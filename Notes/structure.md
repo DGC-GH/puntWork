@@ -1,7 +1,11 @@
+## Current Tree State.
+
 puntWork (root)
 ├── .DS_Store (system file, can be ignored for development)
 ├── Notes/ (documentation directory)
 │   ├── requirements.md (likely outlines plugin requirements or features)
+│   ├── development-roadmap.md
+│   ├── progress-log.md
 │   ├── rules.md (possibly business rules or validation logic)
 │   └── wireframes.md (likely UI sketches or admin page designs)
 └── job-import/ (WordPress plugin directory, appears to be the core focus)
