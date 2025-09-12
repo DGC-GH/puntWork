@@ -23,6 +23,7 @@ Turn raw job feeds into seamless WP posts with zero-touch batches, scaling to en
 ## Progress Log
 - [Date]: [Convo summary: e.g., "Grok proposed core.php refactor; implemented & committed."]
 - [Track wins, blockers, vibe notes: e.g., "Heartbeat control feels snappier—love the OOP wrap!"]
+- 2025-09-12: Committed initial roadmap.md with template; repo check confirms setup ready. Vibe: Locked and loaded—Phase 1 vibes strong! Next: Step 1.1 code output convo.
 
 ## Next Actions
 - Update this file post-convo.
