@@ -3,43 +3,29 @@
 ## Vision
 Turn raw job feeds into seamless WP posts with zero-touch batches, scaling to enterprise via cron/AJAX. Profitable leveraging X Ads and other sources to generate traffic for affiliate marketing referrers, payed per succesful application on external website with bonus per hire, by 2026.
 Generate paid refferrers to external application forms, with pay per conversion and bonus per hire, premium add-ons and/or SAAS for recruiting companies marketing departments.
+Straight into the bright, exciting future!
 
 ## Phases Overview
-| Phase | Focus | Dependencies | Est. Steps | Status |
-|-------|-------|--------------|------------|--------|
-| 1: Refactor Snippets to Plugin | Core structure from snippets; no new features | Snippets folder intact | 4-6 | Planning |
-| 2: Testing & Polish | Unit tests, security, perf | Phase 1 complete | 3 | Not Started |
-| 3: Advanced Features | AI inference, multi-feed | Phase 2 | 5 | Not Started |
-| ... | ... | ... | ... | ... |
+| Phase | Focus | Dependencies | Est. Steps | Status | Grok Tools |
+|-------|-------|--------------|------------|--------|------------|
+| 0.5: Tool Calibration | Optimize fetches/tests | Repo URLs | 2 | New | browse_page (raw MDs), code_execution (PHP sims) |
+| 1: Refactor Snippets to Plugin | Core structure from snippets | Snippets intact | 4-6 | Planning | web_search (WP best practices) |
+| 2: Testing & Polish | Unit tests, security | Phase 1 | 3 | Not Started | code_execution (edge cases) |
+| 3: Advanced Features | AI inference, multi-feed | Phase 2 | 5 | Not Started | x_semantic_search (industry trends) |
 
 ## Phase 1: Refactor Snippets to Plugin (Detailed Steps)
-- **Step 1.1:** [From prior convo: Analyze structure; propose draft changes. Output: Updated includes/core.php with merged snippets 1-1.9.]
-  - Progress: [Log date/completion: e.g., "2025-09-12: Proposed; commit hash abc123."]
-  - Vision Tie-In: Ensures modularity without breaking feed download/batch logic.
-- **Step 1.2:** Integrate admin UI (snippets 2-2.5) into includes/admin.php.
-  - ...
-- **Step 1.3:** ...
-- **Step 1.4:** Full plugin test; remove snippets folder.
+- **Step 1.1:** Output refactored includes/core.php (snippets 1-1.9 → OOP).
+  - Progress: Proposed; commit pending.
+- **Step 1.2:** includes/admin.php (snippets 2-2.5).
+- ...
 
 ## Progress Log
-- [Date]: [Convo summary: e.g., "Grok proposed core.php refactor; implemented & committed."]
-- [Track wins, blockers, vibe notes: e.g., "Heartbeat control feels snappier—love the OOP wrap!"]
-- 2025-09-12: Committed initial roadmap.md with template; repo check confirms setup ready. Vibe: Locked and loaded—Phase 1 vibes strong! Next: Step 1.1 code output convo.
+- 2025-09-12: Roadmap committed; tools calibrated (fallback: Paste MD snippets if browse_page glitches).
+- [Add post-convo]
 
 ## Next Actions
-- Update this file post-convo.
-- Share raw URL in next Grok prompt: https://raw.githubusercontent.com/DGC-GH/puntWork/main/Notes/development-roadmap.md
+- Commit mods; new convo for Phase 0.5/1.1.
+- Grok Workflow Notes: Prompts include URLs; I fetch via browse_page.
 
-## Grok Workflow Notes
-Current date: [YYYY-MM-DD, e.g., 2025-09-12].
-
-Continuing vibe coding on puntWork repo: https://github.com/DGC-GH/puntWork/tree/main
-
-Reference full context from roadmap: https://raw.githubusercontent.com/DGC-GH/puntWork/main/Notes/development-roadmap.md
-(Grok: Use your browse_page tool to fetch and analyze this for vision/phases/progress.)
-
-Last convo summary: [Quick 2-3 sentences: e.g., "Proposed draft changes for includes/core.php from snippets 1-1.9; no code output yet per instructions."]
-
-Now, tackle Phase 1 Step [X.Y]: [Specific ask: e.g., "Output the full refactored code for includes/core.php, merging snippets 1-1.9 into OOP class. Preserve all features; follow WP best practices. Test via code_execution tool if needed."]
-
-Response style: Structured Markdown like requirements.md/structure.md—sections, tables, trees. End with proposed next step update for roadmap.
+## New: ## GitHub Automation Idea
+Add Action YAML to auto-update structure.md tree on push (uses API).
