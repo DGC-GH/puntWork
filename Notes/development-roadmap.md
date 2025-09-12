@@ -1,7 +1,8 @@
 # Job-Import Plugin: Development Roadmap
 
 ## Vision
-Turn raw job feeds into seamless WP posts with zero-touch batches, scaling to enterprise via cron/AJAX. Profitable leveraging X Ads and other sources to generate traffic for affiliate marketing referrers, payed .per succesful application on external website with bonus per hire, by 2026.
+Turn raw job feeds into seamless WP posts with zero-touch batches, scaling to enterprise via cron/AJAX. Profitable leveraging X Ads and other sources to generate traffic for affiliate marketing referrers, payed per succesful application on external website with bonus per hire, by 2026.
+Generate paid refferrers to external application forms, with pay per conversion and bonus per hire, premium add-ons and/or SAAS for recruiting companies marketing departments.
 
 ## Phases Overview
 | Phase | Focus | Dependencies | Est. Steps | Status |
