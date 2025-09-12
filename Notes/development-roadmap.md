@@ -29,4 +29,15 @@ Turn raw job feeds into seamless WP posts with zero-touch batches, scaling to en
 - Share raw URL in next Grok prompt: https://raw.githubusercontent.com/DGC-GH/puntWork/main/Notes/development-roadmap.md
 
 ## Grok Workflow Notes
-[See below for standardized prompt template.]
+Current date: [YYYY-MM-DD, e.g., 2025-09-12].
+
+Continuing vibe coding on puntWork repo: https://github.com/DGC-GH/puntWork/tree/main
+
+Reference full context from roadmap: https://raw.githubusercontent.com/DGC-GH/puntWork/main/Notes/development-roadmap.md
+(Grok: Use your browse_page tool to fetch and analyze this for vision/phases/progress.)
+
+Last convo summary: [Quick 2-3 sentences: e.g., "Proposed draft changes for includes/core.php from snippets 1-1.9; no code output yet per instructions."]
+
+Now, tackle Phase 1 Step [X.Y]: [Specific ask: e.g., "Output the full refactored code for includes/core.php, merging snippets 1-1.9 into OOP class. Preserve all features; follow WP best practices. Test via code_execution tool if needed."]
+
+Response style: Structured Markdown like requirements.md/structure.md—sections, tables, trees. End with proposed next step update for roadmap.
