@@ -1,24 +1,44 @@
 <?php
-// Prevent direct access
-if (!defined('ABSPATH')) {
+/**
+ * Scheduler file for job import plugin.
+ * Sets up WP Cron for periodic job feed imports.
+ *
+ * @package JobImport
+ * @version 1.1
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-// Scheduling from snippet 1.3
-add_action('wp', 'job_import_schedule_triggers');
-function job_import_schedule_triggers() {
-    if (!wp_next_scheduled('job_import_cron')) {
-        wp_schedule_event(time(), 'hourly', 'job_import_cron');
+/**
+ * Schedule the cron job on plugin activation or init.
+ */
+function job_import_schedule_cron() {
+    if ( ! wp_next_scheduled( 'job_import_cron' ) ) {
+        wp_schedule_event( time(), 'hourly', 'job_import_cron' ); // Hourly; adjust as needed
     }
 }
+add_action( 'wp', 'job_import_schedule_cron' ); // Use 'wp' for reliability
 
-// Trigger on post save or other events
-add_action('save_post_job', 'job_import_trigger_update');
-function job_import_trigger_update($post_id) {
-    if (wp_is_post_revision($post_id)) return;
-    // Example trigger: Re-run import if job updated manually
-    wp_schedule_single_event(time() + 300, 'job_import_single_run'); // 5 min delay
+/**
+ * Hook to run the feed processing on cron trigger.
+ */
+function job_import_handle_cron() {
+    if ( ! wp_verify_nonce( $_GET['token'] ?? '', 'job_import_cron' ) && ! defined( 'DOING_CRON' ) ) {
+        die( 'Unauthorized.' );
+    }
+    job_import_process_feeds(); // Call processor
 }
+add_action( 'job_import_cron', 'job_import_handle_cron' );
 
-add_action('job_import_single_run', 'job_import_run_import');
-?>
+/**
+ * Clear schedule on plugin deactivation.
+ */
+function job_import_unschedule_cron() {
+    $timestamp = wp_next_scheduled( 'job_import_cron' );
+    if ( $timestamp ) {
+        wp_unschedule_event( $timestamp, 'job_import_cron' );
+    }
+}
+// Hook to 'deactivation' in main plugin file
