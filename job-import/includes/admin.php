@@ -1,92 +1,51 @@
-//
-//  admin.php
-//  
-//
-//  Created by Dimitri Gulla on 09/09/2025.
-//
-
 <?php
-if (!defined('ABSPATH')) {
+// Prevent direct access.
+if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-// Admin menu (from snippet 6).
-add_action('admin_menu', function() {
-    add_submenu_page(
-        'edit.php?post_type=job',
-        'Job Import Dashboard',
-        'Import Jobs',
+// ==================== SNIPPET 6: Admin Menu ====================
+add_action( 'admin_menu', 'job_import_admin_menu' );
+function job_import_admin_menu() {
+    add_menu_page(
+        'Job Import',
+        'Job Import',
         'manage_options',
-        'job-import-dashboard',
-        'job_import_admin_page', // Callback to output HTML.
-        1
+        'job-import',
+        'job_import_admin_page',
+        'dashicons-update',
+        30
     );
-});
+}
 
-// Admin page HTML (from snippet 2).
+// ==================== SNIPPET 3: Enqueue Scripts and JS ====================
+add_action( 'admin_enqueue_scripts', 'job_import_enqueue_admin' );
+function job_import_enqueue_admin( $hook ) {
+    if ( $hook !== 'toplevel_page_job-import' ) return;
+    wp_enqueue_style( 'job-import-admin-css', JOB_IMPORT_PLUGIN_URL . 'assets/css/admin.css', [], JOB_IMPORT_VERSION );
+    wp_enqueue_script( 'job-import-admin-js', JOB_IMPORT_PLUGIN_URL . 'assets/js/admin.js', [ 'jquery' ], JOB_IMPORT_VERSION, true );
+    wp_localize_script( 'job-import-admin-js', 'job_ajax', [ 'ajax_url' => admin_url( 'admin-ajax.php' ), 'nonce' => wp_create_nonce( 'job_import' ) ] );
+}
+
+// ==================== SNIPPET 2: Admin Page HTML ====================
 function job_import_admin_page() {
-    // Paste the HTML output here (the <div class="wrap">...).
-    // Remove the inline <script> – move to assets/js/admin.js.
-    // Add nonce: echo wp_nonce_field('job_import_nonce');
+    ?>
+    <div class="wrap">
+        <h1># Job Import</h1> <!-- From snippet 2 -->
+        <p>Manage job imports here.</p>
+        <button id="trigger-import" class="button button-primary">Run Import Now</button>
+        <div id="import-status"></div>
+        <table class="wp-list-table widefat fixed striped">
+            <thead><tr><th>Job Title</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody>
+                <?php
+                $jobs = get_posts( [ 'post_type' => JOB_IMPORT_POST_TYPE, 'posts_per_page' => 20 ] );
+                foreach ( $jobs as $job ) {
+                    echo '<tr><td>' . esc_html( get_the_title( $job->ID ) ) . '</td><td>Imported</td><td>' . esc_html( get_the_date( '', $job->ID ) ) . '</td></tr>';
+                }
+                ?>
+            </tbody>
+        </table>
+    </div>
+    <?php
 }
-
-// Enqueue scripts/styles (from snippet 3).
-add_action('admin_enqueue_scripts', function($hook) {
-    if (isset($_GET['page']) && $_GET['page'] === 'job-import-dashboard') {
-        wp_enqueue_style('font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css', [], '5.15.4');
-        wp_enqueue_style('job-import-admin-css', JOB_IMPORT_URL . 'assets/css/admin.css'); // If you extract styles.
-        wp_enqueue_script('job-import-admin-js', JOB_IMPORT_URL . 'assets/js/admin.js', ['jquery'], '1.0', true);
-        wp_localize_script('job-import-admin-js', 'jobImportData', ['nonce' => wp_create_nonce('job_import_nonce'), 'ajaxurl' => admin_url('admin-ajax.php')]);
-    }
-});
-
-// Shortcode (from snippet 5).
-add_shortcode('job_update_status', function($atts, $content, $tag) {
-    global $post;
-    if ($post->post_modified > $post->post_date) {
-        return '<span class="updated-badge">Updated ' . human_time_diff(strtotime($post->post_modified)) . ' ago</span>';
-    }
-    return '';
-});<?php
-if (!defined('ABSPATH')) {
-    exit;
-}
-
-// Admin menu (from snippet 6).
-add_action('admin_menu', function() {
-    add_submenu_page(
-        'edit.php?post_type=job',
-        'Job Import Dashboard',
-        'Import Jobs',
-        'manage_options',
-        'job-import-dashboard',
-        'job_import_admin_page', // Callback to output HTML.
-        1
-    );
-});
-
-// Admin page HTML (from snippet 2).
-function job_import_admin_page() {
-    // Paste the HTML output here (the <div class="wrap">...).
-    // Remove the inline <script> – move to assets/js/admin.js.
-    // Add nonce: echo wp_nonce_field('job_import_nonce');
-}
-
-// Enqueue scripts/styles (from snippet 3).
-add_action('admin_enqueue_scripts', function($hook) {
-    if (isset($_GET['page']) && $_GET['page'] === 'job-import-dashboard') {
-        wp_enqueue_style('font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css', [], '5.15.4');
-        wp_enqueue_style('job-import-admin-css', JOB_IMPORT_URL . 'assets/css/admin.css'); // If you extract styles.
-        wp_enqueue_script('job-import-admin-js', JOB_IMPORT_URL . 'assets/js/admin.js', ['jquery'], '1.0', true);
-        wp_localize_script('job-import-admin-js', 'jobImportData', ['nonce' => wp_create_nonce('job_import_nonce'), 'ajaxurl' => admin_url('admin-ajax.php')]);
-    }
-});
-
-// Shortcode (from snippet 5).
-add_shortcode('job_update_status', function($atts, $content, $tag) {
-    global $post;
-    if ($post->post_modified > $post->post_date) {
-        return '<span class="updated-badge">Updated ' . human_time_diff(strtotime($post->post_modified)) . ' ago</span>';
-    }
-    return '';
-});
