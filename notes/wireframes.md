@@ -20,3 +20,10 @@
 
   Total Jobs: 150
   Last Import: 2025-09-16 14:30 (Recent)
+
+  
+## Notes
+
+Progress bar: Blue gradient, smooth width transition.
+ASCII for quick sketches; use Figma for finals.
+ARIA: role="progressbar" on #progress.
