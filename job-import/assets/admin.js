@@ -1,23 +1,52 @@
 // assets/admin.js (Enhanced: Added AJAX call with nonce, error handling for debug.)
 
 jQuery(document).ready(function($) {
-    $('#trigger-import').on('click', function(e) {
+    /**
+     * Handle Manual Import button click.
+     * Sends AJAX request to process all job feeds.
+     */
+    $('#manual-import').on('click', function(e) {
         e.preventDefault();
-        var nonce = $('[name="job_import_ajax_nonce"]').val(); // Assume added in admin.php
-        $.post(ajaxurl, {
-            action: 'trigger_import',
-            nonce: nonce
-        }, function(response) {
-            if (response.success) {
-                alert('Import triggered! Check logs.');
-                location.reload();
-            } else {
-                alert('Error: ' + response.data);
-                console.error('Import AJAX Error:', response);
-            }
-        }).fail(function() {
-            console.error('AJAX Request Failed');
-        });
+        
+        console.log('=== Job Import Debug: Manual Import button clicked ===');
+        
+        var $button = $(this);
+        var $status = $('#import-status');
+        
+        $button.prop('disabled', true).text('Importing...');
+        $status.hide().text('Starting import...').show();
+        
+        var data = {
+            action: 'manual_import',
+            nonce: job_import_ajax.nonce  // Assumes localized from PHP
+        };
+        
+        console.log('=== Job Import Debug: Sending AJAX with data ===', data);
+        
+        $.post(ajaxurl, data)
+            .done(function(response) {
+                console.log('=== Job Import Debug: AJAX response received ===', response);
+                
+                if (response.success) {
+                    console.log('=== Job Import Debug: Import successful ===', response.data);
+                    $status.html('<span style="color: green;">Import completed successfully!</span>').show();
+                } else {
+                    console.log('=== Job Import Debug: Import failed ===', response.data);
+                    $status.html('<span style="color: red;">Import failed: ' + (response.data || 'Unknown error') + '</span>').show();
+                }
+            })
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                console.error('=== Job Import Debug: AJAX error ===', {
+                    status: textStatus,
+                    error: errorThrown,
+                    response: jqXHR.responseText
+                });
+                $status.html('<span style="color: red;">AJAX Error: ' + textStatus + '</span>').show();
+            })
+            .always(function() {
+                console.log('=== Job Import Debug: AJAX complete ===');
+                $button.prop('disabled', false).text('Manual Import');
+            });
     });
 });
 
