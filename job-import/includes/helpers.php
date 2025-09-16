@@ -1,35 +1,47 @@
 <?php
-// includes/helpers.php
-// Utility functions. Added dir checks for logging, sanitization.
+/**
+ * Helpers file for job import plugin.
+ * Utility functions for feed querying and other tasks.
+ *
+ * @package JobImport
+ * @version 1.1
+ */
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
 /**
- * Log message with dir creation and locking. (Alias for job_import_log)
+ * Retrieve all published job-feed CPT posts.
+ *
+ * @return array|WP_Post[] Array of job-feed posts.
  */
-function log_message( $message ) {
-    $logs_dir = plugin_dir_path( __FILE__ ) . '../../logs/'; // Relative to includes
-    if ( ! file_exists( $logs_dir ) ) {
-        wp_mkdir_p( $logs_dir );
-    }
-    $log = date( 'Y-m-d H:i:s' ) . ' - ' . $message . PHP_EOL;
-    file_put_contents( JOB_LOG_FILE, $log, FILE_APPEND | LOCK_EX );
-}
+function job_import_get_job_feeds() {
+    $feeds = get_posts( array(
+        'post_type' => 'job-feed',
+        'post_status' => 'publish',
+        'posts_per_page' => -1, // Fetch all
+        'orderby' => 'modified',
+        'order' => 'DESC',
+        'fields' => 'all'
+    ) );
 
-// Alias for consistency with processor
-function job_import_log( $message, $level = 'info' ) {
-    log_message( strtoupper($level) . ': ' . $message );
+    return $feeds;
 }
 
 /**
- * Sanitize job data array.
+ * Sanitize and validate a feed URL.
+ *
+ * @param string $url The URL to validate.
+ * @return string|false Valid URL or false.
  */
-function sanitize_job_data( $data ) {
-    if ( ! is_array( $data ) ) {
-        return [];
+function job_import_validate_feed_url( $url ) {
+    $url = filter_var( $url, FILTER_SANITIZE_URL );
+    if ( filter_var( $url, FILTER_VALIDATE_URL ) && strpos( $url, 'xml' ) !== false ) { // Basic RSS/XML check
+        return $url;
     }
-    return array_map( 'sanitize_text_field', $data );
+    return false;
 }
-?>
+
+// Additional existing helpers can be added here if present in current version
+// e.g., function job_import_log_error( $message ) { error_log( '[Job Import] ' . $message ); }
