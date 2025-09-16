@@ -1,0 +1,95 @@
+/* Job Import Admin Styles */
+.wrap h1 {
+    color: #23282d;
+    border-bottom: 1px solid #ccd0d4;
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+}
+
+.form-table th {
+    width: 200px;
+    font-weight: 600;
+}
+
+.form-table input[type="url"],
+.form-table input[type="number"] {
+    width: 300px;
+    max-width: 100%;
+}
+
+#start-import {
+    background: #0073aa;
+    border-color: #006a95;
+    color: #fff;
+    font-weight: 600;
+    margin-bottom: 15px;
+    padding: 8px 16px;
+    transition: background 0.2s;
+}
+
+#start-import:hover {
+    background: #006a95;
+}
+
+#progress-bar {
+    display: none;
+    width: 100%;
+    height: 24px;
+    background: #e5e5e5;
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 10px 0;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+}
+
+#progress {
+    height: 100%;
+    background: linear-gradient(90deg, #0073aa, #00a0d2);
+    width: 0%;
+    transition: width 0.5s ease-in-out;
+    text-align: center;
+    line-height: 24px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+#progress-bar.show {
+    display: block;
+}
+
+#status {
+    margin-top: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #23282d;
+    padding: 8px;
+    background: #f9f9f9;
+    border-left: 4px solid #0073aa;
+    border-radius: 4px;
+}
+
+#status.error {
+    border-left-color: #d63638;
+    background: #fcf0f1;
+    color: #721c24;
+}
+
+#status.success {
+    border-left-color: #00a32a;
+    background: #f0f9f0;
+    color: #155724;
+}
+
+/* Responsive adjustments */
+@media (max-width: 782px) {
+    .form-table th,
+    .form-table td {
+        display: block;
+        width: 100%;
+    }
+    
+    .form-table th {
+        padding-bottom: 0;
+    }
+}
