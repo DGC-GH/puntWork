@@ -1,63 +1,28 @@
 # Project Structure
 
-## Overall Repo Tree
+## Overview
+This repository contains WordPress custom post types (CPTs), plugins, and utilities for the puntWork job board site.
 
-puntWork/
-├── job-import/                  # Main WP plugin folder
-│   ├── job-import.php           # Plugin entry: Headers, hooks, includes
-│   ├── includes/                # Modular PHP files
-│   │   ├── constants.php        # Mappings, URLs, batch sizes
-│   │   ├── helpers.php          # Utilities: Sanitize, gzip, JSONL, logging
-│   │   ├── processor.php        # Core: Download, parse XML, batch import, duplicates, inference
-│   │   ├── scheduler.php        # Cron scheduling, event triggers
-│   │   ├── heartbeat.php        # Progress monitoring via transients
-│   │   ├── admin.php            # Admin menu, settings form, HTML
-│   │   ├── enqueue.php          # Enqueue JS/CSS for admin
-│   │   ├── ajax.php             # AJAX handlers for start/progress
-│   │   └── shortcode.php        # Status shortcode
-│   ├── assets/                  # Static files
-│   │   ├── admin.js             # AJAX polling, button handlers
-│   │   └── admin.css            # Progress bar, form styling
-│   ├── logs/                    # Runtime logs (auto-created)
-│   └── .DS_Store                # Ignore
-├── notes/                       # Documentation (this folder)
-└── ...                          # Other folders
+## Key Components
+- **Custom Post Types (via ACF):**
+  - `job`: Job listings with fields like job_title, description, salary.
+  - `job-feed`: Feed configurations with ACF field `feed_url`.
 
-## File Descriptions
+- **Plugins:**
+  - `job-import/`: WordPress plugin for importing jobs from RSS/XML feeds.
+    - `job-import.php`: Main plugin file (activation hooks, etc.).
+    - `includes/constants.php`: Defines like JOB_POST_TYPE = 'job';.
+    - `includes/mappings.php`: Arrays for $acf_fields and $taxonomies.
+    - `includes/processor.php`: Fetches/parses feeds, maps to jobs.
+    - `includes/scheduler.php`: WP Cron setup.
+    - `includes/helpers.php`: Utility functions like get_job_feeds().
+    - `includes/core.php`: Core logic if expanded.
 
-### job-import.php
-- Initializes plugin: Defines paths, requires includes, activation/deactivation hooks.
-- Registers 'job' CPT, cron event, admin menu, shortcode, AJAX actions.
+## Data Flow
+1. Create `job-feed` posts with `feed_url`.
+2. Cron triggers processor to loop feeds → parse XML → map/insert `job` posts.
 
-### includes/constants.php
-- Global defines: FEED_URL, BATCH_SIZE (50), CHECK_INTERVAL (1hr).
-- Arrays: $job_import_mappings (XML to WP fields), $job_import_categories (keyword inference).
-
-### includes/helpers.php
-- Reusable functions: sanitize_string(), format_date(), clean_item(), handle_gzip(), combine_jsonl(), log().
-
-### includes/processor.php
-- Download feed, process XML batch, import batch (with cleaning/inference/dupe check), infer_item(), handle_duplicate().
-
-### includes/scheduler.php
-- Hooks for cron setup, triggers on post save.
-
-### includes/heartbeat.php
-- Heartbeat tick for progress, update_progress() using transients.
-
-### includes/admin.php
-- Add menu page, render HTML form, register settings.
-
-### includes/enqueue.php
-- Enqueue admin JS/CSS on plugin page, localize AJAX vars.
-
-### includes/ajax.php
-- Handlers: start import (schedule event), get progress (transient).
-
-### includes/shortcode.php
-- [job_import_status] outputs job count, last run.
-
-## Migration Notes
-- All /snippets code refactored into /includes; no losses.
-- Removed redundancy (e.g., merged two heartbeat files).
-- Next: Add tests/ folder for PHPUnit.
+## Job Import Plugin Updates
+- Dynamic feeds now sourced from 'job-feed' CPT via ACF 'feed_url' field.
+- Processor loops over multiple feeds for import.
+- No changes to ACF/taxonomy mappings; they remain in mappings.php.
