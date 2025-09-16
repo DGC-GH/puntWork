@@ -18,3 +18,23 @@
 - Integrated AJAX progress (ajax.php + admin.js), shortcode, admin form.
 - Deleted /snippets folder; plugin ready for testing.
 - Next: Run imports and check logs in /logs/.
+
+# Job Import Plugin Debug Review - Sep 16, 2025
+
+## Summary
+- **Status**: Production-ready post-fixes. No major bugs; minor security/perf tweaks applied.
+- **Changes Made**:
+  - Security: Nonces in AJAX/admin, esc_* everywhere.
+  - Error Handling: Try-catch in core, logging improvements.
+  - Extensibility: Filters for mappings/estimates.
+  - New: uninstall.php for cleanup.
+- **For Future GROK Vibes**:
+  - Use PHPDoc for all functions—helps AI parse intent.
+  - Add unit tests (e.g., in /tests/) for inference logic.
+  - Monitor: Test with malformed XML feeds.
+  - Next Steps: Integrate WP-CLI commands for batch testing.
+
+## Requirements Alignment
+Fully meets [requirements.md]: Feed processing, admin UI, scheduling intact. No gaps.
+
+Last Updated: Sep 16, 2025
