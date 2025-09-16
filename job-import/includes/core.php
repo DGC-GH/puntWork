@@ -1,135 +1,114 @@
 <?php
-// includes/core.php
-// Core logic: Mappings, inference, cleaning. Added error handling, filters for extensibility.
-// Removed unused snippet comments for cleanliness.
+/**
+ * Job Import Core Logic
+ * Consolidated from snippets 1, 1.2, 1.3, 1.4/1.5, 1.6, 1.7
+ * Includes reference to mappings.php for data separation
+ */
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+    exit; // Exit if accessed directly
 }
 
-/**
- * Province mapping with filter for custom overrides.
- */
-function get_province_map() {
-    $map = [
-        'vlaanderen' => 'vlaanderen',
-        'brussels' => 'brussels',
-        'wallonie' => 'wallonie',
-        // Add more mappings.
-    ];
-    return apply_filters( 'job_import_province_map', $map );
+// Include mappings for efficiency
+require_once JOB_IMPORT_PLUGIN_DIR . 'includes/mappings.php';
+
+// ==================== SNIPPET 1.2: Utility Helpers ====================
+function log_message( $message ) {
+    $log = date( 'Y-m-d H:i:s' ) . ' - ' . $message . PHP_EOL;
+    file_put_contents( JOB_LOG_FILE, $log, FILE_APPEND | LOCK_EX );
 }
 
-/**
- * Salary estimates with filter.
- */
-function get_salary_estimates() {
-    $estimates = [
-        'developer' => [ 'low' => 3500, 'high' => 5500 ],
-        'admin' => [ 'low' => 2500, 'high' => 4000 ],
-        // Add more.
-    ];
-    return apply_filters( 'job_import_salary_estimates', $estimates );
+function sanitize_job_data( $data ) {
+    return array_map( 'sanitize_text_field', $data );
 }
 
-/**
- * Icon map.
- */
-function get_icon_map() {
-    return [
-        'developer' => 'code-icon',
-        // Add more.
-    ];
-}
-
-/**
- * Main import runner with try-catch.
- */
+// ==================== SNIPPET 1: Core Structure and Logic ====================
 function job_import_run() {
-    try {
-        $feed = download_feed( get_option( 'job_feed_url', JOB_FEED_URL ) );
-        if ( $feed ) {
-            $xml = process_xml_batch( $feed );
-            import_batch( $xml );
-            update_option( 'job_import_last_run', time() );
-        }
-    } catch ( Exception $e ) {
-        log_message( 'Import Run Error: ' . $e->getMessage() );
-        // Optional: Send admin email.
-        wp_mail( get_option( 'admin_email' ), 'Job Import Failed', $e->getMessage() );
+    $feed = download_feed( JOB_FEED_URL ); // From snippet 1.8, impl in processor.php
+    if ( $feed ) {
+        $xml = process_xml_batch( $feed ); // From snippet 1.9, impl in processor.php
+        import_batch( $xml ); // From snippet 2.3, impl in admin.php or processor
     }
 }
 
-/**
- * Clean item data safely.
- */
-function clean_item( $item ) {
-    if ( ! is_object( $item ) ) {
-        return null; // Early return for invalid items.
+// ==================== SNIPPET 1.3: Scheduling and Triggers ====================
+add_action( 'job_import_cron', 'job_import_run' );
+
+// Manual trigger.
+function trigger_import() {
+    if ( ! wp_next_scheduled( 'job_import_cron' ) ) {
+        wp_schedule_single_event( time(), 'job_import_cron' );
     }
-    $item->title = isset( $item->title ) ? strip_tags( (string) $item->title ) : '';
-    $item->description = isset( $item->description ) ? wp_strip_all_tags( (string) $item->description ) : '';
+}
+
+// ==================== SNIPPET 1.4/1.5: Heartbeat Control ====================
+add_action( 'wp_ajax_heartbeat_control', 'job_heartbeat_handler' );
+
+function job_heartbeat_handler() {
+    wp_die( 'Heartbeat controlled' ); // Placeholder for real-time updates; expand in heartbeat.php
+}
+
+// ==================== SNIPPET 1.6: Item Cleaning ====================
+function clean_item( $item ) {
+    $item->title = strip_tags( (string) $item->title );
+    $item->description = wp_strip_all_tags( (string) $item->description );
     return $item;
 }
 
-/**
- * Infer details with fallbacks and error logging.
- */
+// ==================== SNIPPET 1.7: Item Inference ====================
 function infer_item_details( &$item, $fallback_domain, $lang, &$job_obj ) {
-    if ( ! is_object( $item ) ) {
-        log_message( 'Infer: Invalid item object.' );
-        return;
-    }
-
-    $province = isset( $item->province ) ? strtolower( trim( (string) $item->province ) ) : '';
-    $norm_province = get_province_map()[ $province ] ?? $fallback_domain;
+    $province = strtolower( trim( isset( $item->province ) ? (string) $item->province : '' ) );
+    $norm_province = get_province_map()[$province] ?? $fallback_domain;
 
     $title = isset( $item->functiontitle ) ? (string) $item->functiontitle : '';
     $enhanced_title = $title;
-    if ( isset( $item->city ) ) {
-        $enhanced_title .= ' in ' . (string) $item->city;
-    }
-    if ( isset( $item->province ) ) {
-        $enhanced_title .= ', ' . (string) $item->province;
-    }
+    if ( isset( $item->city ) ) $enhanced_title .= ' in ' . (string) $item->city;
+    if ( isset( $item->province ) ) $enhanced_title .= ', ' . (string) $item->province;
     $enhanced_title = trim( $enhanced_title );
-    $slug = sanitize_title( $enhanced_title . '-' . ( (string) $item->guid ?? uniqid() ) ); // Fallback for missing GUID.
+    $slug = sanitize_title( $enhanced_title . '-' . (string) $item->guid );
     $job_link = 'https://' . $norm_province . '/job/' . $slug;
 
-    $fg = isset( $item->functiongroup ) ? strtolower( trim( (string) $item->functiongroup ) ) : '';
-    $estimate_key = null;
-    foreach ( array_keys( get_salary_estimates() ) as $key ) {
-        if ( strpos( $fg, strtolower( $key ) ) !== false ) {
-            $estimate_key = $key;
-            break;
-        }
-    }
+    $fg = strtolower( trim( isset( $item->functiongroup ) ? (string) $item->functiongroup : '' ) );
+    $estimate_key = array_reduce( array_keys( get_salary_estimates() ), function( $carry, $key ) use ( $fg ) {
+        return strpos( $fg, strtolower( $key ) ) !== false ? $key : $carry;
+    }, null );
 
     $salary_text = '';
-    if ( isset( $item->salaryfrom, $item->salaryto ) && $item->salaryfrom != '0' && $item->salaryto != '0' ) {
+    if ( isset( $item->salaryfrom ) && $item->salaryfrom != '0' && isset( $item->salaryto ) && $item->salaryto != '0' ) {
         $salary_text = '€' . (string) $item->salaryfrom . ' - €' . (string) $item->salaryto;
     } elseif ( isset( $item->salaryfrom ) && $item->salaryfrom != '0' ) {
         $salary_text = '€' . (string) $item->salaryfrom;
     } else {
         $est_prefix = ( $lang == 'nl' ? 'Geschat ' : ( $lang == 'fr' ? 'Estimé ' : 'Est. ' ) );
         if ( $estimate_key ) {
-            $low = get_salary_estimates()[ $estimate_key ]['low'];
-            $high = get_salary_estimates()[ $estimate_key ]['high'];
+            $low = get_salary_estimates()[$estimate_key]['low'];
+            $high = get_salary_estimates()[$estimate_key]['high'];
             $salary_text = $est_prefix . '€' . $low . ' - €' . $high;
         } else {
-            $salary_text = '€3000 - €4500'; // Default fallback.
+            $salary_text = '€3000 - €4500'; // Default fallback
         }
     }
 
-    $apply_link = isset( $item->applylink ) ? esc_url( (string) $item->applylink ) : '';
+    $apply_link = isset( $item->applylink ) ? (string) $item->applylink : '';
 
-    // Apply to job_obj for use in import.
-    $job_obj['link'] = $job_link;
-    $job_obj['apply_link'] = $apply_link;
-    $job_obj['salary_text'] = $salary_text;
-    // Add more inferences as needed.
+    // Complete assignments to job_obj (from snippet logic)
+    $job_obj->title = $enhanced_title;
+    $job_obj->link = $job_link;
+    $job_obj->salary = $salary_text;
+    if ( $apply_link ) {
+        $job_obj->apply_link = $apply_link;
+    }
+    $job_obj->icon_class = get_icon_map()[$estimate_key] ?? 'default-job-icon'; // Use estimate_key or fallback
+    $item->province = $norm_province; // Update item for consistency
+
+    log_message( "Inferred details for job: " . $enhanced_title );
 }
 
-// Hook the cron.
-add_action( 'job_import_cron', 'job_import_run' );
-?>
+// Initialize core on plugin load
+add_action( 'plugins_loaded', 'job_import_init_core' );
+function job_import_init_core() {
+    // Any init logic here, e.g., schedule cron if not set
+    if ( ! wp_next_scheduled( 'job_import_cron' ) ) {
+        wp_schedule_event( time(), 'daily', 'job_import_cron' ); // Default daily
+    }
+}
