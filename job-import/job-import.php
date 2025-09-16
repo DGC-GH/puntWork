@@ -16,6 +16,8 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/constants.php';
 
 // Load includes with error handling for future debugging.
 $includes = [
+    'constants.php', // Already loaded, but explicit
+    'mappings.php', // New: Added for mappings
     'core.php',
     'helpers.php',
     'scheduler.php',
