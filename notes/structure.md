@@ -4,45 +4,72 @@
 Standard WP plugin layout with Notes for docs.
 
 ## Current Tree State.
-.
-├── .DS_Store
-├── snippets/  (Phase 1 source; archive post-refactor)
-        ├── 1 - Core Structure and Logic.php
-        ├── 1.1 - Mappings and Constants.php
-        ├── 1.2 - Utility Helpers.php
-        ├── 1.3 - Scheduling and Triggers.php
-        ├── 1.4 - Heartbeat Control.php
-        ├── 1.5 - Heartbeat Control.php (possible duplicate or variant of 1.4)
-        ├── 1.6 - Item Cleaning.php
-        ├── 1.7 - Item Inference.php
-        ├── 1.8 - Download Feed.php
-        ├── 1.9 - Process XML Batch.php
-        ├── 2 - Admin Page HTML.php
-        ├── 2.1 - Gzip File.php
-        ├── 2.2 - Combine JSONL.php
-        ├── 2.3 - Import Batch.php
-        ├── 2.4 - Handle Duplicates.php
-        ├── 2.5 - Process Batch Items.php
-        ├── 3 - Enqueue Scripts and JS.php
-        ├── 4 - AJAX Handlers.php
-        ├── 5 - Shortcode.php
-        └── 6 - Admin Menu.php
-├── Notes/
-│   ├── development-roadmap.md
-│   ├── requirements.md
-│   ├── rules.md
-│   └── structure.md  (self)
-└── job-import/
-├── assets/
-│   ├── css/
-│   └── js/
-├── includes/
-│   ├── admin.php
-│   ├── ajax.php
-│   └── core.php
-├── job-import.php
-├── logs/
-│   └── import.log
+[
+  {
+    "name": ".DS_Store",
+    "path": ".DS_Store",
+    "sha": "5589ea6a1939593ad1e59d7eb9e548628ac63894",
+    "size": 6148,
+    "url": "https://api.github.com/repos/DGC-GH/puntWork/contents/.DS_Store?ref=main",
+    "html_url": "https://github.com/DGC-GH/puntWork/blob/main/.DS_Store",
+    "git_url": "https://api.github.com/repos/DGC-GH/puntWork/git/blobs/5589ea6a1939593ad1e59d7eb9e548628ac63894",
+    "download_url": "https://raw.githubusercontent.com/DGC-GH/puntWork/main/.DS_Store",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/DGC-GH/puntWork/contents/.DS_Store?ref=main",
+      "git": "https://api.github.com/repos/DGC-GH/puntWork/git/blobs/5589ea6a1939593ad1e59d7eb9e548628ac63894",
+      "html": "https://github.com/DGC-GH/puntWork/blob/main/.DS_Store"
+    }
+  },
+  {
+    "name": "job-import",
+    "path": "job-import",
+    "sha": "5d02344e9952c054cfc5e79ba566d30a3eef9e99",
+    "size": 0,
+    "url": "https://api.github.com/repos/DGC-GH/puntWork/contents/job-import?ref=main",
+    "html_url": "https://github.com/DGC-GH/puntWork/tree/main/job-import",
+    "git_url": "https://api.github.com/repos/DGC-GH/puntWork/git/trees/5d02344e9952c054cfc5e79ba566d30a3eef9e99",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/DGC-GH/puntWork/contents/job-import?ref=main",
+      "git": "https://api.github.com/repos/DGC-GH/puntWork/git/trees/5d02344e9952c054cfc5e79ba566d30a3eef9e99",
+      "html": "https://github.com/DGC-GH/puntWork/tree/main/job-import"
+    }
+  },
+  {
+    "name": "notes",
+    "path": "notes",
+    "sha": "9b97dd9b28e7699ed14e296d5b715f91f33d358e",
+    "size": 0,
+    "url": "https://api.github.com/repos/DGC-GH/puntWork/contents/notes?ref=main",
+    "html_url": "https://github.com/DGC-GH/puntWork/tree/main/notes",
+    "git_url": "https://api.github.com/repos/DGC-GH/puntWork/git/trees/9b97dd9b28e7699ed14e296d5b715f91f33d358e",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/DGC-GH/puntWork/contents/notes?ref=main",
+      "git": "https://api.github.com/repos/DGC-GH/puntWork/git/trees/9b97dd9b28e7699ed14e296d5b715f91f33d358e",
+      "html": "https://github.com/DGC-GH/puntWork/tree/main/notes"
+    }
+  },
+  {
+    "name": "snippets",
+    "path": "snippets",
+    "sha": "b87b45fe3aa10bfc31b86223b468766afe9d6144",
+    "size": 0,
+    "url": "https://api.github.com/repos/DGC-GH/puntWork/contents/snippets?ref=main",
+    "html_url": "https://github.com/DGC-GH/puntWork/tree/main/snippets",
+    "git_url": "https://api.github.com/repos/DGC-GH/puntWork/git/trees/b87b45fe3aa10bfc31b86223b468766afe9d6144",
+    "download_url": null,
+    "type": "dir",
+    "_links": {
+      "self": "https://api.github.com/repos/DGC-GH/puntWork/contents/snippets?ref=main",
+      "git": "https://api.github.com/repos/DGC-GH/puntWork/git/trees/b87b45fe3aa10bfc31b86223b468766afe9d6144",
+      "html": "https://github.com/DGC-GH/puntWork/tree/main/snippets"
+    }
+  }
+]
 
 
 *(Auto-updated via API: https://api.github.com/repos/DGC-GH/puntWork/contents)*
