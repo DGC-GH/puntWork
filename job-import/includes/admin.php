@@ -1,61 +1,59 @@
 <?php
-// Prevent direct access
-if (!defined('ABSPATH')) {
+// includes/admin.php
+// Admin settings page and UI. Enhanced with nonces and validation for security.
+
+if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-// Add admin menu from snippet 6
-function job_import_add_admin_menu() {
-    add_menu_page(
-        'Job Import',
+add_action( 'admin_menu', 'job_import_admin_menu' );
+/**
+ * Add admin menu page.
+ */
+function job_import_admin_menu() {
+    add_options_page(
+        'Job Import Settings',
         'Job Import',
         'manage_options',
         'job-import',
-        'job_import_admin_page',
-        'dashicons-download',
-        30
+        'job_import_admin_page'
     );
 }
 
-// Admin page HTML from snippet 2
+/**
+ * Render admin page with form.
+ */
 function job_import_admin_page() {
-    if (!current_user_can('manage_options')) return;
+    // Handle form submission with nonce.
+    if ( isset( $_POST['submit'] ) && wp_verify_nonce( $_POST['job_import_nonce'], 'job_import_save' ) ) {
+        update_option( 'job_feed_url', esc_url_raw( $_POST['feed_url'] ) );
+        update_option( 'job_batch_size', absint( $_POST['batch_size'] ) );
+        echo '<div class="notice notice-success"><p>Settings saved!</p></div>';
+    }
 
-    // Nonce for security
-    wp_nonce_field('job_import_nonce', 'job_import_nonce');
-
-    // Form for manual import
+    $feed_url = get_option( 'job_feed_url', JOB_FEED_URL );
+    $batch_size = get_option( 'job_batch_size', 50 );
     ?>
     <div class="wrap">
         <h1>Job Import Settings</h1>
-        <form method="post" action="options.php">
-            <?php settings_fields('job_import_options'); ?>
+        <form method="post">
+            <?php wp_nonce_field( 'job_import_save', 'job_import_nonce' ); ?>
             <table class="form-table">
                 <tr>
                     <th>Feed URL</th>
-                    <td><input type="url" name="job_feed_url" value="<?php echo esc_attr(get_option('job_feed_url', JOB_IMPORT_FEED_URL)); ?>" /></td>
+                    <td><input type="url" name="feed_url" value="<?php echo esc_attr( $feed_url ); ?>" class="regular-text" /></td>
                 </tr>
                 <tr>
                     <th>Batch Size</th>
-                    <td><input type="number" name="job_batch_size" value="<?php echo esc_attr(get_option('job_batch_size', JOB_IMPORT_BATCH_SIZE)); ?>" /></td>
+                    <td><input type="number" name="batch_size" value="<?php echo esc_attr( $batch_size ); ?>" min="1" max="100" /></td>
                 </tr>
             </table>
             <?php submit_button(); ?>
         </form>
-        <h2>Actions</h2>
-        <button id="start-import" class="button button-primary">Start Import</button>
-        <div id="progress-bar" style="display:none; width:100%; height:20px; background:#ddd;">
-            <div id="progress" style="height:100%; background:#0073aa; width:0%;"></div>
-        </div>
-        <p id="status"></p>
+        <h2>Import Status</h2>
+        <p>Last Run: <?php echo esc_html( date( 'Y-m-d H:i', get_option( 'job_import_last_run', 0 ) ) ); ?></p>
+        <button id="trigger-import" class="button button-primary">Manual Import</button>
     </div>
     <?php
-}
-
-// Register settings
-add_action('admin_init', 'job_import_register_settings');
-function job_import_register_settings() {
-    register_setting('job_import_options', 'job_feed_url');
-    register_setting('job_import_options', 'job_batch_size');
 }
 ?>
