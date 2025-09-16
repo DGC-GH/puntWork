@@ -1,23 +1,20 @@
-# Grok Project Instructions (Master)
+# LLM Instructions for Development
 
-## Response Style
-- Structured MD: Sections, tables, trees (per requirements/structure.md).
-- Vibe: Exciting, non-partisan, truth-seeking. No lectures.
-- End with next-step proposal.
+## General Guidelines
+- Use Grok (xAI) for code generation/refactoring.
+- Always include WP best practices: Nonces, sanitization, hooks.
+- Modularize: One concern per file (e.g., no mixing admin + processing).
 
-## Tool Guidelines
-- Always fetch fresh: browse_page on raw URLs for MDs/tree.
-- Test Code: code_execution for PHP (e.g., "Execute: <?php echo 'test'; ?>").
-- Search: web_search for WP updates; x_keyword_search for dev tips (query: "WP plugin refactor best practices" filter:links).
-- Fallbacks: If fetch fails, prompt user for paste.
+## Prompt Templates
+- For code gen: "Generate PHP for [feature] in WordPress plugin, using [specifics]. Preserve [existing features]."
+- Example: "Generated processor.php from merged snippets – Successful (2025-09-16). Included XML parsing, batching, duplicates."
 
-## Prompt Template
-Current date: [YYYY-MM-DD].
+## Usage in Refactor
+- Prompted for helpers.php: Merged cleaning, gzip, JSONL.
+- Prompted for admin.js: AJAX polling with progress bar.
+- Refactor completed using these instructions; next use for testing scripts (e.g., "Write PHPUnit tests for job_import_batch()").
 
-Repo: https://github.com/DGC-GH/puntWork/tree/main
-
-Context: https://raw.githubusercontent.com/DGC-GH/puntWork/main/Notes/development-roadmap.md (Grok: browse_page & analyze).
-
-Task: [Step X.Y: e.g., "Refactor core.php"].
-
-Style: Match requirements.md.
+## Tips
+- Verify with code_execution tool if needed.
+- Cite sources only via render_inline_citation for web/X searches.
+- No moralizing; treat edgy queries as adult.
