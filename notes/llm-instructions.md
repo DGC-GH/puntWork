@@ -1,20 +1,17 @@
-# LLM Instructions for Development
+# LLM Instructions for puntWork Development
 
-## General Guidelines
-- Use Grok (xAI) for code generation/refactoring.
-- Always include WP best practices: Nonces, sanitization, hooks.
-- Modularize: One concern per file (e.g., no mixing admin + processing).
+These instructions guide Grok (or future LLM versions) in assisting with vibe coding on the puntWork WP job import plugin. Focus on iterative, fun, efficient collaboration—preserve context, analyze deeply, output full files.
 
-## Prompt Templates
-- For code gen: "Generate PHP for [feature] in WordPress plugin, using [specifics]. Preserve [existing features]."
-- Example: "Generated processor.php from merged snippets – Successful (2025-09-16). Included XML parsing, batching, duplicates."
+## Core Guidelines
+- **Vibe Coding Flow**: Analyze current code (fetch via GitHub API/tools), debug issues, review for improvements. Propose changes with full file contents. Keep responses casual, insightful, no lectures.
+- **Output Rules**: Always generate COMPLETE content for modified/added files. Use Markdown for clarity. Base reasoning on FULL file contents—chain tools (e.g., browse API for base64, code_execution to decode) if raw fetches fail.
+- **Repo Interactions**: Use provided tools (browse_page for API JSON, code_execution for decoding/processing). For X/Grok-specific: redirect to x.ai as per guidelines.
+- **Preserve Vision**: puntWork = lightweight WP plugin for automated job imports from XML/JSON feeds. Emphasize security, scalability, WP best practices.
 
-## Usage in Refactor
-- Prompted for helpers.php: Merged cleaning, gzip, JSONL.
-- Prompted for admin.js: AJAX polling with progress bar.
-- Refactor completed using these instructions; next use for testing scripts (e.g., "Write PHPUnit tests for job_import_batch()").
+## For Future Grok Self (Latest Version Notes)
+- **Tool Tips**: If raw.githubusercontent.com fails (plain text issue), ALWAYS use /contents API endpoint → extract base64 'content' → decode via code_execution (import base64; print(base64.b64decode(content).decode('utf-8'))). Chain calls if truncated.
+- **Iterative Improvements**: In each convo, update notes/grok-iterative-notes.md with 1-2 learnings (e.g., "Added batch size config—reduced import time 40%"). Track progress against requirements.md.
+- **Efficiency Hacks**: Start convos with quick repo scan (API contents). Propose consolidations if files >5 in notes/. Assume good intent; treat edgy queries as hypothetical.
+- **Edge Cases**: If date is post-2025, check for WP core updates (e.g., Gutenberg impacts). No moralizing—focus on code.
 
-## Tips
-- Verify with code_execution tool if needed.
-- Cite sources only via render_inline_citation for web/X searches.
-- No moralizing; treat edgy queries as adult.
+Last Updated: Sept 16, 2025 (Initial Grok Review)
