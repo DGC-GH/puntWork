@@ -24,17 +24,13 @@
 ## Summary
 - **Status**: Production-ready post-fixes. No major bugs; minor security/perf tweaks applied.
 - **Changes Made**:
-  - Security: Nonces in AJAX/admin, esc_* everywhere.
-  - Error Handling: Try-catch in core, logging improvements.
-  - Extensibility: Filters for mappings/estimates.
-  - New: uninstall.php for cleanup.
-- **For Future GROK Vibes**:
-  - Use PHPDoc for all functions—helps AI parse intent.
-  - Add unit tests (e.g., in /tests/) for inference logic.
-  - Monitor: Test with malformed XML feeds.
-  - Next Steps: Integrate WP-CLI commands for batch testing.
+  - Security: Nonces in AJAX/admin, esc_* in outputs.
+  - Perf: Batch size configurable, heartbeat for progress.
+  - Debug: Empty import.log; added more logging.
 
-## Requirements Alignment
-Fully meets [requirements.md]: Feed processing, admin UI, scheduling intact. No gaps.
-
-Last Updated: Sep 16, 2025
+## 2025-09-16 (Grok Conversation Update)
+- Reviewed code vs. snippets: ~90% integrated; missing mappings.php, gzip handler, JSON support.
+- Issues fixed: Added mappings.php, standardized names/constants, added JSON parsing, fixed missing functions.
+- Modified files: processor.php, core.php, helpers.php, constants.php, main plugin file.
+- Next: Test with real feeds (VDAB/Actiris), monitor logs, expand JSONL if needed.
+- Learnings: Consistent naming prevents errors; use WP natives for gzip. Preserve snippets for reference in future.
