@@ -1,32 +1,18 @@
 <?php
-// Prevent direct access
-if (!defined('ABSPATH')) {
+/**
+ * Job Import Constants
+ * Centralized config from various snippets
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-// Core constants from snippet 1.1
-define('JOB_IMPORT_FEED_URL', 'https://example.com/jobs.xml'); // Replace with actual
-define('JOB_IMPORT_BATCH_SIZE', 50);
-define('JOB_IMPORT_CHECK_INTERVAL', 3600); // 1 hour
-define('JOB_IMPORT_MAX_DUPLICATES', 5); // Hash check window
-define('JOB_IMPORT_LOG_LEVEL', 'info'); // debug/info/error
-
-// Field mappings: XML/JSON to WP post fields (from snippet 1.1)
-$job_import_mappings = [
-    'title' => 'job_title',
-    'description' => 'job_description',
-    'location' => 'job_location',
-    'salary' => 'job_salary',
-    'category' => 'job_category',
-    'date_posted' => 'job_date_posted',
-    'url' => 'job_url',
-    // Add more as per feed
-];
-
-// Category inference keywords (from snippet 1.7)
-$job_import_categories = [
-    'tech' => ['developer', 'engineer', 'programmer'],
-    'marketing' => ['digital', 'content', 'seo'],
-    // Expand as needed
-];
-?>
+define( 'JOB_IMPORT_VERSION', '1.0.0' );
+define( 'JOB_IMPORT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) . '../' ); // Relative to includes
+define( 'JOB_FEED_URL', 'https://example.com/jobs.xml' ); // From snippet 1; update to real VDAB/Actiris feed
+define( 'JOB_LOG_FILE', JOB_IMPORT_PLUGIN_DIR . 'logs/job-import.log' );
+define( 'JOB_MAX_BATCH_SIZE', 50 ); // From snippet 2.5
+define( 'JOB_DEFAULT_LANG', 'nl' ); // Fallback language
+define( 'JOB_FALLBACK_DOMAIN', 'vlaanderen' ); // Default province domain
+// Add more constants as needed (e.g., API keys, post types: define('JOB_POST_TYPE', 'job_post'); )
