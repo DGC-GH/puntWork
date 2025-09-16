@@ -34,3 +34,9 @@
 - Modified files: processor.php, core.php, helpers.php, constants.php, main plugin file.
 - Next: Test with real feeds (VDAB/Actiris), monitor logs, expand JSONL if needed.
 - Learnings: Consistent naming prevents errors; use WP natives for gzip. Preserve snippets for reference in future.
+
+
+
+- [2025-09-16] Initial setup of job-import plugin with hardcoded feed. Reviewed mappings/constants matching example 1.1.
+
+- [2025-09-16] Modified job-import plugin to use 'job-feed' CPT for dynamic feeds. Checked mappings/constants – they match snippet example 1.1. Updated processor.php, scheduler.php, helpers.php for loop processing, error handling, and deduplication. Updated structure.md accordingly. This improves scalability for multiple job sources in future iterations.
