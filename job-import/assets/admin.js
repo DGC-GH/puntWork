@@ -1,3 +1,26 @@
+// assets/admin.js (Enhanced: Added AJAX call with nonce, error handling for debug.)
+
+jQuery(document).ready(function($) {
+    $('#trigger-import').on('click', function(e) {
+        e.preventDefault();
+        var nonce = $('[name="job_import_ajax_nonce"]').val(); // Assume added in admin.php
+        $.post(ajaxurl, {
+            action: 'trigger_import',
+            nonce: nonce
+        }, function(response) {
+            if (response.success) {
+                alert('Import triggered! Check logs.');
+                location.reload();
+            } else {
+                alert('Error: ' + response.data);
+                console.error('Import AJAX Error:', response);
+            }
+        }).fail(function() {
+            console.error('AJAX Request Failed');
+        });
+    });
+});
+
 jQuery(document).ready(function($) {
     'use strict';
 
