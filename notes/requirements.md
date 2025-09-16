@@ -13,34 +13,22 @@
 ### Scheduling and Automation
 - [x] Schedule hourly cron jobs for automated imports via wp_schedule_event. Set up in scheduler.php and main job-import.php.
 - [x] Trigger imports on events like post saves for 'job' type. Via save_post_job hook in scheduler.php.
+- [ ] Manual import trigger from admin dashboard (pending UI integration).
 
-### Admin Interface
-- [x] Admin settings page with form for feed URL, batch size, and manual start button. In admin.php with options.php integration.
-- [x] Real-time progress bar and status updates during imports using AJAX polling. Handled in ajax.php and admin.js.
-- [x] Logging to /logs/ directory for debugging (info/error levels). Via job_import_log() in helpers.php.
+### UI/UX
+- [ ] Admin settings page for feed URLs, batch config, logs. (Wireframed in wireframes.md)
+- [ ] Import status dashboard with progress bars, error logs.
 
-### Utilities and Extras
-- [x] Handle GZIP-compressed feeds. In job_import_handle_gzip() in helpers.php.
-- [x] Combine multiple JSONL files if needed. In job_import_combine_jsonl() in helpers.php.
-- [x] Heartbeat API integration for progress monitoring (merged from duplicates). In heartbeat.php.
-- [x] Shortcode [job_import_status] for displaying job count and last run status. In shortcode.php.
+## Non-Functional Requirements (Added Sept 16, 2025)
+- [ ] Performance: Handle 1000+ jobs/hour without timeouts (test with load simulations).
+- [ ] Security: Full audit for WP nonce usage in admin actions; GDPR-compliant data handling.
+- [ ] Compatibility: WP 6.5+, PHP 8.1+; no conflicts with major themes/plugins.
+- [ ] Scalability: Support multi-site installs; optional Redis caching for large feeds.
 
-### Post-Refactor Requirements
-- [ ] Add unit tests for key functions (e.g., batch processing, duplicate detection) using WP-CLI or PHPUnit.
-- [ ] Implement error recovery (e.g., resume failed batches).
-- [ ] Support multiple feed sources via array in settings.
-- [ ] Add export functionality for imported jobs.
+## Testing Requirements
+- [x] Unit tests for parsing/cleaning (PHPUnit in tests/ folder).
+- [ ] Integration tests for cron + imports.
+- [ ] E2E: Simulate full import cycle.
 
-## Non-Functional Requirements
-- Compatibility: WordPress 5.0+, PHP 7.4+.
-- Performance: Handle 1000+ items without timeout (batch + transients).
-- Security: Use WP nonces in AJAX, sanitize all inputs.
-- Accessibility: Admin UI follows WCAG basics (e.g., ARIA labels in JS).
-
-## Field Mappings (Updated to Match constants.php)
-- XML/JSON 'job_title' → WP post_title
-- 'job_description' → post_content
-- 'job_location' → meta 'job_location'
-- 'job_salary' → meta 'job_salary'
-- 'job_category' → meta 'job_category' (inferred if missing)
-- Add more as per feed schema.
+Vision Note: Keep lightweight (<50KB gzipped). For future Grok: Prioritize non-functional in next sprint.
+Last Updated: Sept 16, 2025 (Grok Review)
