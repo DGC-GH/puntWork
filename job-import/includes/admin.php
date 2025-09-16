@@ -1,51 +1,61 @@
 <?php
-// Prevent direct access.
-if ( ! defined( 'ABSPATH' ) ) {
+// Prevent direct access
+if (!defined('ABSPATH')) {
     exit;
 }
 
-// ==================== SNIPPET 6: Admin Menu ====================
-add_action( 'admin_menu', 'job_import_admin_menu' );
-function job_import_admin_menu() {
+// Add admin menu from snippet 6
+function job_import_add_admin_menu() {
     add_menu_page(
         'Job Import',
         'Job Import',
         'manage_options',
         'job-import',
         'job_import_admin_page',
-        'dashicons-update',
+        'dashicons-download',
         30
     );
 }
 
-// ==================== SNIPPET 3: Enqueue Scripts and JS ====================
-add_action( 'admin_enqueue_scripts', 'job_import_enqueue_admin' );
-function job_import_enqueue_admin( $hook ) {
-    if ( $hook !== 'toplevel_page_job-import' ) return;
-    wp_enqueue_style( 'job-import-admin-css', JOB_IMPORT_PLUGIN_URL . 'assets/css/admin.css', [], JOB_IMPORT_VERSION );
-    wp_enqueue_script( 'job-import-admin-js', JOB_IMPORT_PLUGIN_URL . 'assets/js/admin.js', [ 'jquery' ], JOB_IMPORT_VERSION, true );
-    wp_localize_script( 'job-import-admin-js', 'job_ajax', [ 'ajax_url' => admin_url( 'admin-ajax.php' ), 'nonce' => wp_create_nonce( 'job_import' ) ] );
-}
-
-// ==================== SNIPPET 2: Admin Page HTML ====================
+// Admin page HTML from snippet 2
 function job_import_admin_page() {
+    if (!current_user_can('manage_options')) return;
+
+    // Nonce for security
+    wp_nonce_field('job_import_nonce', 'job_import_nonce');
+
+    // Form for manual import
     ?>
     <div class="wrap">
-        <h1># Job Import</h1> <!-- From snippet 2 -->
-        <p>Manage job imports here.</p>
-        <button id="trigger-import" class="button button-primary">Run Import Now</button>
-        <div id="import-status"></div>
-        <table class="wp-list-table widefat fixed striped">
-            <thead><tr><th>Job Title</th><th>Status</th><th>Date</th></tr></thead>
-            <tbody>
-                <?php
-                $jobs = get_posts( [ 'post_type' => JOB_IMPORT_POST_TYPE, 'posts_per_page' => 20 ] );
-                foreach ( $jobs as $job ) {
-                    echo '<tr><td>' . esc_html( get_the_title( $job->ID ) ) . '</td><td>Imported</td><td>' . esc_html( get_the_date( '', $job->ID ) ) . '</td></tr>';
-                }
-                ?>
-            </tbody>
-        </table>
+        <h1>Job Import Settings</h1>
+        <form method="post" action="options.php">
+            <?php settings_fields('job_import_options'); ?>
+            <table class="form-table">
+                <tr>
+                    <th>Feed URL</th>
+                    <td><input type="url" name="job_feed_url" value="<?php echo esc_attr(get_option('job_feed_url', JOB_IMPORT_FEED_URL)); ?>" /></td>
+                </tr>
+                <tr>
+                    <th>Batch Size</th>
+                    <td><input type="number" name="job_batch_size" value="<?php echo esc_attr(get_option('job_batch_size', JOB_IMPORT_BATCH_SIZE)); ?>" /></td>
+                </tr>
+            </table>
+            <?php submit_button(); ?>
+        </form>
+        <h2>Actions</h2>
+        <button id="start-import" class="button button-primary">Start Import</button>
+        <div id="progress-bar" style="display:none; width:100%; height:20px; background:#ddd;">
+            <div id="progress" style="height:100%; background:#0073aa; width:0%;"></div>
+        </div>
+        <p id="status"></p>
     </div>
     <?php
 }
+
+// Register settings
+add_action('admin_init', 'job_import_register_settings');
+function job_import_register_settings() {
+    register_setting('job_import_options', 'job_feed_url');
+    register_setting('job_import_options', 'job_batch_size');
+}
+?>
