@@ -46,6 +46,30 @@ Standard WP plugin layout with Notes for docs.
 
 *(Auto-updated via API: https://api.github.com/repos/DGC-GH/puntWork/contents)*
 
+
+## Snippets Code
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/1 - Core Structure and Logic.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/1.1 - Mappings and Constants.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/1.2 - Utility Helpers.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/1.3 - Scheduling and Triggers.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/1.4 - Heartbeat Control.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/1.5 - Heartbeat Control.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/1.6 - Item Cleaning.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/1.7 - Item Inference.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/1.8 - Download Feed.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/1.9 - Process XML Batch.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/2 - Admin Page HTML.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/2.1 - Gzip File.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/2.2 - Combine JSONL.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/2.3 - Import Batch.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/2.4 - Handle Duplicates.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/2.5 - Process Batch Items.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/3 - Enqueue Scripts and JS.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/4 - AJAX Handlers.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/5 - Shortcode.php
+https://raw.githubusercontent.com/DGC-GH/puntWork/main/job-import/snippets/6 - Admin Menu.php
+
+
 ## New: ## Evolution Log
 - v0.1 (Sep 2025): Baseline + roadmap.
 - Post-Phase 1: Remove snippets/; add classes/.
