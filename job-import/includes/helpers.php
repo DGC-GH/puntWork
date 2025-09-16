@@ -7,15 +7,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Log message with dir creation and locking.
+ * Log message with dir creation and locking. (Alias for job_import_log)
  */
 function log_message( $message ) {
-    $logs_dir = plugin_dir_path( JOB_IMPORT_PLUGIN_FILE ) . 'logs/';
+    $logs_dir = plugin_dir_path( __FILE__ ) . '../../logs/'; // Relative to includes
     if ( ! file_exists( $logs_dir ) ) {
         wp_mkdir_p( $logs_dir );
     }
     $log = date( 'Y-m-d H:i:s' ) . ' - ' . $message . PHP_EOL;
     file_put_contents( JOB_LOG_FILE, $log, FILE_APPEND | LOCK_EX );
+}
+
+// Alias for consistency with processor
+function job_import_log( $message, $level = 'info' ) {
+    log_message( strtoupper($level) . ': ' . $message );
 }
 
 /**
