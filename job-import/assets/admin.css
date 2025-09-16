@@ -1,3 +1,11 @@
+/* assets/admin.css (Minor: Added resets and better spacing for future UI extensions.) */
+
+.wrap h1 { margin-bottom: 20px; }
+.form-table th { width: 150px; }
+#trigger-import { margin-top: 10px; }
+.job-import-status { background: #f9f9f9; padding: 10px; border: 1px solid #ddd; }
+.notice { margin: 10px 0; }
+
 /* Job Import Admin Styles */
 .wrap h1 {
     color: #23282d;
