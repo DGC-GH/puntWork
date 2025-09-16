@@ -11,6 +11,7 @@ A custom WordPress plugin code to import job postings from jobboard XML feeds to
 - Batch processing with duplicate handling, cleaning, inference.
 - Admin UI for mappings, logs, triggers.
 - Leverage Divi 5 for frontend.
+- Wordpress ACF plugin with, "job" CPT
 
 ## Technical Specs
 - WP 6.0+ compatible; PHP 8.0+.
