@@ -4,61 +4,77 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+function log_to_plugin($message) {
+    $log_entry = '[' . date('Y-m-d H:i:s') . '] ' . $message . PHP_EOL;
+    file_put_contents(JOB_IMPORT_LOGS, $log_entry, FILE_APPEND | LOCK_EX);
+    error_log('[JobImport AJAX] ' . $message);  // Also to WP debug.log
+}
+
 add_action('wp_ajax_run_job_import_batch', 'run_job_import_batch_ajax');
 function run_job_import_batch_ajax() {
-    error_log('run_job_import_batch_ajax called with data: ' . print_r($_POST, true));
+    log_to_plugin('AJAX run_job_import_batch called - POST: ' . print_r($_POST, true));
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        error_log('Nonce verification failed for run_job_import_batch');
+        log_to_plugin('Nonce verification FAILED for run_job_import_batch');
         wp_send_json_error(['message' => 'Nonce verification failed']);
     }
+    log_to_plugin('Nonce OK for run_job_import_batch');
     if (!current_user_can('manage_options')) {
-        error_log('Permission denied for run_job_import_batch');
+        log_to_plugin('Permission DENIED for run_job_import_batch - user: ' . wp_get_current_user()->user_login);
         wp_send_json_error(['message' => 'Permission denied']);
     }
-    $start = intval($_POST['start']);
-    $result = import_jobs_from_json(true, $start);
-    wp_send_json_success($result);
+    log_to_plugin('Permissions OK - starting batch import');
+    $start = intval($_POST['start'] ?? 0);
+    try {
+        $result = import_jobs_from_json(true, $start);
+        log_to_plugin('import_jobs_from_json completed - result: ' . print_r($result, true));
+        wp_send_json_success($result);
+    } catch (Exception $e) {
+        log_to_plugin('Exception in import_jobs_from_json: ' . $e->getMessage());
+        wp_send_json_error(['message' => $e->getMessage()]);
+    }
 }
 
 add_action('wp_ajax_cancel_job_import', 'cancel_job_import_ajax');
 function cancel_job_import_ajax() {
-    error_log('cancel_job_import_ajax called');
+    log_to_plugin('AJAX cancel_job_import called');
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        error_log('Nonce verification failed for cancel_job_import');
+        log_to_plugin('Nonce FAILED for cancel_job_import');
         wp_send_json_error(['message' => 'Nonce verification failed']);
     }
     if (!current_user_can('manage_options')) {
-        error_log('Permission denied for cancel_job_import');
+        log_to_plugin('Permission DENIED for cancel_job_import');
         wp_send_json_error(['message' => 'Permission denied']);
     }
     set_transient('import_cancel', true, 3600);
+    log_to_plugin('Cancel transient set');
     wp_send_json_success();
 }
 
 add_action('wp_ajax_clear_import_cancel', 'clear_import_cancel_ajax');
 function clear_import_cancel_ajax() {
-    error_log('clear_import_cancel_ajax called');
+    log_to_plugin('AJAX clear_import_cancel called');
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        error_log('Nonce verification failed for clear_import_cancel');
+        log_to_plugin('Nonce FAILED for clear_import_cancel');
         wp_send_json_error(['message' => 'Nonce verification failed']);
     }
     if (!current_user_can('manage_options')) {
-        error_log('Permission denied for clear_import_cancel');
+        log_to_plugin('Permission DENIED for clear_import_cancel');
         wp_send_json_error(['message' => 'Permission denied']);
     }
     delete_transient('import_cancel');
+    log_to_plugin('Cancel transient cleared');
     wp_send_json_success();
 }
 
 add_action('wp_ajax_get_job_import_status', 'get_job_import_status_ajax');
 function get_job_import_status_ajax() {
-    error_log('get_job_import_status_ajax called');
+    log_to_plugin('AJAX get_job_import_status called');
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        error_log('Nonce verification failed for get_job_import_status');
+        log_to_plugin('Nonce FAILED for get_job_import_status');
         wp_send_json_error(['message' => 'Nonce verification failed']);
     }
     if (!current_user_can('manage_options')) {
-        error_log('Permission denied for get_job_import_status');
+        log_to_plugin('Permission DENIED for get_job_import_status');
         wp_send_json_error(['message' => 'Permission denied']);
     }
     $progress = get_option('job_import_status') ?: [
@@ -79,39 +95,53 @@ function get_job_import_status_ajax() {
         'end_time' => null,
         'last_update' => time(),
         'logs' => [],
+        'message' => 'Idle',
     ];
-    error_log('Progress before calculation: ' . print_r($progress, true));
-    if (!isset($progress['start_time'])) {
-        $progress['start_time'] = microtime(true);
-    }
-    // Keep the accumulated time_elapsed without recalculating to avoid including idle time
-    $progress['time_elapsed'] = $progress['time_elapsed'] ?? 0;
-    $progress['complete'] = ($progress['processed'] >= $progress['total']);
-    error_log('Returning status: ' . print_r($progress, true));
+    log_to_plugin('Status returned: total=' . $progress['total'] . ', processed=' . $progress['processed']);
     wp_send_json_success($progress);
 }
 
 add_action('wp_ajax_job_import_purge', 'job_import_purge_ajax');
 function job_import_purge_ajax() {
-    error_log('job_import_purge_ajax called');
+    log_to_plugin('AJAX job_import_purge called');
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        error_log('Nonce verification failed for job_import_purge');
+        log_to_plugin('Nonce FAILED for job_import_purge');
         wp_send_json_error(['message' => 'Nonce verification failed']);
     }
     if (!current_user_can('manage_options')) {
-        error_log('Permission denied for job_import_purge');
+        log_to_plugin('Permission DENIED for job_import_purge');
         wp_send_json_error(['message' => 'Permission denied']);
     }
-    // Purge logic (from snippet)
-    wp_send_json_success();
+    // Purge old jobs >30 days from snippet 4
+    $old_jobs = get_posts([
+        'post_type' => 'job',
+        'date_query' => [
+            [
+                'column' => 'post_date',
+                'before' => '30 days ago',
+            ],
+        ],
+        'posts_per_page' => -1,
+        'fields' => 'ids',
+    ]);
+    foreach ($old_jobs as $id) {
+        wp_delete_post($id, true);
+    }
+    log_to_plugin('Purged ' . count($old_jobs) . ' old jobs');
+    wp_send_json_success(['message' => 'Purged ' . count($old_jobs) . ' jobs']);
 }
 
 add_action('wp_ajax_reset_job_import', 'reset_job_import_ajax');
 function reset_job_import_ajax() {
+    log_to_plugin('AJAX reset_job_import called');
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
+        log_to_plugin('Nonce FAILED for reset_job_import');
         wp_send_json_error(['message' => 'Nonce verification failed']);
     }
-    if (!current_user_can('manage_options')) wp_send_json_error(['message' => 'Permission denied']);
+    if (!current_user_can('manage_options')) {
+        log_to_plugin('Permission DENIED for reset_job_import');
+        wp_send_json_error(['message' => 'Permission denied']);
+    }
     delete_option('job_import_process');
     delete_option('job_import_status');
     delete_option('job_import_processed_guids');
@@ -120,5 +150,6 @@ function reset_job_import_ajax() {
     delete_transient('import_cancel');
     delete_option('job_import_time_per_job');
     delete_option('job_json_total_count');
+    log_to_plugin('All options/transients reset');
     wp_send_json_success(['message' => 'Import reset successfully']);
 }

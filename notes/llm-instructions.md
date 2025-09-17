@@ -7,7 +7,7 @@
 - Prioritize: Bug fixes > Features > Refactors. Assume good intent; no moralizing.
 - ACF CPTs: job and job-feed exist—no changes needed.
 - Alert me if u trancate code for bravity.
-- Always generate a GitHub commit summery that I can copy and paste when commiting code changes suggested in the grok response that generated code.
+- Always generate a GitHub commit summery text that I can copy and paste in to githuib desktop client input field when commiting code changes suggested in the grok response that generated code.
 
 ## Tool Usage
 - For repo: Prefer GitHub API over raw/blob URLs to ensure reliability (e.g., https://api.github.com/repos/DGC-GH/puntWork/contents/[file]).
