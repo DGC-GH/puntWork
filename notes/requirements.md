@@ -1,29 +1,34 @@
 # Job Import Plugin Requirements
 
-## Functional
-- [x] Fetch/parse XML feeds (VDAB/Actiris formats).
-- [x] Admin UI: Table of feeds, manual/full import buttons.
-- [x] Data cleaning/inference: Salary estimates, enhanced titles/slugs.
-- [ ] Scheduled imports: WP Cron daily, skip if run today.
-- [ ] Export: JSON of all jobs post-batch.
-- [ ] Multi-lang: Detect/enrich NL/FR/EN.
+## Functional Requirements
+### Import Mechanisms
+- Support CSV, XML, JSON imports via file upload.
+- Integrate with 3+ APIs (e.g., Indeed, Google Jobs) using OAuth/Keys.
+- Handle bulk imports (up to 1000 jobs/batch) with progress indicators.
 
-## Non-Functional
-- Performance: Batch limit 50 jobs/feed; cache TTL 24h.
-- Security: Nonces in AJAX; manage_options cap.
-- Logging: import.log + console for debug.
+### Data Handling
+- Auto-detect and map fields (title, description, salary, location, etc.).
+- Deduplication based on job ID/URL.
+- Custom post type 'job_post' with taxonomies (category, type: full-time/part-time).
 
-## Tech Specs
-- CPTs: 'job-feed', 'job'.
-- Fields: ACF (feed_url, functiontitle, salary_estimate, etc.).
-- Hooks: admin_enqueue, wp_ajax_*, init for CPTs.
+### Admin UI
+- Dashboard page with import history, error logs.
+- Settings page for API keys, cron schedules.
+- Export jobs to CSV.
 
----
-**GROK-NOTE: iteration: 2 | date: 2025-09-17 | section: req-prioritization**
-key-learnings:
-  - Checklists track completion; integrate with progress-log.md.
-pending:
-  - Mark 'Export' done after v0.3; add 'Error handling: Retry failed downloads'.
-efficiency-tip: "Grok: Filter unchecked reqs for next fix suggestions."
-prior-iteration-ref: Iteration 1 (UI/AJAX reqs met).
-next-convo-prompt: "From requirements: Implement unchecked 'Scheduled imports'; reference rules.md."
+### Frontend
+- Shortcode [puntwork_jobs] for listing.
+- Single job template with apply button.
+
+## Non-Functional Requirements
+- Performance: Imports <5s for 100 jobs; cache results.
+- Security: Sanitize inputs, nonce all forms, GDPR-compliant data handling.
+- Compatibility: WP 6.0+, themes like Astra/GeneratePress.
+- Accessibility: WCAG 2.1 AA for UI.
+
+## User Stories (Prioritized)
+1. As admin, I can upload CSV and map fields to import jobs.
+2. As admin, I can schedule daily imports from API.
+3. As visitor, I can view/filter jobs on frontend.
+
+For Grok: Use this for feature validation during code reviews.
