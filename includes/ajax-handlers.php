@@ -1,3 +1,9 @@
+?php
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 add_action('wp_ajax_run_job_import_batch', 'run_job_import_batch_ajax');
 function run_job_import_batch_ajax() {
     error_log('run_job_import_batch_ajax called with data: ' . print_r($_POST, true));

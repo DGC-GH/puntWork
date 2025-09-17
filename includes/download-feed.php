@@ -1,3 +1,9 @@
+?php
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 function download_feed($url, $xml_path, $output_dir, &$logs) {
     try {
         if (function_exists('curl_init')) {
