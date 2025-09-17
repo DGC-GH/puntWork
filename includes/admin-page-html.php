@@ -1,3 +1,9 @@
+?php
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 function job_import_admin_page() {
     wp_enqueue_script('jquery');
     ?>

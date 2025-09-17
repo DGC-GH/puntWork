@@ -1,3 +1,9 @@
+?php
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 function clean_item_fields(&$item) {
     $html_fields = ['description', 'functiondescription', 'offerdescription', 'requirementsdescription', 'companydescription'];
     foreach ($html_fields as $field) {

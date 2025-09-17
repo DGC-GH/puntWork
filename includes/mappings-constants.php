@@ -1,3 +1,9 @@
+?php
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 if (!function_exists('get_province_map')) {
     function get_province_map() {
         return [

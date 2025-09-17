@@ -1,3 +1,9 @@
+?php
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 add_action('admin_enqueue_scripts', function($hook) {
     if (isset($_GET['page']) && $_GET['page'] === 'job-import-dashboard') {
         // Font Awesome for icons (if not already in theme)

@@ -1,3 +1,9 @@
+<?php
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 function get_feeds() {
     return [
         'startpeople' => 'https://feeds.startpeople.be/api/vacancies',
