@@ -1,103 +1,59 @@
-/* assets/admin.css (Minor: Added resets and better spacing for future UI extensions.) */
-
-.wrap h1 { margin-bottom: 20px; }
-.form-table th { width: 150px; }
-#trigger-import { margin-top: 10px; }
-.job-import-status { background: #f9f9f9; padding: 10px; border: 1px solid #ddd; }
-.notice { margin: 10px 0; }
-
-/* Job Import Admin Styles */
-.wrap h1 {
-    color: #23282d;
-    border-bottom: 1px solid #ccd0d4;
-    padding-bottom: 8px;
-    margin-bottom: 20px;
+.wrap {
+    max-width: 800px;
+    margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #1d1d1f;
+    padding: 0 20px;
 }
-
-.form-table th {
-    width: 200px;
+h1 {
+    font-size: 34px;
     font-weight: 600;
-}
-
-.form-table input[type="url"],
-.form-table input[type="number"] {
-    width: 300px;
-    max-width: 100%;
-}
-
-#start-import {
-    background: #0073aa;
-    border-color: #006a95;
-    color: #fff;
-    font-weight: 600;
-    margin-bottom: 15px;
-    padding: 8px 16px;
-    transition: background 0.2s;
-}
-
-#start-import:hover {
-    background: #006a95;
-}
-
-#progress-bar {
-    display: none;
-    width: 100%;
-    height: 24px;
-    background: #e5e5e5;
-    border-radius: 12px;
-    overflow: hidden;
-    margin: 10px 0;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-}
-
-#progress {
-    height: 100%;
-    background: linear-gradient(90deg, #0073aa, #00a0d2);
-    width: 0%;
-    transition: width 0.5s ease-in-out;
     text-align: center;
-    line-height: 24px;
-    color: #fff;
-    font-size: 12px;
-    font-weight: bold;
+    margin: 40px 0 20px;
 }
-
-#progress-bar.show {
-    display: block;
-}
-
-#status {
-    margin-top: 10px;
-    font-size: 14px;
+.button {
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 16px;
     font-weight: 500;
-    color: #23282d;
-    padding: 8px;
-    background: #f9f9f9;
-    border-left: 4px solid #0073aa;
+    border: none;
+}
+.button-primary {
+    background-color: #007aff;
+    color: white;
+}
+.button-secondary {
+    background-color: #f2f2f7;
+    color: #007aff;
+}
+#start-import { /* ... */ }
+#progress-bar {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background-color: #f2f2f7;
+    display: flex;
+    overflow: hidden;
+}
+#progress-fill {
+    height: 100%;
+    background-color: #007aff;
+    transition: width 0.3s ease;
+}
+#import-log {
+    margin-top: 32px;
+    max-height: 400px;
+    overflow-y: auto;
+    background: #f2f2f7;
+    padding: 16px;
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 12px;
+}
+.updated-badge {
+    background: #007aff;
+    color: white;
+    padding: 4px 8px;
     border-radius: 4px;
-}
-
-#status.error {
-    border-left-color: #d63638;
-    background: #fcf0f1;
-    color: #721c24;
-}
-
-#status.success {
-    border-left-color: #00a32a;
-    background: #f0f9f0;
-    color: #155724;
-}
-
-/* Responsive adjustments */
-@media (max-width: 782px) {
-    .form-table th,
-    .form-table td {
-        display: block;
-        width: 100%;
-    }
-    
-    .form-table th {
-        padding-bottom: 0;
-    }
+    font-size: 12px;
 }

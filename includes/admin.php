@@ -1,72 +1,49 @@
-<?php
-/**
- * Admin interface for Job Import Plugin
- * Refactored from old WPCode snippets 2, 6.
- */
-
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
-
-/**
- * Add admin menu.
- */
-function job_import_admin_menu() {
-    add_options_page(
-        'Job Import',
-        'Job Import',
+add_action('admin_menu', function() {
+    add_submenu_page(
+        'edit.php?post_type=job',
+        'Job Import Dashboard',
+        'Import Jobs',
         'manage_options',
-        'job-import',
-        'job_import_admin_page'
+        'job-import-dashboard',
+        'job_import_admin_page',
+        1
     );
-}
-add_action( 'admin_menu', 'job_import_admin_menu' );
+});
 
-/**
- * Render admin page.
- */
 function job_import_admin_page() {
-    if ( ! current_user_can( 'manage_options' ) ) {
-        return;
-    }
-
-    // Existing stats/shortcode output here...
-    echo '<div class="wrap"><h1>Job Import Dashboard</h1>';
-    echo '<p>Total Jobs: ' . wp_count_posts( 'job' )->publish . '</p>';
-    echo '<p>Last Run: ' . get_option( 'job_import_last_run', 'Never' ) . '</p>';
-
-    // New section: List job-feeds
-    echo '<h2>Job Feeds Management</h2>';
-    echo '<table class="wp-list-table widefat fixed striped">';
-    echo '<thead><tr><th>ID</th><th>Title</th><th>Feed URL</th><th>Last Run</th><th>Actions</th></tr></thead><tbody>';
-
-    $feeds_query = new WP_Query( array(
-        'post_type' => 'job-feed',
-        'post_status' => 'publish',
-        'posts_per_page' => -1,
-    ) );
-
-    if ( $feeds_query->have_posts() ) {
-        foreach ( $feeds_query->posts as $post ) {
-            $feed_url = get_field( 'feed_url', $post->ID );
-            $last_run = get_feed_last_run( $post->ID );
-            echo '<tr>';
-            echo '<td>' . $post->ID . '</td>';
-            echo '<td><a href="' . get_edit_post_link( $post->ID ) . '">' . esc_html( $post->post_title ) . '</a></td>';
-            echo '<td>' . esc_url( $feed_url ) . '</td>';
-            echo '<td>' . ( $last_run ? date( 'Y-m-d H:i', strtotime( $last_run ) ) : 'Never' ) . '</td>';
-            echo '<td><button class="button manual-import-btn" data-feed-id="' . $post->ID . '">Manual Import</button></td>';
-            echo '</tr>';
-        }
-    } else {
-        echo '<tr><td colspan="5">No published job-feeds found. <a href="' . admin_url( 'post-new.php?post_type=job-feed' ) . '">Add one</a>.</td></tr>';
-    }
-
-    echo '</tbody></table></div>';
-
-    // Enqueue JS for buttons (via enqueue.php)
-    wp_enqueue_script( 'job-import-admin' );
-    wp_localize_script( 'job-import-admin', 'jobImportAjax', array( 'ajaxurl' => admin_url( 'admin-ajax.php' ) ) );
-
-    wp_reset_postdata();
+    wp_enqueue_script('jquery');
+    ?>
+    <div class="wrap" style="max-width: 800px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1d1d1f; padding: 0 20px;">
+        <h1 style="font-size: 34px; font-weight: 600; text-align: center; margin: 40px 0 20px;">Job Import</h1>
+        <div style="display: flex; justify-content: center; gap: 12px; margin-bottom: 32px;">
+            <button id="start-import" class="button button-primary" style="border-radius: 8px; padding: 12px 24px; font-size: 16px; font-weight: 500; background-color: #007aff; border: none; color: white;">Start</button>
+            <button id="resume-import" class="button button-secondary" style="display:none; border-radius: 8px; padding: 12px 24px; font-size: 16px; font-weight: 500; background-color: #f2f2f7; border: none; color: #007aff;">Continue</button>
+            <button id="cancel-import" class="button button-secondary" style="display:none; border-radius: 8px; padding: 12px 24px; font-size: 16px; font-weight: 500; background-color: #ff3b30; border: none; color: white;">Stop</button>
+        </div>
+        <div id="import-progress" style="background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: none;">
+            <h2 id="progress-percent" style="font-size: 48px; font-weight: 600; text-align: center; margin: 0 0 16px; color: #007aff;">0%</h2>
+            <div id="progress-bar" style="width: 100%; height: 6px; border-radius: 3px; background-color: #f2f2f7; display: flex; overflow: hidden;"></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 16px 0;">
+                <span id="time-elapsed" style="font-size: 16px; color: #8e8e93;">0s</span>
+                <p id="status-message" style="font-size: 16px; color: #8e8e93; margin: 0;">Ready to start.</p>
+                <span id="time-left" style="font-size: 16px; color: #8e8e93;">Calculating...</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; font-size: 14px;">
+                <p style="margin: 0;">Total: <span id="total-items" style="font-weight: 500;">0</span></p>
+                <p style="margin: 0;">Processed: <span id="processed-items" style="font-weight: 500;">0</span></p>
+                <p style="margin: 0;">Created: <span id="created-items" style="font-weight: 500;">0</span></p>
+                <p style="margin: 0;">Updated: <span id="updated-items" style="font-weight: 500;">0</span></p>
+                <p style="margin: 0;">Skipped: <span id="skipped-items" style="font-weight: 500;">0</span></p>
+                <p style="margin: 0;">Duplicated: <span id="duplicates-drafted" style="font-weight: 500;">0</span></p>
+                <p style="margin: 0;">Unpublished: <span id="drafted-old" style="font-weight: 500;">0</span></p>
+                <p style="margin: 0;">Left: <span id="items-left" style="font-weight: 500;">0</span></p>
+            </div>
+        </div>
+        <div id="import-log" style="margin-top: 32px; max-height: 400px; overflow-y: auto; background: #f2f2f7; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 12px; display: none;">
+            <h3 style="margin-top: 0;">Import Log</h3>
+            <pre id="log-content"></pre>
+        </div>
+        <button id="reset-import" class="button button-secondary" style="margin-top: 16px; border-radius: 8px; padding: 8px 16px;">Reset Import</button>
+    </div>
+    <?php
 }
