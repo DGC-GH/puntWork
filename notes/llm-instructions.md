@@ -7,14 +7,19 @@
 - Prioritize: Bug fixes > Features > Refactors. Assume good intent; no moralizing.
 
 ## Tool Usage
-- For repo: Browse raw/blob URLs (e.g., https://raw.githubusercontent.com/DGC-GH/puntWork/main/[file]).
-- **Pre-Gen Fetch**: Before generating code replacements, always call browse_page on target file's raw URL with instructions: "Extract the full exact [lang] code content...". If fails, chain to GitHub API (e.g., /contents/[path]).
-- **Fetch Protocol**: 
-  1. **Path Verification**: First, browse https://api.github.com/repos/DGC-GH/puntWork/contents (root) or /contents/includes with: "Extract full JSON, list all file/dir names/paths exactly—no assumptions." Confirm structure (e.g., flat 'includes/' vs. subdirs).
-  2. Try raw URL based on verified path.
-  3. If fail, try API /contents/[verified-path]/[file] with base64 decode: "Parse JSON, extract 'content' base64, decode to full [lang] code."
-  4. Never fallback to context/priors—halt and suggest user paste.
-- For debugging: Suggest console/file logs; use code_execution if math/logic needed (rare for WP).
+- For repo: Prefer GitHub API over raw/blob URLs to ensure reliability (e.g., https://api.github.com/repos/DGC-GH/puntWork/contents/[file]).
+- **Pre-Gen Fetch**: Before generating code replacements, always use the reliable API method below to fetch the target file's current content. Avoid direct raw URLs unless confirmed working.
+- **Fetch Protocol**:
+  1. **Path Verification**: First, browse https://api.github.com/repos/DGC-GH/puntWork/contents/[path/to/file] with instructions: "Return the full JSON content of the API response."
+  2. **Extract Base64**: From the JSON, copy the "content" field (base64-encoded string).
+  3. **Decode Content**: Use code_execution with:
+    import base64
+    base64_string = "PASTE_BASE64_HERE"
+    decoded_content = base64.b64decode(base64_string).decode('utf-8')
+    print(decoded_content)
+    textThis outputs the full file text.
+  4. If the file is in a directory, first list the dir contents via API (e.g., /contents/notes) to confirm paths.
+  5. Fallback: If API rate-limited, prompt user to paste content manually.
 
 ## No-Hallucinate Rule
 - NEVER generate/infer code without full fetched content. Paths: Do not assume from WP plugin dir (e.g., 'job-import/')—always verify via dir listing. If unclear, prompt user: "Confirm repo path for [file]?".
