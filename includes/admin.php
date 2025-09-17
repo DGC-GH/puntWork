@@ -1,3 +1,9 @@
+<?php
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 add_action('admin_menu', function() {
     add_submenu_page(
         'edit.php?post_type=job',
@@ -22,7 +28,9 @@ function job_import_admin_page() {
         </div>
         <div id="import-progress" style="background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: none;">
             <h2 id="progress-percent" style="font-size: 48px; font-weight: 600; text-align: center; margin: 0 0 16px; color: #007aff;">0%</h2>
-            <div id="progress-bar" style="width: 100%; height: 6px; border-radius: 3px; background-color: #f2f2f7; display: flex; overflow: hidden;"></div>
+            <div id="progress-bar" style="width: 100%; height: 6px; border-radius: 3px; background-color: #f2f2f7; display: flex; overflow: hidden;">
+                <div id="progress-fill" style="height: 100%; background-color: #007aff; width: 0%; transition: width 0.3s ease;"></div>
+            </div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin: 16px 0;">
                 <span id="time-elapsed" style="font-size: 16px; color: #8e8e93;">0s</span>
                 <p id="status-message" style="font-size: 16px; color: #8e8e93; margin: 0;">Ready to start.</p>
@@ -46,4 +54,4 @@ function job_import_admin_page() {
         <button id="reset-import" class="button button-secondary" style="margin-top: 16px; border-radius: 8px; padding: 8px 16px;">Reset Import</button>
     </div>
     <?php
-}
+} // Closing brace for job_import_admin_page() - this fixes the parse error
