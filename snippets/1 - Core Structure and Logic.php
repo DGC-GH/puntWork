@@ -1,24 +1,10 @@
 function get_feeds() {
-    $feeds = [];
-    $args = [
-        'post_type' => 'job-feed',
-        'post_status' => 'publish',
-        'posts_per_page' => -1,
+    return [
+        'startpeople' => 'https://feeds.startpeople.be/api/vacancies',
+        'internationalrecruitment' => 'https://feeds.internationalrecruitment.be/api/vacancies',
+        'unique' => 'https://feeds.unique.be/api/vacancies',
+        'expressmedical' => 'https://feeds.expressmedical.be/api/vacancies',
     ];
-    $query = new WP_Query($args);
-    if ($query->have_posts()) {
-        while ($query->have_posts()) {
-            $query->the_post();
-            $feed_key = get_post_field('post_name', get_the_ID());
-            $url = get_field('feed-url', get_the_ID());
-            $url = trim($url);
-            if ($url && filter_var($url, FILTER_VALIDATE_URL)) {
-                $feeds[$feed_key] = $url;
-            }
-        }
-        wp_reset_postdata();
-    }
-    return $feeds;
 }
 
 function process_one_feed($feed_key, $url, $output_dir, $fallback_domain, &$logs) {
