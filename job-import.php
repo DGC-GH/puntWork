@@ -47,17 +47,26 @@ function setup_job_import() {
     
     // Load includes
     $includes = array(
-        'constants.php',
-        'helpers.php',
-        'mappings.php',
-        'core.php',
-        'processor.php',
-        'scheduler.php',
-        'admin.php',
-        'ajax.php',
-        'enqueue.php',
-        'heartbeat.php',
-        'shortcode.php',
+        'core-structure-logic.php',
+        'admin-menu.php',
+        'admin-page-html.php',                    
+          'ajax-handlers.php',
+          'combine-jsonl.php',
+          'download-feed.php',
+          'enqueue-scripts-js.php',
+          'gzip-file.php',
+          'handle-duplicates.php',
+          'heartbeat-control.php',
+          'import-batch.php',
+          'item-cleaning.php',
+          'item-inference.php',
+          'mappings-constants.php',
+          'process-batch-items.php',
+          'process-xml-batch.php',
+          'reset-import.php',
+          'scheduling-triggers.php',
+          'shortcode.php',
+
     );
     foreach ( $includes as $include ) {
         $file = JOB_IMPORT_PATH . 'includes/' . $include;
