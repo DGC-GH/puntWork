@@ -1,90 +1,118 @@
-<?php
-/**
- * AJAX handlers for Job Import Plugin
- * Refactored from old WPCode snippet 4 - AJAX Handlers.php + 1.5 Heartbeat AJAX.
- * Enhanced: Added detailed log_import_event calls for full flow debugging.
- * Compat: Replaced ?? with isset() ternary for PHP 5.6+.
- */
-
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+add_action('wp_ajax_run_job_import_batch', 'run_job_import_batch_ajax');
+function run_job_import_batch_ajax() {
+    error_log('run_job_import_batch_ajax called with data: ' . print_r($_POST, true));
+    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
+        error_log('Nonce verification failed for run_job_import_batch');
+        wp_send_json_error(['message' => 'Nonce verification failed']);
+    }
+    if (!current_user_can('manage_options')) {
+        error_log('Permission denied for run_job_import_batch');
+        wp_send_json_error(['message' => 'Permission denied']);
+    }
+    $start = intval($_POST['start']);
+    $result = import_jobs_from_json(true, $start);
+    wp_send_json_success($result);
 }
 
-/**
- * Manual import for specific feed.
- */
-function ajax_manual_feed_import() {
-    $feed_id = isset( $_POST['feed_id'] ) ? $_POST['feed_id'] : 'unknown';
-    log_import_event( "AJAX: Manual import STARTED for feed ID {$feed_id} by user " . get_current_user_id(), 'info' );
-
-    if ( ! current_user_can( 'manage_options' ) ) {
-        log_import_event( 'AJAX: Unauthorized access attempt to manual_feed_import', 'error' );
-        wp_die( 'Unauthorized' );
+add_action('wp_ajax_cancel_job_import', 'cancel_job_import_ajax');
+function cancel_job_import_ajax() {
+    error_log('cancel_job_import_ajax called');
+    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
+        error_log('Nonce verification failed for cancel_job_import');
+        wp_send_json_error(['message' => 'Nonce verification failed']);
     }
-
-    $post_id = intval( $_POST['feed_id'] ?? 0 );
-    if ( ! $post_id ) {
-        log_import_event( 'AJAX: Invalid feed ID provided: ' . ( isset( $_POST['feed_id'] ) ? $_POST['feed_id'] : 'none' ), 'error' );
-        wp_send_json_error( 'Invalid feed ID' );
+    if (!current_user_can('manage_options')) {
+        error_log('Permission denied for cancel_job_import');
+        wp_send_json_error(['message' => 'Permission denied']);
     }
-
-    $feed_url = get_field( 'feed_url', $post_id );
-    if ( ! $feed_url ) {
-        log_import_event( "AJAX: No feed URL found for post ID {$post_id}", 'error' );
-        wp_send_json_error( 'No feed URL found' );
-    }
-
-    log_import_event( "AJAX: Starting process_single_feed for URL {$feed_url} (post {$post_id})", 'info' );
-
-    set_transient( 'job_import_running', true, 300 ); // Mark running
-    require_once __DIR__ . '/processor.php';
-    $result = process_single_feed( $feed_url, $post_id );
-    update_feed_last_run( $post_id );
-    delete_transient( 'job_import_running' );
-
-    log_import_event( "AJAX: Manual import COMPLETED for feed {$post_id}. Result: imported={$result['imported']}, errors={$result['errors']}", 'info' );
-
-    wp_send_json_success( array(
-        'imported' => $result['imported'],
-        'errors' => $result['errors'],
-        'message' => "Processed feed {$post_id}: {$result['imported']} jobs imported."
-    ) );
+    set_transient('import_cancel', true, 3600);
+    wp_send_json_success();
 }
-add_action( 'wp_ajax_manual_feed_import', 'ajax_manual_feed_import' );
 
-/**
- * Full batch import.
- */
-function ajax_full_import() {
-    log_import_event( 'AJAX: Full batch import STARTED by user ' . get_current_user_id(), 'info' );
-
-    if ( ! current_user_can( 'manage_options' ) ) {
-        log_import_event( 'AJAX: Unauthorized access to full_import', 'error' );
-        wp_die( 'Unauthorized' );
+add_action('wp_ajax_clear_import_cancel', 'clear_import_cancel_ajax');
+function clear_import_cancel_ajax() {
+    error_log('clear_import_cancel_ajax called');
+    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
+        error_log('Nonce verification failed for clear_import_cancel');
+        wp_send_json_error(['message' => 'Nonce verification failed']);
     }
-    set_transient( 'job_import_running', true, 300 );
-    require_once __DIR__ . '/processor.php';
-    $result = process_all_imports( true );
-    delete_transient( 'job_import_running' );
-
-    log_import_event( 'AJAX: Full batch import COMPLETED. Stats: ' . print_r( $result, true ), 'info' );
-
-    wp_send_json_success( $result );
-}
-add_action( 'wp_ajax_full_import', 'ajax_full_import' );
-
-/**
- * Heartbeat import status (ported from 1.5).
- */
-function ajax_heartbeat_import_status() {
-    log_import_event( 'AJAX: Heartbeat status check by user ' . get_current_user_id(), 'debug' );
-
-    if ( ! current_user_can( 'manage_options' ) ) {
-        wp_send_json_error( 'Unauthorized' );
+    if (!current_user_can('manage_options')) {
+        error_log('Permission denied for clear_import_cancel');
+        wp_send_json_error(['message' => 'Permission denied']);
     }
-    $progress = get_transient( 'job_import_progress' ) ?: 0;
-    $running = get_transient( 'job_import_running' );
-    wp_send_json_success( array( 'progress' => $progress, 'running' => $running, 'errors' => 0 ) );
+    delete_transient('import_cancel');
+    wp_send_json_success();
 }
-add_action( 'wp_ajax_heartbeat_import_status', 'ajax_heartbeat_import_status' );
-?>
+
+add_action('wp_ajax_get_job_import_status', 'get_job_import_status_ajax');
+function get_job_import_status_ajax() {
+    error_log('get_job_import_status_ajax called');
+    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
+        error_log('Nonce verification failed for get_job_import_status');
+        wp_send_json_error(['message' => 'Nonce verification failed']);
+    }
+    if (!current_user_can('manage_options')) {
+        error_log('Permission denied for get_job_import_status');
+        wp_send_json_error(['message' => 'Permission denied']);
+    }
+    $progress = get_option('job_import_status') ?: [
+        'total' => 0,
+        'processed' => 0,
+        'created' => 0,
+        'updated' => 0,
+        'skipped' => 0,
+        'duplicates_drafted' => 0,
+        'drafted_old' => 0,
+        'time_elapsed' => 0,
+        'complete' => false,
+        'batch_size' => 10,
+        'inferred_languages' => 0,
+        'inferred_benefits' => 0,
+        'schema_generated' => 0,
+        'start_time' => microtime(true),
+        'end_time' => null,
+        'last_update' => time(),
+        'logs' => [],
+    ];
+    error_log('Progress before calculation: ' . print_r($progress, true));
+    if (!isset($progress['start_time'])) {
+        $progress['start_time'] = microtime(true);
+    }
+    // Keep the accumulated time_elapsed without recalculating to avoid including idle time
+    $progress['time_elapsed'] = $progress['time_elapsed'] ?? 0;
+    $progress['complete'] = ($progress['processed'] >= $progress['total']);
+    error_log('Returning status: ' . print_r($progress, true));
+    wp_send_json_success($progress);
+}
+
+add_action('wp_ajax_job_import_purge', 'job_import_purge_ajax');
+function job_import_purge_ajax() {
+    error_log('job_import_purge_ajax called');
+    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
+        error_log('Nonce verification failed for job_import_purge');
+        wp_send_json_error(['message' => 'Nonce verification failed']);
+    }
+    if (!current_user_can('manage_options')) {
+        error_log('Permission denied for job_import_purge');
+        wp_send_json_error(['message' => 'Permission denied']);
+    }
+    // Purge logic (from snippet)
+    wp_send_json_success();
+}
+
+add_action('wp_ajax_reset_job_import', 'reset_job_import_ajax');
+function reset_job_import_ajax() {
+    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
+        wp_send_json_error(['message' => 'Nonce verification failed']);
+    }
+    if (!current_user_can('manage_options')) wp_send_json_error(['message' => 'Permission denied']);
+    delete_option('job_import_process');
+    delete_option('job_import_status');
+    delete_option('job_import_processed_guids');
+    delete_option('job_import_batch_size');
+    delete_option('job_existing_guids');
+    delete_transient('import_cancel');
+    delete_option('job_import_time_per_job');
+    delete_option('job_json_total_count');
+    wp_send_json_success(['message' => 'Import reset successfully']);
+}

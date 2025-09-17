@@ -1,80 +1,85 @@
-// assets/admin.js
-// Enhanced: Fixed manual import handler for .manual-import-btn, added detailed console logs,
-// correct AJAX action/nonce, per-row status updates. Removed outdated #manual-import block.
-// Supports progress polling if needed for full imports.
-
 jQuery(document).ready(function($) {
-    'use strict';
+    const startBtn = $('#start-import');
+    const resumeBtn = $('#resume-import');
+    const cancelBtn = $('#cancel-import');
+    const resetBtn = $('#reset-import');
+    const progressDiv = $('#import-progress');
+    const logDiv = $('#import-log');
+    const logContent = $('#log-content');
+    let intervalId;
+    let isRunning = false;
 
-    var isImporting = {}; // Per-feed status to prevent duplicates
-
-    // Handle Manual Import button clicks (per feed)
-    $(document).on('click', '.manual-import-btn', function(e) {
-        e.preventDefault();
-
-        var $button = $(this);
-        var feedId = $button.data('feed-id');
-        var $row = $button.closest('tr');
-        var $statusCell = $row.find('td:last'); // Reuse actions cell for status
-
-        console.log('=== Job Import Debug: Manual button clicked for feed ID ===', feedId);
-
-        if (isImporting[feedId]) {
-            console.log('=== Job Import Debug: Import already running for feed ===', feedId);
-            return;
-        }
-
-        // Disable button, show spinner/status
-        isImporting[feedId] = true;
-        $button.prop('disabled', true).text('Importing...').after(' <span class="spinner is-active"></span>');
-        $statusCell.append('<span id="status-' + feedId + '" class="import-status" style="margin-left: 10px; color: blue;">Starting...</span>');
-
-        var data = {
-            action: 'manual_feed_import',
-            feed_id: feedId,
-            nonce: jobImportAjax.nonce
-        };
-
-        console.log('=== Job Import Debug: Sending AJAX for feed ===', feedId, data);
-
-        $.post(jobImportAjax.ajaxurl, data)
-            .done(function(response) {
-                console.log('=== Job Import Debug: AJAX response for feed ===', feedId, response);
-
-                if (response.success) {
-                    console.log('=== Job Import Debug: Import success for feed ===', feedId, response.data);
-                    $('#status-' + feedId).html('<span style="color: green;">Success: ' + response.data.message + '</span>').show();
-                } else {
-                    console.error('=== Job Import Debug: Import error for feed ===', feedId, response.data);
-                    $('#status-' + feedId).html('<span style="color: red;">Failed: ' + (response.data || 'Unknown error') + '</span>').show();
+    function updateProgress() {
+        $.post(ajaxurl, {
+            action: 'get_job_import_status',
+            nonce: jobImportData.nonce
+        }, function(response) {
+            if (response.success) {
+                const data = response.data;
+                const percent = data.total > 0 ? Math.round((data.processed / data.total) * 100) : 0;
+                $('#progress-percent').text(percent + '%');
+                $('#progress-bar .progress-fill').css('width', percent + '%');
+                $('#total-items').text(data.total);
+                $('#processed-items').text(data.processed);
+                $('#created-items').text(data.created);
+                $('#updated-items').text(data.updated);
+                $('#skipped-items').text(data.skipped);
+                $('#duplicates-drafted').text(data.duplicates_drafted);
+                $('#drafted-old').text(data.drafted_old);
+                $('#items-left').text(data.total - data.processed);
+                $('#status-message').text(data.message || 'Processing...');
+                logContent.html(data.logs.join('<br>'));
+                if (data.complete) {
+                    clearInterval(intervalId);
+                    isRunning = false;
+                    startBtn.show();
+                    resumeBtn.hide();
+                    cancelBtn.hide();
                 }
-            })
-            .fail(function(jqXHR, textStatus, errorThrown) {
-                console.error('=== Job Import Debug: AJAX fail for feed ===', feedId, {
-                    status: textStatus,
-                    error: errorThrown,
-                    response: jqXHR.responseText
-                });
-                $('#status-' + feedId).html('<span style="color: red;">AJAX Error: ' + textStatus + '</span>').show();
-            })
-            .always(function() {
-                console.log('=== Job Import Debug: AJAX complete for feed ===', feedId);
-                $button.prop('disabled', false).text('Manual Import').next('.spinner').remove();
-                delete isImporting[feedId];
-            });
-    });
-
-    // Existing full import handler (if #start-import exists; kept for compatibility)
-    $('#start-import').on('click', function(e) {
-        e.preventDefault();
-        // ... (unchanged from original second block, but add console logs if needed)
-        console.log('=== Job Import Debug: Full import button clicked ===');
-        // Implementation as before...
-    });
-
-    // Progress polling function (unchanged, but log if active)
-    function startPolling() {
-        console.log('=== Job Import Debug: Starting progress poll ===');
-        // ... (rest unchanged)
+            }
+        });
     }
+
+    startBtn.click(function() {
+        isRunning = true;
+        startBtn.hide();
+        resumeBtn.hide();
+        cancelBtn.show();
+        progressDiv.show();
+        logDiv.show();
+        $.post(ajaxurl, {
+            action: 'run_job_import_batch',
+            nonce: jobImportData.nonce,
+            start: 0
+        }, function(response) {
+            if (response.success) {
+                intervalId = setInterval(updateProgress, 2000);
+            }
+        });
+    });
+
+    cancelBtn.click(function() {
+        $.post(ajaxurl, {
+            action: 'cancel_job_import',
+            nonce: jobImportData.nonce
+        }, function() {
+            clearInterval(intervalId);
+            isRunning = false;
+            startBtn.show();
+            cancelBtn.hide();
+        });
+    });
+
+    resetBtn.click(function() {
+        $.post(ajaxurl, {
+            action: 'reset_job_import',
+            nonce: jobImportData.nonce
+        }, function(response) {
+            if (response.success) {
+                location.reload();
+            }
+        });
+    });
+
+    // Resume logic, purge, etc. (full from snippets)
 });
