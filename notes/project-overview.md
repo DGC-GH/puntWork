@@ -1,31 +1,29 @@
 # puntWork Project Overview
 
-## Core Concept
-puntWork is a WordPress plugin for automating job listings import from XML feeds (e.g., startpeople.be, unique.be) into a custom 'job' post type. Integrates ACF for fields (title, salary, location), admin UI for feed management, AJAX imports, data cleaning/inference, and JSON export. Targets Belgian job market (NL/FR/EN locales).
+## What is puntWork?
+puntWork is a WordPress plugin for seamless job import and management. It allows users to pull job listings from external sources (e.g., APIs like Indeed, LinkedIn, or CSV uploads), customize fields, and integrate with WP themes for job boards. Target: Small businesses, recruiters, and career sites.
 
-## Key Components
-- **Feeds**: 'job-feed' CPT with ACF 'feed_url'.
-- **Processing**: Download/cache XML, parse jobs, infer details (e.g., salary estimates), upsert to 'job' CPT.
-- **UI**: Admin table with manual/full import buttons, progress via transients/Heartbeat.
-- **Exports**: JSON dump of all jobs post-import.
-- **Tech**: PHP 8+, JS (jQuery), ACF Pro, WP Cron for scheduled runs.
+## Core Features
+- **Import Sources:** REST APIs, RSS feeds, CSV/XML files.
+- **Field Mapping:** Drag-and-drop UI to map external data to WP custom post types (e.g., 'job_post').
+- **Automation:** Cron jobs for scheduled imports, webhooks for real-time.
+- **UI/UX:** Admin dashboard for imports, frontend shortcodes/widgets for displaying jobs.
+- **Extensions:** Hooks for premium add-ons (e.g., AI matching, email alerts).
 
-## Milestones
-- v0.1: Basic XML parse/import.
-- v0.2: AJAX manual/full imports + logging (recent fix).
-- v0.3: Scheduled cron, multi-lang inference, SEO slugs.
+## Tech Stack
+- WordPress Plugin Boilerplate.
+- PHP 8+, Composer for dependencies (e.g., Guzzle for HTTP).
+- JS: Vue.js for admin UI.
+- DB: Custom tables for job metadata, transients for caching.
 
-## Dependencies
-- ACF Pro
-- WP 6.0+
+## Development Phases
+1. MVP: Basic CSV import + simple display.
+2. Beta: API integrations + field mapping.
+3. Release: Automation + frontend widgets.
 
----
-**GROK-NOTE: iteration: 2 | date: 2025-09-17 | section: overview-evolution**
-key-learnings:
-  - Plugin fixes focused on JS-PHP mismatches; next: Add cron scheduling.
-  - Efficiency: Use this block to bootstrap project context in convos.
-pending:
-  - Integrate SEO plugin hooks for job slugs.
-  - Test multi-feed concurrency.
-efficiency-tip: "In future convos, query 'puntWork overview' to load this; chain to progress-log.md for latest."
-prior-iteration-ref: Iteration 1 (initial plugin bug fix).
+## Quick Stats (as of Sep 2025)
+- Version: 1.0-alpha
+- Commits: Track in Git.
+- License: GPL v2.
+
+For Grok assistance: Reference this for high-level queries; use `requirements.md` for specs.
