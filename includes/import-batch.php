@@ -4,6 +4,35 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+if ( ! function_exists( 'get_json_item_count' ) ) {
+    /**
+     * Counts top-level items in a JSON array file.
+     *
+     * @param string $json_path Path to the JSON file.
+     * @return int Item count, or 0 on error/missing file.
+     */
+    function get_json_item_count( $json_path ) {
+        if ( ! file_exists( $json_path ) ) {
+            error_log( 'JSON file not found for counting: ' . esc_html( $json_path ) );
+            return 0;
+        }
+
+        $content = file_get_contents( $json_path );
+        if ( false === $content ) {
+            error_log( 'Failed to read JSON file: ' . esc_html( $json_path ) );
+            return 0;
+        }
+
+        $data = json_decode( $content, true );
+        if ( JSON_ERROR_NONE !== json_last_error() ) {
+            error_log( 'JSON decode error in get_json_item_count: ' . esc_html( json_last_error_msg() ) );
+            return 0;
+        }
+
+        return is_array( $data ) ? (int) count( $data ) : 0;
+    }
+}
+
 if (!function_exists('import_jobs_from_json')) {
     function import_jobs_from_json($is_batch = false, $batch_start = 0) {
         do_action( 'qm/cease' ); // Disable Query Monitor data collection to reduce memory usage
@@ -18,7 +47,7 @@ if (!function_exists('import_jobs_from_json')) {
         wp_suspend_cache_invalidation(true);
         remove_action('post_updated', 'wp_save_post_revision');
         $start_time = microtime(true);
-        $json_path = ABSPATH . 'feeds/combined-jobs.jsonl'; // Fixed: .jsonl to match combine output
+        $json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
         if (!file_exists($json_path)) {
             error_log('JSONL file not found: ' . $json_path);
             return ['success' => false, 'message' => 'JSONL file not found', 'logs' => ['JSONL file not found']];
@@ -63,122 +92,201 @@ if (!function_exists('import_jobs_from_json')) {
             error_log("Loaded " . count($batch_json_items) . " items for batch starting at $start_index");
             $batch_items = [];
             $batch_guids = [];
-            foreach ($batch_json_items as $item) {
-                $guid = $item['guid'] ?? '';
-                if ($guid) {
-                    $batch_items[$guid] = ['item' => $item];
-                    $batch_guids[] = $guid;
-                } else {
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped item without GUID';
-                    error_log('Skipped item without GUID');
+            for ($i = 0; $i < count($batch_json_items); $i++) {
+                $current_index = $start_index + $i;
+                if (get_transient('import_cancel') === true) {
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Import cancelled at #' . ($current_index + 1);
+                    update_option('job_import_progress', $current_index, false);
+                    return ['success' => false, 'message' => 'Import cancelled', 'logs' => $logs];
                 }
+                $item = $batch_json_items[$i];
+                $guid = $item['guid'] ?? '';
+                if (empty($guid)) {
+                    $skipped++;
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped #' . ($current_index + 1) . ': Empty GUID';
+                    continue;
+                }
+                $processed_guids[] = $guid;
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Processing #' . ($current_index + 1) . ' GUID: ' . $guid;
+                $batch_items[$guid] = ['item' => $item, 'index' => $current_index];
+                $batch_guids[] = $guid;
+                if (!empty($item['job_languages'])) $inferred_languages++;
+                $benefit_count = (!empty($item['job_car']) ? 1 : 0) + (!empty($item['job_remote']) ? 1 : 0) + (!empty($item['job_meal_vouchers']) ? 1 : 0) + (!empty($item['job_flex_hours']) ? 1 : 0);
+                $inferred_benefits += $benefit_count;
+                if (!empty($item['job_posting']) || !empty($item['job_ecommerce'])) $schema_generated++;
+                if (memory_get_usage(true) > $threshold) {
+                    $batch_size = max(1, (int)($batch_size * 0.8)); // Changed to 80% reduction instead of halving for more gradual adjustment
+                    update_option('job_import_batch_size', $batch_size, false);
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Memory high, reduced batch to ' . $batch_size;
+                    $end_index = min($start_index + $batch_size, $total);
+                }
+                if ($i % 5 === 0) {
+                    error_log("Processed $i items in batch");
+                    ob_flush();
+                    flush();
+                }
+                unset($batch_json_items[$i]);
             }
+            unset($batch_json_items);
+
             if (empty($batch_guids)) {
-                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'No valid GUIDs in batch';
-                return [
-                    'success' => true,
-                    'processed' => $start_index,
-                    'total' => $total,
-                    'created' => $created,
-                    'updated' => $updated,
-                    'skipped' => $skipped,
-                    'duplicates_drafted' => $duplicates_drafted,
-                    'drafted_old' => $drafted_old,
-                    'time_elapsed' => 0,
-                    'complete' => ($start_index >= $total),
-                    'logs' => $logs,
-                    'batch_size' => $batch_size,
-                    'inferred_languages' => $inferred_languages,
-                    'inferred_benefits' => $inferred_benefits,
-                    'schema_generated' => $schema_generated,
-                    'batch_time' => 0,
-                    'batch_processed' => 0
-                ];
+                update_option('job_import_progress', $end_index, false);
+                update_option('job_import_processed_guids', $processed_guids, false);
+                $time_elapsed = microtime(true) - $start_time;
+                return ['success' => true, 'processed' => $end_index, 'total' => $total, 'created' => $created, 'updated' => $updated, 'skipped' => $skipped, 'duplicates_drafted' => $duplicates_drafted, 'drafted_old' => $drafted_old, 'time_elapsed' => $time_elapsed, 'complete' => ($end_index >= $total), 'logs' => $logs, 'batch_size' => $batch_size, 'inferred_languages' => $inferred_languages, 'inferred_benefits' => $inferred_benefits, 'schema_generated' => $schema_generated, 'batch_time' => $time_elapsed, 'batch_processed' => 0];
             }
 
-            // Get existing data for batch
-            $post_ids_by_guid = [];
+            // Bulk existing post_ids
+            $guid_placeholders = implode(',', array_fill(0, count($batch_guids), '%s'));
+            $existing_meta = $wpdb->get_results($wpdb->prepare(
+                "SELECT post_id, meta_value AS guid FROM $wpdb->postmeta WHERE meta_key = 'guid' AND meta_value IN ($guid_placeholders)",
+                $batch_guids
+            ));
+            $existing_by_guid = [];
+            foreach ($existing_meta as $row) {
+                $existing_by_guid[$row->guid][] = $row->post_id;
+            }
+
+            $post_ids_by_guid = []; // Initialize to prevent null reference error
+            handle_duplicates($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
+
+            // Bulk fetch for all existing in batch
+            $post_ids = array_values($post_ids_by_guid);
+            $max_chunk_size = 50;
+            $post_id_chunks = array_chunk($post_ids, $max_chunk_size);
             $last_updates = [];
             $all_hashes_by_post = [];
-            if (!empty($batch_guids)) {
-                $placeholders = implode(',', array_fill(0, count($batch_guids), '%s'));
-                $existing_posts = $wpdb->get_results($wpdb->prepare(
-                    "SELECT p.ID, pm.meta_value AS guid, pum1.meta_value AS last_update, pum2.meta_value AS hash
-                     FROM $wpdb->posts p
-                     JOIN $wpdb->postmeta pm ON p.ID = pm.post_id
-                     LEFT JOIN $wpdb->postmeta pum1 ON p.ID = pum1.post_id AND pum1.meta_key = '_last_import_update'
-                     LEFT JOIN $wpdb->postmeta pum2 ON p.ID = pum2.post_id AND pum2.meta_key = '_import_hash'
-                     WHERE p.post_type = 'job' AND pm.meta_key = 'guid' AND pm.meta_value IN ($placeholders)",
-                    $batch_guids
-                ));
-                foreach ($existing_posts as $post) {
-                    $post_ids_by_guid[$post->guid] = $post->ID;
-                    $last_updates[$post->ID] = (object)['meta_value' => $post->last_update];
-                    $all_hashes_by_post[$post->ID] = $post->hash;
+            if (!empty($post_ids)) {
+                foreach ($post_id_chunks as $chunk) {
+                    if (empty($chunk)) continue;
+                    $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
+                    $chunk_last = $wpdb->get_results($wpdb->prepare(
+                        "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_last_import_update' AND post_id IN ($placeholders)",
+                        $chunk
+                    ), OBJECT_K);
+                    $last_updates += (array)$chunk_last;
+                }
+
+                foreach ($post_id_chunks as $chunk) {
+                    if (empty($chunk)) continue;
+                    $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
+                    $chunk_hashes = $wpdb->get_results($wpdb->prepare(
+                        "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
+                        $chunk
+                    ), OBJECT_K);
+                    foreach ($chunk_hashes as $id => $obj) {
+                        $all_hashes_by_post[$id] = $obj->meta_value;
+                    }
                 }
             }
 
-            // Process the batch
-            $processed_count = 0;
-            process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $logs, $updated, $created, $skipped, $processed_count, $duplicates_drafted, $drafted_old, $inferred_languages, $inferred_benefits, $schema_generated);
+            $processed_count = 0; // Initialize to prevent null reference error
+            process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $logs, $updated, $created, $skipped, $processed_count);
 
-            $new_progress = $start_index + $processed_count;
-            update_option('job_import_progress', $new_progress, false);
-            $processed_guids = array_merge($processed_guids, $batch_guids);
-            update_option('job_import_processed_guids', array_unique($processed_guids), false);
+            unset($batch_items, $batch_guids);
 
-            $batch_time = microtime(true) - $start_time;
-            $status = [
-                'success' => true,
-                'processed' => $new_progress,
+            update_option('job_import_progress', $end_index, false);
+            update_option('job_import_processed_guids', $processed_guids, false);
+            $time_elapsed = microtime(true) - $start_time;
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Batch complete: Processed $processed_count items";
+
+            // Dynamic batch size adjustment with improvements
+            $time_per_item = $processed_count > 0 ? $time_elapsed / $processed_count : 0;
+            $prev_time_per_item = get_option('job_import_time_per_job', 0);
+            update_option('job_import_time_per_job', $time_per_item, false);
+            $peak_memory = memory_get_peak_usage(true);
+            $memory_ratio = $peak_memory / $memory_limit_bytes;
+
+            // Use rolling average for time_per_item to stabilize adjustments
+            $avg_time_per_item = get_option('job_import_avg_time_per_job', $time_per_item);
+            $avg_time_per_item = ($avg_time_per_item * 0.7) + ($time_per_item * 0.3); // Weighted average, favoring history
+            update_option('job_import_avg_time_per_job', $avg_time_per_item, false);
+
+            // Memory-based adjustment: More gradual
+            if ($memory_ratio > 0.85) { // Raised threshold from 0.8 for allowing higher usage before reduction
+                $batch_size = max(1, floor($batch_size * 0.7)); // Slower reduction (70% instead of 75%)
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch size reduced to ' . $batch_size . ' due to high memory ratio: ' . number_format($memory_ratio, 2);
+            } elseif ($memory_ratio < 0.5 && $avg_time_per_item < 1.0) { // Adjusted threshold and time condition
+                $batch_size = min(50, floor($batch_size * 1.5)); // Capped at 50 for safety, more aggressive increase (150%)
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch size increased to ' . $batch_size . ' due to low memory ratio: ' . number_format($memory_ratio, 2) . ' and low avg time: ' . number_format($avg_time_per_item, 2);
+            }
+
+            // Time-based adjustment using average
+            if ($prev_time_per_item > 0) {
+                $time_ratio = $avg_time_per_item / $prev_time_per_item;
+                if ($time_ratio > 1.2) { // Lowered threshold from 1.5 for quicker response to slowdowns
+                    $batch_size = max(1, floor($batch_size / (1 + ($time_ratio - 1) * 0.5))); // Gradual reduction based on excess ratio
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch size reduced to ' . $batch_size . ' due to high time ratio: ' . number_format($time_ratio, 2);
+                } elseif ($time_ratio < 0.8) { // Adjusted from 0.7 for more opportunities to increase
+                    $batch_size = min(50, floor($batch_size * (1 + (1 - $time_ratio) * 1.5))); // Capped at 50, scaled increase based on improvement
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch size increased to ' . $batch_size . ' due to low time ratio: ' . number_format($time_ratio, 2);
+                }
+            }
+
+            update_option('job_import_batch_size', $batch_size, false);
+
+            // Update cumulative status
+            $status = get_option('job_import_status') ?: [
                 'total' => $total,
-                'created' => $created,
-                'updated' => $updated,
-                'skipped' => $skipped,
-                'duplicates_drafted' => $duplicates_drafted,
-                'drafted_old' => $drafted_old,
-                'time_elapsed' => $batch_time, // Per-batch for accumulation
-                'complete' => ($new_progress >= $total),
-                'logs' => $logs,
+                'processed' => 0,
+                'created' => 0,
+                'updated' => 0,
+                'skipped' => 0,
+                'duplicates_drafted' => 0,
+                'drafted_old' => 0,
+                'time_elapsed' => 0,
+                'complete' => false,
                 'batch_size' => $batch_size,
-                'inferred_languages' => $inferred_languages,
-                'inferred_benefits' => $inferred_benefits,
-                'schema_generated' => $schema_generated,
-                'batch_time' => $batch_time,
+                'inferred_languages' => 0,
+                'inferred_benefits' => 0,
+                'schema_generated' => 0,
+                'start_time' => $start_time,
+                'last_update' => time(),
+                'logs' => [], // Ensure logs key exists
+            ];
+            if (!isset($status['start_time'])) {
+                $status['start_time'] = $start_time;
+            }
+            $status['processed'] = $end_index;
+            $status['created'] += $created;
+            $status['updated'] += $updated;
+            $status['skipped'] += $skipped;
+            $status['duplicates_drafted'] += $duplicates_drafted;
+            $status['drafted_old'] += $drafted_old;
+            $status['time_elapsed'] += $time_elapsed;
+            $status['complete'] = ($end_index >= $total);
+            $status['batch_size'] = $batch_size;
+            $status['inferred_languages'] += $inferred_languages;
+            $status['inferred_benefits'] += $inferred_benefits;
+            $status['schema_generated'] += $schema_generated;
+            $status['last_update'] = time();
+            update_option('job_import_status', $status, false);
+
+            // Return with cumulative stats
+            return [
+                'success' => true,
+                'processed' => $status['processed'],
+                'total' => $status['total'],
+                'created' => $status['created'],
+                'updated' => $status['updated'],
+                'skipped' => $status['skipped'],
+                'duplicates_drafted' => $status['duplicates_drafted'],
+                'drafted_old' => $status['drafted_old'],
+                'time_elapsed' => $status['time_elapsed'],
+                'complete' => $status['complete'],
+                'logs' => $logs,
+                'batch_size' => $status['batch_size'],
+                'inferred_languages' => $status['inferred_languages'],
+                'inferred_benefits' => $status['inferred_benefits'],
+                'schema_generated' => $status['schema_generated'],
+                'batch_time' => $time_elapsed,
                 'batch_processed' => $processed_count
             ];
-
-            // Update global status
-            $global_status = get_option('job_import_status', []);
-            $global_status['processed'] = $new_progress;
-            $global_status['created'] += $created;
-            $global_status['updated'] += $updated;
-            $global_status['skipped'] += $skipped;
-            $global_status['duplicates_drafted'] += $duplicates_drafted;
-            $global_status['drafted_old'] += $drafted_old;
-            $global_status['inferred_languages'] += $inferred_languages;
-            $global_status['inferred_benefits'] += $inferred_benefits;
-            $global_status['schema_generated'] += $schema_generated;
-            $global_status['time_elapsed'] += $batch_time;
-            $global_status['complete'] = $status['complete'];
-            $global_status['logs'] = array_merge($global_status['logs'] ?? [], $logs);
-            $global_status['last_update'] = time();
-            if ($status['complete']) {
-                $global_status['end_time'] = microtime(true);
-            }
-            update_option('job_import_status', $global_status, false);
-
-            error_log('Batch complete: processed ' . $processed_count . ' items in ' . $batch_time . 's');
-            return $status;
-
         } catch (Exception $e) {
-            error_log('Import batch error: ' . $e->getMessage());
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch error: ' . $e->getMessage();
-            return [
-                'success' => false,
-                'message' => $e->getMessage(),
-                'logs' => $logs
-            ];
+            $error_msg = 'Batch import error: ' . $e->getMessage();
+            error_log($error_msg);
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
+            return ['success' => false, 'message' => 'Batch failed: ' . $e->getMessage(), 'logs' => $logs];
         }
     }
 }
