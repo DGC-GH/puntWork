@@ -66,7 +66,7 @@ function setup_job_import() {
           'reset-import.php',
           'scheduling-triggers.php',
           'shortcode.php',
-
+          'utility-helpers.php',
     );
     foreach ( $includes as $include ) {
         $file = JOB_IMPORT_PATH . 'includes/' . $include;
