@@ -1,3 +1,9 @@
+<?php
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 // Schedule daily via WP Cron at 3:33 Brussels time
 add_action('wp', function() {
     if (!wp_next_scheduled('fetch_combined_jobs_json')) {
