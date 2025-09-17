@@ -1,3 +1,9 @@
+?php
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 add_action('admin_menu', function() {
     add_submenu_page(
         'edit.php?post_type=job',

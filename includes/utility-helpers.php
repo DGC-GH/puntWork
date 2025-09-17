@@ -1,3 +1,9 @@
+?php
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 if (!function_exists('get_memory_limit_bytes')) {
     function get_memory_limit_bytes() {
         $memory_limit = ini_get('memory_limit');

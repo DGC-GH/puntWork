@@ -1,3 +1,9 @@
+?php
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 function infer_item_details(&$item, $fallback_domain, $lang, &$job_obj) {
     $province = strtolower(trim(isset($item->province) ? (string)$item->province : ''));
     $norm_province = get_province_map()[$province] ?? $fallback_domain;

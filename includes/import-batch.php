@@ -1,3 +1,9 @@
+?php
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 if (!function_exists('import_jobs_from_json')) {
     function import_jobs_from_json($is_batch = false, $batch_start = 0) {
         do_action( 'qm/cease' ); // Disable Query Monitor data collection to reduce memory usage
