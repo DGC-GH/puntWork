@@ -1,9 +1,14 @@
 <?php
 /**
  * Plugin Name: Job Import
- * Description: Imports jobs from XML feeds via job-feed CPT.
- * Version: 1.0.0
+ * Plugin URI: https://github.com/DGC-GH/puntWork
+ * Description: Imports jobs from JSONL feeds into WordPress posts.
+ * Version: 1.2.0
  * Author: DGC-GH
+ * Requires at least: 5.0
+ * Tested up to: 6.6
+ * Requires PHP: 7.4
+ * Text Domain: job-import
  */
 
 // Prevent direct access
@@ -11,76 +16,95 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'JOB_IMPORT_VERSION', '1.0.0' );
-define( 'JOB_IMPORT_PATH', plugin_dir_path( __FILE__ ) );
-define( 'JOB_IMPORT_URL', plugin_dir_url( __FILE__ ) );
-define( 'JOB_IMPORT_LOGS', JOB_IMPORT_PATH . 'logs/import.log' );
+// Define constants
+define( 'JOB_IMPORT_VERSION', '1.2.0' );
+define( 'JOB_IMPORT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'JOB_IMPORT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+define( 'JOB_IMPORT_TEXT_DOMAIN', 'job-import' );
 
 // Activation hook
 register_activation_hook( __FILE__, 'job_import_activate' );
 function job_import_activate() {
-    // Schedule cron
-    if ( ! wp_next_scheduled( 'job_import_cron' ) ) {
-        wp_schedule_event( time(), 'daily', 'job_import_cron' );
+    // Flush rewrite rules if needed, set defaults
+    if ( ! get_option( 'job_import_batch_size' ) ) {
+        update_option( 'job_import_batch_size', 20 );
     }
-    // Create logs dir if needed
-    $logs_dir = dirname( JOB_IMPORT_LOGS );
-    if ( ! file_exists( $logs_dir ) ) {
-        wp_mkdir_p( $logs_dir );
-    }
-    // Flush rewrite rules if CPTs involved (though ACF handles)
     flush_rewrite_rules();
 }
 
 // Deactivation hook
 register_deactivation_hook( __FILE__, 'job_import_deactivate' );
 function job_import_deactivate() {
-    wp_clear_scheduled_hook( 'job_import_cron' );
+    flush_rewrite_rules();
 }
 
-// Init setup
-add_action( 'init', 'setup_job_import' );
-function setup_job_import() {
-    // Global batch limit (from old 1)
-    global $job_import_batch_limit;
-    $job_import_batch_limit = 50;
-    
-    // Load includes
-    $includes = array(
-        'core-structure-logic.php',
-        'admin-menu.php',
-        'admin-page-html.php',                    
-          'ajax-handlers.php',
-          'combine-jsonl.php',
-          'download-feed.php',
-          'enqueue-scripts-js.php',
-          'gzip-file.php',
-          'handle-duplicates.php',
-          'heartbeat-control.php',
-          'import-batch.php',
-          'item-cleaning.php',
-          'item-inference.php',
-          'mappings-constants.php',
-          'process-batch-items.php',
-          'process-xml-batch.php',
-          'reset-import.php',
-          'scheduling-triggers.php',
-          'shortcode.php',
+// Internationalization
+add_action( 'plugins_loaded', 'job_import_load_textdomain' );
+function job_import_load_textdomain() {
+    load_plugin_textdomain( JOB_IMPORT_TEXT_DOMAIN, false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+}
 
+// Include all core files on plugins_loaded
+add_action( 'plugins_loaded', 'job_import_include_files' );
+function job_import_include_files() {
+    $includes = array(
+        'mappings-constants.php',
+        'core-structure-logic.php',
+        'utility-helpers.php',
+        'download-feed.php',
+        'combine-jsonl.php',
+        'gzip-file.php',
+        'item-cleaning.php',
+        'item-inference.php',
+        'process-batch-items.php',
+        'handle-duplicates.php',
+        'import-batch.php',
+        'process-xml-batch.php',
+        'reset-import.php',
+        'scheduling-triggers.php',
+        'heartbeat-control.php',
+        'shortcode.php',
+        'admin-menu.php',
+        'admin-page-html.php',
+        'enqueue-scripts-js.php',
+        'ajax-handlers.php',  // Ensures AJAX handlers load
     );
-    foreach ( $includes as $include ) {
-        $file = JOB_IMPORT_PATH . 'includes/' . $include;
-        if ( file_exists( $file ) ) {
-            require_once $file;
+
+    foreach ( $includes as $file ) {
+        $path = JOB_IMPORT_PLUGIN_DIR . 'includes/' . $file;
+        if ( file_exists( $path ) ) {
+            require_once $path;
+        } else {
+            error_log( 'Job Import: Missing include file - ' . $path );
         }
     }
 }
 
-// Uninstall hook (cleanup)
-register_uninstall_hook( __FILE__, 'job_import_uninstall' );
-function job_import_uninstall() {
-    // Delete options, transients; optional: delete job-feed posts
-    delete_option( 'job_import_last_run' );
-    // Clear cron
-    wp_clear_scheduled_hook( 'job_import_cron' );
+// Enqueue admin scripts/styles (if not in enqueue-scripts-js.php)
+add_action( 'admin_enqueue_scripts', 'job_import_admin_enqueue' );
+function job_import_admin_enqueue( $hook ) {
+    if ( 'toplevel_page_job-import-dashboard' !== $hook && 'job-import_page_job-import-dashboard' !== $hook ) {
+        return;
+    }
+    wp_enqueue_script( 'jquery' );
+    // enqueue-scripts-js.php will handle the rest
+}
+
+// Register post type if in core-structure-logic.php (stub if needed)
+if ( ! function_exists( 'job_import_register_post_type' ) ) {
+    add_action( 'init', 'job_import_register_post_type' );
+    function job_import_register_post_type() {
+        register_post_type( 'job', array(
+            'labels' => array( 'name' => 'Jobs', 'singular_name' => 'Job' ),
+            'public' => true,
+            'has_archive' => true,
+            'supports' => array( 'title', 'editor', 'custom-fields' ),
+            'show_in_rest' => true,
+        ) );
+    }
+}
+
+// Uninstall hook
+if ( defined( 'WP_UNINSTALL_PLUGIN' ) ) {
+    require_once JOB_IMPORT_PLUGIN_DIR . 'uninstall.php';
 }
