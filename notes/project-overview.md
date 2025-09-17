@@ -1,39 +1,31 @@
-# Project Overview: Roadmap & Structure
-Vision
+# puntWork Project Overview
 
-Turn raw job feeds into seamless WP posts with zero-touch batches, scaling to enterprise via cron/AJAX. Profitable leveraging X Ads and other sources to generate traffic for affiliate marketing referrers, payed per succesful application on external website with bonus per hire, by 2026. Generate paid refferrers to external application forms, with pay per conversion and bonus per hire, premium add-ons and/or SAAS for recruiting companies marketing departments. Straight into the bright, exciting future!
+## Core Concept
+puntWork is a WordPress plugin for automating job listings import from XML feeds (e.g., startpeople.be, unique.be) into a custom 'job' post type. Integrates ACF for fields (title, salary, location), admin UI for feed management, AJAX imports, data cleaning/inference, and JSON export. Targets Belgian job market (NL/FR/EN locales).
 
+## Key Components
+- **Feeds**: 'job-feed' CPT with ACF 'feed_url'.
+- **Processing**: Download/cache XML, parse jobs, infer details (e.g., salary estimates), upsert to 'job' CPT.
+- **UI**: Admin table with manual/full import buttons, progress via transients/Heartbeat.
+- **Exports**: JSON dump of all jobs post-import.
+- **Tech**: PHP 8+, JS (jQuery), ACF Pro, WP Cron for scheduled runs.
 
-## Development Roadmap
-### Phase 1: Planning (Complete - Q1 2025)
-- Defined requirements, wireframed UI.
-- Set up repo structure.
+## Milestones
+- v0.1: Basic XML parse/import.
+- v0.2: AJAX manual/full imports + logging (recent fix).
+- v0.3: Scheduled cron, multi-lang inference, SEO slugs.
 
-### Phase 2: Core Development (Complete - Q2-Q3 2025)
-- Implement import pipeline, scheduling.
-- Add helpers for cleaning/inference.
+## Dependencies
+- ACF Pro
+- WP 6.0+
 
-### Phase 3: UI & Testing (In Progress - Q4 2025)
-- Build admin dashboard.
-- Full testing suite.
-
-### Phase 4: Deployment & Maintenance (Q1 2026)
-- WP.org submission.
-- Ongoing feed compatibility updates.
-
-Timelines flexible; track in progress-log.md.
-
-## Project Structure
-- **job-import/** (Main plugin folder)
-  - job-import.php: Plugin header, activation hooks.
-  - processor.php: Feed download, parsing, batching.
-  - scheduler.php: Cron setup, event triggers.
-  - helpers.php: Utility functions (clean, infer, hash).
-  - admin/ : Settings pages, dashboard.
-  - includes/ : Classes for jobs (e.g., JobImporter).
-- **notes/**: This folder—docs, logs.
-- **assets/**: CSS/JS for admin.
-- **tests/**: PHPUnit tests.
-
-For Future Grok: When updating structure, validate against WP plugin standards. Use this as quick ref before code changes.
-Last Updated: Sept 16, 2025 (Consolidated by Grok)
+---
+**GROK-NOTE: iteration: 2 | date: 2025-09-17 | section: overview-evolution**
+key-learnings:
+  - Plugin fixes focused on JS-PHP mismatches; next: Add cron scheduling.
+  - Efficiency: Use this block to bootstrap project context in convos.
+pending:
+  - Integrate SEO plugin hooks for job slugs.
+  - Test multi-feed concurrency.
+efficiency-tip: "In future convos, query 'puntWork overview' to load this; chain to progress-log.md for latest."
+prior-iteration-ref: Iteration 1 (initial plugin bug fix).
