@@ -1,47 +1,61 @@
 <?php
 /**
- * Helpers file for job import plugin.
- * Utility functions for feed querying and other tasks.
- *
- * @package JobImport
- * @version 1.1
+ * Helper functions for Job Import Plugin
+ * Based on old WPCode snippets utilities.
  */
 
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
+// Existing helpers (if any) go here... e.g., clean_item(), infer_salary(), etc. from snippets 1.6/1.7
 
 /**
- * Retrieve all published job-feed CPT posts.
+ * Get all published job-feed URLs from ACF CPT.
  *
- * @return array|WP_Post[] Array of job-feed posts.
+ * @return array Array of feed URLs, keyed by post ID for logging.
  */
-function job_import_get_job_feeds() {
-    $feeds = get_posts( array(
-        'post_type' => 'job-feed',
-        'post_status' => 'publish',
-        'posts_per_page' => -1, // Fetch all
-        'orderby' => 'modified',
-        'order' => 'DESC',
-        'fields' => 'all'
+function get_job_feed_urls() {
+    if ( ! class_exists( 'ACF' ) ) {
+        error_log( 'Job Import: ACF not active, skipping feed fetch.' );
+        return array();
+    }
+
+    $feeds = array();
+    $query = new WP_Query( array(
+        'post_type'      => 'job-feed',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
     ) );
 
+    if ( $query->have_posts() ) {
+        foreach ( $query->posts as $post_id ) {
+            $feed_url = get_field( 'feed_url', $post_id ); // ACF field
+            if ( ! empty( $feed_url ) && filter_var( $feed_url, FILTER_VALIDATE_URL ) ) {
+                $feeds[ $post_id ] = $feed_url;
+            } else {
+                error_log( "Job Import: Invalid or missing feed_url for job-feed post ID {$post_id}" );
+            }
+        }
+    }
+
+    wp_reset_postdata();
     return $feeds;
 }
 
 /**
- * Sanitize and validate a feed URL.
+ * Get last run timestamp for a specific feed (stored as post meta).
  *
- * @param string $url The URL to validate.
- * @return string|false Valid URL or false.
+ * @param int $post_id Job-feed post ID.
+ * @return string Timestamp or empty.
  */
-function job_import_validate_feed_url( $url ) {
-    $url = filter_var( $url, FILTER_SANITIZE_URL );
-    if ( filter_var( $url, FILTER_VALIDATE_URL ) && strpos( $url, 'xml' ) !== false ) { // Basic RSS/XML check
-        return $url;
-    }
-    return false;
+function get_feed_last_run( $post_id ) {
+    return get_post_meta( $post_id, '_feed_last_run', true );
 }
 
-// Additional existing helpers can be added here if present in current version
-// e.g., function job_import_log_error( $message ) { error_log( '[Job Import] ' . $message ); }
+/**
+ * Update last run timestamp for a feed.
+ *
+ * @param int $post_id Job-feed post ID.
+ * @return bool True on success.
+ */
+function update_feed_last_run( $post_id ) {
+    return update_post_meta( $post_id, '_feed_last_run', current_time( 'mysql' ) );
+}
