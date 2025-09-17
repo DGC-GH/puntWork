@@ -18,3 +18,34 @@ When querying Grok for code/help:
 - No lectures; focus on "vibe coding" – fun, iterative, optimal.
 
 Update this file after major sessions to retain vibe.
+
+
+## Learnings from Iterations
+- Specify "minimal viable" to avoid over-engineering (e.g., fgetcsv() for speed).
+- Always include "WP plugin context" for enqueuing/hooks.
+- For APIs: Request "error-resilient Guzzle" w/ transients.
+- Dedupe: Use WP_Query; add "perf opt" for indexes.
+- Debug: "Simulate error X, suggest fix."
+- Efficiency: Chain queries; use tables for comparisons.
+- Repo Fetch Reliability: GitHub raw/blob tools fail on plain text/HTML mismatch; chain API call + base64 decode in code_execution (if internet enabled) or prompt for manual paste. Test: Simulate fetch error, output 'UNRELIABLE_FETCH' flag.
+
+
+# LLM Instructions for puntWork Collaboration
+
+## Core Guidelines
+- Context: Always prepend "puntWork WP job import plugin" to queries.
+- Output Format: Code snippet (block-ready) + bullet explanation + PHPUnit stub.
+- Enforce: WP Coding Standards; namespaces (Puntwork\); esc_html all.
+
+## Tool Usage
+- For code gen: Reference includes/[file].php; suggest hooks.
+- Repo Access: Use raw URLs for content; if fail, flag 'FETCH_ERROR' and suggest manual.
+
+## Tool Reliability for Repo Fetches
+For file retrieval, prioritize GitHub API JSON (base64 decode content); fallback to web_search_with_snippets on exact raw URL if API rate-limited. Avoid raw.githubusercontent.com direct in browse_page—use blob HTML extraction as last resort. Example: browse_page on https://api.github.com/repos/DGC-GH/puntWork/contents/notes/llm-instructions.md, instructions: "Parse JSON, base64 decode 'content' field to raw MD."
+
+## Preferences
+- Minimal deps; perf-first (transients/cache).
+- No over-engineering: MVP > perfect.
+
+Full: Align w/ grok-collaboration-guide.md.
