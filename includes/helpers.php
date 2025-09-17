@@ -8,6 +8,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+require_once __DIR__ . '/mappings.php'; // For maps
+
 /**
  * Get all published job-feed URLs from ACF CPT.
  *
@@ -15,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function get_job_feed_urls() {
     if ( ! class_exists( 'ACF' ) ) {
-        error_log( 'Job Import: ACF not active, skipping feed fetch.' );
+        log_import_event( 'ACF not active, skipping feed fetch.', 'error' );
         return array();
     }
 
@@ -33,7 +35,7 @@ function get_job_feed_urls() {
             if ( ! empty( $feed_url ) && filter_var( $feed_url, FILTER_VALIDATE_URL ) ) {
                 $feeds[ $post_id ] = $feed_url;
             } else {
-                error_log( "Job Import: Invalid or missing feed_url for job-feed post ID {$post_id}" );
+                log_import_event( "Invalid or missing feed_url for job-feed post ID {$post_id}", 'warn' );
             }
         }
     }
@@ -85,7 +87,6 @@ function clean_item( $data ) {
 /**
  * Infer additional details for item (ported from old 1.7 - Item Inference.php).
  * Handles salary estimates, benefits regex, skills, enhanced title, etc.
- * Assumes mappings like get_province_map(), get_salary_estimates(), get_icon_map() in mappings.php.
  *
  * @param array $item Cleaned item data.
  * @param string $fallback_domain Default domain (e.g., 'be').
@@ -116,7 +117,7 @@ function infer_item_details( $item, $fallback_domain = 'be', $lang = 'en' ) {
         function( $carry, $key ) use ( $fg ) {
             return strpos( $fg, strtolower( $key ) ) !== false ? $key : $carry;
         },
-        null
+        'default'
     );
 
     $salary_text = '';
@@ -126,13 +127,9 @@ function infer_item_details( $item, $fallback_domain = 'be', $lang = 'en' ) {
         $salary_text = '€' . $item['salaryfrom'];
     } else {
         $est_prefix = ( $lang == 'nl' ? 'Geschat ' : ( $lang == 'fr' ? 'Estimé ' : 'Est. ' ) );
-        if ( $estimate_key ) {
-            $low = get_salary_estimates()[ $estimate_key ]['low'];
-            $high = get_salary_estimates()[ $estimate_key ]['high'];
-            $salary_text = $est_prefix . '€' . $low . ' - €' . $high;
-        } else {
-            $salary_text = '€3000 - €4500';
-        }
+        $low = get_salary_estimates()[ $estimate_key ]['low'];
+        $high = get_salary_estimates()[ $estimate_key ]['high'];
+        $salary_text = $est_prefix . '€' . $low . ' - €' . $high;
     }
     $inferred['salary_text'] = $salary_text;
 
@@ -185,4 +182,55 @@ function infer_item_details( $item, $fallback_domain = 'be', $lang = 'en' ) {
     $inferred['job_desc'] = $job_desc;
 
     return $inferred;
+}
+
+/**
+ * Structured logging (ported from old 1.2 - Utility Helpers.php).
+ *
+ * @param string $msg Message.
+ * @param string $level info|warn|error.
+ */
+function log_import_event( $msg, $level = 'info' ) {
+    $log_entry = '[' . current_time( 'Y-m-d H:i:s' ) . '] [' . $level . '] ' . $msg . PHP_EOL;
+    file_put_contents( JOB_IMPORT_LOGS, $log_entry, FILE_APPEND | LOCK_EX );
+}
+
+/**
+ * Format date for locale (ported from 1.2).
+ *
+ * @param string $timestamp MySQL timestamp.
+ * @param string $lang nl|fr|en.
+ * @return string Formatted date.
+ */
+function format_date_locale( $timestamp, $lang = 'en' ) {
+    $date = new DateTime( $timestamp );
+    switch ( $lang ) {
+        case 'nl':
+            return $date->format( 'd/m/Y H:i' );
+        case 'fr':
+            return $date->format( 'd/m/Y H:i' );
+        default:
+            return $date->format( 'Y-m-d H:i' );
+    }
+}
+
+/**
+ * Validate URL (from 1.2).
+ *
+ * @param string $url.
+ * @return bool.
+ */
+function validate_feed_url( $url ) {
+    return ! empty( $url ) && filter_var( $url, FILTER_VALIDATE_URL ) && strpos( $url, '.xml' ) !== false;
+}
+
+/**
+ * Generate slug for job (enhanced from 1.2).
+ *
+ * @param string $title.
+ * @param string $guid.
+ * @return string.
+ */
+function generate_job_slug( $title, $guid ) {
+    return sanitize_title( $title . '-' . $guid );
 }
