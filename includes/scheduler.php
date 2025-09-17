@@ -1,44 +1,41 @@
 <?php
 /**
- * Scheduler file for job import plugin.
- * Sets up WP Cron for periodic job feed imports.
- *
- * @package JobImport
- * @version 1.1
+ * Scheduler for Job Import Plugin
+ * Sets up WP cron for periodic imports.
+ * Refactored from old WPCode snippet 1.3 - Scheduling and Triggers.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+require_once __DIR__ . '/processor.php'; // Ensure processor loaded
+
 /**
- * Schedule the cron job on plugin activation or init.
+ * Schedule the import cron on plugin activation.
  */
-function job_import_schedule_cron() {
+function schedule_job_import_cron() {
     if ( ! wp_next_scheduled( 'job_import_cron' ) ) {
-        wp_schedule_event( time(), 'hourly', 'job_import_cron' ); // Hourly; adjust as needed
+        wp_schedule_event( time(), 'daily', 'job_import_cron' ); // Or 'hourly' per requirements
     }
 }
-add_action( 'wp', 'job_import_schedule_cron' ); // Use 'wp' for reliability
+add_action( 'wp', 'schedule_job_import_cron' );
 
 /**
- * Hook to run the feed processing on cron trigger.
+ * The cron hook: Run the dynamic import process.
  */
-function job_import_handle_cron() {
-    if ( ! wp_verify_nonce( $_GET['token'] ?? '', 'job_import_cron' ) && ! defined( 'DOING_CRON' ) ) {
-        die( 'Unauthorized.' );
+function run_job_import_cron() {
+    if ( ! current_user_can( 'manage_options' ) && ! defined( 'DOING_CRON' ) ) {
+        return;
     }
-    job_import_process_feeds(); // Call processor
+    process_all_imports(); // Calls dynamic feeds
 }
-add_action( 'job_import_cron', 'job_import_handle_cron' );
+add_action( 'job_import_cron', 'run_job_import_cron' );
 
 /**
- * Clear schedule on plugin deactivation.
+ * Manual trigger for admin/AJAX (force = true to skip last-run).
+ * Use in admin.php or ajax.php.
  */
-function job_import_unschedule_cron() {
-    $timestamp = wp_next_scheduled( 'job_import_cron' );
-    if ( $timestamp ) {
-        wp_unschedule_event( $timestamp, 'job_import_cron' );
-    }
+function manual_import_jobs( $force = false ) {
+    return process_all_imports( $force );
 }
-// Hook to 'deactivation' in main plugin file
