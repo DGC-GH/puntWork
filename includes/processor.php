@@ -10,6 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 require_once __DIR__ . '/helpers.php'; // Ensure helpers loaded
+require_once __DIR__ . '/mappings.php';
 
 /**
  * Main import process: Fetch and process all feeds dynamically.
@@ -18,13 +19,19 @@ require_once __DIR__ . '/helpers.php'; // Ensure helpers loaded
  * @return array Stats: processed feeds, imported jobs, errors.
  */
 function process_all_imports( $force = false ) {
+    set_transient( 'job_import_running', true, 300 );
+    set_transient( 'job_import_progress', 0 );
+
     $feeds = get_job_feed_urls();
     if ( empty( $feeds ) ) {
-        error_log( 'Job Import: No valid job-feed URLs found.' );
+        log_import_event( 'No valid job-feed URLs found.', 'error' );
+        delete_transient( 'job_import_running' );
         return array( 'processed' => 0, 'imported' => 0, 'errors' => 1 );
     }
 
     $stats = array( 'processed' => 0, 'imported' => 0, 'errors' => 0 );
+    $total_feeds = count( $feeds );
+    $current = 0;
 
     foreach ( $feeds as $post_id => $feed_url ) {
         $last_run = get_feed_last_run( $post_id );
@@ -39,60 +46,77 @@ function process_all_imports( $force = false ) {
         $stats['imported'] += $result['imported'];
         $stats['errors'] += $result['errors'];
 
+        $current++;
+        set_transient( 'job_import_progress', round( ( $current / $total_feeds ) * 100 ) );
+
         update_feed_last_run( $post_id );
     }
 
     update_option( 'job_import_last_run', current_time( 'mysql' ) );
-    error_log( 'Job Import: Batch complete. Stats: ' . print_r( $stats, true ) );
+    log_import_event( 'Batch complete. Stats: ' . print_r( $stats, true ) );
+    delete_transient( 'job_import_running' );
+    set_transient( 'job_import_progress', 100 );
+
+    // Trigger JSONL export (from 2.2)
+    require_once __DIR__ . '/exporter.php';
+    export_all_jobs_to_jsonl();
 
     return $stats;
 }
 
 /**
- * Process a single feed URL: Download, parse XML, import items in batches.
+ * Process a single feed URL: Download/cache, parse XML, import items in batches.
  *
  * @param string $feed_url XML feed URL.
  * @param int $post_id Job-feed post ID for logging.
  * @return array Local stats.
  */
 function process_single_feed( $feed_url, $post_id ) {
-    $response = wp_remote_get( $feed_url, array(
-        'timeout' => 30,
-        'user-agent' => 'Job-Import-Plugin/1.0',
-    ) );
+    $cache_key = 'job_feed_cache_' . md5( $feed_url );
+    $cached_body = get_transient( $cache_key );
 
-    if ( is_wp_error( $response ) ) {
-        error_log( "Job Import: Download error for feed {$post_id}: " . $response->get_error_message() );
-        return array( 'imported' => 0, 'errors' => 1 );
-    }
+    if ( false === $cached_body ) {
+        $response = wp_remote_get( $feed_url, array(
+            'timeout' => 30,
+            'user-agent' => 'Job-Import-Plugin/1.0',
+        ) );
 
-    $body = wp_remote_retrieve_body( $response );
-    if ( wp_remote_retrieve_response_code( $response ) !== 200 || empty( $body ) ) {
-        error_log( "Job Import: Invalid response for feed {$post_id}" );
-        return array( 'imported' => 0, 'errors' => 1 );
-    }
+        if ( is_wp_error( $response ) ) {
+            log_import_event( "Download error for feed {$post_id}: " . $response->get_error_message(), 'error' );
+            return array( 'imported' => 0, 'errors' => 1 );
+        }
 
-    // Gzip handling (from old 2.1)
-    if ( substr( $body, 0, 2 ) === "\x1f\x8b" ) {
-        $body = gzdecode( $body );
+        $body = wp_remote_retrieve_body( $response );
+        if ( wp_remote_retrieve_response_code( $response ) !== 200 || empty( $body ) ) {
+            log_import_event( "Invalid response for feed {$post_id}", 'error' );
+            return array( 'imported' => 0, 'errors' => 1 );
+        }
+
+        // Gzip handling and cache (enhanced from 2.1)
+        if ( substr( $body, 0, 2 ) === "\x1f\x8b" ) {
+            $body = gzdecode( $body );
+        }
+        set_transient( $cache_key, $body, JOB_IMPORT_CACHE_TTL );
+    } else {
+        $body = $cached_body;
+        log_import_event( "Using cached feed for {$post_id}", 'info' );
     }
 
     $xml = simplexml_load_string( $body );
     if ( ! $xml ) {
-        error_log( "Job Import: XML parse error for feed {$post_id}" );
+        log_import_event( "XML parse error for feed {$post_id}", 'error' );
         return array( 'imported' => 0, 'errors' => 1 );
     }
 
-    $items = $xml->xpath( '//job' ); // Adjust per mappings.php
-    $batch_size = 50;
-    $batches = array_chunk( $items, $batch_size );
+    $items = $xml->xpath( '//job' ); // Adjust per mappings
+    $batches = array_chunk( $items, JOB_IMPORT_BATCH_SIZE );
 
     $local_stats = array( 'imported' => 0, 'errors' => 0 );
     foreach ( $batches as $index => $batch ) {
         $batch_result = import_batch_items( $batch, $post_id );
         $local_stats['imported'] += $batch_result['imported'];
         $local_stats['errors'] += $batch_result['errors'];
-        error_log( "Job Import: Processed batch {$index} for feed {$post_id}: {$batch_result['imported']} imported." );
+        log_import_event( "Processed batch {$index} for feed {$post_id}: {$batch_result['imported']} imported.", 'info' );
     }
 
     return $local_stats;
@@ -110,10 +134,10 @@ function import_batch_items( $items, $feed_post_id ) {
 
     foreach ( $items as $item ) {
         $raw_data = (array) $item;
-        $clean_data = clean_item( $raw_data ); // From 1.6 port
-        $inferred = infer_item_details( $clean_data, 'be', 'en' ); // From 1.7 port
+        $clean_data = clean_item( $raw_data );
+        $inferred = infer_item_details( $clean_data, 'be', 'en' );
 
-        if ( is_duplicate_job( $inferred['functiontitle'] ?? '', $inferred['company'] ?? '' ) ) { // From 2.4
+        if ( is_duplicate_job( $inferred['functiontitle'] ?? '', $inferred['company'] ?? '' ) ) {
             continue;
         }
 
@@ -126,7 +150,7 @@ function import_batch_items( $items, $feed_post_id ) {
         ) );
 
         if ( is_wp_error( $job_id ) ) {
-            error_log( "Job Import: Insert error for item in feed {$feed_post_id}" );
+            log_import_event( "Insert error for item in feed {$feed_post_id}", 'error' );
             $batch_stats['errors']++;
             continue;
         }
@@ -157,15 +181,12 @@ function is_duplicate_job( $title, $company ) {
                 'value' => $company,
                 'compare' => 'LIKE',
             ),
+            array(
+                'key' => 'functiontitle',
+                'value' => $title,
+                'compare' => 'LIKE',
+            ),
         ),
-    );
-
-    // Fuzzy title via LIKE
-    global $wpdb;
-    $args['meta_query'][] = array(
-        'key' => 'functiontitle',
-        'value' => $title,
-        'compare' => 'LIKE',
     );
 
     $exists = get_posts( $args );
