@@ -4,35 +4,6 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-if ( ! function_exists( 'get_json_item_count' ) ) {
-    /**
-     * Counts top-level items in a JSON array file.
-     *
-     * @param string $json_path Path to the JSON file.
-     * @return int Item count, or 0 on error/missing file.
-     */
-    function get_json_item_count( $json_path ) {
-        if ( ! file_exists( $json_path ) ) {
-            error_log( 'JSON file not found for counting: ' . esc_html( $json_path ) );
-            return 0;
-        }
-
-        $content = file_get_contents( $json_path );
-        if ( false === $content ) {
-            error_log( 'Failed to read JSON file: ' . esc_html( $json_path ) );
-            return 0;
-        }
-
-        $data = json_decode( $content, true );
-        if ( JSON_ERROR_NONE !== json_last_error() ) {
-            error_log( 'JSON decode error in get_json_item_count: ' . esc_html( json_last_error_msg() ) );
-            return 0;
-        }
-
-        return is_array( $data ) ? (int) count( $data ) : 0;
-    }
-}
-
 if (!function_exists('import_jobs_from_json')) {
     function import_jobs_from_json($is_batch = false, $batch_start = 0) {
         do_action( 'qm/cease' ); // Disable Query Monitor data collection to reduce memory usage
