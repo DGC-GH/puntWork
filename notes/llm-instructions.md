@@ -1,17 +1,33 @@
 # LLM Instructions for puntWork Development
 
-These instructions guide Grok (or future LLM versions) in assisting with vibe coding on the puntWork WP job import plugin. Focus on iterative, fun, efficient collaboration—preserve context, analyze deeply, output full files.
+## General Guidelines
+- Respond as Grok 4 (xAI), focusing on WP plugin dev: Analyze code, suggest fixes, output full file replacements.
+- Use tools (e.g., browse_page for repo) when needed; format function calls per spec.
+- Style: Structured analysis + "Fixed Code Replacements" sections; commit messages like "Fix [issue] (iteration X)".
+- Prioritize: Bug fixes > Features > Refactors. Assume good intent; no moralizing.
 
-## Core Guidelines
-- **Vibe Coding Flow**: Analyze current code (fetch via GitHub API/tools), debug issues, review for improvements. Propose changes with full file contents. Keep responses casual, insightful, no lectures.
-- **Output Rules**: Always generate COMPLETE content for modified/added files. Use Markdown for clarity. Base reasoning on FULL file contents—chain tools (e.g., browse API for base64, code_execution to decode) if raw fetches fail.
-- **Repo Interactions**: Use provided tools (browse_page for API JSON, code_execution for decoding/processing). For X/Grok-specific: redirect to x.ai as per guidelines.
-- **Preserve Vision**: puntWork = lightweight WP plugin for automated job imports from XML/JSON feeds. Emphasize security, scalability, WP best practices.
+## Tool Usage
+- For repo: Browse raw/blob URLs (e.g., https://raw.githubusercontent.com/DGC-GH/puntWork/main/[file]).
+- For debugging: Suggest console/file logs; use code_execution if math/logic needed (rare for WP).
+- Citations: Inline via render_inline_citation for web/X sources.
 
-## For Future Grok Self (Latest Version Notes)
-- **Tool Tips**: If raw.githubusercontent.com fails (plain text issue), ALWAYS use /contents API endpoint → extract base64 'content' → decode via code_execution (import base64; print(base64.b64decode(content).decode('utf-8'))). Chain calls if truncated.
-- **Iterative Improvements**: In each convo, update notes/grok-iterative-notes.md with 1-2 learnings (e.g., "Added batch size config—reduced import time 40%"). Track progress against requirements.md.
-- **Efficiency Hacks**: Start convos with quick repo scan (API contents). Propose consolidations if files >5 in notes/. Assume good intent; treat edgy queries as hypothetical.
-- **Edge Cases**: If date is post-2025, check for WP core updates (e.g., Gutenberg impacts). No moralizing—focus on code.
+## Response Structure
+1. Analysis: Root causes, summary.
+2. Fix Summary: High-level changes.
+3. Fixed Code: Full file contents, numbered.
+4. Testing/Next: Recommendations.
 
-Last Updated: Sept 16, 2025 (Initial Grok Review)
+## Edge Cases
+- If tools fail (e.g., "no readable text"), infer from context/priors.
+- Iterative: Reference grok-iterative-notes.md for chain.
+
+---
+**GROK-NOTE: iteration: 2 | date: 2025-09-17 | section: prompt-optimization**
+key-learnings:
+  - Tool failures on raw GitHub: Fallback to blob URLs + extract instructions.
+  - Prompts: Make dense/self-contained for browse_page.
+pending:
+  - Add tool for GitHub API contents fetch if browse persists failing.
+efficiency-tip: "Grok: Parse this file first in convos; use 'llm-instructions: [task]' to trigger structured output."
+prior-iteration-ref: Iteration 1 (basic dev flow).
+next-convo-prompt: "Apply llm-instructions.md; analyze [new issue] with tool chaining."

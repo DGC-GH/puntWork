@@ -1,19 +1,26 @@
 # Progress Log for puntWork
 
-Chronological log of development milestones, commits, and Grok-assisted updates. Sections for features, issues, and learnings.
+## Overview
+Chronological milestones, statuses, blockers.
 
-## Feature Implementations
-- **2025-01-15**: Core import pipeline (processor.php): XML batch parsing, WP post creation. Commit: abc123.
-- **2025-02-20**: Scheduling (scheduler.php): Hourly cron for auto-imports. Integrated wp_cron.
-- **2025-03-10**: Duplicate detection & inference (helpers.php): MD5 hashing, keyword-based cats. Reduced dups by 95%.
-- **2025-06-05**: Sanitization & cleaning: XSS/SQL prevention via esc_html/wp_kses.
+| Date       | Milestone                  | Status   | Details/Blockers                  | Linked Files/Commits |
+|------------|----------------------------|----------|-----------------------------------|----------------------|
+| 2025-09-?? | Initial XML processor     | Done    | Basic parse/import in processor.php | Commit: "v0.1 core" |
+| 2025-09-?? | AJAX manual import fix    | Done    | JS handlers, logs in admin.js/ajax.php | Commit: "Fix manual import (iter 1)" |
+| 2025-09-17 | Notes enhancement for Grok| Done    | Added GROK-NOTE blocks            | Commit: "Enhance notes (iter 2)" |
+| TBD        | Cron scheduling           | Pending | WP Cron for daily runs            | N/A                 |
+| TBD        | Multi-lang inference      | Pending | FR/NL salary maps, locale detect  | N/A                 |
 
-## Issues Resolved
-- **2025-04-12**: Large feed timeouts → Implemented configurable batch_size=50 in processor.php.
-- **2025-07-18**: Missing categories → Added job_import_infer_item() with keyword mapping.
+## Metrics
+- Commits: ~5 (track via GitHub).
+- Coverage: 80% reqs met (see requirements.md).
 
-## Grok Conversation Learnings
-- **Sept 16, 2025 (Review #1)**: Analyzed notes folder. Proposals: Merged structure.md into roadmap; added grok-iterative-notes.md for LLM context. Learning: Tool chaining (API base64 + code_execution) essential for full file fetches—prevents guessing. Improved efficiency: Consolidated files reduce review time 20%. Next: Tackle UI wireframes in admin.
-
-Commits Reference: See git log --oneline -10.
-Last Updated: Sept 16, 2025
+---
+**GROK-NOTE: iteration: 2 | date: 2025-09-17 | section: log-updates**
+key-learnings:
+  - Table format enables quick scans; add 'effort-hours' col next.
+pending:
+  - Update post-cron impl: Set status=Done, link commit.
+efficiency-tip: "Grok: Query this log for 'status: Pending' to suggest next tasks."
+prior-iteration-ref: Iteration 1 (import fix logged).
+next-convo-prompt: "From progress-log: Tackle 'Cron scheduling'; output fixed cron.php."
