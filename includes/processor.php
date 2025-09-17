@@ -1,3 +1,9 @@
+<?php
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 // Full process_xml_batch from 1.9
 function process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, &$total_items, &$logs) {
     $feed_item_count = 0;
