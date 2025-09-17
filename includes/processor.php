@@ -2,14 +2,14 @@
 /**
  * Processor for Job Import Plugin
  * Handles downloading feeds, processing XML, cleaning/inferring data, and importing to 'job' CPT.
- * Refactored from old WPCode snippets 1.8, 1.9, 2.3-2.5.
+ * Refactored from old WPCode snippets 1.8, 1.9, 2.1-2.5.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-require_once __DIR__ . '/helpers.php'; // Ensure helpers are loaded
+require_once __DIR__ . '/helpers.php'; // Ensure helpers loaded
 
 /**
  * Main import process: Fetch and process all feeds dynamically.
@@ -29,7 +29,6 @@ function process_all_imports( $force = false ) {
     foreach ( $feeds as $post_id => $feed_url ) {
         $last_run = get_feed_last_run( $post_id );
         if ( ! $force && ! empty( $last_run ) ) {
-            // Skip if run today (adjust interval as needed, e.g., via option)
             if ( date( 'Y-m-d', strtotime( $last_run ) ) === date( 'Y-m-d' ) ) {
                 continue;
             }
@@ -40,24 +39,23 @@ function process_all_imports( $force = false ) {
         $stats['imported'] += $result['imported'];
         $stats['errors'] += $result['errors'];
 
-        update_feed_last_run( $post_id ); // Update after processing
+        update_feed_last_run( $post_id );
     }
 
-    update_option( 'job_import_last_run', current_time( 'mysql' ) ); // Global last run for shortcode
+    update_option( 'job_import_last_run', current_time( 'mysql' ) );
     error_log( 'Job Import: Batch complete. Stats: ' . print_r( $stats, true ) );
 
     return $stats;
 }
 
 /**
- * Process a single feed URL: Download, parse XML, import items.
+ * Process a single feed URL: Download, parse XML, import items in batches.
  *
  * @param string $feed_url XML feed URL.
  * @param int $post_id Job-feed post ID for logging.
  * @return array Local stats.
  */
 function process_single_feed( $feed_url, $post_id ) {
-    // Download feed (from old 1.8 snippet)
     $response = wp_remote_get( $feed_url, array(
         'timeout' => 30,
         'user-agent' => 'Job-Import-Plugin/1.0',
@@ -74,120 +72,102 @@ function process_single_feed( $feed_url, $post_id ) {
         return array( 'imported' => 0, 'errors' => 1 );
     }
 
-    // Handle gzip if needed (from old snippets)
+    // Gzip handling (from old 2.1)
     if ( substr( $body, 0, 2 ) === "\x1f\x8b" ) {
         $body = gzdecode( $body );
     }
 
-    // Parse XML (from old 1.9 snippet)
     $xml = simplexml_load_string( $body );
     if ( ! $xml ) {
         error_log( "Job Import: XML parse error for feed {$post_id}" );
         return array( 'imported' => 0, 'errors' => 1 );
     }
 
-    // Assume XML structure like <jobs><job>...</job></jobs> – adjust xpath as per your feeds/mappings.php
-    $items = $xml->xpath( '//job' ); // Example; use mappings for real paths
-    $batch_size = 50; // Define in constants.php or here
-
-    $local_stats = array( 'imported' => 0, 'errors' => 0 );
+    $items = $xml->xpath( '//job' ); // Adjust per mappings.php
+    $batch_size = 50;
     $batches = array_chunk( $items, $batch_size );
 
-    foreach ( $batches as $batch ) {
-        import_batch_items( $batch, $post_id );
+    $local_stats = array( 'imported' => 0, 'errors' => 0 );
+    foreach ( $batches as $index => $batch ) {
+        $batch_result = import_batch_items( $batch, $post_id );
+        $local_stats['imported'] += $batch_result['imported'];
+        $local_stats['errors'] += $batch_result['errors'];
+        error_log( "Job Import: Processed batch {$index} for feed {$post_id}: {$batch_result['imported']} imported." );
     }
 
     return $local_stats;
 }
 
 /**
- * Import a batch of XML items to 'job' CPT (from old 2.3/2.5 snippets).
+ * Import a batch of XML items to 'job' CPT (from old 2.3/2.5).
  *
  * @param array $items SimpleXML items.
  * @param int $feed_post_id For meta/logging.
+ * @return array Batch stats.
  */
 function import_batch_items( $items, $feed_post_id ) {
-    global $wpdb;
+    $batch_stats = array( 'imported' => 0, 'errors' => 0 );
 
     foreach ( $items as $item ) {
-        // Clean item (call helpers from 1.6)
-        $clean_data = clean_item( (array) $item );
+        $raw_data = (array) $item;
+        $clean_data = clean_item( $raw_data ); // From 1.6 port
+        $inferred = infer_item_details( $clean_data, 'be', 'en' ); // From 1.7 port
 
-        // Infer data (from 1.7: salary, benefits, etc.)
-        $inferred = infer_item_data( $clean_data );
-
-        // Check duplicates (from 2.4: e.g., by title + company)
-        if ( is_duplicate_job( $inferred['title'], $inferred['company'] ) ) {
+        if ( is_duplicate_job( $inferred['functiontitle'] ?? '', $inferred['company'] ?? '' ) ) { // From 2.4
             continue;
         }
 
-        // Create/update 'job' post
         $job_id = wp_insert_post( array(
             'post_type'   => 'job',
-            'post_title'  => $inferred['title'],
+            'post_title'  => $inferred['functiontitle'] ?? 'Untitled Job',
             'post_status' => 'publish',
-            'meta_input'  => $inferred, // All fields as meta
+            'post_content' => $inferred['job_desc'] ?? '',
+            'meta_input'  => $inferred,
         ) );
 
         if ( is_wp_error( $job_id ) ) {
             error_log( "Job Import: Insert error for item in feed {$feed_post_id}" );
+            $batch_stats['errors']++;
             continue;
         }
 
-        // Link to feed
         update_post_meta( $job_id, '_source_feed', $feed_post_id );
-
-        // Increment stats
-        // (Update local_stats in caller)
+        $batch_stats['imported']++;
     }
+
+    return $batch_stats;
 }
 
 /**
- * Placeholder for duplicate check (implement from old 2.4).
+ * Check for duplicate job (enhanced from old 2.4 - fuzzy title match).
  *
  * @param string $title
  * @param string $company
  * @return bool
  */
 function is_duplicate_job( $title, $company ) {
-    // Query 'job' posts with similar title/company meta
-    $exists = get_posts( array(
+    $args = array(
         'post_type' => 'job',
+        'post_status' => 'publish',
+        'posts_per_page' => 1,
         'meta_query' => array(
             'relation' => 'AND',
-            array( 'key' => 'title', 'value' => $title, 'compare' => '=' ),
-            array( 'key' => 'company', 'value' => $company, 'compare' => '=' ),
+            array(
+                'key' => 'company',
+                'value' => $company,
+                'compare' => 'LIKE',
+            ),
         ),
-        'posts_per_page' => 1,
-    ) );
+    );
+
+    // Fuzzy title via LIKE
+    global $wpdb;
+    $args['meta_query'][] = array(
+        'key' => 'functiontitle',
+        'value' => $title,
+        'compare' => 'LIKE',
+    );
+
+    $exists = get_posts( $args );
     return ! empty( $exists );
-}
-
-// Placeholder helpers (port from snippets if not in helpers.php)
-function clean_item( $data ) {
-    // Sanitize, trim, etc. from 1.6
-    return array_map( 'sanitize_text_field', $data );
-}
-
-function infer_item_data( $data ) {
-    // Salary inference, benefits regex from 1.7
-    $inferred = $data;
-    $inferred['salary'] = infer_salary( $data['description'] ?? '' );
-    $inferred['benefits'] = detect_benefits( $data['description'] ?? '' );
-    return $inferred;
-}
-
-function infer_salary( $text ) {
-    // Regex example from snippet: match €50k-€70k, fallback averages
-    preg_match( '/€?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)(?:\s*-\s*€?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?))?/i', $text, $matches );
-    // ... calculate average, etc.
-    return $matches ? ( (float) $matches[1] + (float) ($matches[2] ?? $matches[1]) ) / 2 : 0;
-}
-
-function detect_benefits( $text ) {
-    $benefits = array();
-    if ( preg_match( '/(remote|home office)/i', $text ) ) $benefits[] = 'remote';
-    if ( preg_match( '/(company car|leasing)/i', $text ) ) $benefits[] = 'company_car';
-    // Add more from snippet regex
-    return implode( ', ', $benefits );
 }
