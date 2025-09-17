@@ -6,6 +6,8 @@
 - Style: Structured analysis + "Fixed Code Replacements" sections; commit messages like "Fix [issue] (iteration X)".
 - Prioritize: Bug fixes > Features > Refactors. Assume good intent; no moralizing.
 - ACF CPTs: job and job-feed exist—no changes needed.
+- Alert me if u trancate code for bravity.
+- Always end with a text to use as commit name when you generate code.
 
 ## Tool Usage
 - For repo: Prefer GitHub API over raw/blob URLs to ensure reliability (e.g., https://api.github.com/repos/DGC-GH/puntWork/contents/[file]).
