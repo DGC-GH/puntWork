@@ -24,16 +24,7 @@ if (!function_exists('get_json_item_count')) {
         if (false !== ($cached_count = get_option('job_json_total_count'))) {
             return $cached_count;
         }
-        if (!file_exists($json_path)) {
-            error_log('get_json_item_count: File not found - ' . $json_path);
-            return 0;
-        }
-        $lines = file($json_path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        if (false === $lines) {
-            error_log('get_json_item_count: Failed to read lines - ' . $json_path);
-            return 0;
-        }
-        $count = count($lines);
+        $count = count(file($json_path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES));
         update_option('job_json_total_count', $count, false);
         return $count;
     }
@@ -41,28 +32,15 @@ if (!function_exists('get_json_item_count')) {
 
 if (!function_exists('load_json_batch')) {
     function load_json_batch($json_path, $start, $batch_size) {
-        if (!file_exists($json_path)) {
-            error_log('load_json_batch: File not found - ' . $json_path);
-            return [];
-        }
         $file = new SplFileObject($json_path);
         $file->seek($start);
         $batch = [];
-        $bad_lines = 0;
         for ($i = 0; $i < $batch_size && !$file->eof(); $i++) {
             $line = $file->fgets();
             if (trim($line)) {
                 $item = json_decode($line, true);
-                if (json_last_error() === JSON_ERROR_NONE && is_array($item)) {
-                    $batch[] = $item;
-                } else {
-                    $bad_lines++;
-                    error_log('load_json_batch: JSON decode error on line ~' . ($start + $i + 1) . ': ' . json_last_error_msg() . ' - ' . substr($line, 0, 100));
-                }
+                if ($item) $batch[] = $item;
             }
-        }
-        if ($bad_lines > 0) {
-            error_log('load_json_batch: Skipped ' . $bad_lines . ' invalid lines in batch starting at ' . $start);
         }
         unset($file);
         return $batch;
