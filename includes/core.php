@@ -1,28 +1,3 @@
-<?php
-/**
- * Job Import Core Logic
- * Consolidated from snippets 1, 1.2, 1.3, 1.4/1.5, 1.6, 1.7
- * Includes reference to mappings.php for data separation
- */
-
-if ( ! defined( 'ABSPATH' ) ) {
-    exit; // Exit if accessed directly
-}
-
-// Include mappings for efficiency
-require_once JOB_IMPORT_PATH . 'includes/mappings.php';
-
-// =========================================================================== SNIPPET 1.2: Utility Helpers ===========================================================================
-function log_message( $message ) {
-    $log = date( 'Y-m-d H:i:s' ) . ' - ' . $message . PHP_EOL;
-    file_put_contents( JOB_IMPORT_LOGS, $log, FILE_APPEND | LOCK_EX );
-}
-
-function sanitize_job_data( $data ) {
-    return array_map( 'sanitize_text_field', $data );
-}
-
-// =========================================================================== SNIPPET 1: Core Structure and Logic ===========================================================================
 function get_feeds() {
     $feeds = [];
     $args = [
@@ -57,10 +32,7 @@ function process_one_feed($feed_key, $url, $output_dir, $fallback_domain, &$logs
     }
 
     $handle = fopen($json_path, 'w');
-    if (!$handle) {
-        log_message("Can't open $json_path");
-        throw new Exception("Can't open $json_path");
-    }
+    if (!$handle) throw new Exception("Can't open $json_path");
     $batch_size = 100;
     $total_items = 0;
     $count = process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
@@ -71,15 +43,15 @@ function process_one_feed($feed_key, $url, $output_dir, $fallback_domain, &$logs
     return $count;
 }
 
-function job_import_run() {
+function fetch_and_generate_combined_json() {
     global $import_logs;
     $import_logs = [];
     ini_set('memory_limit', '512M');
     set_time_limit(1800);
     $feeds = get_feeds();
-    $output_dir = JOB_IMPORT_PATH . 'feeds/';
+    $output_dir = ABSPATH . 'feeds/';
     if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
-        log_message("Directory $output_dir not writable");
+        error_log("Directory $output_dir not writable");
         throw new Exception('Feeds directory not writable - check Hosting permissions');
     }
     $fallback_domain = 'belgiumjobs.work';
@@ -92,69 +64,60 @@ function job_import_run() {
         $total_items += $count;
     }
 
-    combine_json_files($feeds, $output_dir, $total_items, $import_logs);
+    combine_jsonl_files($feeds, $output_dir, $total_items, $import_logs);
     return $import_logs;
 }
 
-// =========================================================================== SNIPPET 1.3: Scheduling and Triggers ===========================================================================
-add_action( 'job_import_cron', 'job_import_run' );
-
-// Manual trigger.
-function trigger_import() {
-    if ( ! wp_next_scheduled( 'job_import_cron' ) ) {
-        wp_schedule_single_event( time(), 'job_import_cron' );
+function download_feed($url, $xml_path, $output_dir, &$logs) {
+    try {
+        if (function_exists('curl_init')) {
+            $ch = curl_init($url);
+            $fp = fopen($xml_path, 'w');
+            if (!$fp) throw new Exception("Can't open $xml_path for write");
+            curl_setopt($ch, CURLOPT_FILE, $fp);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 300);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'WordPress Job Importer');
+            $success = curl_exec($ch);
+            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            fclose($fp);
+            if (!$success || $http_code !== 200 || filesize($xml_path) < 1000) {
+                throw new Exception("cURL download failed (HTTP $http_code, size: " . filesize($xml_path) . " bytes)");
+            }
+        } else {
+            $response = wp_remote_get($url, ['timeout' => 300]);
+            if (is_wp_error($response)) throw new Exception($response->get_error_message());
+            $body = wp_remote_retrieve_body($response);
+            if (empty($body) || strlen($body) < 1000) throw new Exception('Empty or small response');
+            file_put_contents($xml_path, $body);
+        }
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Downloaded XML: " . filesize($xml_path) . " bytes";
+        error_log("Downloaded XML: " . filesize($xml_path) . " bytes");
+        @chmod($xml_path, 0644);
+    } catch (Exception $e) {
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Download error: " . $e->getMessage();
+        return false;
     }
+    return true;
 }
 
-// =========================================================================== SNIPPET 1.4/1.5: Heartbeat Control ===========================================================================
-add_action( 'wp_ajax_heartbeat_control', 'job_heartbeat_handler' );
-
-function job_heartbeat_handler() {
-    wp_die( 'Heartbeat controlled' ); // Placeholder for real-time updates; expand in heartbeat.php
-}
-
-// =========================================================================== SNIPPET 1.6: Item Cleaning ===========================================================================
-function clean_item( $item ) {
-    $item->title = strip_tags( (string) $item->title );
-    $item->description = wp_strip_all_tags( (string) $item->description );
-    return $item;
-}
-
-// =========================================================================== SNIPPET 1.7: Item Inference ===========================================================================
-function infer_item_details( &$item, $fallback_domain, $lang, &$job_obj ) {
-    $province = strtolower( trim( isset( $item->province ) ? (string) $item->province : '' ) );
-    $norm_province = get_province_map()[$province] ?? $fallback_domain;
-
-    $title = isset( $item->functiontitle ) ? (string) $item->functiontitle : '';
-    $enhanced_title = $title;
-    if ( isset( $item->city ) ) $enhanced_title .= ' in ' . (string) $item->city;
-    if ( isset( $item->province ) ) $enhanced_title .= ', ' . (string) $item->province;
-    $enhanced_title = trim( $enhanced_title );
-    $slug = sanitize_title( $enhanced_title . '-' . (string) $item->guid );
-    $job_link = 'https://' . $norm_province . '/job/' . $slug;
-
-    $fg = strtolower( trim( isset( $item->functiongroup ) ? (string) $item->functiongroup : '' ) );
-    $estimate_key = array_reduce( array_keys( get_salary_estimates() ), function( $carry, $key ) use ( $fg ) {
-        return strpos( $fg, strtolower( $key ) ) !== false ? $key : $carry;
-    }, null );
-
-    $salary_text = '';
-    if ( isset( $item->salaryfrom ) && $item->salaryfrom != '0' && isset( $item->salaryto ) && $item->salaryto != '0' ) {
-        $salary_text = '€' . (string) $item->salaryfrom . ' - €' . (string) $item->salaryto;
-    } elseif ( isset( $item->salaryfrom ) && $item->salaryfrom != '0' ) {
-        $salary_text = '€' . (string) $item->salaryfrom;
-    } else {
-        $est_prefix = ( $lang == 'nl' ? 'Geschat ' : ( $lang == 'fr' ? 'Estimé ' : 'Est. ' ) );
-        if ( $estimate_key ) {
-            $low = get_salary_estimates()[$estimate_key]['low'];
-            $high = get_salary_estimates()[$estimate_key]['high'];
-            $salary_text = $est_prefix . '€' . $low . ' - €' . $high;
+function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs) {
+    $combined_json_path = $output_dir . 'combined-jobs.json';
+    $combined_gz_path = $combined_json_path . '.gz';
+    $combined_handle = fopen($combined_json_path, 'w');
+    if (!$combined_handle) throw new Exception('Cant open combined JSONL');
+    foreach ($feeds as $feed_key => $url) {
+        $feed_json_path = $output_dir . $feed_key . '.json';
+        if (file_exists($feed_json_path)) {
+            $feed_handle = fopen($feed_json_path, 'r');
+            stream_copy_to_stream($feed_handle, $combined_handle); // Efficient copy
+            fclose($feed_handle);
         }
     }
-
-    // Assign to job_obj (assuming this is used in processing)
-    $job_obj['enhanced_title'] = $enhanced_title;
-    $job_obj['slug'] = $slug;
-    $job_obj['job_link'] = $job_link;
-    $job_obj['salary_text'] = $salary_text;
+    fclose($combined_handle);
+    @chmod($combined_json_path, 0644);
+    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Combined JSONL ($total_items items)";
+    error_log("Combined JSONL ($total_items items)");
+    gzip_file($combined_json_path, $combined_gz_path);
 }
