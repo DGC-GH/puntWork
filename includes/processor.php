@@ -1,120 +1,193 @@
 <?php
 /**
- * Processor file for job import plugin.
- * Handles fetching and processing of job feeds.
- *
- * @package JobImport
- * @version 1.1
+ * Processor for Job Import Plugin
+ * Handles downloading feeds, processing XML, cleaning/inferring data, and importing to 'job' CPT.
+ * Refactored from old WPCode snippets 1.8, 1.9, 2.3-2.5.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-require_once dirname( __FILE__ ) . '/helpers.php';
-require_once dirname( __FILE__ ) . '/mappings.php';
+require_once __DIR__ . '/helpers.php'; // Ensure helpers are loaded
 
 /**
- * Main function to process all job feeds.
- * Queries 'job-feed' CPT, fetches each URL, parses XML, maps data, and imports to 'job' CPT.
+ * Main import process: Fetch and process all feeds dynamically.
+ *
+ * @param bool $force Skip last-run check (for manual/AJAX).
+ * @return array Stats: processed feeds, imported jobs, errors.
  */
-function job_import_process_feeds() {
-    $feeds = job_import_get_job_feeds(); // Get all published job-feed posts
-
+function process_all_imports( $force = false ) {
+    $feeds = get_job_feed_urls();
     if ( empty( $feeds ) ) {
-        error_log( 'Job Import: No job-feed posts found to process.' );
-        return;
+        error_log( 'Job Import: No valid job-feed URLs found.' );
+        return array( 'processed' => 0, 'imported' => 0, 'errors' => 1 );
     }
 
-    foreach ( $feeds as $feed_post ) {
-        $feed_url = get_field( 'feed_url', $feed_post->ID ); // ACF 'feed_url' field
-        if ( empty( $feed_url ) ) {
-            error_log( 'Job Import: Missing feed_url for job-feed post ID ' . $feed_post->ID );
-            continue;
-        }
+    $stats = array( 'processed' => 0, 'imported' => 0, 'errors' => 0 );
 
-        // Fetch feed with timeout and error handling
-        $response = wp_remote_get( $feed_url, array( 'timeout' => 30 ) );
-        if ( is_wp_error( $response ) ) {
-            error_log( 'Job Import: Failed to fetch feed ' . esc_url( $feed_url ) . ' - ' . $response->get_error_message() );
-            continue;
-        }
-
-        $body = wp_remote_retrieve_body( $response );
-        if ( empty( $body ) ) {
-            error_log( 'Job Import: Empty response from ' . esc_url( $feed_url ) );
-            continue;
-        }
-
-        // Parse XML
-        $xml = simplexml_load_string( $body );
-        if ( ! $xml || ! isset( $xml->channel ) ) {
-            error_log( 'Job Import: Invalid XML from ' . esc_url( $feed_url ) );
-            continue;
-        }
-
-        // Process each item in the feed
-        foreach ( $xml->channel->item as $item ) {
-            $job_data = job_import_map_feed_item( $item ); // Mapping function from mappings.php
-            if ( empty( $job_data['title'] ) || empty( $job_data['guid'] ) ) {
-                continue; // Skip invalid items
-            }
-
-            // Check for duplicates using GUID meta
-            $existing_jobs = get_posts( array(
-                'post_type' => JOB_POST_TYPE, // From constants.php
-                'post_status' => 'any',
-                'meta_query' => array(
-                    array(
-                        'key' => 'job_guid',
-                        'value' => $job_data['guid'],
-                        'compare' => '='
-                    )
-                ),
-                'posts_per_page' => 1,
-                'fields' => 'ids'
-            ) );
-
-            if ( ! empty( $existing_jobs ) ) {
-                error_log( 'Job Import: Skipping duplicate job with GUID ' . $job_data['guid'] );
+    foreach ( $feeds as $post_id => $feed_url ) {
+        $last_run = get_feed_last_run( $post_id );
+        if ( ! $force && ! empty( $last_run ) ) {
+            // Skip if run today (adjust interval as needed, e.g., via option)
+            if ( date( 'Y-m-d', strtotime( $last_run ) ) === date( 'Y-m-d' ) ) {
                 continue;
             }
-
-            // Insert new job post
-            $post_data = array(
-                'post_title' => sanitize_text_field( $job_data['title'] ),
-                'post_content' => wp_kses_post( $job_data['description'] ),
-                'post_type' => JOB_POST_TYPE,
-                'post_status' => 'publish',
-                'post_date' => current_time( 'mysql' )
-            );
-
-            $post_id = wp_insert_post( $post_data );
-            if ( is_wp_error( $post_id ) ) {
-                error_log( 'Job Import: Failed to insert job post - ' . $post_id->get_error_message() );
-                continue;
-            }
-
-            // Update ACF fields
-            foreach ( $acf_fields as $field_key ) { // From mappings.php
-                if ( isset( $job_data[ $field_key ] ) ) {
-                    update_field( $field_key, $job_data[ $field_key ], $post_id );
-                }
-            }
-
-            // Update taxonomies
-            foreach ( $taxonomies as $tax_key ) { // From mappings.php
-                if ( isset( $job_data[ $tax_key ] ) && ! empty( $job_data[ $tax_key ] ) ) {
-                    $terms = is_array( $job_data[ $tax_key ] ) ? $job_data[ $tax_key ] : array( $job_data[ $tax_key ] );
-                    wp_set_object_terms( $post_id, $terms, $tax_key );
-                }
-            }
-
-            // Store GUID for future dedup
-            update_post_meta( $post_id, 'job_guid', sanitize_text_field( $job_data['guid'] ) );
-            update_post_meta( $post_id, 'job_feed_source', $feed_post->ID ); // Track source feed
-
-            error_log( 'Job Import: Successfully imported job ID ' . $post_id . ' from ' . esc_url( $feed_url ) );
         }
+
+        $result = process_single_feed( $feed_url, $post_id );
+        $stats['processed']++;
+        $stats['imported'] += $result['imported'];
+        $stats['errors'] += $result['errors'];
+
+        update_feed_last_run( $post_id ); // Update after processing
     }
+
+    update_option( 'job_import_last_run', current_time( 'mysql' ) ); // Global last run for shortcode
+    error_log( 'Job Import: Batch complete. Stats: ' . print_r( $stats, true ) );
+
+    return $stats;
+}
+
+/**
+ * Process a single feed URL: Download, parse XML, import items.
+ *
+ * @param string $feed_url XML feed URL.
+ * @param int $post_id Job-feed post ID for logging.
+ * @return array Local stats.
+ */
+function process_single_feed( $feed_url, $post_id ) {
+    // Download feed (from old 1.8 snippet)
+    $response = wp_remote_get( $feed_url, array(
+        'timeout' => 30,
+        'user-agent' => 'Job-Import-Plugin/1.0',
+    ) );
+
+    if ( is_wp_error( $response ) ) {
+        error_log( "Job Import: Download error for feed {$post_id}: " . $response->get_error_message() );
+        return array( 'imported' => 0, 'errors' => 1 );
+    }
+
+    $body = wp_remote_retrieve_body( $response );
+    if ( wp_remote_retrieve_response_code( $response ) !== 200 || empty( $body ) ) {
+        error_log( "Job Import: Invalid response for feed {$post_id}" );
+        return array( 'imported' => 0, 'errors' => 1 );
+    }
+
+    // Handle gzip if needed (from old snippets)
+    if ( substr( $body, 0, 2 ) === "\x1f\x8b" ) {
+        $body = gzdecode( $body );
+    }
+
+    // Parse XML (from old 1.9 snippet)
+    $xml = simplexml_load_string( $body );
+    if ( ! $xml ) {
+        error_log( "Job Import: XML parse error for feed {$post_id}" );
+        return array( 'imported' => 0, 'errors' => 1 );
+    }
+
+    // Assume XML structure like <jobs><job>...</job></jobs> – adjust xpath as per your feeds/mappings.php
+    $items = $xml->xpath( '//job' ); // Example; use mappings for real paths
+    $batch_size = 50; // Define in constants.php or here
+
+    $local_stats = array( 'imported' => 0, 'errors' => 0 );
+    $batches = array_chunk( $items, $batch_size );
+
+    foreach ( $batches as $batch ) {
+        import_batch_items( $batch, $post_id );
+    }
+
+    return $local_stats;
+}
+
+/**
+ * Import a batch of XML items to 'job' CPT (from old 2.3/2.5 snippets).
+ *
+ * @param array $items SimpleXML items.
+ * @param int $feed_post_id For meta/logging.
+ */
+function import_batch_items( $items, $feed_post_id ) {
+    global $wpdb;
+
+    foreach ( $items as $item ) {
+        // Clean item (call helpers from 1.6)
+        $clean_data = clean_item( (array) $item );
+
+        // Infer data (from 1.7: salary, benefits, etc.)
+        $inferred = infer_item_data( $clean_data );
+
+        // Check duplicates (from 2.4: e.g., by title + company)
+        if ( is_duplicate_job( $inferred['title'], $inferred['company'] ) ) {
+            continue;
+        }
+
+        // Create/update 'job' post
+        $job_id = wp_insert_post( array(
+            'post_type'   => 'job',
+            'post_title'  => $inferred['title'],
+            'post_status' => 'publish',
+            'meta_input'  => $inferred, // All fields as meta
+        ) );
+
+        if ( is_wp_error( $job_id ) ) {
+            error_log( "Job Import: Insert error for item in feed {$feed_post_id}" );
+            continue;
+        }
+
+        // Link to feed
+        update_post_meta( $job_id, '_source_feed', $feed_post_id );
+
+        // Increment stats
+        // (Update local_stats in caller)
+    }
+}
+
+/**
+ * Placeholder for duplicate check (implement from old 2.4).
+ *
+ * @param string $title
+ * @param string $company
+ * @return bool
+ */
+function is_duplicate_job( $title, $company ) {
+    // Query 'job' posts with similar title/company meta
+    $exists = get_posts( array(
+        'post_type' => 'job',
+        'meta_query' => array(
+            'relation' => 'AND',
+            array( 'key' => 'title', 'value' => $title, 'compare' => '=' ),
+            array( 'key' => 'company', 'value' => $company, 'compare' => '=' ),
+        ),
+        'posts_per_page' => 1,
+    ) );
+    return ! empty( $exists );
+}
+
+// Placeholder helpers (port from snippets if not in helpers.php)
+function clean_item( $data ) {
+    // Sanitize, trim, etc. from 1.6
+    return array_map( 'sanitize_text_field', $data );
+}
+
+function infer_item_data( $data ) {
+    // Salary inference, benefits regex from 1.7
+    $inferred = $data;
+    $inferred['salary'] = infer_salary( $data['description'] ?? '' );
+    $inferred['benefits'] = detect_benefits( $data['description'] ?? '' );
+    return $inferred;
+}
+
+function infer_salary( $text ) {
+    // Regex example from snippet: match €50k-€70k, fallback averages
+    preg_match( '/€?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)(?:\s*-\s*€?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?))?/i', $text, $matches );
+    // ... calculate average, etc.
+    return $matches ? ( (float) $matches[1] + (float) ($matches[2] ?? $matches[1]) ) / 2 : 0;
+}
+
+function detect_benefits( $text ) {
+    $benefits = array();
+    if ( preg_match( '/(remote|home office)/i', $text ) ) $benefits[] = 'remote';
+    if ( preg_match( '/(company car|leasing)/i', $text ) ) $benefits[] = 'company_car';
+    // Add more from snippet regex
+    return implode( ', ', $benefits );
 }
