@@ -49,3 +49,26 @@ For file retrieval, prioritize GitHub API JSON (base64 decode content); fallback
 - No over-engineering: MVP > perfect.
 
 Full: Align w/ grok-collaboration-guide.md.
+
+## Reliable File Fetching from Repo for Code Reviews/Modifications
+
+To avoid fetch failures when reviewing or modifying code (e.g., `includes/import-batch.php`), always use this GitHub API + decode method in tool calls. Do not rely on raw URLs if they return insufficient content.
+
+### Fetch Process
+1. **API Call**: `browse_page` on `https://api.github.com/repos/DGC-GH/puntWork/contents/PATH/TO/FILE` (e.g., `includes/import-batch.php`).
+2. **Instructions**:
+The response is a JSON object from GitHub API. If there's an error (e.g., 404), state 'File not found' clearly. Otherwise, extract the 'content' field, which is a base64-encoded string. Decode the base64 to UTF-8 and return only the full decoded file content exactly as is (e.g., the complete PHP code from <?php to the end), without any additional text, summaries, modifications, omissions, or wrappers. Do not truncate—output the entire decoded content in one block.
+3. **If Truncated**: Extract base64 from JSON, then use `code_execution`:
+```python
+import base64
+base64_content = "PAste..."  # Full base64 string
+decoded = base64.b64decode(base64_content).decode('utf-8')
+print(decoded)
+
+3. **Directory List Fallback**: For unknown paths, fetch /contents/DIR (e.g., /includes) with instructions: "Return the full raw JSON array of file objects."
+
+Retry fetches up to 3x; if all fail, report error without imagining content. Update this section if tools evolve.
+- **Why This File?** It's for Grok-specific collaboration, so embedding the workflow here ensures it's referenced in future prompts.
+- **Impact**: Future responses will consistently use this, reducing "imagined" code issues. Commit with message: "Add reliable GitHub fetch guide for Grok tools."
+
+If `grok-collaboration-guide.md` fetch was empty (as tested), create it with this as the initial content. For other notes files, no changes needed unless expanding standards. Let me know if you want a PR draft or further tests!
