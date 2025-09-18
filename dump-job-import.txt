@@ -1,0 +1,6 @@
+<?php
+// One-time generator - run via browser once, then delete this file.
+$content = file_get_contents(__DIR__ . '/job-import.php');
+file_put_contents(__DIR__ . '/dump-job-import.txt', $content);
+echo 'Dumped to dump-job-import.txt';
+?>
