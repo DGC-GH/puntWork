@@ -39,7 +39,43 @@ if (!function_exists('import_jobs_from_json')) {
         $memory_limit_bytes = get_memory_limit_bytes();
         $threshold = 0.6 * $memory_limit_bytes;
         $batch_size = get_option('job_import_batch_size') ?: 20; // Increased default from 10 to 20 for faster initial processing
-        update_option('job_import_batch_size', $batch_size, false);
+        // Removed redundant update_option here
+
+        // Dynamic batch size adjustment moved earlier using stored previous metrics for current batch application
+        $old_batch_size = $batch_size;
+        $prev_time_per_item = get_option('job_import_time_per_job', 0);
+        $avg_time_per_item = get_option('job_import_avg_time_per_job', $prev_time_per_item);
+        $last_peak_memory = get_option('job_import_last_peak_memory', $memory_limit_bytes);
+        $last_memory_ratio = $last_peak_memory / $memory_limit_bytes;
+
+        // Memory-based adjustment using previous peak (pre-processing)
+        if ($last_memory_ratio > 0.85) {
+            $batch_size = max(1, floor($batch_size * 0.7));
+        } elseif ($last_memory_ratio < 0.5 && $avg_time_per_item < 1.0) {
+            $batch_size = min(50, floor($batch_size * 1.5));
+        }
+
+        // Time-based adjustment using stored average
+        if ($prev_time_per_item > 0) {
+            $time_ratio = $avg_time_per_item / $prev_time_per_item;
+            if ($time_ratio > 1.2) {
+                $batch_size = max(1, floor($batch_size / (1 + ($time_ratio - 1) * 0.5)));
+            } elseif ($time_ratio < 0.8) {
+                $batch_size = min(50, floor($batch_size * (1 + (1 - $time_ratio) * 1.5)));
+            }
+        }
+
+        // Only update and log if changed
+        if ($batch_size != $old_batch_size) {
+            update_option('job_import_batch_size', $batch_size, false);
+            $reason = ($last_memory_ratio > 0.85 ? 'high previous memory' : ($last_memory_ratio < 0.5 ? 'low previous memory and low avg time' : ($time_ratio > 1.2 ? 'high time ratio' : 'low time ratio')));
+            $logs = []; // Initialize logs early
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch size adjusted to ' . $batch_size . ' due to ' . $reason;
+        } else {
+            $logs = [];
+        }
+
+        // Re-align start_index with new batch_size to avoid skips
         if ($start_index % $batch_size !== 0) {
             $start_index = floor($start_index / $batch_size) * $batch_size;
         }
@@ -47,7 +83,6 @@ if (!function_exists('import_jobs_from_json')) {
         $created = 0;
         $updated = 0;
         $skipped = 0;
-        $logs = [];
         $duplicates_drafted = 0;
         $drafted_old = 0;
         $inferred_languages = 0;
@@ -161,40 +196,17 @@ if (!function_exists('import_jobs_from_json')) {
             $time_elapsed = microtime(true) - $start_time;
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Batch complete: Processed $processed_count items";
 
-            // Dynamic batch size adjustment with improvements
+            // Update stored metrics for next batch (no adjustment or log here)
             $time_per_item = $processed_count > 0 ? $time_elapsed / $processed_count : 0;
             $prev_time_per_item = get_option('job_import_time_per_job', 0);
             update_option('job_import_time_per_job', $time_per_item, false);
             $peak_memory = memory_get_peak_usage(true);
-            $memory_ratio = $peak_memory / $memory_limit_bytes;
+            update_option('job_import_last_peak_memory', $peak_memory, false);
 
             // Use rolling average for time_per_item to stabilize adjustments
             $avg_time_per_item = get_option('job_import_avg_time_per_job', $time_per_item);
             $avg_time_per_item = ($avg_time_per_item * 0.7) + ($time_per_item * 0.3); // Weighted average, favoring history
             update_option('job_import_avg_time_per_job', $avg_time_per_item, false);
-
-            // Memory-based adjustment: More gradual
-            if ($memory_ratio > 0.85) { // Raised threshold from 0.8 for allowing higher usage before reduction
-                $batch_size = max(1, floor($batch_size * 0.7)); // Slower reduction (70% instead of 75%)
-                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch size reduced to ' . $batch_size . ' due to high memory ratio: ' . number_format($memory_ratio, 2);
-            } elseif ($memory_ratio < 0.5 && $avg_time_per_item < 1.0) { // Adjusted threshold and time condition
-                $batch_size = min(50, floor($batch_size * 1.5)); // Capped at 50 for safety, more aggressive increase (150%)
-                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch size increased to ' . $batch_size . ' due to low memory ratio: ' . number_format($memory_ratio, 2) . ' and low avg time: ' . number_format($avg_time_per_item, 2);
-            }
-
-            // Time-based adjustment using average
-            if ($prev_time_per_item > 0) {
-                $time_ratio = $avg_time_per_item / $prev_time_per_item;
-                if ($time_ratio > 1.2) { // Lowered threshold from 1.5 for quicker response to slowdowns
-                    $batch_size = max(1, floor($batch_size / (1 + ($time_ratio - 1) * 0.5))); // Gradual reduction based on excess ratio
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch size reduced to ' . $batch_size . ' due to high time ratio: ' . number_format($time_ratio, 2);
-                } elseif ($time_ratio < 0.8) { // Adjusted from 0.7 for more opportunities to increase
-                    $batch_size = min(50, floor($batch_size * (1 + (1 - $time_ratio) * 1.5))); // Capped at 50, scaled increase based on improvement
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch size increased to ' . $batch_size . ' due to low time ratio: ' . number_format($time_ratio, 2);
-                }
-            }
-
-            update_option('job_import_batch_size', $batch_size, false);
 
             // Update cumulative status
             $status = get_option('job_import_status') ?: [
