@@ -6,7 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 add_action('wp_ajax_run_job_import_batch', 'run_job_import_batch_ajax');
 function run_job_import_batch_ajax() {
-    error_log('run_job_import_batch_ajax called with data: ' . print_r($_POST, true));
+    //error_log('run_job_import_batch_ajax called with data: ' . print_r($_POST, true));
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
         error_log('Nonce verification failed for run_job_import_batch');
         wp_send_json_error(['message' => 'Nonce verification failed']);
