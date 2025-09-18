@@ -75,3 +75,18 @@ Retry fetches up to 3x; if all fail, report error without imagining content. Upd
 - Empty/raw returns? Switch to API + base64 decode (see above).
 - Example: `requirements.md` prior empty due to summarizer on raw URL—API fixed it.
 - Test: Always verify post-fetch (e.g., check for expected headers like "# Job Import").
+
+### Full File Outputs for Code Changes
+When requesting modifications to a specific file (e.g., "Review and fix includes/import-batch.php"), always include the full current file code in your query if possible, or specify "fetch and use exact current repo content without placeholders."
+If fetches fail (e.g., due to private repo or tool limits), Grok will note it and request the code—provide it to ensure accurate, complete outputs.
+Example query: "Fetch includes/import-batch.php from repo, then [description]. Output the full modified file code ready for copy-paste, no abbreviations."
+
+
+### Strict Enforcement for Fetch Failures
+- **Retry Protocol:** Always retry the `browse_page` tool call up to 3 times on the same API endpoint before declaring failure. Vary instructions slightly if needed (e.g., add "Ensure full decode without truncation").
+- **Success Criteria:** A successful fetch must return the **complete, unaltered file content** (e.g., full PHP from `<?php` to `?>`, no omissions or summaries). Verify by checking file size against repo metadata if possible.
+- **Failure Handling:** If any retry yields incomplete, truncated, base64-decode errors, non-JSON responses, 404s, rate limits, or partial content (e.g., tool summarizer interference), **do not proceed with analysis, modifications, or imagined code**. Instead:
+  - Respond immediately with a clear flag: `FETCH_FAILED: [Brief reason, e.g., 'Truncated decode after 3 retries' or 'API 404 on file path']. Please paste the full current file code manually for accurate processing.`
+  - Halt all code-related output until manual code is provided. Do not generate placeholders, assumptions, or "plausible" logic.
+- **Why This Prevents Rewrites:** This enforces "use only successful fetches" as a hard rule, reducing manual handoffs while catching tool limitations early (e.g., large files > tool buffer).
+- **Testing Queries:** Example user prompt to test: "Fetch includes/import-batch.php from repo via API, decode fully, then review dynamic batch logic. If fetch fails, flag FETCH_FAILED and stop."
