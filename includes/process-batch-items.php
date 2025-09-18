@@ -17,14 +17,14 @@ if (!function_exists('process_batch_items')) {
                 $current_last_ts = $current_last_update ? strtotime($current_last_update) : 0;
                 if ($xml_updated_ts && $current_last_ts >= $xml_updated_ts) {
                     $skipped++;
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped update ID: ' . $post_id . ' GUID: ' . $guid . ' - Not updated';
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - Not updated';
                     continue;
                 }
                 $current_hash = $all_hashes_by_post[$post_id] ?? '';
                 $item_hash = md5(json_encode($item));
                 if ($current_hash === $item_hash) {
                     $skipped++;
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped update ID: ' . $post_id . ' GUID: ' . $guid . ' - No changes';
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - No changes';
                     continue;
                 }
                 $xml_title = isset($item['functiontitle']) ? $item['functiontitle'] : '';
