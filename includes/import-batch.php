@@ -56,11 +56,11 @@ if (!function_exists('import_jobs_from_json')) {
 
         try {
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Starting batch from $start_index to $end_index (size $batch_size)";
-            error_log("Starting batch from $start_index to $end_index (size $batch_size)");
+            //error_log("Starting batch from $start_index to $end_index (size $batch_size)");
 
             // Load batch from JSONL
             $batch_json_items = load_json_batch($json_path, $start_index, $batch_size);
-            error_log("Loaded " . count($batch_json_items) . " items for batch starting at $start_index");
+            //error_log("Loaded " . count($batch_json_items) . " items for batch starting at $start_index");
             $batch_items = [];
             $batch_guids = [];
             for ($i = 0; $i < count($batch_json_items); $i++) {
@@ -92,7 +92,7 @@ if (!function_exists('import_jobs_from_json')) {
                     $end_index = min($start_index + $batch_size, $total);
                 }
                 if ($i % 5 === 0) {
-                    error_log("Processed $i items in batch");
+                    //error_log("Processed $i items in batch");
                     ob_flush();
                     flush();
                 }
