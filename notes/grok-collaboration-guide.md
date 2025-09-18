@@ -61,7 +61,7 @@ The response is a JSON object from GitHub API. If there's an error (e.g., 404), 
 3. **If Truncated**: Extract base64 from JSON, then use `code_execution`:
 ```python
 import base64
-base64_content = "PAste..."  # Full base64 string
+base64_content = "FULL_BASE64_HERE"  # Paste from JSON
 decoded = base64.b64decode(base64_content).decode('utf-8')
 print(decoded)
 
@@ -71,4 +71,7 @@ Retry fetches up to 3x; if all fail, report error without imagining content. Upd
 - **Why This File?** It's for Grok-specific collaboration, so embedding the workflow here ensures it's referenced in future prompts.
 - **Impact**: Future responses will consistently use this, reducing "imagined" code issues. Commit with message: "Add reliable GitHub fetch guide for Grok tools."
 
-If `grok-collaboration-guide.md` fetch was empty (as tested), create it with this as the initial content. For other notes files, no changes needed unless expanding standards. Let me know if you want a PR draft or further tests!
+### Troubleshooting Fetch Failures
+- Empty/raw returns? Switch to API + base64 decode (see above).
+- Example: `requirements.md` prior empty due to summarizer on raw URL—API fixed it.
+- Test: Always verify post-fetch (e.g., check for expected headers like "# Job Import").
