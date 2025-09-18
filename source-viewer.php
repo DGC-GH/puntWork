@@ -1,4 +1,9 @@
 <?php
+// Force plain output for all UAs
+if (strpos($_SERVER['HTTP_USER_AGENT'] ?? '', 'bot') !== false || empty($_SERVER['HTTP_USER_AGENT'])) {
+    header('X-Robots-Tag: noindex, nofollow');
+}
+
 // Temporary source viewer - DELETE AFTER USE! Restrict access if needed (e.g., via IP in .htaccess).
 if (!isset($_GET['file']) || !preg_match('/^[a-zA-Z0-9\/\-\._]+$/', $_GET['file'])) {
     http_response_code(400);
