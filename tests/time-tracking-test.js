@@ -135,6 +135,7 @@ console.log('=== Time Tracking Test Suite ===\n');
 console.log('Test 1: Initial state');
 JobImportUI.clearProgress();
 console.log('Processing speed should be 0:', JobImportUI.processingSpeed === 0);
+console.log('Import success should be null:', JobImportUI.importSuccess === null);
 
 // Test 2: Processing speed calculation
 console.log('\nTest 2: Processing speed calculation');
@@ -159,15 +160,39 @@ testData.forEach(function(data, index) {
     console.log(`Time estimate: ${estimate}`);
 });
 
-// Test 3: Time formatting
-console.log('\nTest 3: Time formatting');
+// Test 3: Success state
+console.log('\nTest 3: Success state');
+JobImportUI.importSuccess = true;
+JobImportUI.errorMessage = '';
+var successEstimate = JobImportUI.updateEstimatedTime({
+    total: 100,
+    processed: 100,
+    time_elapsed: 30,
+    complete: true
+});
+console.log(`Success time estimate: ${successEstimate}`);
+
+// Test 4: Failure state
+console.log('\nTest 4: Failure state');
+JobImportUI.importSuccess = false;
+JobImportUI.errorMessage = 'Test error';
+var failureEstimate = JobImportUI.updateEstimatedTime({
+    total: 100,
+    processed: 50,
+    time_elapsed: 15,
+    complete: false
+});
+console.log(`Failure time estimate: ${failureEstimate}`);
+
+// Test 5: Time formatting
+console.log('\nTest 5: Time formatting');
 var timeTests = [0, 5, 65, 3665, 86401];
 timeTests.forEach(function(seconds) {
     console.log(`${seconds} seconds = ${JobImportUI.formatTime(seconds)}`);
 });
 
-// Test 4: Edge cases
-console.log('\nTest 4: Edge cases');
+// Test 6: Edge cases
+console.log('\nTest 6: Edge cases');
 console.log('NaN input:', JobImportUI.formatTime(NaN));
 console.log('Negative input:', JobImportUI.formatTime(-5));
 console.log('Infinity input:', JobImportUI.formatTime(Infinity));

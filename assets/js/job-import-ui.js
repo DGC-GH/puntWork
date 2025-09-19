@@ -12,6 +12,8 @@
         processingSpeed: 0, // items per second
         lastUpdateTime: 0,
         lastProcessedCount: 0,
+        importSuccess: null, // null = in progress, true = success, false = failure
+        errorMessage: '', // Error message for failed imports
 
         /**
          * Set the current import phase
@@ -52,6 +54,8 @@
             this.processingSpeed = 0; // Reset processing speed
             this.lastUpdateTime = 0;
             this.lastProcessedCount = 0;
+            this.importSuccess = null; // Reset success state
+            this.errorMessage = ''; // Reset error message
             $('#progress-bar').empty();
             $('#progress-percent').text('0%');
             $('#total-items').text(0);
@@ -125,6 +129,8 @@
             data.duplicates_drafted = parseInt(data.duplicates_drafted) || 0;
             data.drafted_old = parseInt(data.drafted_old) || 0;
             data.time_elapsed = parseFloat(data.time_elapsed) || 0;
+            data.success = data.success !== undefined ? data.success : null;
+            data.error_message = data.error_message || '';
 
             PuntWorkJSLogger.debug('Normalized response data', 'UI', {
                 total: data.total,
@@ -134,7 +140,9 @@
                 skipped: data.skipped,
                 duplicates_drafted: data.duplicates_drafted,
                 drafted_old: data.drafted_old,
-                time_elapsed: data.time_elapsed
+                time_elapsed: data.time_elapsed,
+                success: data.success,
+                error_message: data.error_message
             });
 
             return data;
@@ -150,6 +158,12 @@
 
             PuntWorkJSLogger.debug('Updating progress with data', 'UI', data);
             console.log('[PUNTWORK] Progress data received:', data);
+
+            // Update success/failure state
+            if (data.success !== null) {
+                this.importSuccess = data.success;
+                this.errorMessage = data.error_message || '';
+            }
 
             var total = data.total || 0;
             var processed = data.processed || 0;
@@ -185,7 +199,21 @@
                 }
             }
 
+            // For successful completion, ensure we show 100%
+            if (this.importSuccess === true && processed >= total && total > 0) {
+                percent = 100;
+            }
+
             $('#progress-percent').text(percent + '%');
+
+            // Update percentage text color based on success/failure state
+            var percentColor = '#007aff'; // Default blue
+            if (this.importSuccess === true) {
+                percentColor = '#34c759'; // Green for success
+            } else if (this.importSuccess === false) {
+                percentColor = '#ff3b30'; // Red for failure
+            }
+            $('#progress-percent').css('color', percentColor);
 
             if (!this.segmentsCreated && total > 0) {
                 var container = $('#progress-bar');
@@ -203,7 +231,16 @@
             // Update progress bar segments
             if (this.segmentsCreated) {
                 $('#progress-bar div').css('backgroundColor', '#f2f2f7'); // Reset all to default
-                $('#progress-bar div:lt(' + percent + ')').css('backgroundColor', '#007aff'); // Fill completed segments
+
+                // Set fill color based on success/failure state
+                var fillColor = '#007aff'; // Default blue
+                if (this.importSuccess === true) {
+                    fillColor = '#34c759'; // Green for success
+                } else if (this.importSuccess === false) {
+                    fillColor = '#ff3b30'; // Red for failure
+                }
+
+                $('#progress-bar div:lt(' + percent + ')').css('backgroundColor', fillColor); // Fill completed segments
             }
 
             // Check if we're in feed processing phase (no job stats yet)
@@ -259,7 +296,9 @@
                 $('#items-left').text(isNaN(itemsLeft) ? 0 : itemsLeft);
 
                 // Update status message based on completion
-                if (processed >= total && total > 0) {
+                if (this.importSuccess === false) {
+                    $('#status-message').text('Import Failed: ' + (this.errorMessage || 'Unknown error'));
+                } else if (processed >= total && total > 0) {
                     $('#status-message').text('Import Complete');
                 } else {
                     $('#status-message').text('Importing...');
@@ -290,7 +329,10 @@
             var itemsLeft = total - processed;
 
             // Handle completion case
-            if (this.currentPhase === 'complete' || (processed >= total && total > 0)) {
+            if (this.importSuccess === false) {
+                $('#time-left').text('Failed');
+                return;
+            } else if (this.currentPhase === 'complete' || (processed >= total && total > 0)) {
                 $('#time-left').text('Complete');
                 return;
             }

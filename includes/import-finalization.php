@@ -66,6 +66,8 @@ function finalize_batch_import($result) {
     $status['time_elapsed'] = $total_elapsed;
 
     $status['complete'] = $result['complete'];
+    $status['success'] = $result['success']; // Set success status
+    $status['error_message'] = $result['message'] ?? ''; // Set error message if any
     $status['batch_size'] = $result['batch_size'];
     $status['inferred_languages'] += $result['inferred_languages'];
     $status['inferred_benefits'] += $result['inferred_benefits'];
