@@ -20,16 +20,16 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 
 // Include batch size management
-require_once plugin_dir_path(__FILE__) . 'batch-size-management.php';
+require_once __DIR__ . '/../batch/batch-size-management.php';
 
 // Include import setup
-require_once plugin_dir_path(__FILE__) . 'import-setup.php';
+require_once __DIR__ . '/import-setup.php';
 
 // Include batch processing
-require_once plugin_dir_path(__FILE__) . 'batch-processing.php';
+require_once __DIR__ . '/../batch/batch-processing.php';
 
 // Include import finalization
-require_once plugin_dir_path(__FILE__) . 'import-finalization.php';
+require_once __DIR__ . '/import-finalization.php';
 
 if (!function_exists('import_jobs_from_json')) {
     /**

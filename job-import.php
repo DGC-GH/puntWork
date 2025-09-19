@@ -83,8 +83,9 @@ function setup_job_import() {
         'mappings/mappings-constants.php',
         
         // Scheduling
-        'scheduling.php',
+        'scheduling/scheduling-core.php',
         'scheduling/scheduling-triggers.php',
+        'scheduling/scheduling-history.php',
     );
     foreach ( $includes as $include ) {
         $file = JOB_IMPORT_PATH . 'includes/' . $include;
