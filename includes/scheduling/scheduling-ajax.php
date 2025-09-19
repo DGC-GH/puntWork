@@ -26,11 +26,19 @@ function save_import_schedule_ajax() {
         wp_send_json_error(['message' => 'Permission denied']);
     }
 
-    $enabled = isset($_POST['enabled']) ? (bool) $_POST['enabled'] : false;
+    $enabled = isset($_POST['enabled']) ? filter_var($_POST['enabled'], FILTER_VALIDATE_BOOLEAN) : false;
+
+    // Also handle string values '1' and '0'
+    if (isset($_POST['enabled']) && is_string($_POST['enabled'])) {
+        $enabled = $_POST['enabled'] === '1';
+    }
     $frequency = sanitize_text_field($_POST['frequency'] ?? 'daily');
     $interval = intval($_POST['interval'] ?? 24);
     $hour = intval($_POST['hour'] ?? 9);
     $minute = intval($_POST['minute'] ?? 0);
+
+    // Debug logging
+    error_log('[PUNTWORK] Save schedule AJAX received: enabled=' . ($enabled ? 'true' : 'false') . ', frequency=' . $frequency);
 
     // Validate frequency
     $valid_frequencies = ['hourly', '3hours', '6hours', '12hours', 'daily', 'custom'];
@@ -63,13 +71,24 @@ function save_import_schedule_ajax() {
 
     update_option('puntwork_import_schedule', $schedule_data);
 
+    // Verify the data was saved
+    $saved_data = get_option('puntwork_import_schedule');
+    error_log('[PUNTWORK] Data saved to database: enabled=' . ($saved_data['enabled'] ? 'true' : 'false'));
+
     // Update WordPress cron
     update_cron_schedule($schedule_data);
+
+    $last_run = get_option('puntwork_last_import_run', null);
+    $last_run_details = get_option('puntwork_last_import_details', null);
+
+    error_log('[PUNTWORK] Save schedule AJAX response: enabled=' . ($schedule_data['enabled'] ? 'true' : 'false'));
 
     wp_send_json_success([
         'message' => 'Schedule saved successfully',
         'schedule' => $schedule_data,
-        'next_run' => get_next_scheduled_time()
+        'next_run' => get_next_scheduled_time(),
+        'last_run' => $last_run,
+        'last_run_details' => $last_run_details
     ]);
 }
 
@@ -93,6 +112,8 @@ function get_import_schedule_ajax() {
         'updated_at' => null,
         'updated_by' => null
     ]);
+
+    error_log('[PUNTWORK] Get schedule AJAX loaded: enabled=' . ($schedule['enabled'] ? 'true' : 'false'));
 
     $last_run = get_option('puntwork_last_import_run', null);
     $last_run_details = get_option('puntwork_last_import_details', null);
