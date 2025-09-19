@@ -78,7 +78,7 @@ function process_batch_items_logic($setup) {
             if (get_transient('import_cancel') === true) {
                 $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Import cancelled at #' . ($current_index + 1);
                 update_option('job_import_progress', $current_index, false);
-                return ['success' => false, 'message' => 'Import cancelled', 'logs' => $logs];
+                return ['success' => false, 'message' => 'Import cancelled by user', 'logs' => $logs];
             }
 
             $item = $batch_json_items[$i];
@@ -136,7 +136,8 @@ function process_batch_items_logic($setup) {
                 'inferred_benefits' => $inferred_benefits,
                 'schema_generated' => $schema_generated,
                 'batch_time' => $time_elapsed,
-                'batch_processed' => 0
+                'batch_processed' => 0,
+                'message' => '' // No error message for success
             ];
         }
 
@@ -171,7 +172,8 @@ function process_batch_items_logic($setup) {
             'schema_generated' => $schema_generated,
             'batch_time' => $time_elapsed,  // Time for this specific batch
             'batch_processed' => $result['processed_count'],  // Items processed in this batch
-            'start_time' => $start_time
+            'start_time' => $start_time,
+            'message' => '' // No error message for success
         ];
     } catch (\Exception $e) {
         $error_msg = 'Batch import error: ' . $e->getMessage();
