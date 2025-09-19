@@ -22,16 +22,19 @@ function enqueue_job_import_scripts() {
     $current_page = isset($_GET['page']) ? $_GET['page'] : '';
     $post_type = isset($_GET['post_type']) ? $_GET['post_type'] : '';
     $current_screen = get_current_screen();
-    
+
     error_log('[PUNTWORK] Current URL: ' . $_SERVER['REQUEST_URI']);
     error_log('[PUNTWORK] Current page: ' . $current_page);
     error_log('[PUNTWORK] Post type: ' . $post_type);
     error_log('[PUNTWORK] Current screen: ' . ($current_screen ? $current_screen->id : 'none'));
-    
-    // Load scripts on job import dashboard or when editing jobs (to be safe)
-    if ($current_page === 'job-import-dashboard' || $post_type === 'job' || 
-        ($current_screen && $current_screen->id === 'job_page_job-import-dashboard')) {
-        error_log('[PUNTWORK] Enqueueing scripts - condition met');
+
+    // Load scripts on ANY admin page for now to debug - we'll narrow it down later
+    $should_load = true; // Temporarily load on all admin pages
+
+    error_log('[PUNTWORK] Should load scripts: ' . ($should_load ? 'YES' : 'NO'));
+
+    if ($should_load) {
+        error_log('[PUNTWORK] Enqueueing scripts - loading on this page');
         error_log('[PUNTWORK] Current page: ' . $current_page);
         error_log('[PUNTWORK] Post type: ' . $post_type);
         error_log('[PUNTWORK] Current screen: ' . ($current_screen ? $current_screen->id : 'none'));
