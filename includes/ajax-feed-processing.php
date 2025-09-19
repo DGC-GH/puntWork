@@ -53,7 +53,7 @@ function process_feed_ajax() {
 
         PuntWorkLogger::logAjaxResponse('process_feed', ['item_count' => $count, 'logs' => $logs]);
         wp_send_json_success(['item_count' => $count, 'logs' => $logs]);
-    } catch (Exception $e) {
+    } catch (\Exception $e) {
         PuntWorkLogger::logFeedProcessing($feed_key, $url, 0, false);
         PuntWorkLogger::error("Feed processing failed: {$feed_key} - " . $e->getMessage(), PuntWorkLogger::CONTEXT_FEED);
 
@@ -88,7 +88,7 @@ function combine_jsonl_ajax() {
 
         PuntWorkLogger::logAjaxResponse('combine_jsonl', ['logs' => $logs]);
         wp_send_json_success(['logs' => $logs]);
-    } catch (Exception $e) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error("JSONL combination failed: " . $e->getMessage(), PuntWorkLogger::CONTEXT_FEED);
 
         PuntWorkLogger::logAjaxResponse('combine_jsonl', ['message' => 'Combine JSONL failed: ' . $e->getMessage()], false);
@@ -117,7 +117,7 @@ function generate_json_ajax() {
 
         PuntWorkLogger::logAjaxResponse('generate_json', ['message' => 'JSONL generated successfully', 'logs' => $gen_logs]);
         wp_send_json_success(['message' => 'JSONL generated successfully', 'logs' => $gen_logs]);
-    } catch (Exception $e) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('JSONL generation failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_FEED);
 
         PuntWorkLogger::logAjaxResponse('generate_json', ['message' => 'JSONL generation failed: ' . $e->getMessage()], false);

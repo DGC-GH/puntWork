@@ -44,7 +44,7 @@ function prepare_import_setup($batch_start = 0) {
 
     if (!file_exists($json_path)) {
         error_log('JSONL file not found: ' . $json_path);
-        return new WP_Error('jsonl_not_found', 'JSONL file not found');
+        return new \WP_Error('jsonl_not_found', 'JSONL file not found');
     }
 
     $total = get_json_item_count($json_path);

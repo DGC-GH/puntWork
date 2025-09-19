@@ -18,13 +18,13 @@ function process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback
     $feed_item_count = 0;
     $batch = [];
     try {
-        $reader = new XMLReader();
-        if (!$reader->open($xml_path)) throw new Exception('Invalid XML');
+        $reader = new \XMLReader();
+        if (!$reader->open($xml_path)) throw new \Exception('Invalid XML');
         while ($reader->read()) {
-            if ($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'item') {
-                $item = new stdClass();
+            if ($reader->nodeType == \XMLReader::ELEMENT && $reader->name == 'item') {
+                $item = new \stdClass();
                 // Traverse child elements of <item>
-                while ($reader->read() && !($reader->nodeType == XMLReader::END_ELEMENT && $reader->name == 'item')) {
+                while ($reader->read() && !($reader->nodeType == \XMLReader::END_ELEMENT && $reader->name == 'item')) {
                     if ($reader->nodeType == XMLReader::ELEMENT) {
                         $name = strtolower(preg_replace('/^.*:/', '', $reader->name));
                         if ($reader->isEmptyElement) {
@@ -69,7 +69,7 @@ function process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Processed $feed_item_count items for $feed_key";
         error_log("Processed $feed_item_count items for $feed_key");
         $reader->close();
-    } catch (Exception $e) {
+    } catch (\Exception $e) {
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Processing error for $feed_key: " . $e->getMessage();
         error_log("Processing error for $feed_key: " . $e->getMessage());
     }
