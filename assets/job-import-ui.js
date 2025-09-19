@@ -198,6 +198,10 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 }
             }
 
+            var total = data.total || 0;
+            var processed = data.processed || 0;
+            var percent = 0;
+
             // Update success/failure state - only set to true when actually complete
             if (data.success !== null) {
                 // Only set importSuccess to true when the import is actually complete
@@ -209,10 +213,6 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 // Don't set to true for in-progress success responses
                 this.errorMessage = data.error_message || '';
             }
-
-            var total = data.total || 0;
-            var processed = data.processed || 0;
-            var percent = 0;
 
             // Calculate percentage based on current phase - each phase has its own 0-100% progress
             var phaseProgress = 0;
