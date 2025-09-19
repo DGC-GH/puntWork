@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 function render_scheduling_ui() {
     ?>
     <!-- Scheduling Section -->
-    <div id="import-scheduling" style="margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <div id="import-scheduling" style="max-width: 800px; margin: 0 auto; margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
             <h2 style="font-size: 20px; font-weight: 600; margin: 0;">Scheduled Imports</h2>
             <label style="display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 500;">
