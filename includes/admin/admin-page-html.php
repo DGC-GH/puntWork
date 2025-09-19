@@ -16,9 +16,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Load admin UI components
-require_once __DIR__ . '/admin/admin-ui-main.php';
-require_once __DIR__ . '/admin/admin-ui-scheduling.php';
-require_once __DIR__ . '/admin/admin-ui-debug.php';
+require_once __DIR__ . '/admin-ui-main.php';
+require_once __DIR__ . '/admin-ui-scheduling.php';
+require_once __DIR__ . '/admin-ui-debug.php';
 
 function job_import_admin_page() {
     wp_enqueue_script('jquery');
