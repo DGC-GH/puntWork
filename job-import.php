@@ -49,6 +49,7 @@ function setup_job_import() {
     
     // Load includes
     $includes = array(
+        'puntwork-logger.php',
         'core-structure-logic.php',
         'admin-menu.php',
         'admin-page-html.php',                    

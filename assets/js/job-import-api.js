@@ -13,7 +13,8 @@
          * @returns {Promise} AJAX promise
          */
         runImportBatch: function(start) {
-            console.log('Running import batch at start:', start);
+            PuntWorkJSLogger.debug('Running import batch at start: ' + start, 'API');
+
             return $.ajax({
                 url: jobImportData.ajaxurl,
                 type: 'POST',
@@ -32,10 +33,10 @@
                 type: 'POST',
                 data: { action: 'clear_import_cancel', nonce: jobImportData.nonce },
                 success: function(response) {
-                    console.log('Clear cancel response:', response);
+                    PuntWorkJSLogger.debug('Clear cancel response', 'API', response);
                 },
                 error: function(xhr, status, error) {
-                    console.error('Clear cancel error:', error);
+                    PuntWorkJSLogger.error('Clear cancel error: ' + error, 'API');
                 }
             });
         },

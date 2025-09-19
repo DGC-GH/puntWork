@@ -16,9 +16,17 @@ function enqueue_job_import_scripts() {
 
         // Enqueue JavaScript modules
         wp_enqueue_script(
+            'puntwork-logger-js',
+            JOB_IMPORT_URL . 'assets/js/puntwork-logger.js',
+            ['jquery'],
+            JOB_IMPORT_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
             'job-import-ui-js',
             JOB_IMPORT_URL . 'assets/js/job-import-ui.js',
-            ['jquery'],
+            ['jquery', 'puntwork-logger-js'],
             JOB_IMPORT_VERSION,
             true
         );
