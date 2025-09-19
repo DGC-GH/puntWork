@@ -19,9 +19,23 @@
          * Bind all event handlers
          */
         bindEvents: function() {
-            $('#start-import').on('click', this.handleStartImport.bind(this));
-            $('#resume-import').on('click', this.handleResumeImport.bind(this));
-            $('#cancel-import').on('click', this.handleCancelImport.bind(this));
+            console.log('[PUNTWORK] Binding events...');
+            console.log('[PUNTWORK] Start button exists:', $('#start-import').length);
+            
+            $('#start-import').on('click', function(e) {
+                console.log('[PUNTWORK] Start button clicked!');
+                JobImportEvents.handleStartImport();
+            });
+            $('#resume-import').on('click', function(e) {
+                console.log('[PUNTWORK] Resume button clicked!');
+                JobImportEvents.handleResumeImport();
+            });
+            $('#cancel-import').on('click', function(e) {
+                console.log('[PUNTWORK] Cancel button clicked!');
+                JobImportEvents.handleCancelImport();
+            });
+            
+            console.log('[PUNTWORK] Events bound successfully');
         },
 
         /**
