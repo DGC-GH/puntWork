@@ -9,6 +9,9 @@
     var JobImportUI = {
         segmentsCreated: false,
         currentPhase: 'idle', // 'idle', 'feed-processing', 'jsonl-combining', 'job-importing', 'complete'
+        processingSpeed: 0, // items per second
+        lastUpdateTime: 0,
+        lastProcessedCount: 0,
 
         /**
          * Set the current import phase
@@ -20,11 +23,35 @@
         },
 
         /**
+         * Update processing speed calculation
+         * @param {number} processed - Current processed count
+         * @param {number} timeElapsed - Time elapsed so far
+         */
+        updateProcessingSpeed: function(processed, timeElapsed) {
+            if (timeElapsed > 0 && processed > this.lastProcessedCount) {
+                var timeDiff = timeElapsed - this.lastUpdateTime;
+                var processedDiff = processed - this.lastProcessedCount;
+
+                if (timeDiff > 0) {
+                    // Calculate items per second, but smooth it with previous value
+                    var currentSpeed = processedDiff / timeDiff;
+                    this.processingSpeed = this.processingSpeed === 0 ? currentSpeed : (this.processingSpeed * 0.7 + currentSpeed * 0.3);
+
+                    this.lastUpdateTime = timeElapsed;
+                    this.lastProcessedCount = processed;
+                }
+            }
+        },
+
+        /**
          * Clear all progress indicators and reset UI
          */
         clearProgress: function() {
             this.segmentsCreated = false;
             this.setPhase('idle');
+            this.processingSpeed = 0; // Reset processing speed
+            this.lastUpdateTime = 0;
+            this.lastProcessedCount = 0;
             $('#progress-bar').empty();
             $('#progress-percent').text('0%');
             $('#total-items').text(0);
@@ -243,6 +270,11 @@
             var elapsedTime = data.time_elapsed || 0;
             $('#time-elapsed').text(this.formatTime(elapsedTime));
 
+            // Update processing speed for better time estimation
+            if (this.currentPhase === 'job-importing' && total > 0) {
+                this.updateProcessingSpeed(processed, elapsedTime);
+            }
+
             // Calculate and update estimated time remaining
             this.updateEstimatedTime(data);
         },
@@ -284,7 +316,26 @@
                 return;
             }
 
-            // Job importing phase - original logic
+            // Job importing phase - use processing speed for better accuracy
+            if (this.processingSpeed > 0 && itemsLeft > 0) {
+                // Use the tracked processing speed (items per second)
+                var estimatedSeconds = itemsLeft / this.processingSpeed;
+
+                // Validate estimatedSeconds
+                if (!isNaN(estimatedSeconds) && isFinite(estimatedSeconds)) {
+                    // Sanity check - don't show ridiculous estimates
+                    if (estimatedSeconds > 86400) { // More than 24 hours
+                        $('#time-left').text('>24h');
+                    } else if (estimatedSeconds < 0) {
+                        $('#time-left').text('Calculating...');
+                    } else {
+                        $('#time-left').text(this.formatTime(estimatedSeconds));
+                    }
+                    return;
+                }
+            }
+
+            // Fallback to original logic if processing speed not available
             // Don't calculate if we don't have enough data or invalid values
             if (total === 0 || processed === 0 || timeElapsed <= 0 || itemsLeft <= 0 || isNaN(timeElapsed)) {
                 $('#time-left').text('Calculating...');
@@ -333,7 +384,8 @@
                 timeElapsed: timeElapsed,
                 itemsLeft: itemsLeft,
                 timePerItem: timePerItem,
-                estimatedSeconds: estimatedSeconds
+                estimatedSeconds: estimatedSeconds,
+                processingSpeed: this.processingSpeed
             });
             console.log('[PUNTWORK] Time calculation details:', {
                 total: total,
@@ -342,6 +394,7 @@
                 itemsLeft: itemsLeft,
                 timePerItem: timePerItem,
                 estimatedSeconds: estimatedSeconds,
+                processingSpeed: this.processingSpeed,
                 formattedTime: this.formatTime(estimatedSeconds)
             });
         },
