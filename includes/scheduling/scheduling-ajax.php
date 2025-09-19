@@ -65,7 +65,7 @@ function save_import_schedule_ajax() {
         'interval' => $interval,
         'hour' => $hour,
         'minute' => $minute,
-        'updated_at' => time(),
+        'updated_at' => current_time('timestamp'),
         'updated_by' => get_current_user_id()
     ];
 
