@@ -23,7 +23,7 @@ register_activation_hook( __FILE__, __NAMESPACE__ . '\\job_import_activate' );
 function job_import_activate() {
     // Schedule cron
     if ( ! wp_next_scheduled( 'job_import_cron' ) ) {
-        wp_schedule_event( time(), 'daily', 'job_import_cron' );
+        wp_schedule_event( current_time('timestamp'), 'daily', 'job_import_cron' );
     }
     // Create logs dir if needed
     $logs_dir = dirname( JOB_IMPORT_LOGS );

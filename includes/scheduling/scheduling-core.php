@@ -17,19 +17,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Calculate the next run time based on schedule settings
+ * Uses WordPress configured timezone for all time calculations
  */
 function calculate_next_run_time($schedule_data) {
-    $current_time = time();
+    // Get current time in WordPress timezone
+    $current_time = current_time('timestamp');
     $hour = $schedule_data['hour'] ?? 9;
     $minute = $schedule_data['minute'] ?? 0;
     $frequency = $schedule_data['frequency'] ?? 'daily';
 
-    // Create timestamp for today at the specified time
-    $today_target = strtotime(date('Y-m-d', $current_time) . " {$hour}:{$minute}:00");
+    // Get WordPress timezone
+    $wp_timezone = wp_timezone();
+
+    // Create DateTime objects in WordPress timezone
+    $now = new DateTime('now', $wp_timezone);
+    $today_target = new DateTime('today', $wp_timezone);
+    $today_target->setTime($hour, $minute, 0);
 
     // If today's target time has passed, calculate for tomorrow
-    if ($today_target <= $current_time) {
-        $today_target = strtotime('+1 day', $today_target);
+    if ($today_target <= $now) {
+        $today_target->modify('+1 day');
     }
 
     // For non-daily frequencies, we need to find the next occurrence
@@ -57,18 +64,18 @@ function calculate_next_run_time($schedule_data) {
         }
 
         // Find the next occurrence based on the interval
-        $next_run = $today_target;
+        $next_run = clone $today_target;
 
         // If the target time is in the past, find the next future occurrence
-        while ($next_run <= $current_time) {
-            $next_run = strtotime("+{$interval_hours} hours", $next_run);
+        while ($next_run->getTimestamp() <= $current_time) {
+            $next_run->modify("+{$interval_hours} hours");
         }
 
-        return $next_run;
+        return $next_run->getTimestamp();
     }
 
     // For daily frequency, just return today's target (or tomorrow's if passed)
-    return $today_target;
+    return $today_target->getTimestamp();
 }
 
 /**
@@ -85,7 +92,7 @@ function update_cron_schedule($schedule_data) {
         $cron_interval = get_cron_interval($schedule_data);
 
         if (wp_schedule_event($next_run_timestamp, $cron_interval, $hook)) {
-            error_log('[PUNTWORK] Scheduled import hook registered for: ' . date('Y-m-d H:i:s', $next_run_timestamp) . ' with interval: ' . $cron_interval);
+            error_log('[PUNTWORK] Scheduled import hook registered for: ' . wp_date('Y-m-d H:i:s', $next_run_timestamp) . ' (' . wp_timezone_string() . ') with interval: ' . $cron_interval);
         } else {
             error_log('[PUNTWORK] Failed to register scheduled import hook with interval: ' . $cron_interval);
         }
@@ -126,8 +133,8 @@ function get_next_scheduled_time() {
     if ($next_scheduled) {
         return [
             'timestamp' => $next_scheduled,
-            'formatted' => date_i18n('M j, Y g:i A', $next_scheduled),
-            'relative' => human_time_diff($next_scheduled, time()) . ' from now'
+            'formatted' => wp_date('M j, Y g:i A', $next_scheduled),
+            'relative' => human_time_diff($next_scheduled, current_time('timestamp')) . ' from now'
         ];
     }
 
