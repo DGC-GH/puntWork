@@ -8,12 +8,12 @@
  * @since      1.0.0
  */
 
+namespace Puntwork;
+
 // Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
-
-namespace Puntwork;
 
 /**
  * Centralized logging utility for puntWork plugin
