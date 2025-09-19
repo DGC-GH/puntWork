@@ -87,22 +87,24 @@ console.log('[PUNTWORK] job-import-events.js loaded');
             console.log('[PUNTWORK] jobImportData available:', typeof jobImportData);
             console.log('[PUNTWORK] JobImportAPI available:', typeof JobImportAPI);
             console.log('[PUNTWORK] JobImportUI available:', typeof JobImportUI);
-            
+
             if (confirm('This will permanently delete duplicate job posts. This action cannot be undone. Continue?')) {
                 console.log('[PUNTWORK] User confirmed cleanup');
                 $('#cleanup-duplicates').prop('disabled', true);
                 $('#cleanup-text').hide();
                 $('#cleanup-loading').show();
-                $('#cleanup-status').text('Cleaning up duplicates...');
+                $('#cleanup-status').text('Starting cleanup...');
+
+                // Show progress UI immediately
+                JobImportUI.showCleanupUI();
+                JobImportUI.clearCleanupProgress();
 
                 console.log('[PUNTWORK] Calling cleanup API');
                 JobImportEvents.processCleanupBatch(0, 50); // Start with first batch
             } else {
                 console.log('[PUNTWORK] User cancelled cleanup');
             }
-        },
-
-        /**
+        },        /**
          * Process cleanup batch and continue if needed
          * @param {number} offset - Current offset for batch processing
          * @param {number} batchSize - Size of batch to process
@@ -163,22 +165,24 @@ console.log('[PUNTWORK] job-import-events.js loaded');
             console.log('[PUNTWORK] jobImportData available:', typeof jobImportData);
             console.log('[PUNTWORK] JobImportAPI available:', typeof JobImportAPI);
             console.log('[PUNTWORK] JobImportUI available:', typeof JobImportUI);
-            
+
             if (confirm('This will permanently delete all jobs that are no longer in the current feed. This action cannot be undone. Continue?')) {
                 console.log('[PUNTWORK] User confirmed purge');
                 $('#purge-old-jobs').prop('disabled', true);
                 $('#purge-text').hide();
                 $('#purge-loading').show();
-                $('#purge-status').text('Purging old jobs...');
+                $('#purge-status').text('Starting purge...');
+
+                // Show progress UI immediately
+                JobImportUI.showPurgeUI();
+                JobImportUI.clearPurgeProgress();
 
                 console.log('[PUNTWORK] Calling purge API');
                 JobImportEvents.processPurgeBatch(0, 50); // Start with first batch
             } else {
                 console.log('[PUNTWORK] User cancelled purge');
             }
-        },
-
-        /**
+        },        /**
          * Process purge batch and continue if needed
          * @param {number} offset - Current offset for batch processing
          * @param {number} batchSize - Size of batch to process
