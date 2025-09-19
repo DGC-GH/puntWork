@@ -38,7 +38,20 @@ function run_job_import_batch_ajax() {
 
     $result = import_jobs_from_json(true, $start);
 
-    PuntWorkLogger::logAjaxResponse('run_job_import_batch', $result, isset($result['success']) && $result['success']);
+    // Log summary instead of full result to prevent large debug logs
+    $log_summary = [
+        'success' => isset($result['success']) && $result['success'],
+        'processed' => $result['processed'] ?? 0,
+        'total' => $result['total'] ?? 0,
+        'created' => $result['created'] ?? 0,
+        'updated' => $result['updated'] ?? 0,
+        'skipped' => $result['skipped'] ?? 0,
+        'complete' => $result['complete'] ?? false,
+        'logs_count' => isset($result['logs']) && is_array($result['logs']) ? count($result['logs']) : 0,
+        'has_error' => !empty($result['message'])
+    ];
+
+    PuntWorkLogger::logAjaxResponse('run_job_import_batch', $log_summary, isset($result['success']) && $result['success']);
     wp_send_json_success($result);
 }
 
@@ -133,6 +146,20 @@ function get_job_import_status_ajax() {
     // Add resume_progress for JavaScript
     $progress['resume_progress'] = (int) get_option('job_import_progress', 0);
 
-    PuntWorkLogger::logAjaxResponse('get_job_import_status', $progress);
+    // Log response summary instead of full data to prevent large debug logs
+    $log_summary = [
+        'total' => $progress['total'],
+        'processed' => $progress['processed'],
+        'created' => $progress['created'],
+        'updated' => $progress['updated'],
+        'skipped' => $progress['skipped'],
+        'complete' => $progress['complete'],
+        'success' => $progress['success'],
+        'time_elapsed' => $progress['time_elapsed'],
+        'logs_count' => is_array($progress['logs']) ? count($progress['logs']) : 0,
+        'has_error' => !empty($progress['error_message'])
+    ];
+
+    PuntWorkLogger::logAjaxResponse('get_job_import_status', $log_summary);
     wp_send_json_success($progress);
 }
