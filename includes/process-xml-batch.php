@@ -25,7 +25,7 @@ function process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback
                 $item = new \stdClass();
                 // Traverse child elements of <item>
                 while ($reader->read() && !($reader->nodeType == \XMLReader::END_ELEMENT && $reader->name == 'item')) {
-                    if ($reader->nodeType == XMLReader::ELEMENT) {
+                    if ($reader->nodeType == \XMLReader::ELEMENT) {
                         $name = strtolower(preg_replace('/^.*:/', '', $reader->name));
                         if ($reader->isEmptyElement) {
                             $item->$name = '';
