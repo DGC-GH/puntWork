@@ -11,7 +11,7 @@ namespace Puntwork;
  * Handles feed downloading, JSONL combination, and JSON generation
  */
 
-add_action('wp_ajax_process_feed', 'process_feed_ajax');
+add_action('wp_ajax_process_feed', __NAMESPACE__ . '\\process_feed_ajax');
 function process_feed_ajax() {
     error_log('process_feed_ajax called');
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
@@ -40,7 +40,7 @@ function process_feed_ajax() {
     }
 }
 
-add_action('wp_ajax_combine_jsonl', 'combine_jsonl_ajax');
+add_action('wp_ajax_combine_jsonl', __NAMESPACE__ . '\\combine_jsonl_ajax');
 function combine_jsonl_ajax() {
     error_log('combine_jsonl_ajax called');
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
@@ -64,7 +64,7 @@ function combine_jsonl_ajax() {
     }
 }
 
-add_action('wp_ajax_generate_json', 'generate_json_ajax');
+add_action('wp_ajax_generate_json', __NAMESPACE__ . '\\generate_json_ajax');
 function generate_json_ajax() {
     error_log('generate_json_ajax called');
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
