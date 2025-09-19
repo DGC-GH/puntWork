@@ -44,34 +44,67 @@ function render_javascript_init() {
     ?>
     <script type="text/javascript">
         jQuery(document).ready(function($) {
-            console.log('[PUNTWORK] Document ready, checking modules...');
-            console.log('[PUNTWORK] JobImportEvents available:', typeof JobImportEvents);
-            console.log('[PUNTWORK] JobImportUI available:', typeof JobImportUI);
-            console.log('[PUNTWORK] JobImportAPI available:', typeof JobImportAPI);
-            console.log('[PUNTWORK] JobImportLogic available:', typeof JobImportLogic);
+            console.log('[PUNTWORK] Inline script: Document ready, checking modules...');
+            console.log('[PUNTWORK] Inline script: JobImportEvents available:', typeof JobImportEvents);
+            console.log('[PUNTWORK] Inline script: JobImportUI available:', typeof JobImportUI);
+            console.log('[PUNTWORK] Inline script: JobImportAPI available:', typeof JobImportAPI);
+            console.log('[PUNTWORK] Inline script: JobImportLogic available:', typeof JobImportLogic);
+            console.log('[PUNTWORK] Inline script: jobImportInitialized:', typeof window.jobImportInitialized);
 
-            // Initialize the job import system
-            if (typeof JobImportEvents !== 'undefined') {
-                console.log('[PUNTWORK] Initializing JobImportEvents...');
-                JobImportEvents.init();
+            // Check if buttons exist
+            console.log('[PUNTWORK] Inline script: cleanup-duplicates button exists:', $('#cleanup-duplicates').length);
+            console.log('[PUNTWORK] Inline script: purge-old-jobs button exists:', $('#purge-old-jobs').length);
+
+            // Add a simple test function to global scope
+            window.testButtons = function() {
+                console.log('[PUNTWORK] Testing buttons...');
+                console.log('Cleanup button found:', $('#cleanup-duplicates').length);
+                console.log('Purge button found:', $('#purge-old-jobs').length);
+
+                if ($('#cleanup-duplicates').length > 0) {
+                    console.log('Cleanup button HTML:', $('#cleanup-duplicates')[0].outerHTML);
+                }
+                if ($('#purge-old-jobs').length > 0) {
+                    console.log('Purge button HTML:', $('#purge-old-jobs')[0].outerHTML);
+                }
+
+                // Test click events
+                $('#cleanup-duplicates').trigger('click');
+                $('#purge-old-jobs').trigger('click');
+            };
+
+            console.log('[PUNTWORK] Run testButtons() in console to test button functionality');
+
+            // Only initialize if not already initialized
+            if (typeof window.jobImportInitialized === 'undefined') {
+                console.log('[PUNTWORK] Inline script: Initializing job import system...');
+
+                // Initialize the job import system
+                if (typeof JobImportEvents !== 'undefined') {
+                    console.log('[PUNTWORK] Inline script: Calling JobImportEvents.init()');
+                    JobImportEvents.init();
+                } else {
+                    console.error('[PUNTWORK] Inline script: JobImportEvents not available!');
+                }
+
+                // Initialize UI components
+                if (typeof JobImportUI !== 'undefined') {
+                    console.log('[PUNTWORK] Inline script: Calling JobImportUI.clearProgress()');
+                    JobImportUI.clearProgress();
+                }
+
+                // Initialize scheduling if available
+                if (typeof JobImportScheduling !== 'undefined') {
+                    console.log('[PUNTWORK] Inline script: Calling JobImportScheduling.init()');
+                    JobImportScheduling.init();
+                }
+
+                // Mark as initialized to prevent double initialization
+                window.jobImportInitialized = true;
+                console.log('[PUNTWORK] Inline script: Admin page JavaScript initialized');
             } else {
-                console.error('[PUNTWORK] JobImportEvents not available!');
+                console.log('[PUNTWORK] Inline script: Job import already initialized, skipping...');
             }
-
-            // Initialize UI components
-            if (typeof JobImportUI !== 'undefined') {
-                JobImportUI.clearProgress();
-            }
-
-            // Initialize scheduling if available
-            if (typeof JobImportScheduling !== 'undefined') {
-                JobImportScheduling.init();
-            }
-
-            // Mark as initialized to prevent double initialization
-            window.jobImportInitialized = true;
-
-            console.log('[PUNTWORK] Admin page JavaScript initialized');
         });
     </script>
     <?php
