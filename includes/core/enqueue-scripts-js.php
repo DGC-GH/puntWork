@@ -145,18 +145,9 @@ function enqueue_job_import_scripts() {
         );
 
         // Localize script with data
-        $feeds = [];
-        try {
-            $feeds = array_keys(get_feeds());
-            error_log('Job Import: Found ' . count($feeds) . ' feeds: ' . implode(', ', $feeds));
-        } catch (Exception $e) {
-            error_log('Error getting feeds for JavaScript: ' . $e->getMessage());
-            $feeds = [];
-        }
-
         wp_localize_script('job-import-admin-js', 'jobImportData', [
             'nonce' => wp_create_nonce('job_import_nonce'),
-            'feeds' => $feeds,
+            'feeds' => [],
             'ajaxurl' => admin_url('admin-ajax.php'),
             'resume_progress' => (int) get_option('job_import_progress', 0)
         ]);
