@@ -123,6 +123,10 @@ function job_import_cleanup_duplicates_ajax() {
         foreach ($batch_jobs as $job) {
             if (!empty($job->guid)) {
                 $jobs_by_guid[$job->guid][] = $job;
+            } else {
+                // Log jobs without GUIDs
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Warning: Job ID ' . $job->ID . ' has no GUID';
+                error_log('Cleanup: Job ID ' . $job->ID . ' has no GUID');
             }
         }
 
@@ -136,17 +140,28 @@ function job_import_cleanup_duplicates_ajax() {
                 // Keep the first (newest) job as published
                 $keep_job = $jobs[0];
                 if ($keep_job->post_status !== 'publish') {
-                    $wpdb->update($wpdb->posts, ['post_status' => 'publish'], ['ID' => $keep_job->ID]);
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Republished newest job ID: ' . $keep_job->ID . ' GUID: ' . $guid;
+                    $result = $wpdb->update($wpdb->posts, ['post_status' => 'publish'], ['ID' => $keep_job->ID]);
+                    if ($result !== false) {
+                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Republished newest job ID: ' . $keep_job->ID . ' GUID: ' . $guid;
+                        error_log('Cleanup: Republished newest job ID: ' . $keep_job->ID . ' GUID: ' . $guid);
+                    } else {
+                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Error: Failed to republish job ID: ' . $keep_job->ID;
+                        error_log('Cleanup: Failed to republish job ID: ' . $keep_job->ID);
+                    }
                 }
 
                 // Delete all others
                 for ($i = 1; $i < count($jobs); $i++) {
                     $delete_job = $jobs[$i];
-                    wp_delete_post($delete_job->ID, true); // Force delete
-                    $deleted_count++;
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Deleted duplicate job ID: ' . $delete_job->ID . ' GUID: ' . $guid;
-                    error_log('Cleanup: Deleted duplicate job ID: ' . $delete_job->ID . ' GUID: ' . $guid);
+                    $result = wp_delete_post($delete_job->ID, true); // Force delete
+                    if ($result) {
+                        $deleted_count++;
+                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Deleted duplicate job ID: ' . $delete_job->ID . ' GUID: ' . $guid;
+                        error_log('Cleanup: Deleted duplicate job ID: ' . $delete_job->ID . ' GUID: ' . $guid);
+                    } else {
+                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Error: Failed to delete job ID: ' . $delete_job->ID . ' GUID: ' . $guid;
+                        error_log('Cleanup: Failed to delete job ID: ' . $delete_job->ID . ' GUID: ' . $guid);
+                    }
                 }
             }
         }
@@ -243,11 +258,20 @@ function job_import_purge_ajax() {
                 'complete' => false
             ];
 
-            if ($import_progress['processed'] < $import_progress['total'] || $import_progress['total'] == 0) {
+            // More permissive check - allow purge if we have processed GUIDs or if total > 0
+            $processed_guids = get_option('job_import_processed_guids') ?: [];
+            $has_processed_data = !empty($processed_guids) || $import_progress['total'] > 0;
+
+            if (!$has_processed_data) {
                 delete_transient('job_import_purge_lock');
-                error_log('Purge skipped: import not complete');
-                wp_send_json_error(['message' => 'Import not complete or empty; purge skipped']);
+                error_log('Purge skipped: no processed data found');
+                wp_send_json_error(['message' => 'No import data found. Please run an import first before purging.']);
             }
+
+            // Log the current state for debugging
+            error_log('Purge check - Import progress: ' . json_encode($import_progress));
+            error_log('Purge check - Processed GUIDs count: ' . count($processed_guids));
+            error_log('Purge check - Has processed data: ' . ($has_processed_data ? 'yes' : 'no'));
 
             // Get total count for progress calculation
             $total_jobs = $wpdb->get_var("
