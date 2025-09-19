@@ -39,11 +39,15 @@ function register_custom_cron_schedules($schedules) {
         'display' => __('Every 12 hours', 'puntwork')
     ];
 
-    // Custom schedule for time-based scheduling
-    $schedules['puntwork_custom_schedule'] = [
-        'interval' => 60, // Will be rescheduled each time
-        'display' => __('Custom schedule', 'puntwork')
-    ];
+    // Add common custom intervals
+    for ($hours = 2; $hours <= 24; $hours++) {
+        if ($hours != 3 && $hours != 6 && $hours != 12) { // Skip already defined ones
+            $schedules['puntwork_' . $hours . 'hours'] = [
+                'interval' => $hours * HOUR_IN_SECONDS,
+                'display' => sprintf(__('Every %d hours', 'puntwork'), $hours)
+            ];
+        }
+    }
 
     return $schedules;
 }
@@ -115,11 +119,12 @@ function update_cron_schedule($schedule_data) {
 
     if ($schedule_data['enabled']) {
         $next_run_timestamp = calculate_next_run_time($schedule_data);
+        $cron_interval = get_cron_interval($schedule_data);
 
-        if (wp_schedule_event($next_run_timestamp, 'puntwork_custom_schedule', $hook)) {
-            error_log('[PUNTWORK] Scheduled import hook registered for: ' . date('Y-m-d H:i:s', $next_run_timestamp));
+        if (wp_schedule_event($next_run_timestamp, $cron_interval, $hook)) {
+            error_log('[PUNTWORK] Scheduled import hook registered for: ' . date('Y-m-d H:i:s', $next_run_timestamp) . ' with interval: ' . $cron_interval);
         } else {
-            error_log('[PUNTWORK] Failed to register scheduled import hook');
+            error_log('[PUNTWORK] Failed to register scheduled import hook with interval: ' . $cron_interval);
         }
     }
 }
@@ -137,25 +142,13 @@ function get_cron_interval($schedule_data) {
         case 'daily':
             return 'daily';
         case 'custom':
-            // Register custom interval if needed
-            $interval_hours = $schedule_data['interval'];
-            $interval_seconds = $interval_hours * HOUR_IN_SECONDS;
-
-            // Check if custom interval is already registered
-            $schedules = wp_get_schedules();
-            $custom_key = 'puntwork_custom_' . $interval_hours . 'h';
-
-            if (!isset($schedules[$custom_key])) {
-                add_filter('cron_schedules', function($schedules) use ($interval_seconds, $interval_hours, $custom_key) {
-                    $schedules[$custom_key] = [
-                        'interval' => $interval_seconds,
-                        'display' => sprintf(__('Every %d hours', 'puntwork'), $interval_hours)
-                    ];
-                    return $schedules;
-                });
+            $interval_hours = intval($schedule_data['interval']);
+            // Use predefined custom intervals
+            if ($interval_hours >= 2 && $interval_hours <= 24) {
+                return 'puntwork_' . $interval_hours . 'hours';
             }
-
-            return $custom_key;
+            // Fallback to closest available interval
+            return 'puntwork_6hours';
         default:
             return 'daily';
     }
