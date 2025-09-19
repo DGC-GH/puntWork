@@ -50,9 +50,32 @@ function job_import_admin_page() {
     </div>
     <script>
         // Initialize job import admin functionality
-        if (typeof PuntWorkJobImportAdmin !== 'undefined') {
-            PuntWorkJobImportAdmin.init();
-        }
+        jQuery(document).ready(function($) {
+            console.log('[PUNTWORK] DOM ready, checking for PuntWorkJobImportAdmin...');
+            console.log('[PUNTWORK] Available globals:', {
+                PuntWorkJobImportAdmin: typeof PuntWorkJobImportAdmin,
+                PuntWorkJSLogger: typeof PuntWorkJSLogger,
+                JobImportUI: typeof JobImportUI,
+                JobImportAPI: typeof JobImportAPI,
+                JobImportLogic: typeof JobImportLogic,
+                JobImportEvents: typeof JobImportEvents,
+                jobImportData: typeof jobImportData
+            });
+            
+            if (typeof jobImportData !== 'undefined') {
+                console.log('[PUNTWORK] jobImportData:', jobImportData);
+            }
+
+            // Wait a bit for all scripts to load
+            setTimeout(function() {
+                if (typeof PuntWorkJobImportAdmin !== 'undefined') {
+                    console.log('[PUNTWORK] Initializing PuntWorkJobImportAdmin...');
+                    PuntWorkJobImportAdmin.init();
+                } else {
+                    console.error('[PUNTWORK] PuntWorkJobImportAdmin is not defined - scripts may not have loaded');
+                }
+            }, 100);
+        });
     </script>
     <?php
 }

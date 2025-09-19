@@ -24,16 +24,31 @@ function get_feeds() {
             'posts_per_page' => -1,
             'fields' => 'ids',
         ]);
+
+        error_log('[PUNTWORK] get_feeds() - Query found ' . $query->found_posts . ' job-feed posts');
+
         if ($query->have_posts()) {
             foreach ($query->posts as $post_id) {
                 $feed_url = get_post_meta($post_id, 'feed_url', true);
+                $post = get_post($post_id);
+
+                error_log('[PUNTWORK] get_feeds() - Post ID ' . $post_id . ': title="' . $post->post_title . '", status="' . $post->post_status . '", feed_url="' . $feed_url . '"');
+
                 if (!empty($feed_url)) {
-                    $post = get_post($post_id);
                     $feeds[$post->post_name] = $feed_url; // Use slug as key
+                    error_log('[PUNTWORK] get_feeds() - Added feed: ' . $post->post_name . ' -> ' . $feed_url);
+                } else {
+                    error_log('[PUNTWORK] get_feeds() - Skipping post ID ' . $post_id . ' - empty feed_url');
                 }
             }
+        } else {
+            error_log('[PUNTWORK] get_feeds() - No job-feed posts found');
         }
+
         set_transient('puntwork_feeds', $feeds, 3600); // Cache for 1 hour
+        error_log('[PUNTWORK] get_feeds() - Returning ' . count($feeds) . ' feeds: ' . implode(', ', array_keys($feeds)));
+    } else {
+        error_log('[PUNTWORK] get_feeds() - Using cached feeds: ' . count($feeds) . ' feeds');
     }
     return $feeds;
 }
