@@ -165,25 +165,27 @@ function job_import_purge_ajax() {
         }
         $old_ids = array_column($old_jobs, 'ID');
         if (!empty($old_ids)) {
-            $placeholders = implode(',', array_fill(0, count($old_ids), '%d'));
-            $wpdb->query($wpdb->prepare("UPDATE $wpdb->posts SET post_status = 'draft' WHERE ID IN ($placeholders)", ...$old_ids));
-            $drafted_old = count($old_ids);
-            foreach ($old_jobs as $job) {
-                $progress['logs'][] = 'Drafted ID: ' . $job->ID . ' GUID: ' . $job->guid . ' - No longer in feed';
-                error_log('Drafted ID: ' . $job->ID . ' GUID: ' . $job->guid . ' - No longer in feed');
+            // Permanently delete jobs that are no longer in the feed
+            $deleted_count = 0;
+            foreach ($old_ids as $old_id) {
+                $result = wp_delete_post($old_id, true); // true = force delete, skip trash
+                if ($result) {
+                    $deleted_count++;
+                    $progress['logs'][] = 'Permanently deleted ID: ' . $old_id . ' - No longer in feed';
+                    error_log('Permanently deleted ID: ' . $old_id . ' - No longer in feed');
+                } else {
+                    $progress['logs'][] = 'Failed to delete ID: ' . $old_id;
+                    error_log('Failed to delete ID: ' . $old_id);
+                }
             }
             wp_cache_flush();
+            $message = "Purge completed: Permanently deleted {$deleted_count} jobs no longer in feed";
+        } else {
+            $message = "Purge completed: No old jobs found to delete";
         }
-        $progress['drafted_old'] += $drafted_old;
         delete_option('job_import_processed_guids');
         delete_option('job_existing_guids');
         $progress['end_time'] = microtime(true);
         update_option('job_import_status', $progress, false);
         delete_transient('job_import_purge_lock');
-        wp_send_json_success(['message' => 'Purge completed, drafted ' . $drafted_old . ' old jobs']);
-    } catch (\Exception $e) {
-        delete_transient('job_import_purge_lock');
-        error_log('Purge failed: ' . $e->getMessage());
-        wp_send_json_error(['message' => 'Purge failed: ' . $e->getMessage()]);
-    }
-}
+        wp_send_json_success(['message' => $message]);

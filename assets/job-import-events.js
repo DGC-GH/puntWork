@@ -38,6 +38,10 @@
                 console.log('[PUNTWORK] Cleanup button clicked!');
                 JobImportEvents.handleCleanupDuplicates();
             });
+            $('#purge-old-jobs').on('click', function(e) {
+                console.log('[PUNTWORK] Purge button clicked!');
+                JobImportEvents.handlePurgeOldJobs();
+            });
             
             console.log('[PUNTWORK] Events bound successfully');
         },
@@ -90,6 +94,39 @@
                     $('#cleanup-duplicates').prop('disabled', false);
                     $('#cleanup-text').show();
                     $('#cleanup-loading').hide();
+                });
+            }
+        },
+
+        /**
+         * Handle purge old jobs button click
+         */
+        handlePurgeOldJobs: function() {
+            if (confirm('This will permanently delete all jobs that are no longer in the current feed. This action cannot be undone. Continue?')) {
+                $('#purge-old-jobs').prop('disabled', true);
+                $('#purge-text').hide();
+                $('#purge-loading').show();
+                $('#purge-status').text('Purging old jobs...');
+
+                JobImportAPI.purgeImport().then(function(response) {
+                    PuntWorkJSLogger.debug('Purge response', 'EVENTS', response);
+                    
+                    if (response.success) {
+                        $('#purge-status').text(response.data.message);
+                        // Refresh the page to show updated job counts
+                        setTimeout(function() {
+                            location.reload();
+                        }, 2000);
+                    } else {
+                        $('#purge-status').text('Purge failed: ' + (response.data.message || 'Unknown error'));
+                    }
+                }).catch(function(xhr, status, error) {
+                    PuntWorkJSLogger.error('Purge AJAX error', 'EVENTS', error);
+                    $('#purge-status').text('Purge failed: ' + error);
+                }).finally(function() {
+                    $('#purge-old-jobs').prop('disabled', false);
+                    $('#purge-text').show();
+                    $('#purge-loading').hide();
                 });
             }
         },
