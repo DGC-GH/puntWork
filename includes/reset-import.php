@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-add_action('wp_ajax_reset_job_import', 'reset_job_import_ajax');
+add_action('wp_ajax_reset_job_import', __NAMESPACE__ . '\\reset_job_import_ajax');
 function reset_job_import_ajax() {
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
         wp_send_json_error(['message' => 'Nonce verification failed']);
