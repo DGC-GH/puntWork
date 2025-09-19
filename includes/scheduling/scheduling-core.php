@@ -19,6 +19,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Register custom cron schedules
  */
 function register_custom_cron_schedules($schedules) {
+    $schedules['puntwork_hourly'] = [
+        'interval' => HOUR_IN_SECONDS,
+        'display' => __('Hourly', 'puntwork')
+    ];
+
     $schedules['puntwork_3hours'] = [
         'interval' => 3 * HOUR_IN_SECONDS,
         'display' => __('Every 3 hours', 'puntwork')
@@ -65,6 +70,9 @@ function calculate_next_run_time($schedule_data) {
         $interval_hours = 0;
 
         switch ($frequency) {
+            case 'hourly':
+                $interval_hours = 1;
+                break;
             case '3hours':
                 $interval_hours = 3;
                 break;
@@ -116,11 +124,10 @@ function update_cron_schedule($schedule_data) {
     }
 }
 
-/**
- * Get cron interval based on schedule settings
- */
 function get_cron_interval($schedule_data) {
     switch ($schedule_data['frequency']) {
+        case 'hourly':
+            return 'puntwork_hourly';
         case '3hours':
             return 'puntwork_3hours';
         case '6hours':
