@@ -35,6 +35,7 @@
                 this.processingSpeed = 0;
                 this.batchTimes = [];
             }
+            // Keep startTime and other data intact during phase transitions
         },
 
         /**
@@ -218,6 +219,8 @@
                 if (processed >= phaseTotal && phaseTotal > 0) {
                     this.setPhase('jsonl-combining');
                     PuntWorkJSLogger.debug('Transitioned to jsonl-combining phase', 'UI');
+                    // Force a progress update to reflect the phase change
+                    this.updateProgress(data);
                 }
             } else if (this.currentPhase === 'jsonl-combining') {
                 // JSONL combining phase: 30-40% of total progress (fixed 10% range)
@@ -228,6 +231,8 @@
                 if (processed >= 1) {
                     this.setPhase('job-importing');
                     PuntWorkJSLogger.debug('Transitioned to job-importing phase', 'UI');
+                    // Force a progress update to reflect the phase change
+                    this.updateProgress(data);
                 }
             } else if (this.currentPhase === 'job-importing') {
                 // Job importing phase: 40-100% of total progress
@@ -236,6 +241,8 @@
                         percent = 100;
                         this.setPhase('complete');
                         PuntWorkJSLogger.debug('Import completed successfully', 'UI');
+                        // Force a final progress update to show completion
+                        this.updateProgress(data);
                     } else {
                         phaseProgress = processed / total;
                         percent = 40 + Math.floor(phaseProgress * 60);
@@ -367,6 +374,10 @@
             if (this.startTime !== null) {
                 var currentTime = Date.now() / 1000;
                 elapsedTime = Math.max(elapsedTime, currentTime - this.startTime);
+            } else if (window.JobImportLogic && window.JobImportLogic.startTime) {
+                // Fallback to logic module's start time if available
+                var currentTime = Date.now() / 1000;
+                elapsedTime = Math.max(elapsedTime, currentTime - (window.JobImportLogic.startTime / 1000));
             }
 
             // Update time elapsed display immediately
@@ -385,6 +396,11 @@
                 if (this.batchTimes.length > 5) {
                     this.batchTimes.shift();
                 }
+                PuntWorkJSLogger.debug('Batch timing recorded', 'UI', {
+                    batchSize: data.batch_processed,
+                    batchTime: data.batch_time,
+                    batchTimesCount: this.batchTimes.length
+                });
             }
 
             // Update processing speed for better time estimation
@@ -394,6 +410,16 @@
 
             // Calculate and update estimated time remaining
             this.updateEstimatedTime(data, elapsedTime);
+
+            PuntWorkJSLogger.debug('Progress update summary', 'UI', {
+                phase: this.currentPhase,
+                percent: percent,
+                processed: processed,
+                total: total,
+                elapsedTime: elapsedTime,
+                startTime: this.startTime,
+                importSuccess: this.importSuccess
+            });
         },
 
         /**

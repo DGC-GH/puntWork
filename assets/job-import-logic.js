@@ -67,6 +67,9 @@
                             processed: current,
                             finalBatch: batchData
                         });
+                        // Ensure success state is set before completion
+                        batchData.success = true;
+                        JobImportUI.updateProgress(batchData);
                         await this.handleImportCompletion();
                     }
                 } else {
