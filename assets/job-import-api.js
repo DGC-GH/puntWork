@@ -110,6 +110,7 @@ console.log('[PUNTWORK] job-import-api.js loaded');
          * @returns {Promise} AJAX promise
          */
         purgeImport: function() {
+            console.log('[PUNTWORK] API: Making purge import request');
             return $.ajax({
                 url: jobImportData.ajaxurl,
                 type: 'POST',
@@ -124,6 +125,7 @@ console.log('[PUNTWORK] job-import-api.js loaded');
          * @returns {Promise} AJAX promise
          */
         continuePurge: function(offset, batchSize) {
+            console.log('[PUNTWORK] API: Making continue purge request - offset:', offset, 'batchSize:', batchSize);
             return $.ajax({
                 url: jobImportData.ajaxurl,
                 type: 'POST',
@@ -141,6 +143,7 @@ console.log('[PUNTWORK] job-import-api.js loaded');
          * @returns {Promise} AJAX promise
          */
         cleanupDuplicates: function() {
+            console.log('[PUNTWORK] API: Making cleanup duplicates request');
             return $.ajax({
                 url: jobImportData.ajaxurl,
                 type: 'POST',
@@ -155,6 +158,7 @@ console.log('[PUNTWORK] job-import-api.js loaded');
          * @returns {Promise} AJAX promise
          */
         continueCleanup: function(offset, batchSize) {
+            console.log('[PUNTWORK] API: Making continue cleanup request - offset:', offset, 'batchSize:', batchSize);
             return $.ajax({
                 url: jobImportData.ajaxurl,
                 type: 'POST',
