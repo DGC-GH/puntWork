@@ -83,6 +83,9 @@
                 PuntWorkJSLogger.debug('Purge response', 'LOGIC', purgeResponse);
                 JobImportUI.appendLogs(['Purge completed']);
 
+                // Small delay to ensure database is updated
+                await new Promise(resolve => setTimeout(resolve, 500));
+
                 const finalResponse = await JobImportAPI.getImportStatus();
                 PuntWorkJSLogger.debug('Final status response', 'LOGIC', finalResponse);
 
@@ -92,6 +95,11 @@
                     PuntWorkJSLogger.info('Final import status', 'LOGIC', {
                         total: statusData.total,
                         processed: statusData.processed,
+                        created: statusData.created,
+                        updated: statusData.updated,
+                        skipped: statusData.skipped,
+                        duplicates_drafted: statusData.duplicates_drafted,
+                        drafted_old: statusData.drafted_old,
                         complete: statusData.complete,
                         time_elapsed: statusData.time_elapsed
                     });
