@@ -53,32 +53,6 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
 }
 
 /**
- * Get memory limit in bytes.
- *
- * @return int Memory limit in bytes.
- */
-function get_memory_limit_bytes() {
-    $memory_limit = ini_get('memory_limit');
-    if (preg_match('/^(\d+)(.)$/', $memory_limit, $matches)) {
-        $value = (int)$matches[1];
-        $unit = strtolower($matches[2]);
-        switch ($unit) {
-            case 'g':
-                $value *= 1024 * 1024 * 1024;
-                break;
-            case 'm':
-                $value *= 1024 * 1024;
-                break;
-            case 'k':
-                $value *= 1024;
-                break;
-        }
-        return $value;
-    }
-    return 134217728; // Default 128MB
-}
-
-/**
  * Update batch performance metrics.
  *
  * @param float $time_elapsed Time elapsed for batch.
