@@ -24,8 +24,17 @@
          * @param {string} phase - The current phase
          */
         setPhase: function(phase) {
+            var oldPhase = this.currentPhase;
             this.currentPhase = phase;
-            PuntWorkJSLogger.debug('Import phase changed to: ' + phase, 'UI');
+            PuntWorkJSLogger.debug('Import phase changed from ' + oldPhase + ' to: ' + phase, 'UI');
+
+            // Don't reset timing or progress data during phase transitions
+            // Only reset on complete clear or new import start
+            if (phase === 'idle') {
+                this.startTime = null;
+                this.processingSpeed = 0;
+                this.batchTimes = [];
+            }
         },
 
         /**
@@ -60,7 +69,7 @@
             this.lastProcessedCount = 0;
             this.importSuccess = null; // Reset success state
             this.errorMessage = ''; // Reset error message
-            this.startTime = null; // Reset start time
+            this.startTime = null; // Reset start time only on complete clear
             this.batchTimes = []; // Reset batch times
             this.lastBatchTime = 0;
             this.lastBatchSize = 0;
@@ -167,13 +176,15 @@
             PuntWorkJSLogger.debug('Updating progress with data', 'UI', data);
             console.log('[PUNTWORK] Progress data received:', data);
 
-            // Set start time if not set and we're starting
+            // Set start time if not set and we're starting (only once per import session)
             if (this.startTime === null && (data.processed > 0 || this.currentPhase !== 'idle')) {
                 // Try to sync with JobImportLogic's startTime if available
                 if (window.JobImportLogic && window.JobImportLogic.startTime) {
                     this.startTime = window.JobImportLogic.startTime / 1000; // Convert from milliseconds to seconds
+                    PuntWorkJSLogger.debug('Synced startTime from JobImportLogic: ' + this.startTime, 'UI');
                 } else {
                     this.startTime = Date.now() / 1000; // Current time in seconds
+                    PuntWorkJSLogger.debug('Set new startTime: ' + this.startTime, 'UI');
                 }
             }
 
@@ -187,35 +198,66 @@
             var processed = data.processed || 0;
             var percent = 0;
 
-            // Calculate percentage based on current phase
+            // Calculate percentage based on current phase with improved logic
+            var phaseProgress = 0;
+            var phaseTotal = total;
+
             if (this.currentPhase === 'feed-processing') {
                 // Feed processing phase: 0-30% of total progress
-                percent = Math.floor((processed / total) * 30);
-                this.setPhase(processed >= total ? 'jsonl-combining' : 'feed-processing');
+                // Use feed count as the total for this phase
+                var feedCount = Object.keys(jobImportData.feeds || {}).length;
+                if (feedCount > 0) {
+                    phaseTotal = feedCount;
+                    phaseProgress = Math.min(processed / phaseTotal, 1.0);
+                    percent = Math.floor(phaseProgress * 30);
+                } else {
+                    percent = 0;
+                }
+
+                // Only transition to next phase when actually complete
+                if (processed >= phaseTotal && phaseTotal > 0) {
+                    this.setPhase('jsonl-combining');
+                    PuntWorkJSLogger.debug('Transitioned to jsonl-combining phase', 'UI');
+                }
             } else if (this.currentPhase === 'jsonl-combining') {
-                // JSONL combining phase: 30-40% of total progress
-                percent = 30 + Math.floor((processed / 1) * 10);
-                this.setPhase(processed >= 1 ? 'job-importing' : 'jsonl-combining');
-            } else if (this.currentPhase === 'job-importing' || this.currentPhase === 'complete') {
+                // JSONL combining phase: 30-40% of total progress (fixed 10% range)
+                phaseProgress = Math.min(processed / 1, 1.0); // This phase processes 1 item (the combination)
+                percent = 30 + Math.floor(phaseProgress * 10);
+
+                // Only transition when actually complete
+                if (processed >= 1) {
+                    this.setPhase('job-importing');
+                    PuntWorkJSLogger.debug('Transitioned to job-importing phase', 'UI');
+                }
+            } else if (this.currentPhase === 'job-importing') {
                 // Job importing phase: 40-100% of total progress
                 if (total > 0) {
-                    if (processed >= total) {
+                    if (processed >= total && this.importSuccess === true) {
                         percent = 100;
                         this.setPhase('complete');
+                        PuntWorkJSLogger.debug('Import completed successfully', 'UI');
                     } else {
-                        percent = 40 + Math.floor((processed / total) * 60);
+                        phaseProgress = processed / total;
+                        percent = 40 + Math.floor(phaseProgress * 60);
                     }
+                } else {
+                    percent = 40; // Show some progress if we're in importing phase
                 }
+            } else if (this.currentPhase === 'complete') {
+                // Ensure we show 100% when complete
+                percent = 100;
             } else {
-                // Default calculation
+                // Default calculation for unknown phases or idle state
                 if (total > 0) {
-                    if (processed >= total) {
-                        percent = 100;
-                    } else {
-                        percent = Math.floor((processed / total) * 100);
-                    }
+                    phaseProgress = processed / total;
+                    percent = Math.floor(phaseProgress * 100);
+                } else {
+                    percent = 0;
                 }
             }
+
+            // Ensure percentage stays within bounds
+            percent = Math.max(0, Math.min(100, percent));
 
             // For successful completion, ensure we show 100%
             if (this.importSuccess === true && processed >= total && total > 0) {
@@ -228,7 +270,8 @@
             var percentColor = '#007aff'; // Default blue for in-progress
             var barColor = '#007aff'; // Default blue for in-progress
 
-            if (this.currentPhase === 'complete' && this.importSuccess === true && processed >= total && total > 0) {
+            // Only turn green when import is truly complete AND successful
+            if (this.importSuccess === true && processed >= total && total > 0 && this.currentPhase === 'complete') {
                 percentColor = '#34c759'; // Green only for successful completion
                 barColor = '#34c759';
             } else if (this.importSuccess === false) {
@@ -325,6 +368,8 @@
                 var currentTime = Date.now() / 1000;
                 elapsedTime = Math.max(elapsedTime, currentTime - this.startTime);
             }
+
+            // Update time elapsed display immediately
             $('#time-elapsed').text(this.formatTime(elapsedTime));
 
             // Track batch timing for better estimation
@@ -365,14 +410,14 @@
             if (this.importSuccess === false) {
                 $('#time-left').text('Failed');
                 return;
-            } else if (this.currentPhase === 'complete' || (processed >= total && total > 0)) {
+            } else if (this.currentPhase === 'complete' || (processed >= total && total > 0 && this.importSuccess === true)) {
                 $('#time-left').text('Complete');
                 return;
             }
 
-            // Handle different phases
+            // For early phases with limited data, use simple estimates
             if (this.currentPhase === 'feed-processing') {
-                // For feed processing, estimate based on feeds processed
+                // For feed processing, estimate based on feeds processed so far
                 if (processed > 0 && elapsedTime > 0) {
                     var timePerFeed = elapsedTime / processed;
                     var feedsLeft = total - processed;
@@ -435,7 +480,7 @@
                 }
             }
 
-            // Final fallback to original logic
+            // Final fallback - use historical progress rate
             if (total === 0 || processed === 0 || elapsedTime <= 0 || itemsLeft <= 0 || isNaN(elapsedTime)) {
                 $('#time-left').text('Calculating...');
                 return;
@@ -469,6 +514,7 @@
             }
 
             PuntWorkJSLogger.debug('Time calculation', 'UI', {
+                phase: this.currentPhase,
                 total: total,
                 processed: processed,
                 elapsedTime: elapsedTime,
@@ -476,18 +522,7 @@
                 timePerItem: timePerItem,
                 estimatedSeconds: estimatedSeconds,
                 processingSpeed: this.processingSpeed,
-                batchTimes: this.batchTimes
-            });
-            console.log('[PUNTWORK] Time calculation details:', {
-                total: total,
-                processed: processed,
-                elapsedTime: elapsedTime,
-                itemsLeft: itemsLeft,
-                timePerItem: timePerItem,
-                estimatedSeconds: estimatedSeconds,
-                processingSpeed: this.processingSpeed,
-                batchTimes: this.batchTimes,
-                formattedTime: this.formatTime(estimatedSeconds)
+                batchTimesCount: this.batchTimes.length
             });
         },
 
