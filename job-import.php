@@ -42,6 +42,39 @@ function job_import_deactivate() {
 
 // Register custom cron schedules
 add_filter('cron_schedules', __NAMESPACE__ . '\\register_custom_cron_schedules');
+function register_custom_cron_schedules($schedules) {
+    $schedules['puntwork_hourly'] = [
+        'interval' => HOUR_IN_SECONDS,
+        'display' => __('Hourly', 'puntwork')
+    ];
+
+    $schedules['puntwork_3hours'] = [
+        'interval' => 3 * HOUR_IN_SECONDS,
+        'display' => __('Every 3 hours', 'puntwork')
+    ];
+
+    $schedules['puntwork_6hours'] = [
+        'interval' => 6 * HOUR_IN_SECONDS,
+        'display' => __('Every 6 hours', 'puntwork')
+    ];
+
+    $schedules['puntwork_12hours'] = [
+        'interval' => 12 * HOUR_IN_SECONDS,
+        'display' => __('Every 12 hours', 'puntwork')
+    ];
+
+    // Add common custom intervals
+    for ($hours = 2; $hours <= 24; $hours++) {
+        if ($hours != 3 && $hours != 6 && $hours != 12) { // Skip already defined ones
+            $schedules['puntwork_' . $hours . 'hours'] = [
+                'interval' => $hours * HOUR_IN_SECONDS,
+                'display' => sprintf(__('Every %d hours', 'puntwork'), $hours)
+            ];
+        }
+    }
+
+    return $schedules;
+}
 
 // Init setup
 add_action( 'init', __NAMESPACE__ . '\\setup_job_import' );
