@@ -116,6 +116,25 @@
         },
 
         /**
+         * Continue purge operation (for batched processing)
+         * @param {number} offset - Current offset for batch processing
+         * @param {number} batchSize - Size of batch to process
+         * @returns {Promise} AJAX promise
+         */
+        continuePurge: function(offset, batchSize) {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'job_import_purge_continue',
+                    offset: offset,
+                    batch_size: batchSize,
+                    nonce: jobImportData.nonce
+                }
+            });
+        },
+
+        /**
          * Cleanup duplicate job posts
          * @returns {Promise} AJAX promise
          */
@@ -124,6 +143,25 @@
                 url: jobImportData.ajaxurl,
                 type: 'POST',
                 data: { action: 'job_import_cleanup_duplicates', nonce: jobImportData.nonce }
+            });
+        },
+
+        /**
+         * Continue cleanup operation (for batched processing)
+         * @param {number} offset - Current offset for batch processing
+         * @param {number} batchSize - Size of batch to process
+         * @returns {Promise} AJAX promise
+         */
+        continueCleanup: function(offset, batchSize) {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'job_import_cleanup_continue',
+                    offset: offset,
+                    batch_size: batchSize,
+                    nonce: jobImportData.nonce
+                }
             });
         },
 

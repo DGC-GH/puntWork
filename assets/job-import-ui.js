@@ -575,6 +575,120 @@
         hideImportUI: function() {
             $('#import-progress').hide();
             $('#import-log').hide();
+        },
+
+        /**
+         * Show cleanup progress UI
+         */
+        showCleanupUI: function() {
+            $('#cleanup-progress').show();
+        },
+
+        /**
+         * Hide cleanup progress UI
+         */
+        hideCleanupUI: function() {
+            $('#cleanup-progress').hide();
+        },
+
+        /**
+         * Show purge progress UI
+         */
+        showPurgeUI: function() {
+            $('#purge-progress').show();
+        },
+
+        /**
+         * Hide purge progress UI
+         */
+        hidePurgeUI: function() {
+            $('#purge-progress').hide();
+        },
+
+        /**
+         * Update cleanup progress display
+         * @param {Object} data - Cleanup progress data
+         */
+        updateCleanupProgress: function(data) {
+            console.log('[PUNTWORK] Updating cleanup progress:', data);
+
+            var percent = data.progress_percentage || 0;
+            var totalProcessed = data.total_processed || 0;
+            var totalJobs = data.total_jobs || 0;
+            var timeElapsed = data.time_elapsed || 0;
+
+            $('#cleanup-progress-percent').text(percent + '%');
+            $('#cleanup-time-elapsed').text(this.formatTime(timeElapsed));
+            $('#cleanup-status-message').text(`Processed ${totalProcessed}/${totalJobs} jobs`);
+            $('#cleanup-items-left').text((totalJobs - totalProcessed) + ' left');
+
+            // Update progress bar
+            $('#cleanup-progress-bar').empty();
+            var progressBar = $('<div>').css({
+                width: percent + '%',
+                height: '100%',
+                backgroundColor: '#ff9500',
+                borderRadius: '3px',
+                transition: 'width 0.3s ease'
+            });
+            $('#cleanup-progress-bar').append(progressBar);
+
+            this.showCleanupUI();
+        },
+
+        /**
+         * Update purge progress display
+         * @param {Object} data - Purge progress data
+         */
+        updatePurgeProgress: function(data) {
+            console.log('[PUNTWORK] Updating purge progress:', data);
+
+            var percent = data.progress_percentage || 0;
+            var totalProcessed = data.total_processed || 0;
+            var totalJobs = data.total_jobs || 0;
+            var timeElapsed = data.time_elapsed || 0;
+
+            $('#purge-progress-percent').text(percent + '%');
+            $('#purge-time-elapsed').text(this.formatTime(timeElapsed));
+            $('#purge-status-message').text(`Processed ${totalProcessed}/${totalJobs} jobs`);
+            $('#purge-items-left').text((totalJobs - totalProcessed) + ' left');
+
+            // Update progress bar
+            $('#purge-progress-bar').empty();
+            var progressBar = $('<div>').css({
+                width: percent + '%',
+                height: '100%',
+                backgroundColor: '#ff3b30',
+                borderRadius: '3px',
+                transition: 'width 0.3s ease'
+            });
+            $('#purge-progress-bar').append(progressBar);
+
+            this.showPurgeUI();
+        },
+
+        /**
+         * Clear cleanup progress
+         */
+        clearCleanupProgress: function() {
+            $('#cleanup-progress-percent').text('0%');
+            $('#cleanup-time-elapsed').text('0s');
+            $('#cleanup-status-message').text('Ready to start.');
+            $('#cleanup-items-left').text('0 left');
+            $('#cleanup-progress-bar').empty();
+            this.hideCleanupUI();
+        },
+
+        /**
+         * Clear purge progress
+         */
+        clearPurgeProgress: function() {
+            $('#purge-progress-percent').text('0%');
+            $('#purge-time-elapsed').text('0s');
+            $('#purge-status-message').text('Ready to start.');
+            $('#purge-items-left').text('0 left');
+            $('#purge-progress-bar').empty();
+            this.hidePurgeUI();
         }
     };
 

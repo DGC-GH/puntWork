@@ -59,6 +59,20 @@ function render_main_import_ui() {
         <div style="margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px;">Database Cleanup</h2>
             <p style="font-size: 14px; color: #8e8e93; margin: 0 0 16px;">Clean up duplicate job posts that have accumulated from previous imports. This will keep only the most recent version of each job and permanently delete duplicates.</p>
+
+            <!-- Cleanup Progress Section -->
+            <div id="cleanup-progress" style="background-color: #f9f9f9; border-radius: 8px; padding: 16px; margin-bottom: 16px; display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span id="cleanup-progress-percent" style="font-size: 18px; font-weight: 600; color: #007aff;">0%</span>
+                    <span id="cleanup-time-elapsed" style="font-size: 14px; color: #8e8e93;">0s</span>
+                </div>
+                <div id="cleanup-progress-bar" style="width: 100%; height: 6px; border-radius: 3px; background-color: #f2f2f7; display: flex; overflow: hidden;"></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                    <span id="cleanup-status-message" style="font-size: 14px; color: #8e8e93;">Ready to start.</span>
+                    <span id="cleanup-items-left" style="font-size: 14px; color: #8e8e93;">0 left</span>
+                </div>
+            </div>
+
             <div style="display: flex; gap: 12px; align-items: center;">
                 <button id="cleanup-duplicates" class="button button-secondary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #ff9500; border: none; color: white;">
                     <span id="cleanup-text">Clean Up Duplicates</span>
@@ -72,6 +86,20 @@ function render_main_import_ui() {
         <div style="margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px;">Purge Old Jobs</h2>
             <p style="font-size: 14px; color: #8e8e93; margin: 0 0 16px;">Remove jobs that are no longer in the current feed. This permanently deletes jobs that were not found during the last import process.</p>
+
+            <!-- Purge Progress Section -->
+            <div id="purge-progress" style="background-color: #f9f9f9; border-radius: 8px; padding: 16px; margin-bottom: 16px; display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span id="purge-progress-percent" style="font-size: 18px; font-weight: 600; color: #007aff;">0%</span>
+                    <span id="purge-time-elapsed" style="font-size: 14px; color: #8e8e93;">0s</span>
+                </div>
+                <div id="purge-progress-bar" style="width: 100%; height: 6px; border-radius: 3px; background-color: #f2f2f7; display: flex; overflow: hidden;"></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                    <span id="purge-status-message" style="font-size: 14px; color: #8e8e93;">Ready to start.</span>
+                    <span id="purge-items-left" style="font-size: 14px; color: #8e8e93;">0 left</span>
+                </div>
+            </div>
+
             <div style="display: flex; gap: 12px; align-items: center;">
                 <button id="purge-old-jobs" class="button button-secondary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #ff3b30; border: none; color: white;">
                     <span id="purge-text">Purge Old Jobs</span>
