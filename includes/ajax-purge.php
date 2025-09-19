@@ -11,7 +11,7 @@ namespace Puntwork;
  * Handles cleanup of old/unprocessed job posts
  */
 
-add_action('wp_ajax_job_import_purge', 'job_import_purge_ajax');
+add_action('wp_ajax_job_import_purge', __NAMESPACE__ . '\\job_import_purge_ajax');
 function job_import_purge_ajax() {
     error_log('job_import_purge_ajax called');
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
