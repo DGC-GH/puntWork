@@ -113,7 +113,6 @@ function setup_job_import() {
         'utilities/item-inference.php',
         'utilities/shortcode.php',
         'utilities/utility-helpers.php',
-        'utilities/test-scheduling.php',
         
         // Mappings
         'mappings/mappings-constants.php',
@@ -123,6 +122,7 @@ function setup_job_import() {
         'scheduling/scheduling-ajax.php',
         'scheduling/scheduling-triggers.php',
         'scheduling/scheduling-history.php',
+        'scheduling/test-scheduling.php',
     );
     foreach ( $includes as $include ) {
         $file = JOB_IMPORT_PATH . 'includes/' . $include;
