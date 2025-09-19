@@ -40,6 +40,9 @@ function job_import_deactivate() {
     wp_clear_scheduled_hook( 'job_import_cron' );
 }
 
+// Register custom cron schedules
+add_filter('cron_schedules', __NAMESPACE__ . '\\register_custom_cron_schedules');
+
 // Init setup
 add_action( 'init', __NAMESPACE__ . '\\setup_job_import' );
 function setup_job_import() {

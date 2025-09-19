@@ -19,12 +19,12 @@ if (!isset($_GET['test_scheduling'])) {
 echo '<h2>Scheduling Test</h2>';
 
 // Test schedule status
-$schedule_status = Puntwork\get_schedule_status();
+$schedule_status = get_schedule_status();
 echo '<h3>Current Schedule Status:</h3>';
 echo '<pre>' . print_r($schedule_status, true) . '</pre>';
 
 // Test next scheduled time
-$next_run = Puntwork\get_next_scheduled_time();
+$next_run = get_next_scheduled_time();
 echo '<h3>Next Scheduled Run:</h3>';
 echo '<pre>' . print_r($next_run, true) . '</pre>';
 

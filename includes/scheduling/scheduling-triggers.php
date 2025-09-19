@@ -25,3 +25,6 @@ add_action('wp', function() {
     }
 });
 add_action('fetch_combined_jobs_json', __NAMESPACE__ . '\\fetch_and_generate_combined_json');
+
+// Register the scheduled import hook
+add_action('puntwork_scheduled_import', __NAMESPACE__ . '\\run_scheduled_import');
