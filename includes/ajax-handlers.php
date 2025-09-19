@@ -27,3 +27,6 @@ require_once plugin_dir_path(__FILE__) . 'ajax-feed-processing.php';
 
 // Include purge handlers
 require_once plugin_dir_path(__FILE__) . 'ajax-purge.php';
+
+// Include scheduling handlers
+require_once plugin_dir_path(__FILE__) . 'scheduling.php';
