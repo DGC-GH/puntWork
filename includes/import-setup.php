@@ -80,6 +80,14 @@ function prepare_import_setup($batch_start = 0) {
     $processed_guids = get_option('job_import_processed_guids') ?: [];
     $start_index = max((int) get_option('job_import_progress'), $batch_start);
 
+    // For fresh starts (batch_start = 0), always start from 0 regardless of previous progress
+    if ($batch_start === 0) {
+        $start_index = 0;
+        // Clear processed GUIDs for fresh start
+        $processed_guids = [];
+        PuntWorkLogger::info('Fresh import start - resetting progress to 0', PuntWorkLogger::CONTEXT_BATCH);
+    }
+
     if ($start_index >= $total) {
         return [
             'success' => true,
