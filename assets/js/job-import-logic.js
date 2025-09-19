@@ -8,6 +8,16 @@
 
     var JobImportLogic = {
         isImporting: false,
+        startTime: null,
+
+        /**
+         * Get elapsed time since import started
+         * @returns {number} Elapsed time in seconds
+         */
+        getElapsedTime: function() {
+            if (!this.startTime) return 0;
+            return (Date.now() - this.startTime) / 1000;
+        },
 
         /**
          * Handle the complete import process
@@ -137,6 +147,7 @@
 
             try {
                 JobImportUI.clearProgress();
+                this.startTime = Date.now(); // Record start time
                 JobImportUI.setPhase('feed-processing');
                 $('#start-import').hide();
                 $('#cancel-import').show();
@@ -166,7 +177,7 @@
                     skipped: 0,
                     duplicates_drafted: 0,
                     drafted_old: 0,
-                    time_elapsed: 0,
+                    time_elapsed: this.getElapsedTime(),
                     complete: false
                 });
 
@@ -185,7 +196,7 @@
                         skipped: 0,
                         duplicates_drafted: 0,
                         drafted_old: 0,
-                        time_elapsed: 0,
+                        time_elapsed: this.getElapsedTime(),
                         complete: false
                     });
 
@@ -205,7 +216,7 @@
                             skipped: 0,
                             duplicates_drafted: 0,
                             drafted_old: 0,
-                            time_elapsed: 0,
+                            time_elapsed: this.getElapsedTime(),
                             complete: false
                         });
                     } else {
@@ -231,7 +242,7 @@
                     skipped: 0,
                     duplicates_drafted: 0,
                     drafted_old: 0,
-                    time_elapsed: 0,
+                    time_elapsed: this.getElapsedTime(),
                     complete: false
                 });
 
@@ -250,7 +261,7 @@
                         skipped: 0,
                         duplicates_drafted: 0,
                         drafted_old: 0,
-                        time_elapsed: 0,
+                        time_elapsed: this.getElapsedTime(),
                         complete: false
                     });
                 } else {
@@ -270,15 +281,12 @@
             }
         },
 
-        /**
-         * Handle resume import process
-         * @returns {Promise} Resume import process promise
-         */
         handleResumeImport: async function() {
             PuntWorkJSLogger.info('Resume Import clicked', 'LOGIC');
             if (this.isImporting) return;
 
             this.isImporting = true;
+            // For resume, we'll use the time from the server since we don't know the original start time
             $('#start-import').hide();
             $('#resume-import').hide();
             $('#cancel-import').show();
