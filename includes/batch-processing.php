@@ -173,7 +173,7 @@ function process_batch_items_logic($setup) {
             'batch_processed' => $result['processed_count'],
             'start_time' => $start_time
         ];
-    } catch (Exception $e) {
+    } catch (\Exception $e) {
         $error_msg = 'Batch import error: ' . $e->getMessage();
         error_log($error_msg);
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
