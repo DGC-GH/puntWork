@@ -24,7 +24,7 @@ function render_debug_ui() {
     }
     ?>
     <!-- Debug Section (only in development) -->
-    <div style="margin-top: 32px; background-color: #f9f9f9; border-radius: 12px; padding: 16px; border: 1px solid #e0e0e0;">
+    <div style="max-width: 800px; margin: 0 auto; margin-top: 32px; background-color: #f9f9f9; border-radius: 12px; padding: 16px; border: 1px solid #e0e0e0;">
         <h3 style="font-size: 14px; font-weight: 600; margin: 0 0 12px 0; color: #666;">Debug Information</h3>
         <div style="font-size: 12px; color: #666;">
             <p><strong>Schedule Status:</strong> <span id="debug-schedule-status">Loading...</span></p>
