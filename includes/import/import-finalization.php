@@ -49,8 +49,9 @@ function finalize_batch_import($result) {
         'logs' => [],
     ];
 
-    if (!isset($status['start_time'])) {
-        $status['start_time'] = $result['start_time'];
+    // Ensure start_time is set properly
+    if (!isset($status['start_time']) || $status['start_time'] == 0) {
+        $status['start_time'] = $result['start_time'] ?? microtime(true);
     }
 
     $status['processed'] = $result['processed'];
@@ -98,6 +99,10 @@ function cleanup_import_data() {
     delete_option('job_import_avg_time_per_job');
     delete_option('job_import_last_peak_memory');
     delete_option('job_import_batch_size');
+
+    // Clean up batch timing data
+    delete_option('job_import_last_batch_time');
+    delete_option('job_import_last_batch_processed');
 }
 
 /**
