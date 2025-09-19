@@ -1,10 +1,18 @@
 <?php
+/**
+ * Enqueue admin scripts and styles for job import dashboard.
+ *
+ * @package    Puntwork
+ * @subpackage Admin
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 /**
  * Enqueue admin scripts and styles for job import dashboard.
@@ -34,7 +42,7 @@ function enqueue_job_import_scripts() {
         wp_enqueue_script(
             'job-import-api-js',
             JOB_IMPORT_URL . 'assets/js/job-import-api.js',
-            ['jquery'],
+            ['jquery', 'puntwork-logger-js'],
             JOB_IMPORT_VERSION,
             true
         );
@@ -42,7 +50,7 @@ function enqueue_job_import_scripts() {
         wp_enqueue_script(
             'job-import-logic-js',
             JOB_IMPORT_URL . 'assets/js/job-import-logic.js',
-            ['jquery', 'job-import-api-js'],
+            ['jquery', 'job-import-api-js', 'puntwork-logger-js'],
             JOB_IMPORT_VERSION,
             true
         );
@@ -50,7 +58,7 @@ function enqueue_job_import_scripts() {
         wp_enqueue_script(
             'job-import-events-js',
             JOB_IMPORT_URL . 'assets/js/job-import-events.js',
-            ['jquery'],
+            ['jquery', 'puntwork-logger-js'],
             JOB_IMPORT_VERSION,
             true
         );

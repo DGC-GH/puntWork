@@ -1,10 +1,18 @@
 <?php
+/**
+ * Scheduling and trigger utilities
+ *
+ * @package    Puntwork
+ * @subpackage Scheduling
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 // Schedule daily via WP Cron at 3:33 Brussels time
 add_action('wp', function() {

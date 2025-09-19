@@ -1,10 +1,18 @@
 <?php
+/**
+ * Utility helper functions
+ *
+ * @package    Puntwork
+ * @subpackage Utilities
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 if (!function_exists('get_memory_limit_bytes')) {
     function get_memory_limit_bytes() {

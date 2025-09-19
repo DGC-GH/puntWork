@@ -1,10 +1,18 @@
 <?php
+/**
+ * Admin page HTML for job import plugin
+ *
+ * @package    Puntwork
+ * @subpackage Admin
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 function job_import_admin_page() {
     wp_enqueue_script('jquery');
