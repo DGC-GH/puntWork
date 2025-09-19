@@ -102,6 +102,8 @@
                 if (finalResponse.success) {
                     // Handle both response formats: direct data or wrapped in .data
                     var statusData = JobImportUI.normalizeResponseData(finalResponse);
+                    // Ensure success is set for completion
+                    statusData.success = true;
                     PuntWorkJSLogger.info('Final import status', 'LOGIC', {
                         total: statusData.total,
                         processed: statusData.processed,

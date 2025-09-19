@@ -14,6 +14,10 @@
         lastProcessedCount: 0,
         importSuccess: null, // null = in progress, true = success, false = failure
         errorMessage: '', // Error message for failed imports
+        startTime: null, // Track actual start time for elapsed time calculation
+        batchTimes: [], // Store batch processing times for better estimation
+        lastBatchTime: 0, // Time taken for last batch
+        lastBatchSize: 0, // Size of last batch
 
         /**
          * Set the current import phase
@@ -56,6 +60,10 @@
             this.lastProcessedCount = 0;
             this.importSuccess = null; // Reset success state
             this.errorMessage = ''; // Reset error message
+            this.startTime = null; // Reset start time
+            this.batchTimes = []; // Reset batch times
+            this.lastBatchTime = 0;
+            this.lastBatchSize = 0;
             $('#progress-bar').empty();
             $('#progress-percent').text('0%');
             $('#total-items').text(0);
@@ -159,6 +167,16 @@
             PuntWorkJSLogger.debug('Updating progress with data', 'UI', data);
             console.log('[PUNTWORK] Progress data received:', data);
 
+            // Set start time if not set and we're starting
+            if (this.startTime === null && (data.processed > 0 || this.currentPhase !== 'idle')) {
+                // Try to sync with JobImportLogic's startTime if available
+                if (window.JobImportLogic && window.JobImportLogic.startTime) {
+                    this.startTime = window.JobImportLogic.startTime / 1000; // Convert from milliseconds to seconds
+                } else {
+                    this.startTime = Date.now() / 1000; // Current time in seconds
+                }
+            }
+
             // Update success/failure state
             if (data.success !== null) {
                 this.importSuccess = data.success;
@@ -206,13 +224,18 @@
 
             $('#progress-percent').text(percent + '%');
 
-            // Update percentage text color based on success/failure state
-            var percentColor = '#007aff'; // Default blue
-            if (this.importSuccess === true) {
-                percentColor = '#34c759'; // Green for success
+            // Update percentage text color - ONLY green when complete AND successful
+            var percentColor = '#007aff'; // Default blue for in-progress
+            var barColor = '#007aff'; // Default blue for in-progress
+
+            if (this.currentPhase === 'complete' && this.importSuccess === true && processed >= total && total > 0) {
+                percentColor = '#34c759'; // Green only for successful completion
+                barColor = '#34c759';
             } else if (this.importSuccess === false) {
                 percentColor = '#ff3b30'; // Red for failure
+                barColor = '#ff3b30';
             }
+
             $('#progress-percent').css('color', percentColor);
 
             if (!this.segmentsCreated && total > 0) {
@@ -231,16 +254,7 @@
             // Update progress bar segments
             if (this.segmentsCreated) {
                 $('#progress-bar div').css('backgroundColor', '#f2f2f7'); // Reset all to default
-
-                // Set fill color based on success/failure state
-                var fillColor = '#007aff'; // Default blue
-                if (this.importSuccess === true) {
-                    fillColor = '#34c759'; // Green for success
-                } else if (this.importSuccess === false) {
-                    fillColor = '#ff3b30'; // Red for failure
-                }
-
-                $('#progress-bar div:lt(' + percent + ')').css('backgroundColor', fillColor); // Fill completed segments
+                $('#progress-bar div:lt(' + percent + ')').css('backgroundColor', barColor); // Fill completed segments
             }
 
             // Check if we're in feed processing phase (no job stats yet)
@@ -305,9 +319,28 @@
                 }
             }
 
-            // Update elapsed time
+            // Update elapsed time - use client-side tracking if available
             var elapsedTime = data.time_elapsed || 0;
+            if (this.startTime !== null) {
+                var currentTime = Date.now() / 1000;
+                elapsedTime = Math.max(elapsedTime, currentTime - this.startTime);
+            }
             $('#time-elapsed').text(this.formatTime(elapsedTime));
+
+            // Track batch timing for better estimation
+            if (data.batch_processed && data.batch_time) {
+                this.lastBatchSize = data.batch_processed;
+                this.lastBatchTime = data.batch_time;
+                this.batchTimes.push({
+                    size: data.batch_processed,
+                    time: data.batch_time,
+                    timePerItem: data.batch_time / data.batch_processed
+                });
+                // Keep only last 5 batches for averaging
+                if (this.batchTimes.length > 5) {
+                    this.batchTimes.shift();
+                }
+            }
 
             // Update processing speed for better time estimation
             if (this.currentPhase === 'job-importing' && total > 0) {
@@ -315,17 +348,17 @@
             }
 
             // Calculate and update estimated time remaining
-            this.updateEstimatedTime(data);
+            this.updateEstimatedTime(data, elapsedTime);
         },
 
         /**
          * Update estimated time remaining calculation
          * @param {Object} data - Progress data
+         * @param {number} elapsedTime - Current elapsed time
          */
-        updateEstimatedTime: function(data) {
+        updateEstimatedTime: function(data, elapsedTime) {
             var total = data.total || 0;
             var processed = data.processed || 0;
-            var timeElapsed = data.time_elapsed || 0;
             var itemsLeft = total - processed;
 
             // Handle completion case
@@ -340,8 +373,8 @@
             // Handle different phases
             if (this.currentPhase === 'feed-processing') {
                 // For feed processing, estimate based on feeds processed
-                if (processed > 0 && timeElapsed > 0) {
-                    var timePerFeed = timeElapsed / processed;
+                if (processed > 0 && elapsedTime > 0) {
+                    var timePerFeed = elapsedTime / processed;
                     var feedsLeft = total - processed;
                     var estimatedSeconds = timePerFeed * feedsLeft;
                     if (!isNaN(estimatedSeconds) && isFinite(estimatedSeconds) && estimatedSeconds < 3600) {
@@ -358,9 +391,34 @@
                 return;
             }
 
-            // Job importing phase - use processing speed for better accuracy
+            // Job importing phase - use batch timing data for better accuracy
+            if (this.batchTimes.length > 0 && itemsLeft > 0) {
+                // Calculate average time per item from recent batches
+                var totalBatchTime = 0;
+                var totalBatchItems = 0;
+                for (var i = 0; i < this.batchTimes.length; i++) {
+                    totalBatchTime += this.batchTimes[i].time;
+                    totalBatchItems += this.batchTimes[i].size;
+                }
+                var avgTimePerItem = totalBatchTime / totalBatchItems;
+
+                if (!isNaN(avgTimePerItem) && isFinite(avgTimePerItem) && avgTimePerItem > 0) {
+                    var estimatedSeconds = avgTimePerItem * itemsLeft;
+
+                    // Sanity check - don't show ridiculous estimates
+                    if (estimatedSeconds > 86400) { // More than 24 hours
+                        $('#time-left').text('>24h');
+                    } else if (estimatedSeconds < 0) {
+                        $('#time-left').text('Calculating...');
+                    } else {
+                        $('#time-left').text(this.formatTime(estimatedSeconds));
+                    }
+                    return;
+                }
+            }
+
+            // Fallback to processing speed if batch data not available
             if (this.processingSpeed > 0 && itemsLeft > 0) {
-                // Use the tracked processing speed (items per second)
                 var estimatedSeconds = itemsLeft / this.processingSpeed;
 
                 // Validate estimatedSeconds
@@ -377,29 +435,19 @@
                 }
             }
 
-            // Fallback to original logic if processing speed not available
-            // Don't calculate if we don't have enough data or invalid values
-            if (total === 0 || processed === 0 || timeElapsed <= 0 || itemsLeft <= 0 || isNaN(timeElapsed)) {
+            // Final fallback to original logic
+            if (total === 0 || processed === 0 || elapsedTime <= 0 || itemsLeft <= 0 || isNaN(elapsedTime)) {
                 $('#time-left').text('Calculating...');
                 return;
             }
 
             // Calculate time per item based on current progress
-            var timePerItem = timeElapsed / processed;
+            var timePerItem = elapsedTime / processed;
 
             // Validate timePerItem to prevent NaN
             if (isNaN(timePerItem) || !isFinite(timePerItem)) {
                 $('#time-left').text('Calculating...');
                 return;
-            }
-
-            // Use batch data if available for more accurate calculation
-            if (data.batch_processed && data.batch_time && data.batch_processed > 0) {
-                var batchTimePerItem = data.batch_time / data.batch_processed;
-                if (!isNaN(batchTimePerItem) && isFinite(batchTimePerItem)) {
-                    // Use a weighted average: 70% batch time, 30% overall time
-                    timePerItem = (batchTimePerItem * 0.7) + (timePerItem * 0.3);
-                }
             }
 
             // Calculate estimated time remaining
@@ -423,20 +471,22 @@
             PuntWorkJSLogger.debug('Time calculation', 'UI', {
                 total: total,
                 processed: processed,
-                timeElapsed: timeElapsed,
-                itemsLeft: itemsLeft,
-                timePerItem: timePerItem,
-                estimatedSeconds: estimatedSeconds,
-                processingSpeed: this.processingSpeed
-            });
-            console.log('[PUNTWORK] Time calculation details:', {
-                total: total,
-                processed: processed,
-                timeElapsed: timeElapsed,
+                elapsedTime: elapsedTime,
                 itemsLeft: itemsLeft,
                 timePerItem: timePerItem,
                 estimatedSeconds: estimatedSeconds,
                 processingSpeed: this.processingSpeed,
+                batchTimes: this.batchTimes
+            });
+            console.log('[PUNTWORK] Time calculation details:', {
+                total: total,
+                processed: processed,
+                elapsedTime: elapsedTime,
+                itemsLeft: itemsLeft,
+                timePerItem: timePerItem,
+                estimatedSeconds: estimatedSeconds,
+                processingSpeed: this.processingSpeed,
+                batchTimes: this.batchTimes,
                 formattedTime: this.formatTime(estimatedSeconds)
             });
         },
