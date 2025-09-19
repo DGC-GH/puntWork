@@ -189,9 +189,15 @@
                 }
             }
 
-            // Update success/failure state
+            // Update success/failure state - only set to true when actually complete
             if (data.success !== null) {
-                this.importSuccess = data.success;
+                // Only set importSuccess to true when the import is actually complete
+                if (data.success === true && processed >= total && total > 0) {
+                    this.importSuccess = true;
+                } else if (data.success === false) {
+                    this.importSuccess = false;
+                }
+                // Don't set to true for in-progress success responses
                 this.errorMessage = data.error_message || '';
             }
 
@@ -237,9 +243,10 @@
             } else if (this.currentPhase === 'job-importing') {
                 // Job importing phase: 40-100% of total progress
                 if (total > 0) {
-                    if (processed >= total && this.importSuccess === true) {
+                    if (processed >= total && data.success === true) {
                         percent = 100;
                         this.setPhase('complete');
+                        this.importSuccess = true; // Set success when import completes
                         PuntWorkJSLogger.debug('Import completed successfully', 'UI');
                         // Force a final progress update to show completion
                         this.updateProgress(data);
@@ -267,7 +274,7 @@
             percent = Math.max(0, Math.min(100, percent));
 
             // For successful completion, ensure we show 100%
-            if (this.importSuccess === true && processed >= total && total > 0) {
+            if (data.success === true && processed >= total && total > 0) {
                 percent = 100;
             }
 
@@ -278,7 +285,7 @@
             var barColor = '#007aff'; // Default blue for in-progress
 
             // Only turn green when import is truly complete AND successful
-            if (this.importSuccess === true && processed >= total && total > 0 && this.currentPhase === 'complete') {
+            if (this.importSuccess === true && this.currentPhase === 'complete') {
                 percentColor = '#34c759'; // Green only for successful completion
                 barColor = '#34c759';
             } else if (this.importSuccess === false) {
@@ -362,7 +369,7 @@
                 // Update status message based on completion
                 if (this.importSuccess === false) {
                     $('#status-message').text('Import Failed: ' + (this.errorMessage || 'Unknown error'));
-                } else if (processed >= total && total > 0) {
+                } else if (processed >= total && total > 0 && data.success === true) {
                     $('#status-message').text('Import Complete');
                 } else {
                     $('#status-message').text('Importing...');
@@ -442,7 +449,7 @@
             if (this.importSuccess === false) {
                 $('#time-left').text('Failed');
                 return;
-            } else if (this.currentPhase === 'complete' || (processed >= total && total > 0 && this.importSuccess === true)) {
+            } else if (this.currentPhase === 'complete' || (processed >= total && total > 0 && data.success === true)) {
                 $('#time-left').text('Complete');
                 return;
             }
