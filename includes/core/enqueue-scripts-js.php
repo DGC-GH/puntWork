@@ -21,9 +21,20 @@ function enqueue_job_import_scripts() {
     // Check if we're on the job import dashboard page
     $current_page = isset($_GET['page']) ? $_GET['page'] : '';
     $post_type = isset($_GET['post_type']) ? $_GET['post_type'] : '';
+    $current_screen = get_current_screen();
+    
+    error_log('[PUNTWORK] Current URL: ' . $_SERVER['REQUEST_URI']);
+    error_log('[PUNTWORK] Current page: ' . $current_page);
+    error_log('[PUNTWORK] Post type: ' . $post_type);
+    error_log('[PUNTWORK] Current screen: ' . ($current_screen ? $current_screen->id : 'none'));
     
     // Load scripts on job import dashboard or when editing jobs (to be safe)
-    if ($current_page === 'job-import-dashboard' || $post_type === 'job') {
+    if ($current_page === 'job-import-dashboard' || $post_type === 'job' || 
+        ($current_screen && $current_screen->id === 'job_page_job-import-dashboard')) {
+        error_log('[PUNTWORK] Enqueueing scripts - condition met');
+        error_log('[PUNTWORK] Current page: ' . $current_page);
+        error_log('[PUNTWORK] Post type: ' . $post_type);
+        error_log('[PUNTWORK] Current screen: ' . ($current_screen ? $current_screen->id : 'none'));
         // Font Awesome for icons
         wp_enqueue_style('font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css', [], '5.15.4');
 

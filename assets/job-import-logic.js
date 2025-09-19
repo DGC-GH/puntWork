@@ -11,6 +11,14 @@
         startTime: null,
 
         /**
+         * Initialize the logic module
+         */
+        init: function() {
+            // No initialization needed for this module
+            console.log('[PUNTWORK] JobImportLogic initialized');
+        },
+
+        /**
          * Get elapsed time since import started
          * @returns {number} Elapsed time in seconds
          */

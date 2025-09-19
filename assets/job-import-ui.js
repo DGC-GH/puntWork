@@ -3,6 +3,8 @@
  * Handles progress display, logging, time formatting, and UI updates
  */
 
+console.log('[PUNTWORK] job-import-ui.js loaded');
+
 (function($, window, document) {
     'use strict';
 
