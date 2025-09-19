@@ -3,7 +3,7 @@
  * Handles event binding and user interactions
  */
 
-console.log('[PUNTWORK] job-import-events.js loaded');
+console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
 (function($, window, document) {
     'use strict';
@@ -13,13 +13,17 @@ console.log('[PUNTWORK] job-import-events.js loaded');
          * Initialize event bindings
          */
         init: function() {
+            console.log('[PUNTWORK] JobImportEvents.init() called');
+            console.log('[PUNTWORK] jQuery version:', $.fn.jquery);
+            console.log('[PUNTWORK] Document ready state:', document.readyState);
+
             this.bindEvents();
             this.checkInitialStatus();
-            
+
             // Fallback: Re-bind events after a short delay to ensure DOM is ready
             setTimeout(function() {
+                console.log('[PUNTWORK] Re-binding events after delay');
                 JobImportEvents.bindEvents();
-                console.log('[PUNTWORK] Events re-bound after delay');
             }, 1000);
         },
 
@@ -31,7 +35,30 @@ console.log('[PUNTWORK] job-import-events.js loaded');
             console.log('[PUNTWORK] Start button exists:', $('#start-import').length);
             console.log('[PUNTWORK] Cleanup button exists:', $('#cleanup-duplicates').length);
             console.log('[PUNTWORK] Purge button exists:', $('#purge-old-jobs').length);
-            
+
+            // Check if buttons exist before binding
+            if ($('#cleanup-duplicates').length > 0) {
+                console.log('[PUNTWORK] Found cleanup button, binding click handler');
+                $('#cleanup-duplicates').on('click', function(e) {
+                    console.log('[PUNTWORK] Cleanup button clicked!');
+                    e.preventDefault(); // Prevent any default form submission
+                    JobImportEvents.handleCleanupDuplicates();
+                });
+            } else {
+                console.log('[PUNTWORK] Cleanup button NOT found!');
+            }
+
+            if ($('#purge-old-jobs').length > 0) {
+                console.log('[PUNTWORK] Found purge button, binding click handler');
+                $('#purge-old-jobs').on('click', function(e) {
+                    console.log('[PUNTWORK] Purge button clicked!');
+                    e.preventDefault(); // Prevent any default form submission
+                    JobImportEvents.handlePurgeOldJobs();
+                });
+            } else {
+                console.log('[PUNTWORK] Purge button NOT found!');
+            }
+
             $('#start-import').on('click', function(e) {
                 console.log('[PUNTWORK] Start button clicked!');
                 JobImportEvents.handleStartImport();
@@ -44,17 +71,7 @@ console.log('[PUNTWORK] job-import-events.js loaded');
                 console.log('[PUNTWORK] Cancel button clicked!');
                 JobImportEvents.handleCancelImport();
             });
-            $('#cleanup-duplicates').on('click', function(e) {
-                console.log('[PUNTWORK] Cleanup button clicked!');
-                e.preventDefault(); // Prevent any default form submission
-                JobImportEvents.handleCleanupDuplicates();
-            });
-            $('#purge-old-jobs').on('click', function(e) {
-                console.log('[PUNTWORK] Purge button clicked!');
-                e.preventDefault(); // Prevent any default form submission
-                JobImportEvents.handlePurgeOldJobs();
-            });
-            
+
             console.log('[PUNTWORK] Events bound successfully');
         },
 
