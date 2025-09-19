@@ -113,6 +113,48 @@
                 type: 'POST',
                 data: { action: 'job_import_purge', nonce: jobImportData.nonce }
             });
+        },
+
+        /**
+         * Generic API call method for scheduling operations
+         * @param {string} action - AJAX action name
+         * @param {object} data - Additional data to send
+         * @param {function} callback - Success callback function
+         * @param {function} errorCallback - Error callback function
+         */
+        call: function(action, data, callback, errorCallback) {
+            var ajaxData = {
+                action: action,
+                nonce: jobImportData.nonce
+            };
+
+            // Merge additional data
+            if (data && typeof data === 'object') {
+                ajaxData = $.extend(ajaxData, data);
+            }
+
+            PuntWorkJSLogger.debug('Making API call: ' + action, 'API', ajaxData);
+
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: ajaxData,
+                success: function(response) {
+                    PuntWorkJSLogger.debug('API call successful: ' + action, 'API', response);
+                    if (callback && typeof callback === 'function') {
+                        callback(response);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    PuntWorkJSLogger.error('API call failed: ' + action + ' - ' + error, 'API', {
+                        status: xhr.status,
+                        responseText: xhr.responseText
+                    });
+                    if (errorCallback && typeof errorCallback === 'function') {
+                        errorCallback(xhr, status, error);
+                    }
+                }
+            });
         }
     };
 

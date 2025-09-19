@@ -33,7 +33,7 @@ function save_import_schedule_ajax() {
     $minute = intval($_POST['minute'] ?? 0);
 
     // Validate frequency
-    $valid_frequencies = ['3hours', '6hours', '12hours', 'daily', 'custom'];
+    $valid_frequencies = ['hourly', '3hours', '6hours', '12hours', 'daily', 'custom'];
     if (!in_array($frequency, $valid_frequencies)) {
         wp_send_json_error(['message' => 'Invalid frequency']);
     }
