@@ -50,7 +50,7 @@
          */
         formatTime: function(seconds) {
             // Handle invalid input
-            if (!seconds || isNaN(seconds) || seconds < 0) {
+            if (!seconds || isNaN(seconds) || seconds < 0 || !isFinite(seconds)) {
                 return '0s';
             }
 
@@ -89,10 +89,23 @@
 
             PuntWorkJSLogger.debug('Updating progress with data', 'UI', data);
             console.log('[PUNTWORK] Progress data received:', data);
-            var percent = data.total > 0 ? Math.floor((data.processed / data.total) * 100) : 0;
+
+            var total = data.total || 0;
+            var processed = data.processed || 0;
+            var percent = 0;
+
+            // Calculate percentage correctly, handling completion case
+            if (total > 0) {
+                if (processed >= total) {
+                    percent = 100;
+                } else {
+                    percent = Math.floor((processed / total) * 100);
+                }
+            }
+
             $('#progress-percent').text(percent + '%');
 
-            if (!this.segmentsCreated && data.total > 0) {
+            if (!this.segmentsCreated && total > 0) {
                 var container = $('#progress-bar');
                 container.empty();
                 for (var i = 0; i < 100; i++) {
@@ -105,18 +118,29 @@
                 this.segmentsCreated = true;
             }
 
-            $('#progress-bar div:lt(' + percent + ')').css('backgroundColor', '#007aff');
-            $('#total-items').text(data.total || 0);
-            $('#processed-items').text(data.processed || 0);
+            // Update progress bar segments
+            if (this.segmentsCreated) {
+                $('#progress-bar div').css('backgroundColor', '#f2f2f7'); // Reset all to default
+                $('#progress-bar div:lt(' + percent + ')').css('backgroundColor', '#007aff'); // Fill completed segments
+            }
+
+            $('#total-items').text(total);
+            $('#processed-items').text(processed);
             $('#created-items').text(data.created || 0);
             $('#updated-items').text(data.updated || 0);
             $('#skipped-items').text(data.skipped || 0);
             $('#duplicates-drafted').text(data.duplicates_drafted || 0);
             $('#drafted-old').text(data.drafted_old || 0);
 
-            var itemsLeft = (data.total || 0) - (data.processed || 0);
+            var itemsLeft = total - processed;
             $('#items-left').text(isNaN(itemsLeft) ? 0 : itemsLeft);
-            $('#status-message').text('Importing...');
+
+            // Update status message based on completion
+            if (processed >= total && total > 0) {
+                $('#status-message').text('Import Complete');
+            } else {
+                $('#status-message').text('Importing...');
+            }
 
             // Update elapsed time
             var elapsedTime = data.time_elapsed || 0;
@@ -136,8 +160,14 @@
             var timeElapsed = data.time_elapsed || 0;
             var itemsLeft = total - processed;
 
-            // Don't calculate if we don't have enough data
-            if (total === 0 || processed === 0 || timeElapsed === 0 || itemsLeft <= 0) {
+            // Handle completion case
+            if (processed >= total && total > 0) {
+                $('#time-left').text('Complete');
+                return;
+            }
+
+            // Don't calculate if we don't have enough data or invalid values
+            if (total === 0 || processed === 0 || timeElapsed <= 0 || itemsLeft <= 0 || isNaN(timeElapsed)) {
                 $('#time-left').text('Calculating...');
                 return;
             }
@@ -145,15 +175,29 @@
             // Calculate time per item based on current progress
             var timePerItem = timeElapsed / processed;
 
+            // Validate timePerItem to prevent NaN
+            if (isNaN(timePerItem) || !isFinite(timePerItem)) {
+                $('#time-left').text('Calculating...');
+                return;
+            }
+
             // Use batch data if available for more accurate calculation
             if (data.batch_processed && data.batch_time && data.batch_processed > 0) {
                 var batchTimePerItem = data.batch_time / data.batch_processed;
-                // Use a weighted average: 70% batch time, 30% overall time
-                timePerItem = (batchTimePerItem * 0.7) + (timePerItem * 0.3);
+                if (!isNaN(batchTimePerItem) && isFinite(batchTimePerItem)) {
+                    // Use a weighted average: 70% batch time, 30% overall time
+                    timePerItem = (batchTimePerItem * 0.7) + (timePerItem * 0.3);
+                }
             }
 
             // Calculate estimated time remaining
             var estimatedSeconds = timePerItem * itemsLeft;
+
+            // Validate estimatedSeconds
+            if (isNaN(estimatedSeconds) || !isFinite(estimatedSeconds)) {
+                $('#time-left').text('Calculating...');
+                return;
+            }
 
             // Sanity check - don't show ridiculous estimates
             if (estimatedSeconds > 86400) { // More than 24 hours

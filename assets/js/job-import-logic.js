@@ -52,6 +52,11 @@
                     }
 
                     if (this.isImporting && current >= total) {
+                        PuntWorkJSLogger.info('Import completed successfully', 'LOGIC', {
+                            total: total,
+                            processed: current,
+                            finalBatch: batchData
+                        });
                         await this.handleImportCompletion();
                     }
                 } else {
@@ -84,8 +89,17 @@
                 if (finalResponse.success) {
                     // Handle both response formats: direct data or wrapped in .data
                     var statusData = JobImportUI.normalizeResponseData(finalResponse);
+                    PuntWorkJSLogger.info('Final import status', 'LOGIC', {
+                        total: statusData.total,
+                        processed: statusData.processed,
+                        complete: statusData.complete,
+                        time_elapsed: statusData.time_elapsed
+                    });
                     JobImportUI.updateProgress(statusData);
                     JobImportUI.appendLogs(statusData.logs || []);
+                } else {
+                    PuntWorkJSLogger.error('Failed to get final status', 'LOGIC', finalResponse);
+                    JobImportUI.appendLogs(['Failed to get final status']);
                 }
             } catch (error) {
                 PuntWorkJSLogger.error('Final status AJAX error', 'LOGIC', error);
