@@ -189,3 +189,10 @@ function job_import_purge_ajax() {
         update_option('job_import_status', $progress, false);
         delete_transient('job_import_purge_lock');
         wp_send_json_success(['message' => $message]);
+
+    } catch (\Exception $e) {
+        delete_transient('job_import_purge_lock');
+        error_log('Purge failed: ' . $e->getMessage());
+        wp_send_json_error(['message' => 'Purge failed: ' . $e->getMessage()]);
+    }
+}
