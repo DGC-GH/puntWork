@@ -19,7 +19,7 @@ define( 'JOB_IMPORT_URL', plugin_dir_url( __FILE__ ) );
 define( 'JOB_IMPORT_LOGS', JOB_IMPORT_PATH . 'logs/import.log' );
 
 // Activation hook
-register_activation_hook( __FILE__, 'job_import_activate' );
+register_activation_hook( __FILE__, __NAMESPACE__ . '\\job_import_activate' );
 function job_import_activate() {
     // Schedule cron
     if ( ! wp_next_scheduled( 'job_import_cron' ) ) {
@@ -35,13 +35,13 @@ function job_import_activate() {
 }
 
 // Deactivation hook
-register_deactivation_hook( __FILE__, 'job_import_deactivate' );
+register_deactivation_hook( __FILE__, __NAMESPACE__ . '\\job_import_deactivate' );
 function job_import_deactivate() {
     wp_clear_scheduled_hook( 'job_import_cron' );
 }
 
 // Init setup
-add_action( 'init', 'setup_job_import' );
+add_action( 'init', __NAMESPACE__ . '\\setup_job_import' );
 function setup_job_import() {
     // Global batch limit (from old 1)
     global $job_import_batch_limit;
@@ -79,7 +79,7 @@ function setup_job_import() {
 }
 
 // Uninstall hook (cleanup)
-register_uninstall_hook( __FILE__, 'job_import_uninstall' );
+register_uninstall_hook( __FILE__, __NAMESPACE__ . '\\job_import_uninstall' );
 function job_import_uninstall() {
     // Delete options, transients; optional: delete job-feed posts
     delete_option( 'job_import_last_run' );
