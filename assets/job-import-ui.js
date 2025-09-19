@@ -380,6 +380,12 @@
                 elapsedTime = Math.max(elapsedTime, currentTime - (window.JobImportLogic.startTime / 1000));
             }
 
+            // If elapsed time is still 0 or very small, try to get it from server data
+            if (elapsedTime < 1 && data.start_time) {
+                var currentTime = Date.now() / 1000;
+                elapsedTime = currentTime - data.start_time;
+            }
+
             // Update time elapsed display immediately
             $('#time-elapsed').text(this.formatTime(elapsedTime));
 
@@ -516,7 +522,7 @@
             var timePerItem = elapsedTime / processed;
 
             // Validate timePerItem to prevent NaN
-            if (isNaN(timePerItem) || !isFinite(timePerItem)) {
+            if (isNaN(timePerItem) || !isFinite(timePerItem) || timePerItem <= 0) {
                 $('#time-left').text('Calculating...');
                 return;
             }

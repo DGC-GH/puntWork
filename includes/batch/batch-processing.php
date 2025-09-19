@@ -160,6 +160,10 @@ function process_batch_items_logic($setup) {
         // Update performance metrics
         update_batch_metrics($time_elapsed, $result['processed_count'], $batch_size);
 
+        // Store batch timing data for status retrieval
+        update_option('job_import_last_batch_time', $time_elapsed, false);
+        update_option('job_import_last_batch_processed', $result['processed_count'], false);
+
         return [
             'success' => true,
             'processed' => $end_index,

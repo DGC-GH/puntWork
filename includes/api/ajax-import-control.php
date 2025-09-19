@@ -139,12 +139,21 @@ function get_job_import_status_ajax() {
     if (!isset($progress['start_time'])) {
         $progress['start_time'] = microtime(true);
     }
-    // Keep the accumulated time_elapsed without recalculating to avoid including idle time
-    $progress['time_elapsed'] = $progress['time_elapsed'] ?? 0;
+    // Calculate elapsed time properly - if we have a start time, use it
+    if (isset($progress['start_time']) && $progress['start_time'] > 0) {
+        $current_time = microtime(true);
+        $progress['time_elapsed'] = $current_time - $progress['start_time'];
+    } else {
+        $progress['time_elapsed'] = $progress['time_elapsed'] ?? 0;
+    }
     $progress['complete'] = ($progress['processed'] >= $progress['total']);
 
     // Add resume_progress for JavaScript
     $progress['resume_progress'] = (int) get_option('job_import_progress', 0);
+
+    // Add batch timing data for accurate time calculations
+    $progress['batch_time'] = (float) get_option('job_import_last_batch_time', 0);
+    $progress['batch_processed'] = (int) get_option('job_import_last_batch_processed', 0);
 
     // Log response summary instead of full data to prevent large debug logs
     $log_summary = [
@@ -156,6 +165,8 @@ function get_job_import_status_ajax() {
         'complete' => $progress['complete'],
         'success' => $progress['success'],
         'time_elapsed' => $progress['time_elapsed'],
+        'batch_time' => $progress['batch_time'],
+        'batch_processed' => $progress['batch_processed'],
         'logs_count' => is_array($progress['logs']) ? count($progress['logs']) : 0,
         'has_error' => !empty($progress['error_message'])
     ];
