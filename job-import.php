@@ -49,29 +49,42 @@ function setup_job_import() {
     
     // Load includes
     $includes = array(
-        'puntwork-logger.php',
-        'core-structure-logic.php',
-        'admin-menu.php',
-        'admin-page-html.php',                    
-          'ajax-handlers.php',
-          'combine-jsonl.php',
-          'download-feed.php',
-          'enqueue-scripts-js.php',
-          'gzip-file.php',
-          'handle-duplicates.php',
-          'heartbeat-control.php',
-          'import-batch.php',
-          'item-cleaning.php',
-          'item-inference.php',
-          'mappings-constants.php',
-          'process-batch-items.php',
-          'process-xml-batch.php',
-          'reset-import.php',
-          'scheduling-triggers.php',
-          'scheduling.php',
-          'test-scheduling.php',
-          'shortcode.php',
-          'utility-helpers.php',
+        // Core functionality
+        'core/core-structure-logic.php',
+        'core/enqueue-scripts-js.php',
+        
+        // Admin interface
+        'admin/admin-menu.php',
+        'admin/admin-page-html.php',
+        
+        // API handlers
+        'api/ajax-handlers.php',
+        
+        // Import functionality
+        'import/combine-jsonl.php',
+        'import/download-feed.php',
+        'import/import-batch.php',
+        'import/process-batch-items.php',
+        'import/process-xml-batch.php',
+        'import/reset-import.php',
+        
+        // Utilities
+        'utilities/puntwork-logger.php',
+        'utilities/gzip-file.php',
+        'utilities/handle-duplicates.php',
+        'utilities/heartbeat-control.php',
+        'utilities/item-cleaning.php',
+        'utilities/item-inference.php',
+        'utilities/shortcode.php',
+        'utilities/utility-helpers.php',
+        'utilities/test-scheduling.php',
+        
+        // Mappings
+        'mappings/mappings-constants.php',
+        
+        // Scheduling
+        'scheduling.php',
+        'scheduling/scheduling-triggers.php',
     );
     foreach ( $includes as $include ) {
         $file = JOB_IMPORT_PATH . 'includes/' . $include;
