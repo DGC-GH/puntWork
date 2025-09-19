@@ -28,17 +28,23 @@
             this.currentPhase = phase;
             PuntWorkJSLogger.debug('Import phase changed from ' + oldPhase + ' to: ' + phase, 'UI');
 
+            // Reset progress bar when transitioning to a new phase (except complete)
+            if (phase !== 'complete' && phase !== 'idle') {
+                // Reset progress bar segments to show 0% for new phase
+                if (this.segmentsCreated) {
+                    $('#progress-bar div').css('backgroundColor', '#f2f2f7'); // Reset all to default
+                }
+                $('#progress-percent').text('0%');
+                $('#progress-percent').css('color', '#007aff'); // Reset to blue for in-progress
+            }
+
             // Don't reset timing or progress data during phase transitions
-            // Only reset on complete clear or new import start
             if (phase === 'idle') {
                 this.startTime = null;
                 this.processingSpeed = 0;
-                this.batchTimes = [];
             }
             // Keep startTime and other data intact during phase transitions
-        },
-
-        /**
+        },        /**
          * Update processing speed calculation
          * @param {number} processed - Current processed count
          * @param {number} timeElapsed - Time elapsed so far
@@ -76,6 +82,7 @@
             this.lastBatchSize = 0;
             $('#progress-bar').empty();
             $('#progress-percent').text('0%');
+            $('#progress-percent').css('color', '#007aff'); // Reset to blue
             $('#total-items').text(0);
             $('#processed-items').text(0);
             $('#created-items').text(0);
@@ -205,18 +212,18 @@
             var processed = data.processed || 0;
             var percent = 0;
 
-            // Calculate percentage based on current phase with improved logic
+            // Calculate percentage based on current phase - each phase has its own 0-100% progress
             var phaseProgress = 0;
             var phaseTotal = total;
 
             if (this.currentPhase === 'feed-processing') {
-                // Feed processing phase: 0-30% of total progress
+                // Feed processing phase: 0-100% for this phase only
                 // Use feed count as the total for this phase
                 var feedCount = Object.keys(jobImportData.feeds || {}).length;
                 if (feedCount > 0) {
                     phaseTotal = feedCount;
                     phaseProgress = Math.min(processed / phaseTotal, 1.0);
-                    percent = Math.floor(phaseProgress * 30);
+                    percent = Math.floor(phaseProgress * 100);
                 } else {
                     percent = 0;
                 }
@@ -229,9 +236,9 @@
                     this.updateProgress(data);
                 }
             } else if (this.currentPhase === 'jsonl-combining') {
-                // JSONL combining phase: 30-40% of total progress (fixed 10% range)
+                // JSONL combining phase: 0-100% for this phase only
                 phaseProgress = Math.min(processed / 1, 1.0); // This phase processes 1 item (the combination)
-                percent = 30 + Math.floor(phaseProgress * 10);
+                percent = Math.floor(phaseProgress * 100);
 
                 // Only transition when actually complete
                 if (processed >= 1) {
@@ -241,7 +248,7 @@
                     this.updateProgress(data);
                 }
             } else if (this.currentPhase === 'job-importing') {
-                // Job importing phase: 40-100% of total progress
+                // Job importing phase: 0-100% for this phase only
                 if (total > 0) {
                     if (processed >= total && data.success === true) {
                         percent = 100;
@@ -252,10 +259,10 @@
                         this.updateProgress(data);
                     } else {
                         phaseProgress = processed / total;
-                        percent = 40 + Math.floor(phaseProgress * 60);
+                        percent = Math.floor(phaseProgress * 100);
                     }
                 } else {
-                    percent = 40; // Show some progress if we're in importing phase
+                    percent = 0; // Start from 0 for importing phase
                 }
             } else if (this.currentPhase === 'complete') {
                 // Ensure we show 100% when complete
@@ -334,7 +341,9 @@
 
                 // Update status message for feed processing
                 if (processed < total) {
-                    $('#status-message').text(`Processing feeds (${processed}/${total})`);
+                    $('#status-message').text(`Processing feeds (${processed}/${total}) - ${percent}%`);
+                } else {
+                    $('#status-message').text(`Feed processing complete - 100%`);
                 }
             } else if (is_jsonl_combining) {
                 // JSONL combination phase
@@ -349,9 +358,9 @@
 
                 // Update status message for JSONL combination
                 if (processed === 0) {
-                    $('#status-message').text('Combining JSONL files...');
+                    $('#status-message').text('Combining JSONL files... - 0%');
                 } else {
-                    $('#status-message').text('JSONL files combined');
+                    $('#status-message').text('JSONL files combined - 100%');
                 }
             } else {
                 // Job import phase - show normal stats
@@ -370,9 +379,9 @@
                 if (this.importSuccess === false) {
                     $('#status-message').text('Import Failed: ' + (this.errorMessage || 'Unknown error'));
                 } else if (processed >= total && total > 0 && data.success === true) {
-                    $('#status-message').text('Import Complete');
+                    $('#status-message').text('Import Complete - 100%');
                 } else {
-                    $('#status-message').text('Importing...');
+                    $('#status-message').text(`Importing... - ${percent}%`);
                 }
             }
 
