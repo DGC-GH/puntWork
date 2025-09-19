@@ -17,6 +17,9 @@
             performanceLogInterval: 30000 // 30 seconds
         },
 
+        // Log history for debugging
+        logHistory: [],
+
         // Performance monitoring session
         performanceSession: null,
         performanceInterval: null,

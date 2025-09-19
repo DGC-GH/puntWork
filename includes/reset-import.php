@@ -1,10 +1,18 @@
 <?php
+/**
+ * Import reset utilities
+ *
+ * @package    Puntwork
+ * @subpackage Utilities
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 add_action('wp_ajax_reset_job_import', 'reset_job_import_ajax');
 function reset_job_import_ajax() {

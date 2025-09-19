@@ -1,10 +1,18 @@
 <?php
+/**
+ * Batch item processing utilities
+ *
+ * @package    Puntwork
+ * @subpackage Processing
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 if (!function_exists('process_batch_items')) {
     function process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$created, &$skipped, &$processed_count) {

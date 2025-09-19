@@ -1,10 +1,19 @@
 <?php
+/**
+ * AJAX handlers for import control operations
+ * Handles batch processing, cancellation, and status retrieval
+ *
+ * @package    Puntwork
+ * @subpackage AJAX
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 /**
  * AJAX handlers for import control operations
