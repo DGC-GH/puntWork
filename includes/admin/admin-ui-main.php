@@ -54,6 +54,19 @@ function render_main_import_ui() {
             <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px;">Import Log</h2>
             <textarea id="log-textarea" rows="10" style="width: 100%; border: 1px solid #d1d1d6; border-radius: 8px; padding: 12px; font-family: SFMono-Regular, monospace; font-size: 13px; background-color: #f9f9f9; resize: vertical;" readonly></textarea>
         </div>
+
+        <!-- Cleanup Section -->
+        <div style="margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px;">Database Cleanup</h2>
+            <p style="font-size: 14px; color: #8e8e93; margin: 0 0 16px;">Clean up duplicate job posts that have accumulated from previous imports. This will keep only the most recent version of each job and permanently delete duplicates.</p>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button id="cleanup-duplicates" class="button button-secondary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #ff9500; border: none; color: white;">
+                    <span id="cleanup-text">Clean Up Duplicates</span>
+                    <span id="cleanup-loading" style="display: none;">Cleaning...</span>
+                </button>
+                <span id="cleanup-status" style="font-size: 14px; color: #8e8e93;"></span>
+            </div>
+        </div>
     </div>
     <?php
 }

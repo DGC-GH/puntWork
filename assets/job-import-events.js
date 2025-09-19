@@ -34,6 +34,10 @@
                 console.log('[PUNTWORK] Cancel button clicked!');
                 JobImportEvents.handleCancelImport();
             });
+            $('#cleanup-duplicates').on('click', function(e) {
+                console.log('[PUNTWORK] Cleanup button clicked!');
+                JobImportEvents.handleCleanupDuplicates();
+            });
             
             console.log('[PUNTWORK] Events bound successfully');
         },
@@ -57,6 +61,37 @@
          */
         handleCancelImport: function() {
             JobImportLogic.handleCancelImport();
+        },
+
+        /**
+         * Handle cleanup duplicates button click
+         */
+        handleCleanupDuplicates: function() {
+            if (confirm('This will permanently delete duplicate job posts. This action cannot be undone. Continue?')) {
+                $('#cleanup-duplicates').prop('disabled', true);
+                $('#cleanup-text').hide();
+                $('#cleanup-loading').show();
+                $('#cleanup-status').text('Cleaning up duplicates...');
+
+                JobImportAPI.cleanupDuplicates().then(function(response) {
+                    PuntWorkJSLogger.debug('Cleanup response', 'EVENTS', response);
+                    
+                    if (response.success) {
+                        $('#cleanup-status').text('Cleanup completed: ' + response.data.deleted_count + ' duplicates removed');
+                        JobImportUI.appendLogs(response.data.logs || []);
+                    } else {
+                        $('#cleanup-status').text('Cleanup failed: ' + (response.data || 'Unknown error'));
+                    }
+                }).catch(function(xhr, status, error) {
+                    PuntWorkJSLogger.error('Cleanup AJAX error', 'EVENTS', error);
+                    $('#cleanup-status').text('Cleanup failed: ' + error);
+                    JobImportUI.appendLogs(['Cleanup AJAX error: ' + error]);
+                }).finally(function() {
+                    $('#cleanup-duplicates').prop('disabled', false);
+                    $('#cleanup-text').show();
+                    $('#cleanup-loading').hide();
+                });
+            }
         },
 
         /**

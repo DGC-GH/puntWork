@@ -37,9 +37,11 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
                     if ($post_to_keep === null) {
                         $post_to_keep = $post_id;
                     } else {
+                        // If hashes are identical, delete the duplicate
                         if ($hashes[$post_to_keep] === $hashes[$post_id]) {
                             $duplicates_to_delete[] = $post_id;
                         } else {
+                            // If hashes differ, keep the most recently modified
                             if (strtotime(get_post_field('post_modified', $post_id)) > strtotime(get_post_field('post_modified', $post_to_keep))) {
                                 $duplicates_to_delete[] = $post_to_keep;
                                 $post_to_keep = $post_id;
@@ -49,11 +51,14 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
                         }
                     }
                 }
+
+                // Delete duplicates instead of just drafting them
                 foreach ($duplicates_to_delete as $dup_id) {
-                    $wpdb->update($wpdb->posts, ['post_status' => 'draft'], ['ID' => $dup_id]);
+                    // Permanently delete the duplicate post and its metadata
+                    wp_delete_post($dup_id, true); // true = force delete, skip trash
                     $duplicates_drafted++;
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Drafted duplicate ID: ' . $dup_id . ' GUID: ' . $guid;
-                    error_log('Drafted duplicate ID: ' . $dup_id . ' GUID: ' . $guid);
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Deleted duplicate ID: ' . $dup_id . ' GUID: ' . $guid;
+                    error_log('Deleted duplicate ID: ' . $dup_id . ' GUID: ' . $guid);
                 }
                 $post_ids_by_guid[$guid] = $post_to_keep;
             } else {

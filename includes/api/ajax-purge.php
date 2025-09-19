@@ -19,8 +19,95 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Handles cleanup of old/unprocessed job posts
  */
 
-add_action('wp_ajax_job_import_purge', __NAMESPACE__ . '\\job_import_purge_ajax');
-function job_import_purge_ajax() {
+add_action('wp_ajax_job_import_cleanup_duplicates', __NAMESPACE__ . '\\job_import_cleanup_duplicates_ajax');
+function job_import_cleanup_duplicates_ajax() {
+    error_log('job_import_cleanup_duplicates_ajax called');
+    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
+        error_log('Nonce verification failed for job_import_cleanup_duplicates');
+        wp_send_json_error(['message' => 'Nonce verification failed']);
+    }
+    if (!current_user_can('manage_options')) {
+        error_log('Permission denied for job_import_cleanup_duplicates');
+        wp_send_json_error(['message' => 'Permission denied']);
+    }
+
+    global $wpdb;
+
+    $lock_start = microtime(true);
+    while (get_transient('job_import_cleanup_lock')) {
+        usleep(50000);
+        if (microtime(true) - $lock_start > 30) { // Longer timeout for cleanup
+            error_log('Cleanup lock timeout');
+            wp_send_json_error(['message' => 'Cleanup lock timeout']);
+        }
+    }
+    set_transient('job_import_cleanup_lock', true, 30);
+
+    try {
+        $logs = [];
+        $deleted_count = 0;
+
+        // Get all job posts (published and draft)
+        $all_jobs = $wpdb->get_results("
+            SELECT p.ID, p.post_status, pm.meta_value AS guid, pm2.meta_value AS import_hash
+            FROM {$wpdb->posts} p
+            LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
+            LEFT JOIN {$wpdb->postmeta} pm2 ON p.ID = pm2.post_id AND pm2.meta_key = '_import_hash'
+            WHERE p.post_type = 'job'
+            AND p.post_status IN ('publish', 'draft')
+            ORDER BY p.post_modified DESC
+        ");
+
+        $jobs_by_guid = [];
+        foreach ($all_jobs as $job) {
+            if (!empty($job->guid)) {
+                $jobs_by_guid[$job->guid][] = $job;
+            }
+        }
+
+        foreach ($jobs_by_guid as $guid => $jobs) {
+            if (count($jobs) > 1) {
+                // Sort by modification date (newest first)
+                usort($jobs, function($a, $b) {
+                    return strtotime($b->post_modified) - strtotime($a->post_modified);
+                });
+
+                // Keep the first (newest) job as published
+                $keep_job = $jobs[0];
+                if ($keep_job->post_status !== 'publish') {
+                    $wpdb->update($wpdb->posts, ['post_status' => 'publish'], ['ID' => $keep_job->ID]);
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Republished newest job ID: ' . $keep_job->ID . ' GUID: ' . $guid;
+                }
+
+                // Delete all others
+                for ($i = 1; $i < count($jobs); $i++) {
+                    $delete_job = $jobs[$i];
+                    wp_delete_post($delete_job->ID, true); // Force delete
+                    $deleted_count++;
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Deleted duplicate job ID: ' . $delete_job->ID . ' GUID: ' . $guid;
+                    error_log('Cleanup: Deleted duplicate job ID: ' . $delete_job->ID . ' GUID: ' . $guid);
+                }
+            }
+        }
+
+        delete_transient('job_import_cleanup_lock');
+        wp_cache_flush();
+
+        $message = "Cleanup completed: Deleted {$deleted_count} duplicate jobs";
+        error_log($message);
+
+        wp_send_json_success([
+            'message' => $message,
+            'deleted_count' => $deleted_count,
+            'logs' => array_slice($logs, -50) // Return last 50 log entries
+        ]);
+
+    } catch (\Exception $e) {
+        delete_transient('job_import_cleanup_lock');
+        error_log('Cleanup failed: ' . $e->getMessage());
+        wp_send_json_error(['message' => 'Cleanup failed: ' . $e->getMessage()]);
+    }
+}
     error_log('job_import_purge_ajax called');
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
         error_log('Nonce verification failed for job_import_purge');
