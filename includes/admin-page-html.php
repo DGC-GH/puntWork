@@ -47,6 +47,102 @@ function job_import_admin_page() {
             <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px;">Import Log</h2>
             <textarea id="log-textarea" rows="10" style="width: 100%; border: 1px solid #d1d1d6; border-radius: 8px; padding: 12px; font-family: SFMono-Regular, monospace; font-size: 13px; background-color: #f9f9f9; resize: vertical;" readonly></textarea>
         </div>
+
+        <!-- Scheduling Section -->
+        <div id="import-scheduling" style="margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+                <h2 style="font-size: 20px; font-weight: 600; margin: 0;">Scheduled Imports</h2>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 500;">
+                    <span>Enable automatic imports</span>
+                    <label class="schedule-toggle">
+                        <input type="checkbox" id="schedule-enabled">
+                        <span class="schedule-slider"></span>
+                    </label>
+                </label>
+            </div>
+
+            <!-- Schedule Configuration -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+                <div>
+                    <label for="schedule-frequency" style="display: block; font-size: 14px; font-weight: 500; color: #8e8e93; margin-bottom: 8px;">Frequency</label>
+                    <select id="schedule-frequency" style="width: 100%; padding: 12px; border: 1px solid #d1d1d6; border-radius: 8px; font-size: 16px; background-color: white;">
+                        <option value="hourly">Every hour</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                </div>
+                <div id="custom-schedule" style="display: none;">
+                    <label for="schedule-interval" style="display: block; font-size: 14px; font-weight: 500; color: #8e8e93; margin-bottom: 8px;">Custom Interval (hours)</label>
+                    <input type="number" id="schedule-interval" min="1" max="168" placeholder="24" style="width: 100%; padding: 12px; border: 1px solid #d1d1d6; border-radius: 8px; font-size: 16px;">
+                </div>
+            </div>
+
+            <!-- Schedule Status -->
+            <div style="background-color: #f9f9f9; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                    <div>
+                        <div style="font-size: 12px; font-weight: 500; color: #8e8e93; margin-bottom: 4px;">Status</div>
+                        <div id="schedule-status" style="font-size: 14px; font-weight: 500; display: flex; align-items: center;">
+                            <span class="status-indicator status-disabled"></span>
+                            <span>Disabled</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; font-weight: 500; color: #8e8e93; margin-bottom: 4px;">Next Run</div>
+                        <div id="next-run-time" style="font-size: 14px; font-weight: 500;">—</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; font-weight: 500; color: #8e8e93; margin-bottom: 4px;">Last Run</div>
+                        <div id="last-run-time" style="font-size: 14px; font-weight: 500;">Never</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Last Run Details -->
+            <div id="last-run-details" style="background-color: #f2f2f7; border-radius: 8px; padding: 16px; display: none;">
+                <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 12px 0;">Last Import Details</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; font-size: 13px;">
+                    <div>
+                        <div style="color: #8e8e93; margin-bottom: 2px;">Duration</div>
+                        <div id="last-run-duration" style="font-weight: 500;">—</div>
+                    </div>
+                    <div>
+                        <div style="color: #8e8e93; margin-bottom: 2px;">Items Processed</div>
+                        <div id="last-run-processed" style="font-weight: 500;">—</div>
+                    </div>
+                    <div>
+                        <div style="color: #8e8e93; margin-bottom: 2px;">Success Rate</div>
+                        <div id="last-run-success-rate" style="font-weight: 500;">—</div>
+                    </div>
+                    <div>
+                        <div style="color: #8e8e93; margin-bottom: 2px;">Status</div>
+                        <div id="last-run-status" style="font-weight: 500;">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 12px; margin-top: 24px;">
+                <button id="save-schedule" class="button button-primary" style="border-radius: 8px; padding: 12px 24px; font-size: 16px; font-weight: 500; background-color: #007aff; border: none; color: white;">Save Settings</button>
+                <button id="test-schedule" class="button button-secondary" style="border-radius: 8px; padding: 12px 24px; font-size: 16px; font-weight: 500; background-color: #f2f2f7; border: none; color: #007aff;">Test Schedule</button>
+                <button id="run-now" class="button button-secondary" style="border-radius: 8px; padding: 12px 24px; font-size: 16px; font-weight: 500; background-color: #34c759; border: none; color: white;">Run Now</button>
+            </div>
+        </div>
+
+        <!-- Debug Section (only in development) -->
+        <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+        <div style="margin-top: 32px; background-color: #f9f9f9; border-radius: 12px; padding: 16px; border: 1px solid #e0e0e0;">
+            <h3 style="font-size: 14px; font-weight: 600; margin: 0 0 12px 0; color: #666;">Debug Information</h3>
+            <div style="font-size: 12px; color: #666;">
+                <p><strong>Schedule Status:</strong> <span id="debug-schedule-status">Loading...</span></p>
+                <p><strong>Next Run:</strong> <span id="debug-next-run">Loading...</span></p>
+                <p><strong>Last Run:</strong> <span id="debug-last-run">Loading...</span></p>
+                <p><a href="?page=job-import-dashboard&test_scheduling=1" target="_blank" style="color: #007aff;">Open Test Page</a></p>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
     <script>
         // Initialize job import admin functionality

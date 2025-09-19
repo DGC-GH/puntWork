@@ -27,6 +27,10 @@
         console.error('[PUNTWORK] Critical Error: JobImportEvents module not loaded - cannot initialize job import admin');
         return;
     }
+    if (typeof JobImportScheduling === 'undefined') {
+        console.error('[PUNTWORK] Critical Error: JobImportScheduling module not loaded - cannot initialize job import admin');
+        return;
+    }
 
     var PuntWorkJobImportAdmin = {
         /**
@@ -39,10 +43,12 @@
                 ui: typeof JobImportUI !== 'undefined',
                 api: typeof JobImportAPI !== 'undefined',
                 logic: typeof JobImportLogic !== 'undefined',
-                events: typeof JobImportEvents !== 'undefined'
+                events: typeof JobImportEvents !== 'undefined',
+                scheduling: typeof JobImportScheduling !== 'undefined'
             });
 
             JobImportEvents.init();
+            JobImportScheduling.init();
             PuntWorkJSLogger.info('Job Import Admin initialization complete', 'SYSTEM');
         }
     };
