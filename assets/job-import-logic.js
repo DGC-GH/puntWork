@@ -152,7 +152,7 @@
 
             try {
                 JobImportUI.clearProgress();
-                this.startTime = Date.now(); // Record start time
+                this.startTime = Date.now(); // Record start time in milliseconds
                 JobImportUI.setPhase('feed-processing');
                 $('#start-import').hide();
                 $('#cancel-import').show();
@@ -182,7 +182,7 @@
                     skipped: 0,
                     duplicates_drafted: 0,
                     drafted_old: 0,
-                    time_elapsed: this.getElapsedTime(),
+                    time_elapsed: this.getElapsedTime() / 1000, // Convert to seconds for server compatibility
                     complete: false
                 });
 
@@ -201,7 +201,7 @@
                         skipped: 0,
                         duplicates_drafted: 0,
                         drafted_old: 0,
-                        time_elapsed: this.getElapsedTime(),
+                        time_elapsed: this.getElapsedTime() / 1000, // Convert to seconds for server compatibility
                         complete: false
                     });
 
@@ -221,7 +221,7 @@
                             skipped: 0,
                             duplicates_drafted: 0,
                             drafted_old: 0,
-                            time_elapsed: this.getElapsedTime(),
+                            time_elapsed: this.getElapsedTime() / 1000, // Convert to seconds for server compatibility
                             complete: false
                         });
                     } else {
@@ -247,7 +247,7 @@
                     skipped: 0,
                     duplicates_drafted: 0,
                     drafted_old: 0,
-                    time_elapsed: this.getElapsedTime(),
+                    time_elapsed: this.getElapsedTime() / 1000, // Convert to seconds for server compatibility
                     complete: false
                 });
 
@@ -266,7 +266,7 @@
                         skipped: 0,
                         duplicates_drafted: 0,
                         drafted_old: 0,
-                        time_elapsed: this.getElapsedTime(),
+                        time_elapsed: this.getElapsedTime() / 1000, // Convert to seconds for server compatibility
                         complete: false
                     });
                 } else {
