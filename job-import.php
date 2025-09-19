@@ -84,6 +84,7 @@ function setup_job_import() {
         
         // Scheduling
         'scheduling/scheduling-core.php',
+        'scheduling/scheduling-ajax.php',
         'scheduling/scheduling-triggers.php',
         'scheduling/scheduling-history.php',
     );
