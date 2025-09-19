@@ -72,8 +72,10 @@
             var self = this;
 
             JobImportAPI.call('get_import_schedule', {}, function(response) {
+                console.log('[SCHEDULING] loadScheduleSettings response:', response);
                 if (response.success) {
                     self.currentSchedule = response.data.schedule;
+                    console.log('[SCHEDULING] Loaded schedule.enabled:', response.data.schedule.enabled);
                     self.updateUI(response.data);
                     PuntWorkJSLogger.info('Schedule settings loaded', 'SCHEDULING', response.data);
                 } else {
@@ -86,10 +88,14 @@
          * Update UI with schedule data
          */
         updateUI: function(data) {
+            console.log('[SCHEDULING] updateUI called with data:', data);
             var schedule = data.schedule;
+            console.log('[SCHEDULING] schedule.enabled:', schedule.enabled);
 
             // Update form controls
             $('#schedule-enabled').prop('checked', schedule.enabled);
+            console.log('[SCHEDULING] Checkbox set to:', $('#schedule-enabled').is(':checked'));
+
             $('#schedule-frequency').val(schedule.frequency);
             $('#schedule-interval').val(schedule.interval);
             $('#schedule-hour').val(schedule.hour || 9);
@@ -250,7 +256,7 @@
 
             // Get form data
             var settings = {
-                enabled: $('#schedule-enabled').is(':checked'),
+                enabled: $('#schedule-enabled').is(':checked') ? '1' : '0',
                 frequency: $('#schedule-frequency').val(),
                 interval: parseInt($('#schedule-interval').val()) || 24,
                 hour: parseInt($('#schedule-hour').val()) || 9,
@@ -261,10 +267,19 @@
             $button.prop('disabled', true).text('Saving...');
 
             JobImportAPI.call('save_import_schedule', settings, function(response) {
+                console.log('[SCHEDULING] Raw response:', response);
+                console.log('[SCHEDULING] Response success:', response.success);
+                console.log('[SCHEDULING] Response data:', response.data);
+                if (response.data && response.data.schedule) {
+                    console.log('[SCHEDULING] Response schedule.enabled:', response.data.schedule.enabled);
+                }
+
                 $button.prop('disabled', false).text('Save Settings');
 
                 if (response.success) {
-                    self.currentSchedule = settings;
+                    // Update currentSchedule with the response data (which has proper boolean values)
+                    self.currentSchedule = response.data.schedule;
+                    console.log('[SCHEDULING] Updated currentSchedule:', self.currentSchedule);
                     self.updateUI(response.data);
 
                     // Show success message
