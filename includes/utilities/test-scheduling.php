@@ -47,7 +47,7 @@ if (isset($_GET['action'])) {
     switch ($_GET['action']) {
         case 'run_test':
             echo '<h3>Test Import Result:</h3>';
-            $result = Puntwork\run_scheduled_import(true);
+            $result = run_scheduled_import(true);
             echo '<pre>' . print_r($result, true) . '</pre>';
             break;
 
