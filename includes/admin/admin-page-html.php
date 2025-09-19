@@ -35,3 +35,31 @@ function job_import_admin_page() {
     // Render JavaScript initialization
     render_javascript_init();
 }
+
+/**
+ * Render JavaScript initialization for the admin page
+ */
+function render_javascript_init() {
+    ?>
+    <script type="text/javascript">
+        jQuery(document).ready(function($) {
+            // Initialize the job import system
+            if (typeof JobImportLogic !== 'undefined') {
+                JobImportLogic.init();
+            }
+
+            // Initialize UI components
+            if (typeof JobImportUI !== 'undefined') {
+                JobImportUI.clearProgress();
+            }
+
+            // Initialize scheduling if available
+            if (typeof JobImportScheduling !== 'undefined') {
+                JobImportScheduling.init();
+            }
+
+            console.log('[PUNTWORK] Admin page JavaScript initialized');
+        });
+    </script>
+    <?php
+}

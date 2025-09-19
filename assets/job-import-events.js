@@ -141,7 +141,9 @@
                 $('#cleanup-loading').hide();
                 JobImportUI.clearCleanupProgress();
             });
-        },        /**
+        },
+
+        /**
          * Handle purge old jobs button click
          */
         handlePurgeOldJobs: function() {
