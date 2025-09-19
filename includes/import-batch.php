@@ -42,7 +42,7 @@ if (!function_exists('import_jobs_from_json')) {
     function import_jobs_from_json($is_batch = false, $batch_start = 0) {
         $setup = prepare_import_setup($batch_start);
         if (is_wp_error($setup)) {
-            return ['success' => false, 'message' => $setup->get_error_message()];
+            return ['success' => false, 'message' => $setup->get_error_message(), 'logs' => ['Setup failed: ' . $setup->get_error_message()]];
         }
         if (isset($setup['success'])) {
             return $setup; // Early return for empty or completed cases

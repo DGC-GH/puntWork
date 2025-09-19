@@ -105,6 +105,8 @@ function get_job_import_status_ajax() {
         'drafted_old' => 0,
         'time_elapsed' => 0,
         'complete' => false,
+        'success' => false, // Add success status
+        'error_message' => '', // Add error message for failures
         'batch_size' => 10,
         'inferred_languages' => 0,
         'inferred_benefits' => 0,
