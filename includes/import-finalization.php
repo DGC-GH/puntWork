@@ -59,7 +59,12 @@ function finalize_batch_import($result) {
     $status['skipped'] += $result['skipped'];
     $status['duplicates_drafted'] += $result['duplicates_drafted'];
     $status['drafted_old'] += $result['drafted_old'];
-    $status['time_elapsed'] += $result['batch_time'];
+
+    // Calculate total elapsed time from start to now
+    $current_time = microtime(true);
+    $total_elapsed = $current_time - $status['start_time'];
+    $status['time_elapsed'] = $total_elapsed;
+
     $status['complete'] = $result['complete'];
     $status['batch_size'] = $result['batch_size'];
     $status['inferred_languages'] += $result['inferred_languages'];

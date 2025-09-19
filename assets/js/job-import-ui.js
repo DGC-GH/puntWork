@@ -28,6 +28,7 @@
             $('#status-message').text('Ready to start.');
             $('#time-elapsed').text('0s');
             $('#time-left').text('Calculating...');
+            console.log('[PUNTWORK] Progress UI cleared and reset');
         },
 
         /**
@@ -48,6 +49,12 @@
          * @returns {string} Formatted time string
          */
         formatTime: function(seconds) {
+            // Handle invalid input
+            if (!seconds || isNaN(seconds) || seconds < 0) {
+                return '0s';
+            }
+
+            seconds = Math.floor(seconds);
             var days = Math.floor(seconds / (3600 * 24));
             seconds -= days * 3600 * 24;
             var hours = Math.floor(seconds / 3600);
@@ -59,7 +66,17 @@
             if (hours > 0 || days > 0) formatted += hours + 'h ';
             if (minutes > 0 || hours > 0 || days > 0) formatted += minutes + 'm ';
             formatted += seconds + 's';
-            return formatted;
+            return formatted.trim();
+        },
+
+        /**
+         * Normalize AJAX response data (handle both direct and wrapped formats)
+         * @param {Object} response - AJAX response object
+         * @returns {Object} Normalized data object
+         */
+        normalizeResponseData: function(response) {
+            // Some responses have data directly, others have it in .data property
+            return response.data || response;
         },
 
         /**
@@ -67,7 +84,11 @@
          * @param {Object} data - Progress data
          */
         updateProgress: function(data) {
+            // Normalize the data first
+            data = this.normalizeResponseData(data);
+
             PuntWorkJSLogger.debug('Updating progress with data', 'UI', data);
+            console.log('[PUNTWORK] Progress data received:', data);
             var percent = data.total > 0 ? Math.floor((data.processed / data.total) * 100) : 0;
             $('#progress-percent').text(percent + '%');
 
@@ -85,33 +106,81 @@
             }
 
             $('#progress-bar div:lt(' + percent + ')').css('backgroundColor', '#007aff');
-            $('#total-items').text(data.total);
-            $('#processed-items').text(data.processed);
-            $('#created-items').text(data.created);
-            $('#updated-items').text(data.updated);
-            $('#skipped-items').text(data.skipped);
-            $('#duplicates-drafted').text(data.duplicates_drafted);
-            $('#drafted-old').text(data.drafted_old);
+            $('#total-items').text(data.total || 0);
+            $('#processed-items').text(data.processed || 0);
+            $('#created-items').text(data.created || 0);
+            $('#updated-items').text(data.updated || 0);
+            $('#skipped-items').text(data.skipped || 0);
+            $('#duplicates-drafted').text(data.duplicates_drafted || 0);
+            $('#drafted-old').text(data.drafted_old || 0);
 
-            var itemsLeft = data.total - data.processed;
+            var itemsLeft = (data.total || 0) - (data.processed || 0);
             $('#items-left').text(isNaN(itemsLeft) ? 0 : itemsLeft);
             $('#status-message').text('Importing...');
-            $('#time-elapsed').text(this.formatTime(data.time_elapsed));
 
-            var timePerItem = 0;
-            if (data.batch_processed && data.batch_time && data.batch_processed > 0) {
-                timePerItem = data.batch_time / data.batch_processed;
-            } else if (data.processed > 0 && data.time_elapsed > 0) {
-                timePerItem = data.time_elapsed / data.processed;
-            }
+            // Update elapsed time
+            var elapsedTime = data.time_elapsed || 0;
+            $('#time-elapsed').text(this.formatTime(elapsedTime));
 
-            if (timePerItem > 0) {
-                var timeLeftSeconds = timePerItem * itemsLeft;
-                var timeLeftFormatted = this.formatTime(timeLeftSeconds);
-                $('#time-left').text(timeLeftFormatted);
-            } else {
+            // Calculate and update estimated time remaining
+            this.updateEstimatedTime(data);
+        },
+
+        /**
+         * Update estimated time remaining calculation
+         * @param {Object} data - Progress data
+         */
+        updateEstimatedTime: function(data) {
+            var total = data.total || 0;
+            var processed = data.processed || 0;
+            var timeElapsed = data.time_elapsed || 0;
+            var itemsLeft = total - processed;
+
+            // Don't calculate if we don't have enough data
+            if (total === 0 || processed === 0 || timeElapsed === 0 || itemsLeft <= 0) {
                 $('#time-left').text('Calculating...');
+                return;
             }
+
+            // Calculate time per item based on current progress
+            var timePerItem = timeElapsed / processed;
+
+            // Use batch data if available for more accurate calculation
+            if (data.batch_processed && data.batch_time && data.batch_processed > 0) {
+                var batchTimePerItem = data.batch_time / data.batch_processed;
+                // Use a weighted average: 70% batch time, 30% overall time
+                timePerItem = (batchTimePerItem * 0.7) + (timePerItem * 0.3);
+            }
+
+            // Calculate estimated time remaining
+            var estimatedSeconds = timePerItem * itemsLeft;
+
+            // Sanity check - don't show ridiculous estimates
+            if (estimatedSeconds > 86400) { // More than 24 hours
+                $('#time-left').text('>24h');
+            } else if (estimatedSeconds < 0) {
+                $('#time-left').text('Calculating...');
+            } else {
+                $('#time-left').text(this.formatTime(estimatedSeconds));
+            }
+
+            PuntWorkJSLogger.debug('Time calculation', 'UI', {
+                total: total,
+                processed: processed,
+                timeElapsed: timeElapsed,
+                itemsLeft: itemsLeft,
+                timePerItem: timePerItem,
+                estimatedSeconds: estimatedSeconds
+            });
+            console.log('[PUNTWORK] Time calculation details:', {
+                total: total,
+                processed: processed,
+                timeElapsed: timeElapsed,
+                itemsLeft: itemsLeft,
+                timePerItem: timePerItem,
+                estimatedSeconds: estimatedSeconds,
+                formattedTime: this.formatTime(estimatedSeconds)
+            });
         },
 
         /**
