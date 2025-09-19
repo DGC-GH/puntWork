@@ -4,9 +4,9 @@
 **Always start queries with:**
 ```
 Context: puntWork WordPress job import plugin. Reference: [relevant .md file from notes/].
-Task: [Specific action, e.g., "Write PHP function for batch processing with error handling"].
-Requirements: Follow coding-standards.md, use Puntwork namespace, security validations.
-Output: Code snippet + explanation + tests.
+Task: [Specific action, e.g., "Add comprehensive logging to batch processing in import-batch.php"].
+Requirements: Follow coding-standards.md, use Puntwork namespace, security validations, structured logging.
+Output: Code snippet + explanation + tests + logging integration.
 ```
 
 ## Optimized Collaboration Patterns
@@ -67,9 +67,10 @@ Instructions: Extract 'content' field, base64 decode to UTF-8, return full file 
 - [ ] Security validations present
 - [ ] Input sanitization
 - [ ] Output escaping
-- [ ] Error logging
-- [ ] Performance optimization
+- [ ] Error logging with PuntWorkLogger
+- [ ] Performance monitoring integration
 - [ ] WordPress compatibility
+- [ ] Structured logging implementation
 
 ## Common Patterns & Solutions
 
@@ -144,6 +145,58 @@ window.PuntWorkJobImportAdmin = window.PuntWorkJobImportAdmin || {};
 window.PuntWorkJobImportAdmin.UI = PuntWorkJobImportUI;
 ```
 
+### Logging Integration
+```php
+// PHP logging pattern with PuntWorkLogger
+use Puntwork\PuntWorkLogger;
+
+function process_with_logging($data) {
+    PuntWorkLogger::info("Starting operation", "OPERATION", $data);
+
+    try {
+        $result = perform_operation($data);
+        PuntWorkLogger::info("Operation completed", "OPERATION", $result);
+        return $result;
+    } catch (Exception $e) {
+        PuntWorkLogger::error("Operation failed", "OPERATION", [
+            'error' => $e->getMessage(),
+            'data' => $data
+        ]);
+        throw $e;
+    }
+}
+```
+
+```javascript
+// JavaScript logging pattern with PuntWorkJSLogger
+function processWithLogging(data) {
+    PuntWorkJSLogger.info('Starting operation', 'MODULE', data);
+
+    try {
+        const result = performOperation(data);
+        PuntWorkJSLogger.info('Operation completed', 'MODULE', result);
+        return result;
+    } catch (error) {
+        PuntWorkJSLogger.error('Operation failed', 'MODULE', error);
+        throw error;
+    }
+}
+```
+
+### Performance Monitoring
+```javascript
+// Performance session monitoring
+PuntWorkJSLogger.startPerformanceSession('operation-name');
+// ... perform operations ...
+PuntWorkJSLogger.endPerformanceSession();
+
+// AJAX performance monitoring
+PuntWorkJSLogger.monitorAjaxPerformance('ajax-action', ajaxCall);
+
+// Batch processing monitoring
+PuntWorkJSLogger.monitorBatchPerformance('batch-op', batchSize, totalItems, processFunction);
+```
+
 ## Error Prevention
 
 ### Common Pitfalls to Avoid
@@ -211,6 +264,12 @@ composer lint
 
 # Build assets
 npm run build
+
+# Check logs (in browser console)
+pwLog.history()     # View recent logs
+pwLog.clear()       # Clear log history
+pwLog.perf.memory() # Check memory usage
+pwLog.perf.start()  # Start performance monitoring
 ```
 
 ### Common WordPress Functions

@@ -509,56 +509,184 @@ $query = new WP_Query([
 ]);
 ```
 
-## Testing Patterns
+## Logging Patterns
 
-### PHPUnit Test Structure
+### PHP Logging with PuntWorkLogger
 ```php
-class Test_Job_Import extends WP_UnitTestCase {
+use Puntwork\PuntWorkLogger;
 
-    public function setUp() {
-        parent::setUp();
-        // Setup test data
-    }
+/**
+ * Example function with comprehensive logging
+ */
+function process_import_batch($feed_key, $batch_size = 50) {
+    PuntWorkLogger::info("Starting batch processing", "IMPORT", [
+        'feed_key' => $feed_key,
+        'batch_size' => $batch_size
+    ]);
 
-    public function test_import_function() {
-        // Arrange
-        $test_data = ['feed_url' => 'https://example.com/feed'];
+    try {
+        // Process batch
+        $result = perform_batch_operation($feed_key, $batch_size);
 
-        // Act
-        $result = import_jobs($test_data);
+        PuntWorkLogger::info("Batch processing completed", "IMPORT", [
+            'feed_key' => $feed_key,
+            'processed' => $result['processed'],
+            'duration' => $result['duration']
+        ]);
 
-        // Assert
-        $this->assertTrue($result);
-        $this->assertEquals(1, count(get_posts(['post_type' => 'job_post'])));
-    }
-
-    public function test_import_validation() {
-        // Test error conditions
-        $this->expectException(Exception::class);
-        import_jobs([]); // Should throw exception for empty data
+        return $result;
+    } catch (Exception $e) {
+        PuntWorkLogger::error("Batch processing failed", "IMPORT", [
+            'feed_key' => $feed_key,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        throw $e;
     }
 }
 ```
 
-### JavaScript Testing
+### JavaScript Logging with PuntWorkJSLogger
 ```javascript
-describe('Job Import UI', function() {
-    beforeEach(function() {
-        // Setup DOM elements
-        $('body').append('<div id="progress-bar"></div>');
-    });
+/**
+ * Example function with structured logging
+ */
+function handleImport() {
+    PuntWorkJSLogger.info('Starting import process', 'LOGIC');
 
-    afterEach(function() {
-        $('#progress-bar').remove();
-    });
+    try {
+        // Start performance monitoring
+        PuntWorkJSLogger.startPerformanceSession('import-session');
 
-    it('should update progress bar', function() {
-        PuntWorkJobImportUI.updateProgress(50, 'Processing...');
+        const result = await processImportBatch();
+        PuntWorkJSLogger.info('Import completed successfully', 'LOGIC', result);
 
-        expect($('#progress-bar').css('width')).toBe('50%');
-        expect($('#progress-text').text()).toBe('Processing...');
+        // End performance session
+        PuntWorkJSLogger.endPerformanceSession();
+
+        return result;
+    } catch (error) {
+        PuntWorkJSLogger.error('Import failed', 'LOGIC', error);
+        PuntWorkJSLogger.endPerformanceSession();
+        throw error;
+    }
+}
+```
+
+### AJAX Request Logging
+```javascript
+/**
+ * AJAX request with performance monitoring
+ */
+function makeAjaxRequest(action, data) {
+    PuntWorkJSLogger.logAjaxRequest(action, data);
+
+    return $.ajax({
+        url: jobImportData.ajaxurl,
+        type: 'POST',
+        data: { action: action, ...data },
+        success: function(response) {
+            PuntWorkJSLogger.logAjaxResponse(action, response, true);
+        },
+        error: function(xhr, status, error) {
+            PuntWorkJSLogger.logAjaxResponse(action, { error: error }, false);
+        }
     });
-});
+}
+```
+
+## Performance Monitoring Patterns
+
+### Batch Processing Performance
+```javascript
+/**
+ * Monitor batch processing performance
+ */
+function processBatchWithMonitoring(items, batchSize) {
+    return PuntWorkJSLogger.monitorBatchPerformance(
+        'batch-processing',
+        batchSize,
+        items.length,
+        async function() {
+            let processed = 0;
+            for (let i = 0; i < items.length; i += batchSize) {
+                const batch = items.slice(i, i + batchSize);
+                await processBatch(batch);
+                processed += batch.length;
+
+                PuntWorkJSLogger.logBatchProgress(processed, items.length, batchSize);
+            }
+            return { processed: items.length };
+        }
+    );
+}
+```
+
+### Memory Usage Monitoring
+```javascript
+/**
+ * Check memory usage and log warnings
+ */
+function checkMemoryUsage() {
+    PuntWorkJSLogger.logMemoryUsage();
+
+    // Additional custom memory checks
+    if (performance.memory) {
+        const memUsage = performance.memory.usedJSHeapSize / performance.memory.totalJSHeapSize;
+        if (memUsage > 0.8) {
+            PuntWorkJSLogger.warn('High memory usage detected', 'PERF', {
+                usagePercent: Math.round(memUsage * 100),
+                usedMB: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024)
+            });
+        }
+    }
+}
+```
+
+### Performance Session Management
+```javascript
+/**
+ * Complete operation with performance monitoring
+ */
+function performComplexOperation() {
+    // Start monitoring
+    PuntWorkJSLogger.startPerformanceSession('complex-operation');
+
+    try {
+        // Perform operation steps
+        step1();
+        PuntWorkJSLogger.logMemoryUsage();
+
+        step2();
+        PuntWorkJSLogger.logMemoryUsage();
+
+        step3();
+        PuntWorkJSLogger.logMemoryUsage();
+
+        const result = finalizeOperation();
+
+        PuntWorkJSLogger.info('Complex operation completed', 'SYSTEM');
+        return result;
+
+    } finally {
+        // Always end session
+        PuntWorkJSLogger.endPerformanceSession();
+    }
+}
+```
+
+### Developer Tools Usage
+```javascript
+// In browser console during development
+pwLog.perf.start('debug-session')    // Start performance monitoring
+pwLog.perf.memory()                  // Check current memory usage
+pwLog.perf.system()                  // Log system information
+pwLog.perf.timer('operation')        // Time a specific operation
+pwLog.perf.end()                     // End monitoring session
+
+pwLog.history()                      // View recent logs
+pwLog.clear()                        // Clear log history
+pwLog.level('DEBUG')                 // Change log level
 ```
 
 ## Common WordPress Hooks

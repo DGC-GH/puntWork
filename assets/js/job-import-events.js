@@ -50,7 +50,7 @@
          */
         checkInitialStatus: function() {
             JobImportAPI.getImportStatus().then(function(response) {
-                console.log('Initial status response:', response);
+                PuntWorkJSLogger.debug('Initial status response', 'EVENTS', response);
                 if (response.success && response.processed > 0 && !response.complete) {
                     JobImportUI.updateProgress(response);
                     JobImportUI.appendLogs(response.logs);
@@ -65,7 +65,7 @@
                     JobImportUI.hideImportUI();
                 }
             }).catch(function(xhr, status, error) {
-                console.error('Initial status AJAX error:', error);
+                PuntWorkJSLogger.error('Initial status AJAX error', 'EVENTS', error);
                 JobImportUI.appendLogs(['Initial status AJAX error: ' + error]);
             });
         },
@@ -74,7 +74,7 @@
          * Handle restart import (special case for interrupted imports)
          */
         handleRestartImport: async function() {
-            console.log('Restart clicked - resetting and starting over');
+            PuntWorkJSLogger.info('Restart clicked - resetting and starting over', 'EVENTS');
 
             try {
                 const resetResponse = await JobImportAPI.resetImport();
@@ -84,7 +84,7 @@
                 // Trigger start import
                 $('#start-import').trigger('click');
             } catch (error) {
-                console.error('Restart error:', error);
+                PuntWorkJSLogger.error('Restart error', 'EVENTS', error);
                 JobImportUI.appendLogs(['Restart error: ' + error.message]);
             }
         }

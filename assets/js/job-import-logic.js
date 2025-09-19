@@ -15,12 +15,12 @@
          * @returns {Promise} Import process promise
          */
         handleImport: async function(initialStart) {
-            console.log('Handling import starting at:', initialStart);
+            PuntWorkJSLogger.info('Handling import starting at: ' + initialStart, 'LOGIC');
             let response;
 
             try {
                 response = await JobImportAPI.runImportBatch(initialStart);
-                console.log('Import batch response:', response);
+                PuntWorkJSLogger.debug('Import batch response', 'LOGIC', response);
 
                 if (response.success) {
                     JobImportUI.updateProgress(response.data);
@@ -28,12 +28,12 @@
 
                     let total = response.data.total;
                     let current = response.data.processed;
-                    console.log('Initial current:', current, 'total:', total);
+                    PuntWorkJSLogger.debug('Initial current: ' + current + ', total: ' + total, 'LOGIC');
 
                     while (current < total && this.isImporting) {
-                        console.log('Continuing to next batch, current:' + current + ', total:' + total);
+                        PuntWorkJSLogger.debug('Continuing to next batch, current: ' + current + ', total: ' + total, 'LOGIC');
                         response = await JobImportAPI.runImportBatch(current);
-                        console.log('Next batch response:', response);
+                        PuntWorkJSLogger.debug('Next batch response', 'LOGIC', response);
 
                         if (response.success) {
                             JobImportUI.updateProgress(response.data);
@@ -56,7 +56,7 @@
                     JobImportUI.resetButtons();
                 }
             } catch (e) {
-                console.error('Handle import error:', e);
+                PuntWorkJSLogger.error('Handle import error', 'LOGIC', e);
                 JobImportUI.appendLogs(['Handle import error: ' + e.message]);
                 $('#status-message').text('Error: ' + e.message);
                 JobImportUI.resetButtons();
@@ -71,18 +71,18 @@
 
             try {
                 const purgeResponse = await JobImportAPI.purgeImport();
-                console.log('Purge response:', purgeResponse);
+                PuntWorkJSLogger.debug('Purge response', 'LOGIC', purgeResponse);
                 JobImportUI.appendLogs(['Purge completed']);
 
                 const finalResponse = await JobImportAPI.getImportStatus();
-                console.log('Final status response:', finalResponse);
+                PuntWorkJSLogger.debug('Final status response', 'LOGIC', finalResponse);
 
                 if (finalResponse.success) {
                     JobImportUI.updateProgress(finalResponse);
                     JobImportUI.appendLogs(finalResponse.logs || []);
                 }
             } catch (error) {
-                console.error('Final status AJAX error:', error);
+                PuntWorkJSLogger.error('Final status AJAX error', 'LOGIC', error);
                 JobImportUI.appendLogs(['Final status AJAX error: ' + error]);
             }
 
@@ -95,7 +95,7 @@
          * @returns {Promise} Start import process promise
          */
         handleStartImport: async function() {
-            console.log('Start Import clicked');
+            PuntWorkJSLogger.info('Start Import clicked', 'LOGIC');
             if (this.isImporting) return;
 
             this.isImporting = true;
@@ -122,7 +122,7 @@
                 for (let feed of feeds) {
                     $('#status-message').text(`Processing feed: ${feed}`);
                     const response = await JobImportAPI.processFeed(feed);
-                    console.log(`Process feed ${feed} response:`, response);
+                    PuntWorkJSLogger.debug(`Process feed ${feed} response`, 'LOGIC', response);
 
                     if (response.success) {
                         JobImportUI.appendLogs(response.data.logs || []);
@@ -135,7 +135,7 @@
                 // Combine JSONL files
                 $('#status-message').text('Combining JSONL files...');
                 const combineResponse = await JobImportAPI.combineJsonl(total_items);
-                console.log('Combine JSONL response:', combineResponse);
+                PuntWorkJSLogger.debug('Combine JSONL response', 'LOGIC', combineResponse);
 
                 if (combineResponse.success) {
                     JobImportUI.appendLogs(combineResponse.data.logs || []);
@@ -149,7 +149,7 @@
                 await this.handleImport(0);
 
             } catch (error) {
-                console.error('Start import error:', error);
+                PuntWorkJSLogger.error('Start import error', 'LOGIC', error);
                 JobImportUI.appendLogs([error.message]);
                 $('#status-message').text('Error: ' + error.message);
                 JobImportUI.resetButtons();
@@ -161,7 +161,7 @@
          * @returns {Promise} Resume import process promise
          */
         handleResumeImport: async function() {
-            console.log('Resume Import clicked');
+            PuntWorkJSLogger.info('Resume Import clicked', 'LOGIC');
             if (this.isImporting) return;
 
             this.isImporting = true;
@@ -178,10 +178,10 @@
          * Handle cancel import process
          */
         handleCancelImport: function() {
-            console.log('Cancel Import clicked');
+            PuntWorkJSLogger.info('Cancel Import clicked', 'LOGIC');
 
             JobImportAPI.cancelImport().then(function(response) {
-                console.log('Cancel response:', response);
+                PuntWorkJSLogger.debug('Cancel response', 'LOGIC', response);
                 if (response.success) {
                     JobImportUI.appendLogs(['Import cancelled']);
                     $('#status-message').text('Import Cancelled');
@@ -190,7 +190,7 @@
                     $('#start-import').text('Restart').show();
                 }
             }).catch(function(xhr, status, error) {
-                console.error('Cancel AJAX error:', error);
+                PuntWorkJSLogger.error('Cancel AJAX error', 'LOGIC', error);
                 JobImportUI.appendLogs(['Cancel AJAX error: ' + error]);
             });
         }
