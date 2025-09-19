@@ -21,7 +21,7 @@ add_action('admin_menu', function() {
         'Import Jobs',
         'manage_options',
         'job-import-dashboard',
-        'job_import_admin_page',
+        __NAMESPACE__ . '\\job_import_admin_page',
         1
     );
 });

@@ -24,4 +24,4 @@ add_action('wp', function() {
         wp_schedule_event($target->getTimestamp(), 'daily', 'fetch_combined_jobs_json');
     }
 });
-add_action('fetch_combined_jobs_json', 'fetch_and_generate_combined_json');
+add_action('fetch_combined_jobs_json', __NAMESPACE__ . '\\fetch_and_generate_combined_json');
