@@ -13,6 +13,12 @@
         init: function() {
             this.bindEvents();
             this.checkInitialStatus();
+            
+            // Fallback: Re-bind events after a short delay to ensure DOM is ready
+            setTimeout(function() {
+                JobImportEvents.bindEvents();
+                console.log('[PUNTWORK] Events re-bound after delay');
+            }, 1000);
         },
 
         /**
@@ -21,6 +27,8 @@
         bindEvents: function() {
             console.log('[PUNTWORK] Binding events...');
             console.log('[PUNTWORK] Start button exists:', $('#start-import').length);
+            console.log('[PUNTWORK] Cleanup button exists:', $('#cleanup-duplicates').length);
+            console.log('[PUNTWORK] Purge button exists:', $('#purge-old-jobs').length);
             
             $('#start-import').on('click', function(e) {
                 console.log('[PUNTWORK] Start button clicked!');
@@ -71,13 +79,17 @@
          * Handle cleanup duplicates button click
          */
         handleCleanupDuplicates: function() {
+            console.log('[PUNTWORK] Cleanup duplicates handler called');
             if (confirm('This will permanently delete duplicate job posts. This action cannot be undone. Continue?')) {
+                console.log('[PUNTWORK] User confirmed cleanup');
                 $('#cleanup-duplicates').prop('disabled', true);
                 $('#cleanup-text').hide();
                 $('#cleanup-loading').show();
                 $('#cleanup-status').text('Cleaning up duplicates...');
 
+                console.log('[PUNTWORK] Calling cleanup API');
                 JobImportAPI.cleanupDuplicates().then(function(response) {
+                    console.log('[PUNTWORK] Cleanup API response:', response);
                     PuntWorkJSLogger.debug('Cleanup response', 'EVENTS', response);
                     
                     if (response.success) {
@@ -87,14 +99,18 @@
                         $('#cleanup-status').text('Cleanup failed: ' + (response.data || 'Unknown error'));
                     }
                 }).catch(function(xhr, status, error) {
+                    console.log('[PUNTWORK] Cleanup API error:', error);
                     PuntWorkJSLogger.error('Cleanup AJAX error', 'EVENTS', error);
                     $('#cleanup-status').text('Cleanup failed: ' + error);
                     JobImportUI.appendLogs(['Cleanup AJAX error: ' + error]);
                 }).finally(function() {
+                    console.log('[PUNTWORK] Cleanup finally block');
                     $('#cleanup-duplicates').prop('disabled', false);
                     $('#cleanup-text').show();
                     $('#cleanup-loading').hide();
                 });
+            } else {
+                console.log('[PUNTWORK] User cancelled cleanup');
             }
         },
 
