@@ -169,8 +169,8 @@ function process_batch_items_logic($setup) {
             'inferred_languages' => $inferred_languages,
             'inferred_benefits' => $inferred_benefits,
             'schema_generated' => $schema_generated,
-            'batch_time' => $time_elapsed,
-            'batch_processed' => $result['processed_count'],
+            'batch_time' => $time_elapsed,  // Time for this specific batch
+            'batch_processed' => $result['processed_count'],  // Items processed in this batch
             'start_time' => $start_time
         ];
     } catch (\Exception $e) {
