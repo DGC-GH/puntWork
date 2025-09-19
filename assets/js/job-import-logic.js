@@ -23,11 +23,13 @@
                 PuntWorkJSLogger.debug('Import batch response', 'LOGIC', response);
 
                 if (response.success) {
-                    JobImportUI.updateProgress(response.data);
-                    JobImportUI.appendLogs(response.data.logs || []);
+                    // Normalize response data
+                    var batchData = JobImportUI.normalizeResponseData(response);
+                    JobImportUI.updateProgress(batchData);
+                    JobImportUI.appendLogs(batchData.logs || []);
 
-                    let total = response.data.total;
-                    let current = response.data.processed;
+                    let total = batchData.total;
+                    let current = batchData.processed;
                     PuntWorkJSLogger.debug('Initial current: ' + current + ', total: ' + total, 'LOGIC');
 
                     while (current < total && this.isImporting) {
@@ -36,9 +38,11 @@
                         PuntWorkJSLogger.debug('Next batch response', 'LOGIC', response);
 
                         if (response.success) {
-                            JobImportUI.updateProgress(response.data);
-                            JobImportUI.appendLogs(response.data.logs || []);
-                            current = response.data.processed;
+                            // Normalize response data
+                            batchData = JobImportUI.normalizeResponseData(response);
+                            JobImportUI.updateProgress(batchData);
+                            JobImportUI.appendLogs(batchData.logs || []);
+                            current = batchData.processed;
                         } else {
                             JobImportUI.appendLogs(['Import batch error: ' + (response.message || 'Unknown')]);
                             $('#status-message').text('Error: ' + (response.message || 'Unknown'));
@@ -78,8 +82,10 @@
                 PuntWorkJSLogger.debug('Final status response', 'LOGIC', finalResponse);
 
                 if (finalResponse.success) {
-                    JobImportUI.updateProgress(finalResponse);
-                    JobImportUI.appendLogs(finalResponse.logs || []);
+                    // Handle both response formats: direct data or wrapped in .data
+                    var statusData = JobImportUI.normalizeResponseData(finalResponse);
+                    JobImportUI.updateProgress(statusData);
+                    JobImportUI.appendLogs(statusData.logs || []);
                 }
             } catch (error) {
                 PuntWorkJSLogger.error('Final status AJAX error', 'LOGIC', error);
