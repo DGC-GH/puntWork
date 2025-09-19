@@ -67,6 +67,19 @@ function render_main_import_ui() {
                 <span id="cleanup-status" style="font-size: 14px; color: #8e8e93;"></span>
             </div>
         </div>
+
+        <!-- Purge Section -->
+        <div style="margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px;">Purge Old Jobs</h2>
+            <p style="font-size: 14px; color: #8e8e93; margin: 0 0 16px;">Remove jobs that are no longer in the current feed. This permanently deletes jobs that were not found during the last import process.</p>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button id="purge-old-jobs" class="button button-secondary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #ff3b30; border: none; color: white;">
+                    <span id="purge-text">Purge Old Jobs</span>
+                    <span id="purge-loading" style="display: none;">Purging...</span>
+                </button>
+                <span id="purge-status" style="font-size: 14px; color: #8e8e93;"></span>
+            </div>
+        </div>
     </div>
     <?php
 }
