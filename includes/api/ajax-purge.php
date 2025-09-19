@@ -108,6 +108,9 @@ function job_import_cleanup_duplicates_ajax() {
         wp_send_json_error(['message' => 'Cleanup failed: ' . $e->getMessage()]);
     }
 }
+
+add_action('wp_ajax_job_import_purge', __NAMESPACE__ . '\\job_import_purge_ajax');
+function job_import_purge_ajax() {
     error_log('job_import_purge_ajax called');
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
         error_log('Nonce verification failed for job_import_purge');
