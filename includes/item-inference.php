@@ -4,9 +4,11 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+namespace Puntwork;
+
 function infer_item_details(&$item, $fallback_domain, $lang, &$job_obj) {
     $province = strtolower(trim(isset($item->province) ? (string)$item->province : ''));
-    $norm_province = get_province_map()[$province] ?? $fallback_domain;
+    $norm_province = GetProvinceMap()[$province] ?? $fallback_domain;
 
     $title = isset($item->functiontitle) ? (string)$item->functiontitle : '';
     $enhanced_title = $title;
@@ -18,7 +20,7 @@ function infer_item_details(&$item, $fallback_domain, $lang, &$job_obj) {
     $job_link = 'https://' . $norm_province . '/job/' . $slug;
 
     $fg = strtolower(trim(isset($item->functiongroup) ? (string)$item->functiongroup : ''));
-    $estimate_key = array_reduce(array_keys(get_salary_estimates()), function($carry, $key) use ($fg) {
+    $estimate_key = array_reduce(array_keys(GetSalaryEstimates()), function($carry, $key) use ($fg) {
         return strpos($fg, strtolower($key)) !== false ? $key : $carry;
     }, null);
 
@@ -30,8 +32,8 @@ function infer_item_details(&$item, $fallback_domain, $lang, &$job_obj) {
     } else {
         $est_prefix = ($lang == 'nl' ? 'Geschat ' : ($lang == 'fr' ? 'Estimé ' : 'Est. '));
         if ($estimate_key) {
-            $low = get_salary_estimates()[$estimate_key]['low'];
-            $high = get_salary_estimates()[$estimate_key]['high'];
+            $low = GetSalaryEstimates()[$estimate_key]['low'];
+            $high = GetSalaryEstimates()[$estimate_key]['high'];
             $salary_text = $est_prefix . '€' . $low . ' - €' . $high;
         } else {
             $salary_text = '€3000 - €4500';
@@ -41,10 +43,10 @@ function infer_item_details(&$item, $fallback_domain, $lang, &$job_obj) {
     $apply_link = isset($item->applylink) ? (string)$item->applylink : '';
     if ($apply_link) $apply_link .= '?utm_source=puntwork&utm_term=' . (string)$item->guid;
 
-    $icon_key = array_reduce(array_keys(get_icon_map()), function($carry, $key) use ($fg) {
+    $icon_key = array_reduce(array_keys(GetIconMap()), function($carry, $key) use ($fg) {
         return strpos($fg, strtolower($key)) !== false ? $key : $carry;
     }, null);
-    $icon = $icon_key ? '<i class="fas ' . get_icon_map()[$icon_key] . '"></i>' : '<i class="fas fa-briefcase"></i>';
+    $icon = $icon_key ? '<i class="fas ' . GetIconMap()[$icon_key] . '"></i>' : '<i class="fas fa-briefcase"></i>';
 
     $all_text = strtolower(implode(' ', [(string)$item->functiontitle, (string)$item->description, (string)$item->functiondescription, (string)$item->offerdescription, (string)$item->requirementsdescription, (string)$item->companydescription]));
     $job_car = (bool)preg_match('/bedrijfs(wagen|auto)|firmawagen|voiture de société|company car/i', $all_text);

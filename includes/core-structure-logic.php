@@ -4,14 +4,38 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+namespace Puntwork;
+
 function get_feeds() {
-    return [
-        'startpeople' => 'https://feeds.startpeople.be/api/vacancies',
-        'internationalrecruitment' => 'https://feeds.internationalrecruitment.be/api/vacancies',
-        'unique' => 'https://feeds.unique.be/api/vacancies',
-        'expressmedical' => 'https://feeds.expressmedical.be/api/vacancies',
-    ];
+    $feeds = get_transient('puntwork_feeds');
+    if (false === $feeds) {
+        $feeds = [];
+        $query = new WP_Query([
+            'post_type' => 'job-feed',
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'fields' => 'ids',
+        ]);
+        if ($query->have_posts()) {
+            foreach ($query->posts as $post_id) {
+                $feed_url = get_post_meta($post_id, 'feed_url', true);
+                if (!empty($feed_url)) {
+                    $post = get_post($post_id);
+                    $feeds[$post->post_name] = $feed_url; // Use slug as key
+                }
+            }
+        }
+        set_transient('puntwork_feeds', $feeds, 3600); // Cache for 1 hour
+    }
+    return $feeds;
 }
+
+// Clear feeds cache when job-feed post is updated
+add_action('save_post', function($post_id, $post, $update) {
+    if ($post->post_type === 'job-feed' && $post->post_status === 'publish') {
+        delete_transient('puntwork_feeds');
+    }
+}, 10, 3);
 
 function process_one_feed($feed_key, $url, $output_dir, $fallback_domain, &$logs) {
     $xml_path = $output_dir . $feed_key . '.xml';
