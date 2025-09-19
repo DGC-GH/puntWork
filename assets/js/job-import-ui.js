@@ -87,7 +87,30 @@
          */
         normalizeResponseData: function(response) {
             // Some responses have data directly, others have it in .data property
-            return response.data || response;
+            var data = response.data || response;
+
+            // Ensure all counter fields are present and numeric
+            data.total = parseInt(data.total) || 0;
+            data.processed = parseInt(data.processed) || 0;
+            data.created = parseInt(data.created) || 0;
+            data.updated = parseInt(data.updated) || 0;
+            data.skipped = parseInt(data.skipped) || 0;
+            data.duplicates_drafted = parseInt(data.duplicates_drafted) || 0;
+            data.drafted_old = parseInt(data.drafted_old) || 0;
+            data.time_elapsed = parseFloat(data.time_elapsed) || 0;
+
+            PuntWorkJSLogger.debug('Normalized response data', 'UI', {
+                total: data.total,
+                processed: data.processed,
+                created: data.created,
+                updated: data.updated,
+                skipped: data.skipped,
+                duplicates_drafted: data.duplicates_drafted,
+                drafted_old: data.drafted_old,
+                time_elapsed: data.time_elapsed
+            });
+
+            return data;
         },
 
         /**

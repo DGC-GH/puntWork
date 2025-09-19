@@ -44,7 +44,18 @@ function job_import_purge_ajax() {
 
     try {
         $processed_guids = get_option('job_import_processed_guids') ?: [];
-        $progress = get_option('job_import_status') ?: [];
+        $progress = get_option('job_import_status') ?: [
+            'total' => 0,
+            'processed' => 0,
+            'created' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'duplicates_drafted' => 0,
+            'drafted_old' => 0,
+            'time_elapsed' => 0,
+            'complete' => false,
+            'logs' => []
+        ];
         $progress['logs'] = is_array($progress['logs']) ? $progress['logs'] : [];
         if ($progress['processed'] < $progress['total'] || $progress['total'] == 0) {
             delete_transient('job_import_purge_lock');
