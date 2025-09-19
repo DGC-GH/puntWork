@@ -39,7 +39,16 @@ function prepare_import_setup($batch_start = 0) {
     wp_suspend_cache_invalidation(true);
     remove_action('post_updated', 'wp_save_post_revision');
 
-    $start_time = microtime(true);
+    // Check if there's an existing import in progress and use its start time
+    $existing_status = get_option('job_import_status');
+    if ($existing_status && isset($existing_status['start_time']) && $existing_status['start_time'] > 0) {
+        $start_time = $existing_status['start_time'];
+        PuntWorkLogger::info('Using existing import start time: ' . $start_time, PuntWorkLogger::CONTEXT_BATCH);
+    } else {
+        $start_time = microtime(true);
+        PuntWorkLogger::info('Starting new import with start time: ' . $start_time, PuntWorkLogger::CONTEXT_BATCH);
+    }
+
     $json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
 
     if (!file_exists($json_path)) {
@@ -80,12 +89,15 @@ function prepare_import_setup($batch_start = 0) {
     $processed_guids = get_option('job_import_processed_guids') ?: [];
     $start_index = max((int) get_option('job_import_progress'), $batch_start);
 
-    // For fresh starts (batch_start = 0), always start from 0 regardless of previous progress
+    // For fresh starts (batch_start = 0), reset the status and create new start time
     if ($batch_start === 0) {
         $start_index = 0;
         // Clear processed GUIDs for fresh start
         $processed_guids = [];
-        PuntWorkLogger::info('Fresh import start - resetting progress to 0', PuntWorkLogger::CONTEXT_BATCH);
+        // Clear existing status for fresh start
+        delete_option('job_import_status');
+        $start_time = microtime(true);
+        PuntWorkLogger::info('Fresh import start - resetting status and progress to 0', PuntWorkLogger::CONTEXT_BATCH);
     }
 
     if ($start_index >= $total) {
