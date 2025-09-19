@@ -4,6 +4,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+namespace Puntwork;
+
 function clean_item_fields(&$item) {
     $html_fields = ['description', 'functiondescription', 'offerdescription', 'requirementsdescription', 'companydescription'];
     foreach ($html_fields as $field) {

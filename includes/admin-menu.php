@@ -4,6 +4,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+namespace Puntwork;
+
 add_action('admin_menu', function() {
     add_submenu_page(
         'edit.php?post_type=job',

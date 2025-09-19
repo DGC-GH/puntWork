@@ -4,6 +4,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+namespace Puntwork;
+
 add_shortcode('job_update_status', function($atts, $content, $tag) {
     global $post;
     if ($post->post_modified > $post->post_date) {

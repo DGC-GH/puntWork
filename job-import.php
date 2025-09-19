@@ -11,6 +11,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+namespace Puntwork;
+
 define( 'JOB_IMPORT_VERSION', '1.0.0' );
 define( 'JOB_IMPORT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'JOB_IMPORT_URL', plugin_dir_url( __FILE__ ) );

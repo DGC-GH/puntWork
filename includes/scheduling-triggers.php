@@ -4,6 +4,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+namespace Puntwork;
+
 // Schedule daily via WP Cron at 3:33 Brussels time
 add_action('wp', function() {
     if (!wp_next_scheduled('fetch_combined_jobs_json')) {
