@@ -15,9 +15,35 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 function get_feeds() {
+    // Clear cache for debugging
+    delete_transient('puntwork_feeds');
+    
     $feeds = get_transient('puntwork_feeds');
     if (false === $feeds) {
         $feeds = [];
+        
+        // First, check if CPT is registered
+        if (!post_type_exists('job-feed')) {
+            error_log('[PUNTWORK] get_feeds() - ERROR: job-feed post type is not registered!');
+            
+            // Try alternative: check if feeds are stored as options
+            $option_feeds = get_option('job_feed_url');
+            if (!empty($option_feeds)) {
+                error_log('[PUNTWORK] get_feeds() - Found feeds in options: ' . print_r($option_feeds, true));
+                if (is_array($option_feeds)) {
+                    $feeds = $option_feeds;
+                } elseif (is_string($option_feeds)) {
+                    // Try to parse as JSON
+                    $parsed = json_decode($option_feeds, true);
+                    if ($parsed && is_array($parsed)) {
+                        $feeds = $parsed;
+                    }
+                }
+            }
+            
+            return $feeds;
+        }
+        
         $query = new \WP_Query([
             'post_type' => 'job-feed',
             'post_status' => 'publish',
@@ -34,6 +60,12 @@ function get_feeds() {
 
                 error_log('[PUNTWORK] get_feeds() - Post ID ' . $post_id . ': title="' . $post->post_title . '", status="' . $post->post_status . '", feed_url="' . $feed_url . '"');
 
+                // Also check for ACF field if regular meta is empty
+                if (empty($feed_url) && function_exists('get_field')) {
+                    $feed_url = get_field('feed_url', $post_id);
+                    error_log('[PUNTWORK] get_feeds() - ACF feed_url for post ' . $post_id . ': ' . $feed_url);
+                }
+
                 if (!empty($feed_url)) {
                     $feeds[$post->post_name] = $feed_url; // Use slug as key
                     error_log('[PUNTWORK] get_feeds() - Added feed: ' . $post->post_name . ' -> ' . $feed_url);
@@ -43,6 +75,19 @@ function get_feeds() {
             }
         } else {
             error_log('[PUNTWORK] get_feeds() - No job-feed posts found');
+            
+            // Check if there are any job-feed posts with different status
+            $all_query = new \WP_Query([
+                'post_type' => 'job-feed',
+                'post_status' => 'any',
+                'posts_per_page' => -1,
+                'fields' => 'ids',
+            ]);
+            error_log('[PUNTWORK] get_feeds() - Found ' . $all_query->found_posts . ' job-feed posts with any status');
+            
+            if ($all_query->have_posts()) {
+                error_log('[PUNTWORK] get_feeds() - Post IDs with any status: ' . implode(', ', $all_query->posts));
+            }
         }
 
         set_transient('puntwork_feeds', $feeds, 3600); // Cache for 1 hour
