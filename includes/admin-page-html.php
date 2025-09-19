@@ -62,16 +62,35 @@ function job_import_admin_page() {
             </div>
 
             <!-- Schedule Configuration -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
-                <div>
-                    <label for="schedule-frequency" style="display: block; font-size: 14px; font-weight: 500; color: #8e8e93; margin-bottom: 8px;">Frequency</label>
-                    <select id="schedule-frequency" style="width: 100%; padding: 12px; border: 1px solid #d1d1d6; border-radius: 8px; font-size: 16px; background-color: white;">
-                        <option value="hourly">Every hour</option>
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                        <option value="custom">Custom</option>
-                    </select>
+            <div style="margin-bottom: 24px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div>
+                        <label for="schedule-frequency" style="display: block; font-size: 14px; font-weight: 500; color: #8e8e93; margin-bottom: 8px;">Frequency</label>
+                        <select id="schedule-frequency" style="width: 100%; padding: 12px; border: 1px solid #d1d1d6; border-radius: 8px; font-size: 16px; background-color: white;">
+                            <option value="3hours">Every 3 hours</option>
+                            <option value="6hours">Every 6 hours</option>
+                            <option value="12hours">Every 12 hours</option>
+                            <option value="daily">Daily</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="schedule-hour" style="display: block; font-size: 14px; font-weight: 500; color: #8e8e93; margin-bottom: 8px;">Start Time - Hour</label>
+                        <select id="schedule-hour" style="width: 100%; padding: 12px; border: 1px solid #d1d1d6; border-radius: 8px; font-size: 16px; background-color: white;">
+                            <?php for ($i = 0; $i < 24; $i++): ?>
+                                <option value="<?php echo $i; ?>" <?php echo $i == 9 ? 'selected' : ''; ?>><?php echo str_pad($i, 2, '0', STR_PAD_LEFT); ?>:00</option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="schedule-minute" style="display: block; font-size: 14px; font-weight: 500; color: #8e8e93; margin-bottom: 8px;">Minute</label>
+                        <select id="schedule-minute" style="width: 100%; padding: 12px; border: 1px solid #d1d1d6; border-radius: 8px; font-size: 16px; background-color: white;">
+                            <option value="0" selected>00</option>
+                            <option value="15">15</option>
+                            <option value="30">30</option>
+                            <option value="45">45</option>
+                        </select>
+                    </div>
                 </div>
                 <div id="custom-schedule" style="display: none;">
                     <label for="schedule-interval" style="display: block; font-size: 14px; font-weight: 500; color: #8e8e93; margin-bottom: 8px;">Custom Interval (hours)</label>
@@ -123,6 +142,17 @@ function job_import_admin_page() {
                 </div>
             </div>
 
+            <!-- Run History -->
+            <div id="run-history" style="background-color: #f9f9f9; border-radius: 8px; padding: 16px; margin-top: 16px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin: 0;">Import History</h3>
+                    <button id="refresh-history" class="button button-secondary" style="border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 500;">Refresh</button>
+                </div>
+                <div id="run-history-list" style="max-height: 200px; overflow-y: auto; font-size: 12px;">
+                    <div style="color: #8e8e93; text-align: center; padding: 20px;">Loading history...</div>
+                </div>
+            </div>
+
             <!-- Action Buttons -->
             <div style="display: flex; gap: 12px; margin-top: 24px;">
                 <button id="save-schedule" class="button button-primary" style="border-radius: 8px; padding: 12px 24px; font-size: 16px; font-weight: 500; background-color: #007aff; border: none; color: white;">Save Settings</button>
@@ -139,6 +169,8 @@ function job_import_admin_page() {
                 <p><strong>Schedule Status:</strong> <span id="debug-schedule-status">Loading...</span></p>
                 <p><strong>Next Run:</strong> <span id="debug-next-run">Loading...</span></p>
                 <p><strong>Last Run:</strong> <span id="debug-last-run">Loading...</span></p>
+                <p><strong>Schedule Time:</strong> <span id="debug-schedule-time">Loading...</span></p>
+                <p><strong>Frequency:</strong> <span id="debug-schedule-frequency">Loading...</span></p>
                 <p><a href="?page=job-import-dashboard&test_scheduling=1" target="_blank" style="color: #007aff;">Open Test Page</a></p>
             </div>
         </div>

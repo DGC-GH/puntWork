@@ -26,12 +26,97 @@ function init_scheduling() {
     add_action('wp_ajax_get_import_schedule', __NAMESPACE__ . '\\get_import_schedule_ajax');
     add_action('wp_ajax_test_import_schedule', __NAMESPACE__ . '\\test_import_schedule_ajax');
     add_action('wp_ajax_run_scheduled_import', __NAMESPACE__ . '\\run_scheduled_import_ajax');
+    add_action('wp_ajax_get_import_run_history', __NAMESPACE__ . '\\get_import_run_history_ajax');
 
     // Register cron hook
     add_action('puntwork_scheduled_import', __NAMESPACE__ . '\\run_scheduled_import');
 
+    // Register custom cron schedules
+    add_filter('cron_schedules', __NAMESPACE__ . '\\register_custom_cron_schedules');
+
     // Schedule cleanup on plugin deactivation
     register_deactivation_hook(__FILE__, __NAMESPACE__ . '\\cleanup_scheduled_imports');
+}
+
+/**
+ * Register custom cron schedules
+ */
+function register_custom_cron_schedules($schedules) {
+    $schedules['puntwork_3hours'] = [
+        'interval' => 3 * HOUR_IN_SECONDS,
+        'display' => __('Every 3 hours', 'puntwork')
+    ];
+
+    $schedules['puntwork_6hours'] = [
+        'interval' => 6 * HOUR_IN_SECONDS,
+        'display' => __('Every 6 hours', 'puntwork')
+    ];
+
+    $schedules['puntwork_12hours'] = [
+        'interval' => 12 * HOUR_IN_SECONDS,
+        'display' => __('Every 12 hours', 'puntwork')
+    ];
+
+    // Custom schedule for time-based scheduling
+    $schedules['puntwork_custom_schedule'] = [
+        'interval' => 60, // Will be rescheduled each time
+        'display' => __('Custom schedule', 'puntwork')
+    ];
+
+    return $schedules;
+}
+
+/**
+ * Calculate the next run time based on schedule settings
+ */
+function calculate_next_run_time($schedule_data) {
+    $current_time = time();
+    $hour = $schedule_data['hour'] ?? 9;
+    $minute = $schedule_data['minute'] ?? 0;
+    $frequency = $schedule_data['frequency'] ?? 'daily';
+
+    // Create timestamp for today at the specified time
+    $today_target = strtotime(date('Y-m-d', $current_time) . " {$hour}:{$minute}:00");
+
+    // If today's target time has passed, calculate for tomorrow
+    if ($today_target <= $current_time) {
+        $today_target = strtotime('+1 day', $today_target);
+    }
+
+    // For non-daily frequencies, we need to find the next occurrence
+    if ($frequency !== 'daily') {
+        $interval_hours = 0;
+
+        switch ($frequency) {
+            case '3hours':
+                $interval_hours = 3;
+                break;
+            case '6hours':
+                $interval_hours = 6;
+                break;
+            case '12hours':
+                $interval_hours = 12;
+                break;
+            case 'custom':
+                $interval_hours = $schedule_data['interval'] ?? 24;
+                break;
+            default:
+                $interval_hours = 24; // fallback to daily
+        }
+
+        // Find the next occurrence based on the interval
+        $next_run = $today_target;
+
+        // If the target time is in the past, find the next future occurrence
+        while ($next_run <= $current_time) {
+            $next_run = strtotime("+{$interval_hours} hours", $next_run);
+        }
+
+        return $next_run;
+    }
+
+    // For daily frequency, just return today's target (or tomorrow's if passed)
+    return $today_target;
 }
 
 /**
@@ -48,11 +133,21 @@ function save_import_schedule_ajax() {
     $enabled = isset($_POST['enabled']) ? (bool) $_POST['enabled'] : false;
     $frequency = sanitize_text_field($_POST['frequency'] ?? 'daily');
     $interval = intval($_POST['interval'] ?? 24);
+    $hour = intval($_POST['hour'] ?? 9);
+    $minute = intval($_POST['minute'] ?? 0);
 
     // Validate frequency
-    $valid_frequencies = ['hourly', 'daily', 'weekly', 'monthly', 'custom'];
+    $valid_frequencies = ['3hours', '6hours', '12hours', 'daily', 'custom'];
     if (!in_array($frequency, $valid_frequencies)) {
         wp_send_json_error(['message' => 'Invalid frequency']);
+    }
+
+    // Validate time
+    if ($hour < 0 || $hour > 23) {
+        wp_send_json_error(['message' => 'Hour must be between 0 and 23']);
+    }
+    if ($minute < 0 || $minute > 59) {
+        wp_send_json_error(['message' => 'Minute must be between 0 and 59']);
     }
 
     // Validate custom interval
@@ -64,6 +159,8 @@ function save_import_schedule_ajax() {
         'enabled' => $enabled,
         'frequency' => $frequency,
         'interval' => $interval,
+        'hour' => $hour,
+        'minute' => $minute,
         'updated_at' => time(),
         'updated_by' => get_current_user_id()
     ];
@@ -95,6 +192,8 @@ function get_import_schedule_ajax() {
         'enabled' => false,
         'frequency' => 'daily',
         'interval' => 24,
+        'hour' => 9,
+        'minute' => 0,
         'updated_at' => null,
         'updated_by' => null
     ]);
@@ -107,6 +206,25 @@ function get_import_schedule_ajax() {
         'next_run' => get_next_scheduled_time(),
         'last_run' => $last_run,
         'last_run_details' => $last_run_details
+    ]);
+}
+
+/**
+ * Get import run history
+ */
+function get_import_run_history_ajax() {
+    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
+        wp_send_json_error(['message' => 'Nonce verification failed']);
+    }
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(['message' => 'Permission denied']);
+    }
+
+    $history = get_option('puntwork_import_run_history', []);
+
+    wp_send_json_success([
+        'history' => $history,
+        'count' => count($history)
     ]);
 }
 
@@ -160,10 +278,10 @@ function update_cron_schedule($schedule_data) {
     wp_clear_scheduled_hook($hook);
 
     if ($schedule_data['enabled']) {
-        $interval = get_cron_interval($schedule_data);
+        $next_run_timestamp = calculate_next_run_time($schedule_data);
 
-        if (wp_schedule_event(time(), $interval, $hook)) {
-            error_log('[PUNTWORK] Scheduled import hook registered with interval: ' . $interval);
+        if (wp_schedule_event($next_run_timestamp, 'puntwork_custom_schedule', $hook)) {
+            error_log('[PUNTWORK] Scheduled import hook registered for: ' . date('Y-m-d H:i:s', $next_run_timestamp));
         } else {
             error_log('[PUNTWORK] Failed to register scheduled import hook');
         }
@@ -175,14 +293,14 @@ function update_cron_schedule($schedule_data) {
  */
 function get_cron_interval($schedule_data) {
     switch ($schedule_data['frequency']) {
-        case 'hourly':
-            return 'hourly';
+        case '3hours':
+            return 'puntwork_3hours';
+        case '6hours':
+            return 'puntwork_6hours';
+        case '12hours':
+            return 'puntwork_12hours';
         case 'daily':
             return 'daily';
-        case 'weekly':
-            return 'weekly';
-        case 'monthly':
-            return 'monthly';
         case 'custom':
             // Register custom interval if needed
             $interval_hours = $schedule_data['interval'];
@@ -267,6 +385,9 @@ function run_scheduled_import($test_mode = false) {
             ];
 
             update_option('puntwork_last_import_details', $details);
+
+            // Log this run to history
+            log_scheduled_run($details, $test_mode);
         }
 
         return $result;
@@ -283,6 +404,19 @@ function run_scheduled_import($test_mode = false) {
         ];
 
         update_option('puntwork_last_import_run', $error_data);
+
+        // Log failed run to history
+        log_scheduled_run([
+            'success' => false,
+            'duration' => $duration,
+            'processed' => 0,
+            'total' => 0,
+            'created' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'error_message' => $e->getMessage(),
+            'timestamp' => time()
+        ], $test_mode);
 
         error_log('[PUNTWORK] Scheduled import failed: ' . $e->getMessage());
 
@@ -301,6 +435,53 @@ function cleanup_scheduled_imports() {
     delete_option('puntwork_import_schedule');
     delete_option('puntwork_last_import_run');
     delete_option('puntwork_last_import_details');
+    delete_option('puntwork_import_run_history');
+}
+
+/**
+ * Log a scheduled run to history
+ */
+function log_scheduled_run($details, $test_mode = false) {
+    $run_entry = [
+        'timestamp' => $details['timestamp'],
+        'duration' => $details['duration'],
+        'success' => $details['success'],
+        'processed' => $details['processed'],
+        'total' => $details['total'],
+        'created' => $details['created'],
+        'updated' => $details['updated'],
+        'skipped' => $details['skipped'],
+        'error_message' => $details['error_message'] ?? '',
+        'test_mode' => $test_mode
+    ];
+
+    // Get existing history
+    $history = get_option('puntwork_import_run_history', []);
+
+    // Add new entry to the beginning
+    array_unshift($history, $run_entry);
+
+    // Keep only the last 20 runs to prevent the option from growing too large
+    if (count($history) > 20) {
+        $history = array_slice($history, 0, 20);
+    }
+
+    update_option('puntwork_import_run_history', $history);
+
+    // Log to debug log
+    $status = $details['success'] ? 'SUCCESS' : 'FAILED';
+    $mode = $test_mode ? ' (TEST)' : '';
+    error_log(sprintf(
+        '[PUNTWORK] Scheduled import %s%s - Duration: %.2fs, Processed: %d/%d, Created: %d, Updated: %d, Skipped: %d',
+        $status,
+        $mode,
+        $details['duration'],
+        $details['processed'],
+        $details['total'],
+        $details['created'],
+        $details['updated'],
+        $details['skipped']
+    ));
 }
 
 /**
