@@ -8,12 +8,23 @@
 
     var JobImportUI = {
         segmentsCreated: false,
+        currentPhase: 'idle', // 'idle', 'feed-processing', 'jsonl-combining', 'job-importing', 'complete'
+
+        /**
+         * Set the current import phase
+         * @param {string} phase - The current phase
+         */
+        setPhase: function(phase) {
+            this.currentPhase = phase;
+            PuntWorkJSLogger.debug('Import phase changed to: ' + phase, 'UI');
+        },
 
         /**
          * Clear all progress indicators and reset UI
          */
         clearProgress: function() {
             this.segmentsCreated = false;
+            this.setPhase('idle');
             $('#progress-bar').empty();
             $('#progress-percent').text('0%');
             $('#total-items').text(0);
@@ -94,12 +105,33 @@
             var processed = data.processed || 0;
             var percent = 0;
 
-            // Calculate percentage correctly, handling completion case
-            if (total > 0) {
-                if (processed >= total) {
-                    percent = 100;
-                } else {
-                    percent = Math.floor((processed / total) * 100);
+            // Calculate percentage based on current phase
+            if (this.currentPhase === 'feed-processing') {
+                // Feed processing phase: 0-30% of total progress
+                percent = Math.floor((processed / total) * 30);
+                this.setPhase(processed >= total ? 'jsonl-combining' : 'feed-processing');
+            } else if (this.currentPhase === 'jsonl-combining') {
+                // JSONL combining phase: 30-40% of total progress
+                percent = 30 + Math.floor((processed / 1) * 10);
+                this.setPhase(processed >= 1 ? 'job-importing' : 'jsonl-combining');
+            } else if (this.currentPhase === 'job-importing' || this.currentPhase === 'complete') {
+                // Job importing phase: 40-100% of total progress
+                if (total > 0) {
+                    if (processed >= total) {
+                        percent = 100;
+                        this.setPhase('complete');
+                    } else {
+                        percent = 40 + Math.floor((processed / total) * 60);
+                    }
+                }
+            } else {
+                // Default calculation
+                if (total > 0) {
+                    if (processed >= total) {
+                        percent = 100;
+                    } else {
+                        percent = Math.floor((processed / total) * 100);
+                    }
                 }
             }
 
@@ -124,22 +156,64 @@
                 $('#progress-bar div:lt(' + percent + ')').css('backgroundColor', '#007aff'); // Fill completed segments
             }
 
-            $('#total-items').text(total);
-            $('#processed-items').text(processed);
-            $('#created-items').text(data.created || 0);
-            $('#updated-items').text(data.updated || 0);
-            $('#skipped-items').text(data.skipped || 0);
-            $('#duplicates-drafted').text(data.duplicates_drafted || 0);
-            $('#drafted-old').text(data.drafted_old || 0);
+            // Check if we're in feed processing phase (no job stats yet)
+            var is_feed_processing = (data.created === 0 && data.updated === 0 && data.skipped === 0 &&
+                                    data.duplicates_drafted === 0 && data.drafted_old === 0);
 
-            var itemsLeft = total - processed;
-            $('#items-left').text(isNaN(itemsLeft) ? 0 : itemsLeft);
+            // Check if we're in JSONL combination phase (total=1, processed=0 or 1, no job stats)
+            var is_jsonl_combining = (total === 1 && is_feed_processing);
 
-            // Update status message based on completion
-            if (processed >= total && total > 0) {
-                $('#status-message').text('Import Complete');
+            if (is_feed_processing && !is_jsonl_combining && total > 1) {
+                // Feed processing phase - show feed progress
+                $('#total-items').text(total);
+                $('#processed-items').text(processed);
+                $('#created-items').text('—');
+                $('#updated-items').text('—');
+                $('#skipped-items').text('—');
+                $('#duplicates-drafted').text('—');
+                $('#drafted-old').text('—');
+                $('#items-left').text(total - processed);
+
+                // Update status message for feed processing
+                if (processed < total) {
+                    $('#status-message').text(`Processing feeds (${processed}/${total})`);
+                }
+            } else if (is_jsonl_combining) {
+                // JSONL combination phase
+                $('#total-items').text('—');
+                $('#processed-items').text(processed ? 'Complete' : 'In Progress');
+                $('#created-items').text('—');
+                $('#updated-items').text('—');
+                $('#skipped-items').text('—');
+                $('#duplicates-drafted').text('—');
+                $('#drafted-old').text('—');
+                $('#items-left').text(processed ? '0' : '1');
+
+                // Update status message for JSONL combination
+                if (processed === 0) {
+                    $('#status-message').text('Combining JSONL files...');
+                } else {
+                    $('#status-message').text('JSONL files combined');
+                }
             } else {
-                $('#status-message').text('Importing...');
+                // Job import phase - show normal stats
+                $('#total-items').text(total);
+                $('#processed-items').text(processed);
+                $('#created-items').text(data.created || 0);
+                $('#updated-items').text(data.updated || 0);
+                $('#skipped-items').text(data.skipped || 0);
+                $('#duplicates-drafted').text(data.duplicates_drafted || 0);
+                $('#drafted-old').text(data.drafted_old || 0);
+
+                var itemsLeft = total - processed;
+                $('#items-left').text(isNaN(itemsLeft) ? 0 : itemsLeft);
+
+                // Update status message based on completion
+                if (processed >= total && total > 0) {
+                    $('#status-message').text('Import Complete');
+                } else {
+                    $('#status-message').text('Importing...');
+                }
             }
 
             // Update elapsed time
@@ -161,11 +235,33 @@
             var itemsLeft = total - processed;
 
             // Handle completion case
-            if (processed >= total && total > 0) {
+            if (this.currentPhase === 'complete' || (processed >= total && total > 0)) {
                 $('#time-left').text('Complete');
                 return;
             }
 
+            // Handle different phases
+            if (this.currentPhase === 'feed-processing') {
+                // For feed processing, estimate based on feeds processed
+                if (processed > 0 && timeElapsed > 0) {
+                    var timePerFeed = timeElapsed / processed;
+                    var feedsLeft = total - processed;
+                    var estimatedSeconds = timePerFeed * feedsLeft;
+                    if (!isNaN(estimatedSeconds) && isFinite(estimatedSeconds) && estimatedSeconds < 3600) {
+                        $('#time-left').text(this.formatTime(estimatedSeconds));
+                        return;
+                    }
+                }
+                $('#time-left').text('Processing feeds...');
+                return;
+            }
+
+            if (this.currentPhase === 'jsonl-combining') {
+                $('#time-left').text('Combining files...');
+                return;
+            }
+
+            // Job importing phase - original logic
             // Don't calculate if we don't have enough data or invalid values
             if (total === 0 || processed === 0 || timeElapsed <= 0 || itemsLeft <= 0 || isNaN(timeElapsed)) {
                 $('#time-left').text('Calculating...');

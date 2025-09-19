@@ -129,6 +129,7 @@
 
             try {
                 JobImportUI.clearProgress();
+                JobImportUI.setPhase('feed-processing');
                 $('#start-import').hide();
                 $('#cancel-import').show();
                 JobImportUI.showImportUI();
@@ -146,16 +147,59 @@
                 const feeds = jobImportData.feeds;
                 console.log('[PUNTWORK] Processing feeds:', feeds);
                 let total_items = 0;
+                const total_feeds = Object.keys(feeds).length;
 
-                for (let feed of feeds) {
+                // Initialize progress for feed processing phase
+                JobImportUI.updateProgress({
+                    total: total_feeds,
+                    processed: 0,
+                    created: 0,
+                    updated: 0,
+                    skipped: 0,
+                    duplicates_drafted: 0,
+                    drafted_old: 0,
+                    time_elapsed: 0,
+                    complete: false
+                });
+
+                for (let i = 0; i < Object.keys(feeds).length; i++) {
+                    const feed = Object.keys(feeds)[i];
                     console.log('[PUNTWORK] Processing feed:', feed);
-                    $('#status-message').text(`Processing feed: ${feed}`);
+
+                    // Update progress for current feed
+                    const current_feed_num = i + 1;
+                    $('#status-message').text(`Processing feed ${current_feed_num}/${total_feeds}: ${feed}`);
+                    JobImportUI.updateProgress({
+                        total: total_feeds,
+                        processed: current_feed_num - 1, // Show progress up to current feed
+                        created: 0,
+                        updated: 0,
+                        skipped: 0,
+                        duplicates_drafted: 0,
+                        drafted_old: 0,
+                        time_elapsed: 0,
+                        complete: false
+                    });
+
                     const response = await JobImportAPI.processFeed(feed);
                     PuntWorkJSLogger.debug(`Process feed ${feed} response`, 'LOGIC', response);
 
                     if (response.success) {
                         JobImportUI.appendLogs(response.data.logs || []);
                         total_items += response.data.item_count;
+
+                        // Update progress after successful feed processing
+                        JobImportUI.updateProgress({
+                            total: total_feeds,
+                            processed: current_feed_num,
+                            created: 0,
+                            updated: 0,
+                            skipped: 0,
+                            duplicates_drafted: 0,
+                            drafted_old: 0,
+                            time_elapsed: 0,
+                            complete: false
+                        });
                     } else {
                         throw new Error(`Processing feed ${feed} failed: ` + (response.message || 'Unknown error'));
                     }
@@ -169,11 +213,38 @@
 
                 // Combine JSONL files
                 $('#status-message').text('Combining JSONL files...');
+
+                // Show progress for JSONL combination phase
+                JobImportUI.updateProgress({
+                    total: 1,
+                    processed: 0,
+                    created: 0,
+                    updated: 0,
+                    skipped: 0,
+                    duplicates_drafted: 0,
+                    drafted_old: 0,
+                    time_elapsed: 0,
+                    complete: false
+                });
+
                 const combineResponse = await JobImportAPI.combineJsonl(total_items);
                 PuntWorkJSLogger.debug('Combine JSONL response', 'LOGIC', combineResponse);
 
                 if (combineResponse.success) {
                     JobImportUI.appendLogs(combineResponse.data.logs || []);
+
+                    // Update progress to show JSONL combination complete
+                    JobImportUI.updateProgress({
+                        total: 1,
+                        processed: 1,
+                        created: 0,
+                        updated: 0,
+                        skipped: 0,
+                        duplicates_drafted: 0,
+                        drafted_old: 0,
+                        time_elapsed: 0,
+                        complete: false
+                    });
                 } else {
                     throw new Error('Combining JSONL failed: ' + (combineResponse.message || 'Unknown error'));
                 }
