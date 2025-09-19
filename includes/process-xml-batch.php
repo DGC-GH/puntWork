@@ -1,10 +1,18 @@
 <?php
+/**
+ * XML batch processing utilities
+ *
+ * @package    Puntwork
+ * @subpackage Processing
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 function process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, &$total_items, &$logs) {
     $feed_item_count = 0;

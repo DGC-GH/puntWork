@@ -1,10 +1,18 @@
 <?php
+/**
+ * AJAX handlers for purge operations
+ *
+ * @package    Puntwork
+ * @subpackage AJAX
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 /**
  * AJAX handlers for purge operations

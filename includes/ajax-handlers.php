@@ -1,10 +1,18 @@
 <?php
+/**
+ * AJAX handlers for job import plugin
+ *
+ * @package    Puntwork
+ * @subpackage AJAX
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 /**
  * Main AJAX handlers file

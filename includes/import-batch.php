@@ -1,10 +1,18 @@
 <?php
+/**
+ * Batch import processing
+ *
+ * @package    Puntwork
+ * @subpackage Import
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 /**
  * Main import batch processing file

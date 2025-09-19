@@ -1,10 +1,18 @@
 <?php
+/**
+ * Schema mapping definitions
+ *
+ * @package    Puntwork
+ * @subpackage Mappings
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 /**
  * Schema.org structured data builders

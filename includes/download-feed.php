@@ -1,10 +1,18 @@
 <?php
+/**
+ * Feed download utilities
+ *
+ * @package    Puntwork
+ * @subpackage Utilities
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 function download_feed($url, $xml_path, $output_dir, &$logs) {
     // Validate file paths for security
