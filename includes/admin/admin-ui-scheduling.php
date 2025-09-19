@@ -39,6 +39,7 @@ function render_scheduling_ui() {
                 <div>
                     <label for="schedule-frequency" style="display: block; font-size: 14px; font-weight: 500; color: #8e8e93; margin-bottom: 8px;">Frequency</label>
                     <select id="schedule-frequency" style="width: 100%; padding: 12px; border: 1px solid #d1d1d6; border-radius: 8px; font-size: 16px; background-color: white;">
+                        <option value="hourly">Hourly</option>
                         <option value="3hours">Every 3 hours</option>
                         <option value="6hours">Every 6 hours</option>
                         <option value="12hours">Every 12 hours</option>
