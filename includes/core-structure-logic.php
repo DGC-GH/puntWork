@@ -18,7 +18,7 @@ function get_feeds() {
     $feeds = get_transient('puntwork_feeds');
     if (false === $feeds) {
         $feeds = [];
-        $query = new WP_Query([
+        $query = new \WP_Query([
             'post_type' => 'job-feed',
             'post_status' => 'publish',
             'posts_per_page' => -1,
@@ -56,7 +56,7 @@ function process_one_feed($feed_key, $url, $output_dir, $fallback_domain, &$logs
     }
 
     $handle = fopen($json_path, 'w');
-    if (!$handle) throw new Exception("Can't open $json_path");
+    if (!$handle) throw new \Exception("Can't open $json_path");
     $batch_size = 100;
     $total_items = 0;
     $count = process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
@@ -76,7 +76,7 @@ function fetch_and_generate_combined_json() {
     $output_dir = ABSPATH . 'feeds/';
     if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
         error_log("Directory $output_dir not writable");
-        throw new Exception('Feeds directory not writable - check Hostinger permissions');
+        throw new \Exception('Feeds directory not writable - check Hostinger permissions');
     }
     $fallback_domain = 'belgiumjobs.work';
 
