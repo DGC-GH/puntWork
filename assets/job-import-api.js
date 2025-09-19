@@ -116,6 +116,18 @@
         },
 
         /**
+         * Cleanup duplicate job posts
+         * @returns {Promise} AJAX promise
+         */
+        cleanupDuplicates: function() {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: { action: 'job_import_cleanup_duplicates', nonce: jobImportData.nonce }
+            });
+        },
+
+        /**
          * Generic API call method for scheduling operations
          * @param {string} action - AJAX action name
          * @param {object} data - Additional data to send
