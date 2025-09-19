@@ -1,0 +1,121 @@
+/**
+ * Job Import Admin - API Module
+ * Handles all AJAX operations and API communications
+ */
+
+(function($, window, document) {
+    'use strict';
+
+    var JobImportAPI = {
+        /**
+         * Run a single import batch
+         * @param {number} start - Starting index for batch
+         * @returns {Promise} AJAX promise
+         */
+        runImportBatch: function(start) {
+            console.log('Running import batch at start:', start);
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                timeout: 0,
+                data: { action: 'run_job_import_batch', start: start, nonce: jobImportData.nonce }
+            });
+        },
+
+        /**
+         * Clear import cancellation flag
+         * @returns {Promise} AJAX promise
+         */
+        clearImportCancel: function() {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: { action: 'clear_import_cancel', nonce: jobImportData.nonce },
+                success: function(response) {
+                    console.log('Clear cancel response:', response);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Clear cancel error:', error);
+                }
+            });
+        },
+
+        /**
+         * Reset import process
+         * @returns {Promise} AJAX promise
+         */
+        resetImport: function() {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: { action: 'reset_job_import', nonce: jobImportData.nonce }
+            });
+        },
+
+        /**
+         * Process a single feed
+         * @param {string} feedKey - Feed key identifier
+         * @returns {Promise} AJAX promise
+         */
+        processFeed: function(feedKey) {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: { action: 'process_feed', feed_key: feedKey, nonce: jobImportData.nonce }
+            });
+        },
+
+        /**
+         * Combine JSONL files
+         * @param {number} totalItems - Total number of items
+         * @returns {Promise} AJAX promise
+         */
+        combineJsonl: function(totalItems) {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: { action: 'combine_jsonl', total_items: totalItems, nonce: jobImportData.nonce }
+            });
+        },
+
+        /**
+         * Cancel import process
+         * @returns {Promise} AJAX promise
+         */
+        cancelImport: function() {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: { action: 'cancel_job_import', nonce: jobImportData.nonce }
+            });
+        },
+
+        /**
+         * Get current import status
+         * @returns {Promise} AJAX promise
+         */
+        getImportStatus: function() {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: { action: 'get_job_import_status', nonce: jobImportData.nonce }
+            });
+        },
+
+        /**
+         * Perform import purge operation
+         * @returns {Promise} AJAX promise
+         */
+        purgeImport: function() {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: { action: 'job_import_purge', nonce: jobImportData.nonce }
+            });
+        }
+    };
+
+    // Expose to global scope
+    window.JobImportAPI = JobImportAPI;
+
+})(jQuery, window, document);
