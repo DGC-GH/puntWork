@@ -63,11 +63,19 @@
          * Check initial import status on page load
          */
         checkInitialStatus: function() {
+            // Clear progress first to ensure clean state
+            JobImportUI.clearProgress();
+
             JobImportAPI.getImportStatus().then(function(response) {
                 PuntWorkJSLogger.debug('Initial status response', 'EVENTS', response);
-                if (response.success && response.processed > 0 && !response.complete) {
-                    JobImportUI.updateProgress(response);
-                    JobImportUI.appendLogs(response.logs);
+                console.log('[PUNTWORK] Initial status response:', response);
+
+                // Handle both response formats: direct data or wrapped in .data
+                var statusData = JobImportUI.normalizeResponseData(response);
+
+                if (response.success && statusData.processed > 0 && !statusData.complete) {
+                    JobImportUI.updateProgress(statusData);
+                    JobImportUI.appendLogs(statusData.logs || []);
                     $('#resume-import').show();
                     $('#start-import').text('Restart').on('click', function() {
                         JobImportEvents.handleRestartImport();
@@ -81,6 +89,9 @@
             }).catch(function(xhr, status, error) {
                 PuntWorkJSLogger.error('Initial status AJAX error', 'EVENTS', error);
                 JobImportUI.appendLogs(['Initial status AJAX error: ' + error]);
+                // Ensure UI is in clean state even on error
+                JobImportUI.clearProgress();
+                JobImportUI.hideImportUI();
             });
         },
 
