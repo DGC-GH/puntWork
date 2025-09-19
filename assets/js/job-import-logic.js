@@ -96,7 +96,14 @@
          */
         handleStartImport: async function() {
             PuntWorkJSLogger.info('Start Import clicked', 'LOGIC');
-            if (this.isImporting) return;
+            console.log('[PUNTWORK] Start Import clicked');
+            console.log('[PUNTWORK] jobImportData:', jobImportData);
+            console.log('[PUNTWORK] feeds:', jobImportData.feeds);
+
+            if (this.isImporting) {
+                console.log('[PUNTWORK] Import already in progress');
+                return;
+            }
 
             this.isImporting = true;
 
@@ -117,9 +124,11 @@
 
                 // Process feeds
                 const feeds = jobImportData.feeds;
+                console.log('[PUNTWORK] Processing feeds:', feeds);
                 let total_items = 0;
 
                 for (let feed of feeds) {
+                    console.log('[PUNTWORK] Processing feed:', feed);
                     $('#status-message').text(`Processing feed: ${feed}`);
                     const response = await JobImportAPI.processFeed(feed);
                     PuntWorkJSLogger.debug(`Process feed ${feed} response`, 'LOGIC', response);
@@ -130,6 +139,12 @@
                     } else {
                         throw new Error(`Processing feed ${feed} failed: ` + (response.message || 'Unknown error'));
                     }
+                }
+
+                console.log('[PUNTWORK] Total items after feed processing:', total_items);
+
+                if (total_items === 0) {
+                    throw new Error('No items found in feeds. Please check that feeds are configured and accessible.');
                 }
 
                 // Combine JSONL files
