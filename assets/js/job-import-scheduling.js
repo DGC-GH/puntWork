@@ -15,6 +15,7 @@
         init: function() {
             this.bindEvents();
             this.loadScheduleSettings();
+            this.loadRunHistory();
             PuntWorkJSLogger.info('Job Import Scheduling initialized', 'SCHEDULING');
         },
 
@@ -56,6 +57,12 @@
             setInterval(function() {
                 self.refreshScheduleStatus();
             }, 30000); // Refresh every 30 seconds
+
+            // Refresh history button
+            $('#refresh-history').on('click', function(e) {
+                e.preventDefault();
+                self.loadRunHistory();
+            });
         },
 
         /**
@@ -85,6 +92,8 @@
             $('#schedule-enabled').prop('checked', schedule.enabled);
             $('#schedule-frequency').val(schedule.frequency);
             $('#schedule-interval').val(schedule.interval);
+            $('#schedule-hour').val(schedule.hour || 9);
+            $('#schedule-minute').val(schedule.minute || 0);
 
             // Show/hide custom interval
             this.handleFrequencyChange(schedule.frequency);
@@ -190,6 +199,8 @@
                 $('#debug-schedule-status').text(schedule.enabled ? 'Enabled' : 'Disabled');
                 $('#debug-next-run').text(nextRun ? nextRun.formatted : 'Not scheduled');
                 $('#debug-last-run').text(lastRun ? new Date(lastRun.timestamp * 1000).toLocaleString() : 'Never');
+                $('#debug-schedule-time').text((schedule.hour || 9) + ':' + (schedule.minute || 0).toString().padStart(2, '0'));
+                $('#debug-schedule-frequency').text(schedule.frequency + (schedule.frequency === 'custom' ? ' (' + schedule.interval + 'h)' : ''));
             }
         },
 
@@ -241,7 +252,9 @@
             var settings = {
                 enabled: $('#schedule-enabled').is(':checked'),
                 frequency: $('#schedule-frequency').val(),
-                interval: parseInt($('#schedule-interval').val()) || 24
+                interval: parseInt($('#schedule-interval').val()) || 24,
+                hour: parseInt($('#schedule-hour').val()) || 9,
+                minute: parseInt($('#schedule-minute').val()) || 0
             };
 
             // Disable button during save
@@ -286,6 +299,7 @@
                     // Refresh status after test
                     setTimeout(function() {
                         self.loadScheduleSettings();
+                        self.loadRunHistory();
                     }, 2000);
                 } else {
                     self.showNotification('Test import failed: ' + (response.data.message || 'Unknown error'), 'error');
@@ -313,6 +327,7 @@
                     self.showNotification('Import started successfully', 'success');
                     // Refresh status
                     self.loadScheduleSettings();
+                    self.loadRunHistory();
                 } else {
                     self.showNotification('Failed to start import: ' + (response.data.message || 'Unknown error'), 'error');
                 }
@@ -326,6 +341,8 @@
             // Only refresh if schedule is enabled
             if (this.currentSchedule && this.currentSchedule.enabled) {
                 this.loadScheduleSettings();
+                // Also refresh history when status is refreshed
+                this.loadRunHistory();
             }
         },
 
@@ -357,6 +374,59 @@
                     $(this).remove();
                 });
             }, 3000);
+        },
+
+        /**
+         * Load run history
+         */
+        loadRunHistory: function() {
+            var self = this;
+
+            JobImportAPI.call('get_import_run_history', {}, function(response) {
+                if (response.success) {
+                    self.displayRunHistory(response.data.history);
+                    PuntWorkJSLogger.info('Run history loaded', 'SCHEDULING', { count: response.data.count });
+                } else {
+                    PuntWorkJSLogger.error('Failed to load run history', 'SCHEDULING', response.data);
+                }
+            });
+        },
+
+        /**
+         * Display run history
+         */
+        displayRunHistory: function(history) {
+            var $container = $('#run-history-list');
+
+            if (!history || history.length === 0) {
+                $container.html('<div style="color: #8e8e93; text-align: center; padding: 20px;">No import history available</div>');
+                return;
+            }
+
+            var html = '';
+            history.forEach(function(run) {
+                var date = new Date(run.timestamp * 1000);
+                var statusColor = run.success ? '#34c759' : '#ff3b30';
+                var statusText = run.success ? 'Success' : 'Failed';
+                var modeText = run.test_mode ? ' (Test)' : '';
+
+                html += '<div style="border-bottom: 1px solid #e0e0e0; padding: 8px 0; font-size: 11px;">';
+                html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
+                html += '<span style="font-weight: 500;">' + date.toLocaleString() + modeText + '</span>';
+                html += '<span style="color: ' + statusColor + '; font-weight: 500;">' + statusText + '</span>';
+                html += '</div>';
+                html += '<div style="color: #666;">';
+                html += 'Duration: ' + this.formatDuration(run.duration) + ' | ';
+                html += 'Processed: ' + run.processed + '/' + run.total + ' | ';
+                html += 'Created: ' + run.created + ', Updated: ' + run.updated + ', Skipped: ' + run.skipped;
+                html += '</div>';
+                if (run.error_message) {
+                    html += '<div style="color: #ff3b30; margin-top: 2px;">' + run.error_message + '</div>';
+                }
+                html += '</div>';
+            }.bind(this));
+
+            $container.html(html);
         }
     };
 
