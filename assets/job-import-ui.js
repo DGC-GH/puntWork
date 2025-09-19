@@ -376,21 +376,23 @@
                 }
             }
 
-            // Update elapsed time - use client-side tracking if available
+            // Update elapsed time - prioritize server-side calculation for consistency
             var elapsedTime = data.time_elapsed || 0;
-            if (this.startTime !== null) {
-                var currentTime = Date.now() / 1000;
-                elapsedTime = Math.max(elapsedTime, currentTime - this.startTime);
-            } else if (window.JobImportLogic && window.JobImportLogic.startTime) {
-                // Fallback to logic module's start time if available
-                var currentTime = Date.now() / 1000;
-                elapsedTime = Math.max(elapsedTime, currentTime - (window.JobImportLogic.startTime / 1000));
-            }
 
-            // If elapsed time is still 0 or very small, try to get it from server data
-            if (elapsedTime < 1 && data.start_time) {
-                var currentTime = Date.now() / 1000;
-                elapsedTime = currentTime - data.start_time;
+            // Only use client-side calculation as fallback if server data is missing
+            if (elapsedTime < 1) {
+                if (this.startTime !== null) {
+                    var currentTime = Date.now() / 1000;
+                    elapsedTime = currentTime - this.startTime;
+                } else if (window.JobImportLogic && window.JobImportLogic.startTime) {
+                    // Fallback to logic module's start time if available
+                    var currentTime = Date.now() / 1000;
+                    elapsedTime = currentTime - (window.JobImportLogic.startTime / 1000);
+                } else if (data.start_time) {
+                    // Final fallback to server start_time
+                    var currentTime = Date.now() / 1000;
+                    elapsedTime = currentTime - data.start_time;
+                }
             }
 
             // Update time elapsed display immediately
@@ -475,33 +477,41 @@
                 return;
             }
 
-            // Job importing phase - use batch timing data for better accuracy
-            if (this.batchTimes.length > 0 && itemsLeft > 0) {
-                // Calculate average time per item from recent batches
-                var totalBatchTime = 0;
-                var totalBatchItems = 0;
-                for (var i = 0; i < this.batchTimes.length; i++) {
-                    totalBatchTime += this.batchTimes[i].time;
-                    totalBatchItems += this.batchTimes[i].size;
-                }
-                var avgTimePerItem = totalBatchTime / totalBatchItems;
+            // Job importing phase - use overall progress rate for better accuracy
+            if (processed > 0 && elapsedTime > 0 && itemsLeft > 0) {
+                // Calculate time per item based on overall progress so far
+                var overallTimePerItem = elapsedTime / processed;
+                var estimatedSeconds = overallTimePerItem * itemsLeft;
 
-                if (!isNaN(avgTimePerItem) && isFinite(avgTimePerItem) && avgTimePerItem > 0) {
-                    var estimatedSeconds = avgTimePerItem * itemsLeft;
-
-                    // Sanity check - don't show ridiculous estimates
-                    if (estimatedSeconds > 86400) { // More than 24 hours
-                        $('#time-left').text('>24h');
-                    } else if (estimatedSeconds < 0) {
-                        $('#time-left').text('Calculating...');
-                    } else {
-                        $('#time-left').text(this.formatTime(estimatedSeconds));
+                // Use batch timing as a weighted factor if available
+                if (this.batchTimes.length > 0) {
+                    var totalBatchTime = 0;
+                    var totalBatchItems = 0;
+                    for (var i = 0; i < this.batchTimes.length; i++) {
+                        totalBatchTime += this.batchTimes[i].time;
+                        totalBatchItems += this.batchTimes[i].size;
                     }
-                    return;
+                    var batchTimePerItem = totalBatchTime / totalBatchItems;
+
+                    // Use weighted average: 70% overall, 30% recent batch
+                    if (!isNaN(batchTimePerItem) && isFinite(batchTimePerItem) && batchTimePerItem > 0) {
+                        overallTimePerItem = (overallTimePerItem * 0.7) + (batchTimePerItem * 0.3);
+                        estimatedSeconds = overallTimePerItem * itemsLeft;
+                    }
                 }
+
+                // Sanity check - don't show ridiculous estimates
+                if (estimatedSeconds > 86400) { // More than 24 hours
+                    $('#time-left').text('>24h');
+                } else if (estimatedSeconds < 0) {
+                    $('#time-left').text('Calculating...');
+                } else {
+                    $('#time-left').text(this.formatTime(estimatedSeconds));
+                }
+                return;
             }
 
-            // Fallback to processing speed if batch data not available
+            // Fallback to processing speed if no overall progress data
             if (this.processingSpeed > 0 && itemsLeft > 0) {
                 var estimatedSeconds = itemsLeft / this.processingSpeed;
 
@@ -519,13 +529,13 @@
                 }
             }
 
-            // Final fallback - use historical progress rate
+            // Final fallback - use overall progress rate
             if (total === 0 || processed === 0 || elapsedTime <= 0 || itemsLeft <= 0 || isNaN(elapsedTime)) {
                 $('#time-left').text('Calculating...');
                 return;
             }
 
-            // Calculate time per item based on current progress
+            // Calculate time per item based on overall progress
             var timePerItem = elapsedTime / processed;
 
             // Validate timePerItem to prevent NaN
