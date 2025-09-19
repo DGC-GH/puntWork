@@ -21,6 +21,7 @@ require_once __DIR__ . '/admin-ui-scheduling.php';
 require_once __DIR__ . '/admin-ui-debug.php';
 
 function job_import_admin_page() {
+    error_log('[PUNTWORK] job_import_admin_page() called');
     wp_enqueue_script('jquery');
 
     // Render main import UI
@@ -43,9 +44,18 @@ function render_javascript_init() {
     ?>
     <script type="text/javascript">
         jQuery(document).ready(function($) {
+            console.log('[PUNTWORK] Document ready, checking modules...');
+            console.log('[PUNTWORK] JobImportEvents available:', typeof JobImportEvents);
+            console.log('[PUNTWORK] JobImportUI available:', typeof JobImportUI);
+            console.log('[PUNTWORK] JobImportAPI available:', typeof JobImportAPI);
+            console.log('[PUNTWORK] JobImportLogic available:', typeof JobImportLogic);
+
             // Initialize the job import system
-            if (typeof JobImportLogic !== 'undefined') {
-                JobImportLogic.init();
+            if (typeof JobImportEvents !== 'undefined') {
+                console.log('[PUNTWORK] Initializing JobImportEvents...');
+                JobImportEvents.init();
+            } else {
+                console.error('[PUNTWORK] JobImportEvents not available!');
             }
 
             // Initialize UI components
@@ -57,6 +67,9 @@ function render_javascript_init() {
             if (typeof JobImportScheduling !== 'undefined') {
                 JobImportScheduling.init();
             }
+
+            // Mark as initialized to prevent double initialization
+            window.jobImportInitialized = true;
 
             console.log('[PUNTWORK] Admin page JavaScript initialized');
         });

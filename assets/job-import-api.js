@@ -3,6 +3,8 @@
  * Handles all AJAX operations and API communications
  */
 
+console.log('[PUNTWORK] job-import-api.js loaded');
+
 (function($, window, document) {
     'use strict';
 
