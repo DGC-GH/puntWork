@@ -67,6 +67,9 @@ function process_batch_items_logic($setup) {
         $batch_json_items = load_json_batch($json_path, $start_index, $batch_size);
         $batch_items = [];
         $batch_guids = [];
+        $loaded_count = count($batch_json_items);
+
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Loaded $loaded_count items from JSONL (batch size: $batch_size)";
 
         for ($i = 0; $i < count($batch_json_items); $i++) {
             $current_index = $start_index + $i;
@@ -111,6 +114,9 @@ function process_batch_items_logic($setup) {
         }
         unset($batch_json_items);
 
+        $valid_items_count = count($batch_guids);
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Prepared $valid_items_count valid items for processing (skipped " . ($loaded_count - $valid_items_count) . " items)";
+
         if (empty($batch_guids)) {
             update_option('job_import_progress', $end_index, false);
             update_option('job_import_processed_guids', $processed_guids, false);
@@ -145,7 +151,7 @@ function process_batch_items_logic($setup) {
         update_option('job_import_progress', $end_index, false);
         update_option('job_import_processed_guids', $processed_guids, false);
         $time_elapsed = microtime(true) - $start_time;
-        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Batch complete: Processed {$result['processed_count']} items";
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Batch complete: Processed {$result['processed_count']} items (created: $created, updated: $updated, skipped: $skipped, duplicates: $duplicates_drafted)";
 
         // Update performance metrics
         update_batch_metrics($time_elapsed, $result['processed_count'], $batch_size);
