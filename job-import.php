@@ -6,12 +6,12 @@
  * Author: DGC-GH
  */
 
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 define( 'JOB_IMPORT_VERSION', '1.0.0' );
 define( 'JOB_IMPORT_PATH', plugin_dir_path( __FILE__ ) );
