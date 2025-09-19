@@ -88,33 +88,60 @@
                 $('#cleanup-status').text('Cleaning up duplicates...');
 
                 console.log('[PUNTWORK] Calling cleanup API');
-                JobImportAPI.cleanupDuplicates().then(function(response) {
-                    console.log('[PUNTWORK] Cleanup API response:', response);
-                    PuntWorkJSLogger.debug('Cleanup response', 'EVENTS', response);
-                    
-                    if (response.success) {
-                        $('#cleanup-status').text('Cleanup completed: ' + response.data.deleted_count + ' duplicates removed');
-                        JobImportUI.appendLogs(response.data.logs || []);
-                    } else {
-                        $('#cleanup-status').text('Cleanup failed: ' + (response.data || 'Unknown error'));
-                    }
-                }).catch(function(xhr, status, error) {
-                    console.log('[PUNTWORK] Cleanup API error:', error);
-                    PuntWorkJSLogger.error('Cleanup AJAX error', 'EVENTS', error);
-                    $('#cleanup-status').text('Cleanup failed: ' + error);
-                    JobImportUI.appendLogs(['Cleanup AJAX error: ' + error]);
-                }).finally(function() {
-                    console.log('[PUNTWORK] Cleanup finally block');
-                    $('#cleanup-duplicates').prop('disabled', false);
-                    $('#cleanup-text').show();
-                    $('#cleanup-loading').hide();
-                });
+                JobImportEvents.processCleanupBatch(0, 50); // Start with first batch
             } else {
                 console.log('[PUNTWORK] User cancelled cleanup');
             }
         },
 
         /**
+         * Process cleanup batch and continue if needed
+         * @param {number} offset - Current offset for batch processing
+         * @param {number} batchSize - Size of batch to process
+         */
+        processCleanupBatch: function(offset, batchSize) {
+            var isContinue = offset > 0;
+            var action = isContinue ? JobImportAPI.continueCleanup(offset, batchSize) : JobImportAPI.cleanupDuplicates();
+
+            action.then(function(response) {
+                console.log('[PUNTWORK] Cleanup API response:', response);
+                PuntWorkJSLogger.debug('Cleanup response', 'EVENTS', response);
+
+                if (response.success) {
+                    JobImportUI.appendLogs(response.data.logs || []);
+
+                    if (response.data.complete) {
+                        // Operation completed
+                        $('#cleanup-status').text('Cleanup completed: ' + response.data.total_deleted + ' duplicates removed');
+                        $('#cleanup-duplicates').prop('disabled', false);
+                        $('#cleanup-text').show();
+                        $('#cleanup-loading').hide();
+                        JobImportUI.clearCleanupProgress();
+                    } else {
+                        // Update progress and continue with next batch
+                        JobImportUI.updateCleanupProgress(response.data);
+                        $('#cleanup-status').text('Progress: ' + response.data.progress_percentage + '% (' +
+                            response.data.total_processed + '/' + response.data.total_jobs + ' jobs processed)');
+                        JobImportEvents.processCleanupBatch(response.data.next_offset, batchSize);
+                    }
+                } else {
+                    $('#cleanup-status').text('Cleanup failed: ' + (response.data || 'Unknown error'));
+                    $('#cleanup-duplicates').prop('disabled', false);
+                    $('#cleanup-text').show();
+                    $('#cleanup-loading').hide();
+                    JobImportUI.clearCleanupProgress();
+                }
+            }).catch(function(xhr, status, error) {
+                console.log('[PUNTWORK] Cleanup API error:', error);
+                PuntWorkJSLogger.error('Cleanup AJAX error', 'EVENTS', error);
+                $('#cleanup-status').text('Cleanup failed: ' + error);
+                JobImportUI.appendLogs(['Cleanup AJAX error: ' + error]);
+                $('#cleanup-duplicates').prop('disabled', false);
+                $('#cleanup-text').show();
+                $('#cleanup-loading').hide();
+                JobImportUI.clearCleanupProgress();
+            });
+        },        /**
          * Handle purge old jobs button click
          */
         handlePurgeOldJobs: function() {
@@ -124,30 +151,60 @@
                 $('#purge-loading').show();
                 $('#purge-status').text('Purging old jobs...');
 
-                JobImportAPI.purgeImport().then(function(response) {
-                    PuntWorkJSLogger.debug('Purge response', 'EVENTS', response);
-                    
-                    if (response.success) {
+                JobImportEvents.processPurgeBatch(0, 50); // Start with first batch
+            }
+        },
+
+        /**
+         * Process purge batch and continue if needed
+         * @param {number} offset - Current offset for batch processing
+         * @param {number} batchSize - Size of batch to process
+         */
+        processPurgeBatch: function(offset, batchSize) {
+            var isContinue = offset > 0;
+            var action = isContinue ? JobImportAPI.continuePurge(offset, batchSize) : JobImportAPI.purgeImport();
+
+            action.then(function(response) {
+                PuntWorkJSLogger.debug('Purge response', 'EVENTS', response);
+
+                if (response.success) {
+                    JobImportUI.appendLogs(response.data.logs || []);
+
+                    if (response.data.complete) {
+                        // Operation completed
                         $('#purge-status').text(response.data.message);
+                        $('#purge-old-jobs').prop('disabled', false);
+                        $('#purge-text').show();
+                        $('#purge-loading').hide();
+                        JobImportUI.clearPurgeProgress();
+
                         // Refresh the page to show updated job counts
                         setTimeout(function() {
                             location.reload();
                         }, 2000);
                     } else {
-                        $('#purge-status').text('Purge failed: ' + (response.data.message || 'Unknown error'));
+                        // Update progress and continue with next batch
+                        JobImportUI.updatePurgeProgress(response.data);
+                        $('#purge-status').text('Progress: ' + response.data.progress_percentage + '% (' +
+                            response.data.total_processed + '/' + response.data.total_jobs + ' jobs processed)');
+                        JobImportEvents.processPurgeBatch(response.data.next_offset, batchSize);
                     }
-                }).catch(function(xhr, status, error) {
-                    PuntWorkJSLogger.error('Purge AJAX error', 'EVENTS', error);
-                    $('#purge-status').text('Purge failed: ' + error);
-                }).finally(function() {
+                } else {
+                    $('#purge-status').text('Purge failed: ' + (response.data.message || 'Unknown error'));
                     $('#purge-old-jobs').prop('disabled', false);
                     $('#purge-text').show();
                     $('#purge-loading').hide();
-                });
-            }
-        },
-
-        /**
+                    JobImportUI.clearPurgeProgress();
+                }
+            }).catch(function(xhr, status, error) {
+                PuntWorkJSLogger.error('Purge AJAX error', 'EVENTS', error);
+                $('#purge-status').text('Purge failed: ' + error);
+                $('#purge-old-jobs').prop('disabled', false);
+                $('#purge-text').show();
+                $('#purge-loading').hide();
+                JobImportUI.clearPurgeProgress();
+            });
+        },        /**
          * Check initial import status on page load
          */
         checkInitialStatus: function() {
