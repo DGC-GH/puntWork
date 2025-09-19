@@ -25,6 +25,17 @@ if (!function_exists('process_batch_items')) {
 
             // If post exists, check if it needs updating
             if ($post_id) {
+                // First, ensure the job is published if it's in the feed
+                $current_post = get_post($post_id);
+                if ($current_post && $current_post->post_status !== 'publish') {
+                    wp_update_post([
+                        'ID' => $post_id,
+                        'post_status' => 'publish'
+                    ]);
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Republished ID: ' . $post_id . ' GUID: ' . $guid . ' - Found in active feed';
+                    error_log('Republished ID: ' . $post_id . ' GUID: ' . $guid . ' - Found in active feed');
+                }
+
                 $current_last_update = isset($last_updates[$post_id]) ? $last_updates[$post_id]->meta_value : '';
                 $current_last_ts = $current_last_update ? strtotime($current_last_update) : 0;
 
