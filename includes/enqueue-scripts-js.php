@@ -4,17 +4,65 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-add_action('admin_enqueue_scripts', function($hook) {
+namespace Puntwork;
+
+/**
+ * Enqueue admin scripts and styles for job import dashboard.
+ */
+function enqueue_job_import_scripts() {
     if (isset($_GET['page']) && $_GET['page'] === 'job-import-dashboard') {
-        // Font Awesome for icons (if not already in theme)
+        // Font Awesome for icons
         wp_enqueue_style('font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css', [], '5.15.4');
-        
-        // Register handle without src (for inline only)
-        wp_register_script('job-import-js', false, ['jquery'], false, true);
-        wp_enqueue_script('job-import-js');
-        wp_localize_script('job-import-js', 'jobImportData', ['nonce' => wp_create_nonce('job_import_nonce')]);
-        wp_add_inline_script('job-import-js', "
-            console.log('Job Import JS loaded on page job-import-dashboard');
-        ");
+
+        // Enqueue JavaScript modules
+        wp_enqueue_script(
+            'job-import-ui-js',
+            JOB_IMPORT_URL . 'assets/js/job-import-ui.js',
+            ['jquery'],
+            JOB_IMPORT_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
+            'job-import-api-js',
+            JOB_IMPORT_URL . 'assets/js/job-import-api.js',
+            ['jquery'],
+            JOB_IMPORT_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
+            'job-import-logic-js',
+            JOB_IMPORT_URL . 'assets/js/job-import-logic.js',
+            ['jquery', 'job-import-api-js'],
+            JOB_IMPORT_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
+            'job-import-events-js',
+            JOB_IMPORT_URL . 'assets/js/job-import-events.js',
+            ['jquery'],
+            JOB_IMPORT_VERSION,
+            true
+        );
+
+        // Enqueue the main JavaScript file
+        wp_enqueue_script(
+            'job-import-admin-js',
+            JOB_IMPORT_URL . 'assets/js/job-import-admin.js',
+            ['jquery', 'job-import-ui-js', 'job-import-api-js', 'job-import-logic-js', 'job-import-events-js'],
+            JOB_IMPORT_VERSION,
+            true
+        );
+
+        // Localize script with data
+        wp_localize_script('job-import-admin-js', 'jobImportData', [
+            'nonce' => wp_create_nonce('job_import_nonce'),
+            'feeds' => array_keys(get_feeds()),
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'resume_progress' => (int) get_option('job_import_progress', 0)
+        ]);
     }
-});
+}
+add_action('admin_enqueue_scripts', __NAMESPACE__ . '\\enqueue_job_import_scripts');
