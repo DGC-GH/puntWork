@@ -67,7 +67,7 @@
          * @param {Object} data - Progress data
          */
         updateProgress: function(data) {
-            console.log('Updating progress with data:', data);
+            PuntWorkJSLogger.debug('Updating progress with data', 'UI', data);
             var percent = data.total > 0 ? Math.floor((data.processed / data.total) * 100) : 0;
             $('#progress-percent').text(percent + '%');
 
