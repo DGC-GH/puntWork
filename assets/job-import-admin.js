@@ -3,6 +3,8 @@
  * Main entry point that combines all job import modules
  */
 
+console.log('[PUNTWORK] job-import-admin.js loaded');
+
 (function($, window, document) {
     'use strict';
 
@@ -47,9 +49,15 @@
                 scheduling: typeof JobImportScheduling !== 'undefined'
             });
 
-            JobImportEvents.init();
-            JobImportScheduling.init();
-            PuntWorkJSLogger.info('Job Import Admin initialization complete', 'SYSTEM');
+            // Only initialize if not already initialized by inline script
+            if (typeof window.jobImportInitialized === 'undefined') {
+                JobImportEvents.init();
+                JobImportScheduling.init();
+                window.jobImportInitialized = true;
+                PuntWorkJSLogger.info('Job Import Admin initialization complete', 'SYSTEM');
+            } else {
+                PuntWorkJSLogger.info('Job Import Admin already initialized by inline script', 'SYSTEM');
+            }
         }
     };
 
