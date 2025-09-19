@@ -68,6 +68,8 @@ function setup_job_import() {
           'process-xml-batch.php',
           'reset-import.php',
           'scheduling-triggers.php',
+          'scheduling.php',
+          'test-scheduling.php',
           'shortcode.php',
           'utility-helpers.php',
     );
@@ -76,6 +78,11 @@ function setup_job_import() {
         if ( file_exists( $file ) ) {
             require_once $file;
         }
+    }
+
+    // Initialize scheduling
+    if (function_exists(__NAMESPACE__ . '\\init_scheduling')) {
+        call_user_func(__NAMESPACE__ . '\\init_scheduling');
     }
 }
 
