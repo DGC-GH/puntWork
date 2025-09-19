@@ -3,6 +3,8 @@
  * Handles event binding and user interactions
  */
 
+console.log('[PUNTWORK] job-import-events.js loaded');
+
 (function($, window, document) {
     'use strict';
 
