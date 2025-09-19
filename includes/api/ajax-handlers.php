@@ -20,13 +20,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 
 // Include import control handlers
-require_once plugin_dir_path(__FILE__) . 'ajax-import-control.php';
+require_once __DIR__ . '/ajax-import-control.php';
 
 // Include feed processing handlers
-require_once plugin_dir_path(__FILE__) . 'ajax-feed-processing.php';
+require_once __DIR__ . '/ajax-feed-processing.php';
 
 // Include purge handlers
-require_once plugin_dir_path(__FILE__) . 'ajax-purge.php';
+require_once __DIR__ . '/ajax-purge.php';
 
 // Include scheduling handlers
-require_once plugin_dir_path(__FILE__) . 'scheduling.php';
+require_once __DIR__ . '/../scheduling/scheduling-ajax.php';

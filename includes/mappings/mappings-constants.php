@@ -20,19 +20,19 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 
 // Include geographic mappings
-require_once plugin_dir_path(__FILE__) . 'mappings-geographic.php';
+require_once __DIR__ . '/mappings-geographic.php';
 
 // Include salary mappings
-require_once plugin_dir_path(__FILE__) . 'mappings-salary.php';
+require_once __DIR__ . '/mappings-salary.php';
 
 // Include icon mappings
-require_once plugin_dir_path(__FILE__) . 'mappings-icons.php';
+require_once __DIR__ . '/mappings-icons.php';
 
 // Include field mappings
-require_once plugin_dir_path(__FILE__) . 'mappings-fields.php';
+require_once __DIR__ . '/mappings-fields.php';
 
 // Include schema mappings
-require_once plugin_dir_path(__FILE__) . 'mappings-schema.php';
+require_once __DIR__ . '/mappings-schema.php';
 
 // Admin script deregistration
 add_action('admin_enqueue_scripts', function($hook) {
