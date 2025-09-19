@@ -131,10 +131,29 @@ function get_next_scheduled_time() {
     $next_scheduled = wp_next_scheduled('puntwork_scheduled_import');
 
     if ($next_scheduled) {
+        $current_time = current_time('timestamp');
+        $time_diff = $next_scheduled - $current_time;
+
+        // Calculate relative time correctly
+        if ($time_diff <= 0) {
+            $relative = 'now';
+        } elseif ($time_diff < 60) {
+            $relative = 'in ' . $time_diff . ' second' . ($time_diff != 1 ? 's' : '');
+        } elseif ($time_diff < 3600) {
+            $minutes = round($time_diff / 60);
+            $relative = 'in ' . $minutes . ' minute' . ($minutes != 1 ? 's' : '');
+        } elseif ($time_diff < 86400) {
+            $hours = round($time_diff / 3600);
+            $relative = 'in ' . $hours . ' hour' . ($hours != 1 ? 's' : '');
+        } else {
+            $days = round($time_diff / 86400);
+            $relative = 'in ' . $days . ' day' . ($days != 1 ? 's' : '');
+        }
+
         return [
             'timestamp' => $next_scheduled,
             'formatted' => wp_date('M j, Y g:i A', $next_scheduled),
-            'relative' => human_time_diff($next_scheduled, current_time('timestamp')) . ' from now'
+            'relative' => $relative
         ];
     }
 
