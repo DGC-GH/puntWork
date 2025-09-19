@@ -1,10 +1,18 @@
 <?php
+/**
+ * Shortcode definitions for job import plugin
+ *
+ * @package    Puntwork
+ * @subpackage Frontend
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 add_shortcode('job_update_status', function($atts, $content, $tag) {
     global $post;

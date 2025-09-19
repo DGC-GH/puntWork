@@ -88,7 +88,7 @@ class PuntWorkLogger {
      */
     private static function log($message, $level, $context, $data = []) {
         // Skip debug logs in production unless WP_DEBUG is true
-        if ($level === self::DEBUG && !defined('WP_DEBUG') || !WP_DEBUG) {
+        if ($level === self::DEBUG && (!defined('WP_DEBUG') || !WP_DEBUG)) {
             return;
         }
 

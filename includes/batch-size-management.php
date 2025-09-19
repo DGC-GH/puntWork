@@ -1,10 +1,18 @@
 <?php
+/**
+ * Batch size management utilities
+ *
+ * @package    Puntwork
+ * @subpackage Batch
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 /**
  * Batch size management and performance optimization

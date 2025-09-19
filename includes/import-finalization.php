@@ -1,10 +1,18 @@
 <?php
+/**
+ * Import finalization utilities
+ *
+ * @package    Puntwork
+ * @subpackage Import
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 /**
  * Import finalization and status management

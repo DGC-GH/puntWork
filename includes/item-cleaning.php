@@ -1,10 +1,18 @@
 <?php
+/**
+ * Item cleaning and sanitization utilities
+ *
+ * @package    Puntwork
+ * @subpackage Utilities
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 function clean_item_fields(&$item) {
     $html_fields = ['description', 'functiondescription', 'offerdescription', 'requirementsdescription', 'companydescription'];

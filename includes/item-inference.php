@@ -1,10 +1,18 @@
 <?php
+/**
+ * Item inference and processing utilities
+ *
+ * @package    Puntwork
+ * @subpackage Utilities
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 function infer_item_details(&$item, $fallback_domain, $lang, &$job_obj) {
     $province = strtolower(trim(isset($item->province) ? (string)$item->province : ''));

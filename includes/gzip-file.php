@@ -1,10 +1,18 @@
 <?php
+/**
+ * Gzip file compression utilities
+ *
+ * @package    Puntwork
+ * @subpackage Utilities
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 function gzip_file($source_path, $gz_path) {
     // Validate file paths

@@ -1,10 +1,18 @@
 <?php
+/**
+ * Admin menu setup for job import plugin
+ *
+ * @package    Puntwork
+ * @subpackage Admin
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 add_action('admin_menu', function() {
     add_submenu_page(

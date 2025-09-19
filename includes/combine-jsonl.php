@@ -1,10 +1,18 @@
 <?php
+/**
+ * JSONL file combination utilities
+ *
+ * @package    Puntwork
+ * @subpackage Utilities
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-namespace Puntwork;
 
 function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs) {
     $combined_json_path = $output_dir . 'combined-jobs.jsonl';
