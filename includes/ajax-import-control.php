@@ -11,7 +11,7 @@ namespace Puntwork;
  * Handles batch processing, cancellation, and status retrieval
  */
 
-add_action('wp_ajax_run_job_import_batch', 'run_job_import_batch_ajax');
+add_action('wp_ajax_run_job_import_batch', __NAMESPACE__ . '\\run_job_import_batch_ajax');
 function run_job_import_batch_ajax() {
     //error_log('run_job_import_batch_ajax called with data: ' . print_r($_POST, true));
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
@@ -27,7 +27,7 @@ function run_job_import_batch_ajax() {
     wp_send_json_success($result);
 }
 
-add_action('wp_ajax_cancel_job_import', 'cancel_job_import_ajax');
+add_action('wp_ajax_cancel_job_import', __NAMESPACE__ . '\\cancel_job_import_ajax');
 function cancel_job_import_ajax() {
     error_log('cancel_job_import_ajax called');
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
@@ -42,7 +42,7 @@ function cancel_job_import_ajax() {
     wp_send_json_success();
 }
 
-add_action('wp_ajax_clear_import_cancel', 'clear_import_cancel_ajax');
+add_action('wp_ajax_clear_import_cancel', __NAMESPACE__ . '\\clear_import_cancel_ajax');
 function clear_import_cancel_ajax() {
     error_log('clear_import_cancel_ajax called');
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
@@ -57,7 +57,7 @@ function clear_import_cancel_ajax() {
     wp_send_json_success();
 }
 
-add_action('wp_ajax_get_job_import_status', 'get_job_import_status_ajax');
+add_action('wp_ajax_get_job_import_status', __NAMESPACE__ . '\\get_job_import_status_ajax');
 function get_job_import_status_ajax() {
     error_log('get_job_import_status_ajax called');
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
