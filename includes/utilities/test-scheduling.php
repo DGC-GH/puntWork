@@ -4,6 +4,8 @@
  * This file can be used to test the scheduling features
  */
 
+namespace Puntwork;
+
 // Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
