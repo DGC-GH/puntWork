@@ -302,8 +302,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 if (resetResponse.success) {
                     JobImportUI.appendLogs(['Import reset for restart']);
                 }
-                // Trigger start import
-                $('#start-import').trigger('click');
+                // Directly call start import instead of triggering click to prevent loops
+                JobImportLogic.handleStartImport();
             } catch (error) {
                 PuntWorkJSLogger.error('Restart error', 'EVENTS', error);
                 JobImportUI.appendLogs(['Restart error: ' + error.message]);
