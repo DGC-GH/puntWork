@@ -19,12 +19,38 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Run the scheduled import
  */
 function run_scheduled_import($test_mode = false) {
+    // Check if scheduling is still enabled (skip this check for test mode)
+    if (!$test_mode) {
+        $schedule = get_option('puntwork_import_schedule', ['enabled' => false]);
+        if (!$schedule['enabled']) {
+            error_log('[PUNTWORK] Scheduled import skipped - scheduling is disabled');
+            return [
+                'success' => false,
+                'message' => 'Scheduled import skipped - scheduling is disabled'
+            ];
+        }
+    }
+
     $start_time = microtime(true);
 
     try {
         // Log the scheduled run
         $log_message = $test_mode ? 'Test import started' : 'Scheduled import started';
         error_log('[PUNTWORK] ' . $log_message);
+
+        // For scheduled imports, refresh the feed data first
+        if (!$test_mode) {
+            error_log('[PUNTWORK] Refreshing feed data for scheduled import');
+            try {
+                fetch_and_generate_combined_json();
+            } catch (\Exception $e) {
+                error_log('[PUNTWORK] Feed refresh failed: ' . $e->getMessage());
+                return [
+                    'success' => false,
+                    'message' => 'Feed refresh failed: ' . $e->getMessage()
+                ];
+            }
+        }
 
         // Run the import
         $result = import_jobs_from_json();
