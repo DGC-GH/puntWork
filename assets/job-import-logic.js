@@ -52,20 +52,39 @@
 
                     while (current < total && this.isImporting) {
                         PuntWorkJSLogger.debug('Continuing to next batch, current: ' + current + ', total: ' + total, 'LOGIC');
-                        response = await JobImportAPI.runImportBatch(current);
-                        PuntWorkJSLogger.debug('Next batch response', 'LOGIC', response);
+                        
+                        try {
+                            response = await JobImportAPI.runImportBatch(current);
+                            PuntWorkJSLogger.debug('Next batch response', 'LOGIC', response);
 
-                        if (response.success) {
-                            // Normalize response data
-                            batchData = JobImportUI.normalizeResponseData(response);
-                            JobImportUI.updateProgress(batchData);
-                            JobImportUI.appendLogs(batchData.logs || []);
-                            current = batchData.processed;
-                        } else {
-                            JobImportUI.appendLogs(['Import batch error: ' + (response.message || 'Unknown')]);
-                            $('#status-message').text('Error: ' + (response.message || 'Unknown'));
-                            JobImportUI.resetButtons();
-                            break;
+                            if (response.success) {
+                                // Normalize response data
+                                batchData = JobImportUI.normalizeResponseData(response);
+                                JobImportUI.updateProgress(batchData);
+                                JobImportUI.appendLogs(batchData.logs || []);
+                                current = batchData.processed;
+                            } else {
+                                throw new Error('Import batch failed: ' + (response.message || 'Unknown error'));
+                            }
+                        } catch (batchError) {
+                            PuntWorkJSLogger.error('Batch processing error', 'LOGIC', batchError);
+                            
+                            // Check if this is a retryable error
+                            if (batchError.attempts && batchError.attempts > 1) {
+                                // All retries exhausted
+                                JobImportUI.appendLogs(['Batch failed after ' + batchError.attempts + ' attempts: ' + batchError.error]);
+                                $('#status-message').text('Batch failed - you can resume later');
+                                JobImportUI.resetButtons();
+                                $('#resume-import').show();
+                                $('#start-import').text('Restart').show();
+                                return; // Exit the import process
+                            } else {
+                                // Single failure - log and continue trying
+                                JobImportUI.appendLogs(['Batch error (will retry): ' + batchError.message]);
+                                $('#status-message').text('Batch error - retrying...');
+                                // Continue the loop to retry
+                                continue;
+                            }
                         }
                     }
 
@@ -87,9 +106,19 @@
                 }
             } catch (e) {
                 PuntWorkJSLogger.error('Handle import error', 'LOGIC', e);
-                JobImportUI.appendLogs(['Handle import error: ' + e.message]);
-                $('#status-message').text('Error: ' + e.message);
-                JobImportUI.resetButtons();
+                
+                // Check if this is a retry exhaustion error
+                if (e.attempts && e.attempts > 1) {
+                    JobImportUI.appendLogs(['Import failed after ' + e.attempts + ' attempts: ' + e.error]);
+                    $('#status-message').text('Import failed - check logs for details');
+                    JobImportUI.resetButtons();
+                    $('#resume-import').show();
+                    $('#start-import').text('Restart').show();
+                } else {
+                    JobImportUI.appendLogs(['Handle import error: ' + e.message]);
+                    $('#status-message').text('Error: ' + e.message);
+                    JobImportUI.resetButtons();
+                }
             }
         },
 

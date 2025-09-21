@@ -268,10 +268,20 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 // Handle both response formats: direct data or wrapped in .data
                 var statusData = JobImportUI.normalizeResponseData(response);
 
-                // Always show start button for manual imports - don't resume automatically
-                $('#resume-import').hide();
-                $('#start-import').show().text('Start');
-                JobImportUI.hideImportUI();
+                if (response.success && statusData.processed > 0 && !statusData.complete) {
+                    JobImportUI.updateProgress(statusData);
+                    JobImportUI.appendLogs(statusData.logs || []);
+                    $('#resume-import').show();
+                    $('#start-import').text('Restart').on('click', function() {
+                        JobImportEvents.handleRestartImport();
+                    });
+                    JobImportUI.showImportUI();
+                    $('#status-message').text('Previous import interrupted. Continue or restart?');
+                } else {
+                    $('#resume-import').hide();
+                    $('#start-import').show().text('Start');
+                    JobImportUI.hideImportUI();
+                }
             }).catch(function(xhr, status, error) {
                 PuntWorkJSLogger.error('Initial status AJAX error', 'EVENTS', error);
                 JobImportUI.appendLogs(['Initial status AJAX error: ' + error]);
