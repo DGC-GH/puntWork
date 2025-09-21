@@ -77,6 +77,7 @@
                                 JobImportUI.resetButtons();
                                 $('#resume-import').show();
                                 $('#start-import').text('Restart').show();
+                                this.isImporting = false; // Reset flag on failure
                                 return; // Exit the import process
                             } else {
                                 // Single failure - log and continue trying
@@ -119,6 +120,7 @@
                     $('#status-message').text('Error: ' + e.message);
                     JobImportUI.resetButtons();
                 }
+                this.isImporting = false; // Ensure importing flag is reset on error
             }
         },
 
@@ -168,6 +170,7 @@
 
             $('#status-message').text('Import Complete');
             JobImportUI.resetButtons();
+            this.isImporting = false; // Reset importing flag on completion
         },
 
         /**
@@ -320,6 +323,7 @@
                 JobImportUI.appendLogs([error.message]);
                 $('#status-message').text('Error: ' + error.message);
                 JobImportUI.resetButtons();
+                this.isImporting = false; // Ensure importing flag is reset on error
             }
         },
 
