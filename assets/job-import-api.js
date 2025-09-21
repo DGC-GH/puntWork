@@ -10,19 +10,19 @@ console.log('[PUNTWORK] job-import-api.js loaded');
 
     var JobImportAPI = {
         /**
-         * Run a single import batch
+         * Run a single import batch with retry logic
          * @param {number} start - Starting index for batch
          * @returns {Promise} AJAX promise
          */
         runImportBatch: function(start) {
             PuntWorkJSLogger.debug('Running import batch at start: ' + start, 'API');
 
-            return $.ajax({
+            return this._retryAjax({
                 url: jobImportData.ajaxurl,
                 type: 'POST',
-                timeout: 0,
+                timeout: 300000, // 5 minutes timeout
                 data: { action: 'run_job_import_batch', start: start, nonce: jobImportData.nonce }
-            });
+            }, 3, 2000); // 3 retries, 2 second delay
         },
 
         /**
@@ -211,6 +211,80 @@ console.log('[PUNTWORK] job-import-api.js loaded');
                     }
                 }
             });
+        },
+
+        /**
+         * Retry AJAX request with exponential backoff
+         * @param {object} ajaxOptions - jQuery AJAX options
+         * @param {number} maxRetries - Maximum number of retries
+         * @param {number} initialDelay - Initial delay in milliseconds
+         * @returns {Promise} Promise that resolves with AJAX response
+         */
+        _retryAjax: function(ajaxOptions, maxRetries, initialDelay) {
+            var self = this;
+            var attempt = 0;
+
+            return new Promise(function(resolve, reject) {
+                function attemptRequest() {
+                    attempt++;
+                    PuntWorkJSLogger.debug('AJAX attempt ' + attempt + '/' + (maxRetries + 1), 'API');
+
+                    $.ajax(ajaxOptions)
+                        .done(function(response) {
+                            resolve(response);
+                        })
+                        .fail(function(xhr, status, error) {
+                            PuntWorkJSLogger.warn('AJAX attempt ' + attempt + ' failed: ' + error, 'API', {
+                                status: xhr.status,
+                                statusText: xhr.statusText,
+                                readyState: xhr.readyState
+                            });
+
+                            // Check if we should retry
+                            if (attempt <= maxRetries && self._shouldRetry(xhr, status, error)) {
+                                var delay = initialDelay * Math.pow(2, attempt - 1); // Exponential backoff
+                                PuntWorkJSLogger.info('Retrying AJAX request in ' + delay + 'ms (attempt ' + attempt + '/' + (maxRetries + 1) + ')', 'API');
+                                
+                                setTimeout(function() {
+                                    attemptRequest();
+                                }, delay);
+                            } else {
+                                reject({
+                                    xhr: xhr,
+                                    status: status,
+                                    error: error,
+                                    attempts: attempt
+                                });
+                            }
+                        });
+                }
+
+                attemptRequest();
+            });
+        },
+
+        /**
+         * Determine if an AJAX error should be retried
+         * @param {object} xhr - XMLHttpRequest object
+         * @param {string} status - Error status
+         * @param {string} error - Error message
+         * @returns {boolean} Whether to retry the request
+         */
+        _shouldRetry: function(xhr, status, error) {
+            // Retry on network errors, timeouts, and server errors (5xx)
+            // Don't retry on client errors (4xx) except 408 (timeout) and 429 (rate limit)
+            if (status === 'timeout' || xhr.status === 0 || xhr.status === 408 || xhr.status === 429) {
+                return true;
+            }
+            if (xhr.status >= 500 && xhr.status < 600) {
+                return true;
+            }
+            // Don't retry on authentication errors or bad requests
+            if (xhr.status === 401 || xhr.status === 403 || xhr.status === 400) {
+                return false;
+            }
+            // Retry on other errors that might be transient
+            return xhr.readyState === 0 || status === 'error';
         }
     };
 
