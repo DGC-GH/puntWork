@@ -151,6 +151,15 @@ function get_job_import_status_ajax() {
     // Add resume_progress for JavaScript
     $progress['resume_progress'] = (int) get_option('job_import_progress', 0);
 
+    // Track job importing start time
+    if ($progress['total'] > 1 && !isset($progress['job_import_start_time'])) {
+        $progress['job_import_start_time'] = microtime(true);
+        update_option('job_import_status', $progress);
+    }
+
+    // Calculate job importing elapsed time
+    $progress['job_importing_time_elapsed'] = isset($progress['job_import_start_time']) ? microtime(true) - $progress['job_import_start_time'] : $progress['time_elapsed'];
+
     // Add batch timing data for accurate time calculations
     $progress['batch_time'] = (float) get_option('job_import_last_batch_time', 0);
     $progress['batch_processed'] = (int) get_option('job_import_last_batch_processed', 0);
@@ -168,6 +177,7 @@ function get_job_import_status_ajax() {
         'complete' => $progress['complete'],
         'success' => $progress['success'],
         'time_elapsed' => $progress['time_elapsed'],
+        'job_importing_time_elapsed' => $progress['job_importing_time_elapsed'],
         'estimated_time_remaining' => $progress['estimated_time_remaining'],
         'batch_time' => $progress['batch_time'],
         'batch_processed' => $progress['batch_processed'],
