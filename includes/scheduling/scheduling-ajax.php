@@ -181,12 +181,23 @@ function run_scheduled_import_ajax() {
         wp_send_json_error(['message' => 'Permission denied']);
     }
 
-    // Run the import
-    $result = run_scheduled_import();
+    // Check if an import is already running
+    $import_status = get_option('job_import_status', []);
+    if (isset($import_status['complete']) && !$import_status['complete']) {
+        wp_send_json_error(['message' => 'An import is already running']);
+    }
+
+    // Schedule the import to run immediately in the background
+    $scheduled_time = time() + 5; // Start in 5 seconds to allow AJAX response
+    $scheduled = wp_schedule_single_event($scheduled_time, 'puntwork_manual_import');
+
+    if (!$scheduled) {
+        wp_send_json_error(['message' => 'Failed to schedule import']);
+    }
 
     wp_send_json_success([
-        'message' => 'Import started',
-        'result' => $result
+        'message' => 'Import scheduled to start in 5 seconds',
+        'scheduled_time' => $scheduled_time
     ]);
 }
 
@@ -196,3 +207,32 @@ add_action('wp_ajax_get_import_schedule', __NAMESPACE__ . '\\get_import_schedule
 add_action('wp_ajax_get_import_run_history', __NAMESPACE__ . '\\get_import_run_history_ajax');
 add_action('wp_ajax_test_import_schedule', __NAMESPACE__ . '\\test_import_schedule_ajax');
 add_action('wp_ajax_run_scheduled_import', __NAMESPACE__ . '\\run_scheduled_import_ajax');
+
+// Register cron hook for manual imports
+add_action('puntwork_manual_import', __NAMESPACE__ . '\\run_manual_import_cron');
+
+/**
+ * Handle manual import cron job
+ */
+function run_manual_import_cron() {
+    error_log('[PUNTWORK] Manual import cron started');
+
+    // Check if an import is already running
+    $import_status = get_option('job_import_status', []);
+    if (isset($import_status['complete']) && !$import_status['complete']) {
+        error_log('[PUNTWORK] Manual import cron skipped - import already running');
+        return;
+    }
+
+    try {
+        $result = run_scheduled_import();
+
+        if ($result['success']) {
+            error_log('[PUNTWORK] Manual import cron completed successfully');
+        } else {
+            error_log('[PUNTWORK] Manual import cron failed: ' . ($result['message'] ?? 'Unknown error'));
+        }
+    } catch (\Exception $e) {
+        error_log('[PUNTWORK] Manual import cron exception: ' . $e->getMessage());
+    }
+}
