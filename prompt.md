@@ -35,6 +35,3 @@ Docs:
 
 Tests:
 - **Update Tests:** Run the tests (add new if needed) and fix the issues. Validate suggestions via tests or builds, and iterate if needed to ensure error handling and reliability.
-
-Commit:
-- **Commit Title:** Prepare title text to copy and paste in the input field in VS Code, output it as the last thing every step so I can use it for committing the changes if I choose to implement your suggestions, formatted in a way I can copy it easily. Commit your changes after my approval.
