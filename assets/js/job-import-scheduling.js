@@ -175,8 +175,9 @@
             // Update last run time
             var $lastRun = $('#last-run-time');
             if (lastRun && lastRun.timestamp) {
-                var lastRunDate = new Date(lastRun.timestamp * 1000);
-                $lastRun.text(lastRunDate.toLocaleString());
+                // Use formatted date if available, otherwise fallback to browser formatting
+                var lastRunDate = lastRun.formatted_date || new Date(lastRun.timestamp * 1000).toLocaleString();
+                $lastRun.text(lastRunDate);
             } else {
                 $lastRun.text('Never');
             }
@@ -204,7 +205,7 @@
 
                 $('#debug-schedule-status').text(schedule.enabled ? 'Enabled' : 'Disabled');
                 $('#debug-next-run').text(nextRun ? nextRun.formatted : 'Not scheduled');
-                $('#debug-last-run').text(lastRun ? new Date(lastRun.timestamp * 1000).toLocaleString() : 'Never');
+                $('#debug-last-run').text(lastRun ? (lastRun.formatted_date || new Date(lastRun.timestamp * 1000).toLocaleString()) : 'Never');
                 $('#debug-schedule-time').text((schedule.hour || 9) + ':' + (schedule.minute || 0).toString().padStart(2, '0'));
                 $('#debug-schedule-frequency').text(schedule.frequency + (schedule.frequency === 'custom' ? ' (' + schedule.interval + 'h)' : ''));
             }
@@ -478,7 +479,7 @@
 
             var html = '';
             history.forEach(function(run) {
-                var date = new Date(run.timestamp * 1000);
+                var date = run.formatted_date || new Date(run.timestamp * 1000).toLocaleString();
                 var statusColor = run.success ? '#34c759' : '#ff3b30';
                 var statusBg = run.success ? '#f8fff9' : '#fff8f7';
                 var statusText = run.success ? 'Success' : 'Failed';
@@ -486,7 +487,7 @@
 
                 html += '<div style="border: 1px solid #e5e5e7; border-radius: 8px; padding: 16px; margin-bottom: 12px; background: #ffffff; transition: all 0.2s ease;">';
                 html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">';
-                html += '<div style="font-size: 14px; font-weight: 600; color: #1d1d1f;">' + date.toLocaleString() + modeText + '</div>';
+                html += '<div style="font-size: 14px; font-weight: 600; color: #1d1d1f;">' + date + modeText + '</div>';
                 html += '<div style="background: ' + statusBg + '; color: ' + statusColor + '; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; border: 1px solid ' + statusColor + '20;">' + statusText + '</div>';
                 html += '</div>';
                 html += '<div style="color: #86868b; font-size: 13px; line-height: 1.4;">';

@@ -131,6 +131,7 @@ function run_scheduled_import($test_mode = false) {
 function log_scheduled_run($details, $test_mode = false) {
     $run_entry = [
         'timestamp' => $details['timestamp'],
+        'formatted_date' => wp_date('M j, Y g:i A', $details['timestamp']),
         'duration' => $details['duration'],
         'success' => $details['success'],
         'processed' => $details['processed'],
