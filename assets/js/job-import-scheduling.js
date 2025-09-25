@@ -362,12 +362,18 @@
 
             JobImportAPI.call('run_scheduled_import', {}, function(response) {
                 console.log('[PUNTWORK] run_scheduled_import response:', response);
+                PuntWorkJSLogger.debug('Run scheduled import response', 'SCHEDULING', {
+                    success: response.success,
+                    async: response.data?.async,
+                    message: response.data?.message
+                });
 
                 if (response.success) {
                     // Check if import ran asynchronously or synchronously
                     if (response.data.async === false) {
                         // Import completed synchronously - stop polling and show results
                         console.log('[PUNTWORK] Import completed synchronously');
+                        PuntWorkJSLogger.info('Import completed synchronously', 'SCHEDULING');
                         JobImportEvents.stopStatusPolling();
                         $button.prop('disabled', false).html('Run Now');
                         
@@ -381,6 +387,7 @@
                     } else {
                         // Import started asynchronously - keep polling for progress
                         console.log('[PUNTWORK] Import started asynchronously, continuing to poll');
+                        PuntWorkJSLogger.info('Import started asynchronously, polling for updates', 'SCHEDULING');
                         $button.prop('disabled', false).html('Run Now');
                         
                         // Show success notification
@@ -394,6 +401,7 @@
                     }
                 } else {
                     console.log('[PUNTWORK] Import failed to start:', response.data);
+                    PuntWorkJSLogger.error('Import failed to start', 'SCHEDULING', response.data);
                     $button.prop('disabled', false).html('Run Now');
                     
                     // Stop status polling since import failed to start
