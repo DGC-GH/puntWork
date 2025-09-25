@@ -261,7 +261,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                         this.updateProgress(data);
                     } else {
                         phaseProgress = processed / total;
-                        percent = Math.floor(phaseProgress * 100);
+                        percent = (phaseProgress * 100).toFixed(1);
                     }
                 } else {
                     percent = 0; // Start from 0 for importing phase
@@ -522,8 +522,6 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 var overallTimePerItem = elapsedTime / processed;
                 var estimatedSeconds = overallTimePerItem * itemsLeft;
 
-                // TEMPORARILY DISABLE batch timing logic to debug
-                /*
                 // Use batch timing as a weighted factor if available
                 if (this.batchTimes.length > 0) {
                     var totalBatchTime = 0;
@@ -540,9 +538,8 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                         estimatedSeconds = overallTimePerItem * itemsLeft;
                     }
                 }
-                */
 
-                PuntWorkJSLogger.debug('JavaScript time calculation (batch timing disabled)', 'UI', {
+                PuntWorkJSLogger.debug('JavaScript time calculation (batch timing enabled)', 'UI', {
                     processed: processed,
                     elapsedTime: elapsedTime,
                     itemsLeft: itemsLeft,
