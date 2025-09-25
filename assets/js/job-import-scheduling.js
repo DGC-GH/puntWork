@@ -712,11 +712,18 @@
                 html += '</div>';
                 html += '</div>';
 
-                // Error message if present
-                if (run.error_message) {
-                    html += '<div class="error-message" style="background: linear-gradient(135deg, #fef2f2, #fee2e2); border: 1px solid #fecaca; border-radius: 8px; padding: 12px 16px; margin-top: 16px; display: flex; align-items: flex-start; gap: 12px;">';
-                    html += '<div style="flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: #dc2626; display: flex; align-items: center; justify-content: center;"><i class="fas fa-exclamation" style="font-size: 10px; color: white;"></i></div>';
-                    html += '<div style="font-size: 13px; color: #dc2626; line-height: 1.4;">' + run.error_message + '</div>';
+                // Error message if present and actually indicates an error or important info
+                if (run.error_message && (run.error_message.includes('failed') || run.error_message.includes('error') || run.error_message.includes('cancelled') || run.error_message.includes('paused') || !run.success)) {
+                    var isError = run.error_message.includes('failed') || run.error_message.includes('error') || run.error_message.includes('cancelled') || !run.success;
+                    var messageStyle = isError ?
+                        'background: linear-gradient(135deg, #fef2f2, #fee2e2); border: 1px solid #fecaca; color: #dc2626;' :
+                        'background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 1px solid #bbf7d0; color: #166534;';
+                    var iconClass = isError ? 'fas fa-exclamation' : 'fas fa-check-circle';
+                    var iconBg = isError ? '#dc2626' : '#16a34a';
+
+                    html += '<div class="error-message" style="' + messageStyle + ' border-radius: 8px; padding: 12px 16px; margin-top: 16px; display: flex; align-items: flex-start; gap: 12px;">';
+                    html += '<div style="flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: ' + iconBg + '; display: flex; align-items: center; justify-content: center;"><i class="' + iconClass + '" style="font-size: 10px; color: white;"></i></div>';
+                    html += '<div style="font-size: 13px; line-height: 1.4;">' + run.error_message + '</div>';
                     html += '</div>';
                 }
 
