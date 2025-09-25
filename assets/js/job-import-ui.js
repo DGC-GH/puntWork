@@ -631,7 +631,6 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
          */
         showImportUI: function() {
             $('#import-progress').show();
-            $('#toggle-log').show();
         },
 
         /**
@@ -639,65 +638,8 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
          */
         hideImportUI: function() {
             $('#import-progress').hide();
-            $('#toggle-log').hide();
             // Keep log visible for testing purposes
             // this.hideLog();
-        },
-
-        /**
-         * Toggle log visibility
-         */
-        toggleLog: function() {
-            var $log = $('#integrated-log');
-            var $toggleBtn = $('#toggle-log');
-            var $toggleIcon = $toggleBtn.find('i');
-            var $toggleText = $('#toggle-log-text');
-
-            if ($log.hasClass('expanded')) {
-                this.hideLog();
-            } else {
-                this.showLog();
-            }
-        },
-
-        /**
-         * Show the integrated log section
-         */
-        showLog: function() {
-            var $log = $('#integrated-log');
-            var $toggleBtn = $('#toggle-log');
-            var $toggleIcon = $toggleBtn.find('i');
-            var $toggleText = $('#toggle-log-text');
-
-            $log.addClass('expanded').css({
-                'max-height': '400px',
-                'opacity': '1',
-                'transform': 'translateY(0)',
-                'margin-top': '12px'
-            });
-
-            $toggleIcon.css('transform', 'rotate(180deg)');
-            $toggleText.text('Hide Details');
-        },
-
-        /**
-         * Hide the integrated log section
-         */
-        hideLog: function() {
-            var $log = $('#integrated-log');
-            var $toggleBtn = $('#toggle-log');
-            var $toggleIcon = $toggleBtn.find('i');
-            var $toggleText = $('#toggle-log-text');
-
-            $log.removeClass('expanded').css({
-                'max-height': '0',
-                'opacity': '0',
-                'transform': 'translateY(-8px)',
-                'margin-top': '0'
-            });
-
-            $toggleIcon.css('transform', 'rotate(0deg)');
-            $toggleText.text('Show Details');
         },
 
         /**

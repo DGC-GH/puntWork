@@ -173,16 +173,8 @@ function render_main_import_ui() {
                 <span id="status-message" style="font-size: 14px; color: #8e8e93;">Ready to start.</span>
             </div>
 
-            <!-- Log Toggle -->
-            <div style="margin-top: 12px; text-align: center;">
-                <button id="toggle-log" style="background: none; border: none; padding: 6px 12px; font-size: 13px; color: #007aff; cursor: pointer; border-radius: 6px; transition: all 0.2s ease; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                    <span id="toggle-log-text" style="font-weight: 500;">Hide Details</span>
-                    <i class="fas fa-chevron-up" style="margin-left: 6px; font-size: 11px; transition: transform 0.2s ease; transform: rotate(180deg);"></i>
-                </button>
-            </div>
-
             <!-- Integrated Log Section -->
-            <div id="integrated-log" class="expanded" style="margin-top: 12px; max-height: 400px; overflow: hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); opacity: 1; transform: translateY(0);">
+            <div id="integrated-log" style="margin-top: 12px;">
                 <div style="display: flex; align-items: center; margin-bottom: 16px;">
                     <div style="width: 6px; height: 6px; border-radius: 50%; background-color: #007aff; margin-right: 10px;"></div>
                     <h3 style="font-size: 16px; font-weight: 600; margin: 0; color: #1d1d1f;">Import Details</h3>
