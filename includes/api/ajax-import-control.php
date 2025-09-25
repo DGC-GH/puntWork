@@ -151,7 +151,7 @@ function get_job_import_status_ajax() {
         'complete' => true, // Fresh state is complete
         'success' => false, // Add success status
         'error_message' => '', // Add error message for failures
-        'batch_size' => 10,
+        'batch_size' => 100,
         'inferred_languages' => 0,
         'inferred_benefits' => 0,
         'schema_generated' => 0,
@@ -227,7 +227,7 @@ function get_job_import_status_ajax() {
                 'complete' => true, // Fresh state is complete
                 'success' => false,
                 'error_message' => '',
-                'batch_size' => 10,
+                'batch_size' => 100,
                 'inferred_languages' => 0,
                 'inferred_benefits' => 0,
                 'schema_generated' => 0,
