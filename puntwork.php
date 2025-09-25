@@ -100,6 +100,7 @@ function setup_job_import() {
         'import/combine-jsonl.php',
         'import/download-feed.php',
         'import/import-batch.php',
+        'import/import-finalization.php',
         'import/process-batch-items.php',
         'import/process-xml-batch.php',
         'import/reset-import.php',
