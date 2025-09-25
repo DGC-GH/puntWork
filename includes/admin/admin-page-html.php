@@ -87,24 +87,8 @@ function render_javascript_init() {
                     JobImportUI.clearProgress();
                 }
 
-                // Check if there's an ongoing import and show progress UI
-                if (typeof JobImportAPI !== 'undefined' && typeof JobImportUI !== 'undefined') {
-                    console.log('[PUNTWORK] Inline script: Checking for ongoing import...');
-                    JobImportAPI.call('get_job_import_status', {}, function(response) {
-                        console.log('[PUNTWORK] Inline script: Import status check response:', response);
-                        if (response.success && response.data && !response.data.complete) {
-                            console.log('[PUNTWORK] Inline script: Ongoing import detected, showing progress UI');
-                            JobImportUI.showImportUI();
-                            JobImportUI.updateProgress(response.data);
-                            // Start monitoring if import is still running
-                            if (typeof JobImportEvents !== 'undefined') {
-                                JobImportEvents.startStatusPolling();
-                            }
-                        } else {
-                            console.log('[PUNTWORK] Inline script: No ongoing import detected');
-                        }
-                    });
-                }
+                // Note: Import status checking is now handled by JobImportEvents.checkInitialStatus()
+                // to avoid duplicate checks and potential race conditions
 
                 // Initialize scheduling if available
                 if (typeof JobImportScheduling !== 'undefined') {
