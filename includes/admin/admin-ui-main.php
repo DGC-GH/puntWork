@@ -116,12 +116,8 @@ function render_main_import_ui() {
                     <div id="skipped-items" style="font-size: 18px; font-weight: 600;">0</div>
                 </div>
                 <div style="text-align: center;">
-                    <div style="font-size: 12px; font-weight: 500; color: #8e8e93; margin-bottom: 4px;">Drafts</div>
+                    <div style="font-size: 12px; font-weight: 500; color: #8e8e93; margin-bottom: 4px;">Drafted</div>
                     <div id="duplicates-drafted" style="font-size: 18px; font-weight: 600;">0</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 12px; font-weight: 500; color: #8e8e93; margin-bottom: 4px;">Old Drafts</div>
-                    <div id="drafted-old" style="font-size: 18px; font-weight: 600;">0</div>
                 </div>
                 <div style="text-align: center;">
                     <div style="font-size: 12px; font-weight: 500; color: #8e8e93; margin-bottom: 4px;">Left</div>
