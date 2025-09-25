@@ -302,6 +302,13 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 clearInterval(this.statusPollingInterval);
             }
             
+            // Show the progress UI immediately when starting polling for scheduled imports
+            JobImportUI.showImportUI();
+            $('#start-import').hide();
+            $('#resume-import').hide();
+            $('#cancel-import').show();
+            $('#status-message').text('Import in progress...');
+            
             // Poll every 3 seconds
             this.statusPollingInterval = setInterval(function() {
                 JobImportAPI.getImportStatus().then(function(response) {
