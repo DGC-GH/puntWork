@@ -54,8 +54,8 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
     // Dynamic batch size adjustment based on consecutive batch completion times
     if ($previous_batch_time > 0 && $current_batch_time > 0) {
         if ($current_batch_time > $previous_batch_time) {
-            // Current batch took longer than previous - decrease batch size
-            $batch_size = max(1, floor($batch_size * 0.8));
+            // Current batch took longer than previous - decrease batch size moderately
+            $batch_size = max(1, floor($batch_size * 0.9));
         } elseif ($current_batch_time < $previous_batch_time) {
             // Current batch took less time than previous - gradually increase batch size
             $new_size = floor($batch_size * 1.1);

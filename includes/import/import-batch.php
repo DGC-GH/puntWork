@@ -39,7 +39,7 @@ require_once __DIR__ . '/import-finalization.php';
  */
 function import_time_exceeded() {
     $start_time = get_option('job_import_start_time', microtime(true));
-    $time_limit = apply_filters('puntwork_import_time_limit', 20); // 20 seconds default, same as WooCommerce
+    $time_limit = apply_filters('puntwork_import_time_limit', 120); // 120 seconds default (increased from 20 for better performance)
     $current_time = microtime(true);
 
     if (($current_time - $start_time) >= $time_limit) {
