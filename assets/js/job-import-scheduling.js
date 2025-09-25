@@ -335,18 +335,20 @@
                 return;
             }
 
-            $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Starting...');
+            $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Scheduling...');
 
             JobImportAPI.call('run_scheduled_import', {}, function(response) {
                 $button.prop('disabled', false).html('Run Now');
 
                 if (response.success) {
-                    self.showNotification('Import started successfully', 'success');
-                    // Refresh status
-                    self.loadScheduleSettings();
-                    self.loadRunHistory();
+                    self.showNotification('Import scheduled to start in 5 seconds', 'success');
+                    // Refresh status after a short delay to show the import starting
+                    setTimeout(function() {
+                        self.loadScheduleSettings();
+                        self.loadRunHistory();
+                    }, 2000);
                 } else {
-                    self.showNotification('Failed to start import: ' + (response.data.message || 'Unknown error'), 'error');
+                    self.showNotification('Failed to schedule import: ' + (response.data.message || 'Unknown error'), 'error');
                 }
             });
         },
