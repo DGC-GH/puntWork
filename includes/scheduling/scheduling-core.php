@@ -63,13 +63,10 @@ function calculate_next_run_time($schedule_data) {
                 $interval_hours = 24; // fallback to daily
         }
 
-        // Find the next occurrence based on the interval
-        $next_run = clone $today_target;
-
-        // If the target time is in the past, find the next future occurrence
-        while ($next_run->getTimestamp() <= $current_time) {
-            $next_run->modify("+{$interval_hours} hours");
-        }
+        // For interval schedules, run every X hours from now
+        // Add the interval to the current time to get the next run
+        $next_run = clone $now;
+        $next_run->modify("+{$interval_hours} hours");
 
         return $next_run->getTimestamp();
     }
