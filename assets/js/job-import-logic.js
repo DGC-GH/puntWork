@@ -92,6 +92,7 @@
                                 $('#status-message').text('Batch failed - you can resume later');
                                 JobImportUI.resetButtons();
                                 $('#resume-import').show();
+                                $('#reset-import').show();
                                 $('#start-import').text('Restart').show();
                                 this.isImporting = false; // Reset flag on failure
                                 
@@ -136,6 +137,7 @@
                     $('#status-message').text('Import failed - check logs for details');
                     JobImportUI.resetButtons();
                     $('#resume-import').show();
+                    $('#reset-import').show();
                     $('#start-import').text('Restart').show();
                 } else {
                     JobImportUI.appendLogs(['Handle import error: ' + e.message]);
@@ -226,6 +228,7 @@
                 $('#start-import').hide();
                 $('#resume-import').hide();
                 $('#cancel-import').show();
+                $('#reset-import').show();
                 JobImportUI.showImportUI();
 
                 JobImportUI.appendLogs(['Starting feed processing...']);
@@ -370,6 +373,7 @@
             $('#start-import').hide();
             $('#resume-import').hide();
             $('#cancel-import').show();
+            $('#reset-import').show();
             JobImportUI.showImportUI();
 
             await JobImportAPI.clearImportCancel();
@@ -392,6 +396,7 @@
                     $('#status-message').text('Import Cancelled');
                     JobImportUI.resetButtons();
                     $('#resume-import').show();
+                    $('#reset-import').show();
                     $('#start-import').text('Restart').show();
                     
                     // Stop status polling on cancel

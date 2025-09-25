@@ -234,6 +234,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         $('#start-import').hide();
                         $('#resume-import').hide();
                         $('#cancel-import').show();
+                        $('#reset-import').show();
                         JobImportUI.showImportUI();
                         $('#status-message').text('Import in progress...');
                         console.log('[PUNTWORK] Import appears to be currently running - starting status polling');
@@ -243,6 +244,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     } else {
                         // Import was interrupted - show resume option
                         $('#resume-import').show();
+                        $('#reset-import').show();
                         $('#start-import').text('Restart').on('click', function() {
                             JobImportEvents.handleRestartImport();
                         });
@@ -257,6 +259,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     $('#start-import').hide();
                     $('#resume-import').hide();
                     $('#cancel-import').show();
+                    $('#reset-import').show();
                     JobImportUI.showImportUI();
                     $('#status-message').text('Import in progress...');
                     console.log('[PUNTWORK] Incomplete import detected - showing progress UI with cancel option');
@@ -265,6 +268,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     JobImportEvents.startStatusPolling();
                 } else {
                     $('#resume-import').hide();
+                    $('#reset-import').hide();
                     $('#start-import').show().text('Start');
                     JobImportUI.hideImportUI();
                 }
@@ -314,6 +318,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             $('#start-import').hide();
             $('#resume-import').hide();
             $('#cancel-import').show();
+            $('#reset-import').show();
             $('#status-message').text('Import in progress...');
 
             console.log('[PUNTWORK] Starting status polling every 3 seconds');
