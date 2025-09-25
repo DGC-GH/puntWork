@@ -214,13 +214,16 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     var isRecentlyActive = timeSinceLastUpdate < 60;
                     
                     if (isRecentlyActive) {
-                        // Import appears to be currently running - show progress UI with cancel
+                        // Import appears to be currently running - show progress UI with cancel and start polling
                         $('#start-import').hide();
                         $('#resume-import').hide();
                         $('#cancel-import').show();
                         JobImportUI.showImportUI();
                         $('#status-message').text('Import in progress...');
-                        console.log('[PUNTWORK] Import appears to be currently running');
+                        console.log('[PUNTWORK] Import appears to be currently running - starting status polling');
+                        
+                        // Start polling for status updates
+                        JobImportEvents.startStatusPolling();
                     } else {
                         // Import was interrupted - show resume option
                         $('#resume-import').show();
@@ -230,6 +233,30 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         JobImportUI.showImportUI();
                         $('#status-message').text('Previous import interrupted. Continue or restart?');
                         console.log('[PUNTWORK] Import was interrupted, showing resume option');
+                    }
+                } else if (response.success && !statusData.complete) {
+                    // Check if this might be a scheduled import that just started (processed = 0 but recently updated)
+                    var currentTime = Math.floor(Date.now() / 1000);
+                    var timeSinceLastUpdate = currentTime - (statusData.last_update || 0);
+                    var isRecentlyActive = timeSinceLastUpdate < 60;
+                    
+                    if (isRecentlyActive && statusData.logs && statusData.logs.length > 0) {
+                        // Likely a scheduled import that just started - show progress UI and start polling
+                        JobImportUI.updateProgress(statusData);
+                        JobImportUI.appendLogs(statusData.logs || []);
+                        $('#start-import').hide();
+                        $('#resume-import').hide();
+                        $('#cancel-import').show();
+                        JobImportUI.showImportUI();
+                        $('#status-message').text('Import in progress...');
+                        console.log('[PUNTWORK] Scheduled import detected - starting status polling');
+                        
+                        // Start polling for status updates
+                        JobImportEvents.startStatusPolling();
+                    } else {
+                        $('#resume-import').hide();
+                        $('#start-import').show().text('Start');
+                        JobImportUI.hideImportUI();
                     }
                 } else {
                     $('#resume-import').hide();
@@ -261,6 +288,53 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             } catch (error) {
                 PuntWorkJSLogger.error('Restart error', 'EVENTS', error);
                 JobImportUI.appendLogs(['Restart error: ' + error.message]);
+            }
+        },
+
+        /**
+         * Start polling for import status updates (used for scheduled imports)
+         */
+        startStatusPolling: function() {
+            console.log('[PUNTWORK] Starting status polling for scheduled import');
+            
+            // Clear any existing polling interval
+            if (this.statusPollingInterval) {
+                clearInterval(this.statusPollingInterval);
+            }
+            
+            // Poll every 3 seconds
+            this.statusPollingInterval = setInterval(function() {
+                JobImportAPI.getImportStatus().then(function(response) {
+                    if (response.success) {
+                        var statusData = JobImportUI.normalizeResponseData(response);
+                        
+                        // Update progress
+                        JobImportUI.updateProgress(statusData);
+                        JobImportUI.appendLogs(statusData.logs || []);
+                        
+                        // Check if import completed
+                        if (statusData.complete) {
+                            console.log('[PUNTWORK] Polled import completed');
+                            JobImportEvents.stopStatusPolling();
+                            JobImportUI.resetButtons();
+                            $('#status-message').text('Import Complete');
+                        }
+                    }
+                }).catch(function(error) {
+                    console.log('[PUNTWORK] Status polling error:', error);
+                    // Continue polling on error
+                });
+            }, 3000); // Poll every 3 seconds
+        },
+
+        /**
+         * Stop polling for import status updates
+         */
+        stopStatusPolling: function() {
+            if (this.statusPollingInterval) {
+                clearInterval(this.statusPollingInterval);
+                this.statusPollingInterval = null;
+                console.log('[PUNTWORK] Stopped status polling');
             }
         }
     };

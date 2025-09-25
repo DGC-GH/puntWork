@@ -78,6 +78,29 @@ if (!function_exists('import_all_jobs_from_json')) {
         update_option('job_import_processed_guids', [], false);
         delete_option('job_import_status');
 
+        // Initialize import status for UI tracking
+        $initial_status = [
+            'total' => 0, // Will be updated when we know the total
+            'processed' => 0,
+            'published' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'duplicates_drafted' => 0,
+            'time_elapsed' => 0,
+            'complete' => false,
+            'success' => false,
+            'error_message' => '',
+            'batch_size' => get_option('job_import_batch_size') ?: 20,
+            'inferred_languages' => 0,
+            'inferred_benefits' => 0,
+            'schema_generated' => 0,
+            'start_time' => $start_time,
+            'end_time' => null,
+            'last_update' => time(),
+            'logs' => ['Scheduled import started - preparing feeds...'],
+        ];
+        update_option('job_import_status', $initial_status, false);
+
         while (true) {
             $batch_start = (int) get_option('job_import_progress', 0);
 
@@ -92,6 +115,9 @@ if (!function_exists('import_all_jobs_from_json')) {
             // Capture total items from first setup
             if ($batch_count === 0) {
                 $total_items = $setup['total'] ?? 0;
+                // Update status with total items
+                $initial_status['total'] = $total_items;
+                update_option('job_import_status', $initial_status, false);
             }
 
             // Check if import is complete
@@ -127,6 +153,18 @@ if (!function_exists('import_all_jobs_from_json')) {
             if (isset($result['logs']) && is_array($result['logs'])) {
                 $all_logs = array_merge($all_logs, $result['logs']);
             }
+
+            // Update import status for UI tracking
+            $current_status = get_option('job_import_status', $initial_status);
+            $current_status['processed'] = $total_processed;
+            $current_status['published'] = $total_published;
+            $current_status['updated'] = $total_updated;
+            $current_status['skipped'] = $total_skipped;
+            $current_status['duplicates_drafted'] = $total_duplicates_drafted;
+            $current_status['time_elapsed'] = microtime(true) - $start_time;
+            $current_status['last_update'] = time();
+            $current_status['logs'] = array_slice($all_logs, -50); // Keep last 50 log entries for UI
+            update_option('job_import_status', $current_status, false);
 
             // Check if this batch completed the import
             if (isset($result['complete']) && $result['complete']) {
