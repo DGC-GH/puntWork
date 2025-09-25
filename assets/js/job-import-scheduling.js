@@ -637,30 +637,113 @@
             }
 
             var html = '';
-            history.forEach(function(run) {
-                var date = run.formatted_date || new Date(run.timestamp * 1000).toLocaleString();
-                var statusColor = run.success ? '#34c759' : '#ff3b30';
-                var statusBg = run.success ? '#f8fff9' : '#fff8f7';
-                var statusText = run.success ? 'Success' : 'Failed';
-                var modeText = run.test_mode ? ' <span style="background: #007aff; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">TEST</span>' : '';
+            var currentDate = null;
 
-                html += '<div style="border: 1px solid #e5e5e7; border-radius: 8px; padding: 16px; margin-bottom: 12px; background: #ffffff; transition: all 0.2s ease;">';
-                html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">';
-                html += '<div style="font-size: 14px; font-weight: 600; color: #1d1d1f;">' + date + modeText + '</div>';
-                html += '<div style="background: ' + statusBg + '; color: ' + statusColor + '; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; border: 1px solid ' + statusColor + '20;">' + statusText + '</div>';
-                html += '</div>';
-                html += '<div style="color: #86868b; font-size: 13px; line-height: 1.4;">';
-                html += '<div style="margin-bottom: 4px;"><i class="fas fa-clock" style="margin-right: 6px;"></i>Duration: <strong>' + this.formatDuration(run.duration) + '</strong></div>';
-                html += '<div style="margin-bottom: 4px;"><i class="fas fa-tasks" style="margin-right: 6px;"></i>Processed: <strong>' + run.processed + '/' + run.total + '</strong></div>';
-                html += '<div><i class="fas fa-chart-line" style="margin-right: 6px;"></i>Published: <strong style="color: #34c759;">' + (run.published || 0) + '</strong>, Updated: <strong style="color: #007aff;">' + (run.updated || 0) + '</strong>, Skipped: <strong style="color: #ff9500;">' + (run.skipped || 0) + '</strong></div>';
-                html += '</div>';
-                if (run.error_message) {
-                    html += '<div style="background: #fff8f7; border: 1px solid #ff3b30; border-radius: 6px; padding: 8px 12px; margin-top: 8px; font-size: 12px; color: #ff3b30;"><i class="fas fa-exclamation-triangle" style="margin-right: 6px;"></i>' + run.error_message + '</div>';
+            history.forEach(function(run) {
+                var runDate = new Date(run.timestamp * 1000);
+                var dateString = runDate.toLocaleDateString();
+                var timeString = runDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+                // Group by date
+                if (currentDate !== dateString) {
+                    if (currentDate !== null) {
+                        html += '</div>'; // Close previous date group
+                    }
+                    html += '<div class="history-date-group" style="margin-bottom: 24px;">';
+                    html += '<div class="history-date-header" style="font-size: 13px; font-weight: 600; color: #86868b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e5e5e7;">' + dateString + '</div>';
+                    currentDate = dateString;
                 }
+
+                var statusColor = run.success ? '#34c759' : '#ff3b30';
+                var statusBg = run.success ? '#f0fdf4' : '#fef2f2';
+                var statusText = run.success ? 'Success' : 'Failed';
+                var modeText = run.test_mode ? '<span class="test-badge" style="background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-left: 8px;">TEST</span>' : '';
+
+                // Calculate progress percentage
+                var progressPercent = run.total > 0 ? Math.round((run.processed / run.total) * 100) : 0;
+
+                html += '<div class="history-item" style="background: #ffffff; border-radius: 12px; padding: 20px; margin-bottom: 12px; border: 1px solid #e5e5e7; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: all 0.2s ease; position: relative; overflow: hidden;">';
+
+                // Status indicator stripe
+                html += '<div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: ' + statusColor + '; border-radius: 12px 0 0 12px;"></div>';
+
+                html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">';
+                html += '<div style="display: flex; align-items: center; gap: 8px;">';
+                html += '<div class="history-time" style="font-size: 15px; font-weight: 600; color: #1d1d1f;">' + timeString + '</div>';
+                html += modeText;
+                html += '</div>';
+                html += '<div class="status-badge" style="background: ' + statusBg + '; color: ' + statusColor + '; padding: 6px 12px; border-radius: 16px; font-size: 13px; font-weight: 600; border: 1px solid ' + statusColor + '20; display: flex; align-items: center; gap: 6px;">';
+                html += '<div style="width: 8px; height: 8px; border-radius: 50%; background: ' + statusColor + ';"></div>';
+                html += statusText;
+                html += '</div>';
+                html += '</div>';
+
+                // Progress bar
+                html += '<div class="progress-section" style="margin-bottom: 16px;">';
+                html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">';
+                html += '<span style="font-size: 13px; color: #86868b; font-weight: 500;">Progress</span>';
+                html += '<span style="font-size: 13px; color: #1d1d1f; font-weight: 600;">' + run.processed + ' / ' + run.total + ' items</span>';
+                html += '</div>';
+                html += '<div class="progress-bar" style="width: 100%; height: 6px; background: #e5e5e7; border-radius: 3px; overflow: hidden;">';
+                html += '<div style="width: ' + progressPercent + '%; height: 100%; background: linear-gradient(90deg, ' + statusColor + ', ' + statusColor + 'dd); border-radius: 3px; transition: width 0.3s ease;"></div>';
+                html += '</div>';
+                html += '</div>';
+
+                // Metrics grid
+                html += '<div class="metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; margin-bottom: 16px;">';
+                html += '<div class="metric-item" style="display: flex; align-items: center; gap: 8px;">';
+                html += '<div class="metric-icon" style="width: 32px; height: 32px; border-radius: 8px; background: #f2f2f7; display: flex; align-items: center; justify-content: center;"><i class="fas fa-clock" style="font-size: 14px; color: #86868b;"></i></div>';
+                html += '<div><div style="font-size: 11px; color: #86868b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Duration</div><div style="font-size: 14px; font-weight: 600; color: #1d1d1f;">' + this.formatDuration(run.duration) + '</div></div>';
+                html += '</div>';
+
+                html += '<div class="metric-item" style="display: flex; align-items: center; gap: 8px;">';
+                html += '<div class="metric-icon" style="width: 32px; height: 32px; border-radius: 8px; background: #f0fdf4; display: flex; align-items: center; justify-content: center;"><i class="fas fa-plus-circle" style="font-size: 14px; color: #34c759;"></i></div>';
+                html += '<div><div style="font-size: 11px; color: #86868b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Published</div><div style="font-size: 14px; font-weight: 600; color: #34c759;">' + (run.published || 0) + '</div></div>';
+                html += '</div>';
+
+                html += '<div class="metric-item" style="display: flex; align-items: center; gap: 8px;">';
+                html += '<div class="metric-icon" style="width: 32px; height: 32px; border-radius: 8px; background: #eff6ff; display: flex; align-items: center; justify-content: center;"><i class="fas fa-edit" style="font-size: 14px; color: #3b82f6;"></i></div>';
+                html += '<div><div style="font-size: 11px; color: #86868b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Updated</div><div style="font-size: 14px; font-weight: 600; color: #3b82f6;">' + (run.updated || 0) + '</div></div>';
+                html += '</div>';
+
+                html += '<div class="metric-item" style="display: flex; align-items: center; gap: 8px;">';
+                html += '<div class="metric-icon" style="width: 32px; height: 32px; border-radius: 8px; background: #fef3c7; display: flex; align-items: center; justify-content: center;"><i class="fas fa-forward" style="font-size: 14px; color: #f59e0b;"></i></div>';
+                html += '<div><div style="font-size: 11px; color: #86868b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Skipped</div><div style="font-size: 14px; font-weight: 600; color: #f59e0b;">' + (run.skipped || 0) + '</div></div>';
+                html += '</div>';
+                html += '</div>';
+
+                // Error message if present
+                if (run.error_message) {
+                    html += '<div class="error-message" style="background: linear-gradient(135deg, #fef2f2, #fee2e2); border: 1px solid #fecaca; border-radius: 8px; padding: 12px 16px; margin-top: 16px; display: flex; align-items: flex-start; gap: 12px;">';
+                    html += '<div style="flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: #dc2626; display: flex; align-items: center; justify-content: center;"><i class="fas fa-exclamation" style="font-size: 10px; color: white;"></i></div>';
+                    html += '<div style="font-size: 13px; color: #dc2626; line-height: 1.4;">' + run.error_message + '</div>';
+                    html += '</div>';
+                }
+
                 html += '</div>';
             }.bind(this));
 
+            if (currentDate !== null) {
+                html += '</div>'; // Close last date group
+            }
+
             $container.html(html);
+
+            // Add hover effects
+            $container.find('.history-item').hover(
+                function() {
+                    $(this).css({
+                        'transform': 'translateY(-2px)',
+                        'box-shadow': '0 4px 12px rgba(0,0,0,0.08)'
+                    });
+                },
+                function() {
+                    $(this).css({
+                        'transform': 'translateY(0)',
+                        'box-shadow': '0 1px 3px rgba(0,0,0,0.04)'
+                    });
+                }
+            );
         }
     };
 
