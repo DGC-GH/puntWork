@@ -94,34 +94,77 @@ function render_main_import_ui() {
             </div>
 
             <!-- Statistics Grid -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; margin-bottom: 16px;">
-                <div style="text-align: center;">
-                    <div style="font-size: 12px; font-weight: 500; color: #8e8e93; margin-bottom: 4px;">Total</div>
-                    <div id="total-items" style="font-size: 18px; font-weight: 600;">0</div>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px;">
+                <!-- Progress Overview -->
+                <div style="background: linear-gradient(135deg, #007aff 0%, #5856d6 100%); border-radius: 12px; padding: 16px; color: white; box-shadow: 0 2px 8px rgba(0,122,255,0.2);">
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background-color: rgba(255,255,255,0.8); margin-right: 8px;"></div>
+                        <span style="font-size: 13px; font-weight: 500; opacity: 0.9;">Progress</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <div>
+                            <div style="font-size: 24px; font-weight: 700; margin-bottom: 2px;" id="processed-items">0</div>
+                            <div style="font-size: 11px; opacity: 0.8;">of <span id="total-items">0</span> processed</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 14px; font-weight: 600; margin-bottom: 2px;" id="items-left">0</div>
+                            <div style="font-size: 11px; opacity: 0.8;">remaining</div>
+                        </div>
+                    </div>
                 </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 12px; font-weight: 500; color: #8e8e93; margin-bottom: 4px;">Processed</div>
-                    <div id="processed-items" style="font-size: 18px; font-weight: 600;">0</div>
+
+                <!-- Success Metrics -->
+                <div style="background: linear-gradient(135deg, #34c759 0%, #30d158 100%); border-radius: 12px; padding: 16px; color: white; box-shadow: 0 2px 8px rgba(52,199,89,0.2);">
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background-color: rgba(255,255,255,0.8); margin-right: 8px;"></div>
+                        <span style="font-size: 13px; font-weight: 500; opacity: 0.9;">Success</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <div>
+                            <div style="font-size: 24px; font-weight: 700; margin-bottom: 2px;" id="published-items">0</div>
+                            <div style="font-size: 11px; opacity: 0.8;">published</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 14px; font-weight: 600; margin-bottom: 2px;" id="updated-items">0</div>
+                            <div style="font-size: 11px; opacity: 0.8;">updated</div>
+                        </div>
+                    </div>
                 </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 12px; font-weight: 500; color: #8e8e93; margin-bottom: 4px;">Published</div>
-                    <div id="published-items" style="font-size: 18px; font-weight: 600;">0</div>
+
+                <!-- Issues & Actions -->
+                <div style="background: linear-gradient(135deg, #ff9500 0%, #ff9f0a 100%); border-radius: 12px; padding: 16px; color: white; box-shadow: 0 2px 8px rgba(255,149,0,0.2);">
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background-color: rgba(255,255,255,0.8); margin-right: 8px;"></div>
+                        <span style="font-size: 13px; font-weight: 500; opacity: 0.8;">Issues</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <div>
+                            <div style="font-size: 24px; font-weight: 700; margin-bottom: 2px;" id="skipped-items">0</div>
+                            <div style="font-size: 11px; opacity: 0.8;">skipped</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 14px; font-weight: 600; margin-bottom: 2px;" id="duplicates-drafted">0</div>
+                            <div style="font-size: 11px; opacity: 0.8;">drafted</div>
+                        </div>
+                    </div>
                 </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 12px; font-weight: 500; color: #8e8e93; margin-bottom: 4px;">Updated</div>
-                    <div id="updated-items" style="font-size: 18px; font-weight: 600;">0</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 12px; font-weight: 500; color: #8e8e93; margin-bottom: 4px;">Skipped</div>
-                    <div id="skipped-items" style="font-size: 18px; font-weight: 600;">0</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 12px; font-weight: 500; color: #8e8e93; margin-bottom: 4px;">Drafted</div>
-                    <div id="duplicates-drafted" style="font-size: 18px; font-weight: 600;">0</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 12px; font-weight: 500; color: #8e8e93; margin-bottom: 4px;">Left</div>
-                    <div id="items-left" style="font-size: 18px; font-weight: 600;">0</div>
+
+                <!-- Performance Indicator -->
+                <div style="background: linear-gradient(135deg, #f2f2f7 0%, #e5e5ea 100%); border-radius: 12px; padding: 16px; color: #1d1d1f; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #d1d1d6;">
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background-color: #007aff; margin-right: 8px;"></div>
+                        <span style="font-size: 13px; font-weight: 500; color: #8e8e93;">Performance</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <div>
+                            <div style="font-size: 18px; font-weight: 600; color: #007aff; margin-bottom: 2px;" id="progress-percent">0%</div>
+                            <div style="font-size: 11px; color: #8e8e93;">complete</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 2px;" id="time-elapsed">0s</div>
+                            <div style="font-size: 11px; color: #8e8e93;">elapsed</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
