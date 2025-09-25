@@ -41,10 +41,18 @@
                 PuntWorkJSLogger.debug('Import batch response', 'LOGIC', response);
 
                 if (response.success) {
-                    // Normalize response data
-                    var batchData = JobImportUI.normalizeResponseData(response);
-                    JobImportUI.updateProgress(batchData);
-                    JobImportUI.appendLogs(batchData.logs || []);
+                    // Get cumulative status instead of using batch data directly
+                    const statusResponse = await JobImportAPI.getImportStatus();
+                    if (statusResponse.success) {
+                        var batchData = JobImportUI.normalizeResponseData(statusResponse);
+                        JobImportUI.updateProgress(batchData);
+                        JobImportUI.appendLogs(batchData.logs || []);
+                    } else {
+                        // Fallback to batch data if status fetch fails
+                        var batchData = JobImportUI.normalizeResponseData(response);
+                        JobImportUI.updateProgress(batchData);
+                        JobImportUI.appendLogs(batchData.logs || []);
+                    }
 
                     let total = batchData.total;
                     let current = batchData.processed;
@@ -58,10 +66,18 @@
                             PuntWorkJSLogger.debug('Next batch response', 'LOGIC', response);
 
                             if (response.success) {
-                                // Normalize response data
-                                batchData = JobImportUI.normalizeResponseData(response);
-                                JobImportUI.updateProgress(batchData);
-                                JobImportUI.appendLogs(batchData.logs || []);
+                                // Get cumulative status instead of using batch data directly
+                                const statusResponse = await JobImportAPI.getImportStatus();
+                                if (statusResponse.success) {
+                                    batchData = JobImportUI.normalizeResponseData(statusResponse);
+                                    JobImportUI.updateProgress(batchData);
+                                    JobImportUI.appendLogs(batchData.logs || []);
+                                } else {
+                                    // Fallback to batch data if status fetch fails
+                                    batchData = JobImportUI.normalizeResponseData(response);
+                                    JobImportUI.updateProgress(batchData);
+                                    JobImportUI.appendLogs(batchData.logs || []);
+                                }
                                 current = batchData.processed;
                             } else {
                                 throw new Error('Import batch failed: ' + (response.message || 'Unknown error'));
