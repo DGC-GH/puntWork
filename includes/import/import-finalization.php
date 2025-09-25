@@ -144,14 +144,14 @@ function calculate_estimated_time_remaining($status) {
     $time_per_item = $status['job_importing_time_elapsed'] / $status['processed'];
     $estimated_seconds = $items_remaining * $time_per_item;
 
-    PuntWorkLogger::debug('PHP time calculation', PuntWorkLogger::CONTEXT_BATCH, [
-        'total' => $status['total'],
-        'processed' => $status['processed'],
-        'job_importing_time_elapsed' => $status['job_importing_time_elapsed'],
-        'items_remaining' => $items_remaining,
-        'time_per_item' => $time_per_item,
-        'estimated_seconds' => $estimated_seconds
-    ]);
+    // PuntWorkLogger::debug('PHP time calculation', PuntWorkLogger::CONTEXT_BATCH, [
+    //     'total' => $status['total'],
+    //     'processed' => $status['processed'],
+    //     'job_importing_time_elapsed' => $status['job_importing_time_elapsed'],
+    //     'items_remaining' => $items_remaining,
+    //     'time_per_item' => $time_per_item,
+    //     'estimated_seconds' => $estimated_seconds
+    // ]);
 
     return $estimated_seconds;
 }
