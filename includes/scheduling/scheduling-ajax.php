@@ -257,6 +257,7 @@ function run_scheduled_import_ajax() {
             'logs' => ['Scheduled import started - preparing feeds...'],
         ];
         update_option('job_import_status', $initial_status, false);
+        error_log('[PUNTWORK] Initialized import status for scheduled run: ' . json_encode($initial_status));
 
         // Clear any previous cancellation before starting
         delete_transient('import_cancel');
@@ -334,7 +335,7 @@ function run_scheduled_import_async() {
 
     // Check if an import is already running
     $import_status = get_option('job_import_status', []);
-    error_log('[PUNTWORK] Current import status: ' . print_r($import_status, true));
+    error_log('[PUNTWORK] Current import status at async start: ' . json_encode($import_status));
 
     if (isset($import_status['complete']) && $import_status['complete'] === false && 
         isset($import_status['processed']) && $import_status['processed'] > 0) {
