@@ -65,19 +65,23 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
     }
 
     // Minimum batch size recovery mechanism
-    // If batch size is stuck at 1, try to gradually recover
-    if ($batch_size === 1) {
-        // Check if we can safely increase from 1
+    // If batch size is stuck at 1 or 2, try to gradually recover
+    if ($batch_size <= 2) {
+        // Check if we can safely increase from low batch sizes
         $consecutive_small_batches = get_option('job_import_consecutive_small_batches', 0);
 
         // If we've had several small batches but memory is OK, try increasing
         if ($consecutive_small_batches >= 3 && $last_memory_ratio < 0.7) {
-            $batch_size = 2; // Start with 2 instead of 1
+            if ($batch_size === 1) {
+                $batch_size = 2; // Start with 2 instead of 1
+            } elseif ($batch_size === 2) {
+                $batch_size = 3; // Increase from 2 to 3
+            }
             update_option('job_import_consecutive_small_batches', 0, false);
         } else {
             update_option('job_import_consecutive_small_batches', $consecutive_small_batches + 1, false);
         }
-    } elseif ($batch_size > 1) {
+    } elseif ($batch_size > 2) {
         // Reset consecutive small batches counter when batch size recovers
         update_option('job_import_consecutive_small_batches', 0, false);
     }
@@ -145,7 +149,7 @@ function update_batch_metrics($time_elapsed, $processed_count, $batch_size) {
     update_option('job_import_batch_size', $batch_size, false);
 
     // Track consecutive small batches for recovery mechanism
-    if ($batch_size <= 2) {
+    if ($batch_size <= 3) {
         $consecutive = get_option('job_import_consecutive_small_batches', 0) + 1;
         update_option('job_import_consecutive_small_batches', $consecutive, false);
     } else {
