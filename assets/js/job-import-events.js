@@ -328,6 +328,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             var totalZeroCount = 0; // Counter for polls where total remains 0
             this.maxTotalZeroPolls = 20; // Stop polling after 20 polls with total=0 (40 seconds)
             var isStartingNewImport = true; // Flag to prevent hiding UI when starting a new import
+            var hasSeenImportRunning = false; // Flag to track if we've seen the import actually running
 
             // Show the progress UI immediately when starting polling
             console.log('[PUNTWORK] Showing import UI for import');
@@ -404,6 +405,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             JobImportUI.appendLogs(statusData.logs || []);
                             // Import has started, clear the starting flag
                             isStartingNewImport = false;
+                            hasSeenImportRunning = true; // Mark that we've seen the import running
                         } else if (statusData.total === 0 && !statusData.complete) {
                             console.log('[PUNTWORK] Import not yet started (total=0), continuing to poll');
                             // Import hasn't started yet, keep polling
@@ -427,7 +429,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                                 JobImportUI.resetButtons();
                                 $('#status-message').text('Import Complete');
                             }
-                        } else if (statusData.complete && statusData.total === 0 && !isStartingNewImport) {
+                        } else if (statusData.complete && statusData.total === 0 && hasSeenImportRunning && !isStartingNewImport) {
                             console.log('[PUNTWORK] Import status reset to empty state, stopping polling and resetting UI');
                             PuntWorkJSLogger.info('Import status reset to empty state', 'EVENTS', statusData);
                             JobImportEvents.stopStatusPolling();
