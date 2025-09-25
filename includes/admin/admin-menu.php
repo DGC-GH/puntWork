@@ -31,8 +31,7 @@ add_action('admin_menu', function() {
         'Feeds',
         'manage_options',
         'job-feed-dashboard',
-        __NAMESPACE__ . '\\job_import_admin_page',
-        1
+        __NAMESPACE__ . '\\job_import_admin_page'
     );
 
     add_submenu_page(
@@ -41,7 +40,6 @@ add_action('admin_menu', function() {
         'Jobs',
         'manage_options',
         'jobs-dashboard',
-        __NAMESPACE__ . '\\jobs_dashboard_page',
-        1
+        __NAMESPACE__ . '\\jobs_dashboard_page'
     );
 });
