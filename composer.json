@@ -1,0 +1,27 @@
+{
+    "name": "dgc-gh/puntwork",
+    "description": "WordPress plugin for importing jobs from XML feeds",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.0",
+        "wp-cli/wp-cli": "^2.0"
+    },
+    "scripts": {
+        "test": "phpunit",
+        "test-coverage": "phpunit --coverage-html coverage"
+    },
+    "autoload": {
+        "psr-4": {
+            "Puntwork\\": "includes/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    }
+}

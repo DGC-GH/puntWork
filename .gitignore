@@ -1,2 +1,12 @@
 .DS_Store
 assets/.DS_Store
+vendor/
+node_modules/
+.pytest_cache/
+.phpunit.cache/
+tests/_output/
+coverage/
+logs/
+feeds/
+cache/
+*.log
