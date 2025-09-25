@@ -350,7 +350,7 @@
                 console.log('[PUNTWORK] run_scheduled_import response:', response);
 
                 if (response.success) {
-                    console.log('[PUNTWORK] Import scheduled successfully, showing progress UI');
+                    console.log('[PUNTWORK] Import scheduled successfully, showing progress UI immediately');
                     $button.prop('disabled', false).html('<i class="fas fa-clock" style="margin-right: 8px;"></i>Import Scheduled');
                     self.showNotification('Import scheduled - starting in 3 seconds', 'success');
 
