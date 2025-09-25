@@ -623,6 +623,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
         resetButtons: function() {
             $('#cancel-import').hide();
             $('#resume-import').hide();
+            $('#reset-import').hide();
             $('#start-import').show();
         },
 
