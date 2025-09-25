@@ -97,10 +97,26 @@ function calculate_next_run_time($schedule_data) {
                 $interval_hours = 24; // fallback to daily
         }
 
-        // For interval schedules, run every X hours from now
-        // Add the interval to the current time to get the next run
-        $next_run = clone $now;
-        $next_run->modify("+{$interval_hours} hours");
+        // For interval schedules, find the next time that matches the specified hour/minute pattern
+        // within the interval schedule (hour = base_hour + N * interval_hours)
+        $base_hour = $hour;
+        $current_hour = (int) $now->format('H');
+        $current_minute = (int) $now->format('i');
+
+        // Find the next valid hour that is >= current_hour and satisfies the pattern
+        $next_valid_hour = $base_hour;
+        while ($next_valid_hour < $current_hour) {
+            $next_valid_hour += $interval_hours;
+        }
+
+        // Set the time to the next valid hour and specified minute
+        $next_run->setTime($next_valid_hour, $minute, 0);
+
+        // If this exact time has already passed, move to the next interval
+        if ($next_run <= $now) {
+            $next_valid_hour += $interval_hours;
+            $next_run->setTime($next_valid_hour, $minute, 0);
+        }
 
         return $next_run->getTimestamp();
     }
