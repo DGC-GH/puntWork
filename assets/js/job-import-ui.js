@@ -671,7 +671,8 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             $log.addClass('expanded').css({
                 'max-height': '400px',
                 'opacity': '1',
-                'margin-top': '16px'
+                'transform': 'translateY(0)',
+                'margin-top': '12px'
             });
 
             $toggleIcon.css('transform', 'rotate(180deg)');
@@ -690,6 +691,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             $log.removeClass('expanded').css({
                 'max-height': '0',
                 'opacity': '0',
+                'transform': 'translateY(-8px)',
                 'margin-top': '0'
             });
 
