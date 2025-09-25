@@ -69,7 +69,9 @@ function cancel_job_import_ajax() {
     }
 
     set_transient('import_cancel', true, 3600);
-    PuntWorkLogger::info('Import cancellation flag set', PuntWorkLogger::CONTEXT_BATCH);
+    // Also clear the import status to reset the UI
+    delete_option('job_import_status');
+    PuntWorkLogger::info('Import cancelled and status cleared', PuntWorkLogger::CONTEXT_BATCH);
 
     PuntWorkLogger::logAjaxResponse('cancel_job_import', ['message' => 'Import cancelled']);
     wp_send_json_success();

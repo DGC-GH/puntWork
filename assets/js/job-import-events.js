@@ -235,29 +235,18 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         console.log('[PUNTWORK] Import was interrupted, showing resume option');
                     }
                 } else if (response.success && !statusData.complete) {
-                    // Check if this might be a scheduled import that just started (processed = 0 but recently updated)
-                    var currentTime = Math.floor(Date.now() / 1000);
-                    var timeSinceLastUpdate = currentTime - (statusData.last_update || 0);
-                    var isRecentlyActive = timeSinceLastUpdate < 60;
+                    // Import is incomplete - show progress UI and allow canceling
+                    JobImportUI.updateProgress(statusData);
+                    JobImportUI.appendLogs(statusData.logs || []);
+                    $('#start-import').hide();
+                    $('#resume-import').hide();
+                    $('#cancel-import').show();
+                    JobImportUI.showImportUI();
+                    $('#status-message').text('Import in progress...');
+                    console.log('[PUNTWORK] Incomplete import detected - showing progress UI with cancel option');
                     
-                    if (isRecentlyActive && statusData.logs && statusData.logs.length > 0) {
-                        // Likely a scheduled import that just started - show progress UI and start polling
-                        JobImportUI.updateProgress(statusData);
-                        JobImportUI.appendLogs(statusData.logs || []);
-                        $('#start-import').hide();
-                        $('#resume-import').hide();
-                        $('#cancel-import').show();
-                        JobImportUI.showImportUI();
-                        $('#status-message').text('Import in progress...');
-                        console.log('[PUNTWORK] Scheduled import detected - starting status polling');
-                        
-                        // Start polling for status updates
-                        JobImportEvents.startStatusPolling();
-                    } else {
-                        $('#resume-import').hide();
-                        $('#start-import').show().text('Start');
-                        JobImportUI.hideImportUI();
-                    }
+                    // Start polling for status updates
+                    JobImportEvents.startStatusPolling();
                 } else {
                     $('#resume-import').hide();
                     $('#start-import').show().text('Start');
