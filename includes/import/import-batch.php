@@ -58,9 +58,10 @@ if (!function_exists('import_all_jobs_from_json')) {
      * Import all jobs from JSONL file (processes all batches sequentially).
      * Used for scheduled imports that need to process the entire dataset.
      *
+     * @param bool $preserve_status Whether to preserve existing import status for UI polling
      * @return array Import result data.
      */
-    function import_all_jobs_from_json() {
+    function import_all_jobs_from_json($preserve_status = false) {
         $start_time = microtime(true);
         $total_processed = 0;
         $total_published = 0;
@@ -73,33 +74,44 @@ if (!function_exists('import_all_jobs_from_json')) {
 
         error_log('[PUNTWORK] Starting full import - processing all batches without time limit');
 
-        // Reset import progress for fresh start
-        update_option('job_import_progress', 0, false);
-        update_option('job_import_processed_guids', [], false);
-        delete_option('job_import_status');
+        // Only reset status if not preserving existing status
+        if (!$preserve_status) {
+            // Reset import progress for fresh start
+            update_option('job_import_progress', 0, false);
+            update_option('job_import_processed_guids', [], false);
+            delete_option('job_import_status');
+        }
 
-        // Initialize import status for UI tracking
-        $initial_status = [
-            'total' => 0, // Will be updated when we know the total
-            'processed' => 0,
-            'published' => 0,
-            'updated' => 0,
-            'skipped' => 0,
-            'duplicates_drafted' => 0,
-            'time_elapsed' => 0,
-            'complete' => false,
-            'success' => false,
-            'error_message' => '',
-            'batch_size' => get_option('job_import_batch_size') ?: 5,
-            'inferred_languages' => 0,
-            'inferred_benefits' => 0,
-            'schema_generated' => 0,
-            'start_time' => $start_time,
-            'end_time' => null,
-            'last_update' => time(),
-            'logs' => ['Scheduled import started - preparing feeds...'],
-        ];
-        update_option('job_import_status', $initial_status, false);
+        // Initialize import status for UI tracking (only if not preserving)
+        if (!$preserve_status) {
+            $initial_status = [
+                'total' => 0, // Will be updated when we know the total
+                'processed' => 0,
+                'published' => 0,
+                'updated' => 0,
+                'skipped' => 0,
+                'duplicates_drafted' => 0,
+                'time_elapsed' => 0,
+                'complete' => false,
+                'success' => false,
+                'error_message' => '',
+                'batch_size' => get_option('job_import_batch_size') ?: 5,
+                'inferred_languages' => 0,
+                'inferred_benefits' => 0,
+                'schema_generated' => 0,
+                'start_time' => $start_time,
+                'end_time' => null,
+                'last_update' => time(),
+                'logs' => ['Scheduled import started - preparing feeds...'],
+            ];
+            update_option('job_import_status', $initial_status, false);
+        } else {
+            // Update existing status to indicate import is starting
+            $existing_status = get_option('job_import_status', []);
+            $existing_status['logs'][] = 'Scheduled import started - processing batches...';
+            $existing_status['start_time'] = $start_time;
+            update_option('job_import_status', $existing_status, false);
+        }
 
         while (true) {
             $batch_start = (int) get_option('job_import_progress', 0);
