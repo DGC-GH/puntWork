@@ -327,6 +327,14 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 console.log('[PUNTWORK] Polling for status update...');
                 JobImportAPI.getImportStatus().then(function(response) {
                     console.log('[PUNTWORK] Status polling response:', response);
+                    PuntWorkJSLogger.debug('Status polling response', 'EVENTS', {
+                        success: response.success,
+                        total: response.data?.total,
+                        processed: response.data?.processed,
+                        complete: response.data?.complete,
+                        hasLogs: response.data?.logs?.length > 0
+                    });
+
                     if (response.success) {
                         var statusData = JobImportUI.normalizeResponseData(response);
 
@@ -335,23 +343,45 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             console.log('[PUNTWORK] Updating progress with polling data:', statusData);
                             JobImportUI.updateProgress(statusData);
                             JobImportUI.appendLogs(statusData.logs || []);
+                        } else if (statusData.total === 0 && !statusData.complete) {
+                            console.log('[PUNTWORK] Import not yet started (total=0), continuing to poll');
+                            // Import hasn't started yet, keep polling
                         }
 
                         // Check if import completed
-                        if (statusData.complete) {
-                            console.log('[PUNTWORK] Polled import completed');
+                        if (statusData.complete && statusData.total > 0) {
+                            console.log('[PUNTWORK] Polled import completed - total:', statusData.total, 'processed:', statusData.processed);
+                            PuntWorkJSLogger.info('Import completed via polling', 'EVENTS', {
+                                total: statusData.total,
+                                processed: statusData.processed,
+                                success: statusData.success
+                            });
                             JobImportEvents.stopStatusPolling();
                             JobImportUI.resetButtons();
                             $('#status-message').text('Import Complete');
+                        } else if (statusData.complete && statusData.total === 0) {
+                            console.log('[PUNTWORK] Import marked complete but total=0, this might be an error state');
+                            PuntWorkJSLogger.warn('Import marked complete with total=0', 'EVENTS', statusData);
                         }
                     } else {
                         console.log('[PUNTWORK] Status polling failed:', response);
+                        PuntWorkJSLogger.warn('Status polling failed', 'EVENTS', response);
                     }
                 }).catch(function(error) {
                     console.log('[PUNTWORK] Status polling error:', error);
+                    PuntWorkJSLogger.error('Status polling error', 'EVENTS', error);
                     // Continue polling on error
                 });
             }, 2000); // Poll every 2 seconds for better responsiveness
+
+            // Safety timeout: Stop polling after 30 minutes to prevent infinite polling
+            this.statusPollingTimeout = setTimeout(function() {
+                console.log('[PUNTWORK] Status polling timed out after 30 minutes');
+                PuntWorkJSLogger.warn('Status polling timed out', 'EVENTS');
+                JobImportEvents.stopStatusPolling();
+                JobImportUI.resetButtons();
+                $('#status-message').text('Import monitoring timed out - please refresh the page');
+            }, 30 * 60 * 1000); // 30 minutes
         },
 
         /**
@@ -362,6 +392,11 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 clearInterval(this.statusPollingInterval);
                 this.statusPollingInterval = null;
                 console.log('[PUNTWORK] Stopped status polling');
+            }
+            if (this.statusPollingTimeout) {
+                clearTimeout(this.statusPollingTimeout);
+                this.statusPollingTimeout = null;
+                console.log('[PUNTWORK] Cleared status polling timeout');
             }
         }
     };
