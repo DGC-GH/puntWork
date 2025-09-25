@@ -63,6 +63,19 @@ add_action('wp_ajax_debug_trigger_async', function() {
     wp_die('Async function triggered - check debug.log');
 });
 
+// Debug endpoint to clear import status
+add_action('wp_ajax_debug_clear_import_status', function() {
+    if (!current_user_can('manage_options')) {
+        wp_die('Permission denied');
+    }
+
+    delete_option('job_import_status');
+    delete_transient('import_cancel');
+    error_log('[PUNTWORK] === DEBUG: Cleared import status and cancel transient ===');
+
+    wp_die('Import status cleared - you can now try Run Now again');
+});
+
 /**
  * Save import schedule settings via AJAX
  */
