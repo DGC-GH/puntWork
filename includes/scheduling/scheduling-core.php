@@ -30,8 +30,8 @@ function calculate_next_run_time($schedule_data) {
     $wp_timezone = wp_timezone();
 
     // Create DateTime objects in WordPress timezone
-    $now = new DateTime('now', $wp_timezone);
-    $today_target = new DateTime('today', $wp_timezone);
+    $now = new \DateTime('now', $wp_timezone);
+    $today_target = new \DateTime('today', $wp_timezone);
     $today_target->setTime($hour, $minute, 0);
 
     // If today's target time has passed, calculate for tomorrow

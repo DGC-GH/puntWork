@@ -20,8 +20,8 @@ add_action('wp', function() {
     if (!wp_next_scheduled('fetch_combined_jobs_json')) {
         // Use WordPress configured timezone
         $wp_timezone = wp_timezone();
-        $now = new DateTime('now', $wp_timezone);
-        $target = new DateTime('today 03:33', $wp_timezone);
+        $now = new \DateTime('now', $wp_timezone);
+        $target = new \DateTime('today 03:33', $wp_timezone);
         if ($now > $target) $target->modify('+1 day');
         wp_schedule_event($target->getTimestamp(), 'daily', 'fetch_combined_jobs_json');
         error_log('[PUNTWORK] Combined jobs fetch scheduled for: ' . wp_date('Y-m-d H:i:s', $target->getTimestamp()) . ' (' . wp_timezone_string() . ')');
