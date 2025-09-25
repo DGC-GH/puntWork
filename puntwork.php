@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'PUNTWORK_VERSION', '1.0.1' );
+define( 'PUNTWORK_VERSION', '1.0.2' );
 define( 'PUNTWORK_PATH', plugin_dir_path( __FILE__ ) );
 define( 'PUNTWORK_URL', plugin_dir_url( __FILE__ ) );
 define( 'PUNTWORK_LOGS', PUNTWORK_PATH . 'logs/import.log' );
@@ -32,6 +32,11 @@ function job_import_activate() {
     }
     // Flush rewrite rules if CPTs involved (though ACF handles)
     flush_rewrite_rules();
+
+    // Clear any cached admin menu data to ensure icon updates
+    if ( function_exists( 'wp_cache_flush' ) ) {
+        wp_cache_flush();
+    }
 }
 
 // Deactivation hook
@@ -160,7 +165,7 @@ function setup_job_import() {
 // Add custom favicon
 add_action( 'wp_head', __NAMESPACE__ . '\\add_custom_favicon' );
 function add_custom_favicon() {
-    $favicon_url = PUNTWORK_URL . 'assets/images/icon.svg';
+    $favicon_url = PUNTWORK_URL . 'assets/images/icon.svg?v=' . PUNTWORK_VERSION;
     echo '<link rel="icon" type="image/svg+xml" href="' . esc_url( $favicon_url ) . '">' . "\n";
 }
 
