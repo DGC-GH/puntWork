@@ -39,8 +39,8 @@ echo '<h3>Last Run Details:</h3>';
 echo '<pre>' . print_r($last_details, true) . '</pre>';
 
 echo '<h3>Test Actions:</h3>';
-echo '<p><a href="?page=job-import-dashboard&test_scheduling=1&action=run_test" class="button">Run Test Import</a></p>';
-echo '<p><a href="?page=job-import-dashboard&test_scheduling=1&action=clear_schedule" class="button">Clear Schedule</a></p>';
+echo '<p><a href="?page=job-feed-dashboard&test_scheduling=1&action=run_test" class="button">Run Test Import</a></p>';
+echo '<p><a href="?page=job-feed-dashboard&test_scheduling=1&action=clear_schedule" class="button">Clear Schedule</a></p>';
 
 // Handle test actions
 if (isset($_GET['action'])) {
