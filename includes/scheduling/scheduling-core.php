@@ -17,11 +17,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Calculate the next run time based on schedule settings
- * Uses WordPress configured timezone for all time calculations
+ * Uses UTC for all time calculations (WordPress standard)
  */
 function calculate_next_run_time($schedule_data) {
-    // Get current time in WordPress timezone
-    $current_time = current_time('timestamp');
+    // Get current time in UTC (Unix timestamp is always UTC)
+    $current_time = time();
     $hour = $schedule_data['hour'] ?? 9;
     $minute = $schedule_data['minute'] ?? 0;
     $frequency = $schedule_data['frequency'] ?? 'daily';
