@@ -213,6 +213,12 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             // Clear progress first to ensure clean state
             JobImportUI.clearProgress();
 
+            // Hide all import buttons immediately to prevent flash of unwanted buttons
+            $('#start-import').hide();
+            $('#resume-import').hide();
+            $('#cancel-import').hide();
+            $('#reset-import').hide();
+
             JobImportAPI.getImportStatus().then(function(response) {
                 PuntWorkJSLogger.debug('Initial status response', 'EVENTS', response);
                 console.log('[PUNTWORK] Initial status response:', response);
