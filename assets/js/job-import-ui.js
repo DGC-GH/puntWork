@@ -91,7 +91,6 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             $('#updated-items').text(0);
             $('#skipped-items').text(0);
             $('#duplicates-drafted').text(0);
-            $('#drafted-old').text(0);
             $('#items-left').text(0);
             $('#log-textarea').val('');
             $('#status-message').text('Ready to start.');
@@ -154,7 +153,6 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             data.updated = parseInt(data.updated) || 0;
             data.skipped = parseInt(data.skipped) || 0;
             data.duplicates_drafted = parseInt(data.duplicates_drafted) || 0;
-            data.drafted_old = parseInt(data.drafted_old) || 0;
             data.time_elapsed = parseFloat(data.time_elapsed) || 0;
             data.success = data.success !== undefined ? data.success : null;
             data.error_message = data.error_message || '';
@@ -166,7 +164,6 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 updated: data.updated,
                 skipped: data.skipped,
                 duplicates_drafted: data.duplicates_drafted,
-                drafted_old: data.drafted_old,
                 time_elapsed: data.time_elapsed,
                 success: data.success,
                 error_message: data.error_message
@@ -325,7 +322,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
 
             // Check if we're in feed processing phase (no job stats yet)
             var is_feed_processing = (data.published === 0 && data.updated === 0 && data.skipped === 0 &&
-                                    data.duplicates_drafted === 0 && data.drafted_old === 0);
+                                    data.duplicates_drafted === 0);
 
             // Check if we're in JSONL combination phase (total=1, processed=0 or 1, no job stats)
             var is_jsonl_combining = (total === 1 && is_feed_processing);
@@ -338,7 +335,6 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 $('#updated-items').text('—');
                 $('#skipped-items').text('—');
                 $('#duplicates-drafted').text('—');
-                $('#drafted-old').text('—');
                 $('#items-left').text(total - processed);
 
                 // Update status message for feed processing
@@ -355,7 +351,6 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 $('#updated-items').text('—');
                 $('#skipped-items').text('—');
                 $('#duplicates-drafted').text('—');
-                $('#drafted-old').text('—');
                 $('#items-left').text(processed ? '0' : '1');
 
                 // Update status message for JSONL combination
@@ -372,7 +367,6 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 $('#updated-items').text(data.updated || 0);
                 $('#skipped-items').text(data.skipped || 0);
                 $('#duplicates-drafted').text(data.duplicates_drafted || 0);
-                $('#drafted-old').text(data.drafted_old || 0);
 
                 var itemsLeft = total - processed;
                 $('#items-left').text(isNaN(itemsLeft) ? 0 : itemsLeft);

@@ -115,7 +115,6 @@ function get_job_import_status_ajax() {
         'updated' => 0,
         'skipped' => 0,
         'duplicates_drafted' => 0,
-        'drafted_old' => 0,
         'time_elapsed' => 0,
         'complete' => false,
         'success' => false, // Add success status
