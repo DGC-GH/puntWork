@@ -172,6 +172,7 @@ function test_import_schedule_ajax() {
 
 /**
  * Run scheduled import immediately via AJAX
+ * Now triggers the import asynchronously like the manual Start Import button
  */
 function run_scheduled_import_ajax() {
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
@@ -187,19 +188,26 @@ function run_scheduled_import_ajax() {
         wp_send_json_error(['message' => 'An import is already running']);
     }
 
-    // Schedule the import to run in a few seconds so user can see the scheduling process
-    $scheduled_time = time() + 3; // Start in 3 seconds for immediate verification
-    $scheduled = wp_schedule_single_event($scheduled_time, 'puntwork_manual_import');
+    try {
+        // Use Action Scheduler if available (best for background processing)
+        if (function_exists('as_enqueue_async_action')) {
+            as_enqueue_async_action('puntwork_run_scheduled_import_async', [], 'puntwork');
+            error_log('[PUNTWORK] Scheduled import queued via Action Scheduler');
+        } else {
+            // Fallback: Schedule resumable cron job
+            wp_schedule_single_event(time() + 1, 'puntwork_scheduled_import_async');
+            error_log('[PUNTWORK] Scheduled import queued via resumable cron');
+        }
 
-    if (!$scheduled) {
-        wp_send_json_error(['message' => 'Failed to schedule import']);
+        wp_send_json_success([
+            'message' => 'Import started asynchronously',
+            'next_check' => time() + 3
+        ]);
+
+    } catch (\Exception $e) {
+        error_log('[PUNTWORK] Run scheduled import AJAX error: ' . $e->getMessage());
+        wp_send_json_error(['message' => 'Failed to start import: ' . $e->getMessage()]);
     }
-
-    wp_send_json_success([
-        'message' => 'Import scheduled to start in 3 seconds',
-        'scheduled_time' => $scheduled_time,
-        'next_check' => time() + 5 // Suggest when to check for results
-    ]);
 }
 
 // Register AJAX actions
@@ -212,8 +220,48 @@ add_action('wp_ajax_run_scheduled_import', __NAMESPACE__ . '\\run_scheduled_impo
 // Register cron hook for manual imports
 add_action('puntwork_manual_import', __NAMESPACE__ . '\\run_manual_import_cron');
 
+// Register async action hooks
+add_action('puntwork_scheduled_import_async', __NAMESPACE__ . '\\run_scheduled_import_async');
+
+/**
+ * Run scheduled import asynchronously (non-blocking)
+ */
+function run_scheduled_import_async() {
+    error_log('[PUNTWORK] Async scheduled import started');
+
+    // Check if an import is already running
+    $import_status = get_option('job_import_status', []);
+    if (isset($import_status['complete']) && !$import_status['complete']) {
+        error_log('[PUNTWORK] Async import skipped - import already running');
+        return;
+    }
+
+    try {
+        $result = run_scheduled_import();
+
+        // If import is not complete, it means it was paused due to time limits
+        // Schedule the next batch to continue processing
+        if (isset($result['complete']) && !$result['complete']) {
+            error_log('[PUNTWORK] Async import paused for resumption - scheduling next batch');
+            // Schedule next run in 30 seconds using Action Scheduler if available
+            if (function_exists('as_enqueue_async_action')) {
+                as_enqueue_async_action('puntwork_run_scheduled_import_async', [], 'puntwork', true); // true for unique
+            } else {
+                wp_schedule_single_event(time() + 30, 'puntwork_scheduled_import_async');
+            }
+        } elseif ($result['success']) {
+            error_log('[PUNTWORK] Async scheduled import completed successfully');
+        } else {
+            error_log('[PUNTWORK] Async scheduled import failed: ' . ($result['message'] ?? 'Unknown error'));
+        }
+    } catch (\Exception $e) {
+        error_log('[PUNTWORK] Async scheduled import exception: ' . $e->getMessage());
+    }
+}
+
 /**
  * Handle manual import cron job
+ * Modified to handle resumable imports
  */
 function run_manual_import_cron() {
     error_log('[PUNTWORK] Manual import cron started');
@@ -228,7 +276,13 @@ function run_manual_import_cron() {
     try {
         $result = run_scheduled_import();
 
-        if ($result['success']) {
+        // If import is not complete, it means it was paused due to time limits
+        // The import will be automatically resumed by the next cron run
+        if (isset($result['complete']) && !$result['complete']) {
+            error_log('[PUNTWORK] Import paused for resumption - will continue automatically');
+            // Schedule next run in 30 seconds
+            wp_schedule_single_event(time() + 30, 'puntwork_scheduled_import_async');
+        } elseif ($result['success']) {
             error_log('[PUNTWORK] Manual import cron completed successfully');
         } else {
             error_log('[PUNTWORK] Manual import cron failed: ' . ($result['message'] ?? 'Unknown error'));
