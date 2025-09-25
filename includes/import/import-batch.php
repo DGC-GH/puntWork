@@ -62,8 +62,6 @@ if (!function_exists('import_all_jobs_from_json')) {
      */
     function import_all_jobs_from_json() {
         $start_time = microtime(true);
-        $cron_start_time = time(); // Track wall clock time for cron timeout
-        $max_cron_time = 25; // Max 25 seconds per cron run to prevent blocking
         $total_processed = 0;
         $total_published = 0;
         $total_updated = 0;
@@ -73,7 +71,7 @@ if (!function_exists('import_all_jobs_from_json')) {
         $batch_count = 0;
         $total_items = 0;
 
-        error_log('[PUNTWORK] Starting full import - processing batches with time limit');
+        error_log('[PUNTWORK] Starting full import - processing all batches without time limit');
 
         // Reset import progress for fresh start
         update_option('job_import_progress', 0, false);
@@ -135,34 +133,6 @@ if (!function_exists('import_all_jobs_from_json')) {
 
             $batch_count++;
             error_log(sprintf('[PUNTWORK] Processing batch %d starting at index %d', $batch_count, $batch_start));
-
-            // Check if we're approaching the time limit (leave 5 seconds buffer)
-            $elapsed_cron_time = time() - $cron_start_time;
-            if ($elapsed_cron_time >= ($max_cron_time - 5)) {
-                error_log('[PUNTWORK] Approaching time limit (' . $elapsed_cron_time . 's), pausing import to continue later');
-
-                // Update status to show import is paused, not failed
-                $current_status = get_option('job_import_status', $initial_status);
-                $current_status['time_elapsed'] = microtime(true) - $start_time;
-                $current_status['last_update'] = time();
-                $current_status['logs'][] = 'Import paused due to time limit - will resume automatically';
-                update_option('job_import_status', $current_status, false);
-
-                // Return partial result - not complete, so cron will reschedule
-                return [
-                    'success' => true,
-                    'processed' => $total_processed,
-                    'total' => $total_items,
-                    'published' => $total_published,
-                    'updated' => $total_updated,
-                    'skipped' => $total_skipped,
-                    'duplicates_drafted' => $total_duplicates_drafted,
-                    'time_elapsed' => microtime(true) - $start_time,
-                    'complete' => false, // Mark as incomplete so it will continue
-                    'logs' => array_merge($all_logs, ['Import paused - will resume automatically']),
-                    'message' => 'Import paused due to time limit - will resume automatically'
-                ];
-            }
 
             // Process this batch
             $result = process_batch_items_logic($setup);
