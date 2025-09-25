@@ -329,10 +329,16 @@ function run_scheduled_import_async() {
             error_log('[PUNTWORK] Async scheduled import completed successfully');
         } else {
             error_log('[PUNTWORK] Async scheduled import failed: ' . ($result['message'] ?? 'Unknown error'));
+            // Reset import status on failure so future attempts can start
+            delete_option('job_import_status');
+            error_log('[PUNTWORK] Reset job_import_status due to import failure');
         }
     } catch (\Exception $e) {
         error_log('[PUNTWORK] Async scheduled import exception: ' . $e->getMessage());
         error_log('[PUNTWORK] Exception trace: ' . $e->getTraceAsString());
+        // Reset import status on exception so future attempts can start
+        delete_option('job_import_status');
+        error_log('[PUNTWORK] Reset job_import_status due to import exception');
     }
 
     error_log('[PUNTWORK] === ASYNC FUNCTION COMPLETED ===');
