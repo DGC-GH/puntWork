@@ -444,19 +444,41 @@
                 window.JobImportEvents.stopStatusPolling();
             }
 
+            // Show loading state
+            $('#reset-import').prop('disabled', true).text('Resetting...');
+
             JobImportAPI.resetImport().then(function(response) {
                 PuntWorkJSLogger.debug('Reset response', 'LOGIC', response);
+                console.log('[PUNTWORK] Reset API response:', response);
+
                 if (response.success) {
                     JobImportUI.appendLogs(['Import system completely reset']);
                     $('#status-message').text('Import system reset - ready to start fresh');
+
+                    // Clear all UI state
                     JobImportUI.clearProgress();
                     JobImportUI.hideImportUI();
-                    JobImportUI.resetButtons();
-                    $('#start-import').show().text('Start Import');
+
+                    // Reset all button states
+                    $('#start-import').show().text('Start Import').prop('disabled', false);
+                    $('#resume-import').hide();
+                    $('#cancel-import').hide();
+                    $('#reset-import').hide().prop('disabled', false);
+
+                    console.log('[PUNTWORK] Reset completed successfully');
+                } else {
+                    // Reset failed - show error but don't change UI state
+                    JobImportUI.appendLogs(['Reset failed: ' + (response.message || 'Unknown error')]);
+                    $('#status-message').text('Reset failed - please try again');
+                    $('#reset-import').prop('disabled', false);
+                    console.log('[PUNTWORK] Reset failed:', response);
                 }
             }).catch(function(xhr, status, error) {
                 PuntWorkJSLogger.error('Reset AJAX error', 'LOGIC', error);
                 JobImportUI.appendLogs(['Reset AJAX error: ' + error]);
+                $('#status-message').text('Reset failed - please try again');
+                $('#reset-import').prop('disabled', false);
+                console.log('[PUNTWORK] Reset AJAX error:', error);
             });
         }
     };
