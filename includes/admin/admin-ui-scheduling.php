@@ -135,7 +135,7 @@ function render_scheduling_ui() {
                         <i class="fas fa-sync-alt" style="margin-right: 6px;"></i>Refresh
                     </button>
                 </div>
-                <div id="run-history-list" style="max-height: 240px; overflow-y: auto; font-size: 14px; border-radius: 8px; background-color: #fafafa; padding: 16px;">
+                <div id="run-history-list" style="max-height: 600px; overflow-y: auto; font-size: 14px; border-radius: 8px; background-color: #fafbfc; padding: 20px;">
                     <div style="color: #86868b; text-align: center; padding: 24px; font-style: italic;">Loading history...</div>
                 </div>
             </div>
