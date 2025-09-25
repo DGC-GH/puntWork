@@ -98,6 +98,19 @@ function enqueue_job_import_scripts() {
             #import-scheduling .status-error {
                 background-color: #ff3b30;
             }
+
+            /* Log toggle button styles */
+            #toggle-log {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            }
+            #toggle-log:hover {
+                background-color: rgba(0, 122, 255, 0.05);
+                color: #0056cc;
+            }
+            #toggle-log:active {
+                background-color: rgba(0, 122, 255, 0.1);
+                transform: scale(0.98);
+            }
         ');
 
         // Enqueue JavaScript modules
