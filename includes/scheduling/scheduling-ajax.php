@@ -45,6 +45,19 @@ add_action('admin_init', function() {
     }
 });
 
+// Debug endpoint to manually trigger async function
+add_action('wp_ajax_debug_trigger_async', function() {
+    if (!current_user_can('manage_options')) {
+        wp_die('Permission denied');
+    }
+
+    error_log('[PUNTWORK] === MANUAL DEBUG TRIGGER ===');
+    run_scheduled_import_async();
+    error_log('[PUNTWORK] === MANUAL DEBUG TRIGGER COMPLETED ===');
+
+    wp_die('Async function triggered - check debug.log');
+});
+
 /**
  * Save import schedule settings via AJAX
  */
