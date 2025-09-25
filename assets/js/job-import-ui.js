@@ -492,6 +492,11 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             if (data.estimated_time_remaining !== undefined && data.estimated_time_remaining > 0) {
                 var estimatedSeconds = data.estimated_time_remaining;
 
+                PuntWorkJSLogger.debug('Using PHP estimated_time_remaining', 'UI', {
+                    estimated_time_remaining: data.estimated_time_remaining,
+                    formatted: this.formatTime(estimatedSeconds)
+                });
+
                 // Sanity check - don't show ridiculous estimates
                 if (estimatedSeconds > 86400) { // More than 24 hours
                     $('#time-left').text('>24h');
@@ -503,12 +508,22 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 return;
             }
 
+            PuntWorkJSLogger.debug('PHP estimated_time_remaining not available, using fallback', 'UI', {
+                estimated_time_remaining: data.estimated_time_remaining,
+                phase: this.currentPhase,
+                processed: processed,
+                total: total,
+                elapsedTime: elapsedTime
+            });
+
             // Fallback: Job importing phase - use overall progress rate for better accuracy
             if (processed > 0 && elapsedTime > 0 && itemsLeft > 0) {
                 // Calculate time per item based on overall progress so far
                 var overallTimePerItem = elapsedTime / processed;
                 var estimatedSeconds = overallTimePerItem * itemsLeft;
 
+                // TEMPORARILY DISABLE batch timing logic to debug
+                /*
                 // Use batch timing as a weighted factor if available
                 if (this.batchTimes.length > 0) {
                     var totalBatchTime = 0;
@@ -525,6 +540,16 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                         estimatedSeconds = overallTimePerItem * itemsLeft;
                     }
                 }
+                */
+
+                PuntWorkJSLogger.debug('JavaScript time calculation (batch timing disabled)', 'UI', {
+                    processed: processed,
+                    elapsedTime: elapsedTime,
+                    itemsLeft: itemsLeft,
+                    overallTimePerItem: overallTimePerItem,
+                    estimatedSeconds: estimatedSeconds,
+                    batchTimesCount: this.batchTimes.length
+                });
 
                 // Sanity check - don't show ridiculous estimates
                 if (estimatedSeconds > 86400) { // More than 24 hours
