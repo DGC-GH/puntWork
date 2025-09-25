@@ -167,21 +167,44 @@ function get_job_import_status_ajax() {
         'complete' => $progress['complete'] ?? null
     ]);
 
-    // Check for stuck imports and clear them
+    // Check for stuck or stale imports and clear them
     if (isset($progress['complete']) && !$progress['complete'] && isset($progress['total']) && $progress['total'] > 0) {
+        $current_time = time();
         $time_elapsed = 0;
+        $last_update = isset($progress['last_update']) ? $progress['last_update'] : 0;
+        $time_since_last_update = $current_time - $last_update;
+
         if (isset($progress['start_time']) && $progress['start_time'] > 0) {
             $time_elapsed = microtime(true) - $progress['start_time'];
         } elseif (isset($progress['time_elapsed'])) {
             $time_elapsed = $progress['time_elapsed'];
         }
-        
-        $is_stuck = ($progress['processed'] == 0) && ($time_elapsed > 300);
-        
+
+        // Detect stuck imports with multiple criteria:
+        // 1. No progress for 5+ minutes (300 seconds)
+        // 2. Import running for more than 2 hours without completion (7200 seconds)
+        // 3. No status update for 10+ minutes (600 seconds)
+        $is_stuck = false;
+        $stuck_reason = '';
+
+        if ($progress['processed'] == 0 && $time_elapsed > 300) {
+            $is_stuck = true;
+            $stuck_reason = 'no progress for 5+ minutes';
+        } elseif ($time_elapsed > 7200) { // 2 hours
+            $is_stuck = true;
+            $stuck_reason = 'running for more than 2 hours';
+        } elseif ($time_since_last_update > 600) { // 10 minutes since last update
+            $is_stuck = true;
+            $stuck_reason = 'no status update for 10+ minutes';
+        }
+
         if ($is_stuck) {
             PuntWorkLogger::info('Detected stuck import in status check, clearing status', PuntWorkLogger::CONTEXT_BATCH, [
                 'processed' => $progress['processed'],
-                'time_elapsed' => $time_elapsed
+                'total' => $progress['total'],
+                'time_elapsed' => $time_elapsed,
+                'time_since_last_update' => $time_since_last_update,
+                'reason' => $stuck_reason
             ]);
             delete_option('job_import_status');
             delete_option('job_import_progress');
@@ -191,7 +214,7 @@ function get_job_import_status_ajax() {
             delete_option('job_import_batch_size');
             delete_option('job_import_consecutive_small_batches');
             delete_transient('import_cancel');
-            
+
             // Return fresh status
             $progress = [
                 'total' => 0,
