@@ -220,6 +220,34 @@ if (!function_exists('import_all_jobs_from_json')) {
             $total_skipped
         ));
 
+        // Ensure final status is updated for UI
+        $final_status = [
+            'total' => $total_items,
+            'processed' => $total_processed,
+            'published' => $total_published,
+            'updated' => $total_updated,
+            'skipped' => $total_skipped,
+            'duplicates_drafted' => $total_duplicates_drafted,
+            'time_elapsed' => $total_duration,
+            'complete' => true,
+            'success' => true,
+            'error_message' => '',
+            'batch_size' => get_option('job_import_batch_size') ?: 20,
+            'inferred_languages' => 0,
+            'inferred_benefits' => 0,
+            'schema_generated' => 0,
+            'start_time' => $start_time,
+            'end_time' => $end_time,
+            'last_update' => time(),
+            'logs' => array_slice($all_logs, -50),
+        ];
+        update_option('job_import_status', $final_status, false);
+        
+        // Ensure cache is cleared so AJAX can see the updated status
+        if (function_exists('wp_cache_flush')) {
+            wp_cache_flush();
+        }
+
         return finalize_batch_import($final_result);
     }
 }
