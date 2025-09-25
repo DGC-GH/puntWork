@@ -13,6 +13,11 @@
          * Initialize scheduling functionality
          */
         init: function() {
+            console.log('[PUNTWORK] JobImportScheduling.init() called');
+            console.log('[PUNTWORK] jQuery version:', $.fn.jquery);
+            console.log('[PUNTWORK] Document ready state:', document.readyState);
+            console.log('[PUNTWORK] Run Now button exists:', $('#run-now').length);
+
             this.bindEvents();
             this.loadScheduleSettings();
             this.loadRunHistory();
@@ -328,28 +333,38 @@
          * Run import now
          */
         runNow: function() {
+            console.log('[PUNTWORK] JobImportScheduling.runNow() called');
+
             var self = this;
             var $button = $('#run-now');
 
             if (!confirm('This will schedule an import to start in 3 seconds. You can monitor the progress in real-time. Continue?')) {
+                console.log('[PUNTWORK] User cancelled runNow');
                 return;
             }
 
+            console.log('[PUNTWORK] User confirmed runNow, proceeding...');
             $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Scheduling...');
 
             JobImportAPI.call('run_scheduled_import', {}, function(response) {
+                console.log('[PUNTWORK] run_scheduled_import response:', response);
+
                 if (response.success) {
+                    console.log('[PUNTWORK] Import scheduled successfully, showing progress UI');
                     $button.prop('disabled', false).html('<i class="fas fa-clock" style="margin-right: 8px;"></i>Import Scheduled');
                     self.showNotification('Import scheduled - starting in 3 seconds', 'success');
 
                     // Show the progress UI immediately so user can see it's starting
+                    console.log('[PUNTWORK] Calling JobImportUI.showImportUI()');
                     JobImportUI.showImportUI();
                     JobImportUI.clearProgress();
                     $('#status-message').text('Import scheduled - waiting to start...');
 
                     // Start monitoring the import progress immediately
+                    console.log('[PUNTWORK] Starting monitoring with JobImportEvents.startStatusPolling()');
                     self.monitorImportProgress(response.data.scheduled_time, response.data.next_check);
                 } else {
+                    console.log('[PUNTWORK] Import scheduling failed:', response.data);
                     $button.prop('disabled', false).html('Run Now');
                     self.showNotification('Failed to schedule import: ' + (response.data.message || 'Unknown error'), 'error');
                 }
