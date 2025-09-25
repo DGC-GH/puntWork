@@ -58,14 +58,15 @@
                 self.runNow();
             });
 
-            // Refresh schedule status periodically
+            // Refresh schedule status periodically (reduced frequency to prevent console spam)
             setInterval(function() {
                 self.refreshScheduleStatus();
-            }, 30000); // Refresh every 30 seconds
+            }, 300000); // Refresh every 5 minutes instead of 30 seconds
 
             // Refresh history button
             $('#refresh-history').on('click', function(e) {
                 e.preventDefault();
+                $(this).addClass('manual-refresh');
                 self.loadRunHistory();
             });
         },
@@ -77,12 +78,14 @@
             var self = this;
 
             JobImportAPI.call('get_import_schedule', {}, function(response) {
-                console.log('[SCHEDULING] loadScheduleSettings response:', response);
                 if (response.success) {
                     self.currentSchedule = response.data.schedule;
-                    console.log('[SCHEDULING] Loaded schedule.enabled:', response.data.schedule.enabled);
                     self.updateUI(response.data);
-                    PuntWorkJSLogger.info('Schedule settings loaded', 'SCHEDULING', response.data);
+                    // Only log on initial load, not on periodic refreshes
+                    if (!self.initialLoadComplete) {
+                        PuntWorkJSLogger.info('Schedule settings loaded', 'SCHEDULING', response.data);
+                        self.initialLoadComplete = true;
+                    }
                 } else {
                     PuntWorkJSLogger.error('Failed to load schedule settings', 'SCHEDULING', response.data);
                 }
@@ -93,13 +96,10 @@
          * Update UI with schedule data
          */
         updateUI: function(data) {
-            console.log('[SCHEDULING] updateUI called with data:', data);
             var schedule = data.schedule;
-            console.log('[SCHEDULING] schedule.enabled:', schedule.enabled);
 
             // Update form controls
             $('#schedule-enabled').prop('checked', schedule.enabled);
-            console.log('[SCHEDULING] Checkbox set to:', $('#schedule-enabled').is(':checked'));
 
             $('#schedule-frequency').val(schedule.frequency);
             $('#schedule-interval').val(schedule.interval);
@@ -560,7 +560,12 @@
 
                 if (response.success) {
                     self.displayRunHistory(response.data.history);
-                    PuntWorkJSLogger.info('Run history loaded', 'SCHEDULING', { count: response.data.count });
+                    // Only log on initial load or manual refresh, not periodic refreshes
+                    if ($button.hasClass('manual-refresh') || !self.historyLoaded) {
+                        PuntWorkJSLogger.info('Run history loaded', 'SCHEDULING', { count: response.data.count });
+                        self.historyLoaded = true;
+                        $button.removeClass('manual-refresh');
+                    }
                 } else {
                     $list.html('<div style="color: #ff3b30; text-align: center; padding: 24px;"><i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>Failed to load history</div>');
                     PuntWorkJSLogger.error('Failed to load run history', 'SCHEDULING', response.data);
