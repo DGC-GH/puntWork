@@ -53,7 +53,7 @@ function run_scheduled_import($test_mode = false) {
         }
 
         // Run the import
-        $result = import_jobs_from_json();
+        $result = import_all_jobs_from_json();
 
         $end_time = microtime(true);
         $duration = $end_time - $start_time;
