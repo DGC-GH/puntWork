@@ -33,7 +33,7 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
     $old_batch_size = $batch_size;
 
     // Ensure batch size is within reasonable bounds
-    $batch_size = max(1, min(50, $batch_size));
+    $batch_size = max(1, min(500, $batch_size));
 
     // Memory-based adjustment (most critical)
     if ($last_memory_ratio > 0.85) {
@@ -44,7 +44,7 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
         $batch_size = max(1, floor($batch_size * 0.8));
     } elseif ($last_memory_ratio < 0.4) {
         // Low memory usage - can increase batch size
-        $batch_size = min(50, floor($batch_size * 1.3));
+        $batch_size = min(500, floor($batch_size * 1.3));
     }
 
     // Dynamic batch size adjustment based on consecutive batch completion times
@@ -54,7 +54,7 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
             $batch_size = max(1, floor($batch_size * 0.8));
         } elseif ($current_batch_time < $previous_batch_time) {
             // Current batch took less time than previous - increase batch size
-            $batch_size = min(50, floor($batch_size * 1.2));
+            $batch_size = min(500, floor($batch_size * 1.2));
         }
         // If times are equal, keep batch size the same
     }
@@ -81,8 +81,8 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
         update_option('job_import_consecutive_small_batches', 0, false);
     }
 
-    // Ensure batch size never goes below 1 or above 50
-    $batch_size = max(1, min(50, $batch_size));
+    // Ensure batch size never goes below 1 or above 500
+    $batch_size = max(1, min(500, $batch_size));
 
     // Log batch size changes for debugging
     if ($batch_size != $old_batch_size) {
