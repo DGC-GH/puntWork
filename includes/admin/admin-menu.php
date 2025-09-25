@@ -28,7 +28,7 @@ add_action('admin_menu', function() {
     add_submenu_page(
         'edit.php?post_type=job',
         'Jobs Dashboard',
-        'Jobs',
+        'Dashboard',
         'manage_options',
         'jobs-dashboard',
         __NAMESPACE__ . '\\jobs_dashboard_page',
