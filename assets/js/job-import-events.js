@@ -300,7 +300,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
         },
 
         /**
-         * Start polling for import status updates (used for scheduled imports)
+         * Start polling for import status updates (used for scheduled imports and manual imports)
          */
         startStatusPolling: function() {
             console.log('[PUNTWORK] JobImportEvents.startStatusPolling() called');
@@ -311,8 +311,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 clearInterval(this.statusPollingInterval);
             }
 
-            // Show the progress UI immediately when starting polling for scheduled imports
-            console.log('[PUNTWORK] Showing import UI for scheduled import');
+            // Show the progress UI immediately when starting polling
+            console.log('[PUNTWORK] Showing import UI for import');
             JobImportUI.showImportUI();
             $('#start-import').hide();
             $('#resume-import').hide();
@@ -320,9 +320,9 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             $('#reset-import').show();
             $('#status-message').text('Import in progress...');
 
-            console.log('[PUNTWORK] Starting status polling every 3 seconds');
+            console.log('[PUNTWORK] Starting status polling every 2 seconds');
 
-            // Poll every 3 seconds
+            // Poll every 2 seconds for more responsive updates
             this.statusPollingInterval = setInterval(function() {
                 console.log('[PUNTWORK] Polling for status update...');
                 JobImportAPI.getImportStatus().then(function(response) {
@@ -330,10 +330,12 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     if (response.success) {
                         var statusData = JobImportUI.normalizeResponseData(response);
 
-                        // Update progress
-                        console.log('[PUNTWORK] Updating progress with data:', statusData);
-                        JobImportUI.updateProgress(statusData);
-                        JobImportUI.appendLogs(statusData.logs || []);
+                        // Only update UI if there's actual progress data and import is not complete
+                        if (statusData.total > 0 && !statusData.complete) {
+                            console.log('[PUNTWORK] Updating progress with polling data:', statusData);
+                            JobImportUI.updateProgress(statusData);
+                            JobImportUI.appendLogs(statusData.logs || []);
+                        }
 
                         // Check if import completed
                         if (statusData.complete) {
@@ -349,7 +351,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     console.log('[PUNTWORK] Status polling error:', error);
                     // Continue polling on error
                 });
-            }, 3000); // Poll every 3 seconds
+            }, 2000); // Poll every 2 seconds for better responsiveness
         },
 
         /**
