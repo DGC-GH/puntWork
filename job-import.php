@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: Job Import
+ * Plugin Name: puntWork
  * Description: Imports jobs from XML feeds via job-feed CPT.
  * Version: 1.0.0
  * Author: DGC-GH
@@ -13,10 +13,10 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'JOB_IMPORT_VERSION', '1.0.0' );
-define( 'JOB_IMPORT_PATH', plugin_dir_path( __FILE__ ) );
-define( 'JOB_IMPORT_URL', plugin_dir_url( __FILE__ ) );
-define( 'JOB_IMPORT_LOGS', JOB_IMPORT_PATH . 'logs/import.log' );
+define( 'PUNTWORK_VERSION', '1.0.0' );
+define( 'PUNTWORK_PATH', plugin_dir_path( __FILE__ ) );
+define( 'PUNTWORK_URL', plugin_dir_url( __FILE__ ) );
+define( 'PUNTWORK_LOGS', PUNTWORK_PATH . 'logs/import.log' );
 
 // Activation hook
 register_activation_hook( __FILE__, __NAMESPACE__ . '\\job_import_activate' );
@@ -26,7 +26,7 @@ function job_import_activate() {
         wp_schedule_event( current_time('timestamp'), 'daily', 'job_import_cron' );
     }
     // Create logs dir if needed
-    $logs_dir = dirname( JOB_IMPORT_LOGS );
+    $logs_dir = dirname( PUNTWORK_LOGS );
     if ( ! file_exists( $logs_dir ) ) {
         wp_mkdir_p( $logs_dir );
     }
@@ -125,7 +125,7 @@ function setup_job_import() {
         'scheduling/test-scheduling.php',
     );
     foreach ( $includes as $include ) {
-        $file = JOB_IMPORT_PATH . 'includes/' . $include;
+        $file = PUNTWORK_PATH . 'includes/' . $include;
         if ( file_exists( $file ) ) {
             require_once $file;
         }
