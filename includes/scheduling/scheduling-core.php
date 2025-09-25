@@ -149,7 +149,7 @@ function get_next_scheduled_time() {
 
         return [
             'timestamp' => $next_scheduled,
-            'formatted' => wp_date('M j, Y g:i A', $next_scheduled),
+            'formatted' => wp_date('M j, Y H:i', $next_scheduled),
             'relative' => $relative
         ];
     }
