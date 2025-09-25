@@ -21,7 +21,7 @@ add_action('admin_menu', function() {
         'manage_options',
         'puntwork-dashboard',
         __NAMESPACE__ . '\\puntwork_dashboard_page',
-        home_url('/favicon.ico'),
+        PUNTWORK_URL . 'assets/images/puntwork-logo.svg',
         0
     );
 
