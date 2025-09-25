@@ -168,7 +168,7 @@ function get_import_run_history_ajax() {
     // Format dates for history entries - timestamps are stored in UTC
     foreach ($history as &$entry) {
         if (isset($entry['timestamp'])) {
-            $entry['formatted_date'] = wp_date('n/j/Y, g:i:s A', $entry['timestamp']);
+            $entry['formatted_date'] = wp_date('M j, Y H:i', $entry['timestamp']);
         }
     }
 
