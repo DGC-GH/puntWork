@@ -247,7 +247,7 @@ function run_scheduled_import_ajax() {
             'time_elapsed' => 0,
             'success' => false,
             'error_message' => '',
-            'batch_size' => get_option('job_import_batch_size') ?: 25,
+            'batch_size' => get_option('job_import_batch_size') ?: 100,
             'inferred_languages' => 0,
             'inferred_benefits' => 0,
             'schema_generated' => 0,
