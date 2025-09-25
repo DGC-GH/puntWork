@@ -198,7 +198,15 @@ if (!function_exists('import_all_jobs_from_json')) {
             'complete' => true,
             'logs' => $all_logs,
             'batches_processed' => $batch_count,
-            'message' => 'Full import completed successfully'
+            'message' => sprintf(
+                'Full import completed successfully - Processed: %d/%d items (Published: %d, Updated: %d, Skipped: %d) in %.1f seconds',
+                $total_processed,
+                $total_items,
+                $total_published,
+                $total_updated,
+                $total_skipped,
+                $total_duration
+            )
         ];
 
         error_log(sprintf(

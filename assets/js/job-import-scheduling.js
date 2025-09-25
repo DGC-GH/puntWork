@@ -346,15 +346,27 @@
             console.log('[PUNTWORK] User confirmed runNow, proceeding...');
             $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Running Import...');
 
+            // Show the progress UI immediately
+            JobImportUI.showImportUI();
+            JobImportUI.clearProgress();
+            $('#status-message').text('Starting import...');
+
+            // Start status polling to show progress
+            JobImportEvents.startStatusPolling();
+
             JobImportAPI.call('run_scheduled_import', {}, function(response) {
                 console.log('[PUNTWORK] run_scheduled_import response:', response);
+
+                // Stop status polling since import is complete
+                JobImportEvents.stopStatusPolling();
 
                 if (response.success) {
                     console.log('[PUNTWORK] Import completed successfully');
                     $button.prop('disabled', false).html('Run Now');
                     
-                    // Show success notification
-                    self.showNotification('Import completed successfully! Check history for details.', 'success');
+                    // Show success notification with detailed stats
+                    var message = response.data.message || 'Import completed successfully! Check history for details.';
+                    self.showNotification(message, 'success');
                     
                     // Refresh the schedule settings and history to show the new run
                     self.loadScheduleSettings();
