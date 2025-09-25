@@ -315,7 +315,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             this.currentPollingInterval = 500; // Start with 500ms for fast initial updates
             this.lastProcessedCount = -1;
             this.unchangedCount = 0;
-            this.maxUnchangedBeforeSlow = 10; // After 10 unchanged polls (5 seconds), slow down
+            this.maxUnchangedBeforeSlow = 50; // After 50 unchanged polls (25 seconds), slow down
 
             // Show the progress UI immediately when starting polling
             console.log('[PUNTWORK] Showing import UI for import');
@@ -359,8 +359,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             
                             // If no progress for several polls, slow down polling
                             if (JobImportEvents.unchangedCount >= JobImportEvents.maxUnchangedBeforeSlow && 
-                                JobImportEvents.currentPollingInterval < 3000) {
-                                JobImportEvents.adjustPollingInterval(3000);
+                                JobImportEvents.currentPollingInterval < 1000) {
+                                JobImportEvents.adjustPollingInterval(1000);
                             }
                         }
 
