@@ -118,6 +118,11 @@ function get_import_schedule_ajax() {
     $last_run = get_option('puntwork_last_import_run', null);
     $last_run_details = get_option('puntwork_last_import_details', null);
 
+    // Add formatted date to last run if it exists
+    if ($last_run && isset($last_run['timestamp'])) {
+        $last_run['formatted_date'] = wp_date('M j, Y g:i A', $last_run['timestamp']);
+    }
+
     wp_send_json_success([
         'schedule' => $schedule,
         'next_run' => get_next_scheduled_time(),
