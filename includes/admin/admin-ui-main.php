@@ -73,6 +73,9 @@ function render_main_import_ui() {
                 </button>
                 <button id="cancel-import" class="button button-secondary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #ff3b30; border: none; color: white; display: none;">Cancel Import</button>
                 <button id="resume-import" class="button button-secondary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #34c759; border: none; color: white; display: none;">Resume Import</button>
+                <button id="reset-import" class="button button-outline" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: transparent; border: 1px solid #d1d1d6; color: #424245; transition: all 0.2s ease;">
+                    <i class="fas fa-undo" style="margin-right: 6px;"></i>Reset Import
+                </button>
                 <span id="import-status" style="font-size: 14px; color: #8e8e93;"></span>
             </div>
         </div>
@@ -187,5 +190,24 @@ function render_main_import_ui() {
             </div>
         </div>
     </div>
+
+    <style>
+        /* Reset Import Button Styles */
+        #reset-import:hover {
+            background-color: #f2f2f7;
+            border-color: #007aff;
+            color: #007aff;
+        }
+        #reset-import:active {
+            background-color: #e5e5e7;
+            transform: translateY(1px);
+        }
+        #reset-import i {
+            transition: transform 0.2s ease;
+        }
+        #reset-import:hover i {
+            transform: rotate(-180deg);
+        }
+    </style>
     <?php
 }
