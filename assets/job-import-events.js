@@ -34,7 +34,6 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             console.log('[PUNTWORK] Binding events...');
             console.log('[PUNTWORK] Start button exists:', $('#start-import').length);
             console.log('[PUNTWORK] Cleanup button exists:', $('#cleanup-duplicates').length);
-            console.log('[PUNTWORK] Purge button exists:', $('#purge-old-jobs').length);
 
             // Check if buttons exist before binding
             if ($('#cleanup-duplicates').length > 0) {
@@ -46,17 +45,6 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 });
             } else {
                 console.log('[PUNTWORK] Cleanup button NOT found!');
-            }
-
-            if ($('#purge-old-jobs').length > 0) {
-                console.log('[PUNTWORK] Found purge button, binding click handler');
-                $('#purge-old-jobs').on('click', function(e) {
-                    console.log('[PUNTWORK] Purge button clicked!');
-                    e.preventDefault(); // Prevent any default form submission
-                    JobImportEvents.handlePurgeOldJobs();
-                });
-            } else {
-                console.log('[PUNTWORK] Purge button NOT found!');
             }
 
             $('#start-import').on('click', function(e) {
@@ -73,6 +61,28 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             });
 
             console.log('[PUNTWORK] Events bound successfully');
+        },
+
+        /**
+         * Bind only cleanup event handlers (for jobs dashboard)
+         */
+        bindCleanupEvents: function() {
+            console.log('[PUNTWORK] Binding cleanup events only...');
+            console.log('[PUNTWORK] Cleanup button exists:', $('#cleanup-duplicates').length);
+
+            // Check if cleanup button exists before binding
+            if ($('#cleanup-duplicates').length > 0) {
+                console.log('[PUNTWORK] Found cleanup button, binding click handler');
+                $('#cleanup-duplicates').on('click', function(e) {
+                    console.log('[PUNTWORK] Cleanup button clicked!');
+                    e.preventDefault(); // Prevent any default form submission
+                    JobImportEvents.handleCleanupDuplicates();
+                });
+            } else {
+                console.log('[PUNTWORK] Cleanup button NOT found!');
+            }
+
+            console.log('[PUNTWORK] Cleanup events bound successfully');
         },
 
         /**
@@ -105,7 +115,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             console.log('[PUNTWORK] JobImportAPI available:', typeof JobImportAPI);
             console.log('[PUNTWORK] JobImportUI available:', typeof JobImportUI);
 
-            if (confirm('This will permanently delete duplicate job posts. This action cannot be undone. Continue?')) {
+            if (confirm('This will permanently delete all job posts that are in Draft or Trash status. This action cannot be undone. Continue?')) {
                 console.log('[PUNTWORK] User confirmed cleanup');
                 $('#cleanup-duplicates').prop('disabled', true);
                 $('#cleanup-text').hide();
@@ -175,86 +185,6 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
         },
 
         /**
-         * Handle purge old jobs button click
-         */
-        handlePurgeOldJobs: function() {
-            console.log('[PUNTWORK] Purge old jobs handler called');
-            console.log('[PUNTWORK] jobImportData available:', typeof jobImportData);
-            console.log('[PUNTWORK] JobImportAPI available:', typeof JobImportAPI);
-            console.log('[PUNTWORK] JobImportUI available:', typeof JobImportUI);
-
-            if (confirm('This will permanently delete all jobs that are no longer in the current feed. This action cannot be undone. Continue?')) {
-                console.log('[PUNTWORK] User confirmed purge');
-                $('#purge-old-jobs').prop('disabled', true);
-                $('#purge-text').hide();
-                $('#purge-loading').show();
-                $('#purge-status').text('Starting purge...');
-
-                // Show progress UI immediately
-                JobImportUI.showPurgeUI();
-                JobImportUI.clearPurgeProgress();
-
-                console.log('[PUNTWORK] Calling purge API');
-                JobImportEvents.processPurgeBatch(0, 50); // Start with first batch
-            } else {
-                console.log('[PUNTWORK] User cancelled purge');
-            }
-        },        /**
-         * Process purge batch and continue if needed
-         * @param {number} offset - Current offset for batch processing
-         * @param {number} batchSize - Size of batch to process
-         */
-        processPurgeBatch: function(offset, batchSize) {
-            console.log('[PUNTWORK] Processing purge batch - offset:', offset, 'batchSize:', batchSize);
-            var isContinue = offset > 0;
-            var action = isContinue ? JobImportAPI.continuePurge(offset, batchSize) : JobImportAPI.purgeImport();
-
-            action.then(function(response) {
-                console.log('[PUNTWORK] Purge API response:', response);
-                PuntWorkJSLogger.debug('Purge response', 'EVENTS', response);
-
-                if (response.success) {
-                    console.log('[PUNTWORK] Purge response successful, complete:', response.data.complete);
-                    JobImportUI.appendLogs(response.data.logs || []);
-
-                    if (response.data.complete) {
-                        // Operation completed
-                        $('#purge-status').text(response.data.message);
-                        $('#purge-old-jobs').prop('disabled', false);
-                        $('#purge-text').show();
-                        $('#purge-loading').hide();
-                        JobImportUI.clearPurgeProgress();
-
-                        // Refresh the page to show updated job counts
-                        setTimeout(function() {
-                            location.reload();
-                        }, 2000);
-                    } else {
-                        // Update progress and continue with next batch
-                        JobImportUI.updatePurgeProgress(response.data);
-                        $('#purge-status').text('Progress: ' + response.data.progress_percentage + '% (' +
-                            response.data.total_processed + '/' + response.data.total_jobs + ' jobs processed)');
-                        JobImportEvents.processPurgeBatch(response.data.next_offset, batchSize);
-                    }
-                } else {
-                    console.log('[PUNTWORK] Purge response failed:', response.data);
-                    $('#purge-status').text('Purge failed: ' + (response.data.message || 'Unknown error'));
-                    $('#purge-old-jobs').prop('disabled', false);
-                    $('#purge-text').show();
-                    $('#purge-loading').hide();
-                    JobImportUI.clearPurgeProgress();
-                }
-            }).catch(function(xhr, status, error) {
-                console.log('[PUNTWORK] Purge API error:', error);
-                console.log('[PUNTWORK] XHR status:', xhr.status, 'response:', xhr.responseText);
-                PuntWorkJSLogger.error('Purge AJAX error', 'EVENTS', error);
-                $('#purge-status').text('Purge failed: ' + error);
-                $('#purge-old-jobs').prop('disabled', false);
-                $('#purge-text').show();
-                $('#purge-loading').hide();
-                JobImportUI.clearPurgeProgress();
-            });
-        },        /**
          * Check initial import status on page load
          */
         checkInitialStatus: function() {
