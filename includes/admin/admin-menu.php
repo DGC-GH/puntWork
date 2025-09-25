@@ -24,4 +24,14 @@ add_action('admin_menu', function() {
         __NAMESPACE__ . '\\job_import_admin_page',
         1
     );
+
+    add_submenu_page(
+        'edit.php?post_type=job',
+        'Jobs Dashboard',
+        'Jobs',
+        'manage_options',
+        'jobs-dashboard',
+        __NAMESPACE__ . '\\jobs_dashboard_page',
+        1
+    );
 });

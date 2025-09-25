@@ -144,13 +144,9 @@
          * Handle import completion and cleanup
          */
         handleImportCompletion: async function() {
-            JobImportUI.appendLogs(['Import complete, starting purge...']);
+            JobImportUI.appendLogs(['Import complete']);
 
             try {
-                const purgeResponse = await JobImportAPI.purgeImport();
-                PuntWorkJSLogger.debug('Purge response', 'LOGIC', purgeResponse);
-                JobImportUI.appendLogs(['Purge completed']);
-
                 // Small delay to ensure database is updated
                 await new Promise(resolve => setTimeout(resolve, 500));
 
