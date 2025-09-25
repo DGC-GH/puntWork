@@ -81,17 +81,17 @@ function render_main_import_ui() {
         <div id="import-progress" style="max-width: 800px; margin: 0 auto; margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                 <h2 style="font-size: 20px; font-weight: 600; margin: 0;">Import Progress</h2>
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <span id="progress-percent" style="font-size: 24px; font-weight: 600; color: #007aff;">0%</span>
-                    <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                        <span id="time-elapsed" style="font-size: 14px; color: #8e8e93;">0s</span>
-                        <span id="time-left" style="font-size: 12px; color: #8e8e93;">Calculating...</span>
-                    </div>
-                </div>
+                <span id="progress-percent" style="font-size: 24px; font-weight: 600; color: #007aff;">0%</span>
             </div>
 
             <!-- Progress Bar -->
-            <div id="progress-bar" style="width: 100%; height: 6px; border-radius: 3px; background-color: #f2f2f7; display: flex; margin-bottom: 24px; overflow: hidden;"></div>
+            <div id="progress-bar" style="width: 100%; height: 6px; border-radius: 3px; background-color: #f2f2f7; display: flex; margin-bottom: 16px; overflow: hidden;"></div>
+
+            <!-- Time Counters -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; font-size: 14px; color: #8e8e93;">
+                <span>Elapsed: <span id="time-elapsed" style="font-weight: 500;">0s</span></span>
+                <span>Remaining: <span id="time-left" style="font-weight: 500;">Calculating...</span></span>
+            </div>
 
             <!-- Statistics Grid -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; margin-bottom: 16px;">
