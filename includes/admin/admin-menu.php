@@ -20,7 +20,7 @@ add_action('admin_menu', function() {
         '.work',
         'manage_options',
         'puntwork-dashboard',
-        null,
+        __NAMESPACE__ . '\\job_import_admin_page',
         home_url('/favicon.ico'),
         0
     );
