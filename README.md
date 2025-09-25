@@ -57,12 +57,62 @@ Endpoint: `GET {site_url}/wp-json/wp/v2/types`
 ### Key Components
 - **Admin Interface**: Admin menus, pages, and UI components
 - **API Handlers**: AJAX endpoints for import control and processing
+- **REST API**: Remote import triggering and status monitoring
 - **Batch Processing**: Large-scale data import with size management
 - **Scheduling**: Cron-based automated imports
 - **Mappings**: Field mappings for job data transformation
 - **Utilities**: Helper functions and data cleaning tools
 
-## Development Guidelines
+## REST API
+
+### Overview
+The plugin provides REST API endpoints for remote import triggering and status monitoring. All endpoints require authentication via API key.
+
+### Authentication
+- **API Key**: Generated automatically and stored in WordPress options
+- **Location**: Admin > puntWork > API Settings
+- **Security**: Keep API key secure and use HTTPS for all requests
+
+### Endpoints
+
+#### Trigger Import
+- **Method**: POST
+- **Endpoint**: `/wp-json/puntwork/v1/trigger-import`
+- **Parameters**:
+  - `api_key` (required): Your API key
+  - `force` (optional): Force import even if one is running (default: false)
+  - `test_mode` (optional): Run in test mode without creating posts (default: false)
+
+#### Get Import Status
+- **Method**: GET
+- **Endpoint**: `/wp-json/puntwork/v1/import-status`
+- **Parameters**:
+  - `api_key` (required): Your API key
+
+### Usage Examples
+
+#### cURL Examples
+```bash
+# Trigger import
+curl -X POST "https://yoursite.com/wp-json/puntwork/v1/trigger-import" \
+  -d "api_key=YOUR_API_KEY" \
+  -d "force=false" \
+  -d "test_mode=false"
+
+# Get status
+curl "https://yoursite.com/wp-json/puntwork/v1/import-status?api_key=YOUR_API_KEY"
+```
+
+### Security Features
+- API key authentication required
+- Rate limiting implemented
+- All requests logged for monitoring
+- HTTPS recommended for all API calls
+
+### Error Handling
+- Returns appropriate HTTP status codes
+- Detailed error messages in JSON response
+- Import conflicts handled with force parameter
 
 ### Code Standards
 - Follow WordPress coding standards
@@ -107,5 +157,6 @@ This document preserves critical knowledge across "Grok Code Fast 1" sessions to
 
 ---
 
-*Last Updated: September 25, 2025*
+*Last Updated: September 26, 2025*
+*Version: 1.0.7*
 *Verified: REST API check on live site confirmed post types exist*
