@@ -1,14 +1,6 @@
 <?php
 /**
- * Admi    add_menu_page(
-        'puntWork Dashboard',
-        '.work',
-        'manage_options',
-        'puntwork-dashboard',
-        __NAMESPACE__ . '\\puntwork_dashboard_page',
-        PUNTWORK_URL . 'assets/images/icon.svg',
-        0
-    );tup for job import plugin
+ * Admin menu setup for job import plugin
  *
  * @package    Puntwork
  * @subpackage Admin
@@ -29,7 +21,7 @@ add_action('admin_menu', function() {
         'manage_options',
         'puntwork-dashboard',
         __NAMESPACE__ . '\\puntwork_dashboard_page',
-        PUNTWORK_URL . 'assets/images/logo-icon.svg',
+        PUNTWORK_URL . 'assets/images/icon.svg',
         0
     );
 
