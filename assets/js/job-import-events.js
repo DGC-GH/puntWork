@@ -407,7 +407,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         }
 
                         // Check if import completed
-                        if (statusData.complete && statusData.total > 0 && statusData.processed >= statusData.total) {
+                        if (statusData.complete && statusData.total > 0 && (statusData.processed >= statusData.total || statusData.complete)) {
                             this.completeDetectedCount++;
                             console.log('[PUNTWORK] Polled import completed - total:', statusData.total, 'processed:', statusData.processed, 'detection count:', this.completeDetectedCount);
                             PuntWorkJSLogger.info('Import completed via polling', 'EVENTS', {

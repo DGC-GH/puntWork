@@ -203,7 +203,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             // Update success/failure state - only set to true when actually complete
             if (data.success !== null) {
                 // Only set importSuccess to true when the import is actually complete
-                if (data.success === true && processed >= total && total > 0) {
+                if ((data.success === true && processed >= total && total > 0) || data.complete === true) {
                     this.importSuccess = true;
                 } else if (data.success === false) {
                     this.importSuccess = false;
@@ -250,7 +250,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             } else if (this.currentPhase === 'job-importing') {
                 // Job importing phase: 0-100% for this phase only
                 if (total > 0) {
-                    if (processed >= total && data.success === true) {
+                    if ((processed >= total && data.success === true) || data.complete === true) {
                         percent = 100;
                         this.setPhase('complete');
                         this.importSuccess = true; // Set success when import completes
@@ -281,7 +281,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             percent = Math.max(0, Math.min(100, percent));
 
             // For successful completion, ensure we show 100%
-            if (data.success === true && processed >= total && total > 0) {
+            if ((data.success === true && processed >= total && total > 0) || data.complete === true) {
                 percent = 100;
             }
 
@@ -375,7 +375,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 // Update status message based on completion
                 if (this.importSuccess === false) {
                     $('#status-message').text('Import Failed: ' + (this.errorMessage || 'Unknown error'));
-                } else if (processed >= total && total > 0 && data.success === true) {
+                } else if ((processed >= total && total > 0 && data.success === true) || data.complete === true) {
                     $('#status-message').text('Import Complete - 100%');
                 } else {
                     $('#status-message').text(`Importing... - ${percent}%`);
