@@ -71,6 +71,7 @@ function cancel_job_import_ajax() {
     set_transient('import_cancel', true, 3600);
     // Also clear the import status to reset the UI
     delete_option('job_import_status');
+    delete_option('job_import_batch_size');
     PuntWorkLogger::info('Import cancelled and status cleared', PuntWorkLogger::CONTEXT_BATCH);
 
     PuntWorkLogger::logAjaxResponse('cancel_job_import', ['message' => 'Import cancelled']);
@@ -116,6 +117,7 @@ function reset_job_import_ajax() {
     delete_option('job_import_processed_guids');
     delete_option('job_import_last_batch_time');
     delete_option('job_import_last_batch_processed');
+    delete_option('job_import_batch_size');
     delete_transient('import_cancel');
 
     PuntWorkLogger::info('Import system completely reset', PuntWorkLogger::CONTEXT_BATCH);
@@ -185,6 +187,7 @@ function get_job_import_status_ajax() {
             delete_option('job_import_processed_guids');
             delete_option('job_import_last_batch_time');
             delete_option('job_import_last_batch_processed');
+            delete_option('job_import_batch_size');
             delete_transient('import_cancel');
             
             // Return fresh status
