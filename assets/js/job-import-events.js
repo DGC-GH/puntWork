@@ -396,8 +396,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             }
                         }
 
-                        // Only update UI if there's actual progress data and import is not complete
-                        if (statusData.total > 0 && !statusData.complete) {
+                        // Update UI with progress data (including final completion status)
+                        if (statusData.total > 0) {
                             console.log('[PUNTWORK] Updating progress with polling data:', statusData);
                             JobImportUI.updateProgress(statusData);
                             JobImportUI.appendLogs(statusData.logs || []);
@@ -418,6 +418,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             
                             // Continue polling for a few more polls to ensure we get final status updates
                             if (this.completeDetectedCount >= this.maxCompletePolls) {
+                                // Do one final progress update to ensure completion is displayed
+                                JobImportUI.updateProgress(statusData);
                                 JobImportEvents.stopStatusPolling();
                                 JobImportUI.resetButtons();
                                 $('#status-message').text('Import Complete');
