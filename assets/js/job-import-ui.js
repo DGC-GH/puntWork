@@ -488,7 +488,22 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 return;
             }
 
-            // Job importing phase - use overall progress rate for better accuracy
+            // Use PHP-calculated estimated time remaining if available (most accurate)
+            if (data.estimated_time_remaining !== undefined && data.estimated_time_remaining > 0) {
+                var estimatedSeconds = data.estimated_time_remaining;
+
+                // Sanity check - don't show ridiculous estimates
+                if (estimatedSeconds > 86400) { // More than 24 hours
+                    $('#time-left').text('>24h');
+                } else if (estimatedSeconds < 0) {
+                    $('#time-left').text('Calculating...');
+                } else {
+                    $('#time-left').text(this.formatTime(estimatedSeconds));
+                }
+                return;
+            }
+
+            // Fallback: Job importing phase - use overall progress rate for better accuracy
             if (processed > 0 && elapsedTime > 0 && itemsLeft > 0) {
                 // Calculate time per item based on overall progress so far
                 var overallTimePerItem = elapsedTime / processed;
@@ -573,7 +588,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 $('#time-left').text(this.formatTime(estimatedSeconds));
             }
 
-            PuntWorkJSLogger.debug('Time calculation', 'UI', {
+            PuntWorkJSLogger.debug('Time calculation fallback', 'UI', {
                 phase: this.currentPhase,
                 total: total,
                 processed: processed,
