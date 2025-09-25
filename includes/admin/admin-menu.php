@@ -22,7 +22,7 @@ add_action('admin_menu', function() {
         'puntwork-dashboard',
         null,
         home_url('/favicon.ico'),
-        2
+        0
     );
 
     add_submenu_page(
