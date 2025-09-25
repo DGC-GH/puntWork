@@ -97,6 +97,7 @@ function cleanup_import_data() {
     delete_option('job_import_avg_time_per_job');
     delete_option('job_import_last_peak_memory');
     delete_option('job_import_batch_size');
+    delete_option('job_import_consecutive_small_batches');
 
     // Clean up batch timing data
     delete_option('job_import_last_batch_time');
