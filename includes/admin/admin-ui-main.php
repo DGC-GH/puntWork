@@ -161,7 +161,7 @@ function render_main_import_ui() {
                             <div style="font-size: 11px; opacity: 0.8;">drafted</div>
                         </div>
                         <div style="text-align: right;">
-                            <div style="font-size: 14px; font-weight: 600; margin-bottom: 2px; opacity: 0.7;">⚠️</div>
+                            <div style="font-size: 14px; font-weight: 600; margin-bottom: 2px; opacity: 0.7;"><i class="fas fa-exclamation-triangle"></i></div>
                             <div style="font-size: 11px; opacity: 0.8;">needs review</div>
                         </div>
                     </div>
