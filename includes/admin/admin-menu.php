@@ -21,7 +21,7 @@ add_action('admin_menu', function() {
         'manage_options',
         'puntwork-dashboard',
         null,
-        PUNTWORK_URL . 'favicon.ico',
+        home_url('/favicon.ico'),
         2
     );
 
