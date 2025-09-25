@@ -1,6 +1,6 @@
 <?php
 /**
- * Batch import processing
+ * Batch import processing with timeout protection
  *
  * @package    Puntwork
  * @subpackage Import
@@ -30,6 +30,61 @@ require_once __DIR__ . '/../batch/batch-processing.php';
 
 // Include import finalization
 require_once __DIR__ . '/import-finalization.php';
+
+/**
+ * Check if the current import process has exceeded time limits
+ * Similar to WooCommerce's time_exceeded() method
+ *
+ * @return bool True if time limit exceeded
+ */
+function import_time_exceeded() {
+    $start_time = get_option('job_import_start_time', microtime(true));
+    $time_limit = apply_filters('puntwork_import_time_limit', 20); // 20 seconds default, same as WooCommerce
+    $current_time = microtime(true);
+
+    if (($current_time - $start_time) >= $time_limit) {
+        return true;
+    }
+
+    return apply_filters('puntwork_import_time_exceeded', false);
+}
+
+/**
+ * Check if the current import process has exceeded memory limits
+ * Similar to WooCommerce's memory_exceeded() method
+ *
+ * @return bool True if memory limit exceeded
+ */
+function import_memory_exceeded() {
+    $memory_limit = get_memory_limit_bytes() * 0.9; // 90% of max memory
+    $current_memory = memory_get_usage(true);
+
+    if ($current_memory >= $memory_limit) {
+        return true;
+    }
+
+    return apply_filters('puntwork_import_memory_exceeded', false);
+}
+
+/**
+ * Check if batch processing should continue
+ * Returns false if time or memory limits exceeded
+ *
+ * @return bool True if processing should continue
+ */
+function should_continue_batch_processing() {
+    if (import_time_exceeded()) {
+        error_log('[PUNTWORK] Import time limit exceeded - pausing batch processing');
+        return false;
+    }
+
+    if (import_memory_exceeded()) {
+        error_log('[PUNTWORK] Import memory limit exceeded - pausing batch processing');
+        return false;
+    }
+
+    return true;
+}
 
 if (!function_exists('import_jobs_from_json')) {
     /**
@@ -113,7 +168,41 @@ if (!function_exists('import_all_jobs_from_json')) {
             update_option('job_import_status', $existing_status, false);
         }
 
+        // Store import start time for timeout checking
+        update_option('job_import_start_time', $start_time, false);
+
         while (true) {
+            // Check if we should continue processing (time/memory limits)
+            if (!should_continue_batch_processing()) {
+                // Pause processing and schedule continuation
+                $current_status = get_option('job_import_status', []);
+                $current_status['paused'] = true;
+                $current_status['pause_reason'] = 'time_limit_exceeded';
+                $current_status['last_update'] = time();
+                $current_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Import paused due to time/memory limits - will continue automatically';
+                update_option('job_import_status', $current_status, false);
+
+                // Schedule continuation via WordPress cron (runs in background)
+                if (!wp_next_scheduled('puntwork_continue_import')) {
+                    wp_schedule_single_event(time() + 30, 'puntwork_continue_import'); // Continue in 30 seconds
+                    error_log('[PUNTWORK] Scheduled import continuation in 30 seconds');
+                }
+
+                return [
+                    'success' => true,
+                    'processed' => $total_processed,
+                    'total' => $total_items,
+                    'published' => $total_published,
+                    'updated' => $total_updated,
+                    'skipped' => $total_skipped,
+                    'duplicates_drafted' => $total_duplicates_drafted,
+                    'time_elapsed' => microtime(true) - $start_time,
+                    'complete' => false,
+                    'paused' => true,
+                    'message' => 'Import paused due to time limits - will continue automatically in background'
+                ];
+            }
+
             $batch_start = (int) get_option('job_import_progress', 0);
 
             // Prepare setup for this batch
@@ -272,3 +361,39 @@ if (!function_exists('import_all_jobs_from_json')) {
         return finalize_batch_import($final_result);
     }
 }
+
+/**
+ * Continue a paused import process
+ * Called by WordPress cron when import needs to resume after timeout
+ */
+function continue_paused_import() {
+    error_log('[PUNTWORK] Continuing paused import process');
+
+    // Check if import is actually paused
+    $status = get_option('job_import_status', []);
+    if (!isset($status['paused']) || !$status['paused']) {
+        error_log('[PUNTWORK] No paused import found - skipping continuation');
+        return;
+    }
+
+    // Reset pause status
+    $status['paused'] = false;
+    unset($status['pause_reason']);
+    $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Resuming paused import';
+    update_option('job_import_status', $status, false);
+
+    // Reset start time for new timeout window
+    update_option('job_import_start_time', microtime(true), false);
+
+    // Continue the import
+    $result = import_all_jobs_from_json(true); // preserve status
+
+    if ($result['success']) {
+        error_log('[PUNTWORK] Paused import continuation completed successfully');
+    } else {
+        error_log('[PUNTWORK] Paused import continuation failed: ' . ($result['message'] ?? 'Unknown error'));
+    }
+}
+
+// Register the continuation hook
+add_action('puntwork_continue_import', __NAMESPACE__ . '\\continue_paused_import');

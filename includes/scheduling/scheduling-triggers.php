@@ -32,17 +32,29 @@ add_action('fetch_combined_jobs_json', __NAMESPACE__ . '\\fetch_and_generate_com
 // Register the scheduled import hook
 add_action('puntwork_scheduled_import', function() {
     error_log('[PUNTWORK] Scheduled import cron triggered');
-    
-    // Check if an import is already running
+
+    // Check if an import is already running or paused
     $import_status = get_option('job_import_status', []);
-    if (isset($import_status['complete']) && !$import_status['complete']) {
+    if (isset($import_status['complete']) && !$import_status['complete'] && !isset($import_status['paused'])) {
         error_log('[PUNTWORK] Scheduled import cron skipped - import already running');
         return;
     }
 
+    // If import is paused, continue it instead of starting new
+    if (isset($import_status['paused']) && $import_status['paused']) {
+        error_log('[PUNTWORK] Scheduled import cron continuing paused import');
+        try {
+            \Puntwork\continue_paused_import();
+            return;
+        } catch (\Exception $e) {
+            error_log('[PUNTWORK] Failed to continue paused import: ' . $e->getMessage());
+            return;
+        }
+    }
+
     try {
         $result = \Puntwork\run_scheduled_import();
-        
+
         if ($result['success']) {
             error_log('[PUNTWORK] Scheduled import cron completed successfully');
         } else {
