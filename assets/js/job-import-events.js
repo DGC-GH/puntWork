@@ -231,10 +231,11 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     JobImportUI.updateProgress(statusData);
                     JobImportUI.appendLogs(statusData.logs || []);
                     
-                    // Check if import appears to be currently running (updated within last 60 seconds)
+                    // Check if import appears to be currently running (updated within last 5 minutes)
+                    // This aligns with the PHP stuck import detection threshold
                     var currentTime = Math.floor(Date.now() / 1000);
                     var timeSinceLastUpdate = currentTime - (statusData.last_update || 0);
-                    var isRecentlyActive = timeSinceLastUpdate < 60;
+                    var isRecentlyActive = timeSinceLastUpdate < 300; // 5 minutes
                     
                     if (isRecentlyActive && statusData.processed > 0) {
                         // Import appears to be currently running - show progress UI with cancel and reset
