@@ -1,25 +1,6 @@
 <?php
 /**
- * AJAX handlers for scheduli    // Check if our hook is registered
-    if (has_action('puntwork_scheduled_import_async')) {
-        err    // Add formatted date to last run if it exists
-    if ($last_run && isset($last_run['timestamp'])) {
-        // Convert legacy timestamps (stored as local time) to UTC for wp_date()
-        $timestamp = $last_run['timestamp'];
-        $current_utc = time();
-        $timezone_offset = wp_timezone()->getOffset(new DateTime('@' . $current_utc));
-        
-        // If stored timestamp is in the future (indicating local time storage), convert back to UTC
-        if ($timestamp > $current_utc) {
-            $timestamp = $timestamp - $timezone_offset;
-        }
-        
-        $last_run['formatted_date'] = wp_date('M j, Y g:i A', $timestamp);
-    }K] puntwork_scheduled_import_async hook is registered');
-    } else {
-        error_log('[PUNTWORK] puntwork_scheduled_import_async hook is NOT registered');
-    }ctionality
- * Handles all AJAX requests related to scheduling operations
+ * AJAX handlers for scheduling operations
  *
  * @package    Puntwork
  * @subpackage Scheduling
@@ -160,7 +141,7 @@ function get_import_schedule_ajax() {
     // Add formatted date to last run if it exists
     if ($last_run && isset($last_run['timestamp'])) {
         // Timestamps are now stored in UTC using time(), wp_date() handles timezone conversion
-        $last_run['formatted_date'] = wp_date('M j, Y g:i A', $last_run['timestamp']);
+        $last_run['formatted_date'] = wp_date('M j, Y H:i', $last_run['timestamp']);
     }
 
     wp_send_json_success([
@@ -187,7 +168,7 @@ function get_import_run_history_ajax() {
     // Format dates for history entries - timestamps are stored in UTC
     foreach ($history as &$entry) {
         if (isset($entry['timestamp'])) {
-            $entry['formatted_date'] = wp_date('M j, Y g:i A', $entry['timestamp']);
+            $entry['formatted_date'] = wp_date('M j, Y H:i', $entry['timestamp']);
         }
     }
 
