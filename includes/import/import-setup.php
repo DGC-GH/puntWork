@@ -35,7 +35,9 @@ function prepare_import_setup($batch_start = 0) {
     $acf_fields = get_acf_fields();
     $zero_empty_fields = get_zero_empty_fields();
 
-    define('WP_IMPORTING', true);
+    if (!defined('WP_IMPORTING')) {
+        define('WP_IMPORTING', true);
+    }
     wp_suspend_cache_invalidation(true);
     remove_action('post_updated', 'wp_save_post_revision');
 
