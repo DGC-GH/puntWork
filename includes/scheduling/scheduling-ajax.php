@@ -305,6 +305,10 @@ function run_scheduled_import_async() {
     error_log('[PUNTWORK] Current time: ' . date('Y-m-d H:i:s'));
     error_log('[PUNTWORK] Function called with arguments: ' . print_r(func_get_args(), true));
 
+    // Clear any previous cancellation before starting
+    delete_transient('import_cancel');
+    error_log('[PUNTWORK] Cleared import_cancel transient');
+
     // Check if an import is already running
     $import_status = get_option('job_import_status', []);
     error_log('[PUNTWORK] Current import status: ' . print_r($import_status, true));
