@@ -143,7 +143,7 @@ function render_main_import_ui() {
                             <div style="font-size: 11px; opacity: 0.8;">already current</div>
                         </div>
                         <div style="text-align: right;">
-                            <div style="font-size: 14px; font-weight: 600; margin-bottom: 2px; opacity: 0.7;">✓</div>
+                            <div style="font-size: 14px; font-weight: 600; margin-bottom: 2px; opacity: 0.7;"><i class="fas fa-check"></i></div>
                             <div style="font-size: 11px; opacity: 0.8;">no changes</div>
                         </div>
                     </div>
