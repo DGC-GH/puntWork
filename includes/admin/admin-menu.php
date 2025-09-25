@@ -27,7 +27,7 @@ add_action('admin_menu', function() {
 
     add_submenu_page(
         'puntwork-dashboard',
-        'Job Import Dashboard',
+        'Feeds Dashboard',
         'Feeds',
         'manage_options',
         'job-feed-dashboard',

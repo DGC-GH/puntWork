@@ -37,7 +37,6 @@ function finalize_batch_import($result) {
         'updated' => 0,
         'skipped' => 0,
         'duplicates_drafted' => 0,
-        'drafted_old' => 0,
         'time_elapsed' => 0,
         'complete' => false,
         'batch_size' => $result['batch_size'],
@@ -59,7 +58,6 @@ function finalize_batch_import($result) {
     $status['updated'] += $result['updated'];
     $status['skipped'] += $result['skipped'];
     $status['duplicates_drafted'] += $result['duplicates_drafted'];
-    $status['drafted_old'] += $result['drafted_old'];
 
     // Calculate total elapsed time from start to now
     $current_time = microtime(true);
@@ -120,7 +118,6 @@ function get_import_status_summary() {
         'updated' => $status['updated'] ?? 0,
         'skipped' => $status['skipped'] ?? 0,
         'duplicates_drafted' => $status['duplicates_drafted'] ?? 0,
-        'drafted_old' => $status['drafted_old'] ?? 0,
         'complete' => $status['complete'] ?? false,
         'progress_percentage' => $status['total'] > 0 ? round(($status['processed'] / $status['total']) * 100, 2) : 0,
         'time_elapsed' => $status['time_elapsed'] ?? 0,

@@ -59,7 +59,6 @@ function process_batch_items_logic($setup) {
     $updated = 0;
     $skipped = 0;
     $duplicates_drafted = 0;
-    $drafted_old = 0;
     $inferred_languages = 0;
     $inferred_benefits = 0;
     $schema_generated = 0;
@@ -133,7 +132,6 @@ function process_batch_items_logic($setup) {
                 'updated' => $updated,
                 'skipped' => $skipped,
                 'duplicates_drafted' => $duplicates_drafted,
-                'drafted_old' => $drafted_old,
                 'time_elapsed' => $time_elapsed,
                 'complete' => ($end_index >= $total),
                 'logs' => $logs,
@@ -172,7 +170,6 @@ function process_batch_items_logic($setup) {
             'updated' => $updated,
             'skipped' => $skipped,
             'duplicates_drafted' => $duplicates_drafted,
-            'drafted_old' => $drafted_old,
             'time_elapsed' => $time_elapsed,
             'complete' => ($end_index >= $total),
             'logs' => $logs,
