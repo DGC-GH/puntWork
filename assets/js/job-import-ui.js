@@ -625,7 +625,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             $('#cancel-import').hide();
             $('#resume-import').hide();
             $('#reset-import').hide();
-            $('#start-import').show();
+            $('#start-import').show().text('Start Import').prop('disabled', false);
         },
 
         /**
