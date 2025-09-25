@@ -232,12 +232,20 @@ function run_scheduled_import_ajax() {
     // Check if an import is already running
     $import_status = get_option('job_import_status', []);
     if (isset($import_status['complete']) && !$import_status['complete']) {
+        // Calculate actual time elapsed
+        $time_elapsed = 0;
+        if (isset($import_status['start_time']) && $import_status['start_time'] > 0) {
+            $time_elapsed = microtime(true) - $import_status['start_time'];
+        } elseif (isset($import_status['time_elapsed'])) {
+            $time_elapsed = $import_status['time_elapsed'];
+        }
+        
         // Check if it's a stuck import (processed = 0 and old)
         $is_stuck = (!isset($import_status['processed']) || $import_status['processed'] == 0) &&
-                   (isset($import_status['time_elapsed']) && $import_status['time_elapsed'] > 300); // 5 minutes
+                   ($time_elapsed > 300); // 5 minutes
         
         if ($is_stuck) {
-            error_log('[PUNTWORK] Detected stuck import, clearing status for new run');
+            error_log('[PUNTWORK] Detected stuck import (processed: ' . ($import_status['processed'] ?? 'null') . ', time_elapsed: ' . $time_elapsed . '), clearing status for new run');
             delete_option('job_import_status');
             delete_transient('import_cancel');
         } else {
