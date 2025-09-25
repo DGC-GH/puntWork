@@ -103,58 +103,58 @@ function enqueue_job_import_scripts() {
         // Enqueue JavaScript modules
         wp_enqueue_script(
             'puntwork-logger-js',
-            JOB_IMPORT_URL . 'assets/puntwork-logger.js',
+            PUNTWORK_URL . 'assets/puntwork-logger.js',
             ['jquery'],
-            JOB_IMPORT_VERSION,
+            PUNTWORK_VERSION,
             true
         );
 
         wp_enqueue_script(
             'job-import-ui-js',
-            JOB_IMPORT_URL . 'assets/job-import-ui.js',
+            PUNTWORK_URL . 'assets/job-import-ui.js',
             ['jquery', 'puntwork-logger-js'],
-            JOB_IMPORT_VERSION,
+            PUNTWORK_VERSION,
             true
         );
 
         wp_enqueue_script(
             'job-import-api-js',
-            JOB_IMPORT_URL . 'assets/job-import-api.js',
+            PUNTWORK_URL . 'assets/job-import-api.js',
             ['jquery', 'puntwork-logger-js'],
-            JOB_IMPORT_VERSION,
+            PUNTWORK_VERSION,
             true
         );
 
         wp_enqueue_script(
             'job-import-logic-js',
-            JOB_IMPORT_URL . 'assets/job-import-logic.js',
+            PUNTWORK_URL . 'assets/job-import-logic.js',
             ['jquery', 'job-import-api-js', 'puntwork-logger-js'],
-            JOB_IMPORT_VERSION,
+            PUNTWORK_VERSION,
             true
         );
 
         wp_enqueue_script(
             'job-import-events-js',
-            JOB_IMPORT_URL . 'assets/job-import-events.js',
+            PUNTWORK_URL . 'assets/job-import-events.js',
             ['jquery', 'puntwork-logger-js', 'job-import-ui-js', 'job-import-api-js', 'job-import-logic-js'],
-            JOB_IMPORT_VERSION,
+            PUNTWORK_VERSION,
             true
         );
 
         wp_enqueue_script(
             'job-import-scheduling-js',
-            JOB_IMPORT_URL . 'assets/job-import-scheduling.js',
+            PUNTWORK_URL . 'assets/job-import-scheduling.js',
             ['jquery', 'puntwork-logger-js', 'job-import-api-js'],
-            JOB_IMPORT_VERSION,
+            PUNTWORK_VERSION,
             true
         );
 
         // Enqueue the main JavaScript file
         wp_enqueue_script(
             'job-import-admin-js',
-            JOB_IMPORT_URL . 'assets/job-import-admin.js',
+            PUNTWORK_URL . 'assets/job-import-admin.js',
             ['jquery', 'job-import-ui-js', 'job-import-api-js', 'job-import-logic-js', 'job-import-events-js', 'job-import-scheduling-js', 'puntwork-logger-js'],
-            JOB_IMPORT_VERSION,
+            PUNTWORK_VERSION,
             true
         );
 
