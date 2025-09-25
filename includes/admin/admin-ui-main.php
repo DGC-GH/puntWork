@@ -182,8 +182,8 @@ function render_main_import_ui() {
             </div>
 
             <!-- Integrated Log Section -->
-            <div id="integrated-log" class="expanded" style="margin-top: 12px; background-color: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); max-height: 400px; overflow: hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); opacity: 1; transform: translateY(0);">
-                <div style="display: flex; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #f2f2f7;">
+            <div id="integrated-log" class="expanded" style="margin-top: 12px; max-height: 400px; overflow: hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); opacity: 1; transform: translateY(0);">
+                <div style="display: flex; align-items: center; margin-bottom: 16px;">
                     <div style="width: 6px; height: 6px; border-radius: 50%; background-color: #007aff; margin-right: 10px;"></div>
                     <h3 style="font-size: 16px; font-weight: 600; margin: 0; color: #1d1d1f;">Import Details</h3>
                     <div style="margin-left: auto; font-size: 12px; color: #8e8e93;">
