@@ -48,7 +48,7 @@ Endpoint: `GET {site_url}/wp-json/wp/v2/types`
 ## Plugin Architecture
 
 ### File Structure
-- **Main Plugin File**: `job-import.php`
+- **Main Plugin File**: `puntwork.php`
 - **Assets**: JavaScript and CSS files in `/assets/`
 - **Includes**: Core functionality in `/includes/` subdirectories
 - **Scripts**: Additional scripts in `/scripts/`

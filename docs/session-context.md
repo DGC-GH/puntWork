@@ -75,7 +75,7 @@
 - Maintain "vibe coding" approach: fun, iterative, optimal
 
 ## Quick Reference
-- **Main Entry Points**: `job-import.php`, `includes/import-batch.php`
+- **Main Entry Points**: `puntwork.php`, `includes/import-batch.php`
 - **AJAX Handlers**: Split across `ajax-*.php` files in includes/
 - **Mappings**: Split across `mappings-*.php` files
 - **JavaScript**: Modular files in `assets/js/`

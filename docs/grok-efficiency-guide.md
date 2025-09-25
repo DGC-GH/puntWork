@@ -18,7 +18,7 @@ puntWork/
 │   ├── mappings/          # Data mappings (6 files)
 │   ├── scheduling/        # Scheduling system (4 files)
 │   └── utilities/         # Utility functions (9 files)
-└── job-import.php         # Main plugin file
+└── puntwork.php         # Main plugin file
 ```
 
 ## Core Query Template
@@ -107,7 +107,7 @@ Examples:
 - **Utilities**: `includes/utilities/` - Logging, file operations, helper functions
 
 **Key Files to Know:**
-- `job-import.php` - Main plugin loader with updated include paths
+- `puntwork.php` - Main plugin loader with updated include paths
 - `includes/batch/batch-core.php` - Main batch processing logic
 - `includes/scheduling/scheduling-core.php` - Scheduling calculations and cron management
 - `includes/api/ajax-handlers.php` - Primary AJAX endpoint handler
@@ -394,7 +394,7 @@ When asked to "add logging to imports":
 ```
 1. Identify appropriate module from the structure above
 2. Create new file in correct directory
-3. Update job-import.php includes array if needed
+3. Update puntwork.php includes array if needed
 4. Add corresponding JavaScript in assets/ if required
 5. Update documentation in docs/
 ```
@@ -414,7 +414,7 @@ When asked to "add logging to imports":
 - `docs/learning-log.md`: Session improvements
 - `docs/technical-reference.md`: Code patterns
 - `docs/grok-efficiency-guide.md`: **THIS FILE** - Updated structure guide
-- `job-import.php`: Main plugin loader with updated include paths
+- `puntwork.php`: Main plugin loader with updated include paths
 - `includes/batch/batch-core.php`: Main batch processing logic
 - `includes/scheduling/scheduling-core.php`: Scheduling calculations and cron management
 - `includes/api/ajax-handlers.php`: Primary AJAX endpoint handler
@@ -429,7 +429,7 @@ composer test
 find includes -name "*.php" | head -10
 
 # Validate includes are loading
-grep -r "require_once" job-import.php
+grep -r "require_once" puntwork.php
 
 # Check JavaScript dependencies
 grep -r "wp_enqueue_script" includes/core/enqueue-scripts-js.php
@@ -472,7 +472,7 @@ This guide evolves with each session. Update patterns that work well and note im
 - ✅ **Documentation**: Moved from `notes/` to `docs/`
 - ✅ **JavaScript**: Moved from `assets/js/` to `assets/`
 - ✅ **PHP Modules**: Organized into 8 focused directories
-- ✅ **Include Paths**: Updated in `job-import.php` for new structure
+- ✅ **Include Paths**: Updated in `puntwork.php` for new structure
 
 ### **Key Benefits:**
 - **80% Faster** file location and context understanding

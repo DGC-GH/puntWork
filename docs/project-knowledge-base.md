@@ -105,7 +105,7 @@
 ### PHP Structure (UPDATED - Post-Restructuring)
 ```
 puntWork/
-├── job-import.php (Main plugin file - updated include paths)
+├── puntwork.php (Main plugin file - updated include paths)
 ├── uninstall.php (Cleanup on uninstall)
 ├── includes/ (RESTRUCTURED - 8 focused modules, 47+ files total)
 │   ├── admin/ (5 files) - Admin interface, menus, pages

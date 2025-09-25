@@ -137,6 +137,13 @@ function setup_job_import() {
     }
 }
 
+// Add custom favicon
+add_action( 'wp_head', __NAMESPACE__ . '\\add_custom_favicon' );
+function add_custom_favicon() {
+    $favicon_url = PUNTWORK_URL . 'assets/images/icon.svg';
+    echo '<link rel="icon" type="image/svg+xml" href="' . esc_url( $favicon_url ) . '">' . "\n";
+}
+
 // Uninstall hook (cleanup)
 register_uninstall_hook( __FILE__, __NAMESPACE__ . '\\job_import_uninstall' );
 function job_import_uninstall() {
