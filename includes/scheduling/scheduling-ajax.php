@@ -312,6 +312,10 @@ function run_scheduled_import_async() {
 
     error_log('[PUNTWORK] Starting actual import process...');
 
+    // Clear import_cancel transient again just before starting the import
+    delete_transient('import_cancel');
+    error_log('[PUNTWORK] Cleared import_cancel transient again before import');
+
     try {
         $result = run_scheduled_import();
         error_log('[PUNTWORK] Import result: ' . print_r($result, true));
