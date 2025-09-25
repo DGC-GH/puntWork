@@ -341,6 +341,10 @@ if (!function_exists('import_all_jobs_from_json')) {
             'last_update' => time(),
             'logs' => array_slice($all_logs, -50),
         ]);
+        // When complete, ensure processed equals total
+        if ($final_status['complete'] && $final_status['processed'] < $final_status['total']) {
+            $final_status['processed'] = $final_status['total'];
+        }
         update_option('job_import_status', $final_status, false);
         error_log('[PUNTWORK] Final import status updated: ' . json_encode([
             'total' => $total_items,
