@@ -99,6 +99,29 @@ function prepare_import_setup($batch_start = 0) {
         delete_option('job_import_status');
         $start_time = microtime(true);
         PuntWorkLogger::info('Fresh import start - resetting status and progress to 0', PuntWorkLogger::CONTEXT_BATCH);
+
+        // Initialize status for manual import
+        $initial_status = [
+            'total' => $total,
+            'processed' => 0,
+            'published' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'duplicates_drafted' => 0,
+            'time_elapsed' => 0,
+            'complete' => false,
+            'success' => false,
+            'error_message' => '',
+            'batch_size' => get_option('job_import_batch_size') ?: 5,
+            'inferred_languages' => 0,
+            'inferred_benefits' => 0,
+            'schema_generated' => 0,
+            'start_time' => $start_time,
+            'end_time' => null,
+            'last_update' => time(),
+            'logs' => ['Manual import started - preparing to process items...'],
+        ];
+        update_option('job_import_status', $initial_status, false);
     }
 
     if ($start_index >= $total) {
