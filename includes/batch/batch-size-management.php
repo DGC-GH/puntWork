@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @param float $last_memory_ratio Last memory ratio.
  * @param float $prev_time_per_item Previous time per item.
  * @param float $avg_time_per_item Average time per item.
- * @return int Adjusted batch size.
+ * @return array Array with 'batch_size' and 'reason' keys.
  */
 function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $prev_time_per_item, $avg_time_per_item) {
     $old_batch_size = $batch_size;
@@ -111,6 +111,29 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
             $reason = 'minimum batch size recovery attempt';
         }
 
+        // Add detailed log message for user-visible logs
+        $detailed_reason = '';
+        if ($last_memory_ratio > 0.85) {
+            $detailed_reason = 'high memory usage detected';
+        } elseif ($last_memory_ratio > 0.75) {
+            $detailed_reason = 'moderate memory usage detected';
+        } elseif ($last_memory_ratio < 0.4) {
+            $detailed_reason = 'low memory usage allows larger batches';
+        } elseif ($prev_time_per_item > 0 && $avg_time_per_item > 0) {
+            $time_ratio = $avg_time_per_item / $prev_time_per_item;
+            if ($time_ratio > 1.5) {
+                $detailed_reason = 'processing speed slowing down';
+            } elseif ($time_ratio < 0.7) {
+                $detailed_reason = 'processing speed improving';
+            }
+        }
+
+        if (empty($detailed_reason) && $batch_size === 1) {
+            $detailed_reason = 'attempting recovery from minimum batch size';
+        } elseif (empty($detailed_reason) && $batch_size === 2) {
+            $detailed_reason = 'attempting recovery from small batch size';
+        }
+
         error_log(sprintf(
             '[PUNTWORK] Batch size adjusted from %d to %d due to %s (memory: %.2f, avg_time: %.3f)',
             $old_batch_size,
@@ -119,9 +142,12 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
             $last_memory_ratio,
             $avg_time_per_item
         ));
+
+        // Return detailed reason for user logs
+        return ['batch_size' => $batch_size, 'reason' => $detailed_reason];
     }
 
-    return $batch_size;
+    return ['batch_size' => $batch_size, 'reason' => ''];
 }
 
 /**
