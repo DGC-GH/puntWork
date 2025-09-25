@@ -15,6 +15,40 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+// Register custom cron intervals
+add_filter('cron_schedules', function($schedules) {
+    $schedules['puntwork_hourly'] = [
+        'interval' => HOUR_IN_SECONDS,
+        'display' => __('Every Hour (Puntwork)', 'puntwork')
+    ];
+    $schedules['puntwork_3hours'] = [
+        'interval' => 3 * HOUR_IN_SECONDS,
+        'display' => __('Every 3 Hours (Puntwork)', 'puntwork')
+    ];
+    $schedules['puntwork_6hours'] = [
+        'interval' => 6 * HOUR_IN_SECONDS,
+        'display' => __('Every 6 Hours (Puntwork)', 'puntwork')
+    ];
+    $schedules['puntwork_12hours'] = [
+        'interval' => 12 * HOUR_IN_SECONDS,
+        'display' => __('Every 12 Hours (Puntwork)', 'puntwork')
+    ];
+    $schedules['puntwork_5min'] = [
+        'interval' => 5 * MINUTE_IN_SECONDS,
+        'display' => __('Every 5 Minutes (Puntwork)', 'puntwork')
+    ];
+
+    // Add custom intervals
+    for ($i = 2; $i <= 24; $i++) {
+        $schedules['puntwork_' . $i . 'hours'] = [
+            'interval' => $i * HOUR_IN_SECONDS,
+            'display' => sprintf(__('Every %d Hours (Puntwork)', 'puntwork'), $i)
+        ];
+    }
+
+    return $schedules;
+});
+
 /**
  * Calculate the next run time based on schedule settings
  * Uses UTC for all time calculations (WordPress standard)
@@ -183,3 +217,51 @@ function get_schedule_status() {
         'interval' => $schedule['interval'] ?? 24
     ];
 }
+
+/**
+ * Health check for stuck imports
+ * Similar to WooCommerce's cron healthcheck system
+ */
+function check_import_health() {
+    $status = get_option('job_import_status', []);
+
+    // Check if there's an active import that's been running too long
+    if (isset($status['complete']) && !$status['complete'] && !isset($status['paused'])) {
+        $start_time = $status['start_time'] ?? 0;
+        $current_time = time();
+
+        // If import has been running for more than 10 minutes without update, consider it stuck
+        if (($current_time - $start_time) > 600) { // 10 minutes
+            error_log('[PUNTWORK] Detected stuck import - resetting status');
+
+            $status['error_message'] = 'Import appears to be stuck - reset by health check';
+            $status['complete'] = true;
+            $status['success'] = false;
+            $status['last_update'] = $current_time;
+            update_option('job_import_status', $status, false);
+
+            // Clear any scheduled continuations
+            wp_clear_scheduled_hook('puntwork_continue_import');
+        }
+    }
+
+    // Check for paused imports that should be continued
+    if (isset($status['paused']) && $status['paused']) {
+        $last_update = $status['last_update'] ?? 0;
+        $current_time = time();
+
+        // If paused for more than 5 minutes, try to continue
+        if (($current_time - $last_update) > 300) { // 5 minutes
+            error_log('[PUNTWORK] Attempting to continue long-paused import');
+            wp_schedule_single_event(time() + 10, 'puntwork_continue_import');
+        }
+    }
+}
+
+// Schedule health check to run every 5 minutes
+add_action('wp', function() {
+    if (!wp_next_scheduled('puntwork_import_health_check')) {
+        wp_schedule_event(time(), 'puntwork_5min', 'puntwork_import_health_check');
+    }
+});
+add_action('puntwork_import_health_check', __NAMESPACE__ . '\\check_import_health');
