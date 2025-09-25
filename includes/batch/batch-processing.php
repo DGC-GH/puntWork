@@ -28,6 +28,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 function process_batch_items_logic($setup) {
     extract($setup);
 
+    $batch_start_time = microtime(true); // Record start time for this batch
+
     $memory_limit_bytes = get_memory_limit_bytes();
     $threshold = 0.6 * $memory_limit_bytes;
     $batch_size = get_option('job_import_batch_size') ?: 5; // Start more conservatively
@@ -142,6 +144,7 @@ function process_batch_items_logic($setup) {
             update_option('job_import_progress', $end_index, false);
             update_option('job_import_processed_guids', $processed_guids, false);
             $time_elapsed = microtime(true) - $start_time;
+            $batch_time = microtime(true) - $batch_start_time; // Calculate actual batch processing time
 
             // Update import status for UI polling
             $current_status = get_option('job_import_status', []);
@@ -180,7 +183,7 @@ function process_batch_items_logic($setup) {
                 'inferred_languages' => $inferred_languages,
                 'inferred_benefits' => $inferred_benefits,
                 'schema_generated' => $schema_generated,
-                'batch_time' => $time_elapsed,
+                'batch_time' => $batch_time,
                 'batch_processed' => 0,
                 'message' => '' // No error message for success
             ];
@@ -194,13 +197,14 @@ function process_batch_items_logic($setup) {
         update_option('job_import_progress', $end_index, false);
         update_option('job_import_processed_guids', $processed_guids, false);
         $time_elapsed = microtime(true) - $start_time;
+        $batch_time = microtime(true) - $batch_start_time; // Calculate actual batch processing time
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Batch complete: Processed {$result['processed_count']} items (published: $published, updated: $updated, skipped: $skipped, duplicates: $duplicates_drafted)";
 
-        // Update performance metrics
-        update_batch_metrics($time_elapsed, $result['processed_count'], $batch_size);
+        // Update performance metrics with batch time, not total time
+        update_batch_metrics($batch_time, $result['processed_count'], $batch_size);
 
         // Store batch timing data for status retrieval
-        update_option('job_import_last_batch_time', $time_elapsed, false);
+        update_option('job_import_last_batch_time', $batch_time, false);
         update_option('job_import_last_batch_processed', $result['processed_count'], false);
 
         // Update import status for UI polling
@@ -240,7 +244,7 @@ function process_batch_items_logic($setup) {
             'inferred_languages' => $inferred_languages,
             'inferred_benefits' => $inferred_benefits,
             'schema_generated' => $schema_generated,
-            'batch_time' => $time_elapsed,  // Time for this specific batch
+            'batch_time' => $batch_time,  // Time for this specific batch
             'batch_processed' => $result['processed_count'],  // Items processed in this batch
             'start_time' => $start_time,
             'message' => '' // No error message for success
