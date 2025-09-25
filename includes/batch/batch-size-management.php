@@ -43,8 +43,12 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
         // Moderate high memory - reduce slightly
         $batch_size = max(1, floor($batch_size * 0.8));
     } elseif ($last_memory_ratio < 0.4) {
-        // Low memory usage - can increase batch size
-        $batch_size = min(500, floor($batch_size * 1.3));
+        // Low memory usage - gradually increase batch size
+        $new_size = floor($batch_size * 1.1);
+        if ($new_size == $batch_size) {
+            $new_size = $batch_size + 1; // Ensure at least +1 if multiplier doesn't change
+        }
+        $batch_size = min(500, $new_size);
     }
 
     // Dynamic batch size adjustment based on consecutive batch completion times
@@ -53,8 +57,12 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
             // Current batch took longer than previous - decrease batch size
             $batch_size = max(1, floor($batch_size * 0.8));
         } elseif ($current_batch_time < $previous_batch_time) {
-            // Current batch took less time than previous - increase batch size
-            $batch_size = min(500, floor($batch_size * 1.2));
+            // Current batch took less time than previous - gradually increase batch size
+            $new_size = floor($batch_size * 1.1);
+            if ($new_size == $batch_size) {
+                $new_size = $batch_size + 1; // Ensure at least +1 if multiplier doesn't change
+            }
+            $batch_size = min(500, $new_size);
         }
         // If times are equal, keep batch size the same
     }
