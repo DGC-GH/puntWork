@@ -109,7 +109,8 @@ function calculate_next_run_time($schedule_data) {
             $next_valid_hour += $interval_hours;
         }
 
-        // Set the time to the next valid hour and specified minute
+        // Initialize $next_run as a DateTime object
+        $next_run = new \DateTime('now', $wp_timezone);
         $next_run->setTime($next_valid_hour, $minute, 0);
 
         // If this exact time has already passed, move to the next interval
