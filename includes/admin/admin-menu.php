@@ -15,10 +15,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 add_action('admin_menu', function() {
+    add_menu_page(
+        'puntWork Dashboard',
+        '.work',
+        'manage_options',
+        'puntwork-dashboard',
+        __NAMESPACE__ . '\\job_import_admin_page',
+        'https://punt.work/favicon.ico',
+        2
+    );
+
     add_submenu_page(
-        'edit.php?post_type=job-feed',
+        'puntwork-dashboard',
         'Job Import Dashboard',
-        'Dashboard',
+        'Feeds',
         'manage_options',
         'job-feed-dashboard',
         __NAMESPACE__ . '\\job_import_admin_page',
@@ -26,9 +36,9 @@ add_action('admin_menu', function() {
     );
 
     add_submenu_page(
-        'edit.php?post_type=job',
+        'puntwork-dashboard',
         'Jobs Dashboard',
-        'Dashboard',
+        'Jobs',
         'manage_options',
         'jobs-dashboard',
         __NAMESPACE__ . '\\jobs_dashboard_page',
