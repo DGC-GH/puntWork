@@ -130,6 +130,7 @@ if (!function_exists('import_all_jobs_from_json')) {
                 // Update status with total items
                 $initial_status['total'] = $total_items;
                 update_option('job_import_status', $initial_status, false);
+                error_log('[PUNTWORK] Set total items for import: ' . $total_items);
             }
 
             // Check if import is complete
@@ -177,6 +178,8 @@ if (!function_exists('import_all_jobs_from_json')) {
             $current_status['last_update'] = time();
             $current_status['logs'] = array_slice($all_logs, -50); // Keep last 50 log entries for UI
             update_option('job_import_status', $current_status, false);
+            error_log(sprintf('[PUNTWORK] Updated import status after batch %d: processed=%d/%d, complete=%s', 
+                $batch_count, $total_processed, $total_items, ($total_processed >= $total_items ? 'true' : 'false')));
 
             // Check if this batch completed the import
             if (isset($result['complete']) && $result['complete']) {
@@ -254,6 +257,12 @@ if (!function_exists('import_all_jobs_from_json')) {
             'logs' => array_slice($all_logs, -50),
         ];
         update_option('job_import_status', $final_status, false);
+        error_log('[PUNTWORK] Final import status updated: ' . json_encode([
+            'total' => $total_items,
+            'processed' => $total_processed,
+            'complete' => true,
+            'success' => true
+        ]));
         
         // Ensure cache is cleared so AJAX can see the updated status
         if (function_exists('wp_cache_flush')) {
