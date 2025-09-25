@@ -311,6 +311,12 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 clearInterval(this.statusPollingInterval);
             }
 
+            // Initialize dynamic polling variables
+            this.currentPollingInterval = 500; // Start with 500ms for fast initial updates
+            this.lastProcessedCount = -1;
+            this.unchangedCount = 0;
+            this.maxUnchangedBeforeSlow = 10; // After 10 unchanged polls (5 seconds), slow down
+
             // Show the progress UI immediately when starting polling
             console.log('[PUNTWORK] Showing import UI for import');
             JobImportUI.showImportUI();
@@ -320,11 +326,11 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             $('#reset-import').show();
             $('#status-message').text('Import in progress...');
 
-            console.log('[PUNTWORK] Starting status polling every 1 second');
+            console.log('[PUNTWORK] Starting dynamic status polling (initial: 500ms)');
 
-            // Poll every 2 seconds for more responsive updates
-            this.statusPollingInterval = setInterval(function() {
-                console.log('[PUNTWORK] Polling for status update...');
+            // Store the polling function for reuse
+            this.pollStatus = function() {
+                console.log('[PUNTWORK] Polling for status update (interval: ' + JobImportEvents.currentPollingInterval + 'ms)...');
                 JobImportAPI.getImportStatus().then(function(response) {
                     console.log('[PUNTWORK] Status polling response:', response);
                     PuntWorkJSLogger.debug('Status polling response', 'EVENTS', {
@@ -337,6 +343,26 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
                     if (response.success) {
                         var statusData = JobImportUI.normalizeResponseData(response);
+                        var currentProcessed = statusData.processed || 0;
+
+                        // Check if progress has changed
+                        if (currentProcessed !== JobImportEvents.lastProcessedCount) {
+                            JobImportEvents.lastProcessedCount = currentProcessed;
+                            JobImportEvents.unchangedCount = 0;
+                            
+                            // If progress is happening, ensure fast polling
+                            if (JobImportEvents.currentPollingInterval > 1000) {
+                                JobImportEvents.adjustPollingInterval(1000);
+                            }
+                        } else {
+                            JobImportEvents.unchangedCount++;
+                            
+                            // If no progress for several polls, slow down polling
+                            if (JobImportEvents.unchangedCount >= JobImportEvents.maxUnchangedBeforeSlow && 
+                                JobImportEvents.currentPollingInterval < 3000) {
+                                JobImportEvents.adjustPollingInterval(3000);
+                            }
+                        }
 
                         // Only update UI if there's actual progress data and import is not complete
                         if (statusData.total > 0 && !statusData.complete) {
@@ -377,7 +403,10 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     PuntWorkJSLogger.error('Status polling error', 'EVENTS', error);
                     // Continue polling on error
                 });
-            }, 1000); // Poll every 1 second for better responsiveness
+            };
+
+            // Start polling with initial interval
+            this.statusPollingInterval = setInterval(this.pollStatus, this.currentPollingInterval);
 
             // Safety timeout: Stop polling after 30 minutes to prevent infinite polling
             this.statusPollingTimeout = setTimeout(function() {
@@ -387,6 +416,26 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 JobImportUI.resetButtons();
                 $('#status-message').text('Import monitoring timed out - please refresh the page');
             }, 30 * 60 * 1000); // 30 minutes
+        },
+
+        /**
+         * Adjust the polling interval dynamically
+         */
+        adjustPollingInterval: function(newInterval) {
+            if (this.currentPollingInterval === newInterval) {
+                return; // No change needed
+            }
+
+            console.log('[PUNTWORK] Adjusting polling interval from ' + this.currentPollingInterval + 'ms to ' + newInterval + 'ms');
+            
+            // Clear current interval
+            if (this.statusPollingInterval) {
+                clearInterval(this.statusPollingInterval);
+            }
+
+            // Update interval and restart with the stored polling function
+            this.currentPollingInterval = newInterval;
+            this.statusPollingInterval = setInterval(this.pollStatus, this.currentPollingInterval);
         },
 
         /**
