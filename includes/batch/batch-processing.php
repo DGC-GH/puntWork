@@ -38,6 +38,8 @@ function process_batch_items_logic($setup) {
     $last_memory_ratio = $last_peak_memory / $memory_limit_bytes;
 
     $batch_size = adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $prev_time_per_item, $avg_time_per_item);
+    $adjustment_result = $batch_size; // Now returns array with 'batch_size' and 'reason'
+    $batch_size = $adjustment_result['batch_size'];
 
     // Only update and log if changed
     if ($batch_size != $old_batch_size) {
@@ -45,6 +47,9 @@ function process_batch_items_logic($setup) {
         $reason = ($last_memory_ratio > 0.85 ? 'high previous memory' : ($last_memory_ratio < 0.5 ? 'low previous memory and low avg time' : ($time_ratio > 1.2 ? 'high time ratio' : 'low time ratio')));
         $logs = [];
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch size adjusted to ' . $batch_size . ' due to ' . $reason;
+        if (!empty($adjustment_result['reason'])) {
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Reason: ' . $adjustment_result['reason'];
+        }
     } else {
         $logs = [];
     }
