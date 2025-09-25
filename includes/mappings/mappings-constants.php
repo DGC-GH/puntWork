@@ -36,7 +36,7 @@ require_once __DIR__ . '/mappings-schema.php';
 
 // Admin script deregistration
 add_action('admin_enqueue_scripts', function($hook) {
-    if ($hook === 'job_page_job-feed-dashboard') {
+    if ($hook === 'puntwork-dashboard_page_job-feed-dashboard') {
         wp_deregister_script('heartbeat');
     }
 });
