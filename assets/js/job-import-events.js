@@ -320,7 +320,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             $('#reset-import').show();
             $('#status-message').text('Import in progress...');
 
-            console.log('[PUNTWORK] Starting status polling every 2 seconds');
+            console.log('[PUNTWORK] Starting status polling every 1 second');
 
             // Poll every 2 seconds for more responsive updates
             this.statusPollingInterval = setInterval(function() {
@@ -377,7 +377,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     PuntWorkJSLogger.error('Status polling error', 'EVENTS', error);
                     // Continue polling on error
                 });
-            }, 2000); // Poll every 2 seconds for better responsiveness
+            }, 1000); // Poll every 1 second for better responsiveness
 
             // Safety timeout: Stop polling after 30 minutes to prevent infinite polling
             this.statusPollingTimeout = setTimeout(function() {
