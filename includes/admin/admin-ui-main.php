@@ -172,12 +172,27 @@ function render_main_import_ui() {
             <div style="background-color: #f9f9f9; border-radius: 8px; padding: 12px; text-align: center;">
                 <span id="status-message" style="font-size: 14px; color: #8e8e93;">Ready to start.</span>
             </div>
-        </div>
 
-        <!-- Import Log Section -->
-        <div id="import-log" style="max-width: 800px; margin: 0 auto; margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: none;">
-            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px 0;">Import Log</h2>
-            <textarea id="log-textarea" readonly style="width: 100%; height: 200px; padding: 12px; border: 1px solid #d1d1d6; border-radius: 8px; font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace; font-size: 12px; line-height: 1.4; resize: vertical; background-color: #f9f9f9;"></textarea>
+            <!-- Log Toggle -->
+            <div style="margin-top: 16px; text-align: center;">
+                <button id="toggle-log" class="button" style="background: none; border: 1px solid #d1d1d6; border-radius: 8px; padding: 8px 16px; font-size: 13px; color: #007aff; cursor: pointer; transition: all 0.2s ease; display: none;">
+                    <i class="fas fa-chevron-down" style="margin-right: 6px; transition: transform 0.2s ease;"></i>
+                    <span id="toggle-log-text">Show Details</span>
+                </button>
+            </div>
+
+            <!-- Integrated Log Section -->
+            <div id="integrated-log" style="margin-top: 16px; background-color: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); max-height: 0; overflow: hidden; transition: all 0.3s ease; opacity: 0;">
+                <div style="display: flex; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #f2f2f7;">
+                    <div style="width: 6px; height: 6px; border-radius: 50%; background-color: #007aff; margin-right: 10px;"></div>
+                    <h3 style="font-size: 16px; font-weight: 600; margin: 0; color: #1d1d1f;">Import Details</h3>
+                    <div style="margin-left: auto; font-size: 12px; color: #8e8e93;">
+                        <i class="fas fa-terminal" style="margin-right: 4px;"></i>
+                        Live Log
+                    </div>
+                </div>
+                <textarea id="log-textarea" readonly style="width: 100%; height: 180px; padding: 12px; border: 1px solid #d1d1d6; border-radius: 8px; font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace; font-size: 12px; line-height: 1.4; resize: vertical; background-color: #f9f9f9; transition: height 0.3s ease;"></textarea>
+            </div>
         </div>
     </div>
     <?php
