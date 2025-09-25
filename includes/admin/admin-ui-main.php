@@ -131,6 +131,24 @@ function render_main_import_ui() {
                     </div>
                 </div>
 
+                <!-- Skipped Items -->
+                <div style="background: linear-gradient(135deg, #af52de 0%, #8e5de8 100%); border-radius: 12px; padding: 16px; color: white; box-shadow: 0 2px 8px rgba(175,82,222,0.2);">
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background-color: rgba(255,255,255,0.8); margin-right: 8px;"></div>
+                        <span style="font-size: 13px; font-weight: 500; opacity: 0.9;">Up to Date</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <div>
+                            <div style="font-size: 24px; font-weight: 700; margin-bottom: 2px;" id="skipped-items">0</div>
+                            <div style="font-size: 11px; opacity: 0.8;">already current</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 14px; font-weight: 600; margin-bottom: 2px; opacity: 0.7;">✓</div>
+                            <div style="font-size: 11px; opacity: 0.8;">no changes</div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Issues & Actions -->
                 <div style="background: linear-gradient(135deg, #ff9500 0%, #ff9f0a 100%); border-radius: 12px; padding: 16px; color: white; box-shadow: 0 2px 8px rgba(255,149,0,0.2);">
                     <div style="display: flex; align-items: center; margin-bottom: 8px;">
@@ -139,30 +157,12 @@ function render_main_import_ui() {
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: baseline;">
                         <div>
-                            <div style="font-size: 24px; font-weight: 700; margin-bottom: 2px;" id="skipped-items">0</div>
-                            <div style="font-size: 11px; opacity: 0.8;">skipped</div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 14px; font-weight: 600; margin-bottom: 2px;" id="duplicates-drafted">0</div>
+                            <div style="font-size: 24px; font-weight: 700; margin-bottom: 2px;" id="duplicates-drafted">0</div>
                             <div style="font-size: 11px; opacity: 0.8;">drafted</div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Performance Indicator -->
-                <div style="background: linear-gradient(135deg, #f2f2f7 0%, #e5e5ea 100%); border-radius: 12px; padding: 16px; color: #1d1d1f; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #d1d1d6;">
-                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                        <div style="width: 8px; height: 8px; border-radius: 50%; background-color: #007aff; margin-right: 8px;"></div>
-                        <span style="font-size: 13px; font-weight: 500; color: #8e8e93;">Performance</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                        <div>
-                            <div style="font-size: 18px; font-weight: 600; color: #007aff; margin-bottom: 2px;" id="progress-percent">0%</div>
-                            <div style="font-size: 11px; color: #8e8e93;">complete</div>
-                        </div>
                         <div style="text-align: right;">
-                            <div style="font-size: 12px; font-weight: 500; color: #1d1d1f; margin-bottom: 2px;" id="time-elapsed">0s</div>
-                            <div style="font-size: 11px; color: #8e8e93;">elapsed</div>
+                            <div style="font-size: 14px; font-weight: 600; margin-bottom: 2px; opacity: 0.7;">⚠️</div>
+                            <div style="font-size: 11px; opacity: 0.8;">needs review</div>
                         </div>
                     </div>
                 </div>
