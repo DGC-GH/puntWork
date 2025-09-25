@@ -319,6 +319,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             this.maxUnchangedBeforeSlow = 50; // After 50 unchanged polls (25 seconds), slow down
             this.completeDetectedCount = 0; // Counter for complete detections
             this.maxCompletePolls = 3; // Continue polling for 3 more polls after detecting complete
+            this.totalZeroCount = 0; // Counter for polls where total remains 0
+            this.maxTotalZeroPolls = 20; // Stop polling after 20 polls with total=0 (40 seconds)
 
             // Show the progress UI immediately when starting polling
             console.log('[PUNTWORK] Showing import UI for import');
@@ -347,6 +349,27 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     if (response.success) {
                         var statusData = JobImportUI.normalizeResponseData(response);
                         var currentProcessed = statusData.processed || 0;
+
+                        // Check if total is still 0 (import hasn't started)
+                        if (statusData.total === 0) {
+                            this.totalZeroCount++;
+                            console.log('[PUNTWORK] Import total still 0, count:', this.totalZeroCount);
+                        } else {
+                            this.totalZeroCount = 0;
+                        }
+
+                        // Stop polling if total has been 0 for too many polls
+                        if (this.totalZeroCount >= this.maxTotalZeroPolls) {
+                            console.log('[PUNTWORK] Import failed to start after', this.maxTotalZeroPolls, 'polls, stopping polling');
+                            PuntWorkJSLogger.warn('Import failed to start, stopping polling', 'EVENTS', {
+                                totalZeroCount: this.totalZeroCount,
+                                maxTotalZeroPolls: this.maxTotalZeroPolls
+                            });
+                            JobImportEvents.stopStatusPolling();
+                            JobImportUI.resetButtons();
+                            $('#status-message').text('Import failed to start - please try again');
+                            return;
+                        }
 
                         // Check if progress has changed
                         if (currentProcessed !== JobImportEvents.lastProcessedCount) {
