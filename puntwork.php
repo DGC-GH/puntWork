@@ -92,15 +92,29 @@ function setup_job_import() {
         // Admin interface
         'admin/admin-menu.php',
         'admin/admin-page-html.php',
+        'admin/admin-ui-debug.php',
+        'admin/admin-ui-main.php',
+        'admin/admin-ui-scheduling.php',
         
         // API handlers
+        'api/ajax-feed-processing.php',
         'api/ajax-handlers.php',
+        'api/ajax-import-control.php',
+        'api/ajax-purge.php',
+        
+        // Batch processing
+        'batch/batch-core.php',
+        'batch/batch-data.php',
+        'batch/batch-processing.php',
+        'batch/batch-size-management.php',
+        'batch/batch-utils.php',
         
         // Import functionality
         'import/combine-jsonl.php',
         'import/download-feed.php',
         'import/import-batch.php',
         'import/import-finalization.php',
+        'import/import-setup.php',
         'import/process-batch-items.php',
         'import/process-xml-batch.php',
         'import/reset-import.php',
@@ -117,12 +131,17 @@ function setup_job_import() {
         
         // Mappings
         'mappings/mappings-constants.php',
+        'mappings/mappings-fields.php',
+        'mappings/mappings-geographic.php',
+        'mappings/mappings-icons.php',
+        'mappings/mappings-salary.php',
+        'mappings/mappings-schema.php',
         
         // Scheduling
-        'scheduling/scheduling-core.php',
         'scheduling/scheduling-ajax.php',
-        'scheduling/scheduling-triggers.php',
+        'scheduling/scheduling-core.php',
         'scheduling/scheduling-history.php',
+        'scheduling/scheduling-triggers.php',
         'scheduling/test-scheduling.php',
     );
     foreach ( $includes as $include ) {
