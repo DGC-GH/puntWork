@@ -20,7 +20,7 @@ add_action('admin_menu', function() {
         '.work',
         'manage_options',
         'puntwork-dashboard',
-        __NAMESPACE__ . '\\job_import_admin_page',
+        __NAMESPACE__ . '\\puntwork_dashboard_page',
         home_url('/favicon.ico'),
         0
     );
@@ -31,7 +31,7 @@ add_action('admin_menu', function() {
         'Feeds',
         'manage_options',
         'job-feed-dashboard',
-        __NAMESPACE__ . '\\job_import_admin_page'
+        __NAMESPACE__ . '\\feeds_dashboard_page'
     );
 
     add_submenu_page(
