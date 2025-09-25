@@ -403,6 +403,36 @@
                 PuntWorkJSLogger.error('Cancel AJAX error', 'LOGIC', error);
                 JobImportUI.appendLogs(['Cancel AJAX error: ' + error]);
             });
+        },
+
+        /**
+         * Handle reset import process - complete reset to fresh state
+         */
+        handleResetImport: function() {
+            PuntWorkJSLogger.info('Reset Import clicked', 'LOGIC');
+
+            // Stop any ongoing import
+            this.isImporting = false;
+
+            // Stop status polling
+            if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
+                window.JobImportEvents.stopStatusPolling();
+            }
+
+            JobImportAPI.resetImport().then(function(response) {
+                PuntWorkJSLogger.debug('Reset response', 'LOGIC', response);
+                if (response.success) {
+                    JobImportUI.appendLogs(['Import system completely reset']);
+                    $('#status-message').text('Import system reset - ready to start fresh');
+                    JobImportUI.clearProgress();
+                    JobImportUI.hideImportUI();
+                    JobImportUI.resetButtons();
+                    $('#start-import').show().text('Start Import');
+                }
+            }).catch(function(xhr, status, error) {
+                PuntWorkJSLogger.error('Reset AJAX error', 'LOGIC', error);
+                JobImportUI.appendLogs(['Reset AJAX error: ' + error]);
+            });
         }
     };
 

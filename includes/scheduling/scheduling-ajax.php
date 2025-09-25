@@ -2,7 +2,20 @@
 /**
  * AJAX handlers for scheduli    // Check if our hook is registered
     if (has_action('puntwork_scheduled_import_async')) {
-        error_log('[PUNTWORK] puntwork_scheduled_import_async hook is registered');
+        err    // Add formatted date to last run if it exists
+    if ($last_run && isset($last_run['timestamp'])) {
+        // Convert legacy timestamps (stored as local time) to UTC for wp_date()
+        $timestamp = $last_run['timestamp'];
+        $current_utc = time();
+        $timezone_offset = wp_timezone()->getOffset(new DateTime('@' . $current_utc));
+        
+        // If stored timestamp is in the future (indicating local time storage), convert back to UTC
+        if ($timestamp > $current_utc) {
+            $timestamp = $timestamp - $timezone_offset;
+        }
+        
+        $last_run['formatted_date'] = wp_date('M j, Y g:i A', $timestamp);
+    }K] puntwork_scheduled_import_async hook is registered');
     } else {
         error_log('[PUNTWORK] puntwork_scheduled_import_async hook is NOT registered');
     }ctionality
@@ -189,8 +202,8 @@ function get_import_run_history_ajax() {
     foreach ($history as &$entry) {
         if (isset($entry['timestamp'])) {
             $timestamp = $entry['timestamp'];
-            // Convert legacy timestamps if they appear to be in local time
-            if (abs($timestamp - $current_utc) > 3600) {
+            // Convert legacy timestamps if stored as local time
+            if ($timestamp > $current_utc) {
                 $timestamp = $timestamp - $timezone_offset;
             }
             $entry['formatted_date'] = wp_date('M j, Y g:i A', $timestamp);
