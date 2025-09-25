@@ -263,8 +263,8 @@
                 minute: parseInt($('#schedule-minute').val()) || 0
             };
 
-            // Disable button during save
-            $button.prop('disabled', true).text('Saving...');
+            // Disable button and show loading state
+            $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Saving...');
 
             JobImportAPI.call('save_import_schedule', settings, function(response) {
                 console.log('[SCHEDULING] Raw response:', response);
@@ -274,7 +274,8 @@
                     console.log('[SCHEDULING] Response schedule.enabled:', response.data.schedule.enabled);
                 }
 
-                $button.prop('disabled', false).text('Save Settings');
+                // Re-enable button
+                $button.prop('disabled', false).html('Save Settings');
 
                 if (response.success) {
                     // Update currentSchedule with the response data (which has proper boolean values)
@@ -304,10 +305,10 @@
                 return;
             }
 
-            $button.prop('disabled', true).text('Testing...');
+            $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Testing...');
 
             JobImportAPI.call('test_import_schedule', {}, function(response) {
-                $button.prop('disabled', false).text('Test Schedule');
+                $button.prop('disabled', false).html('Test Schedule');
 
                 if (response.success) {
                     self.showNotification('Test import completed successfully', 'success');
@@ -333,10 +334,10 @@
                 return;
             }
 
-            $button.prop('disabled', true).text('Starting...');
+            $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Starting...');
 
             JobImportAPI.call('run_scheduled_import', {}, function(response) {
-                $button.prop('disabled', false).text('Run Now');
+                $button.prop('disabled', false).html('Run Now');
 
                 if (response.success) {
                     self.showNotification('Import started successfully', 'success');
@@ -365,30 +366,77 @@
          * Show notification
          */
         showNotification: function(message, type) {
-            // Simple notification - could be enhanced with a proper notification system
-            var color = type === 'success' ? '#34c759' : '#ff3b30';
+            // Remove existing notifications
+            $('.job-import-notification').remove();
+
+            // Create new notification with Apple-style design
             var notification = $('<div>')
+                .addClass('job-import-notification')
+                .addClass(type)
                 .css({
                     position: 'fixed',
-                    top: '20px',
-                    right: '20px',
-                    background: color,
-                    color: 'white',
-                    padding: '12px 16px',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    top: '24px',
+                    right: '24px',
+                    background: '#ffffff',
+                    borderRadius: '12px',
+                    padding: '16px 20px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1)',
+                    border: '1px solid #e5e5e7',
                     zIndex: 10000,
-                    fontSize: '14px',
-                    fontWeight: '500'
-                })
-                .text(message)
-                .appendTo('body');
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif',
+                    fontSize: '15px',
+                    fontWeight: '500',
+                    color: '#1d1d1f',
+                    maxWidth: '400px',
+                    animation: 'slideIn 0.3s ease-out',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px'
+                });
 
+            // Add icon based on type
+            var iconClass = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle';
+            var iconColor = type === 'success' ? '#34c759' : '#ff3b30';
+
+            notification.append($('<i>')
+                .addClass(iconClass)
+                .css({
+                    color: iconColor,
+                    fontSize: '18px',
+                    flexShrink: 0
+                })
+            );
+
+            notification.append($('<span>').text(message));
+
+            // Apply type-specific styling
+            if (type === 'success') {
+                notification.css({
+                    borderColor: '#34c759',
+                    background: 'linear-gradient(135deg, #f8fff9 0%, #ffffff 100%)'
+                });
+            } else if (type === 'error') {
+                notification.css({
+                    borderColor: '#ff3b30',
+                    background: 'linear-gradient(135deg, #fff8f7 0%, #ffffff 100%)'
+                });
+            }
+
+            notification.appendTo('body');
+
+            // Auto-remove after 4 seconds
             setTimeout(function() {
                 notification.fadeOut(300, function() {
                     $(this).remove();
                 });
-            }, 3000);
+            }, 4000);
+
+            // Allow click to dismiss
+            notification.on('click', function() {
+                $(this).fadeOut(200, function() {
+                    $(this).remove();
+                });
+            });
         },
 
         /**
@@ -396,12 +444,22 @@
          */
         loadRunHistory: function() {
             var self = this;
+            var $button = $('#refresh-history');
+            var $list = $('#run-history-list');
+
+            // Show loading state
+            $button.addClass('loading').prop('disabled', true);
+            $list.html('<div style="color: #86868b; text-align: center; padding: 24px; font-style: italic;"><i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Loading history...</div>');
 
             JobImportAPI.call('get_import_run_history', {}, function(response) {
+                // Remove loading state
+                $button.removeClass('loading').prop('disabled', false);
+
                 if (response.success) {
                     self.displayRunHistory(response.data.history);
                     PuntWorkJSLogger.info('Run history loaded', 'SCHEDULING', { count: response.data.count });
                 } else {
+                    $list.html('<div style="color: #ff3b30; text-align: center; padding: 24px;"><i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>Failed to load history</div>');
                     PuntWorkJSLogger.error('Failed to load run history', 'SCHEDULING', response.data);
                 }
             });
@@ -414,7 +472,7 @@
             var $container = $('#run-history-list');
 
             if (!history || history.length === 0) {
-                $container.html('<div style="color: #8e8e93; text-align: center; padding: 20px;">No import history available</div>');
+                $container.html('<div style="color: #86868b; text-align: center; padding: 32px; font-style: italic; font-size: 15px;"><i class="fas fa-history" style="margin-right: 8px; opacity: 0.6;"></i>No import history available</div>');
                 return;
             }
 
@@ -422,21 +480,22 @@
             history.forEach(function(run) {
                 var date = new Date(run.timestamp * 1000);
                 var statusColor = run.success ? '#34c759' : '#ff3b30';
+                var statusBg = run.success ? '#f8fff9' : '#fff8f7';
                 var statusText = run.success ? 'Success' : 'Failed';
-                var modeText = run.test_mode ? ' (Test)' : '';
+                var modeText = run.test_mode ? ' <span style="background: #007aff; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">TEST</span>' : '';
 
-                html += '<div style="border-bottom: 1px solid #e0e0e0; padding: 8px 0; font-size: 11px;">';
-                html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
-                html += '<span style="font-weight: 500;">' + date.toLocaleString() + modeText + '</span>';
-                html += '<span style="color: ' + statusColor + '; font-weight: 500;">' + statusText + '</span>';
+                html += '<div style="border: 1px solid #e5e5e7; border-radius: 8px; padding: 16px; margin-bottom: 12px; background: #ffffff; transition: all 0.2s ease;">';
+                html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">';
+                html += '<div style="font-size: 14px; font-weight: 600; color: #1d1d1f;">' + date.toLocaleString() + modeText + '</div>';
+                html += '<div style="background: ' + statusBg + '; color: ' + statusColor + '; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; border: 1px solid ' + statusColor + '20;">' + statusText + '</div>';
                 html += '</div>';
-                html += '<div style="color: #666;">';
-                html += 'Duration: ' + this.formatDuration(run.duration) + ' | ';
-                html += 'Processed: ' + run.processed + '/' + run.total + ' | ';
-                html += 'Published: ' + run.published + ', Updated: ' + run.updated + ', Skipped: ' + run.skipped;
+                html += '<div style="color: #86868b; font-size: 13px; line-height: 1.4;">';
+                html += '<div style="margin-bottom: 4px;"><i class="fas fa-clock" style="margin-right: 6px;"></i>Duration: <strong>' + this.formatDuration(run.duration) + '</strong></div>';
+                html += '<div style="margin-bottom: 4px;"><i class="fas fa-tasks" style="margin-right: 6px;"></i>Processed: <strong>' + run.processed + '/' + run.total + '</strong></div>';
+                html += '<div><i class="fas fa-chart-line" style="margin-right: 6px;"></i>Published: <strong style="color: #34c759;">' + run.published + '</strong>, Updated: <strong style="color: #007aff;">' + run.updated + '</strong>, Skipped: <strong style="color: #ff9500;">' + run.skipped + '</strong></div>';
                 html += '</div>';
                 if (run.error_message) {
-                    html += '<div style="color: #ff3b30; margin-top: 2px;">' + run.error_message + '</div>';
+                    html += '<div style="background: #fff8f7; border: 1px solid #ff3b30; border-radius: 6px; padding: 8px 12px; margin-top: 8px; font-size: 12px; color: #ff3b30;"><i class="fas fa-exclamation-triangle" style="margin-right: 6px;"></i>' + run.error_message + '</div>';
                 }
                 html += '</div>';
             }.bind(this));
