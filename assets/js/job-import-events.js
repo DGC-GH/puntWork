@@ -220,7 +220,14 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 // Handle both response formats: direct data or wrapped in .data
                 var statusData = JobImportUI.normalizeResponseData(response);
 
-                if (response.success && statusData.processed > 0 && !statusData.complete) {
+                // Determine if there's actually an incomplete import to resume
+                var hasIncompleteImport = response.success && (
+                    (statusData.processed > 0 && !statusData.complete) || // Partially completed import
+                    (statusData.resume_progress > 0) || // Has resume progress
+                    (!statusData.complete && statusData.total > 0) // Incomplete with total set
+                );
+
+                if (hasIncompleteImport) {
                     JobImportUI.updateProgress(statusData);
                     JobImportUI.appendLogs(statusData.logs || []);
                     
@@ -229,8 +236,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     var timeSinceLastUpdate = currentTime - (statusData.last_update || 0);
                     var isRecentlyActive = timeSinceLastUpdate < 60;
                     
-                    if (isRecentlyActive) {
-                        // Import appears to be currently running - show progress UI with cancel and start polling
+                    if (isRecentlyActive && statusData.processed > 0) {
+                        // Import appears to be currently running - show progress UI with cancel and reset
                         $('#start-import').hide();
                         $('#resume-import').hide();
                         $('#cancel-import').show();
@@ -242,35 +249,23 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         // Start polling for status updates
                         JobImportEvents.startStatusPolling();
                     } else {
-                        // Import was interrupted - show resume option
+                        // Import was interrupted - show resume and reset options
+                        $('#start-import').hide();
                         $('#resume-import').show();
                         $('#reset-import').show();
-                        $('#start-import').text('Restart').on('click', function() {
-                            JobImportEvents.handleRestartImport();
-                        });
+                        $('#cancel-import').hide();
                         JobImportUI.showImportUI();
-                        $('#status-message').text('Previous import interrupted. Continue or restart?');
-                        console.log('[PUNTWORK] Import was interrupted, showing resume option');
+                        $('#status-message').text('Previous import interrupted. Resume or reset?');
+                        console.log('[PUNTWORK] Import was interrupted, showing resume and reset options');
                     }
-                } else if (response.success && !statusData.complete) {
-                    // Import is incomplete - show progress UI and allow canceling
-                    JobImportUI.updateProgress(statusData);
-                    JobImportUI.appendLogs(statusData.logs || []);
-                    $('#start-import').hide();
-                    $('#resume-import').hide();
-                    $('#cancel-import').show();
-                    $('#reset-import').show();
-                    JobImportUI.showImportUI();
-                    $('#status-message').text('Import in progress...');
-                    console.log('[PUNTWORK] Incomplete import detected - showing progress UI with cancel option');
-                    
-                    // Start polling for status updates
-                    JobImportEvents.startStatusPolling();
                 } else {
+                    // Clean state - hide all import controls except start
+                    $('#start-import').show().text('Start Import');
                     $('#resume-import').hide();
+                    $('#cancel-import').hide();
                     $('#reset-import').hide();
-                    $('#start-import').show().text('Start');
                     JobImportUI.hideImportUI();
+                    console.log('[PUNTWORK] Clean state detected - showing start button only');
                 }
             }).catch(function(xhr, status, error) {
                 PuntWorkJSLogger.error('Initial status AJAX error', 'EVENTS', error);
@@ -278,6 +273,10 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 // Ensure UI is in clean state even on error
                 JobImportUI.clearProgress();
                 JobImportUI.hideImportUI();
+                $('#start-import').show().text('Start Import');
+                $('#resume-import').hide();
+                $('#cancel-import').hide();
+                $('#reset-import').hide();
             });
         },
 
