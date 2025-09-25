@@ -191,9 +191,11 @@ function run_scheduled_import_ajax() {
     try {
         // Use Action Scheduler if available (best for background processing)
         if (function_exists('as_enqueue_async_action')) {
+            error_log('[PUNTWORK] Action Scheduler available, queuing async action');
             as_enqueue_async_action('puntwork_run_scheduled_import_async', [], 'puntwork');
             error_log('[PUNTWORK] Scheduled import queued via Action Scheduler');
         } else {
+            error_log('[PUNTWORK] Action Scheduler NOT available, falling back to WP cron');
             // Fallback: Schedule resumable cron job
             wp_schedule_single_event(time() + 1, 'puntwork_scheduled_import_async');
             error_log('[PUNTWORK] Scheduled import queued via resumable cron');
@@ -227,7 +229,7 @@ add_action('puntwork_scheduled_import_async', __NAMESPACE__ . '\\run_scheduled_i
  * Run scheduled import asynchronously (non-blocking)
  */
 function run_scheduled_import_async() {
-    error_log('[PUNTWORK] Async scheduled import started');
+    error_log('[PUNTWORK] Async scheduled import started - Action Scheduler hook fired');
 
     // Check if an import is already running
     $import_status = get_option('job_import_status', []);
@@ -236,8 +238,11 @@ function run_scheduled_import_async() {
         return;
     }
 
+    error_log('[PUNTWORK] Starting actual import process...');
+
     try {
         $result = run_scheduled_import();
+        error_log('[PUNTWORK] Import result: ' . print_r($result, true));
 
         // If import is not complete, it means it was paused due to time limits
         // Schedule the next batch to continue processing
@@ -256,6 +261,7 @@ function run_scheduled_import_async() {
         }
     } catch (\Exception $e) {
         error_log('[PUNTWORK] Async scheduled import exception: ' . $e->getMessage());
+        error_log('[PUNTWORK] Exception trace: ' . $e->getTraceAsString());
     }
 }
 
