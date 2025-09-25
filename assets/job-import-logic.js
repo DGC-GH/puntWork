@@ -165,7 +165,7 @@
                     PuntWorkJSLogger.info('Final import status', 'LOGIC', {
                         total: statusData.total,
                         processed: statusData.processed,
-                        created: statusData.created,
+                        published: statusData.published,
                         updated: statusData.updated,
                         skipped: statusData.skipped,
                         duplicates_drafted: statusData.duplicates_drafted,
@@ -234,7 +234,7 @@
                 JobImportUI.updateProgress({
                     total: total_feeds,
                     processed: 0,
-                    created: 0,
+                    published: 0,
                     updated: 0,
                     skipped: 0,
                     duplicates_drafted: 0,
@@ -253,7 +253,7 @@
                     JobImportUI.updateProgress({
                         total: total_feeds,
                         processed: current_feed_num - 1, // Show progress up to current feed
-                        created: 0,
+                        published: 0,
                         updated: 0,
                         skipped: 0,
                         duplicates_drafted: 0,
@@ -273,7 +273,7 @@
                         JobImportUI.updateProgress({
                             total: total_feeds,
                             processed: current_feed_num,
-                            created: 0,
+                            published: 0,
                             updated: 0,
                             skipped: 0,
                             duplicates_drafted: 0,
@@ -299,7 +299,7 @@
                 JobImportUI.updateProgress({
                     total: 1,
                     processed: 0,
-                    created: 0,
+                    published: 0,
                     updated: 0,
                     skipped: 0,
                     duplicates_drafted: 0,
@@ -318,7 +318,7 @@
                     JobImportUI.updateProgress({
                         total: 1,
                         processed: 1,
-                        created: 0,
+                        published: 0,
                         updated: 0,
                         skipped: 0,
                         duplicates_drafted: 0,

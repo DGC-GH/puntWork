@@ -33,7 +33,7 @@ function finalize_batch_import($result) {
     $status = get_option('job_import_status') ?: [
         'total' => $result['total'],
         'processed' => 0,
-        'created' => 0,
+        'published' => 0,
         'updated' => 0,
         'skipped' => 0,
         'duplicates_drafted' => 0,
@@ -55,7 +55,7 @@ function finalize_batch_import($result) {
     }
 
     $status['processed'] = $result['processed'];
-    $status['created'] += $result['created'];
+    $status['published'] += $result['published'];
     $status['updated'] += $result['updated'];
     $status['skipped'] += $result['skipped'];
     $status['duplicates_drafted'] += $result['duplicates_drafted'];
@@ -116,7 +116,7 @@ function get_import_status_summary() {
     return [
         'total' => $status['total'] ?? 0,
         'processed' => $status['processed'] ?? 0,
-        'created' => $status['created'] ?? 0,
+        'published' => $status['published'] ?? 0,
         'updated' => $status['updated'] ?? 0,
         'skipped' => $status['skipped'] ?? 0,
         'duplicates_drafted' => $status['duplicates_drafted'] ?? 0,

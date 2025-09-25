@@ -55,7 +55,7 @@ function process_batch_items_logic($setup) {
     }
 
     $end_index = min($start_index + $batch_size, $total);
-    $created = 0;
+    $published = 0;
     $updated = 0;
     $skipped = 0;
     $duplicates_drafted = 0;
@@ -129,7 +129,7 @@ function process_batch_items_logic($setup) {
                 'success' => true,
                 'processed' => $end_index,
                 'total' => $total,
-                'created' => $created,
+                'published' => $published,
                 'updated' => $updated,
                 'skipped' => $skipped,
                 'duplicates_drafted' => $duplicates_drafted,
@@ -148,14 +148,14 @@ function process_batch_items_logic($setup) {
         }
 
         // Process batch items
-        $result = process_batch_data($batch_guids, $batch_items, $logs, $created, $updated, $skipped, $duplicates_drafted);
+        $result = process_batch_data($batch_guids, $batch_items, $logs, $published, $updated, $skipped, $duplicates_drafted);
 
         unset($batch_items, $batch_guids);
 
         update_option('job_import_progress', $end_index, false);
         update_option('job_import_processed_guids', $processed_guids, false);
         $time_elapsed = microtime(true) - $start_time;
-        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Batch complete: Processed {$result['processed_count']} items (created: $created, updated: $updated, skipped: $skipped, duplicates: $duplicates_drafted)";
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Batch complete: Processed {$result['processed_count']} items (published: $published, updated: $updated, skipped: $skipped, duplicates: $duplicates_drafted)";
 
         // Update performance metrics
         update_batch_metrics($time_elapsed, $result['processed_count'], $batch_size);
@@ -168,7 +168,7 @@ function process_batch_items_logic($setup) {
             'success' => true,
             'processed' => $end_index,
             'total' => $total,
-            'created' => $created,
+            'published' => $published,
             'updated' => $updated,
             'skipped' => $skipped,
             'duplicates_drafted' => $duplicates_drafted,
@@ -199,13 +199,13 @@ function process_batch_items_logic($setup) {
  * @param array $batch_guids Array of GUIDs in batch.
  * @param array $batch_items Array of batch items.
  * @param array &$logs Reference to logs array.
- * @param int &$created Reference to created count.
+ * @param int &$published Reference to published count.
  * @param int &$updated Reference to updated count.
  * @param int &$skipped Reference to skipped count.
  * @param int &$duplicates_drafted Reference to duplicates drafted count.
  * @return array Processing result.
  */
-function process_batch_data($batch_guids, $batch_items, &$logs, &$created, &$updated, &$skipped, &$duplicates_drafted) {
+function process_batch_data($batch_guids, $batch_items, &$logs, &$published, &$updated, &$skipped, &$duplicates_drafted) {
     global $wpdb;
 
     // Bulk existing post_ids
@@ -257,7 +257,7 @@ function process_batch_data($batch_guids, $batch_items, &$logs, &$created, &$upd
     $acf_fields = get_acf_fields();
     $zero_empty_fields = get_zero_empty_fields();
 
-    process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $logs, $updated, $created, $skipped, $processed_count);
+    process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $logs, $updated, $published, $skipped, $processed_count);
 
     return ['processed_count' => $processed_count];
 }
