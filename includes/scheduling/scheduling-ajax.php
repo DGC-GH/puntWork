@@ -141,7 +141,7 @@ function get_import_schedule_ajax() {
     // Add formatted date to last run if it exists
     if ($last_run && isset($last_run['timestamp'])) {
         // Timestamps are now stored in UTC using time(), wp_date() handles timezone conversion
-        $last_run['formatted_date'] = wp_date('n/j/Y, g:i:s A', $last_run['timestamp']);
+        $last_run['formatted_date'] = wp_date('M j, Y H:i', $last_run['timestamp']);
     }
 
     wp_send_json_success([
