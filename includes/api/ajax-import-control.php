@@ -145,7 +145,7 @@ function get_job_import_status_ajax() {
         'skipped' => 0,
         'duplicates_drafted' => 0,
         'time_elapsed' => 0,
-        'complete' => false,
+        'complete' => true, // Fresh state is complete
         'success' => false, // Add success status
         'error_message' => '', // Add error message for failures
         'batch_size' => 10,
@@ -163,6 +163,53 @@ function get_job_import_status_ajax() {
         'processed' => $progress['processed'],
         'complete' => $progress['complete']
     ]);
+
+    // Check for stuck imports and clear them
+    if (isset($progress['complete']) && !$progress['complete'] && isset($progress['total']) && $progress['total'] > 0) {
+        $time_elapsed = 0;
+        if (isset($progress['start_time']) && $progress['start_time'] > 0) {
+            $time_elapsed = microtime(true) - $progress['start_time'];
+        } elseif (isset($progress['time_elapsed'])) {
+            $time_elapsed = $progress['time_elapsed'];
+        }
+        
+        $is_stuck = ($progress['processed'] == 0) && ($time_elapsed > 300);
+        
+        if ($is_stuck) {
+            PuntWorkLogger::info('Detected stuck import in status check, clearing status', PuntWorkLogger::CONTEXT_BATCH, [
+                'processed' => $progress['processed'],
+                'time_elapsed' => $time_elapsed
+            ]);
+            delete_option('job_import_status');
+            delete_option('job_import_progress');
+            delete_option('job_import_processed_guids');
+            delete_option('job_import_last_batch_time');
+            delete_option('job_import_last_batch_processed');
+            delete_transient('import_cancel');
+            
+            // Return fresh status
+            $progress = [
+                'total' => 0,
+                'processed' => 0,
+                'published' => 0,
+                'updated' => 0,
+                'skipped' => 0,
+                'duplicates_drafted' => 0,
+                'time_elapsed' => 0,
+                'complete' => true, // Fresh state is complete
+                'success' => false,
+                'error_message' => '',
+                'batch_size' => 10,
+                'inferred_languages' => 0,
+                'inferred_benefits' => 0,
+                'schema_generated' => 0,
+                'start_time' => microtime(true),
+                'end_time' => null,
+                'last_update' => time(),
+                'logs' => [],
+            ];
+        }
+    }
 
     if (!isset($progress['start_time'])) {
         $progress['start_time'] = microtime(true);
