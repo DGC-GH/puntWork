@@ -146,7 +146,19 @@ function get_import_schedule_ajax() {
 
     // Add formatted date to last run if it exists
     if ($last_run && isset($last_run['timestamp'])) {
-        $last_run['formatted_date'] = wp_date('M j, Y g:i A', $last_run['timestamp']);
+        // Convert legacy timestamps (stored as local time) to UTC for wp_date()
+        $timestamp = $last_run['timestamp'];
+        $current_utc = time();
+        $timezone_offset = wp_timezone()->getOffset(new DateTime('@' . $current_utc));
+        
+        // If the stored timestamp appears to be in local time (common with old code),
+        // convert it back to UTC. This happens when current_time('timestamp') was used.
+        // The heuristic: if timestamp is significantly different from current UTC, adjust it.
+        if (abs($timestamp - $current_utc) > 3600) { // More than 1 hour difference
+            $timestamp = $timestamp - $timezone_offset;
+        }
+        
+        $last_run['formatted_date'] = wp_date('M j, Y g:i A', $timestamp);
     }
 
     wp_send_json_success([
@@ -169,6 +181,21 @@ function get_import_run_history_ajax() {
     }
 
     $history = get_option('puntwork_import_run_history', []);
+
+    // Update formatted dates for legacy entries (fix timezone issues)
+    $current_utc = time();
+    $timezone_offset = wp_timezone()->getOffset(new DateTime('@' . $current_utc));
+    
+    foreach ($history as &$entry) {
+        if (isset($entry['timestamp'])) {
+            $timestamp = $entry['timestamp'];
+            // Convert legacy timestamps if they appear to be in local time
+            if (abs($timestamp - $current_utc) > 3600) {
+                $timestamp = $timestamp - $timezone_offset;
+            }
+            $entry['formatted_date'] = wp_date('M j, Y g:i A', $timestamp);
+        }
+    }
 
     wp_send_json_success([
         'history' => $history,
@@ -211,7 +238,18 @@ function run_scheduled_import_ajax() {
     // Check if an import is already running
     $import_status = get_option('job_import_status', []);
     if (isset($import_status['complete']) && !$import_status['complete']) {
-        wp_send_json_error(['message' => 'An import is already running']);
+        // Check if it's a stuck import (processed = 0 and old)
+        $is_stuck = (!isset($import_status['processed']) || $import_status['processed'] == 0) &&
+                   (isset($import_status['time_elapsed']) && $import_status['time_elapsed'] > 300); // 5 minutes
+        
+        if ($is_stuck) {
+            error_log('[PUNTWORK] Detected stuck import, clearing status for new run');
+            delete_option('job_import_status');
+            delete_transient('import_cancel');
+        } else {
+            wp_send_json_error(['message' => 'An import is already running']);
+            return;
+        }
     }
 
     try {
