@@ -25,21 +25,23 @@ function get_feeds() {
         // First, check if CPT is registered
         if (!post_type_exists('job-feed')) {
             error_log('[PUNTWORK] get_feeds() - ERROR: job-feed post type is not registered!');
-            
-            // Try alternative: check if feeds are stored as options
-            $option_feeds = get_option('job_feed_url');
-            if (!empty($option_feeds)) {
-                error_log('[PUNTWORK] get_feeds() - Found feeds in options: ' . print_r($option_feeds, true));
-                if (is_array($option_feeds)) {
-                    $feeds = $option_feeds;
-                } elseif (is_string($option_feeds)) {
-                    // Try to parse as JSON
-                    $parsed = json_decode($option_feeds, true);
-                    if ($parsed && is_array($parsed)) {
-                        $feeds = $parsed;
-                    }
+        
+        // Try alternative: check if feeds are stored as options
+        $option_feeds = get_option('job_feed_url');
+        if (!empty($option_feeds)) {
+            if (WP_DEBUG) error_log('[PUNTWORK] get_feeds() - Found feeds in options: ' . print_r($option_feeds, true));
+            if (is_array($option_feeds)) {
+                $feeds = $option_feeds;
+            } elseif (is_string($option_feeds)) {
+                // Try to parse as JSON
+                $parsed = json_decode($option_feeds, true);
+                if ($parsed && is_array($parsed)) {
+                    $feeds = $parsed;
                 }
             }
+        }
+        
+        return $feeds;
             
             return $feeds;
         }
