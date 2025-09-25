@@ -41,22 +41,6 @@ Endpoint: `GET {site_url}/wp-json/wp/v2/types`
 - Returns JSON object containing all registered post types
 - Confirmed presence of `job` and `job-feed` keys on live site
 
-### WordPress PHP API
-```php
-if (post_type_exists('job')) {
-    // Job post type exists
-}
-if (post_type_exists('job-feed')) {
-    // Job-feed post type exists
-}
-```
-
-### Database Verification
-Query `wp_posts` table for `post_type` column:
-```sql
-SELECT DISTINCT post_type FROM wp_posts WHERE post_type IN ('job', 'job-feed');
-```
-
 ### Admin Interface
 - WordPress Admin > Posts > Filter by post type
 - ACF Pro interface shows custom post types
