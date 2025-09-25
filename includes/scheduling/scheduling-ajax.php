@@ -1,6 +1,11 @@
 <?php
 /**
- * AJAX handlers for scheduling functionality
+ * AJAX handlers for scheduli    // Check if our hook is registered
+    if (has_action('puntwork_scheduled_import_async')) {
+        error_log('[PUNTWORK] puntwork_scheduled_import_async hook is registered');
+    } else {
+        error_log('[PUNTWORK] puntwork_scheduled_import_async hook is NOT registered');
+    }ctionality
  * Handles all AJAX requests related to scheduling operations
  *
  * @package    Puntwork
@@ -21,17 +26,17 @@ add_action('admin_init', function() {
         if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
             $pending_count = $wpdb->get_var($wpdb->prepare(
                 "SELECT COUNT(*) FROM $table_name WHERE hook = %s AND status = %s",
-                'puntwork_run_scheduled_import_async',
+                'puntwork_scheduled_import_async',
                 'pending'
             ));
-            error_log('[PUNTWORK] Pending actions for puntwork_run_scheduled_import_async: ' . $pending_count);
+            error_log('[PUNTWORK] Pending actions for puntwork_scheduled_import_async: ' . $pending_count);
 
             $running_count = $wpdb->get_var($wpdb->prepare(
                 "SELECT COUNT(*) FROM $table_name WHERE hook = %s AND status = %s",
-                'puntwork_run_scheduled_import_async',
+                'puntwork_scheduled_import_async',
                 'running'
             ));
-            error_log('[PUNTWORK] Running actions for puntwork_run_scheduled_import_async: ' . $running_count);
+            error_log('[PUNTWORK] Running actions for puntwork_scheduled_import_async: ' . $running_count);
         }
     } else {
         error_log('[PUNTWORK] Action Scheduler is NOT available');
@@ -235,7 +240,7 @@ function run_scheduled_import_ajax() {
         // Use Action Scheduler if available (best for background processing)
         if (function_exists('as_enqueue_async_action')) {
             error_log('[PUNTWORK] Action Scheduler available, queuing async action');
-            $action_id = as_enqueue_async_action('puntwork_run_scheduled_import_async', [], 'puntwork');
+            $action_id = as_enqueue_async_action('puntwork_scheduled_import_async', [], 'puntwork');
             error_log('[PUNTWORK] Scheduled import queued via Action Scheduler, action ID: ' . $action_id);
 
             // Check if action was actually queued
