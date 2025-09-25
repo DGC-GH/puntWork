@@ -361,6 +361,9 @@
         handleCancelImport: function() {
             PuntWorkJSLogger.info('Cancel Import clicked', 'LOGIC');
 
+            // Immediately stop the import loop
+            this.isImporting = false;
+
             JobImportAPI.cancelImport().then(function(response) {
                 PuntWorkJSLogger.debug('Cancel response', 'LOGIC', response);
                 if (response.success) {
