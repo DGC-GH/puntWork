@@ -43,6 +43,13 @@ function run_scheduled_import($test_mode = false) {
             error_log('[PUNTWORK] Refreshing feed data for scheduled import');
             try {
                 fetch_and_generate_combined_json();
+                
+                // Update status after feed refresh
+                $feed_status = get_option('job_import_status', []);
+                if (!empty($feed_status)) {
+                    $feed_status['logs'][] = 'Feed data refreshed successfully';
+                    update_option('job_import_status', $feed_status, false);
+                }
             } catch (\Exception $e) {
                 error_log('[PUNTWORK] Feed refresh failed: ' . $e->getMessage());
                 return [
