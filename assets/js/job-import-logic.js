@@ -144,7 +144,7 @@
          * Handle import completion and cleanup
          */
         handleImportCompletion: async function() {
-            JobImportUI.appendLogs(['Import complete']);
+            JobImportUI.appendLogs(['Finalizing import...']);
 
             try {
                 // Small delay to ensure database is updated
@@ -180,6 +180,7 @@
                 JobImportUI.appendLogs(['Final status AJAX error: ' + error]);
             }
 
+            JobImportUI.appendLogs(['Import complete']);
             $('#status-message').text('Import Complete');
             JobImportUI.resetButtons();
             this.isImporting = false; // Reset importing flag on completion
@@ -225,6 +226,8 @@
                 console.log('[PUNTWORK] Processing feeds:', feeds);
                 let total_items = 0;
                 const total_feeds = Object.keys(feeds).length;
+
+                JobImportUI.appendLogs(['Processing ' + total_feeds + ' feeds...']);
 
                 // Initialize progress for feed processing phase
                 JobImportUI.updateProgress({
@@ -290,6 +293,7 @@
 
                 // Combine JSONL files
                 $('#status-message').text('Combining JSONL files...');
+                JobImportUI.appendLogs(['Starting JSONL combination...']);
 
                 // Show progress for JSONL combination phase
                 JobImportUI.updateProgress({
@@ -328,6 +332,7 @@
 
                 // Start import
                 $('#status-message').text('Starting import...');
+                JobImportUI.appendLogs(['Starting batch import processing...']);
                 await JobImportAPI.clearImportCancel();
                 await this.handleImport(0);
 
