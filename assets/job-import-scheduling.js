@@ -433,7 +433,7 @@
                 html += '<div style="color: #666;">';
                 html += 'Duration: ' + this.formatDuration(run.duration) + ' | ';
                 html += 'Processed: ' + run.processed + '/' + run.total + ' | ';
-                html += 'Created: ' + run.created + ', Updated: ' + run.updated + ', Skipped: ' + run.skipped;
+                html += 'Published: ' + run.published + ', Updated: ' + run.updated + ', Skipped: ' + run.skipped;
                 html += '</div>';
                 if (run.error_message) {
                     html += '<div style="color: #ff3b30; margin-top: 2px;">' + run.error_message + '</div>';

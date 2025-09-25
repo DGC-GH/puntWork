@@ -75,7 +75,7 @@ function run_scheduled_import($test_mode = false) {
                 'duration' => $duration,
                 'processed' => $result['processed'] ?? 0,
                 'total' => $result['total'] ?? 0,
-                'created' => $result['created'] ?? 0,
+                'published' => $result['published'] ?? 0,
                 'updated' => $result['updated'] ?? 0,
                 'skipped' => $result['skipped'] ?? 0,
                 'error_message' => $result['message'] ?? '',
@@ -109,7 +109,7 @@ function run_scheduled_import($test_mode = false) {
             'duration' => $duration,
             'processed' => 0,
             'total' => 0,
-            'created' => 0,
+            'published' => 0,
             'updated' => 0,
             'skipped' => 0,
             'error_message' => $e->getMessage(),
@@ -135,7 +135,7 @@ function log_scheduled_run($details, $test_mode = false) {
         'success' => $details['success'],
         'processed' => $details['processed'],
         'total' => $details['total'],
-        'created' => $details['created'],
+        'published' => $details['published'],
         'updated' => $details['updated'],
         'skipped' => $details['skipped'],
         'error_message' => $details['error_message'] ?? '',
@@ -159,13 +159,13 @@ function log_scheduled_run($details, $test_mode = false) {
     $status = $details['success'] ? 'SUCCESS' : 'FAILED';
     $mode = $test_mode ? ' (TEST)' : '';
     error_log(sprintf(
-        '[PUNTWORK] Scheduled import %s%s - Duration: %.2fs, Processed: %d/%d, Created: %d, Updated: %d, Skipped: %d',
+        '[PUNTWORK] Scheduled import %s%s - Duration: %.2fs, Processed: %d/%d, Published: %d, Updated: %d, Skipped: %d',
         $status,
         $mode,
         $details['duration'],
         $details['processed'],
         $details['total'],
-        $details['created'],
+        $details['published'],
         $details['updated'],
         $details['skipped']
     ));

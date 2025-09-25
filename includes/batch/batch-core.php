@@ -51,7 +51,7 @@ function process_batch_items_logic($setup) {
     }
 
     $end_index = min($start_index + $batch_size, $total);
-    $created = 0;
+    $published = 0;
     $updated = 0;
     $skipped = 0;
     $duplicates_drafted = 0;
@@ -125,7 +125,7 @@ function process_batch_items_logic($setup) {
                 'success' => true,
                 'processed' => $end_index,
                 'total' => $total,
-                'created' => $created,
+                'published' => $published,
                 'updated' => $updated,
                 'skipped' => $skipped,
                 'duplicates_drafted' => $duplicates_drafted,
@@ -144,14 +144,14 @@ function process_batch_items_logic($setup) {
         }
 
         // Process batch items
-        $result = process_batch_data($batch_guids, $batch_items, $logs, $created, $updated, $skipped, $duplicates_drafted);
+        $result = process_batch_data($batch_guids, $batch_items, $logs, $published, $updated, $skipped, $duplicates_drafted);
 
         unset($batch_items, $batch_guids);
 
         update_option('job_import_progress', $end_index, false);
         update_option('job_import_processed_guids', $processed_guids, false);
         $time_elapsed = microtime(true) - $start_time;
-        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Batch complete: Processed {$result['processed_count']} items (created: $created, updated: $updated, skipped: $skipped, duplicates: $duplicates_drafted)";
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Batch complete: Processed {$result['processed_count']} items (published: $published, updated: $updated, skipped: $skipped, duplicates: $duplicates_drafted)";
 
         // Update performance metrics
         update_batch_metrics($time_elapsed, $result['processed_count'], $batch_size);
@@ -160,7 +160,7 @@ function process_batch_items_logic($setup) {
             'success' => true,
             'processed' => $end_index,
             'total' => $total,
-            'created' => $created,
+            'published' => $published,
             'updated' => $updated,
             'skipped' => $skipped,
             'duplicates_drafted' => $duplicates_drafted,
