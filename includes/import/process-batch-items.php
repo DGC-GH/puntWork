@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if (!function_exists('process_batch_items')) {
-    function process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$created, &$skipped, &$processed_count) {
+    function process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count) {
         $user_id = get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : get_current_user_id();
         foreach ($batch_guids as $guid) {
             $item = $batch_items[$guid]['item'];
@@ -111,7 +111,7 @@ if (!function_exists('process_batch_items')) {
                     continue;
                 }
 
-                $created++;
+                $published++;
                 update_post_meta($post_id, '_last_import_update', $xml_updated);
                 $item_hash = md5(json_encode($item));
                 update_post_meta($post_id, '_import_hash', $item_hash);
@@ -123,8 +123,8 @@ if (!function_exists('process_batch_items')) {
                     update_post_meta($post_id, $field, $set_value);
                 }
 
-                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Created ID: ' . $post_id . ' GUID: ' . $guid;
-                error_log('Created ID: ' . $post_id . ' GUID: ' . $guid);
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Published ID: ' . $post_id . ' GUID: ' . $guid;
+                error_log('Published ID: ' . $post_id . ' GUID: ' . $guid);
             }
 
             $processed_count++;

@@ -40,7 +40,7 @@ function render_main_import_ui() {
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; font-size: 14px;">
                 <p style="margin: 0;">Total: <span id="total-items" style="font-weight: 500;">0</span></p>
                 <p style="margin: 0;">Processed: <span id="processed-items" style="font-weight: 500;">0</span></p>
-                <p style="margin: 0;">Created: <span id="created-items" style="font-weight: 500;">0</span></p>
+                <p style="margin: 0;">Published: <span id="published-items" style="font-weight: 500;">0</span></p>
                 <p style="margin: 0;">Updated: <span id="updated-items" style="font-weight: 500;">0</span></p>
                 <p style="margin: 0;">Skipped: <span id="skipped-items" style="font-weight: 500;">0</span></p>
                 <p style="margin: 0;">Duplicated: <span id="duplicates-drafted" style="font-weight: 500;">0</span></p>

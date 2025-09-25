@@ -21,13 +21,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @param array $batch_guids Array of GUIDs in batch.
  * @param array $batch_items Array of batch items.
  * @param array &$logs Reference to logs array.
- * @param int &$created Reference to created count.
+ * @param int &$published Reference to published count.
  * @param int &$updated Reference to updated count.
  * @param int &$skipped Reference to skipped count.
  * @param int &$duplicates_drafted Reference to duplicates drafted count.
  * @return array Processing result.
  */
-function process_batch_data($batch_guids, $batch_items, &$logs, &$created, &$updated, &$skipped, &$duplicates_drafted) {
+function process_batch_data($batch_guids, $batch_items, &$logs, &$published, &$updated, &$skipped, &$duplicates_drafted) {
     global $wpdb;
 
     // Bulk existing post_ids
@@ -79,7 +79,7 @@ function process_batch_data($batch_guids, $batch_items, &$logs, &$created, &$upd
     $acf_fields = get_acf_fields();
     $zero_empty_fields = get_zero_empty_fields();
 
-    process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $logs, $updated, $created, $skipped, $processed_count);
+    process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $logs, $updated, $published, $skipped, $processed_count);
 
     return ['processed_count' => $processed_count];
 }
