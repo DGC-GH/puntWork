@@ -14,6 +14,17 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+// Force admin menu refresh on plugin load to ensure icon updates
+add_action('admin_init', function() {
+    // This helps ensure the admin menu icon is refreshed
+    if (isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0) {
+        // Add a small cache-busting parameter to force icon reload
+        add_action('admin_head', function() {
+            echo '<style>#adminmenu .toplevel_page_puntwork-dashboard .wp-menu-image img { display: none; }</style>';
+        });
+    }
+});
+
 add_action('admin_menu', function() {
     add_menu_page(
         'puntWork Dashboard',
@@ -21,7 +32,7 @@ add_action('admin_menu', function() {
         'manage_options',
         'puntwork-dashboard',
         __NAMESPACE__ . '\\puntwork_dashboard_page',
-        PUNTWORK_URL . 'assets/images/icon.svg',
+        PUNTWORK_URL . 'assets/images/icon.svg?v=' . PUNTWORK_VERSION,
         0
     );
 
