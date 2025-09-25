@@ -195,6 +195,7 @@
                 this.startTime = Date.now(); // Record start time in milliseconds
                 JobImportUI.setPhase('feed-processing');
                 $('#start-import').hide();
+                $('#resume-import').hide();
                 $('#cancel-import').show();
                 JobImportUI.showImportUI();
 

@@ -271,12 +271,30 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 if (response.success && statusData.processed > 0 && !statusData.complete) {
                     JobImportUI.updateProgress(statusData);
                     JobImportUI.appendLogs(statusData.logs || []);
-                    $('#resume-import').show();
-                    $('#start-import').text('Restart').on('click', function() {
-                        JobImportEvents.handleRestartImport();
-                    });
-                    JobImportUI.showImportUI();
-                    $('#status-message').text('Previous import interrupted. Continue or restart?');
+                    
+                    // Check if import appears to be currently running (updated within last 60 seconds)
+                    var currentTime = Math.floor(Date.now() / 1000);
+                    var timeSinceLastUpdate = currentTime - (statusData.last_update || 0);
+                    var isRecentlyActive = timeSinceLastUpdate < 60;
+                    
+                    if (isRecentlyActive) {
+                        // Import appears to be currently running - show progress UI with cancel
+                        $('#start-import').hide();
+                        $('#resume-import').hide();
+                        $('#cancel-import').show();
+                        JobImportUI.showImportUI();
+                        $('#status-message').text('Import in progress...');
+                        console.log('[PUNTWORK] Import appears to be currently running');
+                    } else {
+                        // Import was interrupted - show resume option
+                        $('#resume-import').show();
+                        $('#start-import').text('Restart').on('click', function() {
+                            JobImportEvents.handleRestartImport();
+                        });
+                        JobImportUI.showImportUI();
+                        $('#status-message').text('Previous import interrupted. Continue or restart?');
+                        console.log('[PUNTWORK] Import was interrupted, showing resume option');
+                    }
                 } else {
                     $('#resume-import').hide();
                     $('#start-import').show().text('Start');
