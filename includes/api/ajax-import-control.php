@@ -249,7 +249,10 @@ function get_job_import_status_ajax() {
     } else {
         $progress['time_elapsed'] = $progress['time_elapsed'] ?? 0;
     }
-    $progress['complete'] = ($progress['processed'] >= $progress['total'] && $progress['total'] > 0);
+    // Only recalculate complete status if it's not already marked as complete
+    if (!isset($progress['complete']) || !$progress['complete']) {
+        $progress['complete'] = ($progress['processed'] >= $progress['total'] && $progress['total'] > 0);
+    }
 
     // Add resume_progress for JavaScript
     $progress['resume_progress'] = (int) get_option('job_import_progress', 0);
