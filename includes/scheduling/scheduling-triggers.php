@@ -30,4 +30,25 @@ add_action('wp', function() {
 add_action('fetch_combined_jobs_json', __NAMESPACE__ . '\\fetch_and_generate_combined_json');
 
 // Register the scheduled import hook
-add_action('puntwork_scheduled_import', __NAMESPACE__ . '\\run_scheduled_import');
+add_action('puntwork_scheduled_import', function() {
+    error_log('[PUNTWORK] Scheduled import cron triggered');
+    
+    // Check if an import is already running
+    $import_status = get_option('job_import_status', []);
+    if (isset($import_status['complete']) && !$import_status['complete']) {
+        error_log('[PUNTWORK] Scheduled import cron skipped - import already running');
+        return;
+    }
+
+    try {
+        $result = \Puntwork\run_scheduled_import();
+        
+        if ($result['success']) {
+            error_log('[PUNTWORK] Scheduled import cron completed successfully');
+        } else {
+            error_log('[PUNTWORK] Scheduled import cron failed: ' . ($result['message'] ?? 'Unknown error'));
+        }
+    } catch (\Exception $e) {
+        error_log('[PUNTWORK] Scheduled import cron exception: ' . $e->getMessage());
+    }
+});

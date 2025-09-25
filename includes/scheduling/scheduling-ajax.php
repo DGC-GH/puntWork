@@ -187,8 +187,8 @@ function run_scheduled_import_ajax() {
         wp_send_json_error(['message' => 'An import is already running']);
     }
 
-    // Schedule the import to run immediately in the background
-    $scheduled_time = time() + 5; // Start in 5 seconds to allow AJAX response
+    // Schedule the import to run in a few seconds so user can see the scheduling process
+    $scheduled_time = time() + 3; // Start in 3 seconds for immediate verification
     $scheduled = wp_schedule_single_event($scheduled_time, 'puntwork_manual_import');
 
     if (!$scheduled) {
@@ -196,8 +196,9 @@ function run_scheduled_import_ajax() {
     }
 
     wp_send_json_success([
-        'message' => 'Import scheduled to start in 5 seconds',
-        'scheduled_time' => $scheduled_time
+        'message' => 'Import scheduled to start in 3 seconds',
+        'scheduled_time' => $scheduled_time,
+        'next_check' => time() + 5 // Suggest when to check for results
     ]);
 }
 
