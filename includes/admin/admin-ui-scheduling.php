@@ -66,10 +66,9 @@ function render_scheduling_ui() {
                     <div class="form-group">
                         <label for="schedule-minute" style="display: block; font-size: 14px; font-weight: 500; color: #424245; margin-bottom: 8px; letter-spacing: -0.01em;">Minute</label>
                         <select id="schedule-minute" style="width: 100%; padding: 12px 16px; border: 1px solid #d1d1d6; border-radius: 10px; font-size: 16px; background-color: #ffffff; color: #1d1d1f; font-weight: 400; transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
-                            <option value="0" selected>00</option>
-                            <option value="15">15</option>
-                            <option value="30">30</option>
-                            <option value="45">45</option>
+                            <?php for ($i = 0; $i < 60; $i++): ?>
+                                <option value="<?php echo $i; ?>" <?php echo $i == 0 ? 'selected' : ''; ?>><?php echo str_pad($i, 2, '0', STR_PAD_LEFT); ?></option>
+                            <?php endfor; ?>
                         </select>
                     </div>
                 </div>
