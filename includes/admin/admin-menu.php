@@ -18,9 +18,9 @@ add_action('admin_menu', function() {
     add_submenu_page(
         'edit.php?post_type=job-feed',
         'Job Import Dashboard',
-        'Import Jobs',
+        'Dashboard',
         'manage_options',
-        'job-import-dashboard',
+        'job-feed-dashboard',
         __NAMESPACE__ . '\\job_import_admin_page',
         1
     );

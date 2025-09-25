@@ -32,7 +32,7 @@ function render_debug_ui() {
             <p><strong>Last Run:</strong> <span id="debug-last-run">Loading...</span></p>
             <p><strong>Schedule Time:</strong> <span id="debug-schedule-time">Loading...</span></p>
             <p><strong>Frequency:</strong> <span id="debug-schedule-frequency">Loading...</span></p>
-            <p><a href="?page=job-import-dashboard&test_scheduling=1" target="_blank" style="color: #007aff;">Open Test Page</a></p>
+            <p><a href="?page=job-feed-dashboard&test_scheduling=1" target="_blank" style="color: #007aff;">Open Test Page</a></p>
         </div>
     </div>
     <?php
