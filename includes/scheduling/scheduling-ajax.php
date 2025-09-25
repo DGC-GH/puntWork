@@ -236,29 +236,70 @@ function run_scheduled_import_ajax() {
     }
 
     try {
-        // Run import synchronously for immediate execution
-        error_log('[PUNTWORK] Running import synchronously for immediate execution');
-        
+        // Initialize import status for immediate UI feedback
+        $initial_status = [
+            'total' => 0, // Will be updated as import progresses
+            'processed' => 0,
+            'published' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'duplicates_drafted' => 0,
+            'time_elapsed' => 0,
+            'complete' => false,
+            'success' => false,
+            'error_message' => '',
+            'batch_size' => get_option('job_import_batch_size') ?: 5,
+            'inferred_languages' => 0,
+            'inferred_benefits' => 0,
+            'schema_generated' => 0,
+            'start_time' => microtime(true),
+            'end_time' => null,
+            'last_update' => time(),
+            'logs' => ['Scheduled import started - preparing feeds...'],
+        ];
+        update_option('job_import_status', $initial_status, false);
+
         // Clear any previous cancellation before starting
         delete_transient('import_cancel');
-        error_log('[PUNTWORK] Cleared import_cancel transient');
+        error_log('[PUNTWORK] Cleared import_cancel transient for scheduled run');
 
-        $result = run_scheduled_import();
-        error_log('[PUNTWORK] Synchronous import result: ' . print_r($result, true));
-
-        if ($result['success']) {
-            error_log('[PUNTWORK] Synchronous scheduled import completed successfully');
-            wp_send_json_success([
-                'message' => 'Import completed successfully',
-                'result' => $result
-            ]);
+        // Schedule the import to run asynchronously
+        if (function_exists('as_schedule_single_action')) {
+            // Use Action Scheduler if available
+            error_log('[PUNTWORK] Scheduling async import using Action Scheduler');
+            as_schedule_single_action(time(), 'puntwork_scheduled_import_async');
+        } elseif (function_exists('wp_schedule_single_event')) {
+            // Fallback: Use WordPress cron for near-immediate execution
+            error_log('[PUNTWORK] Action Scheduler not available, using WordPress cron');
+            wp_schedule_single_event(time() + 1, 'puntwork_scheduled_import_async');
         } else {
-            error_log('[PUNTWORK] Synchronous scheduled import failed: ' . ($result['message'] ?? 'Unknown error'));
-            // Reset import status on failure so future attempts can start
-            delete_option('job_import_status');
-            error_log('[PUNTWORK] Reset job_import_status due to import failure');
-            wp_send_json_error(['message' => 'Import failed: ' . ($result['message'] ?? 'Unknown error')]);
+            // Final fallback: Run synchronously (not ideal for UI but maintains functionality)
+            error_log('[PUNTWORK] No async scheduling available, running synchronously');
+            $result = run_scheduled_import();
+            
+            if ($result['success']) {
+                error_log('[PUNTWORK] Synchronous scheduled import completed successfully');
+                wp_send_json_success([
+                    'message' => 'Import completed successfully',
+                    'result' => $result,
+                    'async' => false
+                ]);
+            } else {
+                error_log('[PUNTWORK] Synchronous scheduled import failed: ' . ($result['message'] ?? 'Unknown error'));
+                // Reset import status on failure so future attempts can start
+                delete_option('job_import_status');
+                error_log('[PUNTWORK] Reset job_import_status due to import failure');
+                wp_send_json_error(['message' => 'Import failed: ' . ($result['message'] ?? 'Unknown error')]);
+            }
+            return;
         }
+
+        // Return success immediately so UI can start polling
+        error_log('[PUNTWORK] Scheduled import initiated asynchronously');
+        wp_send_json_success([
+            'message' => 'Import started successfully',
+            'async' => true
+        ]);
 
     } catch (\Exception $e) {
         error_log('[PUNTWORK] Run scheduled import AJAX error: ' . $e->getMessage());

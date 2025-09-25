@@ -344,37 +344,69 @@
             }
 
             console.log('[PUNTWORK] User confirmed runNow, proceeding...');
-            $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Running Import...');
+            $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Starting Import...');
 
             // Show the progress UI immediately
             JobImportUI.showImportUI();
             JobImportUI.clearProgress();
             $('#status-message').text('Starting import...');
 
-            // Start status polling to show progress
+            // Update import controls to show running state
+            $('#start-import').hide();
+            $('#resume-import').hide();
+            $('#cancel-import').show();
+            $('#reset-import').show();
+
+            // Start status polling immediately to show progress as soon as import begins
             JobImportEvents.startStatusPolling();
 
             JobImportAPI.call('run_scheduled_import', {}, function(response) {
                 console.log('[PUNTWORK] run_scheduled_import response:', response);
 
-                // Stop status polling since import is complete
-                JobImportEvents.stopStatusPolling();
-
                 if (response.success) {
-                    console.log('[PUNTWORK] Import completed successfully');
-                    $button.prop('disabled', false).html('Run Now');
-                    
-                    // Show success notification with detailed stats
-                    var message = response.data.message || 'Import completed successfully! Check history for details.';
-                    self.showNotification(message, 'success');
-                    
-                    // Refresh the schedule settings and history to show the new run
-                    self.loadScheduleSettings();
-                    self.loadRunHistory();
+                    // Check if import ran asynchronously or synchronously
+                    if (response.data.async === false) {
+                        // Import completed synchronously - stop polling and show results
+                        console.log('[PUNTWORK] Import completed synchronously');
+                        JobImportEvents.stopStatusPolling();
+                        $button.prop('disabled', false).html('Run Now');
+                        
+                        // Show success notification with detailed stats
+                        var message = response.data.result.message || 'Import completed successfully! Check history for details.';
+                        self.showNotification(message, 'success');
+                        
+                        // Refresh the schedule settings and history to show the new run
+                        self.loadScheduleSettings();
+                        self.loadRunHistory();
+                    } else {
+                        // Import started asynchronously - keep polling for progress
+                        console.log('[PUNTWORK] Import started asynchronously, continuing to poll');
+                        $button.prop('disabled', false).html('Run Now');
+                        
+                        // Show success notification
+                        self.showNotification('Import started successfully - progress will update in real-time', 'success');
+                        
+                        // Refresh the schedule settings and history after a short delay
+                        setTimeout(function() {
+                            self.loadScheduleSettings();
+                            self.loadRunHistory();
+                        }, 2000);
+                    }
                 } else {
-                    console.log('[PUNTWORK] Import failed:', response.data);
+                    console.log('[PUNTWORK] Import failed to start:', response.data);
                     $button.prop('disabled', false).html('Run Now');
-                    self.showNotification('Import failed: ' + (response.data.message || 'Unknown error'), 'error');
+                    
+                    // Stop status polling since import failed to start
+                    JobImportEvents.stopStatusPolling();
+                    
+                    // Reset UI state
+                    JobImportUI.hideImportUI();
+                    $('#start-import').show();
+                    $('#resume-import').hide();
+                    $('#cancel-import').hide();
+                    $('#reset-import').hide();
+                    
+                    self.showNotification('Failed to start import: ' + (response.data.message || 'Unknown error'), 'error');
                 }
             });
         },
