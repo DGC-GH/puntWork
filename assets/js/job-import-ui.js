@@ -640,7 +640,8 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
         hideImportUI: function() {
             $('#import-progress').hide();
             $('#toggle-log').hide();
-            this.hideLog(); // Also hide the log when hiding UI
+            // Keep log visible for testing purposes
+            // this.hideLog();
         },
 
         /**
