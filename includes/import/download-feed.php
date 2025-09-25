@@ -32,7 +32,7 @@ function download_feed($url, $xml_path, $output_dir, &$logs) {
             curl_setopt($ch, CURLOPT_FILE, $fp);
             curl_setopt($ch, CURLOPT_TIMEOUT, 300);
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-            curl_setopt($ch, CURLOPT_USERAGENT, 'WordPress Job Importer');
+            curl_setopt($ch, CURLOPT_USERAGENT, 'WordPress puntWork Importer');
             $success = curl_exec($ch);
             $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
