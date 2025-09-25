@@ -45,13 +45,23 @@
                     const statusResponse = await JobImportAPI.getImportStatus();
                     if (statusResponse.success) {
                         var batchData = JobImportUI.normalizeResponseData(statusResponse);
-                        JobImportUI.updateProgress(batchData);
-                        JobImportUI.appendLogs(batchData.logs || []);
+                        console.log('[PUNTWORK] Updating UI with status data:', batchData);
+                        try {
+                            JobImportUI.updateProgress(batchData);
+                            JobImportUI.appendLogs(batchData.logs || []);
+                        } catch (uiError) {
+                            console.error('[PUNTWORK] Error updating UI with status data:', uiError);
+                        }
                     } else {
                         // Fallback to batch data if status fetch fails
                         var batchData = JobImportUI.normalizeResponseData(response);
-                        JobImportUI.updateProgress(batchData);
-                        JobImportUI.appendLogs(batchData.logs || []);
+                        console.log('[PUNTWORK] Updating UI with batch data (status fetch failed):', batchData);
+                        try {
+                            JobImportUI.updateProgress(batchData);
+                            JobImportUI.appendLogs(batchData.logs || []);
+                        } catch (uiError) {
+                            console.error('[PUNTWORK] Error updating UI with batch data:', uiError);
+                        }
                     }
 
                     let total = batchData.total;
@@ -70,13 +80,23 @@
                                 const statusResponse = await JobImportAPI.getImportStatus();
                                 if (statusResponse.success) {
                                     batchData = JobImportUI.normalizeResponseData(statusResponse);
-                                    JobImportUI.updateProgress(batchData);
-                                    JobImportUI.appendLogs(batchData.logs || []);
+                                    console.log('[PUNTWORK] Updating UI with next batch status data:', batchData);
+                                    try {
+                                        JobImportUI.updateProgress(batchData);
+                                        JobImportUI.appendLogs(batchData.logs || []);
+                                    } catch (uiError) {
+                                        console.error('[PUNTWORK] Error updating UI with next batch status data:', uiError);
+                                    }
                                 } else {
                                     // Fallback to batch data if status fetch fails
                                     batchData = JobImportUI.normalizeResponseData(response);
-                                    JobImportUI.updateProgress(batchData);
-                                    JobImportUI.appendLogs(batchData.logs || []);
+                                    console.log('[PUNTWORK] Updating UI with next batch data (status fetch failed):', batchData);
+                                    try {
+                                        JobImportUI.updateProgress(batchData);
+                                        JobImportUI.appendLogs(batchData.logs || []);
+                                    } catch (uiError) {
+                                        console.error('[PUNTWORK] Error updating UI with next batch data:', uiError);
+                                    }
                                 }
                                 current = batchData.processed;
                             } else {
