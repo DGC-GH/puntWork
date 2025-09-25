@@ -60,7 +60,7 @@ function run_scheduled_import($test_mode = false) {
 
         // Store last run information
         $last_run_data = [
-            'timestamp' => current_time('timestamp'),
+            'timestamp' => time(),
             'duration' => $duration,
             'test_mode' => $test_mode,
             'result' => $result
@@ -79,7 +79,7 @@ function run_scheduled_import($test_mode = false) {
                 'updated' => $result['updated'] ?? 0,
                 'skipped' => $result['skipped'] ?? 0,
                 'error_message' => $result['message'] ?? '',
-                'timestamp' => current_time('timestamp')
+                'timestamp' => time()
             ];
 
             update_option('puntwork_last_import_details', $details);
@@ -95,7 +95,7 @@ function run_scheduled_import($test_mode = false) {
         $duration = $end_time - $start_time;
 
         $error_data = [
-            'timestamp' => current_time('timestamp'),
+            'timestamp' => time(),
             'duration' => $duration,
             'test_mode' => $test_mode,
             'error' => $e->getMessage()
@@ -113,7 +113,7 @@ function run_scheduled_import($test_mode = false) {
             'updated' => 0,
             'skipped' => 0,
             'error_message' => $e->getMessage(),
-            'timestamp' => current_time('timestamp')
+            'timestamp' => time()
         ], $test_mode);
 
         error_log('[PUNTWORK] Scheduled import failed: ' . $e->getMessage());
