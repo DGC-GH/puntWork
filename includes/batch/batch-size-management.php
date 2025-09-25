@@ -20,16 +20,16 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 
 /**
- * Adjust batch size based on memory and time metrics.
+ * Adjust batch size based on memory and consecutive batch time metrics.
  *
  * @param int $batch_size Current batch size.
  * @param float $memory_limit_bytes Memory limit.
  * @param float $last_memory_ratio Last memory ratio.
- * @param float $prev_time_per_item Previous time per item.
- * @param float $avg_time_per_item Average time per item.
+ * @param float $current_batch_time Current batch completion time.
+ * @param float $previous_batch_time Previous batch completion time.
  * @return array Array with 'batch_size' and 'reason' keys.
  */
-function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $prev_time_per_item, $avg_time_per_item) {
+function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time) {
     $old_batch_size = $batch_size;
 
     // Ensure batch size is within reasonable bounds
@@ -47,21 +47,16 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
         $batch_size = min(50, floor($batch_size * 1.3));
     }
 
-    // Time-based adjustment (secondary)
-    if ($prev_time_per_item > 0 && $avg_time_per_item > 0) {
-        $time_ratio = $avg_time_per_item / $prev_time_per_item;
-
-        // Stabilize time ratio for very small values
-        if ($time_ratio < 0.1) $time_ratio = 0.1;
-        if ($time_ratio > 10) $time_ratio = 10;
-
-        if ($time_ratio > 1.5) {
-            // Processing is getting significantly slower - reduce batch size
-            $batch_size = max(1, floor($batch_size * 0.7));
-        } elseif ($time_ratio < 0.7) {
-            // Processing is getting faster - can increase batch size
+    // Dynamic batch size adjustment based on consecutive batch completion times
+    if ($previous_batch_time > 0 && $current_batch_time > 0) {
+        if ($current_batch_time > $previous_batch_time) {
+            // Current batch took longer than previous - increase batch size
             $batch_size = min(50, floor($batch_size * 1.2));
+        } elseif ($current_batch_time < $previous_batch_time) {
+            // Current batch took less time than previous - decrease batch size
+            $batch_size = max(1, floor($batch_size * 0.8));
         }
+        // If times are equal, keep batch size the same
     }
 
     // Minimum batch size recovery mechanism
@@ -98,12 +93,11 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
             $reason = 'moderate high memory usage';
         } elseif ($last_memory_ratio < 0.4) {
             $reason = 'low memory usage';
-        } elseif ($prev_time_per_item > 0 && $avg_time_per_item > 0) {
-            $time_ratio = $avg_time_per_item / $prev_time_per_item;
-            if ($time_ratio > 1.5) {
-                $reason = 'slowing processing time';
-            } elseif ($time_ratio < 0.7) {
-                $reason = 'improving processing time';
+        } elseif ($previous_batch_time > 0 && $current_batch_time > 0) {
+            if ($current_batch_time > $previous_batch_time) {
+                $reason = 'current batch slower than previous';
+            } elseif ($current_batch_time < $previous_batch_time) {
+                $reason = 'current batch faster than previous';
             }
         }
 
@@ -119,12 +113,11 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
             $detailed_reason = 'moderate memory usage detected';
         } elseif ($last_memory_ratio < 0.4) {
             $detailed_reason = 'low memory usage allows larger batches';
-        } elseif ($prev_time_per_item > 0 && $avg_time_per_item > 0) {
-            $time_ratio = $avg_time_per_item / $prev_time_per_item;
-            if ($time_ratio > 1.5) {
-                $detailed_reason = 'processing speed slowing down';
-            } elseif ($time_ratio < 0.7) {
-                $detailed_reason = 'processing speed improving';
+        } elseif ($previous_batch_time > 0 && $current_batch_time > 0) {
+            if ($current_batch_time > $previous_batch_time) {
+                $detailed_reason = 'current batch took longer than previous - increasing batch size';
+            } elseif ($current_batch_time < $previous_batch_time) {
+                $detailed_reason = 'current batch took less time than previous - decreasing batch size';
             }
         }
 
@@ -135,12 +128,13 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
         }
 
         error_log(sprintf(
-            '[PUNTWORK] Batch size adjusted from %d to %d due to %s (memory: %.2f, avg_time: %.3f)',
+            '[PUNTWORK] Batch size adjusted from %d to %d due to %s (memory: %.2f, current_batch: %.3f, prev_batch: %.3f)',
             $old_batch_size,
             $batch_size,
             $reason,
             $last_memory_ratio,
-            $avg_time_per_item
+            $current_batch_time,
+            $previous_batch_time
         ));
 
         // Return detailed reason for user logs
@@ -159,6 +153,10 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
  * @return void
  */
 function update_batch_metrics($time_elapsed, $processed_count, $batch_size) {
+    // Store previous batch time before updating
+    $previous_batch_time = get_option('job_import_last_batch_time', 0);
+    update_option('job_import_previous_batch_time', $previous_batch_time, false);
+
     // Update stored metrics for next batch
     $time_per_item = $processed_count > 0 ? $time_elapsed / $processed_count : 0;
     $prev_time_per_item = get_option('job_import_time_per_job', 0);

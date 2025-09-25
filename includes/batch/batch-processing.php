@@ -37,14 +37,27 @@ function process_batch_items_logic($setup) {
     $last_peak_memory = get_option('job_import_last_peak_memory', $memory_limit_bytes);
     $last_memory_ratio = $last_peak_memory / $memory_limit_bytes;
 
-    $batch_size = adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $prev_time_per_item, $avg_time_per_item);
+    // Get current and previous batch times for dynamic adjustment
+    $current_batch_time = get_option('job_import_last_batch_time', 0);
+    $previous_batch_time = get_option('job_import_previous_batch_time', 0);
+
+    $batch_size = adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time);
     $adjustment_result = $batch_size; // Now returns array with 'batch_size' and 'reason'
     $batch_size = $adjustment_result['batch_size'];
 
     // Only update and log if changed
     if ($batch_size != $old_batch_size) {
         update_option('job_import_batch_size', $batch_size, false);
-        $reason = ($last_memory_ratio > 0.85 ? 'high previous memory' : ($last_memory_ratio < 0.5 ? 'low previous memory and low avg time' : ($time_ratio > 1.2 ? 'high time ratio' : 'low time ratio')));
+        $reason = '';
+        if ($last_memory_ratio > 0.85) {
+            $reason = 'high previous memory';
+        } elseif ($last_memory_ratio < 0.5) {
+            $reason = 'low previous memory and low avg time';
+        } elseif ($current_batch_time > $previous_batch_time) {
+            $reason = 'current batch slower than previous';
+        } elseif ($current_batch_time < $previous_batch_time) {
+            $reason = 'current batch faster than previous';
+        }
         $logs = [];
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch size adjusted to ' . $batch_size . ' due to ' . $reason;
         if (!empty($adjustment_result['reason'])) {
@@ -129,6 +142,29 @@ function process_batch_items_logic($setup) {
             update_option('job_import_progress', $end_index, false);
             update_option('job_import_processed_guids', $processed_guids, false);
             $time_elapsed = microtime(true) - $start_time;
+
+            // Update import status for UI polling
+            $current_status = get_option('job_import_status', []);
+            $current_status['total'] = $total;
+            $current_status['processed'] = $end_index;
+            $current_status['published'] = $current_status['published'] ?? 0;
+            $current_status['updated'] = $current_status['updated'] ?? 0;
+            $current_status['skipped'] = ($current_status['skipped'] ?? 0) + $skipped;
+            $current_status['duplicates_drafted'] = $current_status['duplicates_drafted'] ?? 0;
+            $current_status['time_elapsed'] = $time_elapsed;
+            $current_status['complete'] = ($end_index >= $total);
+            $current_status['success'] = true;
+            $current_status['error_message'] = '';
+            $current_status['batch_size'] = $batch_size;
+            $current_status['inferred_languages'] = ($current_status['inferred_languages'] ?? 0) + $inferred_languages;
+            $current_status['inferred_benefits'] = ($current_status['inferred_benefits'] ?? 0) + $inferred_benefits;
+            $current_status['schema_generated'] = ($current_status['schema_generated'] ?? 0) + $schema_generated;
+            $current_status['start_time'] = $start_time;
+            $current_status['end_time'] = $current_status['complete'] ? microtime(true) : null;
+            $current_status['last_update'] = time();
+            $current_status['logs'] = array_slice($logs, -50);
+            update_option('job_import_status', $current_status, false);
+
             return [
                 'success' => true,
                 'processed' => $end_index,
@@ -166,6 +202,28 @@ function process_batch_items_logic($setup) {
         // Store batch timing data for status retrieval
         update_option('job_import_last_batch_time', $time_elapsed, false);
         update_option('job_import_last_batch_processed', $result['processed_count'], false);
+
+        // Update import status for UI polling
+        $current_status = get_option('job_import_status', []);
+        $current_status['total'] = $total;
+        $current_status['processed'] = $end_index;
+        $current_status['published'] = ($current_status['published'] ?? 0) + $published;
+        $current_status['updated'] = ($current_status['updated'] ?? 0) + $updated;
+        $current_status['skipped'] = ($current_status['skipped'] ?? 0) + $skipped;
+        $current_status['duplicates_drafted'] = ($current_status['duplicates_drafted'] ?? 0) + $duplicates_drafted;
+        $current_status['time_elapsed'] = $time_elapsed;
+        $current_status['complete'] = ($end_index >= $total);
+        $current_status['success'] = true;
+        $current_status['error_message'] = '';
+        $current_status['batch_size'] = $batch_size;
+        $current_status['inferred_languages'] = ($current_status['inferred_languages'] ?? 0) + $inferred_languages;
+        $current_status['inferred_benefits'] = ($current_status['inferred_benefits'] ?? 0) + $inferred_benefits;
+        $current_status['schema_generated'] = ($current_status['schema_generated'] ?? 0) + $schema_generated;
+        $current_status['start_time'] = $start_time;
+        $current_status['end_time'] = $current_status['complete'] ? microtime(true) : null;
+        $current_status['last_update'] = time();
+        $current_status['logs'] = array_slice($logs, -50); // Keep last 50 log entries
+        update_option('job_import_status', $current_status, false);
 
         return [
             'success' => true,
