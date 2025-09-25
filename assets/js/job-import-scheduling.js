@@ -338,35 +338,31 @@
             var self = this;
             var $button = $('#run-now');
 
-            if (!confirm('This will schedule an import to start in 3 seconds. You can monitor the progress in real-time. Continue?')) {
+            if (!confirm('This will start the import immediately. Continue?')) {
                 console.log('[PUNTWORK] User cancelled runNow');
                 return;
             }
 
             console.log('[PUNTWORK] User confirmed runNow, proceeding...');
-            $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Scheduling...');
+            $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Running Import...');
 
             JobImportAPI.call('run_scheduled_import', {}, function(response) {
                 console.log('[PUNTWORK] run_scheduled_import response:', response);
 
                 if (response.success) {
-                    console.log('[PUNTWORK] Import scheduled successfully, showing progress UI immediately');
-                    $button.prop('disabled', false).html('<i class="fas fa-clock" style="margin-right: 8px;"></i>Import Scheduled');
-                    self.showNotification('Import scheduled - starting in 3 seconds', 'success');
-
-                    // Show the progress UI immediately so user can see it's starting
-                    console.log('[PUNTWORK] Calling JobImportUI.showImportUI()');
-                    JobImportUI.showImportUI();
-                    JobImportUI.clearProgress();
-                    $('#status-message').text('Import scheduled - waiting to start...');
-
-                    // Start monitoring the import progress immediately
-                    console.log('[PUNTWORK] Starting monitoring with JobImportEvents.startStatusPolling()');
-                    self.monitorImportProgress(response.data.scheduled_time, response.data.next_check);
-                } else {
-                    console.log('[PUNTWORK] Import scheduling failed:', response.data);
+                    console.log('[PUNTWORK] Import completed successfully');
                     $button.prop('disabled', false).html('Run Now');
-                    self.showNotification('Failed to schedule import: ' + (response.data.message || 'Unknown error'), 'error');
+                    
+                    // Show success notification
+                    self.showNotification('Import completed successfully! Check history for details.', 'success');
+                    
+                    // Refresh the schedule settings and history to show the new run
+                    self.loadScheduleSettings();
+                    self.loadRunHistory();
+                } else {
+                    console.log('[PUNTWORK] Import failed:', response.data);
+                    $button.prop('disabled', false).html('Run Now');
+                    self.showNotification('Import failed: ' + (response.data.message || 'Unknown error'), 'error');
                 }
             });
         },
