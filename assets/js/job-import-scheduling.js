@@ -331,26 +331,93 @@
             var self = this;
             var $button = $('#run-now');
 
-            if (!confirm('This will start an import immediately. Continue?')) {
+            if (!confirm('This will schedule an import to start in 3 seconds. You can monitor the progress in real-time. Continue?')) {
                 return;
             }
 
             $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Scheduling...');
 
             JobImportAPI.call('run_scheduled_import', {}, function(response) {
-                $button.prop('disabled', false).html('Run Now');
-
                 if (response.success) {
-                    self.showNotification('Import scheduled to start in 5 seconds', 'success');
-                    // Refresh status after a short delay to show the import starting
-                    setTimeout(function() {
-                        self.loadScheduleSettings();
-                        self.loadRunHistory();
-                    }, 2000);
+                    $button.prop('disabled', false).html('<i class="fas fa-clock" style="margin-right: 8px;"></i>Import Scheduled');
+                    self.showNotification('Import scheduled - starting in 3 seconds', 'success');
+
+                    // Start monitoring the import progress immediately
+                    self.monitorImportProgress(response.data.scheduled_time, response.data.next_check);
                 } else {
+                    $button.prop('disabled', false).html('Run Now');
                     self.showNotification('Failed to schedule import: ' + (response.data.message || 'Unknown error'), 'error');
                 }
             });
+        },
+
+        /**
+         * Monitor import progress in real-time
+         */
+        monitorImportProgress: function(scheduledTime, nextCheckTime) {
+            var self = this;
+            var startTime = Date.now();
+            var checkInterval = setInterval(function() {
+                // Check if it's time to look for results
+                if (Date.now() / 1000 >= nextCheckTime) {
+                    self.loadScheduleSettings();
+                    self.loadRunHistory();
+
+                    // Check if import has started by looking at the status
+                    JobImportAPI.call('get_import_schedule', {}, function(response) {
+                        if (response.success) {
+                            // Check if there's a currently running import
+                            if (typeof window.JobImport !== 'undefined' && window.JobImport.getStatus) {
+                                window.JobImport.getStatus(function(statusResponse) {
+                                    if (statusResponse.success && statusResponse.data && !statusResponse.data.complete) {
+                                        // Import is currently running - show progress
+                                        var elapsed = Math.floor((Date.now() - startTime) / 1000);
+                                        $('#run-now').html('<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Running... (' + elapsed + 's)');
+                                        return;
+                                    }
+                                });
+                            }
+
+                            // Check if import has completed
+                            if (response.data.last_run_details) {
+                                var lastRun = response.data.last_run_details;
+                                if (lastRun.success !== undefined) {
+                                    // Import has completed
+                                    clearInterval(checkInterval);
+                                    $('#run-now').html('Run Now');
+
+                                    if (lastRun.success) {
+                                        self.showNotification('Import completed successfully! Check history for details.', 'success');
+                                    } else {
+                                        self.showNotification('Import failed: ' + (lastRun.error_message || 'Unknown error'), 'error');
+                                    }
+                                    return;
+                                }
+                            }
+                        }
+
+                        // Continue monitoring if no results yet
+                        var elapsed = Math.floor((Date.now() - startTime) / 1000);
+                        $('#run-now').html('<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Running... (' + elapsed + 's)');
+
+                        // Also refresh the main progress section if it exists
+                        if (typeof window.JobImport !== 'undefined' && window.JobImport.loadProgress) {
+                            window.JobImport.loadProgress();
+                        }
+                    });
+                } else {
+                    // Still waiting for scheduled time
+                    var remaining = Math.max(0, Math.floor(scheduledTime - Date.now() / 1000));
+                    $('#run-now').html('<i class="fas fa-clock" style="margin-right: 8px;"></i>Starting in ' + remaining + 's');
+                }
+            }, 2000); // Check every 2 seconds instead of 1
+
+            // Stop monitoring after 5 minutes to prevent infinite loops
+            setTimeout(function() {
+                clearInterval(checkInterval);
+                $('#run-now').html('Run Now');
+                self.showNotification('Import monitoring timed out. Please refresh the page to check status.', 'error');
+            }, 300000); // 5 minutes
         },
 
         /**
