@@ -244,17 +244,8 @@ function run_scheduled_import_async() {
         $result = run_scheduled_import();
         error_log('[PUNTWORK] Import result: ' . print_r($result, true));
 
-        // If import is not complete, it means it was paused due to time limits
-        // Schedule the next batch to continue processing
-        if (isset($result['complete']) && !$result['complete']) {
-            error_log('[PUNTWORK] Async import paused for resumption - scheduling next batch');
-            // Schedule next run in 30 seconds using Action Scheduler if available
-            if (function_exists('as_enqueue_async_action')) {
-                as_enqueue_async_action('puntwork_run_scheduled_import_async', [], 'puntwork', true); // true for unique
-            } else {
-                wp_schedule_single_event(time() + 30, 'puntwork_scheduled_import_async');
-            }
-        } elseif ($result['success']) {
+        // Import runs to completion without pausing
+        if ($result['success']) {
             error_log('[PUNTWORK] Async scheduled import completed successfully');
         } else {
             error_log('[PUNTWORK] Async scheduled import failed: ' . ($result['message'] ?? 'Unknown error'));
@@ -282,13 +273,8 @@ function run_manual_import_cron() {
     try {
         $result = run_scheduled_import();
 
-        // If import is not complete, it means it was paused due to time limits
-        // The import will be automatically resumed by the next cron run
-        if (isset($result['complete']) && !$result['complete']) {
-            error_log('[PUNTWORK] Import paused for resumption - will continue automatically');
-            // Schedule next run in 30 seconds
-            wp_schedule_single_event(time() + 30, 'puntwork_scheduled_import_async');
-        } elseif ($result['success']) {
+        // Import runs to completion without pausing
+        if ($result['success']) {
             error_log('[PUNTWORK] Manual import cron completed successfully');
         } else {
             error_log('[PUNTWORK] Manual import cron failed: ' . ($result['message'] ?? 'Unknown error'));
