@@ -94,6 +94,12 @@
                                 $('#resume-import').show();
                                 $('#start-import').text('Restart').show();
                                 this.isImporting = false; // Reset flag on failure
+                                
+                                // Stop status polling on failure
+                                if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
+                                    window.JobImportEvents.stopStatusPolling();
+                                }
+                                
                                 return; // Exit the import process
                             } else {
                                 // Single failure - log and continue trying
@@ -184,6 +190,11 @@
             $('#status-message').text('Import Complete');
             JobImportUI.resetButtons();
             this.isImporting = false; // Reset importing flag on completion
+            
+            // Stop status polling on completion
+            if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
+                window.JobImportEvents.stopStatusPolling();
+            }
         },
 
         /**
@@ -199,6 +210,11 @@
             if (this.isImporting) {
                 console.log('[PUNTWORK] Import already in progress');
                 return;
+            }
+
+            // Stop any existing status polling (from scheduled imports)
+            if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
+                window.JobImportEvents.stopStatusPolling();
             }
 
             this.isImporting = true;
@@ -377,6 +393,11 @@
                     JobImportUI.resetButtons();
                     $('#resume-import').show();
                     $('#start-import').text('Restart').show();
+                    
+                    // Stop status polling on cancel
+                    if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
+                        window.JobImportEvents.stopStatusPolling();
+                    }
                 }
             }).catch(function(xhr, status, error) {
                 PuntWorkJSLogger.error('Cancel AJAX error', 'LOGIC', error);
