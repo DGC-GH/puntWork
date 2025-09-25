@@ -118,6 +118,7 @@ function reset_job_import_ajax() {
     delete_option('job_import_last_batch_time');
     delete_option('job_import_last_batch_processed');
     delete_option('job_import_batch_size');
+    delete_option('job_import_consecutive_small_batches');
     delete_transient('import_cancel');
 
     PuntWorkLogger::info('Import system completely reset', PuntWorkLogger::CONTEXT_BATCH);
@@ -188,6 +189,7 @@ function get_job_import_status_ajax() {
             delete_option('job_import_last_batch_time');
             delete_option('job_import_last_batch_processed');
             delete_option('job_import_batch_size');
+            delete_option('job_import_consecutive_small_batches');
             delete_transient('import_cancel');
             
             // Return fresh status
