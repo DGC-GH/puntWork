@@ -360,8 +360,13 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             JobImportUI.resetButtons();
                             $('#status-message').text('Import Complete');
                         } else if (statusData.complete && statusData.total === 0) {
-                            console.log('[PUNTWORK] Import marked complete but total=0, this might be an error state');
-                            PuntWorkJSLogger.warn('Import marked complete with total=0', 'EVENTS', statusData);
+                            console.log('[PUNTWORK] Import status reset to empty state, stopping polling and resetting UI');
+                            PuntWorkJSLogger.info('Import status reset to empty state', 'EVENTS', statusData);
+                            JobImportEvents.stopStatusPolling();
+                            JobImportUI.clearProgress();
+                            JobImportUI.hideImportUI();
+                            JobImportUI.resetButtons();
+                            $('#status-message').text('Ready to start.');
                         }
                     } else {
                         console.log('[PUNTWORK] Status polling failed:', response);
