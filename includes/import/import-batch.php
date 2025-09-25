@@ -52,3 +52,128 @@ if (!function_exists('import_jobs_from_json')) {
         return finalize_batch_import($result);
     }
 }
+
+if (!function_exists('import_all_jobs_from_json')) {
+    /**
+     * Import all jobs from JSONL file (processes all batches sequentially).
+     * Used for scheduled imports that need to process the entire dataset.
+     *
+     * @return array Import result data.
+     */
+    function import_all_jobs_from_json() {
+        $start_time = microtime(true);
+        $total_processed = 0;
+        $total_published = 0;
+        $total_updated = 0;
+        $total_skipped = 0;
+        $total_duplicates_drafted = 0;
+        $all_logs = [];
+        $batch_count = 0;
+        $total_items = 0;
+
+        error_log('[PUNTWORK] Starting full import - processing all batches sequentially');
+
+        // Reset import progress for fresh start
+        update_option('job_import_progress', 0, false);
+        update_option('job_import_processed_guids', [], false);
+        delete_option('job_import_status');
+
+        while (true) {
+            $batch_start = (int) get_option('job_import_progress', 0);
+
+            // Prepare setup for this batch
+            $setup = prepare_import_setup($batch_start);
+            if (is_wp_error($setup)) {
+                $error_msg = 'Setup failed: ' . $setup->get_error_message();
+                error_log('[PUNTWORK] ' . $error_msg);
+                return ['success' => false, 'message' => $error_msg, 'logs' => [$error_msg]];
+            }
+
+            // Capture total items from first setup
+            if ($batch_count === 0) {
+                $total_items = $setup['total'] ?? 0;
+            }
+
+            // Check if import is complete
+            if (isset($setup['success']) && isset($setup['complete']) && $setup['complete']) {
+                error_log('[PUNTWORK] Import complete - no more batches to process');
+                break;
+            }
+
+            if ($batch_start >= $total_items) {
+                error_log('[PUNTWORK] Import complete - reached end of data');
+                break;
+            }
+
+            $batch_count++;
+            error_log(sprintf('[PUNTWORK] Processing batch %d starting at index %d', $batch_count, $batch_start));
+
+            // Process this batch
+            $result = process_batch_items_logic($setup);
+
+            if (!$result['success']) {
+                $error_msg = 'Batch ' . $batch_count . ' failed: ' . ($result['message'] ?? 'Unknown error');
+                error_log('[PUNTWORK] ' . $error_msg);
+                return ['success' => false, 'message' => $error_msg, 'logs' => $result['logs'] ?? []];
+            }
+
+            // Accumulate results
+            $total_processed = max($total_processed, $result['processed']);
+            $total_published += $result['published'] ?? 0;
+            $total_updated += $result['updated'] ?? 0;
+            $total_skipped += $result['skipped'] ?? 0;
+            $total_duplicates_drafted += $result['duplicates_drafted'] ?? 0;
+
+            if (isset($result['logs']) && is_array($result['logs'])) {
+                $all_logs = array_merge($all_logs, $result['logs']);
+            }
+
+            // Check if this batch completed the import
+            if (isset($result['complete']) && $result['complete']) {
+                error_log('[PUNTWORK] Import completed in batch ' . $batch_count);
+                break;
+            }
+
+            // Safety check to prevent infinite loops
+            if ($batch_count > 1000) {
+                $error_msg = 'Import aborted - too many batches processed (possible infinite loop)';
+                error_log('[PUNTWORK] ' . $error_msg);
+                return ['success' => false, 'message' => $error_msg, 'logs' => $all_logs];
+            }
+
+            // Small delay between batches to prevent overwhelming the server
+            usleep(100000); // 0.1 seconds
+        }
+
+        $end_time = microtime(true);
+        $total_duration = $end_time - $start_time;
+
+        $final_result = [
+            'success' => true,
+            'processed' => $total_processed,
+            'total' => $total_items,
+            'published' => $total_published,
+            'updated' => $total_updated,
+            'skipped' => $total_skipped,
+            'duplicates_drafted' => $total_duplicates_drafted,
+            'time_elapsed' => $total_duration,
+            'complete' => true,
+            'logs' => $all_logs,
+            'batches_processed' => $batch_count,
+            'message' => 'Full import completed successfully'
+        ];
+
+        error_log(sprintf(
+            '[PUNTWORK] Full import completed - Duration: %.2fs, Batches: %d, Total: %d, Processed: %d, Published: %d, Updated: %d, Skipped: %d',
+            $total_duration,
+            $batch_count,
+            $total_items,
+            $total_processed,
+            $total_published,
+            $total_updated,
+            $total_skipped
+        ));
+
+        return finalize_batch_import($final_result);
+    }
+}

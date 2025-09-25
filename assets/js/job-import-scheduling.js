@@ -492,7 +492,7 @@
                 html += '<div style="color: #86868b; font-size: 13px; line-height: 1.4;">';
                 html += '<div style="margin-bottom: 4px;"><i class="fas fa-clock" style="margin-right: 6px;"></i>Duration: <strong>' + this.formatDuration(run.duration) + '</strong></div>';
                 html += '<div style="margin-bottom: 4px;"><i class="fas fa-tasks" style="margin-right: 6px;"></i>Processed: <strong>' + run.processed + '/' + run.total + '</strong></div>';
-                html += '<div><i class="fas fa-chart-line" style="margin-right: 6px;"></i>Published: <strong style="color: #34c759;">' + run.published + '</strong>, Updated: <strong style="color: #007aff;">' + run.updated + '</strong>, Skipped: <strong style="color: #ff9500;">' + run.skipped + '</strong></div>';
+                html += '<div><i class="fas fa-chart-line" style="margin-right: 6px;"></i>Published: <strong style="color: #34c759;">' + (run.published || 0) + '</strong>, Updated: <strong style="color: #007aff;">' + (run.updated || 0) + '</strong>, Skipped: <strong style="color: #ff9500;">' + (run.skipped || 0) + '</strong></div>';
                 html += '</div>';
                 if (run.error_message) {
                     html += '<div style="background: #fff8f7; border: 1px solid #ff3b30; border-radius: 6px; padding: 8px 12px; margin-top: 8px; font-size: 12px; color: #ff3b30;"><i class="fas fa-exclamation-triangle" style="margin-right: 6px;"></i>' + run.error_message + '</div>';
