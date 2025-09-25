@@ -143,8 +143,12 @@ function get_json_item_count($json_path) {
     $count = 0;
     if (($handle = fopen($json_path, "r")) !== false) {
         while (($line = fgets($handle)) !== false) {
-            if (!empty(trim($line))) {
-                $count++;
+            $line = trim($line);
+            if (!empty($line)) {
+                $item = json_decode($line, true);
+                if ($item !== null) {
+                    $count++;
+                }
             }
         }
         fclose($handle);
