@@ -114,7 +114,7 @@ function render_main_import_ui() {
                 </div>
 
                 <!-- Success Metrics -->
-                <div style="background: linear-gradient(135deg, #34c759 0%, #00d4aa 100%); border-radius: 12px; padding: 16px; color: white; box-shadow: 0 2px 8px rgba(52,199,89,0.2);">
+                <div style="background: linear-gradient(135deg, #34c759 0%, #4ade80 100%); border-radius: 12px; padding: 16px; color: white; box-shadow: 0 2px 8px rgba(52,199,89,0.2);">
                     <div style="display: flex; align-items: center; margin-bottom: 8px;">
                         <div style="width: 8px; height: 8px; border-radius: 50%; background-color: rgba(255,255,255,0.8); margin-right: 8px;"></div>
                         <span style="font-size: 13px; font-weight: 500; opacity: 0.9;">Success</span>
