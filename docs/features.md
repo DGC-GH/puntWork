@@ -34,6 +34,7 @@
 - **WordPress CPT**: Seamless integration with custom post types for jobs and feeds
 - **ACF Compatibility**: Full support for Advanced Custom Fields data structures
 - **AJAX API**: RESTful API endpoints for programmatic access
+- **REST API**: Remote import triggering and status monitoring via HTTP
 - **Logging System**: Structured logging with configurable levels
 
 ## Utility Functions
