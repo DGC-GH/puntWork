@@ -53,24 +53,18 @@ function render_javascript_init() {
 
             // Check if buttons exist
             console.log('[PUNTWORK] Inline script: cleanup-duplicates button exists:', $('#cleanup-duplicates').length);
-            console.log('[PUNTWORK] Inline script: purge-old-jobs button exists:', $('#purge-old-jobs').length);
 
             // Add a simple test function to global scope
             window.testButtons = function() {
                 console.log('[PUNTWORK] Testing buttons...');
                 console.log('Cleanup button found:', $('#cleanup-duplicates').length);
-                console.log('Purge button found:', $('#purge-old-jobs').length);
 
                 if ($('#cleanup-duplicates').length > 0) {
                     console.log('Cleanup button HTML:', $('#cleanup-duplicates')[0].outerHTML);
                 }
-                if ($('#purge-old-jobs').length > 0) {
-                    console.log('Purge button HTML:', $('#purge-old-jobs')[0].outerHTML);
-                }
 
                 // Test click events
                 $('#cleanup-duplicates').trigger('click');
-                $('#purge-old-jobs').trigger('click');
             };
 
             console.log('[PUNTWORK] Run testButtons() in console to test button functionality');
@@ -104,6 +98,63 @@ function render_javascript_init() {
                 console.log('[PUNTWORK] Inline script: Admin page JavaScript initialized');
             } else {
                 console.log('[PUNTWORK] Inline script: Job import already initialized, skipping...');
+            }
+        });
+    </script>
+    <?php
+}
+
+function jobs_dashboard_page() {
+    error_log('[PUNTWORK] jobs_dashboard_page() called');
+    wp_enqueue_script('jquery');
+
+    // Render jobs dashboard UI
+    render_jobs_dashboard_ui();
+
+    // Render JavaScript initialization for jobs dashboard
+    render_jobs_javascript_init();
+}
+
+/**
+ * Render JavaScript initialization for the jobs dashboard page
+ */
+function render_jobs_javascript_init() {
+    ?>
+    <script type="text/javascript">
+        jQuery(document).ready(function($) {
+            console.log('[PUNTWORK] Jobs Dashboard: Document ready, checking modules...');
+
+            // Check if buttons exist
+            console.log('[PUNTWORK] Jobs Dashboard: cleanup-duplicates button exists:', $('#cleanup-duplicates').length);
+
+            // Add a simple test function to global scope
+            window.testJobsButtons = function() {
+                console.log('[PUNTWORK] Testing jobs buttons...');
+                console.log('Cleanup button found:', $('#cleanup-duplicates').length);
+
+                if ($('#cleanup-duplicates').length > 0) {
+                    console.log('Cleanup button HTML:', $('#cleanup-duplicates')[0].outerHTML);
+                }
+
+                // Test click events
+                $('#cleanup-duplicates').trigger('click');
+            };
+
+            console.log('[PUNTWORK] Run testJobsButtons() in console to test button functionality');
+
+            // Initialize jobs dashboard
+            if (typeof JobImportEvents !== 'undefined') {
+                console.log('[PUNTWORK] Jobs Dashboard: Initializing events...');
+                // Only bind cleanup events, not the full import system
+                JobImportEvents.bindCleanupEvents();
+            } else {
+                console.error('[PUNTWORK] Jobs Dashboard: JobImportEvents not available!');
+            }
+
+            // Initialize UI components
+            if (typeof JobImportUI !== 'undefined') {
+                console.log('[PUNTWORK] Jobs Dashboard: Clearing cleanup progress...');
+                JobImportUI.clearCleanupProgress();
             }
         });
     </script>

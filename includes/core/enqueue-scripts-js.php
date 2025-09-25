@@ -28,8 +28,8 @@ function enqueue_job_import_scripts() {
     error_log('[PUNTWORK] Post type: ' . $post_type);
     error_log('[PUNTWORK] Current screen: ' . ($current_screen ? $current_screen->id : 'none'));
 
-    // Load scripts on ANY admin page for now to debug - we'll narrow it down later
-    $should_load = true; // Temporarily load on all admin pages
+    // Load scripts on job import dashboard and jobs dashboard pages
+    $should_load = in_array($current_page, ['job-import-dashboard', 'jobs-dashboard']);
 
     error_log('[PUNTWORK] Should load scripts: ' . ($should_load ? 'YES' : 'NO'));
 

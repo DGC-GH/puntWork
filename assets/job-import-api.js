@@ -106,39 +106,6 @@ console.log('[PUNTWORK] job-import-api.js loaded');
         },
 
         /**
-         * Perform import purge operation
-         * @returns {Promise} AJAX promise
-         */
-        purgeImport: function() {
-            console.log('[PUNTWORK] API: Making purge import request');
-            return $.ajax({
-                url: jobImportData.ajaxurl,
-                type: 'POST',
-                data: { action: 'job_import_purge', nonce: jobImportData.nonce }
-            });
-        },
-
-        /**
-         * Continue purge operation (for batched processing)
-         * @param {number} offset - Current offset for batch processing
-         * @param {number} batchSize - Size of batch to process
-         * @returns {Promise} AJAX promise
-         */
-        continuePurge: function(offset, batchSize) {
-            console.log('[PUNTWORK] API: Making continue purge request - offset:', offset, 'batchSize:', batchSize);
-            return $.ajax({
-                url: jobImportData.ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'job_import_purge_continue',
-                    offset: offset,
-                    batch_size: batchSize,
-                    nonce: jobImportData.nonce
-                }
-            });
-        },
-
-        /**
          * Cleanup duplicate job posts
          * @returns {Promise} AJAX promise
          */

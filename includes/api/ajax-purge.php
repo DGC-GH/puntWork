@@ -79,7 +79,7 @@ function job_import_cleanup_duplicates_ajax() {
             $total_jobs = $wpdb->get_var("
                 SELECT COUNT(*) FROM {$wpdb->posts} p
                 WHERE p.post_type = 'job'
-                AND p.post_status IN ('publish', 'draft')
+                AND p.post_status IN ('draft', 'trash')
             ");
             $progress['total_jobs'] = $total_jobs;
             update_option('job_import_cleanup_progress', $progress, false);
@@ -87,12 +87,10 @@ function job_import_cleanup_duplicates_ajax() {
 
         // Get batch of jobs
         $batch_jobs = $wpdb->get_results($wpdb->prepare("
-            SELECT p.ID, p.post_status, p.post_modified, pm.meta_value AS guid, pm2.meta_value AS import_hash
+            SELECT p.ID, p.post_status, p.post_title
             FROM {$wpdb->posts} p
-            LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
-            LEFT JOIN {$wpdb->postmeta} pm2 ON p.ID = pm2.post_id AND pm2.meta_key = '_import_hash'
             WHERE p.post_type = 'job'
-            AND p.post_status IN ('publish', 'draft')
+            AND p.post_status IN ('draft', 'trash')
             ORDER BY p.ID
             LIMIT %d OFFSET %d
         ", $batch_size, $offset));
@@ -105,7 +103,7 @@ function job_import_cleanup_duplicates_ajax() {
             update_option('job_import_cleanup_progress', $progress, false);
             delete_transient('job_import_cleanup_lock');
 
-            $message = "Cleanup completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} duplicates";
+            $message = "Cleanup completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} draft/trash posts";
             error_log($message);
 
             wp_send_json_success([
@@ -119,50 +117,15 @@ function job_import_cleanup_duplicates_ajax() {
         }
 
         // Process this batch
-        $jobs_by_guid = [];
         foreach ($batch_jobs as $job) {
-            if (!empty($job->guid)) {
-                $jobs_by_guid[$job->guid][] = $job;
+            $result = wp_delete_post($job->ID, true); // Force delete
+            if ($result) {
+                $deleted_count++;
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Permanently deleted ' . $job->post_status . ' job ID: ' . $job->ID . ' - ' . $job->post_title;
+                error_log('Cleanup: Permanently deleted ' . $job->post_status . ' job ID: ' . $job->ID . ' - ' . $job->post_title);
             } else {
-                // Log jobs without GUIDs
-                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Warning: Job ID ' . $job->ID . ' has no GUID';
-                error_log('Cleanup: Job ID ' . $job->ID . ' has no GUID');
-            }
-        }
-
-        foreach ($jobs_by_guid as $guid => $jobs) {
-            if (count($jobs) > 1) {
-                // Sort by modification date (newest first)
-                usort($jobs, function($a, $b) {
-                    return strtotime($b->post_modified) - strtotime($a->post_modified);
-                });
-
-                // Keep the first (newest) job as published
-                $keep_job = $jobs[0];
-                if ($keep_job->post_status !== 'publish') {
-                    $result = $wpdb->update($wpdb->posts, ['post_status' => 'publish'], ['ID' => $keep_job->ID]);
-                    if ($result !== false) {
-                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Republished newest job ID: ' . $keep_job->ID . ' GUID: ' . $guid;
-                        error_log('Cleanup: Republished newest job ID: ' . $keep_job->ID . ' GUID: ' . $guid);
-                    } else {
-                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Error: Failed to republish job ID: ' . $keep_job->ID;
-                        error_log('Cleanup: Failed to republish job ID: ' . $keep_job->ID);
-                    }
-                }
-
-                // Delete all others
-                for ($i = 1; $i < count($jobs); $i++) {
-                    $delete_job = $jobs[$i];
-                    $result = wp_delete_post($delete_job->ID, true); // Force delete
-                    if ($result) {
-                        $deleted_count++;
-                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Deleted duplicate job ID: ' . $delete_job->ID . ' GUID: ' . $guid;
-                        error_log('Cleanup: Deleted duplicate job ID: ' . $delete_job->ID . ' GUID: ' . $guid);
-                    } else {
-                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Error: Failed to delete job ID: ' . $delete_job->ID . ' GUID: ' . $guid;
-                        error_log('Cleanup: Failed to delete job ID: ' . $delete_job->ID . ' GUID: ' . $guid);
-                    }
-                }
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Error: Failed to delete job ID: ' . $job->ID;
+                error_log('Cleanup: Failed to delete job ID: ' . $job->ID);
             }
         }
 
@@ -179,7 +142,7 @@ function job_import_cleanup_duplicates_ajax() {
         $progress_percentage = $progress['total_jobs'] > 0 ? round(($progress['total_processed'] / $progress['total_jobs']) * 100, 1) : 0;
 
         wp_send_json_success([
-            'message' => "Batch processed: {$progress['total_processed']}/{$progress['total_jobs']} jobs ({$progress_percentage}%), deleted {$deleted_count} duplicates this batch",
+            'message' => "Batch processed: {$progress['total_processed']}/{$progress['total_jobs']} jobs ({$progress_percentage}%), deleted {$deleted_count} draft/trash posts this batch",
             'complete' => false,
             'next_offset' => $progress['current_offset'],
             'batch_size' => $batch_size,
@@ -390,31 +353,4 @@ function job_import_cleanup_continue_ajax() {
     $_POST['is_continue'] = 'true';
 
     job_import_cleanup_duplicates_ajax();
-}
-
-add_action('wp_ajax_job_import_purge_continue', __NAMESPACE__ . '\\job_import_purge_continue_ajax');
-function job_import_purge_continue_ajax() {
-    error_log('job_import_purge_continue_ajax called');
-
-    // Check permissions and nonce
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        error_log('Nonce verification failed for job_import_purge_continue');
-        wp_send_json_error(['message' => 'Nonce verification failed']);
-    }
-    if (!current_user_can('manage_options')) {
-        error_log('Permission denied for job_import_purge_continue');
-        wp_send_json_error(['message' => 'Permission denied']);
-    }
-
-    $progress = get_option('job_import_purge_progress');
-    if (!$progress || $progress['complete']) {
-        wp_send_json_error(['message' => 'No active purge operation found']);
-    }
-
-    // Call the main purge function with continue parameters
-    $_POST['batch_size'] = isset($_POST['batch_size']) ? intval($_POST['batch_size']) : 50;
-    $_POST['offset'] = $progress['current_offset'];
-    $_POST['is_continue'] = 'true';
-
-    job_import_purge_ajax();
 }
