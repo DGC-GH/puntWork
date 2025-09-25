@@ -61,10 +61,10 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             });
 
             // Log toggle button
-            $('#toggle-log').on('click', function(e) {
-                console.log('[PUNTWORK] Toggle log button clicked!');
-                JobImportUI.toggleLog();
-            });
+            // $('#toggle-log').on('click', function(e) {
+            //     console.log('[PUNTWORK] Toggle log button clicked!');
+            //     JobImportUI.toggleLog();
+            // });
 
             console.log('[PUNTWORK] Events bound successfully');
         },
