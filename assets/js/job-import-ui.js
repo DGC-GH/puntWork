@@ -180,6 +180,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             // Normalize the data first
             data = this.normalizeResponseData(data);
 
+            console.log('[PUNTWORK] JobImportUI.updateProgress called with data:', data);
             PuntWorkJSLogger.debug('Updating progress with data', 'UI', data);
             console.log('[PUNTWORK] Progress data received:', data);
 
