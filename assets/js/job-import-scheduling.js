@@ -342,6 +342,11 @@
                     $button.prop('disabled', false).html('<i class="fas fa-clock" style="margin-right: 8px;"></i>Import Scheduled');
                     self.showNotification('Import scheduled - starting in 3 seconds', 'success');
 
+                    // Show the progress UI immediately so user can see it's starting
+                    JobImportUI.showImportUI();
+                    JobImportUI.clearProgress();
+                    $('#status-message').text('Import scheduled - waiting to start...');
+
                     // Start monitoring the import progress immediately
                     self.monitorImportProgress(response.data.scheduled_time, response.data.next_check);
                 } else {
@@ -357,6 +362,10 @@
         monitorImportProgress: function(scheduledTime, nextCheckTime) {
             var self = this;
             var startTime = Date.now();
+
+            // Start the status polling immediately to show progress as soon as import begins
+            JobImportEvents.startStatusPolling();
+
             var checkInterval = setInterval(function() {
                 // Check if it's time to look for results
                 if (Date.now() / 1000 >= nextCheckTime) {
@@ -370,9 +379,8 @@
                             if (typeof window.JobImport !== 'undefined' && window.JobImport.getStatus) {
                                 window.JobImport.getStatus(function(statusResponse) {
                                     if (statusResponse.success && statusResponse.data && !statusResponse.data.complete) {
-                                        // Import is currently running - show progress
-                                        var elapsed = Math.floor((Date.now() - startTime) / 1000);
-                                        $('#run-now').html('<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Running... (' + elapsed + 's)');
+                                        // Import is currently running - ensure progress UI is visible
+                                        JobImportUI.showImportUI();
                                         return;
                                     }
                                 });
@@ -384,6 +392,7 @@
                                 if (lastRun.success !== undefined) {
                                     // Import has completed
                                     clearInterval(checkInterval);
+                                    JobImportEvents.stopStatusPolling();
                                     $('#run-now').html('Run Now');
 
                                     if (lastRun.success) {
@@ -415,6 +424,7 @@
             // Stop monitoring after 5 minutes to prevent infinite loops
             setTimeout(function() {
                 clearInterval(checkInterval);
+                JobImportEvents.stopStatusPolling();
                 $('#run-now').html('Run Now');
                 self.showNotification('Import monitoring timed out. Please refresh the page to check status.', 'error');
             }, 300000); // 5 minutes
