@@ -155,6 +155,9 @@ function get_job_import_status_ajax() {
     $progress['batch_time'] = (float) get_option('job_import_last_batch_time', 0);
     $progress['batch_processed'] = (int) get_option('job_import_last_batch_processed', 0);
 
+    // Add estimated time remaining calculation from PHP
+    $progress['estimated_time_remaining'] = calculate_estimated_time_remaining($progress);
+
     // Log response summary instead of full data to prevent large debug logs
     $log_summary = [
         'total' => $progress['total'],
@@ -165,6 +168,7 @@ function get_job_import_status_ajax() {
         'complete' => $progress['complete'],
         'success' => $progress['success'],
         'time_elapsed' => $progress['time_elapsed'],
+        'estimated_time_remaining' => $progress['estimated_time_remaining'],
         'batch_time' => $progress['batch_time'],
         'batch_processed' => $progress['batch_processed'],
         'logs_count' => is_array($progress['logs']) ? count($progress['logs']) : 0,
