@@ -50,11 +50,11 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
     // Dynamic batch size adjustment based on consecutive batch completion times
     if ($previous_batch_time > 0 && $current_batch_time > 0) {
         if ($current_batch_time > $previous_batch_time) {
-            // Current batch took longer than previous - increase batch size
-            $batch_size = min(50, floor($batch_size * 1.2));
-        } elseif ($current_batch_time < $previous_batch_time) {
-            // Current batch took less time than previous - decrease batch size
+            // Current batch took longer than previous - decrease batch size
             $batch_size = max(1, floor($batch_size * 0.8));
+        } elseif ($current_batch_time < $previous_batch_time) {
+            // Current batch took less time than previous - increase batch size
+            $batch_size = min(50, floor($batch_size * 1.2));
         }
         // If times are equal, keep batch size the same
     }
@@ -115,9 +115,9 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
             $detailed_reason = 'low memory usage allows larger batches';
         } elseif ($previous_batch_time > 0 && $current_batch_time > 0) {
             if ($current_batch_time > $previous_batch_time) {
-                $detailed_reason = 'current batch took longer than previous - increasing batch size';
+                $detailed_reason = 'current batch took longer than previous - decreasing batch size';
             } elseif ($current_batch_time < $previous_batch_time) {
-                $detailed_reason = 'current batch took less time than previous - decreasing batch size';
+                $detailed_reason = 'current batch took less time than previous - increasing batch size';
             }
         }
 
