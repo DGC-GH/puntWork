@@ -164,7 +164,7 @@ function get_job_import_status_ajax() {
     PuntWorkLogger::debug('Retrieved import status', PuntWorkLogger::CONTEXT_BATCH, [
         'total' => $progress['total'],
         'processed' => $progress['processed'],
-        'complete' => $progress['complete']
+        'complete' => $progress['complete'] ?? null
     ]);
 
     // Check for stuck imports and clear them
