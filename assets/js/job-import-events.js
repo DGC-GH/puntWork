@@ -325,9 +325,9 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             this.maxUnchangedBeforeSlow = 50; // After 50 unchanged polls (25 seconds), slow down
             this.completeDetectedCount = 0; // Counter for complete detections
             this.maxCompletePolls = 3; // Continue polling for 3 more polls after detecting complete
-            this.totalZeroCount = 0; // Counter for polls where total remains 0
+            var totalZeroCount = 0; // Counter for polls where total remains 0
             this.maxTotalZeroPolls = 20; // Stop polling after 20 polls with total=0 (40 seconds)
-            this.isStartingNewImport = true; // Flag to prevent hiding UI when starting a new import
+            var isStartingNewImport = true; // Flag to prevent hiding UI when starting a new import
 
             // Show the progress UI immediately when starting polling
             console.log('[PUNTWORK] Showing import UI for import');
@@ -359,17 +359,17 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
                         // Check if total is still 0 (import hasn't started)
                         if (statusData.total === 0) {
-                            JobImportEvents.totalZeroCount++;
-                            console.log('[PUNTWORK] Import total still 0, count:', JobImportEvents.totalZeroCount);
+                            totalZeroCount++;
+                            console.log('[PUNTWORK] Import total still 0, count:', totalZeroCount);
                         } else {
-                            JobImportEvents.totalZeroCount = 0;
+                            totalZeroCount = 0;
                         }
 
                         // Stop polling if total has been 0 for too many polls
-                        if (JobImportEvents.totalZeroCount >= JobImportEvents.maxTotalZeroPolls) {
+                        if (totalZeroCount >= JobImportEvents.maxTotalZeroPolls) {
                             console.log('[PUNTWORK] Import failed to start after', JobImportEvents.maxTotalZeroPolls, 'polls, stopping polling');
                             PuntWorkJSLogger.warn('Import failed to start, stopping polling', 'EVENTS', {
-                                totalZeroCount: JobImportEvents.totalZeroCount,
+                                totalZeroCount: totalZeroCount,
                                 maxTotalZeroPolls: JobImportEvents.maxTotalZeroPolls
                             });
                             JobImportEvents.stopStatusPolling();
@@ -403,7 +403,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             JobImportUI.updateProgress(statusData);
                             JobImportUI.appendLogs(statusData.logs || []);
                             // Import has started, clear the starting flag
-                            JobImportEvents.isStartingNewImport = false;
+                            isStartingNewImport = false;
                         } else if (statusData.total === 0 && !statusData.complete) {
                             console.log('[PUNTWORK] Import not yet started (total=0), continuing to poll');
                             // Import hasn't started yet, keep polling
@@ -427,7 +427,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                                 JobImportUI.resetButtons();
                                 $('#status-message').text('Import Complete');
                             }
-                        } else if (statusData.complete && statusData.total === 0 && !JobImportEvents.isStartingNewImport) {
+                        } else if (statusData.complete && statusData.total === 0 && !isStartingNewImport) {
                             console.log('[PUNTWORK] Import status reset to empty state, stopping polling and resetting UI');
                             PuntWorkJSLogger.info('Import status reset to empty state', 'EVENTS', statusData);
                             JobImportEvents.stopStatusPolling();
