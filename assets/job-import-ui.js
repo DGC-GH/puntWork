@@ -87,7 +87,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             $('#progress-percent').css('color', '#007aff'); // Reset to blue
             $('#total-items').text(0);
             $('#processed-items').text(0);
-            $('#created-items').text(0);
+            $('#published-items').text(0);
             $('#updated-items').text(0);
             $('#skipped-items').text(0);
             $('#duplicates-drafted').text(0);
@@ -150,7 +150,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             // Ensure all counter fields are present and numeric
             data.total = parseInt(data.total) || 0;
             data.processed = parseInt(data.processed) || 0;
-            data.created = parseInt(data.created) || 0;
+            data.published = parseInt(data.published) || 0;
             data.updated = parseInt(data.updated) || 0;
             data.skipped = parseInt(data.skipped) || 0;
             data.duplicates_drafted = parseInt(data.duplicates_drafted) || 0;
@@ -162,7 +162,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             PuntWorkJSLogger.debug('Normalized response data', 'UI', {
                 total: data.total,
                 processed: data.processed,
-                created: data.created,
+                published: data.published,
                 updated: data.updated,
                 skipped: data.skipped,
                 duplicates_drafted: data.duplicates_drafted,
@@ -324,7 +324,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             }
 
             // Check if we're in feed processing phase (no job stats yet)
-            var is_feed_processing = (data.created === 0 && data.updated === 0 && data.skipped === 0 &&
+            var is_feed_processing = (data.published === 0 && data.updated === 0 && data.skipped === 0 &&
                                     data.duplicates_drafted === 0 && data.drafted_old === 0);
 
             // Check if we're in JSONL combination phase (total=1, processed=0 or 1, no job stats)
@@ -334,7 +334,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 // Feed processing phase - show feed progress
                 $('#total-items').text(total);
                 $('#processed-items').text(processed);
-                $('#created-items').text('—');
+                $('#published-items').text('—');
                 $('#updated-items').text('—');
                 $('#skipped-items').text('—');
                 $('#duplicates-drafted').text('—');
@@ -351,7 +351,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 // JSONL combination phase
                 $('#total-items').text('—');
                 $('#processed-items').text(processed ? 'Complete' : 'In Progress');
-                $('#created-items').text('—');
+                $('#published-items').text('—');
                 $('#updated-items').text('—');
                 $('#skipped-items').text('—');
                 $('#duplicates-drafted').text('—');
@@ -368,7 +368,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 // Job import phase - show normal stats
                 $('#total-items').text(total);
                 $('#processed-items').text(processed);
-                $('#created-items').text(data.created || 0);
+                $('#published-items').text(data.published || 0);
                 $('#updated-items').text(data.updated || 0);
                 $('#skipped-items').text(data.skipped || 0);
                 $('#duplicates-drafted').text(data.duplicates_drafted || 0);

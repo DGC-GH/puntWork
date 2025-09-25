@@ -43,7 +43,7 @@ function run_job_import_batch_ajax() {
         'success' => isset($result['success']) && $result['success'],
         'processed' => $result['processed'] ?? 0,
         'total' => $result['total'] ?? 0,
-        'created' => $result['created'] ?? 0,
+        'published' => $result['published'] ?? 0,
         'updated' => $result['updated'] ?? 0,
         'skipped' => $result['skipped'] ?? 0,
         'complete' => $result['complete'] ?? false,
@@ -111,7 +111,7 @@ function get_job_import_status_ajax() {
     $progress = get_option('job_import_status') ?: [
         'total' => 0,
         'processed' => 0,
-        'created' => 0,
+        'published' => 0,
         'updated' => 0,
         'skipped' => 0,
         'duplicates_drafted' => 0,
@@ -159,7 +159,7 @@ function get_job_import_status_ajax() {
     $log_summary = [
         'total' => $progress['total'],
         'processed' => $progress['processed'],
-        'created' => $progress['created'],
+        'published' => $progress['published'],
         'updated' => $progress['updated'],
         'skipped' => $progress['skipped'],
         'complete' => $progress['complete'],
