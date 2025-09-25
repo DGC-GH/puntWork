@@ -97,6 +97,33 @@ function clear_import_cancel_ajax() {
     wp_send_json_success();
 }
 
+add_action('wp_ajax_reset_job_import', __NAMESPACE__ . '\\reset_job_import_ajax');
+function reset_job_import_ajax() {
+    PuntWorkLogger::logAjaxRequest('reset_job_import', $_POST);
+
+    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
+        PuntWorkLogger::error('Nonce verification failed for reset_job_import', PuntWorkLogger::CONTEXT_AJAX);
+        wp_send_json_error(['message' => 'Nonce verification failed']);
+    }
+    if (!current_user_can('manage_options')) {
+        PuntWorkLogger::error('Permission denied for reset_job_import', PuntWorkLogger::CONTEXT_AJAX);
+        wp_send_json_error(['message' => 'Permission denied']);
+    }
+
+    // Clear all import-related data
+    delete_option('job_import_status');
+    delete_option('job_import_progress');
+    delete_option('job_import_processed_guids');
+    delete_option('job_import_last_batch_time');
+    delete_option('job_import_last_batch_processed');
+    delete_transient('import_cancel');
+
+    PuntWorkLogger::info('Import system completely reset', PuntWorkLogger::CONTEXT_BATCH);
+
+    PuntWorkLogger::logAjaxResponse('reset_job_import', ['message' => 'Import system reset']);
+    wp_send_json_success();
+}
+
 add_action('wp_ajax_get_job_import_status', __NAMESPACE__ . '\\get_job_import_status_ajax');
 function get_job_import_status_ajax() {
     PuntWorkLogger::logAjaxRequest('get_job_import_status', $_POST);
