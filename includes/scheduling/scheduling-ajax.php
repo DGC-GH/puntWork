@@ -10,10 +10,40 @@
 
 namespace Puntwork;
 
-// Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
+// Prevent direc// Debug: Check if Action Scheduler is available and working
+add_action('admin_init', function() {
+    if (function_exists('as_enqueue_async_action')) {
+        error_log('[PUNTWORK] Action Scheduler is available and loaded');
+
+        // Check if there are any pending actions for our hook
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'actionscheduler_actions';
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
+            $pending_count = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE hook = %s AND status = %s",
+                'puntwork_run_scheduled_import_async',
+                'pending'
+            ));
+            error_log('[PUNTWORK] Pending actions for puntwork_run_scheduled_import_async: ' . $pending_count);
+
+            $running_count = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE hook = %s AND status = %s",
+                'puntwork_run_scheduled_import_async',
+                'running'
+            ));
+            error_log('[PUNTWORK] Running actions for puntwork_run_scheduled_import_async: ' . $running_count);
+        }
+    } else {
+        error_log('[PUNTWORK] Action Scheduler is NOT available');
+    }
+
+    // Check if our hook is registered
+    if (has_action('puntwork_scheduled_import_async')) {
+        error_log('[PUNTWORK] puntwork_run_scheduled_import_async hook is registered');
+    } else {
+        error_log('[PUNTWORK] puntwork_run_scheduled_import_async hook is NOT registered');
+    }
+});
 
 /**
  * Save import schedule settings via AJAX
@@ -192,8 +222,15 @@ function run_scheduled_import_ajax() {
         // Use Action Scheduler if available (best for background processing)
         if (function_exists('as_enqueue_async_action')) {
             error_log('[PUNTWORK] Action Scheduler available, queuing async action');
-            as_enqueue_async_action('puntwork_run_scheduled_import_async', [], 'puntwork');
-            error_log('[PUNTWORK] Scheduled import queued via Action Scheduler');
+            $action_id = as_enqueue_async_action('puntwork_run_scheduled_import_async', [], 'puntwork');
+            error_log('[PUNTWORK] Scheduled import queued via Action Scheduler, action ID: ' . $action_id);
+
+            // Check if action was actually queued
+            if ($action_id) {
+                error_log('[PUNTWORK] Action successfully queued with ID: ' . $action_id);
+            } else {
+                error_log('[PUNTWORK] Action queuing failed - no action ID returned');
+            }
         } else {
             error_log('[PUNTWORK] Action Scheduler NOT available, falling back to WP cron');
             // Fallback: Schedule resumable cron job
@@ -225,14 +262,35 @@ add_action('puntwork_manual_import', __NAMESPACE__ . '\\run_manual_import_cron')
 // Register async action hooks
 add_action('puntwork_scheduled_import_async', __NAMESPACE__ . '\\run_scheduled_import_async');
 
+// Debug: Check if Action Scheduler is available and working
+add_action('admin_init', function() {
+    if (function_exists('as_enqueue_async_action')) {
+        error_log('[PUNTWORK] Action Scheduler is available and loaded');
+    } else {
+        error_log('[PUNTWORK] Action Scheduler is NOT available');
+    }
+
+    // Check if our hook is registered
+    if (has_action('puntwork_scheduled_import_async')) {
+        error_log('[PUNTWORK] puntwork_scheduled_import_async hook is registered');
+    } else {
+        error_log('[PUNTWORK] puntwork_scheduled_import_async hook is NOT registered');
+    }
+});
+
 /**
  * Run scheduled import asynchronously (non-blocking)
  */
 function run_scheduled_import_async() {
+    error_log('[PUNTWORK] === ASYNC FUNCTION STARTED ===');
     error_log('[PUNTWORK] Async scheduled import started - Action Scheduler hook fired');
+    error_log('[PUNTWORK] Current time: ' . date('Y-m-d H:i:s'));
+    error_log('[PUNTWORK] Function called with arguments: ' . print_r(func_get_args(), true));
 
     // Check if an import is already running
     $import_status = get_option('job_import_status', []);
+    error_log('[PUNTWORK] Current import status: ' . print_r($import_status, true));
+
     if (isset($import_status['complete']) && !$import_status['complete']) {
         error_log('[PUNTWORK] Async import skipped - import already running');
         return;
@@ -254,6 +312,8 @@ function run_scheduled_import_async() {
         error_log('[PUNTWORK] Async scheduled import exception: ' . $e->getMessage());
         error_log('[PUNTWORK] Exception trace: ' . $e->getTraceAsString());
     }
+
+    error_log('[PUNTWORK] === ASYNC FUNCTION COMPLETED ===');
 }
 
 /**

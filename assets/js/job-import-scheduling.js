@@ -375,26 +375,36 @@
          * Monitor import progress in real-time
          */
         monitorImportProgress: function(scheduledTime, nextCheckTime) {
+            console.log('[PUNTWORK] === MONITORING STARTED ===');
+            console.log('[PUNTWORK] monitorImportProgress called with:', {scheduledTime, nextCheckTime});
+
             var self = this;
             var startTime = Date.now();
 
             // Start the status polling immediately to show progress as soon as import begins
+            console.log('[PUNTWORK] Starting JobImportEvents.startStatusPolling()');
             JobImportEvents.startStatusPolling();
 
             var checkInterval = setInterval(function() {
+                console.log('[PUNTWORK] Monitoring check interval fired');
                 // Check if it's time to look for results
                 if (Date.now() / 1000 >= nextCheckTime) {
+                    console.log('[PUNTWORK] Time to check results, calling loadScheduleSettings');
                     self.loadScheduleSettings();
                     self.loadRunHistory();
 
                     // Check if import has started by looking at the status
                     JobImportAPI.call('get_import_schedule', {}, function(response) {
+                        console.log('[PUNTWORK] get_import_schedule response:', response);
                         if (response.success) {
                             // Check if there's a currently running import
                             if (typeof window.JobImport !== 'undefined' && window.JobImport.getStatus) {
+                                console.log('[PUNTWORK] Checking JobImport.getStatus');
                                 window.JobImport.getStatus(function(statusResponse) {
+                                    console.log('[PUNTWORK] JobImport.getStatus response:', statusResponse);
                                     if (statusResponse.success && statusResponse.data && !statusResponse.data.complete) {
                                         // Import is currently running - ensure progress UI is visible
+                                        console.log('[PUNTWORK] Import is running, ensuring UI is visible');
                                         JobImportUI.showImportUI();
                                         return;
                                     }
@@ -406,6 +416,7 @@
                                 var lastRun = response.data.last_run_details;
                                 if (lastRun.success !== undefined) {
                                     // Import has completed
+                                    console.log('[PUNTWORK] Import completed, stopping monitoring');
                                     clearInterval(checkInterval);
                                     JobImportEvents.stopStatusPolling();
                                     $('#run-now').html('Run Now');
@@ -438,6 +449,7 @@
 
             // Stop monitoring after 5 minutes to prevent infinite loops
             setTimeout(function() {
+                console.log('[PUNTWORK] Monitoring timeout reached, stopping');
                 clearInterval(checkInterval);
                 JobImportEvents.stopStatusPolling();
                 $('#run-now').html('Run Now');
