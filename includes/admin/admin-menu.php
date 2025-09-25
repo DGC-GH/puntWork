@@ -53,4 +53,13 @@ add_action('admin_menu', function() {
         'jobs-dashboard',
         __NAMESPACE__ . '\\jobs_dashboard_page'
     );
+
+    add_submenu_page(
+        'puntwork-dashboard',
+        'API Settings',
+        'API',
+        'manage_options',
+        'puntwork-api-settings',
+        __NAMESPACE__ . '\\api_settings_page'
+    );
 });
