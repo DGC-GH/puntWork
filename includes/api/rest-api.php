@@ -160,15 +160,14 @@ function handle_trigger_import($request) {
         delete_transient('import_cancel');
 
         // Schedule the import to run asynchronously
-        if (false && function_exists('as_schedule_single_action')) { // Temporarily disable async
+        if (function_exists('as_schedule_single_action')) {
             // Use Action Scheduler if available
             as_schedule_single_action(time(), 'puntwork_scheduled_import_async');
-        } elseif (false && function_exists('wp_schedule_single_event')) { // Temporarily disable async
+        } elseif (function_exists('wp_schedule_single_event')) {
             // Fallback: Use WordPress cron for near-immediate execution
             wp_schedule_single_event(time() + 1, 'puntwork_scheduled_import_async');
         } else {
-            // Force synchronous execution for debugging
-            error_log('[PUNTWORK] API: Running import synchronously for debugging');
+            // Final fallback: Run synchronously (not ideal but maintains functionality)
             $result = \Puntwork\run_scheduled_import($test_mode, 'api');
 
             // Clear test mode
