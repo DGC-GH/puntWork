@@ -184,8 +184,6 @@ function log_scheduled_run($details, $test_mode = false, $trigger_type = 'schedu
  * Log a manual import run to history
  */
 function log_manual_import_run($details) {
-    error_log('[PUNTWORK] log_manual_import_run called with details: ' . print_r($details, true));
-
     $run_entry = [
         'timestamp' => $details['timestamp'],
         'formatted_date' => wp_date('M j, Y H:i', $details['timestamp']),
@@ -201,11 +199,8 @@ function log_manual_import_run($details) {
         'trigger_type' => 'manual'
     ];
 
-    error_log('[PUNTWORK] log_manual_import_run: Created run_entry: ' . print_r($run_entry, true));
-
     // Get existing history
     $history = get_option('puntwork_import_run_history', []);
-    error_log('[PUNTWORK] log_manual_import_run: Current history count: ' . count($history));
 
     // Add new entry to the beginning
     array_unshift($history, $run_entry);
@@ -215,9 +210,7 @@ function log_manual_import_run($details) {
         $history = array_slice($history, 0, 20);
     }
 
-    $result = update_option('puntwork_import_run_history', $history);
-    error_log('[PUNTWORK] log_manual_import_run: update_option result: ' . ($result ? 'SUCCESS' : 'FAILED'));
-    error_log('[PUNTWORK] log_manual_import_run: New history count: ' . count($history));
+    update_option('puntwork_import_run_history', $history);
 
     // Log to debug log
     $status = $details['success'] ? 'SUCCESS' : 'FAILED';
