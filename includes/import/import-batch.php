@@ -209,6 +209,7 @@ if (!function_exists('import_all_jobs_from_json')) {
             }
 
             $batch_start = (int) get_option('job_import_progress', 0);
+            error_log('[PUNTWORK] import_all_jobs_from_json: batch_start=' . $batch_start . ', total_items=' . $total_items);
 
             // Prepare setup for this batch
             $setup = prepare_import_setup($batch_start);
@@ -226,6 +227,8 @@ if (!function_exists('import_all_jobs_from_json')) {
                 update_option('job_import_status', $initial_status, false);
                 error_log('[PUNTWORK] Set total items for import: ' . $total_items);
             }
+
+            error_log('[PUNTWORK] import_all_jobs_from_json: setup total=' . ($setup['total'] ?? 'not set') . ', complete=' . (isset($setup['complete']) ? $setup['complete'] : 'not set'));
 
             // Check if import is complete
             if (isset($setup['success']) && isset($setup['complete']) && $setup['complete']) {
