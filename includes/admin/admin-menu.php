@@ -80,4 +80,13 @@ add_action('admin_menu', function() {
         'puntwork-analytics',
         __NAMESPACE__ . '\\import_analytics_page'
     );
+
+    add_submenu_page(
+        'puntwork-dashboard',
+        'Performance Metrics',
+        'Performance',
+        'manage_options',
+        'puntwork-performance',
+        __NAMESPACE__ . '\\performance_metrics_page'
+    );
 });
