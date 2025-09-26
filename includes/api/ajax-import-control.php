@@ -385,3 +385,32 @@ function log_manual_import_run_ajax() {
         AjaxErrorHandler::send_error('Failed to log manual import run: ' . $e->getMessage());
     }
 }
+
+add_action('wp_ajax_get_api_key', __NAMESPACE__ . '\\get_api_key_ajax');
+function get_api_key_ajax() {
+    PuntWorkLogger::logAjaxRequest('get_api_key', $_POST);
+
+    // Use comprehensive security validation
+    $validation = SecurityUtils::validate_ajax_request('get_api_key', 'job_import_nonce');
+    if (is_wp_error($validation)) {
+        AjaxErrorHandler::send_error($validation);
+        return;
+    }
+
+    try {
+        $api_key = get_option('puntwork_api_key');
+
+        if (empty($api_key)) {
+            PuntWorkLogger::warn('API key requested but not configured', PuntWorkLogger::CONTEXT_AJAX);
+            AjaxErrorHandler::send_error('API key not configured');
+            return;
+        }
+
+        PuntWorkLogger::logAjaxResponse('get_api_key', ['message' => 'API key retrieved']);
+        AjaxErrorHandler::send_success(['api_key' => $api_key]);
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Get API key error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        AjaxErrorHandler::send_error('Failed to get API key: ' . $e->getMessage());
+    }
+}
