@@ -12,10 +12,15 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'PUNTWORK_VERSION', '1.0.14' );
+define( 'PUNTWORK_VERSION', '1.0.15' );
 define( 'PUNTWORK_PATH', plugin_dir_path( __FILE__ ) );
 define( 'PUNTWORK_URL', plugin_dir_url( __FILE__ ) );
 define( 'PUNTWORK_LOGS', PUNTWORK_PATH . 'logs/import.log' );
+
+// Load Composer autoloader if available
+if (file_exists(PUNTWORK_PATH . 'vendor/autoload.php')) {
+    require_once PUNTWORK_PATH . 'vendor/autoload.php';
+}
 
 // Activation hook
 register_activation_hook( __FILE__, __NAMESPACE__ . '\\job_import_activate' );
@@ -91,14 +96,14 @@ function setup_job_import() {
     // Global batch limit (from old 1)
     global $job_import_batch_limit;
     $job_import_batch_limit = 500;
-    
-    // Load includes
+
+    // Load function-based includes (cannot be autoloaded)
     $includes = array(
-        // Core functionality
+        // Core functionality (functions)
         'core/core-structure-logic.php',
         'core/enqueue-scripts-js.php',
-        
-        // Admin interface
+
+        // Admin interface (functions)
         'admin/admin-menu.php',
         'admin/admin-page-html.php',
         'admin/admin-ui-debug.php',
@@ -107,8 +112,8 @@ function setup_job_import() {
         'admin/admin-api-settings.php',
         'admin/admin-ui-feed-health.php',
         'admin/admin-ui-analytics.php',
-        
-        // API handlers
+
+        // API handlers (functions)
         'api/ajax-feed-processing.php',
         'api/ajax-handlers.php',
         'api/ajax-import-control.php',
@@ -116,15 +121,15 @@ function setup_job_import() {
         'api/ajax-db-optimization.php',
         'api/ajax-feed-health.php',
         'api/rest-api.php',
-        
-        // Batch processing
+
+        // Batch processing (functions)
         'batch/batch-core.php',
         'batch/batch-data.php',
         'batch/batch-processing.php',
         'batch/batch-size-management.php',
         'batch/batch-utils.php',
-        
-        // Import functionality
+
+        // Import functionality (functions)
         'import/combine-jsonl.php',
         'import/download-feed.php',
         'import/import-batch.php',
@@ -132,14 +137,12 @@ function setup_job_import() {
         'import/import-setup.php',
         'import/process-batch-items.php',
         'import/process-xml-batch.php',
-        'import/feed-processor.php',
         'import/reset-import.php',
-        
-        // Utilities
+
+        // Utilities (functions - classes are autoloaded)
         'utilities/puntwork-logger.php',
         'utilities/gzip-file.php',
         'utilities/handle-duplicates.php',
-        'utilities/advanced-deduplication.php',
         'utilities/heartbeat-control.php',
         'utilities/item-cleaning.php',
         'utilities/item-inference.php',
@@ -149,18 +152,16 @@ function setup_job_import() {
         'utilities/async-processing.php',
         'utilities/performance-monitor.php',
         'utilities/security-utils.php',
-        'utilities/feed-health-monitor.php',
-        'utilities/import-analytics.php',
-        
-        // Mappings
+
+        // Mappings (functions)
         'mappings/mappings-constants.php',
         'mappings/mappings-fields.php',
         'mappings/mappings-geographic.php',
         'mappings/mappings-icons.php',
         'mappings/mappings-salary.php',
         'mappings/mappings-schema.php',
-        
-        // Scheduling
+
+        // Scheduling (functions)
         'scheduling/scheduling-ajax.php',
         'scheduling/scheduling-core.php',
         'scheduling/scheduling-history.php',
