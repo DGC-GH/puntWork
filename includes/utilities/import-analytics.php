@@ -205,8 +205,8 @@ class ImportAnalytics {
      * Get comprehensive analytics data
      */
     public static function get_analytics_data($period = '30days') {
-        $cache_key = self::METRICS_TRANSIENT . '_' . $period;
-        $cached_data = get_transient($cache_key);
+        $cache_key = 'analytics_data_' . $period;
+        $cached_data = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
 
         if ($cached_data !== false) {
             return $cached_data;
@@ -221,7 +221,7 @@ class ImportAnalytics {
         ];
 
         // Cache for 1 hour
-        set_transient($cache_key, $data, HOUR_IN_SECONDS);
+        CacheManager::set($cache_key, $data, CacheManager::GROUP_ANALYTICS, HOUR_IN_SECONDS);
 
         return $data;
     }
@@ -436,10 +436,8 @@ class ImportAnalytics {
             'cutoff_date' => $cutoff_date
         ]);
 
-        // Clear cached data
-        delete_transient(self::METRICS_TRANSIENT . '_7days');
-        delete_transient(self::METRICS_TRANSIENT . '_30days');
-        delete_transient(self::METRICS_TRANSIENT . '_90days');
+        // Clear cached analytics data
+        CacheManager::clear_group(CacheManager::GROUP_ANALYTICS);
     }
 
     /**

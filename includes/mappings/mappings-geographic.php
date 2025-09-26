@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 if (!function_exists('GetProvinceMap')) {
     function GetProvinceMap(): array {
-        $cached = get_transient('puntwork_province_map');
+        $cached = CacheManager::get('province_map', CacheManager::GROUP_MAPPINGS);
         if (false === $cached) {
             $cached = [
                 'antwerp' => 'antwerpen.work',
@@ -62,7 +62,7 @@ if (!function_exists('GetProvinceMap')) {
                 'flanders' => 'vlaanderen.work',
                 'flandre' => 'vlaanderen.work',
             ];
-            set_transient('puntwork_province_map', $cached, HOUR_IN_SECONDS);
+            CacheManager::set('province_map', $cached, CacheManager::GROUP_MAPPINGS, HOUR_IN_SECONDS);
         }
         return $cached;
     }
