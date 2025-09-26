@@ -15,7 +15,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 function download_feed($url, $feed_path, $output_dir, &$logs, &$format = null) {
-    // Validate file paths for security
+    // Start tracing span for feed download
+    $span = PuntworkTracing::startActiveSpan('download_feed', [
+        'feed.url' => $url,
+        'feed.path' => $feed_path,
+        'output.dir' => $output_dir
+    ]);
+
+    try {
     $real_output_dir = realpath($output_dir);
     $real_feed_path = realpath(dirname($feed_path)) . '/' . basename($feed_path);
     if ($real_output_dir === false || strpos($real_feed_path, $real_output_dir) !== 0) {
@@ -57,9 +64,19 @@ function download_feed($url, $feed_path, $output_dir, &$logs, &$format = null) {
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Downloaded feed ($format): " . filesize($feed_path) . " bytes";
         error_log("Downloaded feed ($format): " . filesize($feed_path) . " bytes");
         @chmod($xml_path, 0644);
+
+        $span->setAttribute('feed.size', filesize($feed_path));
+        $span->setAttribute('feed.format', $format);
+        $span->end();
+
+        return true;
     } catch (\Exception $e) {
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Download error: " . $e->getMessage();
+
+        $span->recordException($e);
+        $span->setStatus(\OpenTelemetry\API\Trace\StatusCode::STATUS_ERROR, $e->getMessage());
+        $span->end();
+
         return false;
     }
-    return true;
 }
