@@ -69,7 +69,7 @@ function download_feed($url, $feed_path, $output_dir, &$logs, &$format = null) {
 
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Downloaded feed ($format): " . filesize($feed_path) . " bytes";
             error_log("Downloaded feed ($format): " . filesize($feed_path) . " bytes");
-            @chmod($xml_path, 0644);
+            @chmod($feed_path, 0644);
 
             $span->setAttribute('feed.size', filesize($feed_path));
             $span->setAttribute('feed.format', $format);
