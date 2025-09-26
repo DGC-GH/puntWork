@@ -115,9 +115,39 @@ function render_jobs_dashboard_ui() {
                 <span id="async-settings-status" style="font-size: 14px; color: #8e8e93;"></span>
             </div>
         </div>
-    </div>
-    <?php
-}
+
+        <!-- Performance Monitoring Section -->
+        <div style="margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px;">Performance Monitoring</h2>
+            <p style="font-size: 14px; color: #8e8e93; margin: 0 0 16px;">Monitor import performance metrics and system benchmarks.</p>
+
+            <div id="performance-monitoring-status" style="background-color: #f9f9f9; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="font-size: 16px; font-weight: 500;">Performance Metrics</span>
+                    <span id="performance-status-badge" style="font-size: 12px; padding: 4px 8px; border-radius: 4px; background-color: #8e8e93; color: white;">
+                        <i class="fas fa-spinner fa-spin" style="margin-right: 4px;"></i>Loading...
+                    </span>
+                </div>
+                <div id="performance-metrics" style="font-size: 14px; color: #8e8e93;">
+                    <div style="display: flex; align-items: center;">
+                        <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>
+                        Loading performance metrics...
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button id="refresh-performance" class="button button-primary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #007aff; border: none; color: white;">
+                    <span id="refresh-performance-text">Refresh Metrics</span>
+                    <span id="refresh-performance-loading" style="display: none;">Refreshing...</span>
+                </button>
+                <button id="clear-performance-logs" class="button button-secondary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #ff9500; border: none; color: white;">
+                    <span id="clear-performance-text">Clear Old Logs</span>
+                    <span id="clear-performance-loading" style="display: none;">Clearing...</span>
+                </button>
+                <span id="performance-status-msg" style="font-size: 14px; color: #8e8e93;"></span>
+            </div>
+        </div>
 
 /**
  * Render main import UI section
