@@ -37,7 +37,7 @@ require_once __DIR__ . '/import-finalization.php';
  *
  * @return bool True if time limit exceeded
  */
-function import_time_exceeded() {
+function import_time_exceeded(): bool {
     $start_time = get_option('job_import_start_time', microtime(true));
     $time_limit = apply_filters('puntwork_import_time_limit', 120); // 120 seconds default (increased from 20 for better performance)
     $current_time = microtime(true);
@@ -55,7 +55,7 @@ function import_time_exceeded() {
  *
  * @return bool True if memory limit exceeded
  */
-function import_memory_exceeded() {
+function import_memory_exceeded(): bool {
     $memory_limit = get_memory_limit_bytes() * 0.9; // 90% of max memory
     $current_memory = memory_get_usage(true);
 
@@ -72,7 +72,7 @@ function import_memory_exceeded() {
  *
  * @return bool True if processing should continue
  */
-function should_continue_batch_processing() {
+function should_continue_batch_processing(): bool {
     if (import_time_exceeded()) {
         error_log('[PUNTWORK] Import time limit exceeded - pausing batch processing');
         return false;
@@ -94,7 +94,7 @@ if (!function_exists('import_jobs_from_json')) {
      * @param int $batch_start Starting index for batch.
      * @return array Import result data.
      */
-    function import_jobs_from_json($is_batch = false, $batch_start = 0) {
+    function import_jobs_from_json(bool $is_batch = false, int $batch_start = 0): array {
         $setup = prepare_import_setup($batch_start);
         if (is_wp_error($setup)) {
             return ['success' => false, 'message' => $setup->get_error_message(), 'logs' => ['Setup failed: ' . $setup->get_error_message()]];
@@ -116,7 +116,7 @@ if (!function_exists('import_all_jobs_from_json')) {
      * @param bool $preserve_status Whether to preserve existing import status for UI polling
      * @return array Import result data.
      */
-    function import_all_jobs_from_json($preserve_status = false) {
+    function import_all_jobs_from_json(bool $preserve_status = false): array {
         $start_time = microtime(true);
         $total_processed = 0;
         $total_published = 0;
@@ -373,8 +373,10 @@ if (!function_exists('import_all_jobs_from_json')) {
 /**
  * Continue a paused import process
  * Called by WordPress cron when import needs to resume after timeout
+ *
+ * @return void
  */
-function continue_paused_import() {
+function continue_paused_import(): void {
     error_log('[PUNTWORK] Continuing paused import process');
 
     // Check if import is actually paused

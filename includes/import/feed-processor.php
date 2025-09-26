@@ -27,10 +27,10 @@ class FeedProcessor {
      * Detect feed format from URL or content
      *
      * @param string $url Feed URL
-     * @param string $content Optional content to analyze
-     * @return string Detected format
+     * @param string|null $content Optional content to analyze
+     * @return string Detected format (xml, json, or csv)
      */
-    public static function detect_format($url, $content = null) {
+    public static function detect_format(string $url, ?string $content = null): string {
         // Check URL extension first
         $extension = strtolower(pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION));
 
@@ -90,7 +90,7 @@ class FeedProcessor {
      * @param array &$logs Logs array
      * @return array Processed batch data
      */
-    public static function process_feed($feed_path, $format, $handle, $output_dir, $fallback_domain, $batch_size, &$total_items, &$logs) {
+    public static function process_feed(string $feed_path, string $format, string $handle, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): array {
         switch ($format) {
             case self::FORMAT_XML:
                 return self::process_xml_feed($feed_path, $handle, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
@@ -112,8 +112,11 @@ class FeedProcessor {
 
     /**
      * Detect language from item
+     *
+     * @param object $item Job item object
+     * @return string Detected language code (en, fr, nl)
      */
-    private static function detect_language($item) {
+    private static function detect_language(object $item): string {
         $lang = isset($item->languagecode) ? strtolower((string)$item->languagecode) : 'en';
         if (strpos($lang, 'fr') !== false) return 'fr';
         elseif (strpos($lang, 'nl') !== false) return 'nl';
@@ -122,8 +125,18 @@ class FeedProcessor {
 
     /**
      * Process JSON feed
+     *
+     * @param string $json_path Path to JSON file
+     * @param string $handle Feed handle/key
+     * @param string $output_dir Output directory
+     * @param string $fallback_domain Fallback domain
+     * @param int $batch_size Batch size
+     * @param int &$total_items Total items counter
+     * @param array &$logs Logs array
+     * @return array Processed batch data
+     * @throws \Exception If JSON processing fails
      */
-    private static function process_json_feed($json_path, $handle, $output_dir, $fallback_domain, $batch_size, &$total_items, &$logs) {
+    private static function process_json_feed(string $json_path, string $handle, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): array {
         $feed_item_count = 0;
         $batch = [];
 
@@ -193,8 +206,18 @@ class FeedProcessor {
 
     /**
      * Process CSV feed
+     *
+     * @param string $csv_path Path to CSV file
+     * @param string $handle Feed handle/key
+     * @param string $output_dir Output directory
+     * @param string $fallback_domain Fallback domain
+     * @param int $batch_size Batch size
+     * @param int &$total_items Total items counter
+     * @param array &$logs Logs array
+     * @return array Processed batch data
+     * @throws \Exception If CSV processing fails
      */
-    private static function process_csv_feed($csv_path, $handle, $output_dir, $fallback_domain, $batch_size, &$total_items, &$logs) {
+    private static function process_csv_feed(string $csv_path, string $handle, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): array {
         $feed_item_count = 0;
         $batch = [];
 
@@ -271,8 +294,11 @@ class FeedProcessor {
 
     /**
      * Extract items from various JSON structures
+     *
+     * @param mixed $data JSON data structure
+     * @return array Extracted items array
      */
-    private static function extract_json_items($data) {
+    private static function extract_json_items($data): array {
         // If it's an array of objects, return as is
         if (is_array($data) && !empty($data) && (is_array($data[0]) || is_object($data[0]))) {
             return $data;
@@ -299,8 +325,11 @@ class FeedProcessor {
 
     /**
      * Detect CSV delimiter by analyzing the first few lines
+     *
+     * @param string $file_path Path to CSV file
+     * @return string Detected delimiter character
      */
-    private static function detect_csv_delimiter($file_path) {
+    private static function detect_csv_delimiter(string $file_path): string {
         $handle = fopen($file_path, 'r');
         $delimiters = [',', ';', '\t', '|'];
         $counts = array_fill_keys($delimiters, 0);
