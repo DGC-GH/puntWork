@@ -78,9 +78,9 @@
 
 ### 4.2 Integration Capabilities
 - [x] Add support for additional job boards
-- [ ] Implement social media posting (X/Twitter posting & ads integration = high prio)
-- [ ] Add CRM system integrations
-- [ ] Create mobile app companion
+- [x] Implement social media posting (X/Twitter, Facebook, TikTok posting & ads integration)
+- [x] Add CRM system integrations (HubSpot, Salesforce, Zoho, Pipedrive)
+- [x] Create mobile app companion
 
 ## Technical Debt & Maintenance
 ### Immediate Tasks
