@@ -99,6 +99,15 @@ add_action('admin_menu', function() {
         __NAMESPACE__ . '\\api_settings_page'
     );
 
+    add_submenu_page(
+        'puntwork-dashboard',
+        __('System Monitoring', 'puntwork'),
+        __('Monitoring', 'puntwork'),
+        'manage_options',
+        'puntwork-monitoring',
+        __NAMESPACE__ . '\\system_monitoring_page'
+    );
+
     // Onboarding menu item (only show if onboarding not completed)
     if (!\PuntworkOnboardingWizard::isOnboardingCompleted()) {
         add_submenu_page(

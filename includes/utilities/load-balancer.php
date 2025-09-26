@@ -39,7 +39,7 @@ class PuntworkLoadBalancer {
      */
     public function is_wordpress_environment() {
         global $wpdb;
-        return isset($wpdb) && $wpdb instanceof \wpdb;
+        return isset($wpdb) && $wpdb instanceof \wpdb && defined('ABSPATH') && file_exists(ABSPATH . 'wp-admin/includes/upgrade.php');
     }
 
     /**

@@ -16,33 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Iterator for streaming JSONL file items to reduce m        $span->setAttribute('batch.processed', $result['processed_count']);
-        $span->setAttribute('batch.published', $published);
-        $span->setAttribute('batch.updated', $updated);
-        $span->setAttribute('batch.skipped', $skipped);
-        $span->end();
-
-        return $result_array;
-    } catch (\Exception $e) {
-        // End performance monitoring on error
-        $perf_data = end_performance_monitoring($perf_id);
-
-        $error_msg = 'Batch import error: ' . $e->getMessage();
-        error_log($error_msg);
-        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
-
-        $span->recordException($e);
-        $span->setStatus(\OpenTelemetry\API\Trace\StatusCode::STATUS_ERROR, $e->getMessage());
-        $span->end();
-
-        return [
-            'success' => false,
-            'message' => 'Batch failed: ' . $e->getMessage(),
-            'logs' => $logs,
-            'performance' => $perf_data
-        ];
-    }
-}age.
+ * Iterator for streaming JSONL file items to reduce memory usage.
  */
 class JsonlIterator implements \Iterator {
     private string $filePath;
@@ -313,13 +287,6 @@ function process_batch_items_logic(array $setup): array {
             'performance' => $perf_data,
             'message' => '' // No error message for success
         ];
-
-        $span->setAttribute('batch.processed', $result['processed_count']);
-        $span->setAttribute('batch.published', $published);
-        $span->setAttribute('batch.updated', $updated);
-        $span->setAttribute('batch.skipped', $skipped);
-        $span->end();
-
     } catch (\Exception $e) {
         // End performance monitoring on error
         $perf_data = end_performance_monitoring($perf_id);
@@ -339,6 +306,19 @@ function process_batch_items_logic(array $setup): array {
             'performance' => $perf_data
         ];
     }
+} catch (\Exception $e) {
+    // Handle outer try exceptions (setup/initialization errors)
+    $span->recordException($e);
+    $span->setStatus(\OpenTelemetry\API\Trace\StatusCode::STATUS_ERROR, $e->getMessage());
+    $span->end();
+
+    return [
+        'success' => false,
+        'message' => 'Batch setup failed: ' . $e->getMessage(),
+        'logs' => [],
+        'performance' => null
+    ];
+}
 }
 
 /**

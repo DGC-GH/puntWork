@@ -137,6 +137,8 @@ function setup_job_import() {
         'admin/admin-ui-feed-health.php',
         'admin/admin-ui-analytics.php',
         'admin/admin-ui-performance.php',
+        'admin/admin-ui-monitoring.php',
+        'admin/admin-ajax-monitoring.php',
         'admin/admin-feed-config.php',
         'admin/admin-modern-styles.php',
         'admin/onboarding-wizard.php',
