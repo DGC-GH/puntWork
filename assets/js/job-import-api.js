@@ -355,6 +355,18 @@ console.log('[PUNTWORK] job-import-api.js loaded');
             }
             // Retry on other errors that might be transient
             return xhr.readyState === 0 || status === 'error';
+        },
+
+        /**
+         * Get API key for real-time updates
+         * @returns {Promise} AJAX promise
+         */
+        getApiKey: function() {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: { action: 'get_api_key', nonce: jobImportData.nonce }
+            });
         }
     };
 

@@ -121,6 +121,7 @@ function setup_job_import() {
         'api/ajax-db-optimization.php',
         'api/ajax-feed-health.php',
         'api/rest-api.php',
+        'api/sse-import-progress.php',
 
         // Batch processing (functions)
         'batch/batch-core.php',

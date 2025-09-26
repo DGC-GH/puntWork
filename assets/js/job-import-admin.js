@@ -16,6 +16,7 @@ console.log('[PUNTWORK] job-import-admin.js loaded - DEBUG MODE');
     console.log('[PUNTWORK] JobImportLogic:', typeof JobImportLogic);
     console.log('[PUNTWORK] JobImportEvents:', typeof JobImportEvents);
     console.log('[PUNTWORK] JobImportScheduling:', typeof JobImportScheduling);
+    console.log('[PUNTWORK] JobImportRealtime:', typeof JobImportRealtime);
 
     if (typeof PuntWorkJSLogger === 'undefined') {
         console.error('[PUNTWORK] Critical Error: PuntWorkJSLogger module not loaded - cannot initialize job import admin');
@@ -41,6 +42,10 @@ console.log('[PUNTWORK] job-import-admin.js loaded - DEBUG MODE');
         console.error('[PUNTWORK] Critical Error: JobImportScheduling module not loaded - cannot initialize job import admin');
         return;
     }
+    if (typeof JobImportRealtime === 'undefined') {
+        console.error('[PUNTWORK] Critical Error: JobImportRealtime module not loaded - cannot initialize job import admin');
+        return;
+    }
 
     var PuntWorkJobImportAdmin = {
         /**
@@ -55,7 +60,8 @@ console.log('[PUNTWORK] job-import-admin.js loaded - DEBUG MODE');
                 api: typeof JobImportAPI !== 'undefined',
                 logic: typeof JobImportLogic !== 'undefined',
                 events: typeof JobImportEvents !== 'undefined',
-                scheduling: typeof JobImportScheduling !== 'undefined'
+                scheduling: typeof JobImportScheduling !== 'undefined',
+                realtime: typeof JobImportRealtime !== 'undefined'
             });
 
             // Only initialize if not already initialized by inline script
