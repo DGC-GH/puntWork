@@ -99,10 +99,7 @@ abstract class CRMIntegration
     /**
      * Get platform name
      */
-    public function getPlatformName(): string
-    {
-        return $this->platform_name;
-    }
+    abstract public static function getPlatformName(): string;
 
     /**
      * Get configuration

@@ -31,6 +31,86 @@ class CRMManager
     ];
 
     /**
+     * Platform configuration requirements
+     */
+    private static array $platform_configs = [
+        'hubspot' => [
+            'access_token' => [
+                'label' => 'Access Token',
+                'type' => 'password',
+                'required' => true,
+                'description' => 'HubSpot Private App Access Token'
+            ]
+        ],
+        'salesforce' => [
+            'client_id' => [
+                'label' => 'Client ID',
+                'type' => 'text',
+                'required' => true,
+                'description' => 'Salesforce Connected App Consumer Key'
+            ],
+            'client_secret' => [
+                'label' => 'Client Secret',
+                'type' => 'password',
+                'required' => true,
+                'description' => 'Salesforce Connected App Consumer Secret'
+            ],
+            'username' => [
+                'label' => 'Username',
+                'type' => 'text',
+                'required' => true,
+                'description' => 'Salesforce login username'
+            ],
+            'password' => [
+                'label' => 'Password',
+                'type' => 'password',
+                'required' => true,
+                'description' => 'Salesforce login password'
+            ],
+            'security_token' => [
+                'label' => 'Security Token',
+                'type' => 'password',
+                'required' => false,
+                'description' => 'Salesforce security token (if required)'
+            ]
+        ],
+        'zoho' => [
+            'client_id' => [
+                'label' => 'Client ID',
+                'type' => 'text',
+                'required' => true,
+                'description' => 'Zoho OAuth Client ID'
+            ],
+            'client_secret' => [
+                'label' => 'Client Secret',
+                'type' => 'password',
+                'required' => true,
+                'description' => 'Zoho OAuth Client Secret'
+            ],
+            'refresh_token' => [
+                'label' => 'Refresh Token',
+                'type' => 'password',
+                'required' => true,
+                'description' => 'Zoho OAuth Refresh Token'
+            ]
+        ],
+        'pipedrive' => [
+            'api_token' => [
+                'label' => 'API Token',
+                'type' => 'password',
+                'required' => true,
+                'description' => 'Pipedrive API Token'
+            ],
+            'user_id' => [
+                'label' => 'User ID',
+                'type' => 'text',
+                'required' => false,
+                'description' => 'Pipedrive User ID (optional, will use first available)'
+            ]
+        ]
+    ];
+
+    /**
      * Configured platform instances
      */
     private array $platforms = [];
@@ -75,7 +155,8 @@ class CRMManager
         foreach (self::$available_platforms as $platform_id => $platform_class) {
             $platforms[$platform_id] = [
                 'name' => $platform_class::getPlatformName(),
-                'class' => $platform_class
+                'class' => $platform_class,
+                'required_config' => self::$platform_configs[$platform_id] ?? []
             ];
         }
 
