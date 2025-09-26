@@ -24,121 +24,145 @@ add_action('wp_ajax_run_job_import_batch', __NAMESPACE__ . '\\run_job_import_bat
 function run_job_import_batch_ajax() {
     PuntWorkLogger::logAjaxRequest('run_job_import_batch', $_POST);
 
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        PuntWorkLogger::error('Nonce verification failed for run_job_import_batch', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Nonce verification failed']);
+    // Use comprehensive security validation with field validation
+    $validation = SecurityUtils::validate_ajax_request(
+        'run_job_import_batch',
+        'job_import_nonce',
+        ['start'], // required fields
+        [
+            'start' => ['type' => 'int', 'min' => 0, 'max' => 1000000] // validation rules
+        ]
+    );
+
+    if (is_wp_error($validation)) {
+        AjaxErrorHandler::send_error($validation);
+        return;
     }
-    if (!current_user_can('manage_options')) {
-        PuntWorkLogger::error('Permission denied for run_job_import_batch', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Permission denied']);
+
+    try {
+        $start = $_POST['start'];
+        PuntWorkLogger::info("Starting batch import at index: {$start}", PuntWorkLogger::CONTEXT_BATCH);
+
+        $result = import_jobs_from_json(true, $start);
+
+        // Log summary instead of full result to prevent large debug logs
+        $log_summary = [
+            'success' => isset($result['success']) && $result['success'],
+            'processed' => $result['processed'] ?? 0,
+            'total' => $result['total'] ?? 0,
+            'published' => $result['published'] ?? 0,
+            'updated' => $result['updated'] ?? 0,
+            'skipped' => $result['skipped'] ?? 0,
+            'complete' => $result['complete'] ?? false,
+            'logs_count' => isset($result['logs']) && is_array($result['logs']) ? count($result['logs']) : 0,
+            'has_error' => !empty($result['message'])
+        ];
+
+        PuntWorkLogger::logAjaxResponse('run_job_import_batch', $log_summary, isset($result['success']) && $result['success']);
+        AjaxErrorHandler::send_success($result);
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Batch import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        AjaxErrorHandler::send_error('Batch import failed: ' . $e->getMessage());
     }
-
-    $start = intval($_POST['start']);
-    PuntWorkLogger::info("Starting batch import at index: {$start}", PuntWorkLogger::CONTEXT_BATCH);
-
-    $result = import_jobs_from_json(true, $start);
-
-    // Log summary instead of full result to prevent large debug logs
-    $log_summary = [
-        'success' => isset($result['success']) && $result['success'],
-        'processed' => $result['processed'] ?? 0,
-        'total' => $result['total'] ?? 0,
-        'published' => $result['published'] ?? 0,
-        'updated' => $result['updated'] ?? 0,
-        'skipped' => $result['skipped'] ?? 0,
-        'complete' => $result['complete'] ?? false,
-        'logs_count' => isset($result['logs']) && is_array($result['logs']) ? count($result['logs']) : 0,
-        'has_error' => !empty($result['message'])
-    ];
-
-    PuntWorkLogger::logAjaxResponse('run_job_import_batch', $log_summary, isset($result['success']) && $result['success']);
-    wp_send_json_success($result);
 }
 
 add_action('wp_ajax_cancel_job_import', __NAMESPACE__ . '\\cancel_job_import_ajax');
 function cancel_job_import_ajax() {
     PuntWorkLogger::logAjaxRequest('cancel_job_import', $_POST);
 
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        PuntWorkLogger::error('Nonce verification failed for cancel_job_import', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Nonce verification failed']);
-    }
-    if (!current_user_can('manage_options')) {
-        PuntWorkLogger::error('Permission denied for cancel_job_import', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Permission denied']);
+    // Use comprehensive security validation
+    $validation = SecurityUtils::validate_ajax_request('cancel_job_import', 'job_import_nonce');
+    if (is_wp_error($validation)) {
+        AjaxErrorHandler::send_error($validation);
+        return;
     }
 
-    set_transient('import_cancel', true, 3600);
-    // Also clear the import status to reset the UI
-    delete_option('job_import_status');
-    delete_option('job_import_batch_size');
-    PuntWorkLogger::info('Import cancelled and status cleared', PuntWorkLogger::CONTEXT_BATCH);
+    try {
+        set_transient('import_cancel', true, 3600);
+        // Also clear the import status to reset the UI
+        delete_option('job_import_status');
+        delete_option('job_import_batch_size');
+        PuntWorkLogger::info('Import cancelled and status cleared', PuntWorkLogger::CONTEXT_BATCH);
 
-    PuntWorkLogger::logAjaxResponse('cancel_job_import', ['message' => 'Import cancelled']);
-    wp_send_json_success();
+        PuntWorkLogger::logAjaxResponse('cancel_job_import', ['message' => 'Import cancelled']);
+        AjaxErrorHandler::send_success(null, ['message' => 'Import cancelled']);
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Cancel import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        AjaxErrorHandler::send_error('Failed to cancel import: ' . $e->getMessage());
+    }
 }
 
 add_action('wp_ajax_clear_import_cancel', __NAMESPACE__ . '\\clear_import_cancel_ajax');
 function clear_import_cancel_ajax() {
     PuntWorkLogger::logAjaxRequest('clear_import_cancel', $_POST);
 
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        PuntWorkLogger::error('Nonce verification failed for clear_import_cancel', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Nonce verification failed']);
-    }
-    if (!current_user_can('manage_options')) {
-        PuntWorkLogger::error('Permission denied for clear_import_cancel', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Permission denied']);
+    // Use comprehensive security validation
+    $validation = SecurityUtils::validate_ajax_request('clear_import_cancel', 'job_import_nonce');
+    if (is_wp_error($validation)) {
+        AjaxErrorHandler::send_error($validation);
+        return;
     }
 
-    delete_transient('import_cancel');
-    PuntWorkLogger::info('Import cancellation flag cleared', PuntWorkLogger::CONTEXT_BATCH);
+    try {
+        delete_transient('import_cancel');
+        PuntWorkLogger::info('Import cancellation flag cleared', PuntWorkLogger::CONTEXT_BATCH);
 
-    PuntWorkLogger::logAjaxResponse('clear_import_cancel', ['message' => 'Cancellation cleared']);
-    wp_send_json_success();
+        PuntWorkLogger::logAjaxResponse('clear_import_cancel', ['message' => 'Cancellation cleared']);
+        AjaxErrorHandler::send_success(null, ['message' => 'Cancellation cleared']);
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Clear import cancel error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        AjaxErrorHandler::send_error('Failed to clear cancellation: ' . $e->getMessage());
+    }
 }
 
 add_action('wp_ajax_reset_job_import', __NAMESPACE__ . '\\reset_job_import_ajax');
 function reset_job_import_ajax() {
     PuntWorkLogger::logAjaxRequest('reset_job_import', $_POST);
 
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        PuntWorkLogger::error('Nonce verification failed for reset_job_import', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Nonce verification failed']);
-    }
-    if (!current_user_can('manage_options')) {
-        PuntWorkLogger::error('Permission denied for reset_job_import', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Permission denied']);
+    // Use comprehensive security validation
+    $validation = SecurityUtils::validate_ajax_request('reset_job_import', 'job_import_nonce');
+    if (is_wp_error($validation)) {
+        AjaxErrorHandler::send_error($validation);
+        return;
     }
 
-    // Clear all import-related data
-    delete_option('job_import_status');
-    delete_option('job_import_progress');
-    delete_option('job_import_processed_guids');
-    delete_option('job_import_last_batch_time');
-    delete_option('job_import_last_batch_processed');
-    delete_option('job_import_batch_size');
-    delete_option('job_import_consecutive_small_batches');
-    delete_transient('import_cancel');
+    try {
+        // Clear all import-related data
+        delete_option('job_import_status');
+        delete_option('job_import_progress');
+        delete_option('job_import_processed_guids');
+        delete_option('job_import_last_batch_time');
+        delete_option('job_import_last_batch_processed');
+        delete_option('job_import_batch_size');
+        delete_option('job_import_consecutive_small_batches');
+        delete_transient('import_cancel');
 
-    PuntWorkLogger::info('Import system completely reset', PuntWorkLogger::CONTEXT_BATCH);
+        PuntWorkLogger::info('Import system completely reset', PuntWorkLogger::CONTEXT_BATCH);
 
-    PuntWorkLogger::logAjaxResponse('reset_job_import', ['message' => 'Import system reset']);
-    wp_send_json_success();
+        PuntWorkLogger::logAjaxResponse('reset_job_import', ['message' => 'Import system reset']);
+        AjaxErrorHandler::send_success(null, ['message' => 'Import system reset']);
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Reset import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        AjaxErrorHandler::send_error('Failed to reset import: ' . $e->getMessage());
+    }
 }
 
 add_action('wp_ajax_get_job_import_status', __NAMESPACE__ . '\\get_job_import_status_ajax');
 function get_job_import_status_ajax() {
     PuntWorkLogger::logAjaxRequest('get_job_import_status', $_POST);
 
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        PuntWorkLogger::error('Nonce verification failed for get_job_import_status', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Nonce verification failed']);
+    // Use comprehensive security validation
+    $validation = SecurityUtils::validate_ajax_request('get_job_import_status', 'job_import_nonce');
+    if (is_wp_error($validation)) {
+        AjaxErrorHandler::send_error($validation);
+        return;
     }
-    if (!current_user_can('manage_options')) {
-        PuntWorkLogger::error('Permission denied for get_job_import_status', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Permission denied']);
-    }
+
+    try {
 
     $progress = get_option('job_import_status') ?: [
         'total' => 0,
@@ -292,47 +316,72 @@ function get_job_import_status_ajax() {
     ];
 
     PuntWorkLogger::logAjaxResponse('get_job_import_status', $log_summary);
-    wp_send_json_success($progress);
+    AjaxErrorHandler::send_success($progress);
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Get import status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        AjaxErrorHandler::send_error('Failed to get import status: ' . $e->getMessage());
+    }
 }
 
 add_action('wp_ajax_log_manual_import_run', __NAMESPACE__ . '\\log_manual_import_run_ajax');
 function log_manual_import_run_ajax() {
     PuntWorkLogger::logAjaxRequest('log_manual_import_run', $_POST);
 
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        PuntWorkLogger::error('Nonce verification failed for log_manual_import_run', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Nonce verification failed']);
+    // Use comprehensive security validation with field validation
+    $validation = SecurityUtils::validate_ajax_request(
+        'log_manual_import_run',
+        'job_import_nonce',
+        ['timestamp', 'duration', 'success', 'processed', 'total', 'published', 'updated', 'skipped'], // required fields
+        [
+            'timestamp' => ['type' => 'int', 'min' => 0],
+            'duration' => ['type' => 'float', 'min' => 0],
+            'success' => ['type' => 'bool'],
+            'processed' => ['type' => 'int', 'min' => 0],
+            'total' => ['type' => 'int', 'min' => 0],
+            'published' => ['type' => 'int', 'min' => 0],
+            'updated' => ['type' => 'int', 'min' => 0],
+            'skipped' => ['type' => 'int', 'min' => 0],
+            'error_message' => ['type' => 'text', 'max_length' => 1000]
+        ]
+    );
+
+    if (is_wp_error($validation)) {
+        AjaxErrorHandler::send_error($validation);
+        return;
     }
-    if (!current_user_can('manage_options')) {
-        PuntWorkLogger::error('Permission denied for log_manual_import_run', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Permission denied']);
+
+    try {
+        $details = [
+            'timestamp' => $_POST['timestamp'],
+            'duration' => $_POST['duration'],
+            'success' => $_POST['success'],
+            'processed' => $_POST['processed'],
+            'total' => $_POST['total'],
+            'published' => $_POST['published'],
+            'updated' => $_POST['updated'],
+            'skipped' => $_POST['skipped'],
+            'error_message' => $_POST['error_message'] ?? ''
+        ];
+
+        // Include the scheduling history functions
+        require_once __DIR__ . '/../scheduling/scheduling-history.php';
+
+        // Log the manual import run
+        log_manual_import_run($details);
+
+        PuntWorkLogger::info('Manual import run logged to history', PuntWorkLogger::CONTEXT_AJAX, [
+            'success' => $details['success'],
+            'processed' => $details['processed'],
+            'total' => $details['total'],
+            'duration' => $details['duration']
+        ]);
+
+        PuntWorkLogger::logAjaxResponse('log_manual_import_run', ['message' => 'Manual import run logged']);
+        AjaxErrorHandler::send_success(null, ['message' => 'Manual import run logged to history']);
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Log manual import run error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        AjaxErrorHandler::send_error('Failed to log manual import run: ' . $e->getMessage());
     }
-
-    $details = [
-        'timestamp' => intval($_POST['timestamp']),
-        'duration' => floatval($_POST['duration']),
-        'success' => boolval($_POST['success']),
-        'processed' => intval($_POST['processed']),
-        'total' => intval($_POST['total']),
-        'published' => intval($_POST['published']),
-        'updated' => intval($_POST['updated']),
-        'skipped' => intval($_POST['skipped']),
-        'error_message' => sanitize_text_field($_POST['error_message'] ?? '')
-    ];
-
-    // Include the scheduling history functions
-    require_once __DIR__ . '/../scheduling/scheduling-history.php';
-
-    // Log the manual import run
-    log_manual_import_run($details);
-
-    PuntWorkLogger::info('Manual import run logged to history', PuntWorkLogger::CONTEXT_AJAX, [
-        'success' => $details['success'],
-        'processed' => $details['processed'],
-        'total' => $details['total'],
-        'duration' => $details['duration']
-    ]);
-
-    PuntWorkLogger::logAjaxResponse('log_manual_import_run', ['message' => 'Manual import run logged']);
-    wp_send_json_success(['message' => 'Manual import run logged to history']);
 }
