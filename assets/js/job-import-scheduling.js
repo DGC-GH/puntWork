@@ -659,6 +659,16 @@
                 var statusText = run.success ? 'Success' : 'Failed';
                 var modeText = run.test_mode ? '<span class="test-badge" style="background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-left: 8px;">TEST</span>' : '';
 
+                // Trigger type badge
+                var triggerType = run.trigger_type || 'scheduled';
+                var triggerColors = {
+                    'manual': { bg: '#f3f4f6', color: '#374151', icon: 'fas fa-user' },
+                    'scheduled': { bg: '#fef3c7', color: '#92400e', icon: 'fas fa-clock' },
+                    'api': { bg: '#e0f2fe', color: '#0c4a6e', icon: 'fas fa-code' }
+                };
+                var triggerColor = triggerColors[triggerType] || triggerColors['scheduled'];
+                var triggerText = '<span class="trigger-badge" style="background: ' + triggerColor.bg + '; color: ' + triggerColor.color + '; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-left: 8px; display: inline-flex; align-items: center; gap: 4px;"><i class="' + triggerColor.icon + '" style="font-size: 10px;"></i>' + triggerType.charAt(0).toUpperCase() + triggerType.slice(1) + '</span>';
+
                 // Calculate progress percentage
                 var progressPercent = run.total > 0 ? Math.round((run.processed / run.total) * 100) : 0;
 
@@ -671,6 +681,7 @@
                 html += '<div style="display: flex; align-items: center; gap: 8px;">';
                 html += '<div class="history-time" style="font-size: 15px; font-weight: 600; color: #1d1d1f;">' + timeString + '</div>';
                 html += modeText;
+                html += triggerText;
                 html += '</div>';
                 html += '<div class="status-badge" style="background: ' + statusBg + '; color: ' + statusColor + '; padding: 6px 12px; border-radius: 16px; font-size: 13px; font-weight: 600; border: 1px solid ' + statusColor + '20; display: flex; align-items: center; gap: 6px;">';
                 html += '<div style="width: 8px; height: 8px; border-radius: 50%; background: ' + statusColor + ';"></div>';
