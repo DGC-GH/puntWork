@@ -176,7 +176,6 @@
                     JobImportUI.appendLogs(statusData.logs || []);
 
                     // Log the manual import run to history
-                    console.log('[PUNTWORK] About to log successful manual import to history:', statusData);
                     await this.logManualImportRun(statusData);
                 } else {
                     PuntWorkJSLogger.error('Failed to get final status', 'LOGIC', finalResponse);
@@ -527,7 +526,6 @@
          * @param {Object} statusData - The final import status data
          */
         logManualImportRun: async function(statusData) {
-            console.log('[PUNTWORK] logManualImportRun called with:', statusData);
             try {
                 const logData = {
                     action: 'log_manual_import_run',
@@ -544,16 +542,12 @@
                     trigger_type: 'manual'
                 };
 
-                console.log('[PUNTWORK] Sending log data to server:', logData);
-
                 const response = await $.ajax({
                     url: ajaxurl,
                     type: 'POST',
                     data: logData,
                     timeout: 10000
                 });
-
-                console.log('[PUNTWORK] Server response for manual import logging:', response);
 
                 if (response.success) {
                     PuntWorkJSLogger.info('Manual import run logged to history', 'LOGIC', {
