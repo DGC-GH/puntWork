@@ -289,3 +289,298 @@ add_action('wp', function () {
     }
 });
 add_action('puntwork_import_health_check', __NAMESPACE__ . '\\check_import_health');
+
+/**
+ * Advanced scheduling with dependency management and intelligent timing
+ */
+class AdvancedScheduler
+{
+    private static array $jobDependencies = [];
+    private static array $jobPriorities = [];
+    private static array $jobConditions = [];
+
+    /**
+     * Schedule a job with dependencies and conditions
+     *
+     * @param string $jobId Unique job identifier
+     * @param array $schedule Schedule configuration
+     * @param array $dependencies Array of job IDs this job depends on
+     * @param array $conditions Conditional execution rules
+     * @param int $priority Job priority (1-10, higher = more important)
+     * @return bool Success
+     */
+    public static function scheduleWithDependencies(
+        string $jobId,
+        array $schedule,
+        array $dependencies = [],
+        array $conditions = [],
+        int $priority = 5
+    ): bool {
+        // Store job configuration
+        self::$jobDependencies[$jobId] = $dependencies;
+        self::$jobPriorities[$jobId] = max(1, min(10, $priority));
+        self::$jobConditions[$jobId] = $conditions;
+
+        // Calculate next run time considering dependencies
+        $nextRun = self::calculateNextRunWithDependencies($jobId, $schedule);
+
+        if ($nextRun) {
+            // Schedule the job
+            $hook = 'puntwork_scheduled_job_' . $jobId;
+            wp_schedule_single_event($nextRun, $hook, [$jobId]);
+
+            // Store job metadata
+            update_option("puntwork_job_{$jobId}_schedule", $schedule);
+            update_option("puntwork_job_{$jobId}_next_run", $nextRun);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Calculate next run time considering dependencies
+     */
+    private static function calculateNextRunWithDependencies(string $jobId, array $schedule): ?int
+    {
+        $baseTime = calculate_next_run_time($schedule);
+
+        // Check if all dependencies are satisfied
+        if (!self::areDependenciesSatisfied($jobId)) {
+            // Schedule for later when dependencies might be met
+            return $baseTime + (6 * HOUR_IN_SECONDS); // Check again in 6 hours
+        }
+
+        // Check conditional execution
+        if (!self::areConditionsMet($jobId)) {
+            // Skip this run, schedule next regular interval
+            return $baseTime + self::getIntervalSeconds($schedule);
+        }
+
+        return $baseTime;
+    }
+
+    /**
+     * Check if all job dependencies are satisfied
+     */
+    private static function areDependenciesSatisfied(string $jobId): bool
+    {
+        $dependencies = self::$jobDependencies[$jobId] ?? [];
+
+        foreach ($dependencies as $depJobId) {
+            // Check if dependency job completed successfully recently
+            $lastRun = get_option("puntwork_job_{$depJobId}_last_success");
+            $lastFailure = get_option("puntwork_job_{$depJobId}_last_failure");
+
+            // If dependency failed more recently than succeeded, it's not satisfied
+            if ($lastFailure && (!$lastRun || $lastFailure > $lastRun)) {
+                return false;
+            }
+
+            // If dependency never ran successfully, it's not satisfied
+            if (!$lastRun) {
+                return false;
+            }
+
+            // Check if dependency ran within reasonable time (last 24 hours)
+            if ($lastRun < (time() - DAY_IN_SECONDS)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if conditional execution rules are met
+     */
+    private static function areConditionsMet(string $jobId): bool
+    {
+        $conditions = self::$jobConditions[$jobId] ?? [];
+
+        foreach ($conditions as $condition) {
+            if (!self::evaluateCondition($condition)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Evaluate a single condition
+     */
+    private static function evaluateCondition(array $condition): bool
+    {
+        $type = $condition['type'] ?? '';
+        $value = $condition['value'] ?? null;
+        $operator = $condition['operator'] ?? 'equals';
+
+        switch ($type) {
+            case 'time_range':
+                $currentHour = (int) wp_date('H');
+                $startHour = $value['start'] ?? 0;
+                $endHour = $value['end'] ?? 23;
+                return $currentHour >= $startHour && $currentHour <= $endHour;
+
+            case 'day_of_week':
+                $currentDay = (int) wp_date('w'); // 0 = Sunday
+                $allowedDays = is_array($value) ? $value : [$value];
+                return in_array($currentDay, $allowedDays);
+
+            case 'server_load':
+                $load = sys_getloadavg()[0] ?? 0;
+                return self::compareValues($load, $value, $operator);
+
+            case 'memory_usage':
+                $usage = memory_get_usage(true) / 1024 / 1024; // MB
+                $limit = ini_get('memory_limit');
+                $limitMB = self::parseMemoryLimit($limit);
+                $usagePercent = ($usage / $limitMB) * 100;
+                return self::compareValues($usagePercent, $value, $operator);
+
+            case 'feed_health':
+                // Check if feeds are healthy
+                $healthy = true;
+                // Implementation would check feed health status
+                return $healthy;
+
+            case 'custom':
+                // Allow custom condition callbacks
+                if (is_callable($value)) {
+                    return (bool) call_user_func($value);
+                }
+                return false;
+
+            default:
+                return true;
+        }
+    }
+
+    /**
+     * Compare values with different operators
+     */
+    private static function compareValues($actual, $expected, string $operator): bool
+    {
+        switch ($operator) {
+            case 'equals': return $actual == $expected;
+            case 'not_equals': return $actual != $expected;
+            case 'greater': return $actual > $expected;
+            case 'less': return $actual < $expected;
+            case 'greater_equal': return $actual >= $expected;
+            case 'less_equal': return $actual <= $expected;
+            default: return true;
+        }
+    }
+
+    /**
+     * Parse memory limit string to MB
+     */
+    private static function parseMemoryLimit(string $limit): float
+    {
+        if (preg_match('/^(\d+)(.)$/', $limit, $matches)) {
+            $value = (int) $matches[1];
+            $unit = strtoupper($matches[2]);
+            switch ($unit) {
+                case 'G': return $value * 1024;
+                case 'M': return $value;
+                case 'K': return $value / 1024;
+                default: return $value;
+            }
+        }
+        return 128; // Default 128MB
+    }
+
+    /**
+     * Get interval in seconds from schedule
+     */
+    private static function getIntervalSeconds(array $schedule): int
+    {
+        $frequency = $schedule['frequency'] ?? 'daily';
+
+        switch ($frequency) {
+            case 'hourly': return HOUR_IN_SECONDS;
+            case '3hours': return 3 * HOUR_IN_SECONDS;
+            case '6hours': return 6 * HOUR_IN_SECONDS;
+            case '12hours': return 12 * HOUR_IN_SECONDS;
+            case 'custom': return ($schedule['interval'] ?? 24) * HOUR_IN_SECONDS;
+            default: return DAY_IN_SECONDS;
+        }
+    }
+
+    /**
+     * Execute a scheduled job with dependency checking
+     */
+    public static function executeJob(string $jobId): bool
+    {
+        // Double-check dependencies before execution
+        if (!self::areDependenciesSatisfied($jobId)) {
+            // Reschedule for later
+            $schedule = get_option("puntwork_job_{$jobId}_schedule", []);
+            if (!empty($schedule)) {
+                $nextRun = time() + (6 * HOUR_IN_SECONDS);
+                wp_schedule_single_event($nextRun, 'puntwork_scheduled_job_' . $jobId, [$jobId]);
+            }
+            return false;
+        }
+
+        // Double-check conditions
+        if (!self::areConditionsMet($jobId)) {
+            // Skip this execution, schedule next regular run
+            $schedule = get_option("puntwork_job_{$jobId}_schedule", []);
+            if (!empty($schedule)) {
+                $nextRun = calculate_next_run_time($schedule);
+                wp_schedule_single_event($nextRun, 'puntwork_scheduled_job_' . $jobId, [$jobId]);
+            }
+            return false;
+        }
+
+        // Execute the job (this would be overridden by specific job implementations)
+        $result = self::runJobImplementation($jobId);
+
+        // Record execution result
+        if ($result) {
+            update_option("puntwork_job_{$jobId}_last_success", time());
+        } else {
+            update_option("puntwork_job_{$jobId}_last_failure", time());
+        }
+
+        // Schedule next run
+        $schedule = get_option("puntwork_job_{$jobId}_schedule", []);
+        if (!empty($schedule)) {
+            $nextRun = self::calculateNextRunWithDependencies($jobId, $schedule);
+            if ($nextRun) {
+                wp_schedule_single_event($nextRun, 'puntwork_scheduled_job_' . $jobId, [$jobId]);
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Run job implementation (to be overridden)
+     */
+    protected static function runJobImplementation(string $jobId): bool
+    {
+        // Default implementation - override in subclasses
+        do_action('puntwork_execute_scheduled_job', $jobId);
+        return true;
+    }
+
+    /**
+     * Get job status and next run time
+     */
+    public static function getJobStatus(string $jobId): array
+    {
+        return [
+            'job_id' => $jobId,
+            'next_run' => get_option("puntwork_job_{$jobId}_next_run"),
+            'last_success' => get_option("puntwork_job_{$jobId}_last_success"),
+            'last_failure' => get_option("puntwork_job_{$jobId}_last_failure"),
+            'dependencies' => self::$jobDependencies[$jobId] ?? [],
+            'priority' => self::$jobPriorities[$jobId] ?? 5,
+            'conditions' => self::$jobConditions[$jobId] ?? []
+        ];
+    }
+}
