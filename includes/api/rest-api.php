@@ -195,6 +195,7 @@ function handle_trigger_import($request) {
                 ], 500);
             }
             $result = run_scheduled_import($test_mode, 'api');
+            error_log('[PUNTWORK] API: run_scheduled_import returned: ' . json_encode($result));
 
             // Clear test mode
             if ($test_mode) {
@@ -212,6 +213,7 @@ function handle_trigger_import($request) {
             ];
 
             if ($result['success']) {
+                error_log('[PUNTWORK] API: About to return sync success response');
                 PuntWorkLogger::info('Remote import trigger completed successfully (sync)', PuntWorkLogger::CONTEXT_API, [
                     'processed' => $result['processed'] ?? 0,
                     'total' => $result['total'] ?? 0
