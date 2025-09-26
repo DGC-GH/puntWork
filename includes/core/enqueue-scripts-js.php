@@ -38,6 +38,15 @@ function enqueue_job_import_scripts() {
         error_log('[PUNTWORK] Current page: ' . $current_page);
         error_log('[PUNTWORK] Post type: ' . $post_type);
         error_log('[PUNTWORK] Current screen: ' . ($current_screen ? $current_screen->id : 'none'));
+
+        // Modern admin styles
+        wp_enqueue_style(
+            'puntwork-admin-modern',
+            PUNTWORK_URL . 'assets/css/admin-modern.css',
+            ['font-awesome'],
+            PUNTWORK_VERSION
+        );
+
         // Font Awesome for icons
         wp_enqueue_style('font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css', [], '5.15.4');
 
