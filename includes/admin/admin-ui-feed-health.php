@@ -24,7 +24,7 @@ function feed_health_monitor_page() {
             case 'run_health_check':
                 check_admin_referer('feed_health_check_nonce');
                 FeedHealthMonitor::trigger_manual_check();
-                add_settings_error('feed_health_monitor', 'health_check_run', 'Health check completed successfully.', 'success');
+                add_settings_error('feed_health_monitor', 'health_check_run', __('Health check completed successfully.', 'puntwork'), 'success');
                 break;
 
             case 'update_alert_settings':
@@ -392,5 +392,5 @@ function update_alert_settings() {
     ];
 
     update_option('puntwork_feed_alerts', $alert_settings);
-    add_settings_error('feed_health_monitor', 'alerts_updated', 'Alert settings updated successfully.', 'success');
+    add_settings_error('feed_health_monitor', 'alerts_updated', __('Alert settings updated successfully.', 'puntwork'), 'success');
 }

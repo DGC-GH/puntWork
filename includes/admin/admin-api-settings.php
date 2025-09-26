@@ -21,7 +21,7 @@ function api_settings_page() {
     // Handle form submissions
     if (isset($_POST['regenerate_api_key']) && check_admin_referer('puntwork_api_settings')) {
         $new_key = regenerate_api_key();
-        echo '<div class="notice notice-success"><p>API key regenerated successfully!</p></div>';
+        echo '<div class="notice notice-success"><p>' . __('API key regenerated successfully!', 'puntwork') . '</p></div>';
     }
 
     $api_key = get_or_create_api_key();
@@ -29,64 +29,64 @@ function api_settings_page() {
 
     ?>
     <div class="wrap">
-        <h1>API Settings</h1>
+        <h1><?php _e('API Settings', 'puntwork'); ?></h1>
 
         <div class="puntwork-api-settings">
             <div class="puntwork-api-section">
-                <h2>Remote Import Trigger</h2>
-                <p>Use these endpoints to trigger imports remotely via HTTP requests.</p>
+                <h2><?php _e('Remote Import Trigger', 'puntwork'); ?></h2>
+                <p><?php _e('Use these endpoints to trigger imports remotely via HTTP requests.', 'puntwork'); ?></p>
 
-                <h3>API Key</h3>
+                <h3><?php _e('API Key', 'puntwork'); ?></h3>
                 <div class="api-key-container">
                     <input type="text" id="api-key-display" value="<?php echo esc_attr($api_key); ?>" readonly class="regular-text">
-                    <button type="button" id="toggle-api-key" class="button">Show/Hide</button>
-                    <button type="button" id="copy-api-key" class="button">Copy</button>
+                    <button type="button" id="toggle-api-key" class="button"><?php _e('Show/Hide', 'puntwork'); ?></button>
+                    <button type="button" id="copy-api-key" class="button"><?php _e('Copy', 'puntwork'); ?></button>
                 </div>
 
                 <form method="post" style="margin-top: 20px;">
                     <?php wp_nonce_field('puntwork_api_settings'); ?>
-                    <input type="submit" name="regenerate_api_key" value="Regenerate API Key" class="button button-secondary"
-                           onclick="return confirm('Are you sure? This will invalidate the current API key.');">
+                    <input type="submit" name="regenerate_api_key" value="<?php esc_attr_e('Regenerate API Key', 'puntwork'); ?>" class="button button-secondary"
+                           onclick="return confirm('<?php esc_js(__('Are you sure? This will invalidate the current API key.', 'puntwork')); ?>');">
                 </form>
 
-                <h3>API Endpoints</h3>
+                <h3><?php _e('API Endpoints', 'puntwork'); ?></h3>
                 <div class="endpoint-info">
-                    <h4>Trigger Import</h4>
+                    <h4><?php _e('Trigger Import', 'puntwork'); ?></h4>
                     <code>POST <?php echo esc_url($site_url); ?>/wp-json/puntwork/v1/trigger-import</code>
 
-                    <h5>Parameters:</h5>
+                    <h5><?php _e('Parameters:', 'puntwork'); ?></h5>
                     <ul>
-                        <li><code>api_key</code> (required): Your API key</li>
-                        <li><code>force</code> (optional): Set to <code>true</code> to force import even if one is running</li>
-                        <li><code>test_mode</code> (optional): Set to <code>true</code> to run in test mode</li>
+                        <li><code>api_key</code> <?php _e('(required): Your API key', 'puntwork'); ?></li>
+                        <li><code>force</code> <?php _e('(optional): Set to', 'puntwork'); ?> <code>true</code> <?php _e('to force import even if one is running', 'puntwork'); ?></li>
+                        <li><code>test_mode</code> <?php _e('(optional): Set to', 'puntwork'); ?> <code>true</code> <?php _e('to run in test mode', 'puntwork'); ?></li>
                     </ul>
 
-                    <h5>Example cURL:</h5>
+                    <h5><?php _e('Example cURL:', 'puntwork'); ?></h5>
                     <pre><code>curl -X POST "<?php echo esc_url($site_url); ?>/wp-json/puntwork/v1/trigger-import" \
   -d "api_key=<?php echo esc_attr($api_key); ?>" \
   -d "force=false" \
   -d "test_mode=false"</code></pre>
 
-                    <h4>Get Import Status</h4>
+                    <h4><?php _e('Get Import Status', 'puntwork'); ?></h4>
                     <code>GET <?php echo esc_url($site_url); ?>/wp-json/puntwork/v1/import-status</code>
 
-                    <h5>Parameters:</h5>
+                    <h5><?php _e('Parameters:', 'puntwork'); ?></h5>
                     <ul>
-                        <li><code>api_key</code> (required): Your API key</li>
+                        <li><code>api_key</code> <?php _e('(required): Your API key', 'puntwork'); ?></li>
                     </ul>
 
-                    <h5>Example cURL:</h5>
+                    <h5><?php _e('Example cURL:', 'puntwork'); ?></h5>
                     <pre><code>curl "<?php echo esc_url($site_url); ?>/wp-json/puntwork/v1/import-status?api_key=<?php echo esc_attr($api_key); ?>"</code></pre>
                 </div>
 
-                <h3>Security Notes</h3>
+                <h3><?php _e('Security Notes', 'puntwork'); ?></h3>
                 <div class="security-notes">
                     <ul>
-                        <li><strong>Keep your API key secure</strong> - Store it safely and never share it publicly</li>
-                        <li><strong>Use HTTPS</strong> - Always use HTTPS when making API requests</li>
-                        <li><strong>Rate limiting</strong> - The API includes built-in rate limiting to prevent abuse</li>
-                        <li><strong>Logging</strong> - All API requests are logged for security monitoring</li>
-                        <li><strong>Test mode</strong> - Use test_mode=true for testing without affecting live data</li>
+                        <li><strong><?php _e('Keep your API key secure', 'puntwork'); ?></strong> - <?php _e('Store it safely and never share it publicly', 'puntwork'); ?></li>
+                        <li><strong><?php _e('Use HTTPS', 'puntwork'); ?></strong> - <?php _e('Always use HTTPS when making API requests', 'puntwork'); ?></li>
+                        <li><strong><?php _e('Rate limiting', 'puntwork'); ?></strong> - <?php _e('The API includes built-in rate limiting to prevent abuse', 'puntwork'); ?></li>
+                        <li><strong><?php _e('Logging', 'puntwork'); ?></strong> - <?php _e('All API requests are logged for security monitoring', 'puntwork'); ?></li>
+                        <li><strong><?php _e('Test mode', 'puntwork'); ?></strong> - <?php _e('Use test_mode=true for testing without affecting live data', 'puntwork'); ?></li>
                     </ul>
                 </div>
             </div>
@@ -162,7 +162,7 @@ function api_settings_page() {
                 document.execCommand('copy');
 
                 const originalText = copyBtn.text();
-                copyBtn.text('Copied!');
+                copyBtn.text('<?php echo esc_js(__('Copied!', 'puntwork')); ?>');
                 setTimeout(function() {
                     copyBtn.text(originalText);
                 }, 2000);

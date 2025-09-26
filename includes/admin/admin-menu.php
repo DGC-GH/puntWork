@@ -27,7 +27,7 @@ add_action('admin_init', function() {
 
 add_action('admin_menu', function() {
     add_menu_page(
-        'puntWork Dashboard',
+        __('puntWork Dashboard', 'puntwork'),
         '.work',
         'manage_options',
         'puntwork-dashboard',
@@ -38,8 +38,8 @@ add_action('admin_menu', function() {
 
     add_submenu_page(
         'puntwork-dashboard',
-        'Feeds Dashboard',
-        'Feeds',
+        __('Feeds Dashboard', 'puntwork'),
+        __('Feeds', 'puntwork'),
         'manage_options',
         'job-feed-dashboard',
         __NAMESPACE__ . '\\feeds_dashboard_page'
@@ -47,8 +47,8 @@ add_action('admin_menu', function() {
 
     add_submenu_page(
         'puntwork-dashboard',
-        'Jobs Dashboard',
-        'Jobs',
+        __('Jobs Dashboard', 'puntwork'),
+        __('Jobs', 'puntwork'),
         'manage_options',
         'jobs-dashboard',
         __NAMESPACE__ . '\\jobs_dashboard_page'
@@ -56,8 +56,8 @@ add_action('admin_menu', function() {
 
     add_submenu_page(
         'puntwork-dashboard',
-        'Feed Configuration',
-        'Feed Config',
+        __('Feed Configuration', 'puntwork'),
+        __('Feed Config', 'puntwork'),
         'manage_options',
         'puntwork-feed-config',
         __NAMESPACE__ . '\\feed_config_page'
@@ -65,8 +65,8 @@ add_action('admin_menu', function() {
 
     add_submenu_page(
         'puntwork-dashboard',
-        'Feed Health Monitor',
-        'Health Monitor',
+        __('Feed Health Monitor', 'puntwork'),
+        __('Health Monitor', 'puntwork'),
         'manage_options',
         'puntwork-feed-health',
         __NAMESPACE__ . '\\feed_health_monitor_page'
@@ -74,8 +74,8 @@ add_action('admin_menu', function() {
 
     add_submenu_page(
         'puntwork-dashboard',
-        'Import Analytics',
-        'Analytics',
+        __('Import Analytics', 'puntwork'),
+        __('Analytics', 'puntwork'),
         'manage_options',
         'puntwork-analytics',
         __NAMESPACE__ . '\\import_analytics_page'
@@ -83,8 +83,8 @@ add_action('admin_menu', function() {
 
     add_submenu_page(
         'puntwork-dashboard',
-        'Performance Metrics',
-        'Performance',
+        __('Performance Metrics', 'puntwork'),
+        __('Performance', 'puntwork'),
         'manage_options',
         'puntwork-performance',
         __NAMESPACE__ . '\\performance_metrics_page'

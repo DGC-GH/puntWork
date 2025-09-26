@@ -27,13 +27,13 @@ function render_scheduling_ui() {
             <!-- Header Section -->
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #e5e5e7;">
                 <div>
-                    <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 4px 0; color: #1d1d1f; letter-spacing: -0.02em;">Scheduled Imports</h2>
-                    <p style="font-size: 15px; color: #86868b; margin: 0; font-weight: 400;">Automate your job feed imports with custom schedules</p>
+                    <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 4px 0; color: #1d1d1f; letter-spacing: -0.02em;"><?php _e('Scheduled Imports', 'puntwork'); ?></h2>
+                    <p style="font-size: 15px; color: #86868b; margin: 0; font-weight: 400;"><?php _e('Automate your job feed imports with custom schedules', 'puntwork'); ?></p>
                 </div>
                 <div style="display: flex; align-items: center; gap: 12px;">
-                    <span style="font-size: 15px; font-weight: 500; color: #1d1d1f;">Enable automatic imports</span>
+                    <span style="font-size: 15px; font-weight: 500; color: #1d1d1f;"><?php _e('Enable automatic imports', 'puntwork'); ?></span>
                     <label class="schedule-toggle">
-                        <input type="checkbox" id="schedule-enabled" aria-label="Enable automatic imports">
+                        <input type="checkbox" id="schedule-enabled" aria-label="<?php esc_attr_e('Enable automatic imports', 'puntwork'); ?>">
                         <span class="schedule-slider" role="presentation"></span>
                     </label>
                 </div>
@@ -41,22 +41,22 @@ function render_scheduling_ui() {
 
             <!-- Schedule Configuration Card -->
             <div class="scheduling-card" style="background-color: #f9f9fa; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #e5e5e7;">
-                <h3 style="font-size: 20px; font-weight: 600; margin: 0 0 20px 0; color: #1d1d1f;">Schedule Configuration</h3>
+                <h3 style="font-size: 20px; font-weight: 600; margin: 0 0 20px 0; color: #1d1d1f;"><?php _e('Schedule Configuration', 'puntwork'); ?></h3>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                     <div class="form-group">
-                        <label for="schedule-frequency" style="display: block; font-size: 14px; font-weight: 500; color: #424245; margin-bottom: 8px; letter-spacing: -0.01em;">Frequency</label>
+                        <label for="schedule-frequency" style="display: block; font-size: 14px; font-weight: 500; color: #424245; margin-bottom: 8px; letter-spacing: -0.01em;"><?php _e('Frequency', 'puntwork'); ?></label>
                         <select id="schedule-frequency" style="width: 100%; padding: 12px 16px; border: 1px solid #d1d1d6; border-radius: 10px; font-size: 16px; background-color: #ffffff; color: #1d1d1f; font-weight: 400; transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
-                            <option value="hourly">Hourly</option>
-                            <option value="3hours">Every 3 hours</option>
-                            <option value="6hours">Every 6 hours</option>
-                            <option value="12hours">Every 12 hours</option>
-                            <option value="daily" selected>Daily</option>
-                            <option value="custom">Custom</option>
+                            <option value="hourly"><?php _e('Hourly', 'puntwork'); ?></option>
+                            <option value="3hours"><?php _e('Every 3 hours', 'puntwork'); ?></option>
+                            <option value="6hours"><?php _e('Every 6 hours', 'puntwork'); ?></option>
+                            <option value="12hours"><?php _e('Every 12 hours', 'puntwork'); ?></option>
+                            <option value="daily" selected><?php _e('Daily', 'puntwork'); ?></option>
+                            <option value="custom"><?php _e('Custom', 'puntwork'); ?></option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="schedule-hour" style="display: block; font-size: 14px; font-weight: 500; color: #424245; margin-bottom: 8px; letter-spacing: -0.01em;">Start Time - Hour</label>
+                        <label for="schedule-hour" style="display: block; font-size: 14px; font-weight: 500; color: #424245; margin-bottom: 8px; letter-spacing: -0.01em;"><?php _e('Start Time - Hour', 'puntwork'); ?></label>
                         <select id="schedule-hour" style="width: 100%; padding: 12px 16px; border: 1px solid #d1d1d6; border-radius: 10px; font-size: 16px; background-color: #ffffff; color: #1d1d1f; font-weight: 400; transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
                             <?php for ($i = 0; $i < 24; $i++): ?>
                                 <option value="<?php echo $i; ?>" <?php echo $i == 9 ? 'selected' : ''; ?>><?php echo str_pad($i, 2, '0', STR_PAD_LEFT); ?>:00</option>
@@ -64,7 +64,7 @@ function render_scheduling_ui() {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="schedule-minute" style="display: block; font-size: 14px; font-weight: 500; color: #424245; margin-bottom: 8px; letter-spacing: -0.01em;">Minute</label>
+                        <label for="schedule-minute" style="display: block; font-size: 14px; font-weight: 500; color: #424245; margin-bottom: 8px; letter-spacing: -0.01em;"><?php _e('Minute', 'puntwork'); ?></label>
                         <select id="schedule-minute" style="width: 100%; padding: 12px 16px; border: 1px solid #d1d1d6; border-radius: 10px; font-size: 16px; background-color: #ffffff; color: #1d1d1f; font-weight: 400; transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
                             <?php for ($i = 0; $i < 60; $i++): ?>
                                 <option value="<?php echo $i; ?>" <?php echo $i == 0 ? 'selected' : ''; ?>><?php echo str_pad($i, 2, '0', STR_PAD_LEFT); ?></option>
@@ -75,53 +75,53 @@ function render_scheduling_ui() {
 
                 <div id="custom-schedule" style="display: none; margin-top: 16px;">
                     <div class="form-group">
-                        <label for="schedule-interval" style="display: block; font-size: 14px; font-weight: 500; color: #424245; margin-bottom: 8px; letter-spacing: -0.01em;">Custom Interval (hours)</label>
-                        <input type="number" id="schedule-interval" min="1" max="168" placeholder="24" style="width: 100%; padding: 12px 16px; border: 1px solid #d1d1d6; border-radius: 10px; font-size: 16px; background-color: #ffffff; color: #1d1d1f; font-weight: 400; transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.04);" aria-label="Custom interval in hours">
+                        <label for="schedule-interval" style="display: block; font-size: 14px; font-weight: 500; color: #424245; margin-bottom: 8px; letter-spacing: -0.01em;"><?php _e('Custom Interval (hours)', 'puntwork'); ?></label>
+                        <input type="number" id="schedule-interval" min="1" max="168" placeholder="24" style="width: 100%; padding: 12px 16px; border: 1px solid #d1d1d6; border-radius: 10px; font-size: 16px; background-color: #ffffff; color: #1d1d1f; font-weight: 400; transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.04);" aria-label="<?php esc_attr_e('Custom interval in hours', 'puntwork'); ?>">
                     </div>
                 </div>
             </div>
 
             <!-- Status Overview Card -->
             <div class="scheduling-card" style="background-color: #ffffff; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #e5e5e7; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
-                <h3 style="font-size: 20px; font-weight: 600; margin: 0 0 20px 0; color: #1d1d1f;">Status Overview</h3>
+                <h3 style="font-size: 20px; font-weight: 600; margin: 0 0 20px 0; color: #1d1d1f;"><?php _e('Status Overview', 'puntwork'); ?></h3>
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px;">
                     <div class="status-item">
-                        <div style="font-size: 13px; font-weight: 500; color: #86868b; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;">Status</div>
+                        <div style="font-size: 13px; font-weight: 500; color: #86868b; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;"><?php _e('Status', 'puntwork'); ?></div>
                         <div id="schedule-status" style="font-size: 17px; font-weight: 600; display: flex; align-items: center;">
                             <span class="status-indicator status-disabled" aria-hidden="true"></span>
-                            <span>Disabled</span>
+                            <span><?php _e('Disabled', 'puntwork'); ?></span>
                         </div>
                     </div>
                     <div class="status-item">
-                        <div style="font-size: 13px; font-weight: 500; color: #86868b; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;">Next Run</div>
+                        <div style="font-size: 13px; font-weight: 500; color: #86868b; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;"><?php _e('Next Run', 'puntwork'); ?></div>
                         <div id="next-run-time" style="font-size: 17px; font-weight: 600; color: #1d1d1f;">—</div>
                     </div>
                     <div class="status-item">
-                        <div style="font-size: 13px; font-weight: 500; color: #86868b; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;">Last Run</div>
-                        <div id="last-run-time" style="font-size: 17px; font-weight: 600; color: #1d1d1f;">Never</div>
+                        <div style="font-size: 13px; font-weight: 500; color: #86868b; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;"><?php _e('Last Run', 'puntwork'); ?></div>
+                        <div id="last-run-time" style="font-size: 17px; font-weight: 600; color: #1d1d1f;"><?php _e('Never', 'puntwork'); ?></div>
                     </div>
                 </div>
             </div>
 
             <!-- Last Run Details Card -->
             <div id="last-run-details" class="scheduling-card" style="background-color: #f2f2f7; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #e5e5e7; display: none;">
-                <h3 style="font-size: 20px; font-weight: 600; margin: 0 0 20px 0; color: #1d1d1f;">Last Import Details</h3>
+                <h3 style="font-size: 20px; font-weight: 600; margin: 0 0 20px 0; color: #1d1d1f;"><?php _e('Last Import Details', 'puntwork'); ?></h3>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 20px; font-size: 15px;">
                     <div class="metric-item">
-                        <div style="color: #86868b; margin-bottom: 4px; font-weight: 500;">Duration</div>
+                        <div style="color: #86868b; margin-bottom: 4px; font-weight: 500;"><?php _e('Duration', 'puntwork'); ?></div>
                         <div id="last-run-duration" style="font-weight: 600; color: #1d1d1f;">—</div>
                     </div>
                     <div class="metric-item">
-                        <div style="color: #86868b; margin-bottom: 4px; font-weight: 500;">Items Processed</div>
+                        <div style="color: #86868b; margin-bottom: 4px; font-weight: 500;"><?php _e('Items Processed', 'puntwork'); ?></div>
                         <div id="last-run-processed" style="font-weight: 600; color: #1d1d1f;">—</div>
                     </div>
                     <div class="metric-item">
-                        <div style="color: #86868b; margin-bottom: 4px; font-weight: 500;">Success Rate</div>
+                        <div style="color: #86868b; margin-bottom: 4px; font-weight: 500;"><?php _e('Success Rate', 'puntwork'); ?></div>
                         <div id="last-run-success-rate" style="font-weight: 600; color: #1d1d1f;">—</div>
                     </div>
                     <div class="metric-item">
-                        <div style="color: #86868b; margin-bottom: 4px; font-weight: 500;">Status</div>
+                        <div style="color: #86868b; margin-bottom: 4px; font-weight: 500;"><?php _e('Status', 'puntwork'); ?></div>
                         <div id="last-run-status" style="font-weight: 600;">—</div>
                     </div>
                 </div>
@@ -129,14 +129,14 @@ function render_scheduling_ui() {
 
             <!-- Action Buttons -->
             <div style="display: flex; gap: 16px; justify-content: flex-end; padding-top: 24px; border-top: 1px solid #e5e5e7;">
-                <button id="save-schedule" class="primary-button" style="border-radius: 12px; padding: 14px 28px; font-size: 16px; font-weight: 600; background-color: #007aff; border: none; color: #ffffff; transition: all 0.2s ease; cursor: pointer; box-shadow: 0 2px 4px rgba(0,122,255,0.2);" aria-label="Save schedule settings">
-                    Save Settings
+                <button id="save-schedule" class="primary-button" style="border-radius: 12px; padding: 14px 28px; font-size: 16px; font-weight: 600; background-color: #007aff; border: none; color: #ffffff; transition: all 0.2s ease; cursor: pointer; box-shadow: 0 2px 4px rgba(0,122,255,0.2);" aria-label="<?php esc_attr_e('Save schedule settings', 'puntwork'); ?>">
+                    <?php _e('Save Settings', 'puntwork'); ?>
                 </button>
-                <button id="test-schedule" class="secondary-button" style="border-radius: 12px; padding: 14px 28px; font-size: 16px; font-weight: 600; background-color: #f2f2f7; border: 1px solid #d1d1d6; color: #007aff; transition: all 0.2s ease; cursor: pointer;" aria-label="Test schedule configuration">
-                    Test Schedule
+                <button id="test-schedule" class="secondary-button" style="border-radius: 12px; padding: 14px 28px; font-size: 16px; font-weight: 600; background-color: #f2f2f7; border: 1px solid #d1d1d6; color: #007aff; transition: all 0.2s ease; cursor: pointer;" aria-label="<?php esc_attr_e('Test schedule configuration', 'puntwork'); ?>">
+                    <?php _e('Test Schedule', 'puntwork'); ?>
                 </button>
-                <button id="run-now" class="success-button" style="border-radius: 12px; padding: 14px 28px; font-size: 16px; font-weight: 600; background-color: #34c759; border: none; color: #ffffff; transition: all 0.2s ease; cursor: pointer; box-shadow: 0 2px 4px rgba(52,199,89,0.2);" aria-label="Run import immediately">
-                    Run Now
+                <button id="run-now" class="success-button" style="border-radius: 12px; padding: 14px 28px; font-size: 16px; font-weight: 600; background-color: #34c759; border: none; color: #ffffff; transition: all 0.2s ease; cursor: pointer; box-shadow: 0 2px 4px rgba(52,199,89,0.2);" aria-label="<?php esc_attr_e('Run import immediately', 'puntwork'); ?>">
+                    <?php _e('Run Now', 'puntwork'); ?>
                 </button>
             </div>
         </div>

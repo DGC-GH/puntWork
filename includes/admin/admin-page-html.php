@@ -309,8 +309,8 @@ function jobs_dashboard_page() {
 function puntwork_dashboard_page() {
     ?>
     <div class="wrap" style="max-width: 1200px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1d1d1f; padding: 0 20px;">
-        <h1 style="font-size: 34px; font-weight: 600; text-align: center; margin: 40px 0 20px;">puntWork Dashboard</h1>
-        <p style="font-size: 16px; color: #8e8e93; text-align: center; margin-bottom: 40px;">Manage your job feeds and content with ease</p>
+        <h1 style="font-size: 34px; font-weight: 600; text-align: center; margin: 40px 0 20px;"><?php _e('puntWork Dashboard', 'puntwork'); ?></h1>
+        <p style="font-size: 16px; color: #8e8e93; text-align: center; margin-bottom: 40px;"><?php _e('Manage your job feeds and content with ease', 'puntwork'); ?></p>
 
         <!-- Overview Cards -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 40px;">
@@ -321,12 +321,12 @@ function puntwork_dashboard_page() {
                         <span style="font-size: 24px; color: white;">📡</span>
                     </div>
                     <div>
-                        <h3 style="font-size: 20px; font-weight: 600; margin: 0;">Job Feeds</h3>
-                        <p style="font-size: 14px; color: #8e8e93; margin: 4px 0 0;">Import and manage job feeds</p>
+                        <h3 style="font-size: 20px; font-weight: 600; margin: 0;"><?php _e('Job Feeds', 'puntwork'); ?></h3>
+                        <p style="font-size: 14px; color: #8e8e93; margin: 4px 0 0;"><?php _e('Import and manage job feeds', 'puntwork'); ?></p>
                     </div>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 14px; color: #8e8e93;">Manage feeds →</span>
+                    <span style="font-size: 14px; color: #8e8e93;"><?php _e('Manage feeds →', 'puntwork'); ?></span>
                     <span style="font-size: 18px; color: #007aff;">→</span>
                 </div>
             </div>
@@ -338,12 +338,12 @@ function puntwork_dashboard_page() {
                         <span style="font-size: 24px; color: white;">💼</span>
                     </div>
                     <div>
-                        <h3 style="font-size: 20px; font-weight: 600; margin: 0;">Jobs</h3>
-                        <p style="font-size: 14px; color: #8e8e93; margin: 4px 0 0;">View and manage job posts</p>
+                        <h3 style="font-size: 20px; font-weight: 600; margin: 0;"><?php _e('Jobs', 'puntwork'); ?></h3>
+                        <p style="font-size: 14px; color: #8e8e93; margin: 4px 0 0;"><?php _e('View and manage job posts', 'puntwork'); ?></p>
                     </div>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 14px; color: #34c759;">Browse jobs →</span>
+                    <span style="font-size: 14px; color: #34c759;"><?php _e('Browse jobs →', 'puntwork'); ?></span>
                     <span style="font-size: 18px; color: #34c759;">→</span>
                 </div>
             </div>
@@ -355,12 +355,12 @@ function puntwork_dashboard_page() {
                         <span style="font-size: 24px; color: white;">⚙️</span>
                     </div>
                     <div>
-                        <h3 style="font-size: 20px; font-weight: 600; margin: 0;">Feed Config</h3>
-                        <p style="font-size: 14px; color: #8e8e93; margin: 4px 0 0;">Configure and reorder feeds</p>
+                        <h3 style="font-size: 20px; font-weight: 600; margin: 0;"><?php _e('Feed Config', 'puntwork'); ?></h3>
+                        <p style="font-size: 14px; color: #8e8e93; margin: 4px 0 0;"><?php _e('Configure and reorder feeds', 'puntwork'); ?></p>
                     </div>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 14px; color: #8e8e93;">Configure feeds →</span>
+                    <span style="font-size: 14px; color: #8e8e93;"><?php _e('Configure feeds →', 'puntwork'); ?></span>
                     <span style="font-size: 18px; color: #ff9500;">→</span>
                 </div>
             </div>
@@ -372,12 +372,12 @@ function puntwork_dashboard_page() {
                         <span style="font-size: 24px; color: white;">⏰</span>
                     </div>
                     <div>
-                        <h3 style="font-size: 20px; font-weight: 600; margin: 0;">Scheduling</h3>
-                        <p style="font-size: 14px; color: #8e8e93; margin: 4px 0 0;">Automated import schedules</p>
+                        <h3 style="font-size: 20px; font-weight: 600; margin: 0;"><?php _e('Scheduling', 'puntwork'); ?></h3>
+                        <p style="font-size: 14px; color: #8e8e93; margin: 4px 0 0;"><?php _e('Automated import schedules', 'puntwork'); ?></p>
                     </div>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 14px; color: #8e8e93;">Configure schedules →</span>
+                    <span style="font-size: 14px; color: #8e8e93;"><?php _e('Configure schedules →', 'puntwork'); ?></span>
                     <span style="font-size: 18px; color: #af52de;">→</span>
                 </div>
             </div>
@@ -385,33 +385,33 @@ function puntwork_dashboard_page() {
 
         <!-- Quick Stats -->
         <div style="background-color: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 40px;">
-            <h3 style="font-size: 24px; font-weight: 600; margin: 0 0 20px;">Quick Overview</h3>
+            <h3 style="font-size: 24px; font-weight: 600; margin: 0 0 20px;"><?php _e('Quick Overview', 'puntwork'); ?></h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px;">
                 <div style="text-align: center;">
                     <div style="font-size: 32px; font-weight: 700; color: #007aff; margin-bottom: 8px;">0</div>
-                    <div style="font-size: 14px; color: #86868b;">Active Feeds</div>
+                    <div style="font-size: 14px; color: #86868b;"><?php _e('Active Feeds', 'puntwork'); ?></div>
                 </div>
                 <div style="text-align: center;">
                     <div style="font-size: 32px; font-weight: 700; color: #34c759; margin-bottom: 8px;">0</div>
-                    <div style="font-size: 14px; color: #86868b;">Total Jobs</div>
+                    <div style="font-size: 14px; color: #86868b;"><?php _e('Total Jobs', 'puntwork'); ?></div>
                 </div>
                 <div style="text-align: center;">
                     <div style="font-size: 32px; font-weight: 700; color: #ff9500; margin-bottom: 8px;">0</div>
-                    <div style="font-size: 14px; color: #86868b;">Scheduled Imports</div>
+                    <div style="font-size: 14px; color: #86868b;"><?php _e('Scheduled Imports', 'puntwork'); ?></div>
                 </div>
                 <div style="text-align: center;">
                     <div style="font-size: 32px; font-weight: 700; color: #ff3b30; margin-bottom: 8px;">0</div>
-                    <div style="font-size: 14px; color: #86868b;">Failed Imports</div>
+                    <div style="font-size: 14px; color: #86868b;"><?php _e('Failed Imports', 'puntwork'); ?></div>
                 </div>
             </div>
         </div>
 
         <!-- Recent Activity -->
         <div style="background-color: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <h3 style="font-size: 24px; font-weight: 600; margin: 0 0 20px;">Recent Activity</h3>
+            <h3 style="font-size: 24px; font-weight: 600; margin: 0 0 20px;"><?php _e('Recent Activity', 'puntwork'); ?></h3>
             <div style="text-align: center; padding: 40px 20px; color: #8e8e93;">
                 <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
-                <p style="font-size: 16px; margin: 0;">Activity feed will appear here once you start importing jobs</p>
+                <p style="font-size: 16px; margin: 0;"><?php _e('Activity feed will appear here once you start importing jobs', 'puntwork'); ?></p>
             </div>
         </div>
     </div>
@@ -437,17 +437,17 @@ function render_import_history_ui() {
             <!-- Header Section -->
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #e5e5e7;">
                 <div>
-                    <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 4px 0; color: #1d1d1f; letter-spacing: -0.02em;">Import History</h2>
-                    <p style="font-size: 15px; color: #86868b; margin: 0; font-weight: 400;">View all import runs including manual, scheduled, and API-triggered imports</p>
+                    <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 4px 0; color: #1d1d1f; letter-spacing: -0.02em;"><?php _e('Import History', 'puntwork'); ?></h2>
+                    <p style="font-size: 15px; color: #86868b; margin: 0; font-weight: 400;"><?php _e('View all import runs including manual, scheduled, and API-triggered imports', 'puntwork'); ?></p>
                 </div>
-                <button id="refresh-history-main" class="secondary-button" style="border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: 500; background-color: #f2f2f7; border: 1px solid #d1d1d6; color: #424245; transition: all 0.2s ease; cursor: pointer;" aria-label="Refresh import history">
-                    <i class="fas fa-sync-alt" style="margin-right: 6px;"></i>Refresh
+                <button id="refresh-history-main" class="secondary-button" style="border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: 500; background-color: #f2f2f7; border: 1px solid #d1d1d6; color: #424245; transition: all 0.2s ease; cursor: pointer;" aria-label="<?php esc_attr_e('Refresh import history', 'puntwork'); ?>">
+                    <i class="fas fa-sync-alt" style="margin-right: 6px;"></i><?php _e('Refresh', 'puntwork'); ?>
                 </button>
             </div>
 
             <!-- Import History Content -->
             <div id="run-history-list" style="max-height: 600px; overflow-y: auto; font-size: 14px; border-radius: 8px; background-color: #fafbfc; padding: 20px;">
-                <div style="color: #86868b; text-align: center; padding: 24px; font-style: italic;">Loading history...</div>
+                <div style="color: #86868b; text-align: center; padding: 24px; font-style: italic;"><?php _e('Loading history...', 'puntwork'); ?></div>
             </div>
         </div>
     </div>
