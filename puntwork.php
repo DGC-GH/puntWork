@@ -186,6 +186,9 @@ function setup_job_import() {
         }
     }
 
+    // Load text domain for internationalization
+    load_plugin_textdomain( 'puntwork', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+
     // Initialize scheduling
     if (function_exists(__NAMESPACE__ . '\\init_scheduling')) {
         call_user_func(__NAMESPACE__ . '\\init_scheduling');

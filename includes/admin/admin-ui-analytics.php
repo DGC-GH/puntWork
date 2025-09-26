@@ -38,6 +38,40 @@ function import_analytics_page() {
     // Get analytics data with caching
     $period = sanitize_text_field($_GET['period'] ?? '30days');
 
+    // Localize script with translations
+    wp_localize_script('puntwork-analytics', 'puntworkAnalyticsL10n', array(
+        'loading' => __('Loading analytics data...', 'puntwork'),
+        'errorLoading' => __('Error loading analytics data. Please try again.', 'puntwork'),
+        'retry' => __('Retry', 'puntwork'),
+        'overview' => __('Overview', 'puntwork'),
+        'totalImports' => __('Total Imports', 'puntwork'),
+        'jobsProcessed' => __('Jobs Processed', 'puntwork'),
+        'avgSuccessRate' => __('Avg Success Rate', 'puntwork'),
+        'avgDuration' => __('Avg Duration', 'puntwork'),
+        'performanceByTrigger' => __('Performance by Trigger Type', 'puntwork'),
+        'imports' => __('Imports', 'puntwork'),
+        'count' => __('Count:', 'puntwork'),
+        'avgDurationShort' => __('Avg Duration:', 'puntwork'),
+        'successRate' => __('Success Rate:', 'puntwork'),
+        'jobsProcessedShort' => __('Jobs Processed:', 'puntwork'),
+        'importTrends' => __('Import Trends', 'puntwork'),
+        'feedPerformance' => __('Feed Performance', 'puntwork'),
+        'avgFeedsProcessed' => __('Avg Feeds Processed', 'puntwork'),
+        'avgFeedsSuccessful' => __('Avg Feeds Successful', 'puntwork'),
+        'avgFeedsFailed' => __('Avg Feeds Failed', 'puntwork'),
+        'avgResponseTime' => __('Avg Response Time', 'puntwork'),
+        'jobProcessingStats' => __('Job Processing Statistics', 'puntwork'),
+        'published' => __('Published:', 'puntwork'),
+        'updated' => __('Updated:', 'puntwork'),
+        'duplicates' => __('Duplicates:', 'puntwork'),
+        'errorSummary' => __('Error Summary', 'puntwork'),
+        'importsHadErrors' => __('imports had errors', 'puntwork'),
+        'commonErrorMessages' => __('Common Error Messages:', 'puntwork'),
+        'importActivityByHour' => __('Import Activity by Hour', 'puntwork'),
+        'numberOfImports' => __('Number of Imports', 'puntwork'),
+        'jobsProcessedLabel' => __('Jobs Processed', 'puntwork')
+    ));
+
     // Check if this is an AJAX request for lazy loading
     if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
         $analytics_data = ImportAnalytics::get_analytics_data($period);
@@ -82,7 +116,7 @@ function import_analytics_page() {
             <div id="analytics-loading" class="analytics-loading">
                 <div class="loading-spinner">
                     <i class="fas fa-chart-line fa-spin"></i>
-                    <div>Loading analytics data...</div>
+                    <div><?php _e('Loading analytics data...', 'puntwork'); ?></div>
                 </div>
             </div>
 
@@ -126,8 +160,8 @@ function import_analytics_page() {
                     loading.innerHTML = `
                         <div class="loading-spinner error">
                             <i class="fas fa-exclamation-triangle"></i>
-                            <div>Error loading analytics data. Please try again.</div>
-                            <button onclick="loadAnalyticsData('${period}')" class="button button-secondary" style="margin-top: 10px;">Retry</button>
+                            <div>${puntworkAnalyticsL10n.errorLoading}</div>
+                            <button onclick="loadAnalyticsData('${period}')" class="button button-secondary" style="margin-top: 10px;">${puntworkAnalyticsL10n.retry}</button>
                         </div>
                     `;
                 });
@@ -139,49 +173,49 @@ function import_analytics_page() {
             content.innerHTML = `
                 <!-- Overview Metrics -->
                 <div class="analytics-section">
-                    <h2>Overview</h2>
+                    <h2>${puntworkAnalyticsL10n.overview}</h2>
                     <div class="metrics-grid">
                         <div class="metric-card">
                             <div class="metric-value">${number_format(analytics_data.overview.total_imports)}</div>
-                            <div class="metric-label">Total Imports</div>
+                            <div class="metric-label">${puntworkAnalyticsL10n.totalImports}</div>
                         </div>
                         <div class="metric-card">
                             <div class="metric-value">${number_format(analytics_data.overview.total_processed)}</div>
-                            <div class="metric-label">Jobs Processed</div>
+                            <div class="metric-label">${puntworkAnalyticsL10n.jobsProcessed}</div>
                         </div>
                         <div class="metric-card">
                             <div class="metric-value">${analytics_data.overview.avg_success_rate}%</div>
-                            <div class="metric-label">Avg Success Rate</div>
+                            <div class="metric-label">${puntworkAnalyticsL10n.avgSuccessRate}</div>
                         </div>
                         <div class="metric-card">
                             <div class="metric-value">${analytics_data.overview.avg_duration}s</div>
-                            <div class="metric-label">Avg Duration</div>
+                            <div class="metric-label">${puntworkAnalyticsL10n.avgDuration}</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Performance Breakdown -->
                 <div class="analytics-section">
-                    <h2>Performance by Trigger Type</h2>
+                    <h2>${puntworkAnalyticsL10n.performanceByTrigger}</h2>
                     <div class="performance-breakdown">
                         ${Object.entries(analytics_data.performance).map(([trigger_type, stats]) => `
                             <div class="performance-card">
-                                <h3>${trigger_type.charAt(0).toUpperCase() + trigger_type.slice(1)} Imports</h3>
+                                <h3>${trigger_type.charAt(0).toUpperCase() + trigger_type.slice(1)} ${puntworkAnalyticsL10n.imports}</h3>
                                 <div class="performance-stats">
                                     <div class="stat">
-                                        <span class="stat-label">Count:</span>
+                                        <span class="stat-label">${puntworkAnalyticsL10n.count}</span>
                                         <span class="stat-value">${number_format(stats.count)}</span>
                                     </div>
                                     <div class="stat">
-                                        <span class="stat-label">Avg Duration:</span>
+                                        <span class="stat-label">${puntworkAnalyticsL10n.avgDurationShort}</span>
                                         <span class="stat-value">${stats.avg_duration}s</span>
                                     </div>
                                     <div class="stat">
-                                        <span class="stat-label">Success Rate:</span>
+                                        <span class="stat-label">${puntworkAnalyticsL10n.successRate}</span>
                                         <span class="stat-value">${stats.avg_success_rate}%</span>
                                     </div>
                                     <div class="stat">
-                                        <span class="stat-label">Jobs Processed:</span>
+                                        <span class="stat-label">${puntworkAnalyticsL10n.jobsProcessedShort}</span>
                                         <span class="stat-value">${number_format(stats.total_processed)}</span>
                                     </div>
                                 </div>
@@ -192,7 +226,7 @@ function import_analytics_page() {
 
                 <!-- Trends Chart -->
                 <div class="analytics-section">
-                    <h2>Import Trends</h2>
+                    <h2>${puntworkAnalyticsL10n.importTrends}</h2>
                     <div class="chart-container">
                         <canvas id="trends-chart" width="400" height="200"></canvas>
                     </div>
@@ -200,47 +234,47 @@ function import_analytics_page() {
 
                 <!-- Feed Statistics -->
                 <div class="analytics-section">
-                    <h2>Feed Performance</h2>
+                    <h2>${puntworkAnalyticsL10n.feedPerformance}</h2>
                     <div class="feed-stats-grid">
                         <div class="feed-stat-card">
                             <div class="stat-value">${analytics_data.feed_stats.avg_feeds_processed}</div>
-                            <div class="stat-label">Avg Feeds Processed</div>
+                            <div class="stat-label">${puntworkAnalyticsL10n.avgFeedsProcessed}</div>
                         </div>
                         <div class="feed-stat-card">
                             <div class="stat-value">${analytics_data.feed_stats.avg_feeds_successful}</div>
-                            <div class="stat-label">Avg Feeds Successful</div>
+                            <div class="stat-label">${puntworkAnalyticsL10n.avgFeedsSuccessful}</div>
                         </div>
                         <div class="feed-stat-card">
                             <div class="stat-value">${analytics_data.feed_stats.avg_feeds_failed}</div>
-                            <div class="stat-label">Avg Feeds Failed</div>
+                            <div class="stat-label">${puntworkAnalyticsL10n.avgFeedsFailed}</div>
                         </div>
                         <div class="feed-stat-card">
                             <div class="stat-value">${analytics_data.feed_stats.avg_response_time}s</div>
-                            <div class="stat-label">Avg Response Time</div>
+                            <div class="stat-label">${puntworkAnalyticsL10n.avgResponseTime}</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Job Statistics -->
                 <div class="analytics-section">
-                    <h2>Job Processing Statistics</h2>
+                    <h2>${puntworkAnalyticsL10n.jobProcessingStats}</h2>
                     <div class="job-stats-breakdown">
                         <div class="job-stat-item">
-                            <span class="job-stat-label">Published:</span>
+                            <span class="job-stat-label">${puntworkAnalyticsL10n.published}</span>
                             <span class="job-stat-value">${number_format(analytics_data.overview.total_published)}</span>
                             <div class="job-stat-bar">
                                 <div class="job-stat-fill published" style="width: ${analytics_data.overview.total_processed > 0 ? (analytics_data.overview.total_published / analytics_data.overview.total_processed * 100) : 0}%;"></div>
                             </div>
                         </div>
                         <div class="job-stat-item">
-                            <span class="job-stat-label">Updated:</span>
+                            <span class="job-stat-label">${puntworkAnalyticsL10n.updated}</span>
                             <span class="job-stat-value">${number_format(analytics_data.overview.total_updated)}</span>
                             <div class="job-stat-bar">
                                 <div class="job-stat-fill updated" style="width: ${analytics_data.overview.total_processed > 0 ? (analytics_data.overview.total_updated / analytics_data.overview.total_processed * 100) : 0}%;"></div>
                             </div>
                         </div>
                         <div class="job-stat-item">
-                            <span class="job-stat-label">Duplicates:</span>
+                            <span class="job-stat-label">${puntworkAnalyticsL10n.duplicates}</span>
                             <span class="job-stat-value">${number_format(analytics_data.overview.total_duplicates)}</span>
                             <div class="job-stat-bar">
                                 <div class="job-stat-fill duplicates" style="width: ${analytics_data.overview.total_processed > 0 ? (analytics_data.overview.total_duplicates / analytics_data.overview.total_processed * 100) : 0}%;"></div>
@@ -252,15 +286,15 @@ function import_analytics_page() {
                 ${analytics_data.errors.total_errors > 0 ? `
                 <!-- Error Summary -->
                 <div class="analytics-section">
-                    <h2>Error Summary</h2>
+                    <h2>${puntworkAnalyticsL10n.errorSummary}</h2>
                     <div class="error-summary">
                         <div class="error-count">
                             <span class="error-number">${number_format(analytics_data.errors.total_errors)}</span>
-                            <span class="error-label">imports had errors</span>
+                            <span class="error-label">${puntworkAnalyticsL10n.importsHadErrors}</span>
                         </div>
                         ${analytics_data.errors.error_messages ? `
                             <div class="error-messages">
-                                <strong>Common Error Messages:</strong>
+                                <strong>${puntworkAnalyticsL10n.commonErrorMessages}</strong>
                                 <p>${analytics_data.errors.error_messages}</p>
                             </div>
                         ` : ''}
@@ -270,7 +304,7 @@ function import_analytics_page() {
 
                 <!-- Hourly Distribution -->
                 <div class="analytics-section">
-                    <h2>Import Activity by Hour</h2>
+                    <h2>${puntworkAnalyticsL10n.importActivityByHour}</h2>
                     <div class="hourly-chart-container">
                         <canvas id="hourly-chart" width="400" height="150"></canvas>
                     </div>
@@ -293,13 +327,13 @@ function import_analytics_page() {
                     data: {
                         labels: trendsData.map(item => item.date),
                         datasets: [{
-                            label: 'Imports',
+                            label: puntworkAnalyticsL10n.imports,
                             data: trendsData.map(item => item.imports_count),
                             borderColor: '#007cba',
                             backgroundColor: 'rgba(0, 124, 186, 0.1)',
                             tension: 0.4
                         }, {
-                            label: 'Jobs Processed',
+                            label: puntworkAnalyticsL10n.jobsProcessedLabel,
                             data: trendsData.map(item => item.jobs_processed),
                             borderColor: '#28a745',
                             backgroundColor: 'rgba(40, 167, 69, 0.1)',
@@ -314,7 +348,7 @@ function import_analytics_page() {
                                 beginAtZero: true,
                                 title: {
                                     display: true,
-                                    text: 'Number of Imports'
+                                    text: puntworkAnalyticsL10n.numberOfImports
                                 }
                             },
                             y1: {
@@ -322,7 +356,7 @@ function import_analytics_page() {
                                 position: 'right',
                                 title: {
                                     display: true,
-                                    text: 'Jobs Processed'
+                                    text: puntworkAnalyticsL10n.jobsProcessedLabel
                                 },
                                 grid: {
                                     drawOnChartArea: false
@@ -342,7 +376,7 @@ function import_analytics_page() {
                     data: {
                         labels: hourlyData.map(item => item.hour + ':00'),
                         datasets: [{
-                            label: 'Imports',
+                            label: puntworkAnalyticsL10n.imports,
                             data: hourlyData.map(item => item.count),
                             backgroundColor: 'rgba(0, 124, 186, 0.6)',
                             borderColor: '#007cba',
@@ -356,7 +390,7 @@ function import_analytics_page() {
                                 beginAtZero: true,
                                 title: {
                                     display: true,
-                                    text: 'Number of Imports'
+                                    text: puntworkAnalyticsL10n.numberOfImports
                                 }
                             }
                         }
