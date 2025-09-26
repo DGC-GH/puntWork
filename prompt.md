@@ -31,7 +31,7 @@ After Implementation:
 
 Docs:
 - **Update Roadmap:** Update the existing roadmap.md file (or create new if it doesn't exist) based on your findings and plan it step by step in an optimal order, keeping track of your progress by editing this file.
-- **Update Features:** Update or create features.md to include a list of features used in this code; don't use project-specific names or descriptions but describe it in a general yet specific way that can be used for learnings and inspiration in another project coded with Grok Code Fast 1; per feature, note the function names specific for the feature.
+- **Update README:** Update or create README.md in the root to include a list of features used in this code; that can be used for learnings and inspiration in next "Grok Code Fast 1" or another project coded with "Grok Code Fast 1"; 
 
 Tests:
 - **Update Tests:** Run the tests (add new if needed) and fix the issues. Validate suggestions via tests or builds, and iterate if needed to ensure error handling and reliability.
