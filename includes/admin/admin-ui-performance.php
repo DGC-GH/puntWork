@@ -512,51 +512,199 @@ function performance_metrics_page()
                     });
                 });
             }
+
+            // Enhanced cache management functionality
+            const warmCachesBtn = document.getElementById('warm-caches');
+            const clearAnalyticsBtn = document.getElementById('clear-analytics-cache');
+            const cacheStatus = document.getElementById('cache-status');
+
+            if (warmCachesBtn && cacheStatus) {
+                warmCachesBtn.addEventListener('click', function() {
+                    warmCachesBtn.disabled = true;
+                    warmCachesBtn.innerHTML = '<span class="dashicons dashicons-update dashicons-spin"></span> Warming...';
+                    cacheStatus.textContent = 'Warming up caches...';
+
+                    const data = {
+                        action: 'warm_performance_caches',
+                        nonce: '<?php echo wp_create_nonce("puntwork_performance_caches"); ?>'
+                    };
+
+                    fetch(ajaxurl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: new URLSearchParams(data)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            cacheStatus.style.color = 'green';
+                            cacheStatus.textContent = 'Caches warmed successfully!';
+                            // Reload the page to show updated stats
+                            setTimeout(() => {
+                                location.reload();
+                            }, 2000);
+                        } else {
+                            cacheStatus.style.color = 'red';
+                            cacheStatus.textContent = 'Error: ' + (data.data || 'Unknown error');
+                            warmCachesBtn.disabled = false;
+                            warmCachesBtn.innerHTML = '<span class="dashicons dashicons-update"></span> Warm Up Caches';
+                        }
+                    })
+                    .catch(error => {
+                        cacheStatus.style.color = 'red';
+                        cacheStatus.textContent = 'Error: ' + error.message;
+                        warmCachesBtn.disabled = false;
+                        warmCachesBtn.innerHTML = '<span class="dashicons dashicons-update"></span> Warm Up Caches';
+                    });
+                });
+            }
+
+            if (clearAnalyticsBtn && cacheStatus) {
+                clearAnalyticsBtn.addEventListener('click', function() {
+                    clearAnalyticsBtn.disabled = true;
+                    cacheStatus.textContent = 'Resetting cache analytics...';
+
+                    const data = {
+                        action: 'reset_cache_analytics',
+                        nonce: '<?php echo wp_create_nonce("puntwork_cache_analytics"); ?>'
+                    };
+
+                    fetch(ajaxurl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: new URLSearchParams(data)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            cacheStatus.style.color = 'green';
+                            cacheStatus.textContent = 'Cache analytics reset successfully!';
+                            // Reload the page to show updated stats
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1000);
+                        } else {
+                            cacheStatus.style.color = 'red';
+                            cacheStatus.textContent = 'Error: ' + (data.data || 'Unknown error');
+                            clearAnalyticsBtn.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        cacheStatus.style.color = 'red';
+                        cacheStatus.textContent = 'Error: ' + error.message;
+                        clearAnalyticsBtn.disabled = false;
+                    });
+                });
+            }
+
+            // Advanced memory management functionality
+            const runMemoryTestBtn = document.getElementById('run-memory-test');
+            const clearMemoryPoolBtn = document.getElementById('clear-memory-pool');
+            const memoryStatus = document.getElementById('memory-status');
+
+            if (runMemoryTestBtn && memoryStatus) {
+                runMemoryTestBtn.addEventListener('click', function() {
+                    runMemoryTestBtn.disabled = true;
+                    runMemoryTestBtn.innerHTML = '<span class="dashicons dashicons-performance dashicons-spin"></span> Testing...';
+                    memoryStatus.textContent = 'Running memory performance test...';
+
+                    const data = {
+                        action: 'run_memory_performance_test',
+                        nonce: '<?php echo wp_create_nonce("puntwork_memory_test"); ?>'
+                    };
+
+                    fetch(ajaxurl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: new URLSearchParams(data)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            memoryStatus.style.color = 'green';
+                            memoryStatus.textContent = 'Memory test completed! Peak: ' + formatBytes(data.data.peak_memory) + ', Time: ' + data.data.test_time + 's';
+                            runMemoryTestBtn.disabled = false;
+                            runMemoryTestBtn.innerHTML = '<span class="dashicons dashicons-performance"></span> Run Memory Test';
+                        } else {
+                            memoryStatus.style.color = 'red';
+                            memoryStatus.textContent = 'Error: ' + (data.data || 'Unknown error');
+                            runMemoryTestBtn.disabled = false;
+                            runMemoryTestBtn.innerHTML = '<span class="dashicons dashicons-performance"></span> Run Memory Test';
+                        }
+                    })
+                    .catch(error => {
+                        memoryStatus.style.color = 'red';
+                        memoryStatus.textContent = 'Error: ' + error.message;
+                        runMemoryTestBtn.disabled = false;
+                        runMemoryTestBtn.innerHTML = '<span class="dashicons dashicons-performance"></span> Run Memory Test';
+                    });
+                });
+            }
+
+            if (clearMemoryPoolBtn && memoryStatus) {
+                clearMemoryPoolBtn.addEventListener('click', function() {
+                    clearMemoryPoolBtn.disabled = true;
+                    memoryStatus.textContent = 'Clearing memory pool...';
+
+                    const data = {
+                        action: 'clear_memory_pool',
+                        nonce: '<?php echo wp_create_nonce("puntwork_memory_pool"); ?>'
+                    };
+
+                    fetch(ajaxurl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: new URLSearchParams(data)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            memoryStatus.style.color = 'green';
+                            memoryStatus.textContent = 'Memory pool cleared successfully!';
+                            clearMemoryPoolBtn.disabled = false;
+                        } else {
+                            memoryStatus.style.color = 'red';
+                            memoryStatus.textContent = 'Error: ' + (data.data || 'Unknown error');
+                            clearMemoryPoolBtn.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        memoryStatus.style.color = 'red';
+                        memoryStatus.textContent = 'Error: ' + error.message;
+                        clearMemoryPoolBtn.disabled = false;
+                    });
+                });
+            }
         });
-
-        function formatBytes(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
     </script>
-
     <style>
-        .performance-dashboard {
-            max-width: none;
-        }
-
-        .performance-filters {
-            background: #fff;
-            padding: 15px 20px;
+        .cache-controls, .memory-controls {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
             border: 1px solid #ddd;
             border-radius: 8px;
-            margin-bottom: 20px;
         }
 
-        .performance-section {
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 30px;
+        .cache-controls button, .memory-controls button {
+            margin-right: 10px;
         }
 
-        .performance-section h2 {
-            margin-top: 0;
-            margin-bottom: 20px;
-            color: #23282d;
-        }
-
-        .system-status-grid, .performance-overview-grid {
+        .memory-stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
         }
 
-        .status-card, .overview-card {
+        .memory-stat-card {
             text-align: center;
             padding: 20px;
             border: 1px solid #e1e1e1;
@@ -564,286 +712,18 @@ function performance_metrics_page()
             background: #f8f9fa;
         }
 
-        .status-value, .overview-value {
+        .memory-stat-value {
             font-size: 1.8em;
             font-weight: bold;
-            color: #007cba;
+            color: #17a2b8;
             display: block;
             margin-bottom: 5px;
         }
 
-        .status-label, .overview-label {
+        .memory-stat-label {
             color: #666;
             font-size: 0.9em;
-        }
-
-        .overview-subtext {
-            font-size: 0.8em;
-            color: #888;
-            margin-top: 5px;
-        }
-
-        .charts-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 30px;
-        }
-
-        .chart-wrapper {
-            background: #f8f9fa;
-            border: 1px solid #e1e1e1;
-            border-radius: 8px;
-            padding: 20px;
-        }
-
-        .chart-wrapper h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-            color: #23282d;
-            font-size: 16px;
-        }
-
-        .performance-logs-table-container {
-            overflow-x: auto;
-        }
-
-        .performance-logs-table th,
-        .performance-logs-table td {
-            padding: 8px 12px;
-            text-align: left;
-        }
-
-        .performance-logs-table .view-details {
-            padding: 2px 8px;
-            font-size: 12px;
-        }
-
-        .cache-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-        }
-
-        .cache-stat-card {
-            text-align: center;
-            padding: 15px;
-            border: 1px solid #e1e1e1;
-            border-radius: 6px;
-            background: #f8f9fa;
-        }
-
-        .cache-stat-value {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #28a745;
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .cache-stat-label {
-            color: #666;
-            font-size: 0.8em;
-        }
-
-        .performance-modal {
-            position: fixed;
-            z-index: 100000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-
-        .performance-modal-content {
-            background-color: #fff;
-            margin: 5% auto;
-            padding: 0;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 600px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .performance-modal-header {
-            padding: 15px 20px;
-            border-bottom: 1px solid #ddd;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .performance-modal-header h3 {
-            margin: 0;
-        }
-
-        .performance-modal-close {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: #666;
-        }
-
-        .performance-modal-body {
-            padding: 20px;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .performance-details h4 {
-            margin-top: 20px;
-            margin-bottom: 10px;
-            color: #23282d;
-        }
-
-        .performance-details ul {
-            margin: 0;
-            padding-left: 20px;
-        }
-
-        .performance-details li {
-            margin-bottom: 5px;
-            line-height: 1.4;
-        }
-
-        .optimization-controls {
-            margin-bottom: 20px;
-        }
-
-        .optimization-results {
-            background: #f8f9fa;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .optimization-timestamp {
-            font-size: 0.9em;
-            color: #666;
-            margin-bottom: 10px;
-        }
-
-        .optimization-stats {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-
-        .optimization-stat {
-            text-align: center;
-        }
-
-        .optimization-stat-value {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #007cba;
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .optimization-stat-label {
-            color: #666;
-            font-size: 0.9em;
-        }
-
-        .optimization-recommendations {
-            margin-top: 20px;
-        }
-
-        .recommendation-card {
-            background: #f8f9fa;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-
-        .recommendation-item {
-            margin-bottom: 10px;
-            padding: 10px;
-            border-left: 4px solid transparent;
-        }
-
-        .recommendation-item.recommendation-info {
-            border-left-color: #007cba;
-        }
-
-        .recommendation-item.recommendation-warning {
-            border-left-color: #ffc107;
-        }
-
-        .recommendation-item.recommendation-error {
-            border-left-color: #dc3545;
-        }
-
-        .recommendation-type {
-            font-weight: bold;
-            margin-right: 5px;
         }
     </style>
     <?php
-}
-
-/**
- * Get performance chart data for the dashboard
- *
- * @param string $period Time period
- * @param string $operation Operation filter
- * @return array Chart data
- */
-function get_performance_chart_data(string $period, string $operation = ''): array
-{
-    global $wpdb;
-
-    $table_name = $wpdb->prefix . 'puntwork_performance_logs';
-    $days = $period === '7days' ? 7 : ($period === '30days' ? 30 : 90);
-
-    $where_clause = "WHERE created_at >= DATE_SUB(NOW(), INTERVAL $days DAY)";
-    if ($operation) {
-        $where_clause .= $wpdb->prepare(" AND operation = %s", $operation);
-    }
-
-    // Time trend data (daily averages)
-    $time_trend = $wpdb->get_results($wpdb->prepare("
-        SELECT
-            DATE(created_at) as date,
-            AVG(total_time) as avg_time
-        FROM $table_name
-        $where_clause
-        GROUP BY DATE(created_at)
-        ORDER BY date ASC
-    "));
-
-    // Memory trend data (daily averages)
-    $memory_trend = $wpdb->get_results($wpdb->prepare("
-        SELECT
-            DATE(created_at) as date,
-            AVG(total_memory_used) as avg_memory
-        FROM $table_name
-        $where_clause
-        GROUP BY DATE(created_at)
-        ORDER BY date ASC
-    "));
-
-    return [
-        'time_trend' => [
-            'labels' => array_map(function ($row) {
-                return wp_date('M j', strtotime($row->date));
-            }, $time_trend),
-            'data' => array_map(function ($row) {
-                return round((float) $row->avg_time, 3);
-            }, $time_trend)
-        ],
-        'memory_trend' => [
-            'labels' => array_map(function ($row) {
-                return wp_date('M j', strtotime($row->date));
-            }, $memory_trend),
-            'data' => array_map(function ($row) {
-                return round((float) $row->avg_memory / 1024 / 1024, 2); // Convert to MB
-            }, $memory_trend)
-        ]
-    ];
 }

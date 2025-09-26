@@ -906,3 +906,499 @@ function reset_memory_manager(): void
 {
     MemoryManager::reset();
 }
+
+/**
+ * Enhanced Cache Manager with advanced features
+ */
+class EnhancedCacheManager extends CacheManager
+{
+    /**
+     * Cache warming for frequently accessed data
+     */
+    public static function warmCommonCaches(): void
+    {
+        // Warm up ACF fields cache
+        if (function_exists('get_acf_fields')) {
+            $acf_fields = get_acf_fields();
+            self::set('acf_fields_warmed', $acf_fields, self::GROUP_MAPPINGS, HOUR_IN_SECONDS);
+        }
+
+        // Warm up field mappings
+        if (function_exists('get_field_mappings')) {
+            $mappings = get_field_mappings();
+            self::set('field_mappings_warmed', $mappings, self::GROUP_MAPPINGS, HOUR_IN_SECONDS);
+        }
+
+        // Warm up geographic mappings
+        if (function_exists('get_geographic_mappings')) {
+            $geo_mappings = get_geographic_mappings();
+            self::set('geographic_mappings_warmed', $geo_mappings, self::GROUP_MAPPINGS, HOUR_IN_SECONDS);
+        }
+    }
+
+    /**
+     * Get cached data with automatic cache warming
+     */
+    public static function getWithWarmup(string $key, string $group = '', ?callable $fallback = null, int $warmup_threshold = 300)
+    {
+        $cached = self::get($key, $group);
+
+        if ($cached === false && $fallback) {
+            // Cache miss - execute fallback and cache result
+            $cached = $fallback();
+            self::set($key, $cached, $group, $warmup_threshold);
+        }
+
+        return $cached;
+    }
+
+    /**
+     * Batch cache operations for better performance
+     */
+    public static function getMultiple(array $keys, string $group = ''): array
+    {
+        $results = [];
+        $missing_keys = [];
+
+        // First pass - get from cache
+        foreach ($keys as $key) {
+            $cached = self::get($key, $group);
+            if ($cached !== false) {
+                $results[$key] = $cached;
+            } else {
+                $missing_keys[] = $key;
+            }
+        }
+
+        return [$results, $missing_keys];
+    }
+
+    /**
+     * Set multiple cache entries at once
+     */
+    public static function setMultiple(array $data, string $group = '', int $expiration = 3600): bool
+    {
+        $success = true;
+        foreach ($data as $key => $value) {
+            if (!self::set($key, $value, $group, $expiration)) {
+                $success = false;
+            }
+        }
+        return $success;
+    }
+
+    /**
+     * Intelligent cache invalidation based on patterns
+     */
+    public static function invalidatePattern(string $pattern, string $group = ''): int
+    {
+        global $wpdb;
+
+        $invalidated = 0;
+
+        // For transients (fallback)
+        $transient_pattern = '_transient_' . ($group ? $group . '_' : '') . $pattern;
+        $transients = $wpdb->get_col($wpdb->prepare(
+            "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s",
+            $transient_pattern . '%'
+        ));
+
+        foreach ($transients as $transient) {
+            $key = str_replace('_transient_', '', $transient);
+            if ($group) {
+                $key = str_replace($group . '_', '', $key);
+            }
+            delete_transient($key);
+            $invalidated++;
+        }
+
+        // For Redis/Object Cache - we can't pattern match, so we clear the group
+        if (self::is_redis_available()) {
+            self::clear_group($group);
+        }
+
+        return $invalidated;
+    }
+
+    /**
+     * Cache analytics and hit/miss tracking
+     */
+    private static $cache_stats = ['hits' => 0, 'misses' => 0, 'sets' => 0];
+
+    public static function getAnalytics(): array
+    {
+        return self::$cache_stats;
+    }
+
+    public static function resetAnalytics(): void
+    {
+        self::$cache_stats = ['hits' => 0, 'misses' => 0, 'sets' => 0];
+    }
+
+    /**
+     * Override get method to track analytics
+     */
+    public static function get(string $key, string $group = '')
+    {
+        $result = parent::get($key, $group);
+
+        if ($result !== false) {
+            self::$cache_stats['hits']++;
+        } else {
+            self::$cache_stats['misses']++;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Override set method to track analytics
+     */
+    public static function set(string $key, $data, string $group = '', int $expiration = 3600): bool
+    {
+        $result = parent::set($key, $data, $group, $expiration);
+
+        if ($result) {
+            self::$cache_stats['sets']++;
+        }
+
+        return $result;
+    }
+}
+
+/**
+ * Advanced Memory Manager for large-scale imports
+ */
+class AdvancedMemoryManager extends MemoryManager
+{
+    /**
+     * Streaming JSONL processor for memory-efficient large file handling
+     */
+    public static function processJsonlStreaming(string $filePath, callable $processor, int $chunkSize = 1000): array
+    {
+        $stats = [
+            'total_processed' => 0,
+            'memory_peaks' => [],
+            'processing_time' => 0
+        ];
+
+        $startTime = microtime(true);
+
+        if (!file_exists($filePath)) {
+            throw new \Exception("File not found: $filePath");
+        }
+
+        $handle = fopen($filePath, 'r');
+        if (!$handle) {
+            throw new \Exception("Cannot open file: $filePath");
+        }
+
+        $buffer = [];
+        $lineNumber = 0;
+
+        while (($line = fgets($handle)) !== false) {
+            $lineNumber++;
+            $line = trim($line);
+
+            if (empty($line)) {
+                continue;
+            }
+
+            $item = json_decode($line, true);
+            if ($item === null) {
+                continue; // Skip invalid JSON
+            }
+
+            $buffer[] = $item;
+
+            // Process in chunks
+            if (count($buffer) >= $chunkSize) {
+                $processed = $processor($buffer);
+                $stats['total_processed'] += $processed;
+                $stats['memory_peaks'][] = memory_get_peak_usage(true);
+                $buffer = [];
+
+                // Memory check and cleanup
+                self::checkAndCleanup();
+            }
+        }
+
+        // Process remaining items
+        if (!empty($buffer)) {
+            $processed = $processor($buffer);
+            $stats['total_processed'] += $processed;
+            $stats['memory_peaks'][] = memory_get_peak_usage(true);
+        }
+
+        fclose($handle);
+
+        $stats['processing_time'] = microtime(true) - $startTime;
+        $stats['avg_memory_peak'] = !empty($stats['memory_peaks']) ? array_sum($stats['memory_peaks']) / count($stats['memory_peaks']) : 0;
+
+        return $stats;
+    }
+
+    /**
+     * Memory-mapped file reader for extremely large files
+     */
+    public static function readLargeFileChunk(string $filePath, int $offset, int $length): string
+    {
+        if (!function_exists('fopen')) {
+            throw new \Exception('File functions not available');
+        }
+
+        $handle = fopen($filePath, 'r');
+        if (!$handle) {
+            throw new \Exception("Cannot open file: $filePath");
+        }
+
+        fseek($handle, $offset);
+        $data = fread($handle, $length);
+        fclose($handle);
+
+        return $data;
+    }
+
+    /**
+     * Adaptive batch sizing based on memory usage patterns
+     */
+    public static function calculateOptimalBatchSize(int $currentBatchSize, float $memoryUsage, float $targetMemoryRatio = 0.7): int
+    {
+        $memoryLimit = self::get_memory_limit_bytes();
+        $currentRatio = $memoryUsage / $memoryLimit;
+
+        if ($currentRatio > $targetMemoryRatio) {
+            // Reduce batch size
+            $newSize = max(1, (int)($currentBatchSize * 0.8));
+        } elseif ($currentRatio < $targetMemoryRatio * 0.5) {
+            // Can increase batch size
+            $newSize = min($currentBatchSize * 2, 10000); // Cap at 10k
+        } else {
+            // Keep current size
+            $newSize = $currentBatchSize;
+        }
+
+        return $newSize;
+    }
+
+    /**
+     * Memory pool for reusable objects
+     */
+    private static $objectPool = [];
+
+    public static function getFromPool(string $className, ...$args)
+    {
+        $key = $className . '_' . md5(serialize($args));
+
+        if (isset(self::$objectPool[$key])) {
+            return self::$objectPool[$key];
+        }
+
+        // Create new instance
+        $instance = new $className(...$args);
+        self::$objectPool[$key] = $instance;
+
+        return $instance;
+    }
+
+    public static function clearPool(): void
+    {
+        self::$objectPool = [];
+    }
+
+    /**
+     * Progressive memory cleanup
+     */
+    public static function checkAndCleanup(): void
+    {
+        $memoryUsage = memory_get_usage(true);
+        $memoryLimit = self::get_memory_limit_bytes();
+        $ratio = $memoryUsage / $memoryLimit;
+
+        if ($ratio > 0.85) {
+            // Aggressive cleanup
+            self::clearPool();
+            if (function_exists('wp_cache_flush')) {
+                wp_cache_flush();
+            }
+            gc_collect_cycles();
+        } elseif ($ratio > 0.75) {
+            // Moderate cleanup
+            gc_collect_cycles();
+        }
+    }
+
+    /**
+     * Memory usage prediction for batch operations
+     */
+    public static function predictMemoryUsage(int $batchSize, int $itemSizeEstimate = 1024): array
+    {
+        $baseMemory = memory_get_usage(true);
+        $estimatedBatchMemory = $batchSize * $itemSizeEstimate;
+        $safetyBuffer = 50 * 1024 * 1024; // 50MB safety buffer
+
+        $predictedPeak = $baseMemory + $estimatedBatchMemory + $safetyBuffer;
+        $memoryLimit = self::get_memory_limit_bytes();
+
+        return [
+            'predicted_peak' => $predictedPeak,
+            'memory_limit' => $memoryLimit,
+            'will_exceed_limit' => $predictedPeak > $memoryLimit,
+            'recommended_batch_size' => $predictedPeak > $memoryLimit ?
+                max(1, (int)($batchSize * ($memoryLimit - $baseMemory - $safetyBuffer) / $estimatedBatchMemory)) :
+                $batchSize
+        ];
+    }
+
+    /**
+     * Compressed caching for large datasets
+     */
+    public static function setCompressed(string $key, $data, string $group = '', int $expiration = 3600): bool
+    {
+        $compressed = gzcompress(serialize($data), 6);
+        return self::set($key . '_compressed', $compressed, $group, $expiration);
+    }
+
+    public static function getCompressed(string $key, string $group = '')
+    {
+        $compressed = self::get($key . '_compressed', $group);
+        if ($compressed === false) {
+            return false;
+        }
+
+        return unserialize(gzuncompress($compressed));
+    }
+}
+
+/**
+ * AJAX handler for warming performance caches
+ */
+function ajax_warm_performance_caches(): void
+{
+    try {
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_performance_caches')) {
+            wp_send_json_error('Security check failed');
+            return;
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+            return;
+        }
+
+        EnhancedCacheManager::warmCommonCaches();
+
+        wp_send_json_success([
+            'message' => 'Performance caches warmed successfully',
+            'timestamp' => current_time('timestamp')
+        ]);
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Cache warming failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SYSTEM);
+        wp_send_json_error('Cache warming failed: ' . $e->getMessage());
+    }
+}
+add_action('wp_ajax_warm_performance_caches', 'ajax_warm_performance_caches');
+
+/**
+ * AJAX handler for resetting cache analytics
+ */
+function ajax_reset_cache_analytics(): void
+{
+    try {
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_cache_analytics')) {
+            wp_send_json_error('Security check failed');
+            return;
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+            return;
+        }
+
+        EnhancedCacheManager::resetAnalytics();
+
+        wp_send_json_success([
+            'message' => 'Cache analytics reset successfully',
+            'timestamp' => current_time('timestamp')
+        ]);
+
+    } catch (\Exception $e) {
+        wp_send_json_error('Analytics reset failed: ' . $e->getMessage());
+    }
+}
+add_action('wp_ajax_reset_cache_analytics', 'ajax_reset_cache_analytics');
+
+/**
+ * AJAX handler for running memory performance test
+ */
+function ajax_run_memory_performance_test(): void
+{
+    try {
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_memory_test')) {
+            wp_send_json_error('Security check failed');
+            return;
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+            return;
+        }
+
+        $start_time = microtime(true);
+        $start_memory = memory_get_usage(true);
+
+        // Simulate processing different batch sizes
+        $test_results = [];
+        for ($batch_size = 100; $batch_size <= 1000; $batch_size += 200) {
+            $prediction = AdvancedMemoryManager::predictMemoryUsage($batch_size);
+            $test_results[] = [
+                'batch_size' => $batch_size,
+                'prediction' => $prediction
+            ];
+        }
+
+        $end_memory = memory_get_peak_usage(true);
+        $test_time = microtime(true) - $start_time;
+
+        wp_send_json_success([
+            'message' => 'Memory performance test completed',
+            'peak_memory' => $end_memory,
+            'test_time' => round($test_time, 3),
+            'predictions' => $test_results
+        ]);
+
+    } catch (\Exception $e) {
+        wp_send_json_error('Memory test failed: ' . $e->getMessage());
+    }
+}
+add_action('wp_ajax_run_memory_performance_test', 'ajax_run_memory_performance_test');
+
+/**
+ * AJAX handler for clearing memory pool
+ */
+function ajax_clear_memory_pool(): void
+{
+    try {
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_memory_pool')) {
+            wp_send_json_error('Security check failed');
+            return;
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+            return;
+        }
+
+        AdvancedMemoryManager::clearPool();
+
+        wp_send_json_success([
+            'message' => 'Memory pool cleared successfully',
+            'timestamp' => current_time('timestamp')
+        ]);
+
+    } catch (\Exception $e) {
+        wp_send_json_error('Memory pool clear failed: ' . $e->getMessage());
+    }
+}
+add_action('wp_ajax_clear_memory_pool', 'ajax_clear_memory_pool');
