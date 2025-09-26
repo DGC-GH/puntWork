@@ -244,6 +244,143 @@ docker-compose logs -f  # View logs
 - WordPress coding standards
 - Comprehensive documentation
 
+## 🏆 Code Quality & Best Practices
+
+### 📏 **PSR-12 Coding Standards**
+This project follows PSR-12 coding standards. Key requirements:
+
+#### Method Naming
+- **Use camelCase** for method names (e.g., `validateAjaxRequest`, `getClientIp`)
+- ❌ Avoid snake_case in method names (e.g., `validate_ajax_request`, `get_client_ip`)
+- Class names should be in PascalCase
+- Constants should be in UPPER_SNAKE_CASE
+
+#### Code Formatting
+- **Line Length**: Maximum 120 characters per line
+- **Indentation**: Use 4 spaces (no tabs)
+- **Braces**: Opening brace on same line for control structures
+- **Spacing**: Consistent spacing around operators and keywords
+
+#### File Structure
+- One class per file
+- Files should declare symbols (classes, functions) or execute logic, not both
+- Use meaningful namespaces following PSR-4
+
+### 🛠️ **Code Quality Tools**
+
+#### PHP CodeSniffer (PHPCS)
+Automatically check and fix coding standards:
+
+```bash
+# Check coding standards
+./vendor/bin/phpcs includes/ tests/ puntwork.php
+
+# Auto-fix issues (where possible)
+./vendor/bin/phpcbf includes/ tests/ puntwork.php
+```
+
+#### PHPUnit Testing
+Run comprehensive test suite:
+
+```bash
+# Run all tests
+./vendor/bin/phpunit
+
+# Run with coverage
+./vendor/bin/phpunit --coverage-html coverage
+
+# Run specific test class
+./vendor/bin/phpunit tests/SecurityTest.php
+```
+
+### ✅ **Pre-Commit Quality Checks**
+
+Before committing code, ensure:
+
+1. **Tests Pass**: All PHPUnit tests must pass
+2. **Coding Standards**: No PHPCS errors (warnings acceptable for legacy code)
+3. **Syntax Check**: PHP files must have valid syntax
+4. **Documentation**: New methods/classes should have PHPDoc comments
+
+### 🔧 **Development Workflow**
+
+#### Code Changes
+1. Create feature branch from `main`
+2. Make changes following coding standards
+3. Add/update tests for new functionality
+4. Run full test suite: `./vendor/bin/phpunit`
+5. Check coding standards: `./vendor/bin/phpcs includes/`
+6. Fix any auto-fixable issues: `./vendor/bin/phpcbf includes/`
+7. Commit with descriptive message
+
+#### Pull Request Checklist
+- [ ] Tests pass (`./vendor/bin/phpunit`)
+- [ ] Coding standards met (`./vendor/bin/phpcs`)
+- [ ] No syntax errors (`php -l`)
+- [ ] Documentation updated
+- [ ] Security implications reviewed
+- [ ] Performance impact assessed
+
+### 🚨 **Common Issues to Avoid**
+
+#### Method Naming Violations
+```php
+// ❌ Wrong - snake_case
+public function validate_ajax_request() { }
+
+// ✅ Correct - camelCase
+public function validateAjaxRequest() { }
+```
+
+#### Line Length Issues
+```php
+// ❌ Wrong - too long
+$very_long_variable_name_that_exceeds_the_limit = "This line is way too long and should be broken up";
+
+// ✅ Correct - broken into multiple lines
+$very_long_variable_name = "This line is properly formatted " .
+    "and broken into multiple lines for readability";
+```
+
+#### File Structure Issues
+```php
+// ❌ Wrong - mixing declarations and logic
+class MyClass {
+    public function method() { }
+}
+// Some execution code here
+
+// ✅ Correct - separate files for logic
+// In class file
+class MyClass {
+    public function method() { }
+}
+
+// In separate execution file
+$instance = new MyClass();
+$instance->method();
+```
+
+### 📊 **Quality Metrics**
+
+Track these metrics to maintain code quality:
+
+- **Test Coverage**: Aim for >80% code coverage
+- **PHPCS Compliance**: 0 errors (warnings tracked separately)
+- **Cyclomatic Complexity**: Keep methods under 10 complexity
+- **Documentation**: 100% PHPDoc coverage for public methods
+
+### 🔄 **Continuous Improvement**
+
+Regular code quality reviews should include:
+- Refactoring legacy code to meet standards
+- Updating deprecated patterns
+- Improving test coverage
+- Performance optimizations
+- Security enhancements
+
+By following these practices, we maintain high code quality and prevent the accumulation of technical debt.
+
 ## 📊 Performance
 
 ### ⚡ **Optimization Features**

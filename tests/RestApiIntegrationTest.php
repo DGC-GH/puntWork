@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Integration Tests for puntWork REST API Endpoints
  * Tests API endpoints with realistic data and scenarios

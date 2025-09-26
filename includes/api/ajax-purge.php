@@ -26,9 +26,9 @@ function job_import_cleanup_duplicates_ajax()
     PuntWorkLogger::logAjaxRequest('job_import_cleanup_duplicates', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validate_ajax_request('job_import_cleanup_duplicates', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('job_import_cleanup_duplicates', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -36,9 +36,9 @@ function job_import_cleanup_duplicates_ajax()
 
     try {
         // Get batch parameters with validation
-        $batch_size = SecurityUtils::validate_field($_POST, 'batch_size', 'integer', ['min' => 1, 'max' => 500, 'default' => 50]);
-        $offset = SecurityUtils::validate_field($_POST, 'offset', 'integer', ['min' => 0, 'default' => 0]);
-        $is_continue = SecurityUtils::validate_field($_POST, 'is_continue', 'boolean', ['default' => false]);
+        $batch_size = SecurityUtils::validateField($_POST, 'batch_size', 'integer', ['min' => 1, 'max' => 500, 'default' => 50]);
+        $offset = SecurityUtils::validateField($_POST, 'offset', 'integer', ['min' => 0, 'default' => 0]);
+        $is_continue = SecurityUtils::validateField($_POST, 'is_continue', 'boolean', ['default' => false]);
 
         PuntWorkLogger::info('Starting cleanup duplicates batch', PuntWorkLogger::CONTEXT_PURGE, [
             'batch_size' => $batch_size,
@@ -73,7 +73,7 @@ function job_import_cleanup_duplicates_ajax()
             usleep(50000);
             if (microtime(true) - $lock_start > 30) {
                 PuntWorkLogger::error('Cleanup lock timeout', PuntWorkLogger::CONTEXT_PURGE);
-                AjaxErrorHandler::send_error('Cleanup lock timeout');
+                AjaxErrorHandler::sendError('Cleanup lock timeout');
                 return;
             }
         }
@@ -122,7 +122,7 @@ function job_import_cleanup_duplicates_ajax()
                 'time_elapsed' => $progress['time_elapsed'],
                 'logs_count' => count($logs)
             ]);
-            AjaxErrorHandler::send_success([
+            AjaxErrorHandler::sendSuccess([
                 'message' => $message,
                 'complete' => true,
                 'total_processed' => $progress['total_processed'],
@@ -177,7 +177,7 @@ function job_import_cleanup_duplicates_ajax()
             'progress_percentage' => $progress_percentage,
             'logs_count' => count($logs)
         ]);
-        AjaxErrorHandler::send_success([
+        AjaxErrorHandler::sendSuccess([
             'message' => $message,
             'complete' => false,
             'next_offset' => $progress['current_offset'],
@@ -192,7 +192,7 @@ function job_import_cleanup_duplicates_ajax()
         PuntWorkLogger::error('Cleanup failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_PURGE);
 
         PuntWorkLogger::logAjaxResponse('job_import_cleanup_duplicates', ['message' => 'Cleanup failed: ' . $e->getMessage()], false);
-        AjaxErrorHandler::send_error('Cleanup failed: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Cleanup failed: ' . $e->getMessage());
     }
 }
 
@@ -202,9 +202,9 @@ function job_import_purge_ajax()
     PuntWorkLogger::logAjaxRequest('job_import_purge', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validate_ajax_request('job_import_purge', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('job_import_purge', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -212,9 +212,9 @@ function job_import_purge_ajax()
 
     try {
         // Get batch parameters with validation
-        $batch_size = SecurityUtils::validate_field($_POST, 'batch_size', 'integer', ['min' => 1, 'max' => 500, 'default' => 50]);
-        $offset = SecurityUtils::validate_field($_POST, 'offset', 'integer', ['min' => 0, 'default' => 0]);
-        $is_continue = SecurityUtils::validate_field($_POST, 'is_continue', 'boolean', ['default' => false]);
+        $batch_size = SecurityUtils::validateField($_POST, 'batch_size', 'integer', ['min' => 1, 'max' => 500, 'default' => 50]);
+        $offset = SecurityUtils::validateField($_POST, 'offset', 'integer', ['min' => 0, 'default' => 0]);
+        $is_continue = SecurityUtils::validateField($_POST, 'is_continue', 'boolean', ['default' => false]);
 
         PuntWorkLogger::info('Starting purge batch', PuntWorkLogger::CONTEXT_PURGE, [
             'batch_size' => $batch_size,
@@ -249,7 +249,7 @@ function job_import_purge_ajax()
             usleep(50000);
             if (microtime(true) - $lock_start > 10) {
                 PuntWorkLogger::error('Purge lock timeout', PuntWorkLogger::CONTEXT_PURGE);
-                AjaxErrorHandler::send_error('Purge lock timeout');
+                AjaxErrorHandler::sendError('Purge lock timeout');
                 return;
             }
         }
@@ -273,7 +273,7 @@ function job_import_purge_ajax()
             if (!$has_processed_data) {
                 delete_transient('job_import_purge_lock');
                 PuntWorkLogger::error('Purge skipped: no processed data found', PuntWorkLogger::CONTEXT_PURGE);
-                AjaxErrorHandler::send_error('No import data found. Please run an import first before purging.');
+                AjaxErrorHandler::sendError('No import data found. Please run an import first before purging.');
                 return;
             }
 
@@ -327,7 +327,7 @@ function job_import_purge_ajax()
                 'time_elapsed' => $progress['time_elapsed'],
                 'logs_count' => count($logs)
             ]);
-            AjaxErrorHandler::send_success([
+            AjaxErrorHandler::sendSuccess([
                 'message' => $message,
                 'complete' => true,
                 'total_processed' => $progress['total_processed'],
@@ -388,7 +388,7 @@ function job_import_purge_ajax()
             'progress_percentage' => $progress_percentage,
             'logs_count' => count($logs)
         ]);
-        AjaxErrorHandler::send_success([
+        AjaxErrorHandler::sendSuccess([
             'message' => $message,
             'complete' => false,
             'next_offset' => $progress['current_offset'],
@@ -403,7 +403,7 @@ function job_import_purge_ajax()
         PuntWorkLogger::error('Purge failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_PURGE);
 
         PuntWorkLogger::logAjaxResponse('job_import_purge', ['message' => 'Purge failed: ' . $e->getMessage()], false);
-        AjaxErrorHandler::send_error('Purge failed: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Purge failed: ' . $e->getMessage());
     }
 }
 
@@ -413,9 +413,9 @@ function job_import_cleanup_continue_ajax()
     PuntWorkLogger::logAjaxRequest('job_import_cleanup_continue', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validate_ajax_request('job_import_cleanup_continue', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('job_import_cleanup_continue', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -423,12 +423,12 @@ function job_import_cleanup_continue_ajax()
         $progress = get_option('job_import_cleanup_progress');
         if (!$progress || $progress['complete']) {
             PuntWorkLogger::error('No active cleanup operation found', PuntWorkLogger::CONTEXT_PURGE);
-            AjaxErrorHandler::send_error('No active cleanup operation found');
+            AjaxErrorHandler::sendError('No active cleanup operation found');
             return;
         }
 
         // Get batch parameters with validation
-        $batch_size = SecurityUtils::validate_field($_POST, 'batch_size', 'integer', ['min' => 1, 'max' => 500, 'default' => 50]);
+        $batch_size = SecurityUtils::validateField($_POST, 'batch_size', 'integer', ['min' => 1, 'max' => 500, 'default' => 50]);
 
         PuntWorkLogger::info('Continuing cleanup operation', PuntWorkLogger::CONTEXT_PURGE, [
             'batch_size' => $batch_size,
@@ -443,6 +443,6 @@ function job_import_cleanup_continue_ajax()
         job_import_cleanup_duplicates_ajax();
     } catch (\Exception $e) {
         PuntWorkLogger::error('Cleanup continue failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_PURGE);
-        AjaxErrorHandler::send_error('Cleanup continue failed: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Cleanup continue failed: ' . $e->getMessage());
     }
 }

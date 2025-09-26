@@ -26,7 +26,7 @@ function process_feed_ajax()
     PuntWorkLogger::logAjaxRequest('process_feed', $_POST);
 
     // Use comprehensive security validation with field validation
-    $validation = SecurityUtils::validate_ajax_request(
+    $validation = SecurityUtils::validateAjaxRequest(
         'process_feed',
         'job_import_nonce',
         ['feed_key'], // required fields
@@ -36,7 +36,7 @@ function process_feed_ajax()
     );
 
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -47,7 +47,7 @@ function process_feed_ajax()
 
         if (empty($url)) {
             PuntWorkLogger::error("Invalid feed key: {$feed_key}", PuntWorkLogger::CONTEXT_FEED);
-            AjaxErrorHandler::send_error('Invalid feed key');
+            AjaxErrorHandler::sendError('Invalid feed key');
             return;
         }
 
@@ -61,13 +61,13 @@ function process_feed_ajax()
         PuntWorkLogger::logFeedProcessing($feed_key, $url, $count, true);
 
         PuntWorkLogger::logAjaxResponse('process_feed', ['item_count' => $count, 'logs_count' => count($logs)]);
-        AjaxErrorHandler::send_success(['item_count' => $count, 'logs' => $logs]);
+        AjaxErrorHandler::sendSuccess(['item_count' => $count, 'logs' => $logs]);
     } catch (\Exception $e) {
         PuntWorkLogger::logFeedProcessing($feed_key ?? 'unknown', $url ?? '', 0, false);
         PuntWorkLogger::error("Feed processing failed: {$feed_key} - " . $e->getMessage(), PuntWorkLogger::CONTEXT_FEED);
 
         PuntWorkLogger::logAjaxResponse('process_feed', ['message' => 'Process feed failed: ' . $e->getMessage()], false);
-        AjaxErrorHandler::send_error('Process feed failed: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Process feed failed: ' . $e->getMessage());
     }
 }
 
@@ -77,7 +77,7 @@ function combine_jsonl_ajax()
     PuntWorkLogger::logAjaxRequest('combine_jsonl', $_POST);
 
     // Use comprehensive security validation with field validation
-    $validation = SecurityUtils::validate_ajax_request(
+    $validation = SecurityUtils::validateAjaxRequest(
         'combine_jsonl',
         'job_import_nonce',
         ['total_items'], // required fields
@@ -87,7 +87,7 @@ function combine_jsonl_ajax()
     );
 
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -103,12 +103,12 @@ function combine_jsonl_ajax()
         PuntWorkLogger::info('JSONL files combined successfully', PuntWorkLogger::CONTEXT_FEED, ['total_items' => $total_items]);
 
         PuntWorkLogger::logAjaxResponse('combine_jsonl', ['logs_count' => count($logs)]);
-        AjaxErrorHandler::send_success(['logs' => $logs]);
+        AjaxErrorHandler::sendSuccess(['logs' => $logs]);
     } catch (\Exception $e) {
         PuntWorkLogger::error("JSONL combination failed: " . $e->getMessage(), PuntWorkLogger::CONTEXT_FEED);
 
         PuntWorkLogger::logAjaxResponse('combine_jsonl', ['message' => 'Combine JSONL failed: ' . $e->getMessage()], false);
-        AjaxErrorHandler::send_error('Combine JSONL failed: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Combine JSONL failed: ' . $e->getMessage());
     }
 }
 
@@ -118,9 +118,9 @@ function generate_json_ajax()
     PuntWorkLogger::logAjaxRequest('generate_json', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validate_ajax_request('generate_json', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('generate_json', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -131,11 +131,11 @@ function generate_json_ajax()
         PuntWorkLogger::info('JSONL generation completed successfully', PuntWorkLogger::CONTEXT_FEED);
 
         PuntWorkLogger::logAjaxResponse('generate_json', ['message' => 'JSONL generated successfully', 'logs_count' => count($gen_logs)]);
-        AjaxErrorHandler::send_success(['message' => 'JSONL generated successfully', 'logs' => $gen_logs]);
+        AjaxErrorHandler::sendSuccess(['message' => 'JSONL generated successfully', 'logs' => $gen_logs]);
     } catch (\Exception $e) {
         PuntWorkLogger::error('JSONL generation failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_FEED);
 
         PuntWorkLogger::logAjaxResponse('generate_json', ['message' => 'JSONL generation failed: ' . $e->getMessage()], false);
-        AjaxErrorHandler::send_error('JSONL generation failed: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('JSONL generation failed: ' . $e->getMessage());
     }
 }
