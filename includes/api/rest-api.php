@@ -174,18 +174,36 @@ function handle_trigger_import($request) {
         // Clear any previous cancellation before starting
         delete_transient('import_cancel');
 
-        // Schedule the import to run asynchronously
-        error_log('[PUNTWORK] API: Checking async conditions - as_schedule_single_action: ' . (function_exists('as_schedule_single_action') ? 'true' : 'false') . ', wp_schedule_single_event: ' . (function_exists('wp_schedule_single_event') ? 'true' : 'false'));
-        if (function_exists('as_schedule_single_action') && false) { // Temporarily force sync for testing
+        // Determine execution mode
+        $use_async = false; // Force synchronous for debugging
+        
+        if ($use_async && function_exists('as_schedule_single_action')) {
             // Use Action Scheduler if available
+            error_log('[PUNTWORK] API: Using Action Scheduler');
             as_schedule_single_action(time(), 'puntwork_scheduled_import_async');
-        } elseif (function_exists('wp_schedule_single_event') && false) { // Temporarily force sync for testing
+            
+            PuntWorkLogger::info('Remote import trigger initiated asynchronously', PuntWorkLogger::CONTEXT_API);
+            return new \WP_REST_Response([
+                'success' => true,
+                'message' => 'Import triggered successfully',
+                'async' => true
+            ], 200);
+            
+        } elseif ($use_async && function_exists('wp_schedule_single_event')) {
             // Fallback: Use WordPress cron for near-immediate execution
+            error_log('[PUNTWORK] API: Using WP Cron');
             wp_schedule_single_event(time() + 1, 'puntwork_scheduled_import_async');
+            
+            PuntWorkLogger::info('Remote import trigger initiated asynchronously', PuntWorkLogger::CONTEXT_API);
+            return new \WP_REST_Response([
+                'success' => true,
+                'message' => 'Import triggered successfully',
+                'async' => true
+            ], 200);
+            
         } else {
-            error_log('[PUNTWORK] API: Taking synchronous path');
-            // Force synchronous execution for testing polling mechanism
-            error_log('[PUNTWORK] API: Forcing synchronous execution');
+            // Force synchronous execution
+            error_log('[PUNTWORK] API: Using synchronous execution');
             if (!function_exists('run_scheduled_import')) {
                 error_log('[PUNTWORK] API: run_scheduled_import function not found');
                 return new \WP_REST_Response([
@@ -194,6 +212,7 @@ function handle_trigger_import($request) {
                     'async' => false
                 ], 500);
             }
+            
             $result = run_scheduled_import($test_mode, 'api');
             error_log('[PUNTWORK] API: run_scheduled_import returned: ' . json_encode($result));
 
@@ -228,6 +247,7 @@ function handle_trigger_import($request) {
                 ], 200);
             } else {
                 $error_msg = $result['message'] ?? 'Unknown error occurred';
+                error_log('[PUNTWORK] API: About to return sync error response: ' . $error_msg);
                 PuntWorkLogger::error('Remote import trigger failed (sync)', PuntWorkLogger::CONTEXT_API, [
                     'error' => $error_msg
                 ]);
@@ -241,19 +261,6 @@ function handle_trigger_import($request) {
                 ], 500);
             }
         }
-
-        // Clear test mode (will be set again by async function if needed)
-        if ($test_mode) {
-            delete_option('puntwork_test_mode');
-        }
-
-        PuntWorkLogger::info('Remote import trigger initiated asynchronously', PuntWorkLogger::CONTEXT_API);
-
-        return new \WP_REST_Response([
-            'success' => true,
-            'message' => 'Import triggered successfully',
-            'async' => true
-        ], 200);
 
     } catch (\Exception $e) {
         PuntWorkLogger::error('Remote import trigger exception', PuntWorkLogger::CONTEXT_API, [
