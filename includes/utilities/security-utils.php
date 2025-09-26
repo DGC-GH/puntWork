@@ -465,6 +465,212 @@ class SecurityUtils
 
         return false;
     }
+
+    /**
+     * Enhanced URL validation with security checks
+     *
+     * @param string $url URL to validate
+     * @param array $allowed_schemes Allowed URL schemes
+     * @return bool True if URL is valid and safe
+     */
+    public static function validateSecureUrl(string $url, array $allowed_schemes = ['http', 'https']): bool
+    {
+        // Basic URL validation
+        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+            return false;
+        }
+
+        $parsed = parse_url($url);
+        if (!$parsed) {
+            return false;
+        }
+
+        // Check scheme
+        if (!in_array(strtolower($parsed['scheme'] ?? ''), $allowed_schemes)) {
+            return false;
+        }
+
+        // Check for suspicious patterns
+        $suspicious_patterns = [
+            '/\.\./',  // Directory traversal
+            '/localhost/i',
+            '/127\.0\.0\.1/',
+            '/0\.0\.0\.0/',
+            '/169\.254\./',  // Link-local
+            '/10\./',        // Private network
+            '/172\.(1[6-9]|2[0-9]|3[0-1])\./', // Private network
+            '/192\.168\./',  // Private network
+        ];
+
+        foreach ($suspicious_patterns as $pattern) {
+            if (preg_match($pattern, $url)) {
+                return false;
+            }
+        }
+
+        // Check host length (prevent very long hosts)
+        if (isset($parsed['host']) && strlen($parsed['host']) > 253) {
+            return false;
+        }
+
+        // Additional security headers check for HTTPS
+        if ($parsed['scheme'] === 'https') {
+            // Could add certificate validation here if needed
+        }
+
+        return true;
+    }
+
+    /**
+     * Validate and sanitize job data
+     *
+     * @param array $job_data Raw job data
+     * @return array|WP_Error Sanitized data or error
+     */
+    public static function validateJobData(array $job_data)
+    {
+        $sanitized = [];
+        $errors = [];
+
+        // Required fields validation
+        $required_fields = ['job_title', 'job_desc'];
+        foreach ($required_fields as $field) {
+            if (empty($job_data[$field])) {
+                $errors[] = "Missing required field: {$field}";
+                continue;
+            }
+        }
+
+        if (!empty($errors)) {
+            return new \WP_Error('validation_error', 'Job data validation failed', $errors);
+        }
+
+        // Sanitize text fields
+        $text_fields = ['job_title', 'job_desc', 'job_location', 'job_company', 'job_type'];
+        foreach ($text_fields as $field) {
+            if (isset($job_data[$field])) {
+                $sanitized[$field] = self::sanitizeText($job_data[$field]);
+            }
+        }
+
+        // Validate and sanitize URLs
+        $url_fields = ['job_url', 'job_apply_url', 'company_url'];
+        foreach ($url_fields as $field) {
+            if (isset($job_data[$field]) && !empty($job_data[$field])) {
+                if (!self::validateSecureUrl($job_data[$field])) {
+                    $errors[] = "Invalid URL in field: {$field}";
+                } else {
+                    $sanitized[$field] = esc_url_raw($job_data[$field]);
+                }
+            }
+        }
+
+        // Validate salary fields
+        $salary_fields = ['job_salary_min', 'job_salary_max'];
+        foreach ($salary_fields as $field) {
+            if (isset($job_data[$field])) {
+                $salary = self::sanitizeNumeric($job_data[$field]);
+                if ($salary !== null) {
+                    $sanitized[$field] = $salary;
+                }
+            }
+        }
+
+        // Validate email
+        if (isset($job_data['job_email']) && !empty($job_data['job_email'])) {
+            if (!is_email($job_data['job_email'])) {
+                $errors[] = "Invalid email address";
+            } else {
+                $sanitized['job_email'] = sanitize_email($job_data['job_email']);
+            }
+        }
+
+        // Validate dates
+        $date_fields = ['job_date_posted', 'job_date_expires'];
+        foreach ($date_fields as $field) {
+            if (isset($job_data[$field]) && !empty($job_data[$field])) {
+                $timestamp = strtotime($job_data[$field]);
+                if ($timestamp === false) {
+                    $errors[] = "Invalid date format in field: {$field}";
+                } else {
+                    $sanitized[$field] = date('Y-m-d H:i:s', $timestamp);
+                }
+            }
+        }
+
+        if (!empty($errors)) {
+            return new \WP_Error('validation_error', 'Job data validation failed', $errors);
+        }
+
+        return $sanitized;
+    }
+
+    /**
+     * Sanitize text input with length limits
+     *
+     * @param string $text Text to sanitize
+     * @param int $max_length Maximum length
+     * @return string Sanitized text
+     */
+    private static function sanitizeText(string $text, int $max_length = 10000): string
+    {
+        $text = wp_strip_all_tags($text);
+        $text = sanitize_text_field($text);
+        if (strlen($text) > $max_length) {
+            $text = substr($text, 0, $max_length);
+        }
+        return $text;
+    }
+
+    /**
+     * Sanitize numeric input
+     *
+     * @param mixed $value Value to sanitize
+     * @return float|null Sanitized number or null
+     */
+    private static function sanitizeNumeric($value): ?float
+    {
+        if (is_numeric($value)) {
+            $num = (float) $value;
+            return $num >= 0 ? $num : null;
+        }
+        return null;
+    }
+
+    /**
+     * Validate feed data structure
+     *
+     * @param array $feed_data Feed data to validate
+     * @return array|WP_Error Validated data or error
+     */
+    public static function validateFeedData(array $feed_data)
+    {
+        $errors = [];
+
+        // Check for required feed metadata
+        if (empty($feed_data['url'])) {
+            $errors[] = 'Feed URL is required';
+        } elseif (!self::validateSecureUrl($feed_data['url'])) {
+            $errors[] = 'Invalid feed URL';
+        }
+
+        if (empty($feed_data['format'])) {
+            $errors[] = 'Feed format is required';
+        } elseif (!in_array($feed_data['format'], ['xml', 'json', 'csv'])) {
+            $errors[] = 'Unsupported feed format';
+        }
+
+        if (!empty($errors)) {
+            return new \WP_Error('feed_validation_error', 'Feed validation failed', $errors);
+        }
+
+        return [
+            'url' => esc_url_raw($feed_data['url']),
+            'format' => sanitize_text_field($feed_data['format']),
+            'name' => sanitize_text_field($feed_data['name'] ?? ''),
+            'description' => self::sanitizeText($feed_data['description'] ?? '', 500)
+        ];
+    }
 }
 
 /**

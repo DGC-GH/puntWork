@@ -254,6 +254,82 @@ function performance_metrics_page()
                     </div>
                 </div>
             </div>
+
+            <!-- AI Feed Optimization -->
+            <div class="performance-section">
+                <h2><?php _e('AI Feed Optimization', 'puntwork'); ?></h2>
+                <?php
+                $last_optimization = get_option('puntwork_last_optimization', []);
+                $recommendations = [];
+
+                if (class_exists('\Puntwork\AI\FeedOptimizer')) {
+                    $recommendations = \Puntwork\AI\FeedOptimizer::getOptimizationRecommendations();
+                }
+                ?>
+                <div class="optimization-controls">
+                    <button id="run-optimization" class="button button-primary">
+                        <span class="dashicons dashicons-update"></span>
+                        <?php _e('Run Feed Optimization', 'puntwork'); ?>
+                    </button>
+                    <span id="optimization-status"></span>
+                </div>
+
+                <?php if (!empty($last_optimization)) : ?>
+                    <div class="optimization-results">
+                        <h3><?php _e('Last Optimization Results', 'puntwork'); ?></h3>
+                        <p class="optimization-timestamp">
+                            <?php echo sprintf(__('Last run: %s', 'puntwork'), wp_date('M j, Y H:i', $last_optimization['timestamp'])); ?>
+                        </p>
+                        <div class="optimization-stats">
+                            <div class="optimization-stat">
+                                <span class="optimization-stat-value"><?php echo $last_optimization['results']['feeds_analyzed'] ?? 0; ?></span>
+                                <span class="optimization-stat-label"><?php _e('Feeds Analyzed', 'puntwork'); ?></span>
+                            </div>
+                            <div class="optimization-stat">
+                                <span class="optimization-stat-value"><?php echo $last_optimization['results']['optimizations_applied'] ?? 0; ?></span>
+                                <span class="optimization-stat-label"><?php _e('Optimizations Applied', 'puntwork'); ?></span>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($recommendations['feed_optimizations'])) : ?>
+                    <div class="optimization-recommendations">
+                        <h3><?php _e('Feed Optimization Recommendations', 'puntwork'); ?></h3>
+                        <?php foreach ($recommendations['feed_optimizations'] as $feed_rec) : ?>
+                            <div class="recommendation-card">
+                                <h4><?php echo esc_html($feed_rec['feed_name']); ?></h4>
+                                <?php foreach ($feed_rec['recommendations'] as $rec) : ?>
+                                    <div class="recommendation-item recommendation-<?php echo esc_attr($rec['severity']); ?>">
+                                        <span class="recommendation-type"><?php echo esc_html(ucfirst($rec['type'])); ?>:</span>
+                                        <?php echo esc_html($rec['message']); ?>
+                                        <?php if (!empty($rec['suggested_action'])) : ?>
+                                            <br><small><em><?php echo esc_html($rec['suggested_action']); ?></em></small>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($recommendations['global_optimizations'])) : ?>
+                    <div class="optimization-recommendations">
+                        <h3><?php _e('Global Optimization Recommendations', 'puntwork'); ?></h3>
+                        <?php foreach ($recommendations['global_optimizations'] as $rec) : ?>
+                            <div class="recommendation-item recommendation-<?php echo esc_attr($rec['severity']); ?>">
+                                <span class="recommendation-type"><?php echo esc_html(ucfirst($rec['type'])); ?>:</span>
+                                <?php echo esc_html($rec['message']); ?>
+                                <?php if (!empty($rec['suggested_action'])) : ?>
+                                    <br><small><em><?php echo esc_html($rec['suggested_action']); ?></em></small>
+                                <?php endif; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -389,6 +465,53 @@ function performance_metrics_page()
                     modal.style.display = 'none';
                 }
             });
+
+            // Feed optimization functionality
+            const runOptimizationBtn = document.getElementById('run-optimization');
+            const optimizationStatus = document.getElementById('optimization-status');
+
+            if (runOptimizationBtn && optimizationStatus) {
+                runOptimizationBtn.addEventListener('click', function() {
+                    runOptimizationBtn.disabled = true;
+                    runOptimizationBtn.innerHTML = '<span class="dashicons dashicons-update dashicons-spin"></span> Running...';
+                    optimizationStatus.textContent = 'Running feed optimization...';
+
+                    const data = {
+                        action: 'run_feed_optimization',
+                        nonce: '<?php echo wp_create_nonce("puntwork_feed_optimization"); ?>'
+                    };
+
+                    fetch(ajaxurl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: new URLSearchParams(data)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            optimizationStatus.style.color = 'green';
+                            optimizationStatus.textContent = 'Optimization completed successfully!';
+                            // Reload the page to show updated results
+                            setTimeout(() => {
+                                location.reload();
+                            }, 2000);
+                        } else {
+                            optimizationStatus.style.color = 'red';
+                            optimizationStatus.textContent = 'Error: ' + (data.data || 'Unknown error');
+                            runOptimizationBtn.disabled = false;
+                            runOptimizationBtn.innerHTML = '<span class="dashicons dashicons-update"></span> Run Feed Optimization';
+                        }
+                    })
+                    .catch(error => {
+                        optimizationStatus.style.color = 'red';
+                        optimizationStatus.textContent = 'Error: ' + error.message;
+                        runOptimizationBtn.disabled = false;
+                        runOptimizationBtn.innerHTML = '<span class="dashicons dashicons-update"></span> Run Feed Optimization';
+                    });
+                });
+            }
         });
 
         function formatBytes(bytes) {
@@ -583,6 +706,82 @@ function performance_metrics_page()
         .performance-details li {
             margin-bottom: 5px;
             line-height: 1.4;
+        }
+
+        .optimization-controls {
+            margin-bottom: 20px;
+        }
+
+        .optimization-results {
+            background: #f8f9fa;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .optimization-timestamp {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .optimization-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .optimization-stat {
+            text-align: center;
+        }
+
+        .optimization-stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #007cba;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .optimization-stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .optimization-recommendations {
+            margin-top: 20px;
+        }
+
+        .recommendation-card {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .recommendation-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-left: 4px solid transparent;
+        }
+
+        .recommendation-item.recommendation-info {
+            border-left-color: #007cba;
+        }
+
+        .recommendation-item.recommendation-warning {
+            border-left-color: #ffc107;
+        }
+
+        .recommendation-item.recommendation-error {
+            border-left-color: #dc3545;
+        }
+
+        .recommendation-type {
+            font-weight: bold;
+            margin-right: 5px;
         }
     </style>
     <?php

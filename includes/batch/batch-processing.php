@@ -126,7 +126,18 @@ function process_batch_items_logic(array $setup): array
     ]);
 
     try {
-        $perf_id = start_performance_monitoring('batch_processing');
+        // Start performance monitoring
+        $perf_id = start_performance_monitoring('batch_import');
+        $span = start_tracing_span('batch_import', ['batch_size' => $batch_size, 'start_index' => $start_index]);
+
+        // Start database performance monitoring
+        start_db_performance_monitoring();
+
+        // Optimize memory for large batch
+        optimize_memory_for_batch();
+
+        // Reset memory manager
+        reset_memory_manager();
 
         extract($setup);
 
@@ -256,6 +267,12 @@ function process_batch_items_logic(array $setup): array
             // End performance monitoring
             $perf_data = end_performance_monitoring($perf_id);
 
+            // End database performance monitoring
+            $db_perf_data = end_db_performance_monitoring();
+
+            // Include DB performance in main performance data
+            $perf_data['database'] = $db_perf_data;
+
             // Update import status for UI polling
             $current_status = get_option('job_import_status', []);
             $current_status['total'] = $total;
@@ -277,6 +294,23 @@ function process_batch_items_logic(array $setup): array
             $current_status['last_update'] = time();
             $current_status['logs'] = array_slice($logs, -50); // Keep last 50 log entries
             update_option('job_import_status', $current_status, false);
+
+            // Schedule async analytics update for better performance
+            $analytics_data = [
+                'import_id' => wp_generate_uuid4(),
+                'start_time' => $start_time,
+                'end_time' => microtime(true),
+                'batch_time' => $batch_time,
+                'total' => $total,
+                'processed' => $result['processed_count'],
+                'published' => $published,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'duplicates_drafted' => $duplicates_drafted,
+                'performance' => $perf_data,
+                'message' => ''
+            ];
+            schedule_async_analytics_update($analytics_data);
 
             return [
                 'success' => true,
@@ -449,6 +483,12 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Processing #' . ($current_index + 1) . ' GUID: ' . $guid;
         $batch_items[$guid] = ['item' => $item, 'index' => $current_index];
 
+        // Enhanced memory management
+        $memory_status = check_batch_memory_usage($current_index, $threshold * 0.8); // More aggressive threshold
+        if (!empty($memory_status['actions_taken'])) {
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Memory management: ' . implode(', ', $memory_status['actions_taken']);
+        }
+
         // Memory check
         if (memory_get_usage(true) > $threshold) {
             $batch_size = max(1, (int)($batch_size * 0.8));
@@ -495,6 +535,23 @@ function process_batch_data(array $batch_guids, array $batch_items, array &$logs
 
     $post_ids_by_guid = [];
 
+    // Handle duplicates
+    handle_batch_duplicates($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
+
+    // Prepare batch metadata
+    $batch_metadata = prepare_batch_metadata($post_ids_by_guid);
+
+    // Process items
+    $processed_count = process_batch_items_with_metadata($batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid, $logs, $updated, $published, $skipped);
+
+    return ['processed_count' => $processed_count];
+}
+
+/**
+ * Handle duplicates for the batch.
+ */
+function handle_batch_duplicates(array $batch_guids, array $existing_by_guid, array &$logs, int &$duplicates_drafted, array &$post_ids_by_guid): void
+{
     // Use advanced deduplication if available and enabled
     if (class_exists(__NAMESPACE__ . '\\JobDeduplicator') && apply_filters('puntwork_use_advanced_deduplication', true)) {
         JobDeduplicator::handle_duplicates_advanced($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
@@ -502,74 +559,114 @@ function process_batch_data(array $batch_guids, array $batch_items, array &$logs
         // Fallback to original deduplication logic
         handle_duplicates($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
     }
+}
 
-    // Bulk fetch for all existing in batch with caching
+/**
+ * Prepare metadata for batch processing.
+ */
+function prepare_batch_metadata(array $post_ids_by_guid): array
+{
+    global $wpdb;
+
     $post_ids = array_values($post_ids_by_guid);
+    if (empty($post_ids)) {
+        return ['last_updates' => [], 'hashes_by_post' => []];
+    }
+
     $max_chunk_size = 50;
     $post_id_chunks = array_chunk($post_ids, $max_chunk_size);
+
+    // Get last updates with caching
+    $last_updates = get_cached_last_updates($post_ids, $post_id_chunks);
+
+    // Get import hashes with caching
+    $hashes_by_post = get_cached_import_hashes($post_ids, $post_id_chunks);
+
+    return [
+        'last_updates' => $last_updates,
+        'hashes_by_post' => $hashes_by_post
+    ];
+}
+
+/**
+ * Get cached last updates for posts.
+ */
+function get_cached_last_updates(array $post_ids, array $post_id_chunks): array
+{
+    global $wpdb;
+
+    sort($post_ids);
+    $cache_key = 'batch_last_updates_' . md5(implode(',', $post_ids));
+    $cached = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
+
+    if ($cached !== false) {
+        return $cached;
+    }
+
     $last_updates = [];
-    $all_hashes_by_post = [];
+    foreach ($post_id_chunks as $chunk) {
+        if (empty($chunk)) continue;
+        $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
+        $chunk_last = $wpdb->get_results($wpdb->prepare(
+            "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_last_import_update' AND post_id IN ($placeholders)",
+            $chunk
+        ), OBJECT_K);
+        $last_updates += (array)$chunk_last;
+    }
 
-    if (!empty($post_ids)) {
-        // Cache key for last updates
-        sort($post_ids);
-        $last_updates_cache_key = 'batch_last_updates_' . md5(implode(',', $post_ids));
-        $cached_last_updates = CacheManager::get($last_updates_cache_key, CacheManager::GROUP_ANALYTICS);
+    // Cache for 5 minutes during import processing
+    CacheManager::set($cache_key, $last_updates, CacheManager::GROUP_ANALYTICS, 5 * MINUTE_IN_SECONDS);
+    return $last_updates;
+}
 
-        if ($cached_last_updates !== false) {
-            $last_updates = $cached_last_updates;
-        } else {
-            foreach ($post_id_chunks as $chunk) {
-                if (empty($chunk)) {
-                    continue;
-                }
-                $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
-                $chunk_last = $wpdb->get_results($wpdb->prepare(
-                    "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_last_import_update' AND post_id IN ($placeholders)",
-                    $chunk
-                ), OBJECT_K);
-                $last_updates += (array)$chunk_last;
-            }
-            // Cache last updates for 5 minutes during import processing
-            CacheManager::set($last_updates_cache_key, $last_updates, CacheManager::GROUP_ANALYTICS, 5 * MINUTE_IN_SECONDS);
-        }
+/**
+ * Get cached import hashes for posts.
+ */
+function get_cached_import_hashes(array $post_ids, array $post_id_chunks): array
+{
+    global $wpdb;
 
-        // Cache key for import hashes
-        $hashes_cache_key = 'batch_import_hashes_' . md5(implode(',', $post_ids));
-        $cached_hashes = CacheManager::get($hashes_cache_key, CacheManager::GROUP_ANALYTICS);
+    $cache_key = 'batch_import_hashes_' . md5(implode(',', $post_ids));
+    $cached = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
 
-        if ($cached_hashes !== false) {
-            $all_hashes_by_post = $cached_hashes;
-        } else {
-            foreach ($post_id_chunks as $chunk) {
-                if (empty($chunk)) {
-                    continue;
-                }
-                $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
-                $chunk_hashes = $wpdb->get_results($wpdb->prepare(
-                    "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
-                    $chunk
-                ), OBJECT_K);
-                foreach ($chunk_hashes as $id => $obj) {
-                    $all_hashes_by_post[$id] = $obj->meta_value;
-                }
-            }
-            // Cache import hashes for 5 minutes during import processing
-            CacheManager::set($hashes_cache_key, $all_hashes_by_post, CacheManager::GROUP_ANALYTICS, 5 * MINUTE_IN_SECONDS);
+    if ($cached !== false) {
+        return $cached;
+    }
+
+    $hashes_by_post = [];
+    foreach ($post_id_chunks as $chunk) {
+        if (empty($chunk)) continue;
+        $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
+        $chunk_hashes = $wpdb->get_results($wpdb->prepare(
+            "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
+            $chunk
+        ), OBJECT_K);
+        foreach ($chunk_hashes as $id => $obj) {
+            $hashes_by_post[$id] = $obj->meta_value;
         }
     }
 
+    // Cache for 5 minutes during import processing
+    CacheManager::set($cache_key, $hashes_by_post, CacheManager::GROUP_ANALYTICS, 5 * MINUTE_IN_SECONDS);
+    return $hashes_by_post;
+}
+
+/**
+ * Process batch items with prepared metadata.
+ */
+function process_batch_items_with_metadata(array $batch_guids, array $batch_items, array $batch_metadata, array $post_ids_by_guid, array &$logs, int &$updated, int &$published, int &$skipped): int
+{
     $processed_count = 0;
     $acf_fields = get_acf_fields();
     $zero_empty_fields = get_zero_empty_fields();
 
-    process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $logs, $updated, $published, $skipped, $processed_count);
+    process_batch_items($batch_guids, $batch_items, $batch_metadata['last_updates'], $batch_metadata['hashes_by_post'], $acf_fields, $zero_empty_fields, $post_ids_by_guid, $logs, $updated, $published, $skipped, $processed_count);
 
-    return ['processed_count' => $processed_count];
+    return $processed_count;
 }
 
 /**
- * Load a batch of items from JSONL file.
+ * Load a batch of items from JSONL file with improved performance.
  *
  * @param string $json_path Path to JSONL file.
  * @param int $start_index Starting index.
@@ -583,18 +680,20 @@ function load_json_batch($json_path, $start_index, $batch_size)
     $current_index = 0;
 
     if (($handle = fopen($json_path, "r")) !== false) {
-        while (($line = fgets($handle)) !== false) {
-            if ($current_index >= $start_index && $count < $batch_size) {
-                $line = trim($line);
-                if (!empty($line)) {
-                    $item = json_decode($line, true);
-                    if ($item !== null) {
-                        $items[] = $item;
-                        $count++;
-                    }
+        // Skip to start_index efficiently
+        while ($current_index < $start_index && ($line = fgets($handle)) !== false) {
+            $current_index++;
+        }
+
+        // Read batch_size items
+        while ($count < $batch_size && ($line = fgets($handle)) !== false) {
+            $line = trim($line);
+            if (!empty($line)) {
+                $item = json_decode($line, true);
+                if ($item !== null) {
+                    $items[] = $item;
+                    $count++;
                 }
-            } elseif ($current_index >= $start_index + $batch_size) {
-                break;
             }
             $current_index++;
         }

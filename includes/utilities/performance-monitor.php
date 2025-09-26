@@ -435,6 +435,377 @@ class PerformanceMonitor
 }
 
 /**
+ * Database query performance monitor
+ */
+class DatabasePerformanceMonitor
+{
+    private static array $query_log = [];
+    private static float $start_time = 0.0;
+
+    /**
+     * Start monitoring database queries
+     */
+    public static function start(): void
+    {
+        self::$query_log = [];
+        self::$start_time = microtime(true);
+
+        // Hook into WordPress database queries
+        add_filter('query', [__CLASS__, 'log_query']);
+        add_filter('get_col', [__CLASS__, 'log_query']);
+        add_filter('get_row', [__CLASS__, 'log_query']);
+        add_filter('get_results', [__CLASS__, 'log_query']);
+    }
+
+    /**
+     * Log a database query
+     *
+     * @param string $query The SQL query
+     * @return string The query (unchanged)
+     */
+    public static function log_query(string $query): string
+    {
+        $query_start = microtime(true);
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5);
+
+        // Store query info
+        self::$query_log[] = [
+            'query' => $query,
+            'start_time' => $query_start,
+            'backtrace' => $backtrace,
+            'query_type' => self::get_query_type($query)
+        ];
+
+        return $query;
+    }
+
+    /**
+     * End monitoring and return statistics
+     *
+     * @return array Query performance statistics
+     */
+    public static function end(): array
+    {
+        $end_time = microtime(true);
+        $total_time = $end_time - self::$start_time;
+
+        // Remove hooks
+        remove_filter('query', [__CLASS__, 'log_query']);
+        remove_filter('get_col', [__CLASS__, 'log_query']);
+        remove_filter('get_row', [__CLASS__, 'log_query']);
+        remove_filter('get_results', [__CLASS__, 'log_query']);
+
+        $query_count = count(self::$query_log);
+        $slow_queries = array_filter(self::$query_log, fn($q) => ($q['start_time'] ?? 0) > 0.1); // Queries > 100ms
+
+        return [
+            'total_queries' => $query_count,
+            'total_time' => round($total_time, 4),
+            'avg_query_time' => $query_count > 0 ? round($total_time / $query_count, 4) : 0,
+            'slow_queries_count' => count($slow_queries),
+            'slow_queries' => array_slice($slow_queries, 0, 10), // Top 10 slow queries
+            'query_types' => self::analyze_query_types()
+        ];
+    }
+
+    /**
+     * Get query type from SQL
+     */
+    private static function get_query_type(string $query): string
+    {
+        $query = strtoupper(trim($query));
+        if (strpos($query, 'SELECT') === 0) return 'SELECT';
+        if (strpos($query, 'INSERT') === 0) return 'INSERT';
+        if (strpos($query, 'UPDATE') === 0) return 'UPDATE';
+        if (strpos($query, 'DELETE') === 0) return 'DELETE';
+        return 'OTHER';
+    }
+
+    /**
+     * Analyze query types distribution
+     */
+    private static function analyze_query_types(): array
+    {
+        $types = [];
+        foreach (self::$query_log as $query) {
+            $type = $query['query_type'];
+            $types[$type] = ($types[$type] ?? 0) + 1;
+        }
+        return $types;
+    }
+}
+
+/**
+ * Memory management utilities for large imports
+ */
+class MemoryManager
+{
+    private static int $gc_threshold = 100; // Run GC every 100 items
+    private static int $processed_count = 0;
+    private static int $last_gc_run = 0;
+
+    /**
+     * Check and manage memory usage during batch processing
+     *
+     * @param int $current_index Current processing index
+     * @param float $threshold Memory threshold (0-1)
+     * @return array Memory management actions taken
+     */
+    public static function check_memory_usage(int $current_index, float $threshold = 0.8): array
+    {
+        $actions = [];
+        $memory_usage = memory_get_usage(true);
+        $memory_limit = self::get_memory_limit_bytes();
+        $memory_ratio = $memory_usage / $memory_limit;
+
+        self::$processed_count++;
+
+        // Force garbage collection periodically
+        if (self::$processed_count - self::$last_gc_run >= self::$gc_threshold) {
+            gc_collect_cycles();
+            self::$last_gc_run = self::$processed_count;
+            $actions[] = 'garbage_collection';
+        }
+
+        // Memory pressure detected
+        if ($memory_ratio > $threshold) {
+            // Aggressive cleanup
+            if (function_exists('wp_cache_flush')) {
+                wp_cache_flush();
+                $actions[] = 'cache_flush';
+            }
+
+            // Force immediate GC
+            gc_collect_cycles();
+            $actions[] = 'forced_gc';
+
+            // Clear any large static caches if they exist
+            if (isset($GLOBALS['wp_object_cache']) && method_exists($GLOBALS['wp_object_cache'], 'flush')) {
+                $GLOBALS['wp_object_cache']->flush();
+                $actions[] = 'object_cache_flush';
+            }
+        }
+
+        return [
+            'memory_usage_mb' => round($memory_usage / 1024 / 1024, 2),
+            'memory_limit_mb' => round($memory_limit / 1024 / 1024, 2),
+            'memory_ratio' => round($memory_ratio, 3),
+            'actions_taken' => $actions
+        ];
+    }
+
+    /**
+     * Optimize memory for large batch operations
+     */
+    public static function optimize_for_large_batch(): void
+    {
+        // Increase GC threshold to reduce collection frequency
+        gc_mem_caches();
+
+        // Disable some WordPress features that consume memory
+        if (!defined('WP_DISABLE_FATAL_ERROR_HANDLER')) {
+            define('WP_DISABLE_FATAL_ERROR_HANDLER', true);
+        }
+
+        // Reduce autoload overhead for known classes
+        if (function_exists('spl_autoload_register')) {
+            // Preload critical classes if needed
+        }
+    }
+
+    /**
+     * Get memory limit in bytes
+     */
+    private static function get_memory_limit_bytes(): int
+    {
+        $limit = ini_get('memory_limit');
+        if (preg_match('/^(\d+)(.)$/', $limit, $matches)) {
+            $value = (int) $matches[1];
+            $unit = strtoupper($matches[2]);
+            switch ($unit) {
+                case 'G': return $value * 1024 * 1024 * 1024;
+                case 'M': return $value * 1024 * 1024;
+                case 'K': return $value * 1024;
+                default: return $value;
+            }
+        }
+        return 128 * 1024 * 1024; // Default 128MB
+    }
+
+    /**
+     * Reset memory manager state
+     */
+    public static function reset(): void
+    {
+        self::$processed_count = 0;
+        self::$last_gc_run = 0;
+    }
+}
+
+/**
+ * Circuit breaker pattern for feed processing reliability
+ */
+class CircuitBreaker
+{
+    private static array $circuits = [];
+    const STATE_CLOSED = 'closed';     // Normal operation
+    const STATE_OPEN = 'open';         // Failing, reject requests
+    const STATE_HALF_OPEN = 'half_open'; // Testing if service recovered
+
+    /**
+     * Check if circuit is closed (allow request)
+     *
+     * @param string $circuit_name Circuit identifier
+     * @return bool True if request should proceed
+     */
+    public static function can_proceed(string $circuit_name): bool
+    {
+        $circuit = self::get_circuit_state($circuit_name);
+
+        switch ($circuit['state']) {
+            case self::STATE_CLOSED:
+                return true;
+            case self::STATE_OPEN:
+                // Check if timeout has passed
+                if (time() - $circuit['last_failure'] > $circuit['timeout']) {
+                    self::$circuits[$circuit_name]['state'] = self::STATE_HALF_OPEN;
+                    return true; // Allow one test request
+                }
+                return false;
+            case self::STATE_HALF_OPEN:
+                return true; // Allow test request
+            default:
+                return true;
+        }
+    }
+
+    /**
+     * Record successful operation
+     *
+     * @param string $circuit_name Circuit identifier
+     */
+    public static function record_success(string $circuit_name): void
+    {
+        if (!isset(self::$circuits[$circuit_name])) {
+            self::init_circuit($circuit_name);
+        }
+
+        $circuit = &self::$circuits[$circuit_name];
+
+        if ($circuit['state'] === self::STATE_HALF_OPEN) {
+            // Service recovered, close circuit
+            $circuit['state'] = self::STATE_CLOSED;
+            $circuit['failure_count'] = 0;
+        }
+    }
+
+    /**
+     * Record failed operation
+     *
+     * @param string $circuit_name Circuit identifier
+     */
+    public static function record_failure(string $circuit_name): void
+    {
+        if (!isset(self::$circuits[$circuit_name])) {
+            self::init_circuit($circuit_name);
+        }
+
+        $circuit = &self::$circuits[$circuit_name];
+        $circuit['failure_count']++;
+        $circuit['last_failure'] = time();
+
+        // Open circuit if failure threshold reached
+        if ($circuit['failure_count'] >= $circuit['failure_threshold']) {
+            $circuit['state'] = self::STATE_OPEN;
+        }
+    }
+
+    /**
+     * Get circuit state
+     *
+     * @param string $circuit_name Circuit identifier
+     * @return array Circuit state data
+     */
+    private static function get_circuit_state(string $circuit_name): array
+    {
+        if (!isset(self::$circuits[$circuit_name])) {
+            self::init_circuit($circuit_name);
+        }
+        return self::$circuits[$circuit_name];
+    }
+
+    /**
+     * Initialize circuit state
+     *
+     * @param string $circuit_name Circuit identifier
+     */
+    private static function init_circuit(string $circuit_name): void
+    {
+        self::$circuits[$circuit_name] = [
+            'state' => self::STATE_CLOSED,
+            'failure_count' => 0,
+            'failure_threshold' => 5, // Open after 5 failures
+            'timeout' => 300, // 5 minutes timeout
+            'last_failure' => 0
+        ];
+    }
+
+    /**
+     * Get all circuit states (for monitoring)
+     *
+     * @return array All circuit states
+     */
+    public static function get_all_states(): array
+    {
+        return self::$circuits;
+    }
+}
+
+/**
+ * Check if feed processing can proceed
+ *
+ * @param string $feed_url Feed URL
+ * @return bool True if processing should proceed
+ */
+function can_process_feed(string $feed_url): bool
+{
+    $circuit_name = 'feed_' . md5($feed_url);
+    return CircuitBreaker::can_proceed($circuit_name);
+}
+
+/**
+ * Record feed processing success
+ *
+ * @param string $feed_url Feed URL
+ */
+function record_feed_success(string $feed_url): void
+{
+    $circuit_name = 'feed_' . md5($feed_url);
+    CircuitBreaker::record_success($circuit_name);
+}
+
+/**
+ * Record feed processing failure
+ *
+ * @param string $feed_url Feed URL
+ */
+function record_feed_failure(string $feed_url): void
+{
+    $circuit_name = 'feed_' . md5($feed_url);
+    CircuitBreaker::record_failure($circuit_name);
+}
+
+/**
+ * Get circuit breaker status for monitoring
+ *
+ * @return array Circuit states
+ */
+function get_circuit_breaker_status(): array
+{
+    return CircuitBreaker::get_all_states();
+}
+
+/**
  * Start performance monitoring for import operations
  *
  * @param string $operation Operation name
@@ -488,4 +859,50 @@ function get_performance_snapshot(): array
 function get_performance_statistics(?string $operation = '', int $days = 30): array
 {
     return PerformanceMonitor::get_statistics($operation ?? '', $days);
+}
+
+/**
+ * Start database performance monitoring
+ */
+function start_db_performance_monitoring(): void
+{
+    DatabasePerformanceMonitor::start();
+}
+
+/**
+ * End database performance monitoring
+ *
+ * @return array Database performance statistics
+ */
+function end_db_performance_monitoring(): array
+{
+    return DatabasePerformanceMonitor::end();
+}
+
+/**
+ * Check memory usage during batch processing
+ *
+ * @param int $current_index Current processing index
+ * @param float $threshold Memory threshold
+ * @return array Memory status
+ */
+function check_batch_memory_usage(int $current_index, float $threshold = 0.8): array
+{
+    return MemoryManager::check_memory_usage($current_index, $threshold);
+}
+
+/**
+ * Optimize memory for large batch operations
+ */
+function optimize_memory_for_batch(): void
+{
+    MemoryManager::optimize_for_large_batch();
+}
+
+/**
+ * Reset memory manager
+ */
+function reset_memory_manager(): void
+{
+    MemoryManager::reset();
 }

@@ -376,3 +376,41 @@ function get_async_processing_status(): array
         'max_memory_mb' => get_memory_limit_bytes() / 1024 / 1024
     ];
 }
+
+/**
+ * Schedule async analytics update after import batch
+ *
+ * @param array $analytics_data Analytics data to update
+ * @return string|null Action ID if scheduled, null if failed
+ */
+function schedule_async_analytics_update(array $analytics_data): ?string
+{
+    $hook = 'puntwork_update_analytics_async';
+
+    if (is_action_scheduler_available() && function_exists('as_schedule_single_action')) {
+        // Use Action Scheduler if available (preferred)
+        return as_schedule_single_action(time(), $hook, [$analytics_data], 'puntwork', false, 5); // Lower priority
+    } elseif (function_exists('wp_schedule_single_event')) {
+        // Fallback to WP-Cron
+        $job_id = wp_generate_uuid4();
+        $args = ['job_id' => $job_id, 'analytics_data' => $analytics_data];
+
+        if (wp_schedule_single_event(time(), $hook, $args)) {
+            return $job_id;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Process async analytics update
+ *
+ * @param array $analytics_data Analytics data
+ */
+function process_async_analytics_update(array $analytics_data): void
+{
+    if (class_exists(__NAMESPACE__ . '\\ImportAnalytics')) {
+        ImportAnalytics::record_batch_metrics($analytics_data);
+    }
+}

@@ -593,4 +593,59 @@ class ImportAnalytics
 
         return $csv_content;
     }
+
+    /**
+     * Record batch-level metrics asynchronously
+     *
+     * @param array $batch_data Batch processing data
+     */
+    public static function record_batch_metrics(array $batch_data): void
+    {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . self::TABLE_NAME;
+
+        // Only record if we have meaningful data
+        if (empty($batch_data['processed']) || $batch_data['processed'] <= 0) {
+            return;
+        }
+
+        $data = [
+            'import_id' => $batch_data['import_id'] ?? wp_generate_uuid4(),
+            'start_time' => date('Y-m-d H:i:s', $batch_data['start_time'] ?? time()),
+            'end_time' => date('Y-m-d H:i:s', $batch_data['end_time'] ?? time()),
+            'duration' => $batch_data['batch_time'] ?? 0,
+            'trigger_type' => 'batch',
+            'total_jobs' => $batch_data['total'] ?? 0,
+            'processed_jobs' => $batch_data['processed'] ?? 0,
+            'published_jobs' => $batch_data['published'] ?? 0,
+            'updated_jobs' => $batch_data['updated'] ?? 0,
+            'skipped_jobs' => $batch_data['skipped'] ?? 0,
+            'duplicate_jobs' => $batch_data['duplicates_drafted'] ?? 0,
+            'failed_jobs' => 0, // Batches don't track failures separately
+            'memory_peak' => $batch_data['performance']['memory_peak'] ?? null,
+            'feeds_processed' => 1, // Batch level
+            'feeds_successful' => 1,
+            'feeds_failed' => 0,
+            'avg_response_time' => null,
+            'success_rate' => $batch_data['processed'] > 0 ? 100.0 : 0.0,
+            'error_message' => $batch_data['message'] ?? null
+        ];
+
+        $wpdb->insert($table_name, $data);
+
+        // Update transient cache
+        $metrics = get_transient(self::METRICS_TRANSIENT);
+        if ($metrics === false) {
+            $metrics = [];
+        }
+
+        $metrics[] = $data;
+        // Keep only last 100 batch metrics
+        if (count($metrics) > 100) {
+            $metrics = array_slice($metrics, -100);
+        }
+
+        set_transient(self::METRICS_TRANSIENT, $metrics, HOUR_IN_SECONDS);
+    }
 }

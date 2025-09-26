@@ -263,6 +263,21 @@ function setup_job_import()
     if (class_exists(__NAMESPACE__ . '\\Puntwork_Social_Media_Admin')) {
         // Admin interface is initialized in the class constructor
     }
+
+    // Initialize GraphQL API
+    if (class_exists(__NAMESPACE__ . '\\API\\GraphQLAPI')) {
+        call_user_func([__NAMESPACE__ . '\\API\\GraphQLAPI', 'init']);
+    }
+
+    // Initialize Webhook Manager
+    if (class_exists(__NAMESPACE__ . '\\API\\WebhookManager')) {
+        call_user_func([__NAMESPACE__ . '\\API\\WebhookManager', 'init']);
+    }
+
+    // Initialize Feed Optimizer
+    if (class_exists(__NAMESPACE__ . '\\AI\\FeedOptimizer')) {
+        call_user_func([__NAMESPACE__ . '\\AI\\FeedOptimizer', 'init']);
+    }
 }
 
 // Add custom favicon
@@ -329,6 +344,9 @@ function handle_cors_preflight()
         exit(0);
     }
 }
+
+// Add analytics async processing hook
+add_action('puntwork_update_analytics_async', __NAMESPACE__ . '\\process_async_analytics_update');
 
 // Uninstall hook (cleanup)
 register_uninstall_hook(__FILE__, __NAMESPACE__ . '\\job_import_uninstall');
