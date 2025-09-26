@@ -153,6 +153,7 @@ function setup_job_import() {
 
         // Utilities (functions - classes are autoloaded)
         'utilities/puntwork-logger.php',
+        'utilities/puntwork-tracing.php',
         'utilities/gzip-file.php',
         'utilities/handle-duplicates.php',
         'utilities/heartbeat-control.php',
