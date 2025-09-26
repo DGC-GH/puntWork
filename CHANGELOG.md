@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - 2024-12-26
+## [2.0.0] - 2025-09-26
 
 ### 🎉 **Major Release - Enterprise-Grade Job Import Platform**
 
@@ -120,13 +120,11 @@ This major release transforms puntWork from a basic job importer into a comprehe
 - **Code Standards**: PSR-12 and WordPress coding standards
 - **Architecture Guide**: System design and component overview
 
-### 🧪 **Testing**
-
-#### **Test Coverage Expansion**
-- **Unit Tests**: Core functionality testing
-- **Integration Tests**: End-to-end workflow testing
-- **API Tests**: REST endpoint validation
-- **Performance Tests**: Benchmarking and load testing
+### 🧪 **Testing & Quality Assurance**
+- **Enhanced Test Suite**: Added performance benchmark tests and security validation tests
+- **PHPUnit Configuration**: Fixed compatibility issues for clean CI/CD execution
+- **Performance Monitoring**: Automated benchmarks for mapping operations, schema building, and duplicate handling
+- **Security Testing**: Comprehensive validation of input sanitization, XSS prevention, and API security measures
 
 #### **CI/CD Pipeline**
 - **GitHub Actions**: Automated testing and validation
