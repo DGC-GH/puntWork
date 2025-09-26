@@ -39,7 +39,8 @@ function run_scheduled_import($test_mode = false, $trigger_type = 'scheduled') {
         error_log('[PUNTWORK] ' . $log_message);
 
         // For scheduled imports, refresh the feed data first
-        if (!$test_mode) {
+        // Skip feed refresh for API triggers to use existing data
+        if (!$test_mode && $trigger_type !== 'api') {
             error_log('[PUNTWORK] Refreshing feed data for scheduled import');
             try {
                 fetch_and_generate_combined_json();
@@ -60,7 +61,9 @@ function run_scheduled_import($test_mode = false, $trigger_type = 'scheduled') {
         }
 
         // Run the import - don't reset status if it's already initialized for UI polling
-        $result = import_all_jobs_from_json(true); // true = preserve existing status
+        // For API triggers, don't preserve status to allow fresh imports
+        $preserve_status = ($trigger_type !== 'api');
+        $result = import_all_jobs_from_json($preserve_status);
 
         $end_time = microtime(true);
         $duration = $end_time - $start_time;
