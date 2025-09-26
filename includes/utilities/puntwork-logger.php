@@ -35,6 +35,7 @@ class PuntWorkLogger
     const CONTEXT_FEED = 'FEED';
     const CONTEXT_UI = 'UI';
     const CONTEXT_SYSTEM = 'SYSTEM';
+    const CONTEXT_SECURITY = 'SECURITY';
 
     /**
      * Log a debug message

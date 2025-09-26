@@ -12,6 +12,10 @@ if (!defined('WP_DEBUG')) {
     define('WP_DEBUG', true);
 }
 
+if (!defined('MINUTE_IN_SECONDS')) {
+    define('MINUTE_IN_SECONDS', 60);
+}
+
 if (!defined('HOUR_IN_SECONDS')) {
     define('HOUR_IN_SECONDS', 3600);
 }
@@ -133,6 +137,14 @@ if (!function_exists('wp_localize_script')) {
 global $mock_wp_options;
 $mock_wp_options = [];
 
+// Global storage for mocked posts
+global $mock_wp_posts;
+$mock_wp_posts = [];
+
+// Global storage for mocked transients
+global $mock_transients;
+$mock_transients = [];
+
 if (!function_exists('get_option')) {
     function get_option($key, $default = null) {
         global $mock_wp_options;
@@ -157,15 +169,26 @@ if (!function_exists('delete_option')) {
 }
 
 if (!function_exists('get_transient')) {
-    function get_transient($key) { return false; }
+    function get_transient($key) {
+        global $mock_transients;
+        return $mock_transients[$key] ?? false;
+    }
 }
 
 if (!function_exists('set_transient')) {
-    function set_transient($key, $value, $expiration = 0) { return true; }
+    function set_transient($key, $value, $expiration = 0) {
+        global $mock_transients;
+        $mock_transients[$key] = $value;
+        return true;
+    }
 }
 
 if (!function_exists('delete_transient')) {
-    function delete_transient($key) { return true; }
+    function delete_transient($key) {
+        global $mock_transients;
+        unset($mock_transients[$key]);
+        return true;
+    }
 }
 
 if (!function_exists('gethostname')) {
@@ -279,6 +302,8 @@ $includes = array(
     'utilities/performance-monitor.php',
     'utilities/horizontal-scaling.php',
     'utilities/load-balancer.php',
+    'utilities/security-utils.php',
+    'utilities/async-processing.php',
     
     // Queue management - commented out
     /*
@@ -338,25 +363,32 @@ if (!function_exists('wp_kses_post')) {
 
 if (!function_exists('wp_insert_post')) {
     function wp_insert_post($postarr, $wp_error = false) {
+        global $mock_wp_posts;
         // Mock implementation - return a fake post ID
         static $post_id = 1000;
-        return $post_id++;
+        $id = $post_id++;
+        
+        $post = (object) [
+            'ID' => $id,
+            'post_title' => $postarr['post_title'] ?? 'Mock Job',
+            'post_content' => $postarr['post_content'] ?? 'Mock content',
+            'post_status' => $postarr['post_status'] ?? 'publish',
+            'post_type' => $postarr['post_type'] ?? 'post',
+            'post_modified' => '2024-01-01 12:00:00',
+            'post_date' => '2024-01-01 10:00:00',
+            'post_excerpt' => $postarr['post_excerpt'] ?? '',
+            'guid' => 'mock-guid-' . $id
+        ];
+        
+        $mock_wp_posts[$id] = $post;
+        return $id;
     }
 }
 
 if (!function_exists('get_post')) {
     function get_post($post_id) {
-        // Mock post object with all required properties
-        return (object) [
-            'ID' => $post_id,
-            'post_title' => 'Mock Job',
-            'post_content' => 'Mock content',
-            'post_status' => 'publish',
-            'post_type' => 'job',
-            'post_modified' => '2024-01-01 12:00:00',
-            'post_date' => '2024-01-01 10:00:00',
-            'guid' => 'mock-guid-' . $post_id
-        ];
+        global $mock_wp_posts;
+        return $mock_wp_posts[$post_id] ?? null;
     }
 }
 
@@ -387,7 +419,16 @@ if (!function_exists('get_posts')) {
 
 if (!function_exists('wp_update_post')) {
     function wp_update_post($postarr) {
-        return $postarr['ID'] ?? 1001;
+        global $mock_wp_posts;
+        $id = $postarr['ID'];
+        if (isset($mock_wp_posts[$id])) {
+            foreach ($postarr as $key => $value) {
+                if ($key !== 'ID') {
+                    $mock_wp_posts[$id]->$key = $value;
+                }
+            }
+        }
+        return $id;
     }
 }
 
@@ -506,5 +547,104 @@ if (!class_exists('WP_Error')) {
         public function get_error_message() {
             return $this->message;
         }
+    }
+}
+
+if (!function_exists('get_permalink')) {
+    function get_permalink($post_id) {
+        return 'http://example.com/?p=' . $post_id;
+    }
+}
+
+if (!function_exists('wp_publish_post')) {
+    function wp_publish_post($post_id) {
+        wp_update_post([
+            'ID' => $post_id,
+            'post_status' => 'publish'
+        ]);
+    }
+}
+
+if (!function_exists('handle_get_import_status')) {
+    function handle_get_import_status($request) {
+        // Mock implementation
+        return new \WP_REST_Response([
+            'success' => true,
+            'status' => 'idle',
+            'data' => []
+        ], 200);
+    }
+}
+
+// Mock WP_Query class
+if (!class_exists('WP_Query')) {
+    class WP_Query {
+        public $posts = [];
+        public $found_posts = 0;
+        public $max_num_pages = 0;
+        
+        public function __construct($args = []) {
+            global $mock_wp_posts;
+            // Filter posts by args
+            $posts = array_filter($mock_wp_posts, function($post) use ($args) {
+                if (isset($args['post_type']) && $post->post_type !== $args['post_type']) {
+                    return false;
+                }
+                if (isset($args['post_status']) && $args['post_status'] !== 'any' && $post->post_status !== $args['post_status']) {
+                    return false;
+                }
+                return true;
+            });
+            $this->posts = array_values($posts);
+            $this->found_posts = count($this->posts);
+            $this->max_num_pages = 1;
+        }
+    }
+}
+
+if (!function_exists('get_current_user_id')) {
+    function get_current_user_id() {
+        return 1; // Mock admin user
+    }
+}
+
+if (!function_exists('get_bloginfo')) {
+    function get_bloginfo($show = '') {
+        $info = [
+            'version' => '6.0',
+            'name' => 'Test Site',
+            'url' => 'http://example.com'
+        ];
+        return $info[$show] ?? 'Test';
+    }
+}
+
+if (!function_exists('run_scheduled_import')) {
+    function run_scheduled_import($test_mode = false, $trigger = 'scheduled') {
+        // Mock implementation - return success array
+        return [
+            'success' => true,
+            'processed' => 10,
+            'total' => 10,
+            'message' => 'Mock import completed'
+        ];
+    }
+}
+
+if (!function_exists('get_next_scheduled_time')) {
+    function get_next_scheduled_time() {
+        // Mock next scheduled time
+        return time() + 3600; // 1 hour from now
+    }
+}
+
+if (!function_exists('size_format')) {
+    function size_format($bytes, $decimals = 0) {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+        $bytes /= (1 << (10 * $pow));
+        return round($bytes, $decimals) . ' ' . $units[$pow];
     }
 }

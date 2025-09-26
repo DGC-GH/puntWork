@@ -265,7 +265,7 @@ function verify_api_key($request)
     $rate_limit_key = 'api_key_attempts_' . SecurityUtils::get_client_ip();
     $attempts = get_transient($rate_limit_key) ?: 0;
 
-    if ($attempts >= 5) {
+    if ($attempts >= 6) {
         SecurityUtils::log_security_event('api_rate_limit_exceeded', [
             'endpoint' => $request->get_route(),
             'ip' => SecurityUtils::get_client_ip()
