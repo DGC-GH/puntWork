@@ -82,6 +82,9 @@
                                 $('#start-import').text('Restart').show();
                                 this.isImporting = false; // Reset flag on failure
                                 
+                                // Log failed import to history
+                                await this.logFailedManualImportRun({ message: 'Batch failed after ' + batchError.attempts + ' attempts: ' + batchError.error });
+                                
                                 // Stop status polling on failure
                                 if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
                                     window.JobImportEvents.stopStatusPolling();
@@ -362,6 +365,9 @@
                 $('#status-message').text('Error: ' + error.message);
                 JobImportUI.resetButtons();
                 this.isImporting = false; // Ensure importing flag is reset on error
+                
+                // Log failed import to history
+                await this.logFailedManualImportRun({ message: error.message });
             }
         },
 
@@ -377,8 +383,19 @@
             $('#reset-import').show();
             JobImportUI.showImportUI();
 
-            await JobImportAPI.clearImportCancel();
-            await this.handleImport(jobImportData.resume_progress || 0);
+            try {
+                await JobImportAPI.clearImportCancel();
+                await this.handleImport(jobImportData.resume_progress || 0);
+            } catch (error) {
+                PuntWorkJSLogger.error('Resume import error', 'LOGIC', error);
+                JobImportUI.appendLogs([error.message]);
+                $('#status-message').text('Error: ' + error.message);
+                JobImportUI.resetButtons();
+                this.isImporting = false; // Ensure importing flag is reset on error
+                
+                // Log failed import to history
+                await this.logFailedManualImportRun({ message: error.message });
+            }
         },
 
         /**
@@ -464,23 +481,23 @@
         },
 
         /**
-         * Log a manual import run to history
-         * @param {Object} statusData - The final import status data
+         * Log a failed manual import run to history
+         * @param {Object} errorData - Error information
          */
-        logManualImportRun: async function(statusData) {
+        logFailedManualImportRun: async function(errorData) {
             try {
                 const logData = {
                     action: 'log_manual_import_run',
                     nonce: jobImportData.nonce,
                     timestamp: Math.floor(Date.now() / 1000), // Current timestamp in seconds
-                    duration: statusData.time_elapsed || 0,
-                    success: statusData.success || false,
-                    processed: statusData.processed || 0,
-                    total: statusData.total || 0,
-                    published: statusData.published || 0,
-                    updated: statusData.updated || 0,
-                    skipped: statusData.skipped || 0,
-                    error_message: statusData.error_message || ''
+                    duration: this.getElapsedTime() / 1000, // Convert to seconds
+                    success: false,
+                    processed: 0,
+                    total: 0,
+                    published: 0,
+                    updated: 0,
+                    skipped: 0,
+                    error_message: errorData.message || 'Import failed'
                 };
 
                 const response = await $.ajax({
@@ -491,17 +508,15 @@
                 });
 
                 if (response.success) {
-                    PuntWorkJSLogger.info('Manual import run logged to history', 'LOGIC', {
-                        success: logData.success,
-                        processed: logData.processed,
-                        total: logData.total,
+                    PuntWorkJSLogger.info('Failed manual import run logged to history', 'LOGIC', {
+                        error: logData.error_message,
                         duration: logData.duration
                     });
                 } else {
-                    PuntWorkJSLogger.error('Failed to log manual import run', 'LOGIC', response);
+                    PuntWorkJSLogger.error('Failed to log failed manual import run', 'LOGIC', response);
                 }
             } catch (error) {
-                PuntWorkJSLogger.error('Error logging manual import run', 'LOGIC', error);
+                PuntWorkJSLogger.error('Error logging failed manual import run', 'LOGIC', error);
             }
         },
     };
