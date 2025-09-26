@@ -199,6 +199,16 @@ function handle_trigger_import($request) {
                 delete_option('puntwork_test_mode');
             }
 
+            // Add debug information
+            $debug_info = [
+                'jsonl_path' => ABSPATH . 'feeds/combined-jobs.jsonl',
+                'jsonl_exists' => file_exists(ABSPATH . 'feeds/combined-jobs.jsonl'),
+                'jsonl_size' => file_exists(ABSPATH . 'feeds/combined-jobs.jsonl') ? filesize(ABSPATH . 'feeds/combined-jobs.jsonl') : 0,
+                'jsonl_readable' => is_readable(ABSPATH . 'feeds/combined-jobs.jsonl'),
+                'feeds_count' => count(\Puntwork\get_feeds()),
+                'wp_abspath' => ABSPATH,
+            ];
+
             if ($result['success']) {
                 PuntWorkLogger::info('Remote import trigger completed successfully (sync)', PuntWorkLogger::CONTEXT_API, [
                     'processed' => $result['processed'] ?? 0,
@@ -209,6 +219,7 @@ function handle_trigger_import($request) {
                     'success' => true,
                     'message' => 'Import completed successfully',
                     'data' => $result,
+                    'debug' => $debug_info,
                     'async' => false
                 ], 200);
             } else {
@@ -221,6 +232,7 @@ function handle_trigger_import($request) {
                     'success' => false,
                     'message' => $error_msg,
                     'data' => $result,
+                    'debug' => $debug_info,
                     'async' => false
                 ], 500);
             }
