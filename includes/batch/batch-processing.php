@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
  * Batch processing utilities
  *
@@ -12,6 +13,85 @@ namespace Puntwork;
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
+}
+
+/**
+ * Iterator for streaming JSONL file items to reduce memory usage.
+ */
+class JsonlIterator implements \Iterator {
+    private string $filePath;
+    private int $startIndex;
+    private int $batchSize;
+    private $handle;
+    private int $currentIndex = 0;
+    private int $loadedCount = 0;
+    private $currentItem = null;
+    private int $key = 0;
+
+    public function __construct(string $filePath, int $startIndex, int $batchSize) {
+        $this->filePath = $filePath;
+        $this->startIndex = $startIndex;
+        $this->batchSize = $batchSize;
+    }
+
+    public function rewind(): void {
+        if ($this->handle) {
+            fclose($this->handle);
+        }
+        $this->handle = fopen($this->filePath, 'r');
+        $this->currentIndex = 0;
+        $this->loadedCount = 0;
+        $this->key = 0;
+        $this->currentItem = null;
+        $this->skipToStart();
+    }
+
+    private function skipToStart(): void {
+        while ($this->currentIndex < $this->startIndex && ($line = fgets($this->handle)) !== false) {
+            $this->currentIndex++;
+        }
+    }
+
+    #[\ReturnTypeWillChange]
+    public function current() {
+        return $this->currentItem;
+    }
+
+    public function key(): int {
+        return $this->key;
+    }
+
+    public function next(): void {
+        $this->key++;
+        $this->currentItem = null;
+
+        if ($this->loadedCount >= $this->batchSize) {
+            return;
+        }
+
+        while (($line = fgets($this->handle)) !== false) {
+            $this->currentIndex++;
+            $line = trim($line);
+            if (!empty($line)) {
+                $item = json_decode($line, true);
+                if ($item !== null) {
+                    $this->currentItem = $item;
+                    $this->loadedCount++;
+                    return;
+                }
+            }
+        }
+    }
+
+    public function valid(): bool {
+        return $this->currentItem !== null && $this->loadedCount <= $this->batchSize;
+    }
+
+    public function __destruct() {
+        if ($this->handle) {
+            fclose($this->handle);
+        }
+    }
 }
 
 /**
