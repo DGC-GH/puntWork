@@ -1,0 +1,8 @@
+{
+    "chaos_engineering": {
+        "resource_memory_handled": true,
+        "resource_cpu_handled": true,
+        "resource_disk_handled": true,
+        "resource_connections_handled": true
+    }
+}
