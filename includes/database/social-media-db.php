@@ -8,6 +8,8 @@
  * @since      2.2.0
  */
 
+namespace Puntwork;
+
 // Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
@@ -16,7 +18,7 @@ if (!defined('ABSPATH')) {
 /**
  * Social Media Database Class
  */
-class Puntwork_Social_Media_DB
+class PuntworkSocialMediaDb
 {
     /**
      * Database version
@@ -33,18 +35,18 @@ class Puntwork_Social_Media_DB
      */
     public static function init(): void
     {
-        add_action('admin_init', [__CLASS__, 'check_db_version']);
+        add_action('admin_init', [__CLASS__, 'checkDbVersion']);
     }
 
     /**
      * Check database version and upgrade if needed
      */
-    public static function check_db_version(): void
+    public static function checkDbVersion(): void
     {
         $current_version = get_option(self::DB_VERSION_OPTION, '0');
 
         if (version_compare($current_version, self::DB_VERSION, '<')) {
-            self::create_tables();
+            self::createTables();
             update_option(self::DB_VERSION_OPTION, self::DB_VERSION);
         }
     }
@@ -52,7 +54,7 @@ class Puntwork_Social_Media_DB
     /**
      * Create database tables
      */
-    public static function create_tables(): void
+    public static function createTables(): void
     {
         global $wpdb;
 
@@ -87,7 +89,7 @@ class Puntwork_Social_Media_DB
     /**
      * Drop database tables (for uninstall)
      */
-    public static function drop_tables(): void
+    public static function dropTables(): void
     {
         global $wpdb;
 
@@ -105,7 +107,7 @@ class Puntwork_Social_Media_DB
     /**
      * Get table name with prefix
      */
-    public static function get_table_name(string $table): string
+    public static function getTableName(string $table): string
     {
         global $wpdb;
 
@@ -118,4 +120,4 @@ class Puntwork_Social_Media_DB
 }
 
 // Initialize database
-Puntwork_Social_Media_DB::init();
+PuntworkSocialMediaDb::init();

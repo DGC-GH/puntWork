@@ -375,9 +375,9 @@ $includes = array(
     'import/import-finalization.php',
     'import/import-setup.php',
     'import/process-batch-items.php',
-    'import/process-xml-batch.php',
     'import/reset-import.php',
     */
+    'import/process-xml-batch.php',
 
     // Utilities - only load essential ones
     'utilities/puntwork-logger.php',
