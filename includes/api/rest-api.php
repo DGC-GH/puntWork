@@ -175,6 +175,7 @@ function handle_trigger_import($request) {
         delete_transient('import_cancel');
 
         // Schedule the import to run asynchronously
+        error_log('[PUNTWORK] API: Checking async conditions - as_schedule_single_action: ' . (function_exists('as_schedule_single_action') ? 'true' : 'false') . ', wp_schedule_single_event: ' . (function_exists('wp_schedule_single_event') ? 'true' : 'false'));
         if (false && function_exists('as_schedule_single_action')) { // Temporarily force sync for testing
             // Use Action Scheduler if available
             as_schedule_single_action(time(), 'puntwork_scheduled_import_async');
@@ -182,6 +183,7 @@ function handle_trigger_import($request) {
             // Fallback: Use WordPress cron for near-immediate execution
             wp_schedule_single_event(time() + 1, 'puntwork_scheduled_import_async');
         } else {
+            error_log('[PUNTWORK] API: Taking synchronous path');
             // Force synchronous execution for testing polling mechanism
             error_log('[PUNTWORK] API: Forcing synchronous execution');
             if (!function_exists('run_scheduled_import')) {
