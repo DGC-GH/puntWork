@@ -400,3 +400,72 @@ $jobs = get_posts([
 3. **Follow Patterns**: Use established patterns within that module
 4. **Test Integration**: Validate cross-module communication
 5. **Update Documentation**: Keep module interfaces documented
+
+## Mobile App Companion
+
+### Overview
+The puntWork mobile app is a React Native application that provides mobile access to the job board platform. It integrates with the WordPress plugin's REST API to deliver a native mobile experience for job seekers.
+
+### Architecture
+- **Framework**: React Native with Expo support
+- **Navigation**: React Navigation v6 with stack navigator
+- **State Management**: React Context for authentication state
+- **API Integration**: Axios for HTTP requests with JWT authentication
+- **Data Persistence**: AsyncStorage for offline data and user sessions
+- **UI Components**: Custom styled components with responsive design
+
+### Key Components
+
+#### Authentication System
+- **AuthContext**: Global authentication state management
+- **JWT Tokens**: Secure token-based authentication
+- **Auto-login**: Persistent sessions with AsyncStorage
+- **Secure Storage**: Encrypted token storage
+
+#### Screen Components
+- **LoginScreen**: User authentication interface
+- **JobListScreen**: Paginated job listings with search
+- **JobDetailScreen**: Comprehensive job information display
+- **ApplicationFormScreen**: Multi-field job application form
+- **ProfileScreen**: User profile management
+- **DashboardScreen**: Application tracking and statistics
+
+#### API Integration
+- **Base URL**: Configurable WordPress site endpoint
+- **Authentication**: Automatic JWT header injection
+- **Error Handling**: Comprehensive error responses
+- **Offline Support**: Cached data for offline viewing
+
+### Mobile API Endpoints
+The mobile app integrates with these WordPress REST API endpoints:
+- `POST /wp-json/puntwork-mobile/v1/auth/login` - User authentication
+- `GET /wp-json/puntwork-mobile/v1/jobs` - Job listings with pagination
+- `GET /wp-json/puntwork-mobile/v1/jobs/{id}` - Detailed job information
+- `POST /wp-json/puntwork-mobile/v1/applications` - Submit job applications
+- `GET /wp-json/puntwork-mobile/v1/dashboard` - User dashboard data
+- `POST /wp-json/puntwork-mobile/v1/profile` - Update user profile
+
+### Development Standards
+- **Code Style**: ESLint with React Native standards
+- **File Organization**: Feature-based component structure
+- **Error Handling**: Try/catch with user-friendly messages
+- **Performance**: Optimized rendering and API calls
+- **Accessibility**: Screen reader support and keyboard navigation
+
+### Build Process
+- **iOS**: Xcode build with CocoaPods dependencies
+- **Android**: Gradle build with Android SDK
+- **Code Signing**: Platform-specific signing configurations
+- **OTA Updates**: Over-the-air update support via Expo
+
+### Testing Strategy
+- **Unit Tests**: Component and utility function testing
+- **Integration Tests**: API endpoint testing
+- **UI Tests**: End-to-end user flow testing
+- **Device Testing**: iOS Simulator and Android Emulator testing
+
+### Deployment
+- **App Store**: iOS App Store submission process
+- **Play Store**: Google Play Store submission process
+- **Beta Testing**: TestFlight and Google Play Beta testing
+- **Version Management**: Semantic versioning with changelog

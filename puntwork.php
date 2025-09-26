@@ -197,6 +197,13 @@ function setup_job_import() {
         'admin/social-media-test.php',
         'database/social-media-db.php',
 
+        // CRM Integration (classes are autoloaded)
+        'crm/crm-integration.php',
+        'crm/crm-manager.php',
+        'crm/hubspot-integration.php',
+        'admin/crm-admin.php',
+        'database/crm-db.php',
+
         // Mappings (functions)
         'mappings/mappings-constants.php',
         'mappings/mappings-fields.php',
