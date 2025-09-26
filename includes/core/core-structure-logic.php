@@ -14,7 +14,12 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-function get_feeds() {
+/**
+ * Get all configured feeds with caching
+ *
+ * @return array Array of feed URLs keyed by feed slug
+ */
+function get_feeds(): array {
     $cache_key = 'puntwork_feeds';
     $feeds = CacheManager::get($cache_key, CacheManager::GROUP_MAPPINGS);
 
@@ -83,7 +88,18 @@ add_action('save_post', function($post_id, $post, $update) {
     }
 }, 10, 3);
 
-function process_one_feed($feed_key, $url, $output_dir, $fallback_domain, &$logs) {
+/**
+ * Process a single feed and return the number of items processed
+ *
+ * @param string $feed_key Unique identifier for the feed
+ * @param string $url Feed URL to process
+ * @param string $output_dir Directory to store processed files
+ * @param string $fallback_domain Fallback domain for job URLs
+ * @param array &$logs Reference to logs array for recording processing details
+ * @return int Number of items processed from this feed
+ * @throws \Exception If feed processing fails
+ */
+function process_one_feed(string $feed_key, string $url, string $output_dir, string $fallback_domain, array &$logs): int {
     // Determine file extension based on URL
     $extension = FeedProcessor::detect_format($url);
     $feed_path = $output_dir . $feed_key . '.' . $extension;
@@ -115,7 +131,14 @@ function process_one_feed($feed_key, $url, $output_dir, $fallback_domain, &$logs
     return $count;
 }
 
-function fetch_and_generate_combined_json() {
+/**
+ * Fetch and process all configured feeds, generating combined JSONL output
+ *
+ * @global array $import_logs Global logs array for recording import details
+ * @return array Import logs containing processing details and any errors
+ * @throws \Exception If feed processing setup fails
+ */
+function fetch_and_generate_combined_json(): array {
     global $import_logs;
     $import_logs = [];
     ini_set('memory_limit', '512M');

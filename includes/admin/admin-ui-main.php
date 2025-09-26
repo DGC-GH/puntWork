@@ -17,8 +17,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Render jobs dashboard UI section
+ *
+ * @return void
  */
-function render_jobs_dashboard_ui() {
+function render_jobs_dashboard_ui(): void {
     ?>
     <div class="wrap" style="max-width: 800px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1d1d1f; padding: 0 20px;">
         <h1 style="font-size: 34px; font-weight: 600; text-align: center; margin: 40px 0 20px;">Jobs Dashboard</h1>
@@ -191,8 +193,10 @@ function render_jobs_dashboard_ui() {
 
 /**
  * Render main import UI section
+ *
+ * @return void
  */
-function render_main_import_ui() {
+function render_main_import_ui(): void {
     ?>
     <div class="wrap" style="max-width: 800px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1d1d1f; padding: 0 20px;">
         <h1 style="font-size: 34px; font-weight: 600; text-align: center; margin: 40px 0 20px;">Feeds Dashboard</h1>
