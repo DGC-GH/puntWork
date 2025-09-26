@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Feed download utilities
  *
@@ -14,7 +15,8 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-function download_feed($url, $feed_path, $output_dir, &$logs, &$format = null) {
+function download_feed($url, $feed_path, $output_dir, &$logs, &$format = null)
+{
     // Start tracing span for feed download
     $span = PuntworkTracing::startActiveSpan('download_feed', [
         'feed.url' => $url,
@@ -65,9 +67,10 @@ function download_feed($url, $feed_path, $output_dir, &$logs, &$format = null) {
 
             // Detect format from downloaded content
             $content = file_get_contents($feed_path);
-            $format = FeedProcessor::detect_format($url, $content);
+            $format = FeedProcessor::detectFormat($url, $content);
 
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Downloaded feed ($format): " . filesize($feed_path) . " bytes";
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' .
+                "Downloaded feed ($format): " . filesize($feed_path) . " bytes";
             error_log("Downloaded feed ($format): " . filesize($feed_path) . " bytes");
             @chmod($feed_path, 0644);
 

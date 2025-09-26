@@ -421,7 +421,8 @@ function run_scheduled_import_async()
     $import_status = get_option('job_import_status', []);
     error_log('[PUNTWORK] Current import status at async start: ' . json_encode($import_status));
 
-    if (isset($import_status['complete']) && $import_status['complete'] === false &&
+    if (
+        isset($import_status['complete']) && $import_status['complete'] === false &&
         isset($import_status['processed']) && $import_status['processed'] > 0
     ) {
         error_log('[PUNTWORK] Async import skipped - import already running and has processed items');
@@ -473,7 +474,8 @@ function run_manual_import_cron()
 
     // Check if an import is already running
     $import_status = get_option('job_import_status', []);
-    if (isset($import_status['complete']) && $import_status['complete'] === false &&
+    if (
+        isset($import_status['complete']) && $import_status['complete'] === false &&
         isset($import_status['processed']) && $import_status['processed'] > 0
     ) {
         error_log('[PUNTWORK] Manual import cron skipped - import already running and has processed items');

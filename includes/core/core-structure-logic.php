@@ -146,7 +146,7 @@ add_action('save_post', function ($post_id, $post, $update) {
 function process_one_feed(string $feed_key, string $url, string $output_dir, string $fallback_domain, array &$logs): int
 {
     // Determine file extension based on URL
-    $extension = FeedProcessor::detect_format($url);
+    $extension = FeedProcessor::detectFormat($url);
     $feed_path = $output_dir . $feed_key . '.' . $extension;
     $json_filename = $feed_key . '.jsonl';
     $json_path = $output_dir . $json_filename;
@@ -165,7 +165,7 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
     }
 
     // Use detected format, fallback to URL-based detection
-    $format = $detected_format ?: FeedProcessor::detect_format($url);
+    $format = $detected_format ?: FeedProcessor::detectFormat($url);
 
     $handle = fopen($json_path, 'w');
     if (!$handle) {

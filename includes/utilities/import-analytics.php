@@ -181,7 +181,8 @@ class ImportAnalytics
         foreach ($feeds as $feed_key => $feed_url) {
             if (isset($health_status[$feed_key])) {
                 $status = $health_status[$feed_key];
-                if ($status['status'] === FeedHealthMonitor::STATUS_HEALTHY ||
+                if (
+                    $status['status'] === FeedHealthMonitor::STATUS_HEALTHY ||
                     $status['status'] === FeedHealthMonitor::STATUS_WARNING
                 ) {
                     $successful++;

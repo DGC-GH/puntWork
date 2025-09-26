@@ -25,6 +25,11 @@ class RestApiIntegrationTest extends TestCase {
             return;
         }
 
+        // Clear any existing rate limiting to ensure test isolation
+        $client_ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        $rate_limit_key = 'api_key_attempts_' . $client_ip;
+        delete_transient($rate_limit_key);
+
         // Set up test API key
         $this->api_key = 'test_api_key_integration_' . time();
 
