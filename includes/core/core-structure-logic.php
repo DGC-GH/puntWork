@@ -108,20 +108,30 @@ add_action('save_post', function($post_id, $post, $update) {
 }, 10, 3);
 
 function process_one_feed($feed_key, $url, $output_dir, $fallback_domain, &$logs) {
-    $xml_path = $output_dir . $feed_key . '.xml';
+    // Determine file extension based on URL
+    $extension = FeedProcessor::detect_format($url);
+    $feed_path = $output_dir . $feed_key . '.' . $extension;
     $json_filename = $feed_key . '.jsonl';
     $json_path = $output_dir . $json_filename;
     $gz_json_path = $json_path . '.gz';
 
-    if (!download_feed($url, $xml_path, $output_dir, $logs)) {
+    // Download feed and detect format
+    $detected_format = null;
+    if (!download_feed($url, $feed_path, $output_dir, $logs, $detected_format)) {
         return 0;
     }
+
+    // Use detected format, fallback to URL-based detection
+    $format = $detected_format ?: FeedProcessor::detect_format($url);
 
     $handle = fopen($json_path, 'w');
     if (!$handle) throw new \Exception("Can't open $json_path");
     $batch_size = 100;
     $total_items = 0;
-    $count = process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+
+    // Process feed using FeedProcessor
+    $count = FeedProcessor::process_feed($feed_path, $format, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+
     fclose($handle);
     @chmod($json_path, 0644);
 
