@@ -119,6 +119,7 @@ function setup_job_import() {
         'admin/admin-api-settings.php',
         'admin/admin-ui-feed-health.php',
         'admin/admin-ui-analytics.php',
+        'admin/admin-ui-performance.php',
 
         // API handlers (functions)
         'api/ajax-feed-processing.php',
