@@ -28,3 +28,28 @@ if (!function_exists('get_memory_limit_bytes')) {
         }
     }
 }
+
+if (!function_exists('get_json_item_count')) {
+    /**
+     * Get the total count of items in JSONL file.
+     *
+     * @param string $json_path Path to JSONL file.
+     * @return int Total item count.
+     */
+    function get_json_item_count($json_path) {
+        $count = 0;
+        if (($handle = fopen($json_path, "r")) !== false) {
+            while (($line = fgets($handle)) !== false) {
+                $line = trim($line);
+                if (!empty($line)) {
+                    $item = json_decode($line, true);
+                    if ($item !== null) {
+                        $count++;
+                    }
+                }
+            }
+            fclose($handle);
+        }
+        return $count;
+    }
+}
