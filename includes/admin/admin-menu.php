@@ -89,4 +89,19 @@ add_action('admin_menu', function() {
         'puntwork-performance',
         __NAMESPACE__ . '\\performance_metrics_page'
     );
+
+    // Onboarding menu item (only show if onboarding not completed)
+    if (!\PuntworkOnboardingWizard::isOnboardingCompleted()) {
+        add_submenu_page(
+            'puntwork-dashboard',
+            __('Setup Wizard', 'puntwork'),
+            __('🚀 Setup Wizard', 'puntwork'),
+            'manage_options',
+            'puntwork-onboarding',
+            function() {
+                wp_redirect(admin_url('admin.php?page=puntwork-onboarding'));
+                exit;
+            }
+        );
+    }
 });
