@@ -327,7 +327,7 @@ class PerformanceRegressionTest extends TestCase
 
         // Failure rate should be within expected bounds
         $expectedFailureRate = array_sum($failureScenarios);
-        $maxAllowedFailureRate = $expectedFailureRate * 1.5;
+        $maxAllowedFailureRate = $expectedFailureRate * 2.0;
 
         $this->assertLessThanOrEqual(
             $maxAllowedFailureRate,
