@@ -15,6 +15,130 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Enhanced caching utility with Redis support
+ */
+class CacheManager {
+
+    /**
+     * Cache group for mappings
+     */
+    const GROUP_MAPPINGS = 'puntwork_mappings';
+
+    /**
+     * Cache group for analytics
+     */
+    const GROUP_ANALYTICS = 'puntwork_analytics';
+
+    /**
+     * Check if Redis/Object Cache is available
+     *
+     * @return bool True if Redis/Object Cache is available
+     */
+    public static function is_redis_available(): bool {
+        return function_exists('wp_cache_get') && wp_cache_get('test_redis_connection', 'puntwork_test') === false;
+    }
+
+    /**
+     * Get cached data with Redis support
+     *
+     * @param string $key Cache key
+     * @param string $group Cache group
+     * @return mixed Cached data or false
+     */
+    public static function get(string $key, string $group = '') {
+        // Try Redis/Object Cache first
+        if (self::is_redis_available()) {
+            $cached = wp_cache_get($key, $group);
+            if ($cached !== false) {
+                return $cached;
+            }
+        }
+
+        // Fallback to transients
+        $transient_key = $group ? $group . '_' . $key : $key;
+        return get_transient($transient_key);
+    }
+
+    /**
+     * Set cached data with Redis support
+     *
+     * @param string $key Cache key
+     * @param mixed $data Data to cache
+     * @param string $group Cache group
+     * @param int $expiration Expiration time in seconds
+     * @return bool True on success
+     */
+    public static function set(string $key, $data, string $group = '', int $expiration = 3600): bool {
+        // Try Redis/Object Cache first
+        if (self::is_redis_available()) {
+            $result = wp_cache_set($key, $data, $group, $expiration);
+            if ($result) {
+                return true;
+            }
+        }
+
+        // Fallback to transients
+        $transient_key = $group ? $group . '_' . $key : $key;
+        return set_transient($transient_key, $data, $expiration);
+    }
+
+    /**
+     * Delete cached data
+     *
+     * @param string $key Cache key
+     * @param string $group Cache group
+     * @return bool True on success
+     */
+    public static function delete(string $key, string $group = ''): bool {
+        // Try Redis/Object Cache first
+        if (self::is_redis_available()) {
+            wp_cache_delete($key, $group);
+        }
+
+        // Also clear transients
+        $transient_key = $group ? $group . '_' . $key : $key;
+        return delete_transient($transient_key);
+    }
+
+    /**
+     * Clear all cache in a group
+     *
+     * @param string $group Cache group
+     * @return bool True on success
+     */
+    public static function clear_group(string $group): bool {
+        if (self::is_redis_available()) {
+            // For Redis, we can't easily clear a group, so we'll flush the entire cache
+            // This is a limitation of the WordPress object cache API
+            wp_cache_flush();
+        }
+
+        // Clear transients with group prefix
+        global $wpdb;
+        $transient_prefix = '_transient_' . $group . '_';
+        $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+            $transient_prefix . '%'
+        ));
+
+        return true;
+    }
+
+    /**
+     * Get cache stats
+     *
+     * @return array Cache statistics
+     */
+    public static function get_stats(): array {
+        return [
+            'redis_available' => self::is_redis_available(),
+            'cache_groups' => [self::GROUP_MAPPINGS, self::GROUP_ANALYTICS],
+            'wp_cache_supports_groups' => function_exists('wp_cache_supports') ? wp_cache_supports('groups') : false,
+        ];
+    }
+}
+
+/**
  * Performance monitoring class
  */
 class PerformanceMonitor {

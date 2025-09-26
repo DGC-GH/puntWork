@@ -16,6 +16,10 @@ if (!defined('HOUR_IN_SECONDS')) {
     define('HOUR_IN_SECONDS', 3600);
 }
 
+if (!defined('DAY_IN_SECONDS')) {
+    define('DAY_IN_SECONDS', 86400);
+}
+
 // Load WordPress test functions
 if (file_exists('/tmp/wordpress-tests-lib/includes/functions.php')) {
     require_once '/tmp/wordpress-tests-lib/includes/functions.php';
@@ -148,13 +152,18 @@ $includes = array(
     'admin/admin-ui-main.php',
     'admin/admin-ui-scheduling.php',
     'admin/admin-api-settings.php',
+    'admin/admin-ui-feed-health.php',
+    'admin/admin-ui-analytics.php',
     
     // API handlers
     'api/ajax-feed-processing.php',
     'api/ajax-handlers.php',
     'api/ajax-import-control.php',
     'api/ajax-purge.php',
+    'api/ajax-db-optimization.php',
+    'api/ajax-feed-health.php',
     'api/rest-api.php',
+    'api/sse-import-progress.php',
     
     // Batch processing
     'batch/batch-core.php',
@@ -182,6 +191,11 @@ $includes = array(
     'utilities/item-inference.php',
     'utilities/shortcode.php',
     'utilities/utility-helpers.php',
+    'utilities/database-optimization.php',
+    'utilities/async-processing.php',
+    'utilities/performance-monitor.php',
+    'utilities/security-utils.php',
+    'utilities/import-analytics.php',
     
     // Mappings
     'mappings/mappings-constants.php',

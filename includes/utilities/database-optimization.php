@@ -131,6 +131,15 @@ function get_posts_by_guids_with_status(array $guids): array {
         return [];
     }
 
+    // Create cache key from sorted GUIDs to ensure consistency
+    sort($guids);
+    $cache_key = 'posts_by_guids_' . md5(implode(',', $guids));
+    $cached_result = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
+
+    if ($cached_result !== false) {
+        return $cached_result;
+    }
+
     $guid_placeholders = implode(',', array_fill(0, count($guids), '%s'));
     $query = $wpdb->prepare("
         SELECT pm.meta_value AS guid, p.ID, p.post_status, p.post_modified
@@ -154,6 +163,9 @@ function get_posts_by_guids_with_status(array $guids): array {
             'modified' => $row->post_modified
         ];
     }
+
+    // Cache for 10 minutes - GUID lookups change relatively frequently during imports
+    CacheManager::set($cache_key, $posts_by_guid, CacheManager::GROUP_ANALYTICS, 10 * MINUTE_IN_SECONDS);
 
     return $posts_by_guid;
 }

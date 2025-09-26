@@ -15,10 +15,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 function get_feeds() {
-    $feeds = wp_cache_get('puntwork_feeds');
-    if (false === $feeds) {
+    $cache_key = 'puntwork_feeds';
+    $feeds = CacheManager::get($cache_key, CacheManager::GROUP_MAPPINGS);
+
+    if ($feeds === false) {
         $feeds = [];
-        
+
         // First, check if CPT is registered
         if (!post_type_exists('job-feed')) {
             // Try alternative: check if feeds are stored as options
@@ -34,10 +36,12 @@ function get_feeds() {
                     }
                 }
             }
-            
+
+            // Cache for 1 hour
+            CacheManager::set($cache_key, $feeds, CacheManager::GROUP_MAPPINGS, HOUR_IN_SECONDS);
             return $feeds;
         }
-        
+
         $query = new \WP_Query([
             'post_type' => 'job-feed',
             'post_status' => 'publish',
@@ -65,15 +69,17 @@ function get_feeds() {
             }
         }
 
-        wp_cache_set('puntwork_feeds', $feeds, '', 3600); // Cache for 1 hour
+        // Cache for 1 hour
+        CacheManager::set($cache_key, $feeds, CacheManager::GROUP_MAPPINGS, HOUR_IN_SECONDS);
     }
+
     return $feeds;
 }
 
 // Clear feeds cache when job-feed post is updated
 add_action('save_post', function($post_id, $post, $update) {
     if ($post->post_type === 'job-feed' && $post->post_status === 'publish') {
-        wp_cache_delete('puntwork_feeds');
+        CacheManager::delete('puntwork_feeds', CacheManager::GROUP_MAPPINGS);
     }
 }, 10, 3);
 
