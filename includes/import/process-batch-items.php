@@ -17,6 +17,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 if (!function_exists('process_batch_items')) {
     function process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count) {
         $user_id = get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : get_current_user_id();
+
+        // Bulk fetch post statuses to avoid N+1 queries
+        $post_ids_for_status = array_values($post_ids_by_guid);
+        $post_statuses = bulk_get_post_statuses($post_ids_for_status);
+
         foreach ($batch_guids as $guid) {
             $item = $batch_items[$guid]['item'];
             $xml_updated = isset($item['updated']) ? $item['updated'] : '';
@@ -26,8 +31,8 @@ if (!function_exists('process_batch_items')) {
             // If post exists, check if it needs updating
             if ($post_id) {
                 // First, ensure the job is published if it's in the feed
-                $current_post = get_post($post_id);
-                if ($current_post && $current_post->post_status !== 'publish') {
+                $current_post_status = $post_statuses[$post_id] ?? 'draft';
+                if ($current_post_status !== 'publish') {
                     wp_update_post([
                         'ID' => $post_id,
                         'post_status' => 'publish'
