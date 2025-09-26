@@ -46,7 +46,7 @@
 - [x] Enhance admin UI with modern design and responsive layout
 - [x] Add drag-and-drop feed configuration interface
 - [ ] Implement progressive web app features for mobile access
-- [ ] Add multi-language support (i18n) for international users
+- [x] Add multi-language support (i18n) for international users
 - [ ] Create interactive onboarding wizard for new installations
 - [ ] Add keyboard shortcuts and accessibility improvements
 
