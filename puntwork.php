@@ -1,11 +1,12 @@
-</**
+<?php
+/**
  * Plugin Name: puntWork
  * Description: Advanced job import plugin with multi-format feed support, real-time analytics, health monitoring, and comprehensive API integration.
  * Version: 2.0.0
  * Author: DGC-GH
  * Requires at least: 5.0
- * Tested up to: 6.6
- * Requires PHP: 7.4
+ * Tested up to: 6.8
+ * Requires PHP: 8.1
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: puntwork

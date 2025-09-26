@@ -1,3 +1,4 @@
+<?php
 /**
  * Interactive Onboarding Wizard for puntWork
  * Guides new users through initial setup and configuration
@@ -54,5 +55,11 @@ class PuntworkOnboardingWizard {
     }
 }
 
-// Initialize onboarding wizard
-new PuntworkOnboardingWizard();
+// Initialize onboarding wizard only when WordPress is loaded and not in testing
+if (!defined('PHPUNIT_RUNNING') && function_exists('add_action')) {
+    add_action('init', function() {
+        if (class_exists('PuntworkOnboardingWizard')) {
+            new PuntworkOnboardingWizard();
+        }
+    });
+}
