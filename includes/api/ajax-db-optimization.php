@@ -127,3 +127,59 @@ function ajax_get_async_status() {
         'data' => $status
     ]);
 }
+
+/**
+ * Get performance monitoring status
+ */
+add_action('wp_ajax_get_performance_status', __NAMESPACE__ . '\\ajax_get_performance_status');
+function ajax_get_performance_status() {
+    // Check nonce for security
+    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_admin_nonce')) {
+        wp_die('Security check failed');
+    }
+
+    // Check user capabilities
+    if (!current_user_can('manage_options')) {
+        wp_die('Insufficient permissions');
+    }
+
+    $stats = get_performance_statistics('batch_processing', 30);
+    $snapshot = get_performance_snapshot();
+
+    $response = [
+        'success' => true,
+        'stats' => $stats,
+        'snapshot' => $snapshot
+    ];
+
+    wp_send_json($response);
+}
+
+/**
+ * Clear old performance logs
+ */
+add_action('wp_ajax_clear_performance_logs', __NAMESPACE__ . '\\ajax_clear_performance_logs');
+function ajax_clear_performance_logs() {
+    // Check nonce for security
+    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_admin_nonce')) {
+        wp_die('Security check failed');
+    }
+
+    // Check user capabilities
+    if (!current_user_can('manage_options')) {
+        wp_die('Insufficient permissions');
+    }
+
+    // Import the cleanup function
+    if (function_exists(__NAMESPACE__ . '\\PerformanceMonitor::cleanup_old_logs')) {
+        \Puntwork\PerformanceMonitor::cleanup_old_logs(30); // Keep 30 days
+        $message = 'Performance logs older than 30 days have been cleared.';
+    } else {
+        $message = 'Performance monitoring not available.';
+    }
+
+    wp_send_json([
+        'success' => true,
+        'message' => $message
+    ]);
+}
