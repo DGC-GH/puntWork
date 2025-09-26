@@ -174,34 +174,43 @@ function handle_trigger_import($request) {
         // Clear any previous cancellation before starting
         delete_transient('import_cancel');
 
-        // Determine execution mode
-        $use_async = false; // Force synchronous for debugging - updated
-        
-        if ($use_async && function_exists('as_schedule_single_action')) {
-            // Use Action Scheduler if available
-            error_log('[PUNTWORK] API: Using Action Scheduler');
-            as_schedule_single_action(time(), 'puntwork_scheduled_import_async');
-            
-            PuntWorkLogger::info('Remote import trigger initiated asynchronously', PuntWorkLogger::CONTEXT_API);
-            return new \WP_REST_Response([
-                'success' => true,
-                'message' => 'Import triggered successfully',
-                'async' => true
-            ], 200);
-            
-        } elseif ($use_async && function_exists('wp_schedule_single_event')) {
-            // Fallback: Use WordPress cron for near-immediate execution
-            error_log('[PUNTWORK] API: Using WP Cron');
-            wp_schedule_single_event(time() + 1, 'puntwork_scheduled_import_async');
-            
-            PuntWorkLogger::info('Remote import trigger initiated asynchronously', PuntWorkLogger::CONTEXT_API);
-            return new \WP_REST_Response([
-                'success' => true,
-                'message' => 'Import triggered successfully',
-                'async' => true
-            ], 200);
-            
-        } else {
+        // Determine execution mode based on import size and settings
+        $use_async = false;
+
+        // Check if async processing is enabled and available
+        if (is_async_processing_enabled()) {
+            // Get estimated item count to determine if async is beneficial
+            $jsonl_path = ABSPATH . 'feeds/combined-jobs.jsonl';
+            if (file_exists($jsonl_path)) {
+                $estimated_count = get_json_item_count($jsonl_path);
+                // Use async for imports larger than 500 items or when explicitly requested
+                $use_async = ($estimated_count > 500) || isset($_GET['async']);
+            }
+        }
+
+        if ($use_async) {
+            // Use new async batch processing system
+            error_log('[PUNTWORK] API: Using async batch processing');
+
+            $result = trigger_async_import($test_mode, 'api');
+
+            if ($result['success']) {
+                PuntWorkLogger::info('Remote import trigger initiated asynchronously', PuntWorkLogger::CONTEXT_API);
+                return new \WP_REST_Response([
+                    'success' => true,
+                    'message' => 'Async import started successfully',
+                    'async' => true,
+                    'job_ids' => $result['job_ids'] ?? [],
+                    'estimated_batches' => $result['batch_count'] ?? 0
+                ], 200);
+            } else {
+                // Fallback to sync if async fails
+                error_log('[PUNTWORK] API: Async failed, falling back to sync: ' . $result['message']);
+                $use_async = false;
+            }
+        }
+
+        if (!$use_async) {
             // Force synchronous execution
             error_log('[PUNTWORK] API: Using synchronous execution');
             if (!function_exists('run_scheduled_import')) {
@@ -299,6 +308,17 @@ function handle_get_import_status($request) {
         'last_update' => time(),
         'logs' => [],
     ];
+
+    // Check async import status if applicable
+    $async_status = check_async_import_status();
+    if ($async_status['active']) {
+        // Merge async status with main status
+        $progress = array_merge($progress, $async_status['progress']);
+        $progress['async_active'] = true;
+        $progress['async_status'] = $async_status['status'];
+    } else {
+        $progress['async_active'] = false;
+    }
 
     // Calculate elapsed time
     if (isset($progress['start_time']) && $progress['start_time'] > 0) {

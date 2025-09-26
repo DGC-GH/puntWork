@@ -78,10 +78,10 @@ function ajax_get_db_optimization_status() {
 }
 
 /**
- * Create database indexes
+ * Save async processing settings
  */
-add_action('wp_ajax_create_database_indexes', __NAMESPACE__ . '\\ajax_create_database_indexes');
-function ajax_create_database_indexes() {
+add_action('wp_ajax_save_async_settings', __NAMESPACE__ . '\\ajax_save_async_settings');
+function ajax_save_async_settings() {
     // Check nonce for security
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_admin_nonce')) {
         wp_die('Security check failed');
@@ -92,27 +92,38 @@ function ajax_create_database_indexes() {
         wp_die('Insufficient permissions');
     }
 
-    try {
-        create_database_indexes();
+    $enabled = isset($_POST['enabled']) && $_POST['enabled'] === 'true';
 
-        $status = get_database_optimization_status();
+    update_option('puntwork_async_enabled', $enabled);
 
-        $response = [
-            'success' => true,
-            'message' => 'Database indexes created successfully!',
-            'status' => $status
-        ];
+    $status = get_async_processing_status();
 
-        if (!$status['optimization_complete']) {
-            $response['message'] = 'Some indexes may have failed to create. Check database permissions.';
-        }
+    wp_send_json([
+        'success' => true,
+        'message' => 'Async settings saved successfully',
+        'data' => $status
+    ]);
+}
 
-        wp_send_json($response);
-
-    } catch (\Exception $e) {
-        wp_send_json([
-            'success' => false,
-            'message' => 'Failed to create indexes: ' . $e->getMessage()
-        ]);
+/**
+ * Get async processing status
+ */
+add_action('wp_ajax_get_async_status', __NAMESPACE__ . '\\ajax_get_async_status');
+function ajax_get_async_status() {
+    // Check nonce for security
+    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_admin_nonce')) {
+        wp_die('Security check failed');
     }
+
+    // Check user capabilities
+    if (!current_user_can('manage_options')) {
+        wp_die('Insufficient permissions');
+    }
+
+    $status = get_async_processing_status();
+
+    wp_send_json([
+        'success' => true,
+        'data' => $status
+    ]);
 }

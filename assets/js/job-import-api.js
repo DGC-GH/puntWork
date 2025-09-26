@@ -290,6 +290,50 @@ console.log('[PUNTWORK] job-import-api.js loaded');
         },
 
         /**
+         * Save async processing settings
+         * @param {boolean} enabled Whether async processing is enabled
+         * @returns {Promise} AJAX promise
+         */
+        saveAsyncSettings: function(enabled) {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'save_async_settings',
+                    enabled: enabled,
+                    nonce: jobImportData.nonce
+                },
+                success: function(response) {
+                    PuntWorkJSLogger.debug('Save async settings response', 'API', response);
+                },
+                error: function(xhr, status, error) {
+                    PuntWorkJSLogger.error('Save async settings error: ' + error, 'API');
+                }
+            });
+        },
+
+        /**
+         * Get async processing status
+         * @returns {Promise} AJAX promise
+         */
+        getAsyncStatus: function() {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'get_async_status',
+                    nonce: jobImportData.nonce
+                },
+                success: function(response) {
+                    PuntWorkJSLogger.debug('Get async status response', 'API', response);
+                },
+                error: function(xhr, status, error) {
+                    PuntWorkJSLogger.error('Get async status error: ' + error, 'API');
+                }
+            });
+        },
+
+        /**
          * Determine if an AJAX error should be retried
          * @param {object} xhr - XMLHttpRequest object
          * @param {string} status - Error status

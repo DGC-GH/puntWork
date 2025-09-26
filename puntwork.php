@@ -141,6 +141,7 @@ function setup_job_import() {
         'utilities/shortcode.php',
         'utilities/utility-helpers.php',
         'utilities/database-optimization.php',
+        'utilities/async-processing.php',
         
         // Mappings
         'mappings/mappings-constants.php',
@@ -167,6 +168,11 @@ function setup_job_import() {
     // Initialize scheduling
     if (function_exists(__NAMESPACE__ . '\\init_scheduling')) {
         call_user_func(__NAMESPACE__ . '\\init_scheduling');
+    }
+
+    // Initialize async processing
+    if (function_exists(__NAMESPACE__ . '\\init_async_processing')) {
+        call_user_func(__NAMESPACE__ . '\\init_async_processing');
     }
 }
 
