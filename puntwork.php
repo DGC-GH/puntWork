@@ -1,6 +1,18 @@
-<?php
-/**
+</**
  * Plugin Name: puntWork
+ * Description: Imports jobs from XML feeds via job-feed CPT.
+ * Version: 1.0.11
+ * Author: DGC-GH
+ */
+
+namespace Puntwork;
+
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+define( 'PUNTWORK_VERSION', '1.0.11' );gin Name: puntWork
  * Description: Imports jobs from XML feeds via job-feed CPT.
  * Version: 1.0.8
  * Author: DGC-GH
@@ -106,12 +118,15 @@ function setup_job_import() {
         'admin/admin-ui-main.php',
         'admin/admin-ui-scheduling.php',
         'admin/admin-api-settings.php',
+        'admin/admin-ui-feed-health.php',
         
         // API handlers
         'api/ajax-feed-processing.php',
         'api/ajax-handlers.php',
         'api/ajax-import-control.php',
         'api/ajax-purge.php',
+        'api/ajax-db-optimization.php',
+        'api/ajax-feed-health.php',
         'api/rest-api.php',
         
         // Batch processing
@@ -144,6 +159,7 @@ function setup_job_import() {
         'utilities/async-processing.php',
         'utilities/performance-monitor.php',
         'utilities/security-utils.php',
+        'utilities/feed-health-monitor.php',
         
         // Mappings
         'mappings/mappings-constants.php',
@@ -175,6 +191,11 @@ function setup_job_import() {
     // Initialize async processing
     if (function_exists(__NAMESPACE__ . '\\init_async_processing')) {
         call_user_func(__NAMESPACE__ . '\\init_async_processing');
+    }
+
+    // Initialize feed health monitoring
+    if (class_exists(__NAMESPACE__ . '\\FeedHealthMonitor')) {
+        call_user_func([__NAMESPACE__ . '\\FeedHealthMonitor', 'init']);
     }
 }
 
