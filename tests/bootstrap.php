@@ -197,6 +197,11 @@ $includes = array(
     'utilities/performance-monitor.php',
     'utilities/security-utils.php',
     'utilities/import-analytics.php',
+    'utilities/horizontal-scaling.php',
+    'utilities/load-balancer.php',
+    
+    // Queue management
+    'queue/queue-manager.php',
     
     // Mappings
     'mappings/mappings-constants.php',

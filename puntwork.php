@@ -164,6 +164,8 @@ function setup_job_import() {
         'utilities/async-processing.php',
         'utilities/performance-monitor.php',
         'utilities/security-utils.php',
+        'utilities/horizontal-scaling.php',
+        'utilities/load-balancer.php',
 
         // Mappings (functions)
         'mappings/mappings-constants.php',
