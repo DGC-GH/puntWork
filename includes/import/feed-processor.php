@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Multi-format feed processing utilities
  *
@@ -19,7 +20,6 @@ if (!defined('ABSPATH')) {
  */
 class FeedProcessor
 {
-
     const FORMAT_XML = 'xml';
     const FORMAT_JSON = 'json';
     const FORMAT_CSV = 'csv';
@@ -32,7 +32,7 @@ class FeedProcessor
      * @param string|null $content Optional content to analyze
      * @return string Detected format (xml, json, csv, or job_board)
      */
-    public static function detect_format(string $url, ?string $content = null): string
+    public static function detectFormat(string $url, ?string $content = null): string
     {
         // Check if it's a job board URL
         if (self::is_job_board_url($url)) {

@@ -253,7 +253,8 @@ class PuntWorkLogger
         if (is_array($data)) {
             $sanitized = [];
             foreach ($data as $key => $value) {
-                if (strpos(strtolower($key), 'password') !== false ||
+                if (
+                    strpos(strtolower($key), 'password') !== false ||
                     strpos(strtolower($key), 'key') !== false ||
                     strpos(strtolower($key), 'secret') !== false ||
                     strpos(strtolower($key), 'token') !== false
