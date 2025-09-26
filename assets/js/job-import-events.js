@@ -235,6 +235,32 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             $('#cancel-import').hide();
             $('#reset-import').hide();
 
+            // Load all status information progressively
+            this.loadProgressiveStatus();
+        },
+
+        /**
+         * Load all status information progressively for better UX
+         */
+        loadProgressiveStatus: function() {
+            console.log('[PUNTWORK] Loading status information progressively');
+
+            // Load database optimization status first
+            JobImportAPI.getDbOptimizationStatus().then(function(dbResponse) {
+                console.log('[PUNTWORK] DB status response:', dbResponse);
+                if (dbResponse.success) {
+                    JobImportEvents.updateDbStatusDisplay(dbResponse.data.status);
+                } else {
+                    // Show error state
+                    $('#db-status-badge').removeClass('success warning error').addClass('error').html('<i class="fas fa-exclamation-triangle" style="margin-right: 4px;"></i>Error');
+                    $('#db-indexes-list').html('<div style="color: #ff3b30;">Failed to load database status</div>');
+                }
+            }).catch(function(error) {
+                console.log('[PUNTWORK] DB status load error:', error);
+                $('#db-status-badge').removeClass('success warning error').addClass('error').html('<i class="fas fa-exclamation-triangle" style="margin-right: 4px;"></i>Error');
+                $('#db-indexes-list').html('<div style="color: #ff3b30;">Failed to load database status</div>');
+            });
+
             // Load async processing status
             JobImportAPI.getAsyncStatus().then(function(asyncResponse) {
                 console.log('[PUNTWORK] Async status response:', asyncResponse);
@@ -242,11 +268,18 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     JobImportEvents.updateAsyncStatusDisplay(asyncResponse.data);
                     // Update checkbox state
                     $('#enable-async-processing').prop('checked', asyncResponse.data.enabled);
+                } else {
+                    // Show error state
+                    $('#async-status-badge').removeClass('success warning error').addClass('error').html('<i class="fas fa-exclamation-triangle" style="margin-right: 4px;"></i>Error');
+                    $('#async-status-details').html('<div style="color: #ff3b30;">Failed to load async status</div>');
                 }
             }).catch(function(error) {
                 console.log('[PUNTWORK] Async status load error:', error);
+                $('#async-status-badge').removeClass('success warning error').addClass('error').html('<i class="fas fa-exclamation-triangle" style="margin-right: 4px;"></i>Error');
+                $('#async-status-details').html('<div style="color: #ff3b30;">Failed to load async status</div>');
             });
 
+            // Load import status last (most important for user interaction)
             JobImportAPI.getImportStatus().then(function(response) {
                 PuntWorkJSLogger.debug('Initial status response', 'EVENTS', response);
                 console.log('[PUNTWORK] Initial status response:', response);
@@ -314,24 +347,71 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 $('#reset-import').hide();
             });
         },
+                PuntWorkJSLogger.debug('Initial status response', 'EVENTS', response);
+                console.log('[PUNTWORK] Initial status response:', response);
 
-        /**
-         * Handle restart import (special case for interrupted imports)
-         */
-        handleRestartImport: async function() {
-            PuntWorkJSLogger.info('Restart clicked - resetting and starting over', 'EVENTS');
+                // Handle both response formats: direct data or wrapped in .data
+                var statusData = JobImportUI.normalizeResponseData(response);
 
-            try {
-                const resetResponse = await JobImportAPI.resetImport();
-                if (resetResponse.success) {
-                    JobImportUI.appendLogs(['Import reset for restart']);
+                // Determine if there's actually an incomplete import to resume
+                var hasIncompleteImport = response.success && (
+                    (statusData.processed > 0 && !statusData.complete) || // Partially completed import
+                    (statusData.resume_progress > 0) || // Has resume progress
+                    (!statusData.complete && statusData.total > 0) // Incomplete with total set
+                );
+
+                if (hasIncompleteImport) {
+                    JobImportUI.updateProgress(statusData);
+                    JobImportUI.appendLogs(statusData.logs || []);
+                    
+                    // Check if import appears to be currently running (updated within last 5 minutes)
+                    // This aligns with the PHP stuck import detection threshold
+                    var currentTime = Math.floor(Date.now() / 1000);
+                    var timeSinceLastUpdate = currentTime - (statusData.last_update || 0);
+                    var isRecentlyActive = timeSinceLastUpdate < 300; // 5 minutes
+                    
+                    if (isRecentlyActive && statusData.processed > 0) {
+                        // Import appears to be currently running - show progress UI with cancel and reset
+                        $('#start-import').hide();
+                        $('#resume-import').hide();
+                        $('#cancel-import').show();
+                        $('#reset-import').show();
+                        JobImportUI.showImportUI();
+                        $('#status-message').text('Import in progress...');
+                        console.log('[PUNTWORK] Import appears to be currently running - starting status polling');
+                        
+                        // Start polling for status updates
+                        JobImportEvents.startStatusPolling();
+                    } else {
+                        // Import was interrupted - show resume and reset options
+                        $('#start-import').hide();
+                        $('#resume-import').show();
+                        $('#reset-import').show();
+                        $('#cancel-import').hide();
+                        JobImportUI.showImportUI();
+                        $('#status-message').text('Previous import interrupted. Resume or reset?');
+                        console.log('[PUNTWORK] Import was interrupted, showing resume and reset options');
+                    }
+                } else {
+                    // Clean state - hide all import controls except start
+                    $('#start-import').show().text('Start Import');
+                    $('#resume-import').hide();
+                    $('#cancel-import').hide();
+                    $('#reset-import').hide();
+                    JobImportUI.hideImportUI();
+                    console.log('[PUNTWORK] Clean state detected - showing start button only');
                 }
-                // Directly call start import instead of triggering click to prevent loops
-                JobImportLogic.handleStartImport();
-            } catch (error) {
-                PuntWorkJSLogger.error('Restart error', 'EVENTS', error);
-                JobImportUI.appendLogs(['Restart error: ' + error.message]);
-            }
+            }).catch(function(xhr, status, error) {
+                PuntWorkJSLogger.error('Initial status AJAX error', 'EVENTS', error);
+                JobImportUI.appendLogs(['Initial status AJAX error: ' + error]);
+                // Ensure UI is in clean state even on error
+                JobImportUI.clearProgress();
+                JobImportUI.hideImportUI();
+                $('#start-import').show().text('Start Import');
+                $('#resume-import').hide();
+                $('#cancel-import').hide();
+                $('#reset-import').hide();
+            });
         },
 
         /**
