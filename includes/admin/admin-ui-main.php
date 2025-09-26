@@ -49,6 +49,34 @@ function render_jobs_dashboard_ui() {
                 <span id="cleanup-status" style="font-size: 14px; color: #8e8e93;"></span>
             </div>
         </div>
+
+        <!-- Database Optimization Section -->
+        <div style="margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px;">Database Optimization</h2>
+            <p style="font-size: 14px; color: #8e8e93; margin: 0 0 16px;">Optimize database performance with proper indexes for faster imports.</p>
+
+            <div id="db-optimization-status" style="background-color: #f9f9f9; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="font-size: 16px; font-weight: 500;">Index Status</span>
+                    <span id="db-status-badge" style="font-size: 12px; padding: 4px 8px; border-radius: 4px; background-color: #ff3b30; color: white;">Checking...</span>
+                </div>
+                <div id="db-indexes-list" style="font-size: 14px; color: #8e8e93;">
+                    Loading database optimization status...
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button id="optimize-database" class="button button-primary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #007aff; border: none; color: white;">
+                    <span id="optimize-text">Create Missing Indexes</span>
+                    <span id="optimize-loading" style="display: none;">Creating Indexes...</span>
+                </button>
+                <button id="check-db-status" class="button button-secondary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500;">
+                    <span id="check-text">Check Status</span>
+                    <span id="check-loading" style="display: none;">Checking...</span>
+                </button>
+                <span id="db-optimization-status-msg" style="font-size: 14px; color: #8e8e93;"></span>
+            </div>
+        </div>
     </div>
     <?php
 }

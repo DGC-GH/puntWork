@@ -37,6 +37,11 @@ function job_import_activate() {
     if ( function_exists( 'wp_cache_flush' ) ) {
         wp_cache_flush();
     }
+
+    // Create database indexes for performance optimization
+    if (function_exists(__NAMESPACE__ . '\\create_database_indexes')) {
+        call_user_func(__NAMESPACE__ . '\\create_database_indexes');
+    }
 }
 
 // Deactivation hook
@@ -135,6 +140,7 @@ function setup_job_import() {
         'utilities/item-inference.php',
         'utilities/shortcode.php',
         'utilities/utility-helpers.php',
+        'utilities/database-optimization.php',
         
         // Mappings
         'mappings/mappings-constants.php',

@@ -18,11 +18,21 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
     global $wpdb;
     foreach ($batch_guids as $guid) {
         if (isset($existing_by_guid[$guid])) {
-            $ids = $existing_by_guid[$guid];
-            if (count($ids) > 1) {
+            $posts_data = $existing_by_guid[$guid];
+            if (count($posts_data) > 1) {
+                // Extract post IDs for duplicate processing - handle both formats
+                $post_ids = [];
+                foreach ($posts_data as $item) {
+                    if (is_array($item) && isset($item['id'])) {
+                        $post_ids[] = $item['id'];
+                    } else {
+                        $post_ids[] = $item;
+                    }
+                }
+
                 $existing = get_posts([
                     'post_type' => 'job',
-                    'post__in' => $ids,
+                    'post__in' => $post_ids,
                     'posts_per_page' => -1,
                     'post_status' => 'any',
                     'fields' => 'ids',
@@ -85,7 +95,13 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
                 }
                 $post_ids_by_guid[$guid] = $post_to_keep;
             } else {
-                $post_ids_by_guid[$guid] = $ids[0];
+                // Handle both old format (array of IDs) and new format (array of post data)
+                $first_item = $posts_data[0];
+                if (is_array($first_item) && isset($first_item['id'])) {
+                    $post_ids_by_guid[$guid] = $first_item['id'];
+                } else {
+                    $post_ids_by_guid[$guid] = $first_item;
+                }
             }
         }
     }

@@ -64,6 +64,16 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 JobImportEvents.handleResetImport();
             });
 
+            // Database optimization events
+            $('#optimize-database').on('click', function(e) {
+                console.log('[PUNTWORK] Optimize database button clicked!');
+                JobImportEvents.handleOptimizeDatabase();
+            });
+            $('#check-db-status').on('click', function(e) {
+                console.log('[PUNTWORK] Check DB status button clicked!');
+                JobImportEvents.handleCheckDbStatus();
+            });
+
             // Log toggle button
             // $('#toggle-log').on('click', function(e) {
             //     console.log('[PUNTWORK] Toggle log button clicked!');
@@ -505,6 +515,103 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 JobImportEvents.statusPollingTimeout = null;
                 console.log('[PUNTWORK] Cleared status polling timeout');
             }
+        },
+
+        /**
+         * Handle optimize database button click
+         */
+        handleOptimizeDatabase: function() {
+            console.log('[PUNTWORK] Optimize database handler called');
+
+            if (confirm('This will create database indexes to improve import performance. This may take a few moments. Continue?')) {
+                console.log('[PUNTWORK] User confirmed database optimization');
+                $('#optimize-database').prop('disabled', true);
+                $('#optimize-text').hide();
+                $('#optimize-loading').show();
+                $('#db-optimization-status-msg').text('Creating indexes...');
+
+                JobImportAPI.createDatabaseIndexes().then(function(response) {
+                    console.log('[PUNTWORK] Database optimization response:', response);
+
+                    if (response.success) {
+                        $('#db-optimization-status-msg').text(response.data.message || 'Database indexes created successfully!');
+                        JobImportEvents.updateDbStatusDisplay(response.data.status);
+                    } else {
+                        $('#db-optimization-status-msg').text('Failed: ' + (response.data.message || 'Unknown error'));
+                    }
+
+                    $('#optimize-database').prop('disabled', false);
+                    $('#optimize-text').show();
+                    $('#optimize-loading').hide();
+                }).catch(function(xhr, status, error) {
+                    console.log('[PUNTWORK] Database optimization error:', error);
+                    $('#db-optimization-status-msg').text('Error: ' + error);
+                    $('#optimize-database').prop('disabled', false);
+                    $('#optimize-text').show();
+                    $('#optimize-loading').hide();
+                });
+            } else {
+                console.log('[PUNTWORK] User cancelled database optimization');
+            }
+        },
+
+        /**
+         * Handle check database status button click
+         */
+        handleCheckDbStatus: function() {
+            console.log('[PUNTWORK] Check DB status handler called');
+
+            $('#check-db-status').prop('disabled', true);
+            $('#check-text').hide();
+            $('#check-loading').show();
+            $('#db-optimization-status-msg').text('Checking status...');
+
+            JobImportAPI.getDbOptimizationStatus().then(function(response) {
+                console.log('[PUNTWORK] DB status response:', response);
+
+                if (response.success) {
+                    JobImportEvents.updateDbStatusDisplay(response.data.status);
+                    $('#db-optimization-status-msg').text('Status updated');
+                } else {
+                    $('#db-optimization-status-msg').text('Failed to check status');
+                }
+
+                $('#check-db-status').prop('disabled', false);
+                $('#check-text').show();
+                $('#check-loading').hide();
+            }).catch(function(xhr, status, error) {
+                console.log('[PUNTWORK] DB status check error:', error);
+                $('#db-optimization-status-msg').text('Error: ' + error);
+                $('#check-db-status').prop('disabled', false);
+                $('#check-text').show();
+                $('#check-loading').hide();
+            });
+        },
+
+        /**
+         * Update the database status display
+         */
+        updateDbStatusDisplay: function(status) {
+            console.log('[PUNTWORK] Updating DB status display:', status);
+
+            // Update badge
+            var badgeElement = $('#db-status-badge');
+            var badgeClass = 'error';
+            var badgeText = 'Not Optimized';
+
+            if (status.optimization_complete) {
+                badgeClass = 'success';
+                badgeText = 'Optimized';
+            } else if (status.indexes_created > 0) {
+                badgeClass = 'warning';
+                badgeText = 'Partial';
+            }
+
+            badgeElement.removeClass('success warning error').addClass(badgeClass);
+            badgeElement.text(badgeText);
+
+            // Update indexes list
+            $('#db-indexes-list').html(status.indexes_html || 'Unable to load index status');
         }
     };
 

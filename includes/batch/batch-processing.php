@@ -405,16 +405,8 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
 function process_batch_data(array $batch_guids, array $batch_items, array &$logs, int &$published, int &$updated, int &$skipped, int &$duplicates_drafted): array {
     global $wpdb;
 
-    // Bulk existing post_ids
-    $guid_placeholders = implode(',', array_fill(0, count($batch_guids), '%s'));
-    $existing_meta = $wpdb->get_results($wpdb->prepare(
-        "SELECT post_id, meta_value AS guid FROM $wpdb->postmeta WHERE meta_key = 'guid' AND meta_value IN ($guid_placeholders)",
-        $batch_guids
-    ));
-    $existing_by_guid = [];
-    foreach ($existing_meta as $row) {
-        $existing_by_guid[$row->guid][] = $row->post_id;
-    }
+    // Use optimized function to get posts by GUIDs with status
+    $existing_by_guid = get_posts_by_guids_with_status($batch_guids);
 
     $post_ids_by_guid = [];
     handle_duplicates($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);

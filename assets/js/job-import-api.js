@@ -247,6 +247,49 @@ console.log('[PUNTWORK] job-import-api.js loaded');
         },
 
         /**
+         * Get database optimization status
+         * @returns {Promise} AJAX promise
+         */
+        getDbOptimizationStatus: function() {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'get_db_optimization_status',
+                    nonce: jobImportData.nonce
+                },
+                success: function(response) {
+                    PuntWorkJSLogger.debug('DB optimization status response', 'API', response);
+                },
+                error: function(xhr, status, error) {
+                    PuntWorkJSLogger.error('DB optimization status error: ' + error, 'API');
+                }
+            });
+        },
+
+        /**
+         * Create database indexes
+         * @returns {Promise} AJAX promise
+         */
+        createDatabaseIndexes: function() {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                timeout: 60000, // 1 minute timeout for index creation
+                data: {
+                    action: 'create_database_indexes',
+                    nonce: jobImportData.nonce
+                },
+                success: function(response) {
+                    PuntWorkJSLogger.debug('Create database indexes response', 'API', response);
+                },
+                error: function(xhr, status, error) {
+                    PuntWorkJSLogger.error('Create database indexes error: ' + error, 'API');
+                }
+            });
+        },
+
+        /**
          * Determine if an AJAX error should be retried
          * @param {object} xhr - XMLHttpRequest object
          * @param {string} status - Error status
