@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Facebook Ads Integration
  *
@@ -17,8 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * Facebook Ads Manager
  */
-class FacebookAdsManager {
-
+class FacebookAdsManager
+{
     /**
      * Facebook Platform instance
      */
@@ -32,14 +33,16 @@ class FacebookAdsManager {
     /**
      * Constructor
      */
-    public function __construct(FacebookPlatform $facebook_platform) {
+    public function __construct(FacebookPlatform $facebook_platform)
+    {
         $this->facebook_platform = $facebook_platform;
     }
 
     /**
      * Create a Facebook Ads campaign
      */
-    public function createCampaign(array $campaign_data): array {
+    public function createCampaign(array $campaign_data): array
+    {
         $required_fields = ['name', 'account_id', 'objective', 'budget', 'start_time', 'end_time'];
         foreach ($required_fields as $field) {
             if (!isset($campaign_data[$field])) {
@@ -70,7 +73,8 @@ class FacebookAdsManager {
     /**
      * Create an ad set
      */
-    public function createAdSet(array $adset_data): array {
+    public function createAdSet(array $adset_data): array
+    {
         $required_fields = ['name', 'campaign_id', 'account_id', 'budget', 'targeting'];
         foreach ($required_fields as $field) {
             if (!isset($adset_data[$field])) {
@@ -102,7 +106,8 @@ class FacebookAdsManager {
     /**
      * Create an ad creative
      */
-    public function createAdCreative(array $creative_data): array {
+    public function createAdCreative(array $creative_data): array
+    {
         $required_fields = ['account_id', 'page_id'];
         foreach ($required_fields as $field) {
             if (!isset($creative_data[$field])) {
@@ -121,7 +126,7 @@ class FacebookAdsManager {
         ];
 
         // Remove empty fields
-        $params = array_filter($params, function($value) {
+        $params = array_filter($params, function ($value) {
             return !empty($value);
         });
 
@@ -137,7 +142,8 @@ class FacebookAdsManager {
     /**
      * Create an ad
      */
-    public function createAd(array $ad_data): array {
+    public function createAd(array $ad_data): array
+    {
         $required_fields = ['name', 'adset_id', 'creative_id', 'account_id'];
         foreach ($required_fields as $field) {
             if (!isset($ad_data[$field])) {
@@ -164,7 +170,8 @@ class FacebookAdsManager {
     /**
      * Post job with ads campaign
      */
-    public function postJobWithAds(array $job_data, array $ads_config): array {
+    public function postJobWithAds(array $job_data, array $ads_config): array
+    {
         // First create the campaign
         $campaign_result = $this->createCampaign($ads_config['campaign']);
 
@@ -229,7 +236,8 @@ class FacebookAdsManager {
     /**
      * Create compelling ad title for job posting
      */
-    private function createJobAdTitle(array $job_data): string {
+    private function createJobAdTitle(array $job_data): string
+    {
         $title = $job_data['title'] ?? '';
         $company = $job_data['company'] ?? '';
 
@@ -243,7 +251,8 @@ class FacebookAdsManager {
     /**
      * Create compelling ad text for job posting
      */
-    private function createJobAdText(array $job_data): string {
+    private function createJobAdText(array $job_data): string
+    {
         $title = $job_data['title'] ?? '';
         $company = $job_data['company'] ?? '';
         $location = $job_data['location'] ?? '';
@@ -270,7 +279,8 @@ class FacebookAdsManager {
     /**
      * Format targeting for Facebook API
      */
-    private function formatTargeting(array $targeting): array {
+    private function formatTargeting(array $targeting): array
+    {
         $formatted = [];
 
         // Age targeting
@@ -291,7 +301,7 @@ class FacebookAdsManager {
 
         // Interest targeting
         if (!empty($targeting['interests'])) {
-            $formatted['interests'] = array_map(function($interest) {
+            $formatted['interests'] = array_map(function ($interest) {
                 return ['id' => $interest, 'name' => $interest];
             }, $targeting['interests']);
         }
@@ -307,7 +317,8 @@ class FacebookAdsManager {
     /**
      * Get campaign performance metrics
      */
-    public function getCampaignMetrics(string $campaign_id, string $account_id): array {
+    public function getCampaignMetrics(string $campaign_id, string $account_id): array
+    {
         $response = $this->makeAdsApiRequest(
             'act_' . $account_id . '/campaigns',
             [
@@ -335,14 +346,16 @@ class FacebookAdsManager {
     /**
      * Convert currency to cents
      */
-    private function convertToCents(float $amount): int {
+    private function convertToCents(float $amount): int
+    {
         return (int)($amount * 100);
     }
 
     /**
      * Make Ads API request
      */
-    private function makeAdsApiRequest(string $endpoint, array $params, string $method) {
+    private function makeAdsApiRequest(string $endpoint, array $params, string $method)
+    {
         $url = $this->ads_api_base . '/' . $endpoint;
 
         $args = [

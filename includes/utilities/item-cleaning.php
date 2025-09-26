@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Item cleaning and sanitization utilities
  *
@@ -10,11 +11,12 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
-function clean_item_fields(&$item) {
+function clean_item_fields(&$item)
+{
     $html_fields = ['description', 'functiondescription', 'offerdescription', 'requirementsdescription', 'companydescription'];
     foreach ($html_fields as $field) {
         if (isset($item->$field)) {

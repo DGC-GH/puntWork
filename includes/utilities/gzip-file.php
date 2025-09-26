@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Gzip file compression utilities
  *
@@ -10,11 +11,12 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
-function gzip_file($source_path, $gz_path) {
+function gzip_file($source_path, $gz_path)
+{
     // Validate file paths
     $real_source_dir = realpath(dirname($source_path));
     $real_gz_dir = realpath(dirname($gz_path));

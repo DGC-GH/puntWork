@@ -20,6 +20,15 @@ if (!defined('DAY_IN_SECONDS')) {
     define('DAY_IN_SECONDS', 86400);
 }
 
+// WordPress query constants
+if (!defined('ARRAY_A')) {
+    define('ARRAY_A', 'ARRAY_A');
+}
+
+if (!defined('OBJECT')) {
+    define('OBJECT', 'OBJECT');
+}
+
 // Load WordPress test functions
 if (file_exists('/tmp/wordpress-tests-lib/includes/functions.php')) {
     require_once '/tmp/wordpress-tests-lib/includes/functions.php';
@@ -35,7 +44,11 @@ if (!function_exists('wp_die')) {
 
 if (!function_exists('plugin_dir_path')) {
     function plugin_dir_path($file) {
-        return dirname($file) . '/';
+        // For testing, return the project root + includes/
+        // Assuming $file is something like includes/utilities/import-analytics.php
+        // We want to return the path to the plugin root
+        $project_root = dirname(__DIR__); // Go up from tests/ to project root
+        return $project_root . '/';
     }
 }
 
@@ -116,12 +129,31 @@ if (!function_exists('wp_localize_script')) {
     function wp_localize_script($handle, $object_name, $l10n) { return true; }
 }
 
+// Global storage for mocked WordPress options
+global $mock_wp_options;
+$mock_wp_options = [];
+
 if (!function_exists('get_option')) {
-    function get_option($key, $default = null) { return $default; }
+    function get_option($key, $default = null) {
+        global $mock_wp_options;
+        return $mock_wp_options[$key] ?? $default;
+    }
 }
 
 if (!function_exists('update_option')) {
-    function update_option($key, $value) { return true; }
+    function update_option($key, $value) {
+        global $mock_wp_options;
+        $mock_wp_options[$key] = $value;
+        return true;
+    }
+}
+
+if (!function_exists('delete_option')) {
+    function delete_option($key) {
+        global $mock_wp_options;
+        unset($mock_wp_options[$key]);
+        return true;
+    }
 }
 
 if (!function_exists('get_transient')) {
@@ -220,6 +252,7 @@ $includes = array(
     
     // API handlers - testing one by one
     'api/ajax-feed-processing.php',
+    'api/rest-api.php',
     
     // Batch processing - testing individual files
     'batch/batch-core.php',
@@ -308,5 +341,170 @@ if (!function_exists('wp_insert_post')) {
         // Mock implementation - return a fake post ID
         static $post_id = 1000;
         return $post_id++;
+    }
+}
+
+if (!function_exists('get_post')) {
+    function get_post($post_id) {
+        // Mock post object with all required properties
+        return (object) [
+            'ID' => $post_id,
+            'post_title' => 'Mock Job',
+            'post_content' => 'Mock content',
+            'post_status' => 'publish',
+            'post_type' => 'job',
+            'post_modified' => '2024-01-01 12:00:00',
+            'post_date' => '2024-01-01 10:00:00',
+            'guid' => 'mock-guid-' . $post_id
+        ];
+    }
+}
+
+if (!function_exists('wp_delete_post')) {
+    function wp_delete_post($post_id, $force = false) {
+        return true;
+    }
+}
+
+if (!function_exists('post_type_exists')) {
+    function post_type_exists($post_type) {
+        return in_array($post_type, ['job', 'post', 'page']);
+    }
+}
+
+if (!function_exists('get_posts')) {
+    function get_posts($args = []) {
+        // Return mock posts
+        return [
+            (object) [
+                'ID' => 1001,
+                'post_title' => 'Mock Job 1',
+                'post_status' => 'publish'
+            ]
+        ];
+    }
+}
+
+if (!function_exists('wp_update_post')) {
+    function wp_update_post($postarr) {
+        return $postarr['ID'] ?? 1001;
+    }
+}
+
+if (!function_exists('wp_generate_password')) {
+    function wp_generate_password($length = 12, $special_chars = true, $extra_special_chars = false) {
+        $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        if ($special_chars) {
+            $chars .= '!@#$%^&*()';
+        }
+        if ($extra_special_chars) {
+            $chars .= '-_ []{}<>~`+=,.;:/?|';
+        }
+        $password = '';
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $chars[rand(0, strlen($chars) - 1)];
+        }
+        return $password;
+    }
+}
+
+if (!function_exists('get_post_meta')) {
+    function get_post_meta($post_id, $key, $single = false) {
+        // Mock post meta
+        $mock_meta = [
+            'guid' => 'mock-guid-' . $post_id,
+            'company' => 'Mock Company',
+            'location' => 'Mock City, Mock State',
+            'salary' => '$50,000 - $70,000'
+        ];
+        return $mock_meta[$key] ?? '';
+    }
+}
+
+if (!function_exists('is_admin')) {
+    function is_admin() {
+        return false; // Not in admin for API tests
+    }
+}
+
+// Mock WordPress REST API classes
+if (!class_exists('WP_REST_Request')) {
+    class WP_REST_Request {
+        private $method;
+        private $route;
+        private $params = [];
+        
+        public function __construct($method = 'GET', $route = '') {
+            $this->method = $method;
+            $this->route = $route;
+        }
+        
+        public function set_param($key, $value) {
+            $this->params[$key] = $value;
+        }
+        
+        public function get_param($key) {
+            return $this->params[$key] ?? null;
+        }
+        
+        public function get_params() {
+            return $this->params;
+        }
+        
+        public function get_method() {
+            return $this->method;
+        }
+        
+        public function get_route() {
+            return $this->route;
+        }
+    }
+}
+
+if (!class_exists('WP_REST_Response')) {
+    class WP_REST_Response {
+        private $data;
+        private $status;
+        
+        public function __construct($data = null, $status = 200) {
+            $this->data = $data;
+            $this->status = $status;
+        }
+        
+        public function get_data() {
+            return $this->data;
+        }
+        
+        public function set_data($data) {
+            $this->data = $data;
+        }
+        
+        public function get_status() {
+            return $this->status;
+        }
+        
+        public function set_status($status) {
+            $this->status = $status;
+        }
+    }
+}
+
+if (!class_exists('WP_Error')) {
+    class WP_Error {
+        private $code;
+        private $message;
+        
+        public function __construct($code, $message) {
+            $this->code = $code;
+            $this->message = $message;
+        }
+        
+        public function get_error_code() {
+            return $this->code;
+        }
+        
+        public function get_error_message() {
+            return $this->message;
+        }
     }
 }

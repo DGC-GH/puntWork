@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Performance monitoring and benchmarking utilities
  *
@@ -10,15 +11,15 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
 /**
  * Enhanced caching utility with Redis support
  */
-class CacheManager {
-
+class CacheManager
+{
     /**
      * Cache group for mappings
      */
@@ -34,7 +35,8 @@ class CacheManager {
      *
      * @return bool True if Redis/Object Cache is available
      */
-    public static function is_redis_available(): bool {
+    public static function is_redis_available(): bool
+    {
         return function_exists('wp_cache_get') && wp_cache_get('test_redis_connection', 'puntwork_test') === false;
     }
 
@@ -45,7 +47,8 @@ class CacheManager {
      * @param string $group Cache group
      * @return mixed Cached data or false
      */
-    public static function get(string $key, string $group = '') {
+    public static function get(string $key, string $group = '')
+    {
         // Try Redis/Object Cache first
         if (self::is_redis_available()) {
             $cached = wp_cache_get($key, $group);
@@ -68,7 +71,8 @@ class CacheManager {
      * @param int $expiration Expiration time in seconds
      * @return bool True on success
      */
-    public static function set(string $key, $data, string $group = '', int $expiration = 3600): bool {
+    public static function set(string $key, $data, string $group = '', int $expiration = 3600): bool
+    {
         // Try Redis/Object Cache first
         if (self::is_redis_available()) {
             $result = wp_cache_set($key, $data, $group, $expiration);
@@ -89,7 +93,8 @@ class CacheManager {
      * @param string $group Cache group
      * @return bool True on success
      */
-    public static function delete(string $key, string $group = ''): bool {
+    public static function delete(string $key, string $group = ''): bool
+    {
         // Try Redis/Object Cache first
         if (self::is_redis_available()) {
             wp_cache_delete($key, $group);
@@ -106,7 +111,8 @@ class CacheManager {
      * @param string $group Cache group
      * @return bool True on success
      */
-    public static function clear_group(string $group): bool {
+    public static function clear_group(string $group): bool
+    {
         if (self::is_redis_available()) {
             // For Redis, we can't easily clear a group, so we'll flush the entire cache
             // This is a limitation of the WordPress object cache API
@@ -129,7 +135,8 @@ class CacheManager {
      *
      * @return array Cache statistics
      */
-    public static function get_stats(): array {
+    public static function get_stats(): array
+    {
         return [
             'redis_available' => self::is_redis_available(),
             'cache_groups' => [self::GROUP_MAPPINGS, self::GROUP_ANALYTICS],
@@ -141,8 +148,8 @@ class CacheManager {
 /**
  * Performance monitoring class
  */
-class PerformanceMonitor {
-
+class PerformanceMonitor
+{
     /**
      * Start time for current measurement
      */
@@ -164,7 +171,8 @@ class PerformanceMonitor {
      * @param string $operation Operation name
      * @return string Measurement ID
      */
-    public static function start(string $operation): string {
+    public static function start(string $operation): string
+    {
         $id = $operation . '_' . microtime(true);
         self::$start_time = microtime(true);
         self::$start_memory = memory_get_usage(true);
@@ -187,7 +195,8 @@ class PerformanceMonitor {
      * @param string $checkpoint Checkpoint name
      * @param array $data Additional data
      */
-    public static function checkpoint(string $id, string $checkpoint, array $data = []): void {
+    public static function checkpoint(string $id, string $checkpoint, array $data = []): void
+    {
         if (!isset(self::$metrics[$id])) {
             return;
         }
@@ -214,7 +223,8 @@ class PerformanceMonitor {
      * @param string $id Measurement ID
      * @return array Performance data
      */
-    public static function end(string $id): array {
+    public static function end(string $id): array
+    {
         if (!isset(self::$metrics[$id])) {
             return [];
         }
@@ -256,7 +266,8 @@ class PerformanceMonitor {
      *
      * @return array Current performance data
      */
-    public static function snapshot(): array {
+    public static function snapshot(): array
+    {
         return [
             'memory_current' => memory_get_usage(true),
             'memory_peak' => memory_get_peak_usage(true),
@@ -273,7 +284,8 @@ class PerformanceMonitor {
      *
      * @return int Memory limit in bytes
      */
-    private static function get_memory_limit_bytes(): int {
+    private static function get_memory_limit_bytes(): int
+    {
         $limit = ini_get('memory_limit');
         if ($limit === '-1') {
             return PHP_INT_MAX;
@@ -299,7 +311,8 @@ class PerformanceMonitor {
      *
      * @param array $data Performance data
      */
-    private static function store_performance_data(array $data): void {
+    private static function store_performance_data(array $data): void
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'puntwork_performance_logs';
@@ -330,7 +343,8 @@ class PerformanceMonitor {
     /**
      * Create performance logs table
      */
-    private static function create_performance_table(): void {
+    private static function create_performance_table(): void
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'puntwork_performance_logs';
@@ -362,7 +376,8 @@ class PerformanceMonitor {
      * @param int $days Number of days to look back
      * @return array Performance statistics
      */
-    public static function get_statistics(string $operation = '', int $days = 30): array {
+    public static function get_statistics(string $operation = '', int $days = 30): array
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'puntwork_performance_logs';
@@ -406,7 +421,8 @@ class PerformanceMonitor {
      *
      * @param int $days_retention Days to keep logs
      */
-    public static function cleanup_old_logs(int $days_retention = 90): void {
+    public static function cleanup_old_logs(int $days_retention = 90): void
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'puntwork_performance_logs';
@@ -424,7 +440,8 @@ class PerformanceMonitor {
  * @param string $operation Operation name
  * @return string Measurement ID
  */
-function start_performance_monitoring(string $operation): string {
+function start_performance_monitoring(string $operation): string
+{
     return PerformanceMonitor::start($operation);
 }
 
@@ -435,7 +452,8 @@ function start_performance_monitoring(string $operation): string {
  * @param string $checkpoint Checkpoint name
  * @param array $data Additional data
  */
-function checkpoint_performance(string $id, string $checkpoint, array $data = []): void {
+function checkpoint_performance(string $id, string $checkpoint, array $data = []): void
+{
     PerformanceMonitor::checkpoint($id, $checkpoint, $data);
 }
 
@@ -445,7 +463,8 @@ function checkpoint_performance(string $id, string $checkpoint, array $data = []
  * @param string $id Measurement ID
  * @return array Performance data
  */
-function end_performance_monitoring(string $id): array {
+function end_performance_monitoring(string $id): array
+{
     return PerformanceMonitor::end($id);
 }
 
@@ -454,7 +473,8 @@ function end_performance_monitoring(string $id): array {
  *
  * @return array Current performance data
  */
-function get_performance_snapshot(): array {
+function get_performance_snapshot(): array
+{
     return PerformanceMonitor::snapshot();
 }
 
@@ -465,6 +485,7 @@ function get_performance_snapshot(): array {
  * @param int $days Number of days to look back
  * @return array Performance statistics
  */
-function get_performance_statistics(string $operation = '', int $days = 30): array {
+function get_performance_statistics(string $operation = '', int $days = 30): array
+{
     return PerformanceMonitor::get_statistics($operation, $days);
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Indeed Job Board Integration
  *
@@ -17,8 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * Indeed job board integration
  */
-class IndeedBoard extends JobBoard {
-
+class IndeedBoard extends JobBoard
+{
     /**
      * Publisher ID for Indeed API
      */
@@ -27,7 +28,8 @@ class IndeedBoard extends JobBoard {
     /**
      * Constructor
      */
-    public function __construct(array $config = []) {
+    public function __construct(array $config = [])
+    {
         $this->board_id = 'indeed';
         $this->board_name = 'Indeed';
         $this->api_url = 'https://api.indeed.com/ads/apisearch';
@@ -38,7 +40,8 @@ class IndeedBoard extends JobBoard {
     /**
      * Configure Indeed integration
      */
-    public function configure(array $config): void {
+    public function configure(array $config): void
+    {
         parent::configure($config);
 
         if (isset($config['publisher_id'])) {
@@ -49,14 +52,16 @@ class IndeedBoard extends JobBoard {
     /**
      * Check if Indeed is properly configured
      */
-    public function isConfigured(): bool {
+    public function isConfigured(): bool
+    {
         return parent::isConfigured() && !empty($this->publisher_id);
     }
 
     /**
      * Fetch jobs from Indeed
      */
-    public function fetchJobs(array $params = []): array {
+    public function fetchJobs(array $params = []): array
+    {
         if (!$this->isConfigured()) {
             throw new \Exception('Indeed integration not properly configured');
         }
@@ -85,7 +90,6 @@ class IndeedBoard extends JobBoard {
             }
 
             return $jobs;
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('Indeed API error', PuntWorkLogger::CONTEXT_IMPORT, [
                 'error' => $e->getMessage(),
@@ -98,7 +102,8 @@ class IndeedBoard extends JobBoard {
     /**
      * Get job details by ID
      */
-    public function getJobDetails(string $jobId): ?array {
+    public function getJobDetails(string $jobId): ?array
+    {
         // Indeed doesn't provide detailed job info via API
         // Return basic info if we have it cached, otherwise null
         return null;
@@ -107,7 +112,8 @@ class IndeedBoard extends JobBoard {
     /**
      * Search jobs with filters
      */
-    public function searchJobs(array $filters = []): array {
+    public function searchJobs(array $filters = []): array
+    {
         $params = [];
 
         if (isset($filters['keywords'])) {
@@ -138,7 +144,8 @@ class IndeedBoard extends JobBoard {
     /**
      * Normalize Indeed job data
      */
-    private function normalizeIndeedJob(array $jobData): array {
+    private function normalizeIndeedJob(array $jobData): array
+    {
         return [
             'id' => $jobData['jobkey'] ?? uniqid('indeed_'),
             'title' => $jobData['jobtitle'] ?? '',
@@ -158,7 +165,8 @@ class IndeedBoard extends JobBoard {
     /**
      * Map Indeed job types to standard format
      */
-    private function mapJobType(string $indeedType): string {
+    private function mapJobType(string $indeedType): string
+    {
         $type_map = [
             'fulltime' => 'full-time',
             'parttime' => 'part-time',
@@ -173,7 +181,8 @@ class IndeedBoard extends JobBoard {
     /**
      * Parse Indeed date format
      */
-    private function parseDatePosted(string $dateString): string {
+    private function parseDatePosted(string $dateString): string
+    {
         if (empty($dateString)) {
             return date('Y-m-d');
         }
@@ -190,7 +199,8 @@ class IndeedBoard extends JobBoard {
     /**
      * Calculate days ago from date string
      */
-    private function calculateDaysAgo(string $dateString): int {
+    private function calculateDaysAgo(string $dateString): int
+    {
         try {
             $date = new \DateTime($dateString);
             $now = new \DateTime();

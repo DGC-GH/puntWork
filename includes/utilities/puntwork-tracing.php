@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Distributed Tracing Utility for puntWork
  * Implements OpenTelemetry tracing for monitoring operations across the plugin
@@ -18,14 +19,16 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class PuntworkTracing {
+class PuntworkTracing
+{
     private static ?TracerProviderInterface $tracerProvider = null;
     private static ?TracerInterface $tracer = null;
 
     /**
      * Initialize the tracing system
      */
-    public static function init(): void {
+    public static function init(): void
+    {
         if (self::$tracerProvider !== null) {
             return; // Already initialized
         }
@@ -46,7 +49,8 @@ class PuntworkTracing {
     /**
      * Get the tracer instance
      */
-    public static function getTracer(): TracerInterface {
+    public static function getTracer(): TracerInterface
+    {
         if (self::$tracer === null) {
             self::init();
         }
@@ -56,7 +60,8 @@ class PuntworkTracing {
     /**
      * Start a new span
      */
-    public static function startSpan(string $name, array $attributes = []): \OpenTelemetry\API\Trace\SpanInterface {
+    public static function startSpan(string $name, array $attributes = []): \OpenTelemetry\API\Trace\SpanInterface
+    {
         $tracer = self::getTracer();
         $span = $tracer->spanBuilder($name)->startSpan();
 
@@ -70,7 +75,8 @@ class PuntworkTracing {
     /**
      * Start an active span (automatically makes it current)
      */
-    public static function startActiveSpan(string $name, array $attributes = []): \OpenTelemetry\API\Trace\SpanInterface {
+    public static function startActiveSpan(string $name, array $attributes = []): \OpenTelemetry\API\Trace\SpanInterface
+    {
         $tracer = self::getTracer();
         $span = $tracer->spanBuilder($name)->startSpan();
 
@@ -87,7 +93,8 @@ class PuntworkTracing {
     /**
      * Create a child span
      */
-    public static function createChildSpan(string $name, array $attributes = []): \OpenTelemetry\API\Trace\SpanInterface {
+    public static function createChildSpan(string $name, array $attributes = []): \OpenTelemetry\API\Trace\SpanInterface
+    {
         $tracer = self::getTracer();
         $span = $tracer->spanBuilder($name)->startSpan();
 
@@ -101,7 +108,8 @@ class PuntworkTracing {
     /**
      * Shutdown tracing (flush remaining spans)
      */
-    public static function shutdown(): void {
+    public static function shutdown(): void
+    {
         if (self::$tracerProvider !== null) {
             self::$tracerProvider->shutdown();
         }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AJAX handlers for database optimization
  *
@@ -10,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -18,7 +19,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Get database optimization status
  */
 add_action('wp_ajax_get_db_optimization_status', __NAMESPACE__ . '\\ajax_get_db_optimization_status');
-function ajax_get_db_optimization_status() {
+function ajax_get_db_optimization_status()
+{
     // Use comprehensive security validation
     $validation = SecurityUtils::validate_ajax_request('get_db_optimization_status');
     if (is_wp_error($validation)) {
@@ -73,7 +75,6 @@ function ajax_get_db_optimization_status() {
         }
 
         AjaxErrorHandler::send_success($response);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Database optimization status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::send_error('Failed to get database optimization status: ' . $e->getMessage());
@@ -84,7 +85,8 @@ function ajax_get_db_optimization_status() {
  * Save async processing settings
  */
 add_action('wp_ajax_save_async_settings', __NAMESPACE__ . '\\ajax_save_async_settings');
-function ajax_save_async_settings() {
+function ajax_save_async_settings()
+{
     // Use comprehensive security validation with field validation
     $validation = SecurityUtils::validate_ajax_request(
         'save_async_settings',
@@ -108,7 +110,6 @@ function ajax_save_async_settings() {
         $status = get_async_processing_status();
 
         AjaxErrorHandler::send_success($status, ['message' => 'Async settings saved successfully']);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Save async settings error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::send_error('Failed to save async settings: ' . $e->getMessage());
@@ -119,7 +120,8 @@ function ajax_save_async_settings() {
  * Get async processing status
  */
 add_action('wp_ajax_get_async_status', __NAMESPACE__ . '\\ajax_get_async_status');
-function ajax_get_async_status() {
+function ajax_get_async_status()
+{
     // Use comprehensive security validation
     $validation = SecurityUtils::validate_ajax_request('get_async_status');
     if (is_wp_error($validation)) {
@@ -130,7 +132,6 @@ function ajax_get_async_status() {
     try {
         $status = get_async_processing_status();
         AjaxErrorHandler::send_success($status);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Get async status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::send_error('Failed to get async status: ' . $e->getMessage());
@@ -141,7 +142,8 @@ function ajax_get_async_status() {
  * Get performance monitoring status
  */
 add_action('wp_ajax_get_performance_status', __NAMESPACE__ . '\\ajax_get_performance_status');
-function ajax_get_performance_status() {
+function ajax_get_performance_status()
+{
     // Use comprehensive security validation
     $validation = SecurityUtils::validate_ajax_request('get_performance_status');
     if (is_wp_error($validation)) {
@@ -157,7 +159,6 @@ function ajax_get_performance_status() {
             'stats' => $stats,
             'snapshot' => $snapshot
         ]);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Get performance status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::send_error('Failed to get performance status: ' . $e->getMessage());
@@ -168,7 +169,8 @@ function ajax_get_performance_status() {
  * Clear old performance logs
  */
 add_action('wp_ajax_clear_performance_logs', __NAMESPACE__ . '\\ajax_clear_performance_logs');
-function ajax_clear_performance_logs() {
+function ajax_clear_performance_logs()
+{
     // Use comprehensive security validation
     $validation = SecurityUtils::validate_ajax_request('clear_performance_logs');
     if (is_wp_error($validation)) {
@@ -186,7 +188,6 @@ function ajax_clear_performance_logs() {
         }
 
         AjaxErrorHandler::send_success(null, ['message' => $message]);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Clear performance logs error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::send_error('Failed to clear performance logs: ' . $e->getMessage());

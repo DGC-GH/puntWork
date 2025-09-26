@@ -1,4 +1,5 @@
 <?php
+
 /**
  * CRM Database Setup
  *
@@ -15,7 +16,8 @@ if (!defined('ABSPATH')) {
 /**
  * Create CRM database tables
  */
-function create_crm_tables() {
+function create_crm_tables()
+{
     global $wpdb;
 
     $charset_collate = $wpdb->get_charset_collate();
@@ -69,7 +71,8 @@ function create_crm_tables() {
 /**
  * Drop CRM database tables
  */
-function drop_crm_tables() {
+function drop_crm_tables()
+{
     global $wpdb;
 
     $tables = [
@@ -92,7 +95,8 @@ function drop_crm_tables() {
 /**
  * Update CRM database schema
  */
-function update_crm_schema() {
+function update_crm_schema()
+{
     // Check if tables exist and create/update as needed
     create_crm_tables();
 
@@ -109,7 +113,7 @@ function update_crm_schema() {
 register_activation_hook(__FILE__, 'create_crm_tables');
 
 // Hook into plugin deactivation (optional cleanup)
-register_deactivation_hook(__FILE__, function() {
+register_deactivation_hook(__FILE__, function () {
     // Only drop tables in development/testing
     if (defined('WP_DEBUG') && WP_DEBUG) {
         drop_crm_tables();

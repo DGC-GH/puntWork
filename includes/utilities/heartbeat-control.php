@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Heartbeat control for admin interface
  *
@@ -10,11 +11,11 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
-add_action('admin_enqueue_scripts', function($hook) {
+add_action('admin_enqueue_scripts', function ($hook) {
     if ($hook === 'puntwork-dashboard_page_job-feed-dashboard') {
         wp_deregister_script('heartbeat');
     }

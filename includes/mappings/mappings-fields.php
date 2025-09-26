@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Field mapping definitions
  *
@@ -10,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +21,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 
 if (!function_exists('get_acf_fields')) {
-    function get_acf_fields() {
+    function get_acf_fields()
+    {
         $cache_key = 'acf_fields';
         $fields = CacheManager::get($cache_key, CacheManager::GROUP_MAPPINGS);
 
@@ -55,7 +57,8 @@ if (!function_exists('get_acf_fields')) {
 }
 
 if (!function_exists('get_zero_empty_fields')) {
-    function get_zero_empty_fields() {
+    function get_zero_empty_fields()
+    {
         $cache_key = 'zero_empty_fields';
         $fields = CacheManager::get($cache_key, CacheManager::GROUP_MAPPINGS);
 

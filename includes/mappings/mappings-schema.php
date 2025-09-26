@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Schema mapping definitions
  *
@@ -10,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +21,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 
 if (!function_exists('build_job_schema')) {
-    function build_job_schema($enhanced_title, $job_desc, $item, $norm_province, $job_time, $job_remote, $fg, $estimate_key) {
+    function build_job_schema($enhanced_title, $job_desc, $item, $norm_province, $job_time, $job_remote, $fg, $estimate_key)
+    {
         $schema = [
             '@context' => 'https://schema.org',
             '@type' => 'JobPosting',
@@ -71,7 +73,8 @@ if (!function_exists('build_job_schema')) {
 }
 
 if (!function_exists('build_ecomm_schema')) {
-    function build_ecomm_schema($enhanced_title, $job_desc, $item, $estimate_key) {
+    function build_ecomm_schema($enhanced_title, $job_desc, $item, $estimate_key)
+    {
         $schema = [
             '@context' => 'https://schema.org',
             '@type' => 'Product',

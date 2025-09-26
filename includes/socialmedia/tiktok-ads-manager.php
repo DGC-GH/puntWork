@@ -1,4 +1,5 @@
 <?php
+
 /**
  * TikTok Ads Manager
  *
@@ -17,8 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * TikTok Ads API integration
  */
-class TikTokAdsManager {
-
+class TikTokAdsManager
+{
     /**
      * Parent platform instance
      */
@@ -32,14 +33,16 @@ class TikTokAdsManager {
     /**
      * Constructor
      */
-    public function __construct(TikTokPlatform $platform) {
+    public function __construct(TikTokPlatform $platform)
+    {
         $this->platform = $platform;
     }
 
     /**
      * Create ads campaign for job posting
      */
-    public function postJobWithAds(array $post_data, array $ads_config): array {
+    public function postJobWithAds(array $post_data, array $ads_config): array
+    {
         try {
             // Create campaign
             $campaign = $this->createCampaign($ads_config);
@@ -62,7 +65,6 @@ class TikTokAdsManager {
                 'platform' => 'tiktok',
                 'timestamp' => time()
             ];
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('TikTok ads campaign creation failed', PuntWorkLogger::CONTEXT_SOCIAL, [
                 'error' => $e->getMessage(),
@@ -81,7 +83,8 @@ class TikTokAdsManager {
     /**
      * Create campaign
      */
-    private function createCampaign(array $ads_config): array {
+    private function createCampaign(array $ads_config): array
+    {
         $campaign_data = [
             'advertiser_id' => $this->platform->getCredentials()['advertiser_id'],
             'campaign_name' => $ads_config['campaign_name'] ?? 'Job Posting Campaign - ' . date('Y-m-d H:i:s'),
@@ -101,7 +104,8 @@ class TikTokAdsManager {
     /**
      * Create ad group
      */
-    private function createAdGroup(string $campaign_id, array $ads_config): array {
+    private function createAdGroup(string $campaign_id, array $ads_config): array
+    {
         $ad_group_data = [
             'advertiser_id' => $this->platform->getCredentials()['advertiser_id'],
             'campaign_id' => $campaign_id,
@@ -123,7 +127,8 @@ class TikTokAdsManager {
     /**
      * Create ad creative
      */
-    private function createAdCreative(string $adgroup_id, array $post_data, array $ads_config): array {
+    private function createAdCreative(string $adgroup_id, array $post_data, array $ads_config): array
+    {
         $creative_data = [
             'advertiser_id' => $this->platform->getCredentials()['advertiser_id'],
             'adgroup_id' => $adgroup_id,
@@ -146,7 +151,8 @@ class TikTokAdsManager {
     /**
      * Create ad
      */
-    private function createAd(string $adgroup_id, string $creative_id, array $ads_config): array {
+    private function createAd(string $adgroup_id, string $creative_id, array $ads_config): array
+    {
         $ad_data = [
             'advertiser_id' => $this->platform->getCredentials()['advertiser_id'],
             'adgroup_id' => $adgroup_id,
@@ -165,7 +171,8 @@ class TikTokAdsManager {
     /**
      * Build targeting parameters
      */
-    private function buildTargeting(array $targeting_config): array {
+    private function buildTargeting(array $targeting_config): array
+    {
         $targeting = [
             'age' => $targeting_config['age'] ?? ['18', '65'], // Age range
             'gender' => $targeting_config['gender'] ?? 'GENDER_UNLIMITED', // GENDER_UNLIMITED, GENDER_MALE, GENDER_FEMALE
@@ -181,7 +188,8 @@ class TikTokAdsManager {
     /**
      * Get campaign metrics
      */
-    public function getCampaignMetrics(string $campaign_id, string $advertiser_id): array {
+    public function getCampaignMetrics(string $campaign_id, string $advertiser_id): array
+    {
         $params = [
             'advertiser_id' => $advertiser_id,
             'campaign_ids' => [$campaign_id],
@@ -211,7 +219,8 @@ class TikTokAdsManager {
     /**
      * Get ad group metrics
      */
-    public function getAdGroupMetrics(string $adgroup_id, string $advertiser_id): array {
+    public function getAdGroupMetrics(string $adgroup_id, string $advertiser_id): array
+    {
         $params = [
             'advertiser_id' => $advertiser_id,
             'adgroup_ids' => [$adgroup_id],
@@ -241,7 +250,8 @@ class TikTokAdsManager {
     /**
      * Pause campaign
      */
-    public function pauseCampaign(string $campaign_id, string $advertiser_id): bool {
+    public function pauseCampaign(string $campaign_id, string $advertiser_id): bool
+    {
         $data = [
             'advertiser_id' => $advertiser_id,
             'campaign_id' => $campaign_id,
@@ -255,7 +265,8 @@ class TikTokAdsManager {
     /**
      * Resume campaign
      */
-    public function resumeCampaign(string $campaign_id, string $advertiser_id): bool {
+    public function resumeCampaign(string $campaign_id, string $advertiser_id): bool
+    {
         $data = [
             'advertiser_id' => $advertiser_id,
             'campaign_id' => $campaign_id,
@@ -269,7 +280,8 @@ class TikTokAdsManager {
     /**
      * Update campaign budget
      */
-    public function updateCampaignBudget(string $campaign_id, string $advertiser_id, float $budget): bool {
+    public function updateCampaignBudget(string $campaign_id, string $advertiser_id, float $budget): bool
+    {
         $data = [
             'advertiser_id' => $advertiser_id,
             'campaign_id' => $campaign_id,
@@ -283,7 +295,8 @@ class TikTokAdsManager {
     /**
      * Make TikTok Ads API request
      */
-    private function makeAdsApiRequest(string $endpoint, array $params, string $method) {
+    private function makeAdsApiRequest(string $endpoint, array $params, string $method)
+    {
         $url = $this->ads_api_base . '/' . $endpoint;
 
         $args = [

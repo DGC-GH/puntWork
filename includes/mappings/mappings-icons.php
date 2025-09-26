@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Icon mapping definitions
  *
@@ -10,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -25,7 +26,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return array Icon mappings by category.
  */
 if (!function_exists('GetIconMap')) {
-    function GetIconMap() {
+    function GetIconMap()
+    {
         $cached = CacheManager::get('icon_map', CacheManager::GROUP_MAPPINGS);
         if (false === $cached) {
             $cached = [

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Monitoring AJAX Handlers
  *
@@ -16,7 +17,8 @@ if (!defined('ABSPATH')) {
 /**
  * Get system metrics for monitoring dashboard
  */
-function puntwork_get_system_metrics() {
+function puntwork_get_system_metrics()
+{
     // Verify nonce for security
     if (!wp_verify_nonce($_POST['nonce'], 'puntwork_monitoring_nonce')) {
         wp_die(__('Security check failed', 'puntwork'));
@@ -46,7 +48,8 @@ add_action('wp_ajax_puntwork_get_system_metrics', 'puntwork_get_system_metrics')
 /**
  * Get performance metrics for monitoring dashboard
  */
-function puntwork_get_performance_metrics() {
+function puntwork_get_performance_metrics()
+{
     // Verify nonce for security
     if (!wp_verify_nonce($_POST['nonce'], 'puntwork_monitoring_nonce')) {
         wp_die(__('Security check failed', 'puntwork'));
@@ -76,7 +79,8 @@ add_action('wp_ajax_puntwork_get_performance_metrics', 'puntwork_get_performance
 /**
  * Get error logs for monitoring dashboard
  */
-function puntwork_get_error_logs() {
+function puntwork_get_error_logs()
+{
     // Verify nonce for security
     if (!wp_verify_nonce($_POST['nonce'], 'puntwork_monitoring_nonce')) {
         wp_die(__('Security check failed', 'puntwork'));
@@ -102,7 +106,8 @@ add_action('wp_ajax_puntwork_get_error_logs', 'puntwork_get_error_logs');
 /**
  * Get memory usage
  */
-function puntwork_get_memory_usage() {
+function puntwork_get_memory_usage()
+{
     if (function_exists('memory_get_peak_usage')) {
         return array(
             'current' => memory_get_usage(true),
@@ -116,7 +121,8 @@ function puntwork_get_memory_usage() {
 /**
  * Get CPU usage (simplified - would need system monitoring extension)
  */
-function puntwork_get_cpu_usage() {
+function puntwork_get_cpu_usage()
+{
     // This is a simplified implementation
     // In production, you'd use system monitoring tools
     return array(
@@ -128,7 +134,8 @@ function puntwork_get_cpu_usage() {
 /**
  * Get disk usage
  */
-function puntwork_get_disk_usage() {
+function puntwork_get_disk_usage()
+{
     $path = ABSPATH;
     $total = disk_total_space($path);
     $free = disk_free_space($path);
@@ -145,7 +152,8 @@ function puntwork_get_disk_usage() {
 /**
  * Get database connections
  */
-function puntwork_get_db_connections() {
+function puntwork_get_db_connections()
+{
     global $wpdb;
 
     // Get current connections (simplified)
@@ -160,7 +168,8 @@ function puntwork_get_db_connections() {
 /**
  * Get active users count
  */
-function puntwork_get_active_users() {
+function puntwork_get_active_users()
+{
     // Get users active in last 15 minutes
     $active_users = count_users();
     return $active_users['total_users']; // Simplified
@@ -169,7 +178,8 @@ function puntwork_get_active_users() {
 /**
  * Get queue status
  */
-function puntwork_get_queue_status() {
+function puntwork_get_queue_status()
+{
     // This would integrate with your queue system
     return array(
         'pending' => 0, // Placeholder
@@ -182,7 +192,8 @@ function puntwork_get_queue_status() {
 /**
  * Get error rate
  */
-function puntwork_get_error_rate() {
+function puntwork_get_error_rate()
+{
     // This would track errors over time
     return array(
         'rate' => 0.05, // 5% error rate placeholder
@@ -194,7 +205,8 @@ function puntwork_get_error_rate() {
 /**
  * Get response time
  */
-function puntwork_get_response_time() {
+function puntwork_get_response_time()
+{
     // This would track response times
     return array(
         'average' => 250, // ms
@@ -206,7 +218,8 @@ function puntwork_get_response_time() {
 /**
  * Get page load times for time range
  */
-function puntwork_get_page_load_times($time_range) {
+function puntwork_get_page_load_times($time_range)
+{
     // This would query performance logs
     return array(
         array('time' => current_time('timestamp') - 3600, 'value' => 1200),
@@ -218,7 +231,8 @@ function puntwork_get_page_load_times($time_range) {
 /**
  * Get API response times
  */
-function puntwork_get_api_response_times($time_range) {
+function puntwork_get_api_response_times($time_range)
+{
     // This would query API performance logs
     return array(
         array('time' => current_time('timestamp') - 3600, 'value' => 200),
@@ -230,7 +244,8 @@ function puntwork_get_api_response_times($time_range) {
 /**
  * Get database query times
  */
-function puntwork_get_db_query_times($time_range) {
+function puntwork_get_db_query_times($time_range)
+{
     // This would query database performance logs
     return array(
         array('time' => current_time('timestamp') - 3600, 'value' => 50),
@@ -242,7 +257,8 @@ function puntwork_get_db_query_times($time_range) {
 /**
  * Get cache hit rate
  */
-function puntwork_get_cache_hit_rate($time_range) {
+function puntwork_get_cache_hit_rate($time_range)
+{
     // This would query cache performance logs
     return array(
         array('time' => current_time('timestamp') - 3600, 'value' => 85),
@@ -254,7 +270,8 @@ function puntwork_get_cache_hit_rate($time_range) {
 /**
  * Get throughput metrics
  */
-function puntwork_get_throughput($time_range) {
+function puntwork_get_throughput($time_range)
+{
     // This would query throughput logs
     return array(
         array('time' => current_time('timestamp') - 3600, 'value' => 150),
@@ -266,7 +283,8 @@ function puntwork_get_throughput($time_range) {
 /**
  * Clear old logs
  */
-function puntwork_clear_old_logs() {
+function puntwork_clear_old_logs()
+{
     // Verify nonce for security
     if (!wp_verify_nonce($_POST['nonce'], 'puntwork_monitoring_nonce')) {
         wp_die(__('Security check failed', 'puntwork'));
@@ -288,7 +306,8 @@ add_action('wp_ajax_puntwork_clear_old_logs', 'puntwork_clear_old_logs');
 /**
  * Save alert settings
  */
-function puntwork_save_alert_settings() {
+function puntwork_save_alert_settings()
+{
     // Verify nonce for security
     if (!wp_verify_nonce($_POST['nonce'], 'puntwork_monitoring_nonce')) {
         wp_die(__('Security check failed', 'puntwork'));

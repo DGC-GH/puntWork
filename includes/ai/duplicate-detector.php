@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Advanced duplicate detection using ML-like similarity algorithms
  *
@@ -17,8 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * Duplicate detection engine using similarity algorithms
  */
-class DuplicateDetector {
-
+class DuplicateDetector
+{
     /**
      * Similarity threshold for considering items as duplicates
      */
@@ -30,7 +31,8 @@ class DuplicateDetector {
      * @param array $jobBatch Array of job data arrays
      * @return array Array of duplicate groups, each containing similar job indices
      */
-    public static function detectDuplicates(array $jobBatch): array {
+    public static function detectDuplicates(array $jobBatch): array
+    {
         $duplicates = [];
         $processed = [];
 
@@ -70,7 +72,8 @@ class DuplicateDetector {
      * @param array $job2 Second job data
      * @return float Similarity score between 0 and 1
      */
-    public static function calculateSimilarity(array $job1, array $job2): float {
+    public static function calculateSimilarity(array $job1, array $job2): float
+    {
         // Extract comparable fields
         $title1 = strtolower($job1['job_title'] ?? '');
         $title2 = strtolower($job2['job_title'] ?? '');
@@ -101,7 +104,8 @@ class DuplicateDetector {
      * @param string $str2 Second string
      * @return float Similarity score between 0 and 1
      */
-    private static function jaccardSimilarity(string $str1, string $str2): float {
+    private static function jaccardSimilarity(string $str1, string $str2): float
+    {
         if (empty($str1) && empty($str2)) {
             return 1.0;
         }
@@ -134,7 +138,8 @@ class DuplicateDetector {
      * @param string $str2 Second string
      * @return float Similarity score between 0 and 1
      */
-    private static function levenshteinSimilarity(string $str1, string $str2): float {
+    private static function levenshteinSimilarity(string $str1, string $str2): float
+    {
         if (empty($str1) && empty($str2)) {
             return 1.0;
         }
@@ -163,7 +168,8 @@ class DuplicateDetector {
      * @param string $str2 Second string
      * @return float Fuzzy match score between 0 and 1
      */
-    public static function fuzzyMatch(string $str1, string $str2): float {
+    public static function fuzzyMatch(string $str1, string $str2): float
+    {
         $str1 = strtolower(trim($str1));
         $str2 = strtolower(trim($str2));
 
@@ -185,7 +191,8 @@ class DuplicateDetector {
      * @param array $job2 Second job data
      * @return bool True if jobs are considered duplicates
      */
-    public static function isDuplicate(array $job1, array $job2): bool {
+    public static function isDuplicate(array $job1, array $job2): bool
+    {
         return self::calculateSimilarity($job1, $job2) >= self::SIMILARITY_THRESHOLD;
     }
 }

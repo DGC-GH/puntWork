@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Feed Health Monitoring and Alert System
  *
@@ -18,8 +19,8 @@ if (!defined('ABSPATH')) {
  * Feed Health Monitor Class
  * Monitors feed availability, performance, and sends alerts
  */
-class FeedHealthMonitor {
-
+class FeedHealthMonitor
+{
     const TABLE_NAME = 'puntwork_feed_health';
     const ALERT_TRANSIENT_PREFIX = 'puntwork_feed_alert_';
     const HEALTH_CHECK_TRANSIENT = 'puntwork_feed_health_check';
@@ -39,7 +40,8 @@ class FeedHealthMonitor {
     /**
      * Initialize the feed health monitoring system
      */
-    public static function init() {
+    public static function init()
+    {
         self::create_health_table();
         add_action('puntwork_feed_health_check', [__CLASS__, 'perform_health_check']);
         add_action('admin_init', [__CLASS__, 'schedule_health_checks']);
@@ -48,7 +50,8 @@ class FeedHealthMonitor {
     /**
      * Create the feed health monitoring database table
      */
-    private static function create_health_table() {
+    private static function create_health_table()
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -79,7 +82,8 @@ class FeedHealthMonitor {
     /**
      * Schedule regular health checks
      */
-    public static function schedule_health_checks() {
+    public static function schedule_health_checks()
+    {
         if (!wp_next_scheduled('puntwork_feed_health_check')) {
             // Run health checks every 15 minutes
             wp_schedule_event(time(), '15min', 'puntwork_feed_health_check');
@@ -89,7 +93,8 @@ class FeedHealthMonitor {
     /**
      * Perform health check on all feeds
      */
-    public static function perform_health_check() {
+    public static function perform_health_check()
+    {
         $feeds = get_feeds();
 
         if (empty($feeds)) {
@@ -108,7 +113,8 @@ class FeedHealthMonitor {
     /**
      * Check health of a specific feed
      */
-    public static function check_feed_health($feed_key, $feed_url) {
+    public static function check_feed_health($feed_key, $feed_url)
+    {
         $start_time = microtime(true);
 
         try {
@@ -213,7 +219,6 @@ class FeedHealthMonitor {
             }
 
             self::record_health_check($feed_key, $feed_url, $status, $response_time, $http_code, $item_count, $last_modified, null, $content_hash);
-
         } catch (\Exception $e) {
             $response_time = microtime(true) - $start_time;
             self::record_health_check($feed_key, $feed_url, self::STATUS_DOWN, $response_time, null, null, null, $e->getMessage());
@@ -224,7 +229,8 @@ class FeedHealthMonitor {
     /**
      * Record a health check result in the database
      */
-    private static function record_health_check($feed_key, $feed_url, $status, $response_time, $http_code, $item_count, $last_modified, $error_message = null, $content_hash = null) {
+    private static function record_health_check($feed_key, $feed_url, $status, $response_time, $http_code, $item_count, $last_modified, $error_message = null, $content_hash = null)
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -258,7 +264,8 @@ class FeedHealthMonitor {
     /**
      * Send an alert for a feed issue
      */
-    private static function send_alert($feed_key, $feed_url, $alert_type, $data = []) {
+    private static function send_alert($feed_key, $feed_url, $alert_type, $data = [])
+    {
         $alert_key = $alert_type . '_' . $feed_key;
         $transient_key = self::ALERT_TRANSIENT_PREFIX . $alert_key;
 
@@ -314,7 +321,8 @@ class FeedHealthMonitor {
     /**
      * Get alert subject line
      */
-    private static function get_alert_subject($alert_type, $feed_key) {
+    private static function get_alert_subject($alert_type, $feed_key)
+    {
         $subjects = [
             self::ALERT_FEED_DOWN => "🚨 Feed Down Alert: $feed_key",
             self::ALERT_FEED_SLOW => "⚠️ Slow Feed Alert: $feed_key",
@@ -328,7 +336,8 @@ class FeedHealthMonitor {
     /**
      * Get alert message content
      */
-    private static function get_alert_message($alert_type, $feed_key, $feed_url, $data) {
+    private static function get_alert_message($alert_type, $feed_key, $feed_url, $data)
+    {
         $site_name = get_bloginfo('name');
         $site_url = get_site_url();
 
@@ -397,7 +406,8 @@ class FeedHealthMonitor {
     /**
      * Get the previous content hash for a feed
      */
-    private static function get_previous_content_hash($feed_key) {
+    private static function get_previous_content_hash($feed_key)
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -413,7 +423,8 @@ class FeedHealthMonitor {
     /**
      * Clean up old health records (keep last 30 days)
      */
-    private static function cleanup_old_records() {
+    private static function cleanup_old_records()
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -428,7 +439,8 @@ class FeedHealthMonitor {
     /**
      * Get current health status for all feeds with caching
      */
-    public static function get_feed_health_status() {
+    public static function get_feed_health_status()
+    {
         $cache_key = 'feed_health_status_all';
         $cached_result = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
 
@@ -464,7 +476,8 @@ class FeedHealthMonitor {
     /**
      * Get health history for a specific feed with caching
      */
-    public static function get_feed_health_history($feed_key, $days = 7) {
+    public static function get_feed_health_history($feed_key, $days = 7)
+    {
         $cache_key = 'feed_health_history_' . $feed_key . '_' . $days;
         $cached_result = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
 
@@ -493,7 +506,8 @@ class FeedHealthMonitor {
     /**
      * Manually trigger a health check for all feeds
      */
-    public static function trigger_manual_check() {
+    public static function trigger_manual_check()
+    {
         self::perform_health_check();
     }
 }

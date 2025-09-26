@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Salary mapping definitions
  *
@@ -10,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -25,7 +26,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return array Salary estimates by category.
  */
 if (!function_exists('GetSalaryEstimates')) {
-    function GetSalaryEstimates() {
+    function GetSalaryEstimates()
+    {
         $cached = CacheManager::get('salary_estimates', CacheManager::GROUP_MAPPINGS);
         if (false === $cached) {
             $cached = [

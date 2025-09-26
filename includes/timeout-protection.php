@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Timeout Protection and Background Processing Fixes
  *
@@ -13,7 +14,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 

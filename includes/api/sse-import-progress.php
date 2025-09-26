@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Server-Sent Events (SSE) for real-time import progress updates
  *
@@ -10,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -22,7 +23,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Register SSE endpoint for import progress
  */
 add_action('rest_api_init', __NAMESPACE__ . '\\register_sse_import_progress_route');
-function register_sse_import_progress_route() {
+function register_sse_import_progress_route()
+{
     register_rest_route('puntwork/v1', '/import-progress', [
         'methods' => 'GET',
         'callback' => __NAMESPACE__ . '\\handle_import_progress_sse',
@@ -40,7 +42,8 @@ function register_sse_import_progress_route() {
 /**
  * Handle Server-Sent Events for import progress
  */
-function handle_import_progress_sse($request) {
+function handle_import_progress_sse($request)
+{
     $api_key = $request->get_param('api_key');
 
     // Verify API key
@@ -79,7 +82,7 @@ function handle_import_progress_sse($request) {
     set_time_limit(0);
 
     // Handle client disconnect
-    register_shutdown_function(function() use (&$client_disconnected) {
+    register_shutdown_function(function () use (&$client_disconnected) {
         $client_disconnected = true;
     });
 
@@ -159,7 +162,6 @@ function handle_import_progress_sse($request) {
                 PuntWorkLogger::info('SSE connection closed - import completed', PuntWorkLogger::CONTEXT_API);
                 break;
             }
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('SSE error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_API);
 
@@ -179,4 +181,3 @@ function handle_import_progress_sse($request) {
     PuntWorkLogger::debug('SSE connection closed', PuntWorkLogger::CONTEXT_API);
     exit();
 }
-

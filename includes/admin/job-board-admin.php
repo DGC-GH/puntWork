@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Job Board Admin Configuration
  *
@@ -17,12 +18,13 @@ if (!defined('ABSPATH')) {
 /**
  * Job Board configuration admin page
  */
-class JobBoardAdmin {
-
+class JobBoardAdmin
+{
     /**
      * Initialize the admin page
      */
-    public static function init(): void {
+    public static function init(): void
+    {
         add_action('admin_menu', [self::class, 'add_admin_menu']);
         add_action('admin_enqueue_scripts', [self::class, 'enqueue_scripts']);
         add_action('wp_ajax_puntwork_test_job_board', [self::class, 'ajax_test_job_board']);
@@ -32,7 +34,8 @@ class JobBoardAdmin {
     /**
      * Add admin menu
      */
-    public static function add_admin_menu(): void {
+    public static function add_admin_menu(): void
+    {
         add_submenu_page(
             'puntwork-admin',
             __('Job Boards', 'puntwork'),
@@ -46,7 +49,8 @@ class JobBoardAdmin {
     /**
      * Enqueue admin scripts and styles
      */
-    public static function enqueue_scripts($hook): void {
+    public static function enqueue_scripts($hook): void
+    {
         if ($hook !== 'puntwork_page_puntwork-job-boards') {
             return;
         }
@@ -71,7 +75,8 @@ class JobBoardAdmin {
     /**
      * Render the admin page
      */
-    public static function render_admin_page(): void {
+    public static function render_admin_page(): void
+    {
         if (!current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.'));
         }
@@ -92,7 +97,7 @@ class JobBoardAdmin {
                 </div>
 
                 <div class="puntwork-job-boards-grid">
-                    <?php foreach ($available_boards as $board_id => $board_info): ?>
+                    <?php foreach ($available_boards as $board_id => $board_info) : ?>
                         <?php
                         $config = $board_configs[$board_id] ?? [];
                         $is_enabled = isset($config['enabled']) && $config['enabled'];
@@ -139,7 +144,8 @@ class JobBoardAdmin {
     /**
      * Render configuration fields for a specific job board
      */
-    private static function render_board_config_fields(string $board_id, array $config): void {
+    private static function render_board_config_fields(string $board_id, array $config): void
+    {
         switch ($board_id) {
             case 'indeed':
                 ?>
@@ -180,7 +186,8 @@ class JobBoardAdmin {
     /**
      * AJAX handler for testing job board connections
      */
-    public static function ajax_test_job_board(): void {
+    public static function ajax_test_job_board(): void
+    {
         check_ajax_referer('puntwork_job_boards', 'nonce');
 
         if (!current_user_can('manage_options')) {
@@ -227,7 +234,6 @@ class JobBoardAdmin {
             }
 
             wp_send_json_success($test_result);
-
         } catch (\Exception $e) {
             wp_send_json_error([
                 'message' => $e->getMessage(),
@@ -239,7 +245,8 @@ class JobBoardAdmin {
     /**
      * AJAX handler for saving job board configurations
      */
-    public static function ajax_save_job_board(): void {
+    public static function ajax_save_job_board(): void
+    {
         check_ajax_referer('puntwork_job_boards', 'nonce');
 
         if (!current_user_can('manage_options')) {
@@ -271,7 +278,6 @@ class JobBoardAdmin {
             } else {
                 wp_send_json_error(['message' => __('Failed to save settings.', 'puntwork')]);
             }
-
         } catch (\Exception $e) {
             wp_send_json_error([
                 'message' => $e->getMessage(),
@@ -283,7 +289,8 @@ class JobBoardAdmin {
     /**
      * Sanitize board configuration data
      */
-    private static function sanitize_board_config(string $board_id, array $config): array {
+    private static function sanitize_board_config(string $board_id, array $config): array
+    {
         $sanitized = [];
 
         foreach ($config as $key => $value) {

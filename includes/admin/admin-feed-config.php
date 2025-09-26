@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Drag-and-drop feed configuration UI
  *
@@ -10,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -19,7 +20,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @return void
  */
-function render_feed_config_ui(): void {
+function render_feed_config_ui(): void
+{
     $feeds = get_feeds();
     $feed_posts = get_posts([
         'post_type' => 'job-feed',
@@ -46,7 +48,7 @@ function render_feed_config_ui(): void {
 
                 <div class="puntwork-card__body">
                     <div id="feed-list" class="feed-list">
-                        <?php if (empty($feed_posts)): ?>
+                        <?php if (empty($feed_posts)) : ?>
                             <div class="puntwork-empty">
                                 <i class="fas fa-rss puntwork-empty__icon"></i>
                                 <div class="puntwork-empty__title">No feeds configured</div>
@@ -55,13 +57,13 @@ function render_feed_config_ui(): void {
                                     <i class="fas fa-plus puntwork-btn__icon"></i>Add First Feed
                                 </button>
                             </div>
-                        <?php else: ?>
-                            <?php foreach ($feed_posts as $post):
+                        <?php else : ?>
+                            <?php foreach ($feed_posts as $post) :
                                 $feed_url = get_post_meta($post->ID, 'feed_url', true);
                                 $is_enabled = get_post_meta($post->ID, 'feed_enabled', true) !== '0'; // Default to enabled
                                 $last_import = get_post_meta($post->ID, 'last_import', true);
                                 $import_count = get_post_meta($post->ID, 'import_count', true) ?: 0;
-                            ?>
+                                ?>
                                 <div class="feed-item" data-feed-id="<?php echo esc_attr($post->ID); ?>">
                                     <div class="feed-item__handle">
                                         <i class="fas fa-grip-vertical"></i>
@@ -93,7 +95,7 @@ function render_feed_config_ui(): void {
                                                 <i class="fas fa-chart-line"></i>
                                                 <?php echo number_format($import_count); ?> imports
                                             </span>
-                                            <?php if ($last_import): ?>
+                                            <?php if ($last_import) : ?>
                                                 <span class="feed-meta-item">
                                                     <i class="fas fa-clock"></i>
                                                     Last import: <?php echo esc_html(date('M j, Y H:i', strtotime($last_import))); ?>
@@ -110,7 +112,7 @@ function render_feed_config_ui(): void {
                         <?php endif; ?>
                     </div>
 
-                    <?php if (!empty($feed_posts)): ?>
+                    <?php if (!empty($feed_posts)) : ?>
                         <div class="feed-actions" style="margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--color-gray-200);">
                             <button id="add-new-feed" class="puntwork-btn puntwork-btn--primary">
                                 <i class="fas fa-plus puntwork-btn__icon"></i>Add New Feed

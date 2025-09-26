@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Predictive analytics using statistical analysis and trend prediction
  *
@@ -17,8 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * Predictive analytics engine for job import data
  */
-class PredictiveAnalytics {
-
+class PredictiveAnalytics
+{
     /**
      * Prediction confidence levels
      */
@@ -41,7 +42,8 @@ class PredictiveAnalytics {
      * @param int $daysHistory Number of days of historical data to analyze
      * @return array Prediction results
      */
-    public static function predictImportSuccess(string $feedKey, int $daysHistory = 30): array {
+    public static function predictImportSuccess(string $feedKey, int $daysHistory = 30): array
+    {
         $historicalData = self::getHistoricalImportData($feedKey, $daysHistory);
 
         if (empty($historicalData)) {
@@ -77,7 +79,8 @@ class PredictiveAnalytics {
      * @param string $feedKey Feed identifier
      * @return array Reliability prediction
      */
-    public static function predictFeedReliability(string $feedKey): array {
+    public static function predictFeedReliability(string $feedKey): array
+    {
         $healthData = self::getFeedHealthData($feedKey, 30); // 30 days
 
         if (empty($healthData)) {
@@ -130,7 +133,8 @@ class PredictiveAnalytics {
      * @param int $daysHistory Number of days to analyze
      * @return array Quality trend prediction
      */
-    public static function predictContentQualityTrends(int $daysHistory = 30): array {
+    public static function predictContentQualityTrends(int $daysHistory = 30): array
+    {
         $qualityData = self::getContentQualityData($daysHistory);
 
         if (empty($qualityData)) {
@@ -179,7 +183,8 @@ class PredictiveAnalytics {
      * @param int $daysHistory Number of days to analyze
      * @return array Duplicate pattern prediction
      */
-    public static function predictDuplicatePatterns(int $daysHistory = 30): array {
+    public static function predictDuplicatePatterns(int $daysHistory = 30): array
+    {
         $duplicateData = self::getDuplicateData($daysHistory);
 
         if (empty($duplicateData)) {
@@ -217,7 +222,8 @@ class PredictiveAnalytics {
      * @param string $period Prediction period (hour, day, week, month)
      * @return array Volume prediction
      */
-    public static function predictImportVolume(string $period = self::PERIOD_DAY): array {
+    public static function predictImportVolume(string $period = self::PERIOD_DAY): array
+    {
         $volumeData = self::getImportVolumeData($period, 30); // 30 periods of data
 
         if (empty($volumeData)) {
@@ -256,9 +262,12 @@ class PredictiveAnalytics {
      * @param array $data Array of numerical values
      * @return float Trend slope
      */
-    private static function calculateTrend(array $data): float {
+    private static function calculateTrend(array $data): float
+    {
         $n = count($data);
-        if ($n < 2) return 0;
+        if ($n < 2) {
+            return 0;
+        }
 
         $sumX = $sumY = $sumXY = $sumXX = 0;
 
@@ -280,7 +289,8 @@ class PredictiveAnalytics {
      * @param float $trend Calculated trend
      * @return float Predicted next value
      */
-    private static function predictNextValue(array $data, float $trend): float {
+    private static function predictNextValue(array $data, float $trend): float
+    {
         $lastValue = end($data);
         $nextIndex = count($data);
 
@@ -295,24 +305,31 @@ class PredictiveAnalytics {
      * @param float $trend Trend slope
      * @return string Confidence level
      */
-    private static function calculateConfidence(array $data, float $trend): string {
+    private static function calculateConfidence(array $data, float $trend): string
+    {
         $n = count($data);
-        if ($n < 3) return self::CONFIDENCE_LOW;
+        if ($n < 3) {
+            return self::CONFIDENCE_LOW;
+        }
 
         // Calculate coefficient of determination (R²)
         $mean = array_sum($data) / $n;
         $ssRes = $ssTot = 0;
 
         for ($i = 0; $i < $n; $i++) {
-            $predicted = $mean + ($trend * ($i - $n/2)); // Center the trend
+            $predicted = $mean + ($trend * ($i - $n / 2)); // Center the trend
             $ssRes += pow($data[$i] - $predicted, 2);
             $ssTot += pow($data[$i] - $mean, 2);
         }
 
         $rSquared = $ssTot > 0 ? 1 - ($ssRes / $ssTot) : 0;
 
-        if ($rSquared > 0.8) return self::CONFIDENCE_HIGH;
-        if ($rSquared > 0.5) return self::CONFIDENCE_MEDIUM;
+        if ($rSquared > 0.8) {
+            return self::CONFIDENCE_HIGH;
+        }
+        if ($rSquared > 0.5) {
+            return self::CONFIDENCE_MEDIUM;
+        }
         return self::CONFIDENCE_LOW;
     }
 
@@ -322,11 +339,16 @@ class PredictiveAnalytics {
      * @param array $data Data points
      * @return float Volatility percentage
      */
-    private static function calculateVolatility(array $data): float {
-        if (empty($data)) return 0;
+    private static function calculateVolatility(array $data): float
+    {
+        if (empty($data)) {
+            return 0;
+        }
 
         $mean = array_sum($data) / count($data);
-        if ($mean == 0) return 0;
+        if ($mean == 0) {
+            return 0;
+        }
 
         $variance = 0;
         foreach ($data as $value) {
@@ -344,9 +366,12 @@ class PredictiveAnalytics {
      * @param array $data Time series data
      * @return array|null Seasonal pattern analysis
      */
-    private static function detectSeasonalPattern(array $data): ?array {
+    private static function detectSeasonalPattern(array $data): ?array
+    {
         $n = count($data);
-        if ($n < 14) return null; // Need at least 2 weeks
+        if ($n < 14) {
+            return null; // Need at least 2 weeks
+        }
 
         // Simple day-of-week pattern detection (assuming daily data)
         $dayPatterns = [];
@@ -379,8 +404,11 @@ class PredictiveAnalytics {
      * @param array $duplicateData Duplicate data with timestamps
      * @return array Peak analysis
      */
-    private static function analyzeDuplicatePeaks(array $duplicateData): array {
-        if (empty($duplicateData)) return [];
+    private static function analyzeDuplicatePeaks(array $duplicateData): array
+    {
+        if (empty($duplicateData)) {
+            return [];
+        }
 
         $peaks = [];
         $threshold = (array_sum(array_column($duplicateData, 'duplicate_rate')) / count($duplicateData)) * 1.5;
@@ -405,7 +433,8 @@ class PredictiveAnalytics {
      * @param float $currentRate Current duplicate rate
      * @return array Recommendations
      */
-    private static function generateDuplicateRecommendations(float $trend, float $currentRate): array {
+    private static function generateDuplicateRecommendations(float $trend, float $currentRate): array
+    {
         $recommendations = [];
 
         if ($trend > 0.01) {
@@ -425,7 +454,8 @@ class PredictiveAnalytics {
 
     // Data retrieval methods using real database data
 
-    private static function getHistoricalImportData(string $feedKey, int $days): array {
+    private static function getHistoricalImportData(string $feedKey, int $days): array
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'puntwork_import_analytics';
@@ -449,7 +479,8 @@ class PredictiveAnalytics {
         return $results ?: [];
     }
 
-    private static function getFeedHealthData(string $feedKey, int $days): array {
+    private static function getFeedHealthData(string $feedKey, int $days): array
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'puntwork_import_analytics';
@@ -473,7 +504,8 @@ class PredictiveAnalytics {
         return $results ?: [];
     }
 
-    private static function getContentQualityData(int $days): array {
+    private static function getContentQualityData(int $days): array
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'puntwork_import_analytics';
@@ -497,7 +529,8 @@ class PredictiveAnalytics {
         return $results ?: [];
     }
 
-    private static function getDuplicateData(int $days): array {
+    private static function getDuplicateData(int $days): array
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'puntwork_import_analytics';
@@ -519,7 +552,8 @@ class PredictiveAnalytics {
         return $results ?: [];
     }
 
-    private static function getImportVolumeData(string $period, int $periods): array {
+    private static function getImportVolumeData(string $period, int $periods): array
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'puntwork_import_analytics';

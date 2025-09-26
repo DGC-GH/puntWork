@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Batch size management utilities
  *
@@ -10,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -29,7 +30,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @param float $previous_batch_time Previous batch completion time.
  * @return array Array with 'batch_size' and 'reason' keys.
  */
-function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time) {
+function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time)
+{
     $old_batch_size = $batch_size;
 
     // Ensure batch size is within reasonable bounds
@@ -160,7 +162,8 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
  * @param int $batch_size Current batch size.
  * @return void
  */
-function update_batch_metrics($time_elapsed, $processed_count, $batch_size) {
+function update_batch_metrics($time_elapsed, $processed_count, $batch_size)
+{
     // Store previous batch time before updating
     $previous_batch_time = get_option('job_import_last_batch_time', 0);
     update_option('job_import_previous_batch_time', $previous_batch_time, false);

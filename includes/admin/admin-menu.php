@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Admin menu setup for job import plugin
  *
@@ -10,22 +11,22 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
 // Force admin menu refresh on plugin load to ensure icon updates
-add_action('admin_init', function() {
+add_action('admin_init', function () {
     // This helps ensure the admin menu icon is refreshed
     if (isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0) {
         // Add a small cache-busting parameter to force icon reload
-        add_action('admin_head', function() {
+        add_action('admin_head', function () {
             echo '<style>#adminmenu .toplevel_page_puntwork-dashboard .wp-menu-image img { display: none; }</style>';
         });
     }
 });
 
-add_action('admin_menu', function() {
+add_action('admin_menu', function () {
     add_menu_page(
         __('puntWork Dashboard', 'puntwork'),
         '.work',
@@ -116,7 +117,7 @@ add_action('admin_menu', function() {
             __('🚀 Setup Wizard', 'puntwork'),
             'manage_options',
             'puntwork-onboarding',
-            function() {
+            function () {
                 wp_redirect(admin_url('admin.php?page=puntwork-onboarding'));
                 exit;
             }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Batch import processing with timeout protection
  *
@@ -10,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -37,7 +38,8 @@ require_once __DIR__ . '/import-finalization.php';
  *
  * @return bool True if time limit exceeded
  */
-function import_time_exceeded(): bool {
+function import_time_exceeded(): bool
+{
     $start_time = get_option('job_import_start_time', microtime(true));
     $time_limit = apply_filters('puntwork_import_time_limit', 120); // 120 seconds default (increased from 20 for better performance)
     $current_time = microtime(true);
@@ -55,7 +57,8 @@ function import_time_exceeded(): bool {
  *
  * @return bool True if memory limit exceeded
  */
-function import_memory_exceeded(): bool {
+function import_memory_exceeded(): bool
+{
     $memory_limit = get_memory_limit_bytes() * 0.9; // 90% of max memory
     $current_memory = memory_get_usage(true);
 
@@ -72,7 +75,8 @@ function import_memory_exceeded(): bool {
  *
  * @return bool True if processing should continue
  */
-function should_continue_batch_processing(): bool {
+function should_continue_batch_processing(): bool
+{
     if (import_time_exceeded()) {
         error_log('[PUNTWORK] Import time limit exceeded - pausing batch processing');
         return false;
@@ -94,7 +98,8 @@ if (!function_exists('import_jobs_from_json')) {
      * @param int $batch_start Starting index for batch.
      * @return array Import result data.
      */
-    function import_jobs_from_json(bool $is_batch = false, int $batch_start = 0): array {
+    function import_jobs_from_json(bool $is_batch = false, int $batch_start = 0): array
+    {
         $setup = prepare_import_setup($batch_start);
         if (is_wp_error($setup)) {
             return ['success' => false, 'message' => $setup->get_error_message(), 'logs' => ['Setup failed: ' . $setup->get_error_message()]];
@@ -116,7 +121,8 @@ if (!function_exists('import_all_jobs_from_json')) {
      * @param bool $preserve_status Whether to preserve existing import status for UI polling
      * @return array Import result data.
      */
-    function import_all_jobs_from_json(bool $preserve_status = false): array {
+    function import_all_jobs_from_json(bool $preserve_status = false): array
+    {
         $start_time = microtime(true);
         $total_processed = 0;
         $total_published = 0;
@@ -275,8 +281,13 @@ if (!function_exists('import_all_jobs_from_json')) {
             $current_status['last_update'] = time();
             $current_status['logs'] = array_slice($all_logs, -50); // Keep last 50 log entries for UI
             update_option('job_import_status', $current_status, false);
-            error_log(sprintf('[PUNTWORK] Updated import status after batch %d: processed=%d/%d, complete=%s', 
-                $batch_count, $total_processed, $total_items, ($total_processed >= $total_items ? 'true' : 'false')));
+            error_log(sprintf(
+                '[PUNTWORK] Updated import status after batch %d: processed=%d/%d, complete=%s',
+                $batch_count,
+                $total_processed,
+                $total_items,
+                ($total_processed >= $total_items ? 'true' : 'false')
+            ));
 
             // Check if this batch completed the import
             if (isset($result['complete']) && $result['complete']) {
@@ -360,7 +371,7 @@ if (!function_exists('import_all_jobs_from_json')) {
             'complete' => true,
             'success' => true
         ]));
-        
+
         // Ensure cache is cleared so AJAX can see the updated status
         if (function_exists('wp_cache_flush')) {
             wp_cache_flush();
@@ -376,7 +387,8 @@ if (!function_exists('import_all_jobs_from_json')) {
  *
  * @return void
  */
-function continue_paused_import(): void {
+function continue_paused_import(): void
+{
     error_log('[PUNTWORK] Continuing paused import process');
 
     // Check if import is actually paused

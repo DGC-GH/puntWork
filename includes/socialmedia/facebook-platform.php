@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Facebook Social Media Integration
  *
@@ -17,8 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * Facebook platform integration
  */
-class FacebookPlatform extends SocialMediaPlatform {
-
+class FacebookPlatform extends SocialMediaPlatform
+{
     /**
      * Ads manager instance
      */
@@ -32,7 +33,8 @@ class FacebookPlatform extends SocialMediaPlatform {
     /**
      * Constructor
      */
-    public function __construct(array $config = []) {
+    public function __construct(array $config = [])
+    {
         $this->platform_id = 'facebook';
         $this->platform_name = 'Facebook';
         $this->rate_limits = [
@@ -51,7 +53,8 @@ class FacebookPlatform extends SocialMediaPlatform {
     /**
      * Check if Facebook is properly configured
      */
-    public function isConfigured(): bool {
+    public function isConfigured(): bool
+    {
         return parent::isConfigured() &&
                isset($this->credentials['app_id']) &&
                isset($this->credentials['app_secret']) &&
@@ -62,7 +65,8 @@ class FacebookPlatform extends SocialMediaPlatform {
     /**
      * Check if ads credentials are configured
      */
-    public function hasAdsCredentials(): bool {
+    public function hasAdsCredentials(): bool
+    {
         return isset($this->credentials['ad_account_id']) &&
                isset($this->credentials['access_token']);
     }
@@ -70,14 +74,16 @@ class FacebookPlatform extends SocialMediaPlatform {
     /**
      * Check if ads functionality is available
      */
-    public function supportsAds(): bool {
+    public function supportsAds(): bool
+    {
         return $this->ads_manager !== null;
     }
 
     /**
      * Post content to Facebook
      */
-    public function post(array $content, array $options = []): array {
+    public function post(array $content, array $options = []): array
+    {
         if (!$this->isConfigured()) {
             throw new \Exception('Facebook integration not properly configured');
         }
@@ -101,7 +107,6 @@ class FacebookPlatform extends SocialMediaPlatform {
                 'platform' => 'facebook',
                 'timestamp' => time()
             ];
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('Facebook posting failed', PuntWorkLogger::CONTEXT_SOCIAL, [
                 'error' => $e->getMessage(),
@@ -120,7 +125,8 @@ class FacebookPlatform extends SocialMediaPlatform {
     /**
      * Post content with ads campaign
      */
-    public function postWithAds(array $content, array $ads_config): array {
+    public function postWithAds(array $content, array $ads_config): array
+    {
         if (!$this->supportsAds()) {
             throw new \Exception('Facebook ads not configured. Please provide ad_account_id and access_token.');
         }
@@ -143,7 +149,6 @@ class FacebookPlatform extends SocialMediaPlatform {
                 'ads_campaign' => $ads_result,
                 'has_ads' => true
             ]);
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('Facebook ads creation failed', PuntWorkLogger::CONTEXT_SOCIAL, [
                 'post_id' => $post_result['post_id'],
@@ -161,7 +166,8 @@ class FacebookPlatform extends SocialMediaPlatform {
     /**
      * Get ads campaign metrics
      */
-    public function getAdsMetrics(string $campaign_id): array {
+    public function getAdsMetrics(string $campaign_id): array
+    {
         if (!$this->supportsAds()) {
             throw new \Exception('Facebook ads not configured');
         }
@@ -175,7 +181,8 @@ class FacebookPlatform extends SocialMediaPlatform {
     /**
      * Get posting limits and remaining quota
      */
-    public function getLimits(): array {
+    public function getLimits(): array
+    {
         $transient_key = 'socialmedia_ratelimit_' . $this->platform_id;
         $posts_today = get_transient($transient_key) ?: 0;
 
@@ -195,14 +202,16 @@ class FacebookPlatform extends SocialMediaPlatform {
     /**
      * Get maximum text length
      */
-    protected function getMaxTextLength(): int {
+    protected function getMaxTextLength(): int
+    {
         return 63206; // Facebook allows very long posts
     }
 
     /**
      * Prepare post data for Facebook API
      */
-    private function preparePostData(array $content, array $options): array {
+    private function preparePostData(array $content, array $options): array
+    {
         $post_data = [];
 
         // Add text content
@@ -236,12 +245,13 @@ class FacebookPlatform extends SocialMediaPlatform {
     /**
      * Process text content with URL handling
      */
-    private function processTextContent(string $text, array $options): string {
+    private function processTextContent(string $text, array $options): string
+    {
         // Facebook doesn't need URL shortening as much as Twitter
         // Add hashtags if provided
         if (!empty($options['hashtags'])) {
             $hashtags = is_array($options['hashtags']) ? $options['hashtags'] : [$options['hashtags']];
-            $text .= ' ' . implode(' ', array_map(function($tag) {
+            $text .= ' ' . implode(' ', array_map(function ($tag) {
                 return '#' . ltrim($tag, '#');
             }, $hashtags));
         }
@@ -257,7 +267,8 @@ class FacebookPlatform extends SocialMediaPlatform {
     /**
      * Upload media to Facebook
      */
-    private function uploadMedia(array $media_files): array {
+    private function uploadMedia(array $media_files): array
+    {
         $media_ids = [];
 
         foreach ($media_files as $media_file) {
@@ -276,7 +287,6 @@ class FacebookPlatform extends SocialMediaPlatform {
                 if ($media_id) {
                     $media_ids[] = ['media_fbid' => $media_id];
                 }
-
             } catch (\Exception $e) {
                 PuntWorkLogger::error('Facebook media upload failed', PuntWorkLogger::CONTEXT_SOCIAL, [
                     'error' => $e->getMessage(),
@@ -291,7 +301,8 @@ class FacebookPlatform extends SocialMediaPlatform {
     /**
      * Upload media file to Facebook
      */
-    private function uploadMediaToFacebook(string $file_path): ?string {
+    private function uploadMediaToFacebook(string $file_path): ?string
+    {
         if (!file_exists($file_path)) {
             return null;
         }
@@ -310,7 +321,8 @@ class FacebookPlatform extends SocialMediaPlatform {
     /**
      * Download media file from URL
      */
-    private function downloadMediaFile(string $url): string {
+    private function downloadMediaFile(string $url): string
+    {
         $temp_file = wp_tempnam();
         $response = wp_remote_get($url);
 
@@ -325,7 +337,8 @@ class FacebookPlatform extends SocialMediaPlatform {
     /**
      * Execute API request
      */
-    protected function executeApiRequest(string $endpoint, array $params, string $method) {
+    protected function executeApiRequest(string $endpoint, array $params, string $method)
+    {
         $url = $this->api_base . '/' . $endpoint;
 
         $args = [
@@ -349,7 +362,8 @@ class FacebookPlatform extends SocialMediaPlatform {
     /**
      * Handle Facebook API errors
      */
-    protected function handleApiError(array $response): void {
+    protected function handleApiError(array $response): void
+    {
         if (isset($response['error'])) {
             $error = $response['error'];
             $message = $error['message'] ?? 'Unknown error';

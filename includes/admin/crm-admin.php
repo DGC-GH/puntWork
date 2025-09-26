@@ -1,4 +1,5 @@
 <?php
+
 /**
  * CRM Admin Interface
  *
@@ -15,8 +16,8 @@ if (!defined('ABSPATH')) {
 /**
  * CRM Admin Class
  */
-class Puntwork_CRM_Admin {
-
+class Puntwork_CRM_Admin
+{
     /**
      * CRM Manager instance
      */
@@ -25,7 +26,8 @@ class Puntwork_CRM_Admin {
     /**
      * Constructor
      */
-    public function __construct() {
+    public function __construct()
+    {
         $this->crm_manager = new \Puntwork\CRM\CRMManager();
 
         add_action('admin_menu', [$this, 'add_crm_menu']);
@@ -38,7 +40,8 @@ class Puntwork_CRM_Admin {
     /**
      * Add CRM menu to admin
      */
-    public function add_crm_menu(): void {
+    public function add_crm_menu(): void
+    {
         add_submenu_page(
             'puntwork-admin',
             __('CRM Integration', 'puntwork'),
@@ -52,7 +55,8 @@ class Puntwork_CRM_Admin {
     /**
      * Enqueue admin scripts and styles
      */
-    public function enqueue_scripts($hook): void {
+    public function enqueue_scripts($hook): void
+    {
         if ($hook !== 'puntwork_page_puntwork-crm') {
             return;
         }
@@ -92,7 +96,8 @@ class Puntwork_CRM_Admin {
     /**
      * Render CRM admin page
      */
-    public function render_crm_page(): void {
+    public function render_crm_page(): void
+    {
         $available_platforms = \Puntwork\CRM\CRMManager::getAvailablePlatforms();
         $platform_configs = \Puntwork\CRM\CRMManager::getAllPlatformConfigs();
         $statistics = $this->crm_manager->getStatistics();
@@ -141,7 +146,7 @@ class Puntwork_CRM_Admin {
                 <div id="platforms-tab" class="tab-content active">
                     <h2><?php _e('Configure CRM Platforms', 'puntwork'); ?></h2>
 
-                    <?php foreach ($available_platforms as $platform_id => $platform_info): ?>
+                    <?php foreach ($available_platforms as $platform_id => $platform_info) : ?>
                         <div class="platform-config-card" data-platform="<?php echo esc_attr($platform_id); ?>">
                             <div class="platform-header">
                                 <h3><?php echo esc_html($platform_info['name']); ?></h3>
@@ -196,8 +201,8 @@ class Puntwork_CRM_Admin {
                                 <td>
                                     <?php
                                     $default_platforms = get_option('puntwork_crm_default_platforms', []);
-                                    foreach ($available_platforms as $platform_id => $platform_info):
-                                    ?>
+                                    foreach ($available_platforms as $platform_id => $platform_info) :
+                                        ?>
                                         <label style="display: block; margin-bottom: 5px;">
                                             <input type="checkbox"
                                                    name="default_platforms[]"
@@ -246,7 +251,7 @@ class Puntwork_CRM_Admin {
                             <input type="text" id="application_id" placeholder="Enter application ID">
 
                             <div class="sync-platforms">
-                                <?php foreach ($available_platforms as $platform_id => $platform_info): ?>
+                                <?php foreach ($available_platforms as $platform_id => $platform_info) : ?>
                                     <label>
                                         <input type="checkbox" class="sync-platform" value="<?php echo esc_attr($platform_id); ?>">
                                         <?php echo esc_html($platform_info['name']); ?>
@@ -418,7 +423,8 @@ class Puntwork_CRM_Admin {
     /**
      * Render platform-specific configuration
      */
-    private function render_platform_config(string $platform_id, array $config): void {
+    private function render_platform_config(string $platform_id, array $config): void
+    {
         switch ($platform_id) {
             case 'hubspot':
                 ?>
@@ -446,7 +452,8 @@ class Puntwork_CRM_Admin {
     /**
      * Render sync logs
      */
-    private function render_sync_logs(): void {
+    private function render_sync_logs(): void
+    {
         global $wpdb;
         $table_name = $wpdb->prefix . 'puntwork_crm_sync_log';
 
@@ -502,7 +509,8 @@ class Puntwork_CRM_Admin {
     /**
      * AJAX handler for testing platform connection
      */
-    public function ajax_test_platform(): void {
+    public function ajax_test_platform(): void
+    {
         check_ajax_referer('puntwork_crm_nonce', 'nonce');
 
         if (!current_user_can('manage_options')) {
@@ -527,7 +535,8 @@ class Puntwork_CRM_Admin {
     /**
      * AJAX handler for saving platform configuration
      */
-    public function ajax_save_config(): void {
+    public function ajax_save_config(): void
+    {
         check_ajax_referer('puntwork_crm_nonce', 'nonce');
 
         if (!current_user_can('manage_options')) {
@@ -559,7 +568,8 @@ class Puntwork_CRM_Admin {
     /**
      * AJAX handler for manual application sync
      */
-    public function ajax_sync_application(): void {
+    public function ajax_sync_application(): void
+    {
         check_ajax_referer('puntwork_crm_nonce', 'nonce');
 
         if (!current_user_can('manage_options')) {

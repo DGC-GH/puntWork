@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Main import UI components for job import plugin
  * Contains the primary import interface and progress display
@@ -11,7 +12,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +21,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @return void
  */
-function render_jobs_dashboard_ui(): void {
+function render_jobs_dashboard_ui(): void
+{
     ?>
     <div class="puntwork-admin">
         <div class="puntwork-container">

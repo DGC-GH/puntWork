@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Core batch processing logic
  * Handles the main batch processing operations and workflow
@@ -11,7 +12,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 

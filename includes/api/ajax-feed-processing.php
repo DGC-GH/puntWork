@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AJAX handlers for feed processing operations
  *
@@ -10,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +21,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 
 add_action('wp_ajax_process_feed', __NAMESPACE__ . '\\process_feed_ajax');
-function process_feed_ajax() {
+function process_feed_ajax()
+{
     PuntWorkLogger::logAjaxRequest('process_feed', $_POST);
 
     // Use comprehensive security validation with field validation
@@ -60,7 +62,6 @@ function process_feed_ajax() {
 
         PuntWorkLogger::logAjaxResponse('process_feed', ['item_count' => $count, 'logs_count' => count($logs)]);
         AjaxErrorHandler::send_success(['item_count' => $count, 'logs' => $logs]);
-
     } catch (\Exception $e) {
         PuntWorkLogger::logFeedProcessing($feed_key ?? 'unknown', $url ?? '', 0, false);
         PuntWorkLogger::error("Feed processing failed: {$feed_key} - " . $e->getMessage(), PuntWorkLogger::CONTEXT_FEED);
@@ -71,7 +72,8 @@ function process_feed_ajax() {
 }
 
 add_action('wp_ajax_combine_jsonl', __NAMESPACE__ . '\\combine_jsonl_ajax');
-function combine_jsonl_ajax() {
+function combine_jsonl_ajax()
+{
     PuntWorkLogger::logAjaxRequest('combine_jsonl', $_POST);
 
     // Use comprehensive security validation with field validation
@@ -102,7 +104,6 @@ function combine_jsonl_ajax() {
 
         PuntWorkLogger::logAjaxResponse('combine_jsonl', ['logs_count' => count($logs)]);
         AjaxErrorHandler::send_success(['logs' => $logs]);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error("JSONL combination failed: " . $e->getMessage(), PuntWorkLogger::CONTEXT_FEED);
 
@@ -112,7 +113,8 @@ function combine_jsonl_ajax() {
 }
 
 add_action('wp_ajax_generate_json', __NAMESPACE__ . '\\generate_json_ajax');
-function generate_json_ajax() {
+function generate_json_ajax()
+{
     PuntWorkLogger::logAjaxRequest('generate_json', $_POST);
 
     // Use comprehensive security validation
@@ -130,7 +132,6 @@ function generate_json_ajax() {
 
         PuntWorkLogger::logAjaxResponse('generate_json', ['message' => 'JSONL generated successfully', 'logs_count' => count($gen_logs)]);
         AjaxErrorHandler::send_success(['message' => 'JSONL generated successfully', 'logs' => $gen_logs]);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('JSONL generation failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_FEED);
 

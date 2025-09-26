@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Social Media Admin Interface
  *
@@ -15,8 +16,8 @@ if (!defined('ABSPATH')) {
 /**
  * Social Media Admin Class
  */
-class Puntwork_Social_Media_Admin {
-
+class Puntwork_Social_Media_Admin
+{
     /**
      * Social Media Manager instance
      */
@@ -25,7 +26,8 @@ class Puntwork_Social_Media_Admin {
     /**
      * Constructor
      */
-    public function __construct() {
+    public function __construct()
+    {
         $this->social_manager = new \Puntwork\SocialMedia\SocialMediaManager();
 
         add_action('admin_menu', [$this, 'add_social_media_menu']);
@@ -38,7 +40,8 @@ class Puntwork_Social_Media_Admin {
     /**
      * Add social media menu to admin
      */
-    public function add_social_media_menu(): void {
+    public function add_social_media_menu(): void
+    {
         add_submenu_page(
             'puntwork-admin',
             __('Social Media Integration', 'puntwork'),
@@ -52,7 +55,8 @@ class Puntwork_Social_Media_Admin {
     /**
      * Enqueue admin scripts and styles
      */
-    public function enqueue_scripts($hook): void {
+    public function enqueue_scripts($hook): void
+    {
         if ($hook !== 'puntwork_page_puntwork-social-media') {
             return;
         }
@@ -92,7 +96,8 @@ class Puntwork_Social_Media_Admin {
     /**
      * Render social media admin page
      */
-    public function render_social_media_page(): void {
+    public function render_social_media_page(): void
+    {
         $available_platforms = \Puntwork\SocialMedia\SocialMediaManager::getAvailablePlatforms();
         $platform_configs = \Puntwork\SocialMedia\SocialMediaManager::getAllPlatformConfigs();
 
@@ -117,7 +122,7 @@ class Puntwork_Social_Media_Admin {
                 <div id="platforms-tab" class="tab-content active">
                     <h2><?php _e('Configure Social Media Platforms', 'puntwork'); ?></h2>
 
-                    <?php foreach ($available_platforms as $platform_id => $platform_info): ?>
+                    <?php foreach ($available_platforms as $platform_id => $platform_info) : ?>
                         <div class="platform-config-card" data-platform="<?php echo esc_attr($platform_id); ?>">
                             <div class="platform-header">
                                 <h3><?php echo esc_html($platform_info['name']); ?></h3>
@@ -183,8 +188,8 @@ class Puntwork_Social_Media_Admin {
                                 <td>
                                     <?php
                                     $default_platforms = get_option('puntwork_social_default_platforms', []);
-                                    foreach ($available_platforms as $platform_id => $platform_info):
-                                    ?>
+                                    foreach ($available_platforms as $platform_id => $platform_info) :
+                                        ?>
                                         <label style="display: block; margin-bottom: 5px;">
                                             <input type="checkbox"
                                                    name="default_platforms[]"
@@ -227,7 +232,7 @@ class Puntwork_Social_Media_Admin {
                         <textarea id="manual-post-content" rows="4" placeholder="<?php esc_attr_e('Enter your post content here...', 'puntwork'); ?>"></textarea>
 
                         <div class="manual-post-platforms">
-                            <?php foreach ($available_platforms as $platform_id => $platform_info): ?>
+                            <?php foreach ($available_platforms as $platform_id => $platform_info) : ?>
                                 <label>
                                     <input type="checkbox" class="manual-post-platform" value="<?php echo esc_attr($platform_id); ?>">
                                     <?php echo esc_html($platform_info['name']); ?>
@@ -354,7 +359,8 @@ class Puntwork_Social_Media_Admin {
     /**
      * Render ads-specific configuration
      */
-    private function render_ads_config(string $platform_id, array $config): void {
+    private function render_ads_config(string $platform_id, array $config): void
+    {
         switch ($platform_id) {
             case 'twitter':
                 ?>
@@ -483,7 +489,8 @@ class Puntwork_Social_Media_Admin {
         /**
      * Render platform-specific configuration
      */
-    private function render_platform_config(string $platform_id, array $config): void {
+    private function render_platform_config(string $platform_id, array $config): void
+    {
         switch ($platform_id) {
             case 'twitter':
                 ?>
@@ -589,7 +596,8 @@ class Puntwork_Social_Media_Admin {
     /**
      * Render activity logs
      */
-    private function render_activity_logs(): void {
+    private function render_activity_logs(): void
+    {
         global $wpdb;
         $table_name = $wpdb->prefix . 'puntwork_social_posts';
 
@@ -637,7 +645,8 @@ class Puntwork_Social_Media_Admin {
     /**
      * AJAX handler for testing platform connection
      */
-    public function ajax_test_platform(): void {
+    public function ajax_test_platform(): void
+    {
         check_ajax_referer('puntwork_social_nonce', 'nonce');
 
         if (!current_user_can('manage_options')) {
@@ -662,7 +671,8 @@ class Puntwork_Social_Media_Admin {
     /**
      * AJAX handler for saving platform configuration
      */
-    public function ajax_save_config(): void {
+    public function ajax_save_config(): void
+    {
         check_ajax_referer('puntwork_social_nonce', 'nonce');
 
         if (!current_user_can('manage_options')) {
@@ -694,7 +704,8 @@ class Puntwork_Social_Media_Admin {
     /**
      * AJAX handler for manual posting
      */
-    public function ajax_post_now(): void {
+    public function ajax_post_now(): void
+    {
         check_ajax_referer('puntwork_social_nonce', 'nonce');
 
         if (!current_user_can('manage_options')) {

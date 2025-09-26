@@ -10,16 +10,19 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
-function process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, &$total_items, &$logs) {
+function process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, &$total_items, &$logs)
+{
     $feed_item_count = 0;
     $batch = [];
     try {
         $reader = new \XMLReader();
-        if (!$reader->open($xml_path)) throw new \Exception('Invalid XML');
+        if (!$reader->open($xml_path)) {
+            throw new \Exception('Invalid XML');
+        }
         while ($reader->read()) {
             if ($reader->nodeType == \XMLReader::ELEMENT && $reader->name == 'item') {
                 $item = new \stdClass();
@@ -42,9 +45,13 @@ function process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback
                 }
                 clean_item_fields($item);
                 $lang = isset($item->languagecode) ? strtolower((string)$item->languagecode) : 'en';
-                if (strpos($lang, 'fr') !== false) $lang = 'fr';
-                else if (strpos($lang, 'nl') !== false) $lang = 'nl';
-                else $lang = 'en';
+                if (strpos($lang, 'fr') !== false) {
+                    $lang = 'fr';
+                } elseif (strpos($lang, 'nl') !== false) {
+                    $lang = 'nl';
+                } else {
+                    $lang = 'en';
+                }
                 $job_obj = json_decode(json_encode($item), true);
                 infer_item_details($item, $fallback_domain, $lang, $job_obj);
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * TikTok Social Media Integration
  *
@@ -17,8 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * TikTok platform integration
  */
-class TikTokPlatform extends SocialMediaPlatform {
-
+class TikTokPlatform extends SocialMediaPlatform
+{
     /**
      * Ads manager instance
      */
@@ -32,7 +33,8 @@ class TikTokPlatform extends SocialMediaPlatform {
     /**
      * Constructor
      */
-    public function __construct(array $config = []) {
+    public function __construct(array $config = [])
+    {
         $this->platform_id = 'tiktok';
         $this->platform_name = 'TikTok';
         $this->rate_limits = [
@@ -51,7 +53,8 @@ class TikTokPlatform extends SocialMediaPlatform {
     /**
      * Check if TikTok is properly configured
      */
-    public function isConfigured(): bool {
+    public function isConfigured(): bool
+    {
         return parent::isConfigured() &&
                isset($this->credentials['app_id']) &&
                isset($this->credentials['app_secret']) &&
@@ -62,7 +65,8 @@ class TikTokPlatform extends SocialMediaPlatform {
     /**
      * Check if ads credentials are configured
      */
-    public function hasAdsCredentials(): bool {
+    public function hasAdsCredentials(): bool
+    {
         return isset($this->credentials['advertiser_id']) &&
                isset($this->credentials['access_token']);
     }
@@ -70,14 +74,16 @@ class TikTokPlatform extends SocialMediaPlatform {
     /**
      * Check if ads functionality is available
      */
-    public function supportsAds(): bool {
+    public function supportsAds(): bool
+    {
         return $this->ads_manager !== null;
     }
 
     /**
      * Post content to TikTok
      */
-    public function post(array $content, array $options = []): array {
+    public function post(array $content, array $options = []): array
+    {
         if (!$this->isConfigured()) {
             throw new \Exception('TikTok integration not properly configured');
         }
@@ -106,7 +112,6 @@ class TikTokPlatform extends SocialMediaPlatform {
                 'platform' => 'tiktok',
                 'timestamp' => time()
             ];
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('TikTok posting failed', PuntWorkLogger::CONTEXT_SOCIAL, [
                 'error' => $e->getMessage(),
@@ -125,7 +130,8 @@ class TikTokPlatform extends SocialMediaPlatform {
     /**
      * Post content with ads campaign
      */
-    public function postWithAds(array $content, array $ads_config): array {
+    public function postWithAds(array $content, array $ads_config): array
+    {
         if (!$this->supportsAds()) {
             throw new \Exception('TikTok ads not configured. Please provide advertiser_id and access_token.');
         }
@@ -148,7 +154,6 @@ class TikTokPlatform extends SocialMediaPlatform {
                 'ads_campaign' => $ads_result,
                 'has_ads' => true
             ]);
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('TikTok ads creation failed', PuntWorkLogger::CONTEXT_SOCIAL, [
                 'video_id' => $post_result['post_id'],
@@ -166,7 +171,8 @@ class TikTokPlatform extends SocialMediaPlatform {
     /**
      * Get ads campaign metrics
      */
-    public function getAdsMetrics(string $campaign_id): array {
+    public function getAdsMetrics(string $campaign_id): array
+    {
         if (!$this->supportsAds()) {
             throw new \Exception('TikTok ads not configured');
         }
@@ -180,7 +186,8 @@ class TikTokPlatform extends SocialMediaPlatform {
     /**
      * Get posting limits and remaining quota
      */
-    public function getLimits(): array {
+    public function getLimits(): array
+    {
         $transient_key = 'socialmedia_ratelimit_' . $this->platform_id;
         $posts_today = get_transient($transient_key) ?: 0;
 
@@ -200,14 +207,16 @@ class TikTokPlatform extends SocialMediaPlatform {
     /**
      * Get maximum text length
      */
-    protected function getMaxTextLength(): int {
+    protected function getMaxTextLength(): int
+    {
         return 2200; // TikTok allows up to 2200 characters
     }
 
     /**
      * Prepare post data for TikTok API
      */
-    private function preparePostData(array $content, array $options): array {
+    private function preparePostData(array $content, array $options): array
+    {
         $post_data = [];
 
         // Add text content
@@ -238,11 +247,12 @@ class TikTokPlatform extends SocialMediaPlatform {
     /**
      * Process text content with hashtag handling
      */
-    private function processTextContent(string $text, array $options): string {
+    private function processTextContent(string $text, array $options): string
+    {
         // Add hashtags if provided
         if (!empty($options['hashtags'])) {
             $hashtags = is_array($options['hashtags']) ? $options['hashtags'] : [$options['hashtags']];
-            $text .= ' ' . implode(' ', array_map(function($tag) {
+            $text .= ' ' . implode(' ', array_map(function ($tag) {
                 return '#' . ltrim($tag, '#');
             }, $hashtags));
         }
@@ -258,7 +268,8 @@ class TikTokPlatform extends SocialMediaPlatform {
     /**
      * Prepare video data for TikTok upload
      */
-    private function prepareVideoData(array $media_files): array {
+    private function prepareVideoData(array $media_files): array
+    {
         $video_data = [];
 
         foreach ($media_files as $media_file) {
@@ -278,7 +289,6 @@ class TikTokPlatform extends SocialMediaPlatform {
 
                 $video_data['video'] = $file_path;
                 break; // TikTok only supports one video per post
-
             } catch (\Exception $e) {
                 PuntWorkLogger::error('TikTok video preparation failed', PuntWorkLogger::CONTEXT_SOCIAL, [
                     'error' => $e->getMessage(),
@@ -297,7 +307,8 @@ class TikTokPlatform extends SocialMediaPlatform {
     /**
      * Validate video file for TikTok requirements
      */
-    private function validateVideoFile(string $file_path): void {
+    private function validateVideoFile(string $file_path): void
+    {
         if (!file_exists($file_path)) {
             throw new \Exception('Video file does not exist');
         }
@@ -322,7 +333,8 @@ class TikTokPlatform extends SocialMediaPlatform {
     /**
      * Download media file from URL
      */
-    private function downloadMediaFile(string $url): string {
+    private function downloadMediaFile(string $url): string
+    {
         $temp_file = wp_tempnam();
         $response = wp_remote_get($url);
 
@@ -337,7 +349,8 @@ class TikTokPlatform extends SocialMediaPlatform {
     /**
      * Execute API request
      */
-    protected function executeApiRequest(string $endpoint, array $params, string $method) {
+    protected function executeApiRequest(string $endpoint, array $params, string $method)
+    {
         $url = $this->api_base . '/' . $endpoint;
 
         $args = [
@@ -361,7 +374,8 @@ class TikTokPlatform extends SocialMediaPlatform {
     /**
      * Handle TikTok API errors
      */
-    protected function handleApiError(array $response): void {
+    protected function handleApiError(array $response): void
+    {
         if (isset($response['error'])) {
             $error = $response['error'];
             $message = $error['message'] ?? 'Unknown error';

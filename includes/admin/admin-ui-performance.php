@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Admin UI for Performance Metrics Dashboard
  *
@@ -17,7 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * Performance Metrics Dashboard Admin Page
  */
-function performance_metrics_page() {
+function performance_metrics_page()
+{
     // Handle AJAX actions
     if (isset($_POST['action'])) {
         switch ($_POST['action']) {
@@ -79,7 +81,7 @@ function performance_metrics_page() {
                 <label for="operation-select" style="margin-left: 20px;"><?php _e('Operation:', 'puntwork'); ?></label>
                 <select name="operation" id="operation-select" onchange="this.form.submit()">
                     <option value=""><?php _e('All Operations', 'puntwork'); ?></option>
-                    <?php foreach ($operation_types as $op): ?>
+                    <?php foreach ($operation_types as $op) : ?>
                         <option value="<?php echo esc_attr($op); ?>" <?php selected($operation, $op); ?>><?php echo esc_html($op); ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -125,7 +127,7 @@ function performance_metrics_page() {
                         <div class="status-label"><?php _e('WordPress Version', 'puntwork'); ?></div>
                     </div>
 
-                    <?php if ($current_snapshot['load_average']): ?>
+                    <?php if ($current_snapshot['load_average']) : ?>
                     <div class="status-card">
                         <div class="status-value"><?php echo number_format($current_snapshot['load_average'][0], 2); ?></div>
                         <div class="status-label"><?php _e('Load Average (1m)', 'puntwork'); ?></div>
@@ -135,7 +137,7 @@ function performance_metrics_page() {
             </div>
 
             <!-- Performance Overview -->
-            <?php if (!empty($performance_stats)): ?>
+            <?php if (!empty($performance_stats)) : ?>
             <div class="performance-section">
                 <h2><?php _e('Performance Overview', 'puntwork'); ?></h2>
                 <div class="performance-overview-grid">
@@ -161,7 +163,7 @@ function performance_metrics_page() {
                         </div>
                     </div>
 
-                    <?php if ($performance_stats['avg_items_per_second']): ?>
+                    <?php if ($performance_stats['avg_items_per_second']) : ?>
                     <div class="overview-card">
                         <div class="overview-value"><?php echo $performance_stats['avg_items_per_second']; ?>/s</div>
                         <div class="overview-label"><?php _e('Avg Processing Rate', 'puntwork'); ?></div>
@@ -191,11 +193,11 @@ function performance_metrics_page() {
             <div class="performance-section">
                 <h2><?php _e('Recent Performance Logs', 'puntwork'); ?></h2>
 
-                <?php if (empty($recent_logs)): ?>
+                <?php if (empty($recent_logs)) : ?>
                     <div class="notice notice-info">
                         <p><?php _e('No performance logs found for the selected period.', 'puntwork'); ?></p>
                     </div>
-                <?php else: ?>
+                <?php else : ?>
                     <div class="performance-logs-table-container">
                         <table class="wp-list-table widefat fixed striped performance-logs-table">
                             <thead>
@@ -210,7 +212,7 @@ function performance_metrics_page() {
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($recent_logs as $log): ?>
+                                <?php foreach ($recent_logs as $log) : ?>
                                     <tr>
                                         <td><?php echo wp_date('M j, H:i:s', strtotime($log->created_at)); ?></td>
                                         <td><?php echo esc_html($log->operation); ?></td>
@@ -593,7 +595,8 @@ function performance_metrics_page() {
  * @param string $operation Operation filter
  * @return array Chart data
  */
-function get_performance_chart_data(string $period, string $operation = ''): array {
+function get_performance_chart_data(string $period, string $operation = ''): array
+{
     global $wpdb;
 
     $table_name = $wpdb->prefix . 'puntwork_performance_logs';
@@ -628,18 +631,18 @@ function get_performance_chart_data(string $period, string $operation = ''): arr
 
     return [
         'time_trend' => [
-            'labels' => array_map(function($row) {
+            'labels' => array_map(function ($row) {
                 return wp_date('M j', strtotime($row->date));
             }, $time_trend),
-            'data' => array_map(function($row) {
+            'data' => array_map(function ($row) {
                 return round((float) $row->avg_time, 3);
             }, $time_trend)
         ],
         'memory_trend' => [
-            'labels' => array_map(function($row) {
+            'labels' => array_map(function ($row) {
                 return wp_date('M j', strtotime($row->date));
             }, $memory_trend),
-            'data' => array_map(function($row) {
+            'data' => array_map(function ($row) {
                 return round((float) $row->avg_memory / 1024 / 1024, 2); // Convert to MB
             }, $memory_trend)
         ]

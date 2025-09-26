@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Mobile App API Endpoints
  *
@@ -15,7 +16,8 @@ if (!defined('ABSPATH')) {
 /**
  * Register mobile app REST API endpoints
  */
-function register_mobile_api_endpoints() {
+function register_mobile_api_endpoints()
+{
     // Authentication endpoints
     register_rest_route('puntwork-mobile/v1', '/auth/login', [
         'methods' => 'POST',
@@ -162,7 +164,8 @@ add_action('rest_api_init', 'register_mobile_api_endpoints');
 /**
  * Mobile API permission check
  */
-function mobile_api_permission_check($request) {
+function mobile_api_permission_check($request)
+{
     // Check for valid JWT token or WordPress authentication
     $auth_header = $request->get_header('authorization');
 
@@ -189,7 +192,8 @@ function mobile_api_permission_check($request) {
 /**
  * Mobile API login
  */
-function mobile_api_login($request) {
+function mobile_api_login($request)
+{
     $username = $request->get_param('username');
     $password = $request->get_param('password');
 
@@ -218,7 +222,8 @@ function mobile_api_login($request) {
 /**
  * Mobile API logout
  */
-function mobile_api_logout($request) {
+function mobile_api_logout($request)
+{
     // Invalidate token (simplified - in production maintain token blacklist)
     return [
         'success' => true,
@@ -229,7 +234,8 @@ function mobile_api_logout($request) {
 /**
  * Get jobs for mobile app
  */
-function mobile_api_get_jobs($request) {
+function mobile_api_get_jobs($request)
+{
     $page = $request->get_param('page');
     $per_page = $request->get_param('per_page');
     $search = $request->get_param('search');
@@ -292,7 +298,8 @@ function mobile_api_get_jobs($request) {
 /**
  * Get single job for mobile app
  */
-function mobile_api_get_job($request) {
+function mobile_api_get_job($request)
+{
     $job_id = $request->get_param('id');
 
     $post = get_post($job_id);
@@ -309,7 +316,8 @@ function mobile_api_get_job($request) {
 /**
  * Get applications for mobile app
  */
-function mobile_api_get_applications($request) {
+function mobile_api_get_applications($request)
+{
     $page = $request->get_param('page');
     $per_page = $request->get_param('per_page');
     $status = $request->get_param('status');
@@ -327,7 +335,8 @@ function mobile_api_get_applications($request) {
 /**
  * Create job application via mobile app
  */
-function mobile_api_create_application($request) {
+function mobile_api_create_application($request)
+{
     $job_id = $request->get_param('job_id');
     $first_name = $request->get_param('first_name');
     $last_name = $request->get_param('last_name');
@@ -374,7 +383,8 @@ function mobile_api_create_application($request) {
 /**
  * Get dashboard statistics for mobile app
  */
-function mobile_api_get_dashboard_stats($request) {
+function mobile_api_get_dashboard_stats($request)
+{
     // Get job statistics
     $total_jobs = wp_count_posts('job_listing')->publish;
 
@@ -395,7 +405,8 @@ function mobile_api_get_dashboard_stats($request) {
 /**
  * Get user profile for mobile app
  */
-function mobile_api_get_profile($request) {
+function mobile_api_get_profile($request)
+{
     $user = wp_get_current_user();
 
     return [
@@ -414,7 +425,8 @@ function mobile_api_get_profile($request) {
 /**
  * Update user profile via mobile app
  */
-function mobile_api_update_profile($request) {
+function mobile_api_update_profile($request)
+{
     $user_id = get_current_user_id();
 
     $allowed_fields = ['first_name', 'last_name', 'description'];
@@ -441,7 +453,8 @@ function mobile_api_update_profile($request) {
 /**
  * Upload file via mobile app
  */
-function mobile_api_upload_file($request) {
+function mobile_api_upload_file($request)
+{
     if (!function_exists('wp_handle_upload')) {
         require_once(ABSPATH . 'wp-admin/includes/file.php');
     }
@@ -456,7 +469,7 @@ function mobile_api_upload_file($request) {
     $file = $files['file'];
     $upload_overrides = [
         'test_form' => false,
-        'upload_error_handler' => function($file, $message) {
+        'upload_error_handler' => function ($file, $message) {
             return new WP_Error('upload_error', $message);
         }
     ];
@@ -496,7 +509,8 @@ function mobile_api_upload_file($request) {
 /**
  * Format job data for mobile API
  */
-function mobile_format_job_data($post, $detailed = false) {
+function mobile_format_job_data($post, $detailed = false)
+{
     $job_data = [
         'id' => $post->ID,
         'title' => $post->post_title,
@@ -545,7 +559,8 @@ function mobile_format_job_data($post, $detailed = false) {
 /**
  * Save job application (placeholder - implement based on your system)
  */
-function mobile_save_application($application_data) {
+function mobile_save_application($application_data)
+{
     // This should be implemented based on your application storage system
     // For now, return a mock ID
     return uniqid('app_', true);
@@ -554,7 +569,8 @@ function mobile_save_application($application_data) {
 /**
  * Generate JWT token (simplified - use proper JWT library in production)
  */
-function mobile_generate_jwt_token($user_id) {
+function mobile_generate_jwt_token($user_id)
+{
     $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
     $payload = json_encode([
         'user_id' => $user_id,
@@ -574,7 +590,8 @@ function mobile_generate_jwt_token($user_id) {
 /**
  * Verify JWT token (simplified - use proper JWT library in production)
  */
-function mobile_verify_jwt_token($token) {
+function mobile_verify_jwt_token($token)
+{
     $parts = explode('.', $token);
 
     if (count($parts) !== 3) {

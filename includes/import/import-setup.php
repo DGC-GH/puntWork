@@ -10,7 +10,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -25,7 +25,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @param int $batch_start Starting index for batch.
  * @return array|WP_Error Setup data or error.
  */
-function prepare_import_setup($batch_start = 0) {
+function prepare_import_setup($batch_start = 0)
+{
     do_action('qm/cease'); // Disable Query Monitor data collection to reduce memory usage
     ini_set('memory_limit', '512M');
     set_time_limit(1800);

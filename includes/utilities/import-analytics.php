@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Import Analytics and Reporting Dashboard
  *
@@ -18,15 +19,16 @@ if (!defined('ABSPATH')) {
  * ImportAnalytics Class
  * Provides comprehensive analytics and reporting for import operations
  */
-class ImportAnalytics {
-
+class ImportAnalytics
+{
     const TABLE_NAME = 'puntwork_import_analytics';
     const METRICS_TRANSIENT = 'puntwork_import_metrics';
 
     /**
      * Initialize the analytics system
      */
-    public static function init() {
+    public static function init()
+    {
         self::create_analytics_table();
         add_action('puntwork_import_completed', [__CLASS__, 'record_import_metrics'], 10, 1);
         add_action('admin_init', [__CLASS__, 'schedule_analytics_cleanup']);
@@ -35,7 +37,8 @@ class ImportAnalytics {
     /**
      * Create the analytics database table
      */
-    private static function create_analytics_table() {
+    private static function create_analytics_table()
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -77,7 +80,8 @@ class ImportAnalytics {
     /**
      * Schedule cleanup of old analytics data
      */
-    public static function schedule_analytics_cleanup() {
+    public static function schedule_analytics_cleanup()
+    {
         if (!wp_next_scheduled('puntwork_analytics_cleanup')) {
             // Run cleanup weekly
             wp_schedule_event(time(), 'weekly', 'puntwork_analytics_cleanup');
@@ -87,7 +91,8 @@ class ImportAnalytics {
     /**
      * Record import metrics when an import completes
      */
-    public static function record_import_metrics($import_data) {
+    public static function record_import_metrics($import_data)
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -162,7 +167,8 @@ class ImportAnalytics {
     /**
      * Get feed processing statistics for the current import
      */
-    private static function get_feed_processing_stats() {
+    private static function get_feed_processing_stats()
+    {
         $feeds = get_feeds();
         $processed = count($feeds);
         $successful = 0;
@@ -176,7 +182,8 @@ class ImportAnalytics {
             if (isset($health_status[$feed_key])) {
                 $status = $health_status[$feed_key];
                 if ($status['status'] === FeedHealthMonitor::STATUS_HEALTHY ||
-                    $status['status'] === FeedHealthMonitor::STATUS_WARNING) {
+                    $status['status'] === FeedHealthMonitor::STATUS_WARNING
+                ) {
                     $successful++;
                 } else {
                     $failed++;
@@ -204,7 +211,8 @@ class ImportAnalytics {
     /**
      * Get comprehensive analytics data
      */
-    public static function get_analytics_data($period = '30days') {
+    public static function get_analytics_data($period = '30days')
+    {
         $cache_key = 'analytics_data_' . $period;
         $cached_data = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
 
@@ -230,7 +238,8 @@ class ImportAnalytics {
     /**
      * Get overview metrics
      */
-    private static function get_overview_metrics($period) {
+    private static function get_overview_metrics($period)
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -267,7 +276,8 @@ class ImportAnalytics {
     /**
      * Get performance metrics
      */
-    private static function get_performance_metrics($period) {
+    private static function get_performance_metrics($period)
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -304,7 +314,8 @@ class ImportAnalytics {
     /**
      * Get trends data for charts
      */
-    private static function get_trends_data($period) {
+    private static function get_trends_data($period)
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -349,7 +360,8 @@ class ImportAnalytics {
     /**
      * Get feed statistics
      */
-    private static function get_feed_statistics($period) {
+    private static function get_feed_statistics($period)
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -378,7 +390,8 @@ class ImportAnalytics {
     /**
      * Get error summary
      */
-    private static function get_error_summary($period) {
+    private static function get_error_summary($period)
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -403,10 +416,11 @@ class ImportAnalytics {
     /**
      * Get predictive analytics data
      */
-    private static function get_predictive_analytics($period) {
+    private static function get_predictive_analytics($period)
+    {
         // Import the PredictiveAnalytics class
         if (!class_exists('\Puntwork\AI\PredictiveAnalytics')) {
-            require_once plugin_dir_path(dirname(__FILE__, 2)) . 'ai/predictive-analytics.php';
+            require_once plugin_dir_path(dirname(__FILE__, 2)) . 'includes/ai/predictive-analytics.php';
         }
 
         $predictions = [];
@@ -429,7 +443,6 @@ class ImportAnalytics {
 
             // Get feed reliability predictions for top feeds
             $predictions['feed_reliability'] = self::get_feed_reliability_predictions();
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('Error generating predictive analytics', PuntWorkLogger::CONTEXT_ANALYTICS, [
                 'error' => $e->getMessage()
@@ -446,12 +459,13 @@ class ImportAnalytics {
     /**
      * Get feed reliability predictions for active feeds
      */
-    private static function get_feed_reliability_predictions() {
+    private static function get_feed_reliability_predictions()
+    {
         $feeds = get_feeds();
         $predictions = [];
 
         if (!class_exists('\Puntwork\AI\PredictiveAnalytics')) {
-            require_once plugin_dir_path(dirname(__FILE__, 2)) . 'ai/predictive-analytics.php';
+            require_once plugin_dir_path(dirname(__FILE__, 2)) . 'includes/ai/predictive-analytics.php';
         }
 
         foreach (array_keys($feeds) as $feed_key) {
@@ -469,7 +483,8 @@ class ImportAnalytics {
     /**
      * Convert period string to days for predictive analytics
      */
-    private static function get_period_days($period) {
+    private static function get_period_days($period)
+    {
         switch ($period) {
             case '7days':
                 return 7;
@@ -485,7 +500,8 @@ class ImportAnalytics {
     /**
      * Get date filter for SQL queries
      */
-    private static function get_date_filter($period) {
+    private static function get_date_filter($period)
+    {
         $now = current_time('timestamp');
 
         switch ($period) {
@@ -503,7 +519,8 @@ class ImportAnalytics {
     /**
      * Clean up old analytics data (keep last 90 days)
      */
-    public static function cleanup_old_data() {
+    public static function cleanup_old_data()
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -526,7 +543,8 @@ class ImportAnalytics {
     /**
      * Export analytics data as CSV
      */
-    public static function export_analytics_csv($period = '30days') {
+    public static function export_analytics_csv($period = '30days')
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;

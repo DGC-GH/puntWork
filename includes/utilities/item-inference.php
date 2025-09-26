@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Item inference and processing utilities
  *
@@ -13,25 +14,30 @@ use Puntwork\AI\JobCategorizer;
 use Puntwork\AI\ContentQualityScorer;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
-function infer_item_details(&$item, $fallback_domain, $lang, &$job_obj) {
+function infer_item_details(&$item, $fallback_domain, $lang, &$job_obj)
+{
     $province = strtolower(trim(isset($item->province) ? (string)$item->province : ''));
     $norm_province = GetProvinceMap()[$province] ?? $fallback_domain;
 
     $title = isset($item->functiontitle) ? (string)$item->functiontitle : '';
     $enhanced_title = $title;
-    if (isset($item->city)) $enhanced_title .= ' in ' . (string)$item->city;
-    if (isset($item->province)) $enhanced_title .= ', ' . (string)$item->province;
+    if (isset($item->city)) {
+        $enhanced_title .= ' in ' . (string)$item->city;
+    }
+    if (isset($item->province)) {
+        $enhanced_title .= ', ' . (string)$item->province;
+    }
     $enhanced_title = trim($enhanced_title);
 
     $slug = sanitize_title($enhanced_title . '-' . (string)$item->guid);
     $job_link = 'https://' . $norm_province . '/job/' . $slug;
 
     $fg = strtolower(trim(isset($item->functiongroup) ? (string)$item->functiongroup : ''));
-    $estimate_key = array_reduce(array_keys(GetSalaryEstimates()), function($carry, $key) use ($fg) {
+    $estimate_key = array_reduce(array_keys(GetSalaryEstimates()), function ($carry, $key) use ($fg) {
         return strpos($fg, strtolower($key)) !== false ? $key : $carry;
     }, null);
 
@@ -52,9 +58,11 @@ function infer_item_details(&$item, $fallback_domain, $lang, &$job_obj) {
     }
 
     $apply_link = isset($item->applylink) ? (string)$item->applylink : '';
-    if ($apply_link) $apply_link .= '?utm_source=puntwork&utm_term=' . (string)$item->guid;
+    if ($apply_link) {
+        $apply_link .= '?utm_source=puntwork&utm_term=' . (string)$item->guid;
+    }
 
-    $icon_key = array_reduce(array_keys(GetIconMap()), function($carry, $key) use ($fg) {
+    $icon_key = array_reduce(array_keys(GetIconMap()), function ($carry, $key) use ($fg) {
         return strpos($fg, strtolower($key)) !== false ? $key : $carry;
     }, null);
     $icon = $icon_key ? '<i class="fas ' . GetIconMap()[$icon_key] . '"></i>' : '<i class="fas fa-briefcase"></i>';
@@ -65,8 +73,12 @@ function infer_item_details(&$item, $fallback_domain, $lang, &$job_obj) {
     $job_meal_vouchers = (bool)preg_match('/maaltijdcheques|chèques repas|meal vouchers/i', $all_text);
     $job_flex_hours = (bool)preg_match('/flexibele uren|heures flexibles|flexible hours/i', $all_text);
     $job_skills = [];
-    if (preg_match('/\bexcel\b|\bmicrosoft excel\b|\bms excel\b/i', $all_text)) $job_skills[] = 'Excel';
-    if (preg_match('/\bwinbooks\b/i', $all_text)) $job_skills[] = 'WinBooks';
+    if (preg_match('/\bexcel\b|\bmicrosoft excel\b|\bms excel\b/i', $all_text)) {
+        $job_skills[] = 'Excel';
+    }
+    if (preg_match('/\bwinbooks\b/i', $all_text)) {
+        $job_skills[] = 'WinBooks';
+    }
 
     $parttime = isset($item->parttime) && (string)$item->parttime == 'true';
     $job_time = $parttime ? ($lang == 'nl' ? 'Deeltijds' : ($lang == 'fr' ? 'Temps partiel' : 'Part-time')) : ($lang == 'nl' ? 'Voltijds' : ($lang == 'fr' ? 'Temps plein' : 'Full-time'));

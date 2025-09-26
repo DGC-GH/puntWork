@@ -1,4 +1,5 @@
 <?php
+
 /**
  * HubSpot CRM Integration
  *
@@ -17,8 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * HubSpot CRM integration
  */
-class HubSpotIntegration extends CRMIntegration {
-
+class HubSpotIntegration extends CRMIntegration
+{
     /**
      * API base URL
      */
@@ -27,7 +28,8 @@ class HubSpotIntegration extends CRMIntegration {
     /**
      * Constructor
      */
-    public function __construct(array $config = []) {
+    public function __construct(array $config = [])
+    {
         $this->platform_id = 'hubspot';
         $this->platform_name = 'HubSpot';
         $this->rate_limits = [
@@ -42,21 +44,24 @@ class HubSpotIntegration extends CRMIntegration {
     /**
      * Initialize HubSpot integration
      */
-    protected function initialize(): void {
+    protected function initialize(): void
+    {
         // HubSpot specific initialization if needed
     }
 
     /**
      * Check if HubSpot is properly configured
      */
-    public function isConfigured(): bool {
+    public function isConfigured(): bool
+    {
         return isset($this->config['access_token']) && !empty($this->config['access_token']);
     }
 
     /**
      * Test HubSpot connection
      */
-    public function testConnection(): array {
+    public function testConnection(): array
+    {
         if (!$this->isConfigured()) {
             return [
                 'success' => false,
@@ -73,7 +78,6 @@ class HubSpotIntegration extends CRMIntegration {
                 'message' => 'HubSpot connection successful',
                 'account_info' => $response
             ];
-
         } catch (\Exception $e) {
             return [
                 'success' => false,
@@ -85,7 +89,8 @@ class HubSpotIntegration extends CRMIntegration {
     /**
      * Create or update a contact
      */
-    public function createContact(array $contact_data): array {
+    public function createContact(array $contact_data): array
+    {
         $standardized_data = $this->standardizeContactData($contact_data);
 
         $properties = $this->formatContactProperties($standardized_data);
@@ -99,7 +104,6 @@ class HubSpotIntegration extends CRMIntegration {
                 'platform' => 'hubspot',
                 'timestamp' => time()
             ];
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('HubSpot contact creation failed', PuntWorkLogger::CONTEXT_CRM, [
                 'error' => $e->getMessage(),
@@ -118,7 +122,8 @@ class HubSpotIntegration extends CRMIntegration {
     /**
      * Update existing contact
      */
-    public function updateContact(string $contact_id, array $contact_data): array {
+    public function updateContact(string $contact_id, array $contact_data): array
+    {
         $standardized_data = $this->standardizeContactData($contact_data);
 
         $properties = $this->formatContactProperties($standardized_data);
@@ -132,7 +137,6 @@ class HubSpotIntegration extends CRMIntegration {
                 'platform' => 'hubspot',
                 'timestamp' => time()
             ];
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('HubSpot contact update failed', PuntWorkLogger::CONTEXT_CRM, [
                 'contact_id' => $contact_id,
@@ -151,7 +155,8 @@ class HubSpotIntegration extends CRMIntegration {
     /**
      * Find contact by email
      */
-    public function findContactByEmail(string $email): ?array {
+    public function findContactByEmail(string $email): ?array
+    {
         try {
             $response = $this->makeApiRequest('crm/v3/objects/contacts/search', [
                 'filterGroups' => [
@@ -175,7 +180,6 @@ class HubSpotIntegration extends CRMIntegration {
             }
 
             return null;
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('HubSpot contact search failed', PuntWorkLogger::CONTEXT_CRM, [
                 'email' => $email,
@@ -189,7 +193,8 @@ class HubSpotIntegration extends CRMIntegration {
     /**
      * Create a deal
      */
-    public function createDeal(array $deal_data): array {
+    public function createDeal(array $deal_data): array
+    {
         $standardized_data = $this->standardizeDealData($deal_data);
 
         $properties = [
@@ -203,7 +208,7 @@ class HubSpotIntegration extends CRMIntegration {
         ];
 
         // Remove null values
-        $properties = array_filter($properties, function($value) {
+        $properties = array_filter($properties, function ($value) {
             return $value !== null;
         });
 
@@ -221,7 +226,6 @@ class HubSpotIntegration extends CRMIntegration {
                 'platform' => 'hubspot',
                 'timestamp' => time()
             ];
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('HubSpot deal creation failed', PuntWorkLogger::CONTEXT_CRM, [
                 'error' => $e->getMessage(),
@@ -240,7 +244,8 @@ class HubSpotIntegration extends CRMIntegration {
     /**
      * Format contact properties for HubSpot API
      */
-    private function formatContactProperties(array $contact_data): array {
+    private function formatContactProperties(array $contact_data): array
+    {
         $properties = [];
 
         if (!empty($contact_data['first_name'])) {
@@ -308,7 +313,8 @@ class HubSpotIntegration extends CRMIntegration {
     /**
      * Map deal stage to HubSpot pipeline stages
      */
-    private function mapDealStage(string $stage): string {
+    private function mapDealStage(string $stage): string
+    {
         $stage_mapping = [
             'lead' => 'appointmentscheduled',
             'application_received' => 'qualifiedtobuy',
@@ -325,7 +331,8 @@ class HubSpotIntegration extends CRMIntegration {
     /**
      * Associate deal with contact
      */
-    private function associateDealWithContact(string $deal_id, string $contact_id): void {
+    private function associateDealWithContact(string $deal_id, string $contact_id): void
+    {
         try {
             $this->makeApiRequest("crm/v3/objects/deals/{$deal_id}/associations/contacts/{$contact_id}", [], 'PUT');
         } catch (\Exception $e) {
@@ -340,14 +347,16 @@ class HubSpotIntegration extends CRMIntegration {
     /**
      * Get API base URL
      */
-    protected function getApiBaseUrl(): string {
+    protected function getApiBaseUrl(): string
+    {
         return $this->api_base;
     }
 
     /**
      * Get default headers for API requests
      */
-    protected function getDefaultHeaders(): array {
+    protected function getDefaultHeaders(): array
+    {
         return [
             'Authorization' => 'Bearer ' . ($this->config['access_token'] ?? ''),
             'Content-Type' => 'application/json'
@@ -357,7 +366,8 @@ class HubSpotIntegration extends CRMIntegration {
     /**
      * Handle HubSpot API errors
      */
-    protected function handleApiError(array $response): void {
+    protected function handleApiError(array $response): void
+    {
         if (isset($response['status']) && $response['status'] === 'error') {
             $message = $response['message'] ?? 'Unknown error';
             throw new \Exception('HubSpot API Error: ' . $message);
@@ -372,7 +382,8 @@ class HubSpotIntegration extends CRMIntegration {
     /**
      * Get platform name (static method for manager)
      */
-    public static function getPlatformName(): string {
+    public static function getPlatformName(): string
+    {
         return 'HubSpot';
     }
 }

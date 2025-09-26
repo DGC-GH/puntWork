@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Intelligent job categorization using keyword-based classification
  *
@@ -17,8 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * Job categorization engine
  */
-class JobCategorizer {
-
+class JobCategorizer
+{
     /**
      * Job categories with associated keywords
      */
@@ -88,7 +89,8 @@ class JobCategorizer {
      * @param string $description Job description
      * @return string Job category
      */
-    public static function categorize(string $title, string $description = ''): string {
+    public static function categorize(string $title, string $description = ''): string
+    {
         $text = strtolower($title . ' ' . $description);
         $scores = [];
 
@@ -123,7 +125,8 @@ class JobCategorizer {
      *
      * @return array List of category names
      */
-    public static function getCategories(): array {
+    public static function getCategories(): array
+    {
         return array_keys(self::CATEGORIES);
     }
 
@@ -133,7 +136,8 @@ class JobCategorizer {
      * @param string $category Category name
      * @return array List of keywords
      */
-    public static function getCategoryKeywords(string $category): array {
+    public static function getCategoryKeywords(string $category): array
+    {
         return self::CATEGORIES[$category] ?? [];
     }
 }

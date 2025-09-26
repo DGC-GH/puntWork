@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Admin page HTML for job import plugin
  * Main entry point that loads all admin UI components
@@ -11,7 +12,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -28,7 +29,8 @@ require_once __DIR__ . '/accessibility.php';
 require_once __DIR__ . '/../queue/queue-manager.php';
 require_once __DIR__ . '/../queue/queue-ajax.php';
 
-function feeds_dashboard_page() {
+function feeds_dashboard_page()
+{
     // Remove debug logging for security
     wp_enqueue_script('jquery');
 
@@ -48,7 +50,8 @@ function feeds_dashboard_page() {
 /**
  * Feed Configuration page callback
  */
-function feed_config_page() {
+function feed_config_page()
+{
     // Enqueue Sortable library for drag-and-drop
     wp_enqueue_script('jquery-ui-sortable');
 
@@ -59,7 +62,8 @@ function feed_config_page() {
 /**
  * Render JavaScript initialization for the admin page
  */
-function render_javascript_init() {
+function render_javascript_init()
+{
     ?>
     <script type="text/javascript">
         jQuery(document).ready(function($) {
@@ -142,7 +146,8 @@ function render_javascript_init() {
     <?php
 }
 
-function jobs_dashboard_page() {
+function jobs_dashboard_page()
+{
     error_log('[PUNTWORK] jobs_dashboard_page() called');
     wp_enqueue_script('jquery');
 
@@ -156,7 +161,8 @@ function jobs_dashboard_page() {
 /**
  * Render the main puntWork dashboard page
  */
-function puntwork_dashboard_page() {
+function puntwork_dashboard_page()
+{
     ?>
     <div class="wrap" style="max-width: 1200px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1d1d1f; padding: 0 20px;">
         <h1 style="font-size: 34px; font-weight: 600; text-align: center; margin: 40px 0 20px;"><?php _e('puntWork Dashboard', 'puntwork'); ?></h1>
@@ -324,7 +330,8 @@ function puntwork_dashboard_page() {
 /**
  * Render the onboarding modal HTML
  */
-function render_onboarding_modal() {
+function render_onboarding_modal()
+{
     // Check if onboarding has been completed
     $onboarding_completed = get_option('puntwork_onboarding_completed', false);
 
@@ -386,7 +393,8 @@ function render_onboarding_modal() {
 /**
  * Render import history UI section
  */
-function render_import_history_ui() {
+function render_import_history_ui()
+{
     ?>
     <!-- Import History Section -->
     <div class="wrap" style="max-width: 900px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1d1d1f; padding: 0 24px; background-color: #f5f5f7;">
@@ -445,7 +453,8 @@ function render_import_history_ui() {
 /**
  * Render JavaScript initialization for the jobs dashboard page
  */
-function render_jobs_javascript_init() {
+function render_jobs_javascript_init()
+{
     ?>
     <script type="text/javascript">
         jQuery(document).ready(function($) {
