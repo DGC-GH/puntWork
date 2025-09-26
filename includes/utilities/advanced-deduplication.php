@@ -472,6 +472,72 @@ class JobDeduplicator {
                 }
             }
         }
+
+        // Use AI-powered similarity detection for content-based duplicates
+        if (class_exists('\\Puntwork\\AI\\DuplicateDetector')) {
+            self::handle_ai_duplicates($logs, $duplicates_drafted);
+        }
+    }
+
+    /**
+     * Handle AI-powered content similarity duplicates
+     */
+    private static function handle_ai_duplicates(&$logs, &$duplicates_drafted) {
+        // Get all published jobs for AI similarity analysis
+        $existing_jobs = get_posts([
+            'post_type' => 'job',
+            'posts_per_page' => -1,
+            'post_status' => 'publish',
+            'fields' => 'ids',
+        ]);
+
+        if (empty($existing_jobs) || count($existing_jobs) < 2) {
+            return;
+        }
+
+        // Build job data array for AI similarity detection
+        $job_data = [];
+        foreach ($existing_jobs as $post_id) {
+            $job_data[] = [
+                'job_title' => get_post_field('post_title', $post_id),
+                'job_description' => get_post_meta($post_id, 'job_description', true) ?: '',
+                'job_company' => get_post_meta($post_id, 'company', true) ?: '',
+            ];
+        }
+
+        // Detect duplicate groups using AI algorithms
+        $duplicate_groups = \Puntwork\AI\DuplicateDetector::detectDuplicates($job_data);
+
+        // Process duplicate groups
+        foreach ($duplicate_groups as $group_indices) {
+            if (count($group_indices) < 2) continue;
+
+            // Map indices back to post IDs
+            $post_ids_in_group = array_map(function($index) use ($existing_jobs) {
+                return $existing_jobs[$index];
+            }, $group_indices);
+
+            // Sort by post ID to keep the oldest (lowest ID)
+            sort($post_ids_in_group);
+            $keep_id = $post_ids_in_group[0];
+            $duplicates = array_slice($post_ids_in_group, 1);
+
+            // Draft the AI-detected duplicates
+            foreach ($duplicates as $dup_id) {
+                $current_title = get_post_field('post_title', $dup_id);
+                $new_title = strpos($current_title, 'Duplicate - ') === false ?
+                    $current_title . ' [Duplicate - AI Content Similarity]' : $current_title;
+
+                wp_update_post([
+                    'ID' => $dup_id,
+                    'post_title' => $new_title,
+                    'post_status' => 'draft'
+                ]);
+
+                $duplicates_drafted++;
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Drafted AI-detected duplicate ID: ' . $dup_id . ' - Content similarity with ID: ' . $keep_id;
+            }
+        }
     }
 
     /**
