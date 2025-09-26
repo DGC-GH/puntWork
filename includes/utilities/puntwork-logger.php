@@ -29,6 +29,7 @@ class PuntWorkLogger {
 
     // Log contexts
     const CONTEXT_AJAX = 'AJAX';
+    const CONTEXT_API = 'API';
     const CONTEXT_BATCH = 'BATCH';
     const CONTEXT_FEED = 'FEED';
     const CONTEXT_UI = 'UI';
