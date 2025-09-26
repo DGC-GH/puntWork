@@ -120,6 +120,7 @@ function setup_job_import() {
         'admin/admin-ui-feed-health.php',
         'admin/admin-ui-analytics.php',
         'admin/admin-ui-performance.php',
+        'admin/admin-feed-config.php',
         'admin/admin-modern-styles.php',
 
         // API handlers (functions)
