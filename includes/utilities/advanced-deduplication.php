@@ -21,16 +21,16 @@ if (!defined('ABSPATH')) {
 class JobDeduplicator
 {
     // Similarity thresholds
-    const EXACT_MATCH = 1.0;
-    const HIGH_SIMILARITY = 0.85;
-    const MEDIUM_SIMILARITY = 0.70;
-    const LOW_SIMILARITY = 0.50;
+    public const EXACT_MATCH = 1.0;
+    public const HIGH_SIMILARITY = 0.85;
+    public const MEDIUM_SIMILARITY = 0.70;
+    public const LOW_SIMILARITY = 0.50;
 
     // Deduplication strategies
-    const STRATEGY_GUID = 'guid';
-    const STRATEGY_TITLE_COMPANY = 'title_company';
-    const STRATEGY_CONTENT_HASH = 'content_hash';
-    const STRATEGY_FUZZY_TITLE = 'fuzzy_title';
+    public const STRATEGY_GUID = 'guid';
+    public const STRATEGY_TITLE_COMPANY = 'title_company';
+    public const STRATEGY_CONTENT_HASH = 'content_hash';
+    public const STRATEGY_FUZZY_TITLE = 'fuzzy_title';
 
     /**
      * Configuration for deduplication rules
@@ -55,23 +55,23 @@ class JobDeduplicator
      * @param array $existing_jobs Array of existing job posts
      * @return array Array of potential duplicates with similarity scores
      */
-    public static function find_duplicates($job_item, $existing_jobs = null)
+    public static function findDuplicates($job_item, $existing_jobs = null)
     {
         if ($existing_jobs === null) {
-            $existing_jobs = self::get_existing_jobs_for_comparison($job_item);
+            $existing_jobs = self::getExistingJobsForComparison($job_item);
         }
 
         $duplicates = [];
 
         foreach ($existing_jobs as $existing_job) {
-            $similarity = self::calculate_similarity($job_item, $existing_job);
+            $similarity = self::calculateSimilarity($job_item, $existing_job);
 
             if ($similarity >= self::$config['title_similarity_threshold']) {
                 $duplicates[] = [
                     'post_id' => $existing_job->ID,
                     'similarity' => $similarity,
-                    'reasons' => self::get_similarity_reasons($job_item, $existing_job),
-                    'strategy' => self::determine_matching_strategy($job_item, $existing_job)
+                    'reasons' => self::getSimilarityReasons($job_item, $existing_job),
+                    'strategy' => self::determineMatchingStrategy($job_item, $existing_job)
                 ];
             }
         }
@@ -87,39 +87,39 @@ class JobDeduplicator
     /**
      * Calculate overall similarity between two job items
      */
-    private static function calculate_similarity($job1, $job2)
+    private static function calculateSimilarity($job1, $job2)
     {
         $similarity = 0;
         $weights = 0;
 
         // Title similarity (highest weight)
-        $title_sim = self::calculate_text_similarity(
-            self::normalize_text($job1->title ?? ''),
-            self::normalize_text($job2->post_title ?? '')
+        $title_sim = self::calculateTextSimilarity(
+            self::normalizeText($job1->title ?? ''),
+            self::normalizeText($job2->post_title ?? '')
         );
         $similarity += $title_sim * 0.4;
         $weights += 0.4;
 
         // Company similarity
-        $company_sim = self::calculate_text_similarity(
-            self::normalize_text($job1->company ?? $job1->companyname ?? ''),
-            self::normalize_text(get_post_meta($job2->ID, 'company', true) ?? '')
+        $company_sim = self::calculateTextSimilarity(
+            self::normalizeText($job1->company ?? $job1->companyname ?? ''),
+            self::normalizeText(get_post_meta($job2->ID, 'company', true) ?? '')
         );
         $similarity += $company_sim * 0.3;
         $weights += 0.3;
 
         // Location similarity
-        $location_sim = self::calculate_text_similarity(
-            self::normalize_text($job1->location ?? $job1->city ?? ''),
-            self::normalize_text(get_post_meta($job2->ID, 'location', true) ?? '')
+        $location_sim = self::calculateTextSimilarity(
+            self::normalizeText($job1->location ?? $job1->city ?? ''),
+            self::normalizeText(get_post_meta($job2->ID, 'location', true) ?? '')
         );
         $similarity += $location_sim * 0.2;
         $weights += 0.2;
 
         // Content similarity (lower weight)
-        $content_sim = self::calculate_text_similarity(
-            self::normalize_text($job1->description ?? ''),
-            self::normalize_text($job2->post_content ?? '')
+        $content_sim = self::calculateTextSimilarity(
+            self::normalizeText($job1->description ?? ''),
+            self::normalizeText($job2->post_content ?? '')
         );
         $similarity += $content_sim * 0.1;
         $weights += 0.1;
@@ -130,7 +130,7 @@ class JobDeduplicator
     /**
      * Calculate text similarity using multiple algorithms
      */
-    private static function calculate_text_similarity($text1, $text2)
+    private static function calculateTextSimilarity($text1, $text2)
     {
         if (empty($text1) || empty($text2)) {
             return empty($text1) && empty($text2) ? 1.0 : 0.0;
@@ -149,16 +149,16 @@ class JobDeduplicator
         }
 
         // Jaccard similarity for longer texts
-        return self::jaccard_similarity($text1, $text2);
+        return self::jaccardSimilarity($text1, $text2);
     }
 
     /**
      * Calculate Jaccard similarity coefficient
      */
-    private static function jaccard_similarity($text1, $text2)
+    private static function jaccardSimilarity($text1, $text2)
     {
-        $words1 = self::get_word_tokens($text1);
-        $words2 = self::get_word_tokens($text2);
+        $words1 = self::getWordTokens($text1);
+        $words2 = self::getWordTokens($text2);
 
         if (empty($words1) && empty($words2)) {
             return 1.0;
@@ -173,7 +173,7 @@ class JobDeduplicator
     /**
      * Tokenize text into words
      */
-    private static function get_word_tokens($text)
+    private static function getWordTokens($text)
     {
         // Remove punctuation and normalize
         $text = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $text);
@@ -191,7 +191,7 @@ class JobDeduplicator
     /**
      * Normalize text for comparison
      */
-    private static function normalize_text($text)
+    private static function normalizeText($text)
     {
         // Convert to lowercase and trim
         $text = strtolower(trim($text));
@@ -223,32 +223,32 @@ class JobDeduplicator
     /**
      * Get reasons why items are considered similar
      */
-    private static function get_similarity_reasons($job1, $job2)
+    private static function getSimilarityReasons($job1, $job2)
     {
         $reasons = [];
 
         // Check title similarity
-        $title_sim = self::calculate_text_similarity(
-            self::normalize_text($job1->title ?? ''),
-            self::normalize_text($job2->post_title ?? '')
+        $title_sim = self::calculateTextSimilarity(
+            self::normalizeText($job1->title ?? ''),
+            self::normalizeText($job2->post_title ?? '')
         );
         if ($title_sim >= self::HIGH_SIMILARITY) {
             $reasons[] = 'Similar title';
         }
 
         // Check company similarity
-        $company_sim = self::calculate_text_similarity(
-            self::normalize_text($job1->company ?? $job1->companyname ?? ''),
-            self::normalize_text(get_post_meta($job2->ID, 'company', true) ?? '')
+        $company_sim = self::calculateTextSimilarity(
+            self::normalizeText($job1->company ?? $job1->companyname ?? ''),
+            self::normalizeText(get_post_meta($job2->ID, 'company', true) ?? '')
         );
         if ($company_sim >= self::HIGH_SIMILARITY) {
             $reasons[] = 'Same company';
         }
 
         // Check location similarity
-        $location_sim = self::calculate_text_similarity(
-            self::normalize_text($job1->location ?? $job1->city ?? ''),
-            self::normalize_text(get_post_meta($job2->ID, 'location', true) ?? '')
+        $location_sim = self::calculateTextSimilarity(
+            self::normalizeText($job1->location ?? $job1->city ?? ''),
+            self::normalizeText(get_post_meta($job2->ID, 'location', true) ?? '')
         );
         if ($location_sim >= self::MEDIUM_SIMILARITY) {
             $reasons[] = 'Similar location';
@@ -260,7 +260,7 @@ class JobDeduplicator
     /**
      * Determine which strategy was used for matching
      */
-    private static function determine_matching_strategy($job1, $job2)
+    private static function determineMatchingStrategy($job1, $job2)
     {
         // Check GUID match
         if (isset($job1->guid) && !empty($job1->guid)) {
@@ -285,7 +285,7 @@ class JobDeduplicator
         }
 
         // Check content hash
-        $content_hash = self::generate_content_hash($job1);
+        $content_hash = self::generateContentHash($job1);
         $existing_hash = get_post_meta($job2->ID, '_import_hash', true);
         if ($content_hash === $existing_hash) {
             return self::STRATEGY_CONTENT_HASH;
@@ -297,7 +297,7 @@ class JobDeduplicator
     /**
      * Generate content hash for comparison
      */
-    private static function generate_content_hash($job)
+    private static function generateContentHash($job)
     {
         $content = '';
         $content .= $job->title ?? '';
@@ -311,7 +311,7 @@ class JobDeduplicator
     /**
      * Get existing jobs for comparison (with caching)
      */
-    private static function get_existing_jobs_for_comparison($job_item)
+    private static function getExistingJobsForComparison($job_item)
     {
         $cache_key = 'puntwork_dedup_jobs_' . md5($job_item->title ?? '' . $job_item->company ?? '');
         $cached = wp_cache_get($cache_key);
@@ -352,23 +352,23 @@ class JobDeduplicator
     /**
      * Enhanced duplicate handling with advanced algorithms
      */
-    public static function handle_duplicates_advanced($batch_guids, $existing_by_guid, &$logs, &$duplicates_drafted, &$post_ids_by_guid)
+    public static function handleDuplicatesAdvanced($batch_guids, $existing_by_guid, &$logs, &$duplicates_drafted, &$post_ids_by_guid)
     {
         global $wpdb;
 
         // First, handle exact GUID matches with existing logic
-        self::handle_exact_guid_duplicates($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
+        self::handleExactGuidDuplicates($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
 
         // Then, apply fuzzy matching for remaining items
         if (self::$config['enable_fuzzy_matching']) {
-            self::handle_fuzzy_duplicates($batch_guids, $logs, $duplicates_drafted, $post_ids_by_guid);
+            self::handleFuzzyDuplicates($batch_guids, $logs, $duplicates_drafted, $post_ids_by_guid);
         }
     }
 
     /**
      * Handle exact GUID duplicates (existing logic)
      */
-    private static function handle_exact_guid_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates_drafted, &$post_ids_by_guid)
+    private static function handleExactGuidDuplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates_drafted, &$post_ids_by_guid)
     {
         global $wpdb;
 
@@ -451,14 +451,14 @@ class JobDeduplicator
     /**
      * Handle fuzzy duplicates using advanced algorithms
      */
-    private static function handle_fuzzy_duplicates($batch_guids, &$logs, &$duplicates_drafted, &$post_ids_by_guid)
+    private static function handleFuzzyDuplicates($batch_guids, &$logs, &$duplicates_drafted, &$post_ids_by_guid)
     {
         // Get all jobs in current batch that don't have exact GUID matches
         $batch_jobs = [];
         foreach ($batch_guids as $guid) {
             if (!isset($post_ids_by_guid[$guid])) {
                 // This GUID doesn't have an exact match, get the job data
-                $batch_jobs[$guid] = self::get_job_data_by_guid($guid);
+                $batch_jobs[$guid] = self::getJobDataByGuid($guid);
             }
         }
 
@@ -468,7 +468,7 @@ class JobDeduplicator
                 continue;
             }
 
-            $duplicates = self::find_duplicates($job_data);
+            $duplicates = self::findDuplicates($job_data);
 
             if (!empty($duplicates)) {
                 $best_match = $duplicates[0];
@@ -491,14 +491,14 @@ class JobDeduplicator
 
         // Use AI-powered similarity detection for content-based duplicates
         if (class_exists('\\Puntwork\\AI\\DuplicateDetector')) {
-            self::handle_ai_duplicates($logs, $duplicates_drafted);
+            self::handleAiDuplicates($logs, $duplicates_drafted);
         }
     }
 
     /**
      * Handle AI-powered content similarity duplicates
      */
-    private static function handle_ai_duplicates(&$logs, &$duplicates_drafted)
+    private static function handleAiDuplicates(&$logs, &$duplicates_drafted)
     {
         // Get all published jobs for AI similarity analysis
         $existing_jobs = get_posts([
@@ -562,7 +562,7 @@ class JobDeduplicator
     /**
      * Get job data by GUID from current import batch
      */
-    private static function get_job_data_by_guid($guid)
+    private static function getJobDataByGuid($guid)
     {
         // This would need to be implemented to get job data from the current batch
         // For now, return null - this would be integrated with the import process
@@ -572,7 +572,7 @@ class JobDeduplicator
     /**
      * Update deduplication configuration
      */
-    public static function update_config($new_config)
+    public static function updateConfig($new_config)
     {
         self::$config = array_merge(self::$config, $new_config);
     }
@@ -580,7 +580,7 @@ class JobDeduplicator
     /**
      * Get current configuration
      */
-    public static function get_config()
+    public static function getConfig()
     {
         return self::$config;
     }

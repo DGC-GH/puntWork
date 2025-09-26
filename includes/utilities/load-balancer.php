@@ -2,7 +2,19 @@
 
 /**
  * Load Balancer for puntWork
- * Distributes workload across multiple server instances
+     p    private function isWordpressEnvironment()
+    {
+        global $wpdb;
+        return isset($wpdb)
+            && $wpdb instanceof \wpdb
+            && defined('ABSPATH')
+            && file_exists(ABSPATH . 'wp-admin/includes/upgrade.php');
+    }e function isWordpressEnvironment()
+    {
+        global $wpdb;
+        return isset($wpdb) && $wpdb instanceof \wpdb && defined('ABSPATH')
+            && file_exists(ABSPATH . 'wp-admin/includes/upgrade.php');
+    }tributes workload across multiple server instances
  */
 
 namespace Puntwork;
@@ -31,38 +43,41 @@ class PuntworkLoadBalancer
         $this->health_checks = [];
 
         // Only initialize database operations if WordPress is properly loaded
-        if ($this->is_wordpress_environment()) {
-            $this->init_hooks();
-            $this->create_load_balancer_table();
+        if ($this->isWordpressEnvironment()) {
+            $this->initHooks();
+            $this->createLoadBalancerTable();
         }
     }
 
     /**
      * Check if we're in a proper WordPress environment
      */
-    public function is_wordpress_environment()
+    public function isWordpressEnvironment()
     {
         global $wpdb;
-        return isset($wpdb) && $wpdb instanceof \wpdb && defined('ABSPATH') && file_exists(ABSPATH . 'wp-admin/includes/upgrade.php');
+        return isset($wpdb)
+            && $wpdb instanceof \wpdb
+            && defined('ABSPATH')
+            && file_exists(ABSPATH . 'wp-admin/includes/upgrade.php');
     }
 
     /**
      * Initialize WordPress hooks
      */
-    private function init_hooks()
+    private function initHooks()
     {
         add_action('init', [$this, 'process_load_balanced_jobs']);
-        add_action('wp_ajax_puntwork_lb_health_check', [$this, 'ajax_health_check_all']);
-        add_action('wp_ajax_puntwork_lb_stats', [$this, 'ajax_get_stats']);
+        add_action('wp_ajax_puntwork_lb_health_check', [$this, 'ajaxHealthCheckAll']);
+        add_action('wp_ajax_puntwork_lb_stats', [$this, 'ajaxGetStats']);
 
         // Add admin menu
-        add_action('admin_menu', [$this, 'add_load_balancer_menu'], 30);
+        add_action('admin_menu', [$this, 'addLoadBalancerMenu'], 30);
     }
 
     /**
      * Add load balancer admin menu
      */
-    public function add_load_balancer_menu()
+    public function addLoadBalancerMenu()
     {
         add_submenu_page(
             'puntwork-dashboard',
@@ -70,21 +85,21 @@ class PuntworkLoadBalancer
             __('Load Balancer', 'puntwork'),
             'manage_options',
             'puntwork-load-balancer',
-            [$this, 'render_load_balancer_page']
+            [$this, 'renderLoadBalancerPage']
         );
     }
 
     /**
      * Render load balancer admin page
      */
-    public function render_load_balancer_page()
+    public function renderLoadBalancerPage()
     {
         if (!current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.'));
         }
 
-        $stats = $this->get_load_balancer_stats();
-        $instances = $this->get_all_instances();
+        $stats = $this->getLoadBalancerStats();
+        $instances = $this->getAllInstances();
         $strategy = $this->balancing_strategy;
 
         ?>
@@ -208,9 +223,9 @@ class PuntworkLoadBalancer
     /**
      * Create load balancer table
      */
-    private function create_load_balancer_table()
+    private function createLoadBalancerTable()
     {
-        if (!$this->is_wordpress_environment()) {
+        if (!$this->isWordpressEnvironment()) {
             return;
         }
 
@@ -239,22 +254,22 @@ class PuntworkLoadBalancer
     /**
      * Process load balanced jobs
      */
-    public function process_load_balanced_jobs()
+    public function processLoadBalancedJobs()
     {
         // Get pending jobs that can be load balanced
-        $pending_jobs = $this->get_pending_load_balanced_jobs();
+        $pending_jobs = $this->getPendingLoadBalancedJobs();
 
         foreach ($pending_jobs as $job) {
-            $this->distribute_job($job);
+            $this->distributeJob($job);
         }
     }
 
     /**
      * Get pending jobs suitable for load balancing
      */
-    private function get_pending_load_balanced_jobs()
+    private function getPendingLoadBalancedJobs()
     {
-        if (!$this->is_wordpress_environment()) {
+        if (!$this->isWordpressEnvironment()) {
             return [];
         }
 
@@ -276,9 +291,9 @@ class PuntworkLoadBalancer
     /**
      * Distribute job to optimal instance
      */
-    private function distribute_job($job)
+    private function distributeJob($job)
     {
-        $instance = $this->select_instance_for_job($job);
+        $instance = $this->selectInstanceForJob($job);
 
         if (!$instance) {
             // No suitable instance available, mark for retry later
@@ -291,9 +306,9 @@ class PuntworkLoadBalancer
     /**
      * Select best instance for job using current strategy
      */
-    private function select_instance_for_job($job)
+    private function selectInstanceForJob($job)
     {
-        $active_instances = $this->get_active_instances();
+        $active_instances = $this->getActiveInstances();
 
         if (empty($active_instances)) {
             return null;
@@ -301,26 +316,26 @@ class PuntworkLoadBalancer
 
         switch ($this->balancing_strategy) {
             case 'round_robin':
-                return $this->round_robin_selection($active_instances, $job['job_type']);
+                return $this->roundRobinSelection($active_instances, $job['job_type']);
 
             case 'least_loaded':
-                return $this->least_loaded_selection($active_instances, $job['job_type']);
+                return $this->leastLoadedSelection($active_instances, $job['job_type']);
 
             case 'weighted':
-                return $this->weighted_selection($active_instances, $job['job_type']);
+                return $this->weightedSelection($active_instances, $job['job_type']);
 
             case 'ip_hash':
-                return $this->ip_hash_selection($active_instances, $job['job_type']);
+                return $this->ipHashSelection($active_instances, $job['job_type']);
 
             default:
-                return $this->round_robin_selection($active_instances, $job['job_type']);
+                return $this->roundRobinSelection($active_instances, $job['job_type']);
         }
     }
 
     /**
      * Round robin instance selection
      */
-    private function round_robin_selection($instances, $job_type)
+    private function roundRobinSelection($instances, $job_type)
     {
         static $last_index = [];
 
@@ -329,7 +344,7 @@ class PuntworkLoadBalancer
         }
 
         $capable_instances = array_filter($instances, function ($instance) use ($job_type) {
-            return $this->instance_can_handle_job($instance, $job_type);
+            return $this->instanceCanHandleJob($instance, $job_type);
         });
 
         if (empty($capable_instances)) {
@@ -346,10 +361,10 @@ class PuntworkLoadBalancer
     /**
      * Least loaded instance selection
      */
-    private function least_loaded_selection($instances, $job_type)
+    private function leastLoadedSelection($instances, $job_type)
     {
         $capable_instances = array_filter($instances, function ($instance) use ($job_type) {
-            return $this->instance_can_handle_job($instance, $job_type);
+            return $this->instanceCanHandleJob($instance, $job_type);
         });
 
         if (empty($capable_instances)) {
@@ -359,7 +374,7 @@ class PuntworkLoadBalancer
         // Get load metrics for each instance
         $instance_loads = [];
         foreach ($capable_instances as $instance) {
-            $instance_loads[$instance['instance_id']] = $this->get_instance_load($instance);
+            $instance_loads[$instance['instance_id']] = $this->getInstanceLoad($instance);
         }
 
         // Return instance with lowest load
@@ -374,10 +389,10 @@ class PuntworkLoadBalancer
     /**
      * Weighted round robin selection
      */
-    private function weighted_selection($instances, $job_type)
+    private function weightedSelection($instances, $job_type)
     {
         $capable_instances = array_filter($instances, function ($instance) use ($job_type) {
-            return $this->instance_can_handle_job($instance, $job_type);
+            return $this->instanceCanHandleJob($instance, $job_type);
         });
 
         if (empty($capable_instances)) {
@@ -387,7 +402,8 @@ class PuntworkLoadBalancer
         // Weight instances by CPU count and memory
         $weighted_instances = [];
         foreach ($capable_instances as $instance) {
-            $weight = $instance['cpu_count'] * ($instance['memory_limit'] / (128 * 1024 * 1024)); // Base weight on 128MB
+            $weight = $instance['cpu_count'] * ($instance['memory_limit'] / (128 * 1024 * 1024));
+            // Base weight on 128MB
             $weighted_instances[] = array_merge($instance, ['weight' => max(1, $weight)]);
         }
 
@@ -409,10 +425,10 @@ class PuntworkLoadBalancer
     /**
      * IP hash selection for session stickiness
      */
-    private function ip_hash_selection($instances, $job_type)
+    private function ipHashSelection($instances, $job_type)
     {
         $capable_instances = array_filter($instances, function ($instance) use ($job_type) {
-            return $this->instance_can_handle_job($instance, $job_type);
+            return $this->instanceCanHandleJob($instance, $job_type);
         });
 
         if (empty($capable_instances)) {
@@ -430,7 +446,7 @@ class PuntworkLoadBalancer
     /**
      * Check if instance can handle specific job type
      */
-    private function instance_can_handle_job($instance, $job_type)
+    private function instanceCanHandleJob($instance, $job_type)
     {
         $role_capabilities = [
             'coordinator_only' => ['notification', 'analytics_update', 'cleanup'],
@@ -445,9 +461,9 @@ class PuntworkLoadBalancer
     /**
      * Get instance load metrics
      */
-    private function get_instance_load($instance)
+    private function getInstanceLoad($instance)
     {
-        if (!$this->is_wordpress_environment()) {
+        if (!$this->isWordpressEnvironment()) {
             return 0;
         }
 
@@ -475,45 +491,45 @@ class PuntworkLoadBalancer
     /**
      * Send job to specific instance
      */
-    private function send_job_to_instance($job, $instance)
+    private function sendJobToInstance($job, $instance)
     {
         $start_time = microtime(true);
 
         try {
             // For now, simulate sending job to instance
             // In a real distributed setup, this would use HTTP requests or message queues
-            $result = $this->simulate_instance_processing($job, $instance);
+            $result = $this->simulateInstanceProcessing($job, $instance);
 
             $response_time = microtime(true) - $start_time;
             $status = $result['success'] ? 'success' : 'failed';
 
-            $this->record_load_balancer_request($instance['instance_id'], $job['job_type'], $status, $response_time);
+            $this->recordLoadBalancerRequest($instance['instance_id'], $job['job_type'], $status, $response_time);
 
             if ($result['success']) {
                 // Mark job as completed in local queue
-                $this->mark_job_completed($job['id']);
+                $this->markJobCompleted($job['id']);
             } else {
                 // Handle failure
-                $this->handle_job_failure($job, $result['error']);
+                $this->handleJobFailure($job, $result['error']);
             }
         } catch (\Exception $e) {
             $response_time = microtime(true) - $start_time;
-            $this->record_load_balancer_request($instance['instance_id'], $job['job_type'], 'error', $response_time);
+            $this->recordLoadBalancerRequest($instance['instance_id'], $job['job_type'], 'error', $response_time);
 
-            $this->handle_job_failure($job, $e->getMessage());
+            $this->handleJobFailure($job, $e->getMessage());
         }
     }
 
     /**
      * Simulate processing job on remote instance
      */
-    private function simulate_instance_processing($job, $instance)
+    private function simulateInstanceProcessing($job, $instance)
     {
         // In a real implementation, this would make HTTP request to the instance
         // For now, we'll simulate based on instance capabilities
 
         $job_data = json_decode($job['job_data'], true);
-        $processing_time = $this->estimate_processing_time($job['job_type'], $job_data, $instance);
+        $processing_time = $this->estimateProcessingTime($job['job_type'], $job_data, $instance);
 
         // Simulate processing delay
         usleep($processing_time * 1000000); // Convert to microseconds
@@ -535,7 +551,7 @@ class PuntworkLoadBalancer
     /**
      * Estimate processing time based on job type and instance capabilities
      */
-    private function estimate_processing_time($job_type, $job_data, $instance)
+    private function estimateProcessingTime($job_type, $job_data, $instance)
     {
         $base_times = [
             'feed_import' => 2.0,    // 2 seconds base
@@ -562,9 +578,9 @@ class PuntworkLoadBalancer
     /**
      * Record load balancer request
      */
-    private function record_load_balancer_request($instance_id, $request_type, $status, $response_time)
+    private function recordLoadBalancerRequest($instance_id, $request_type, $status, $response_time)
     {
-        if (!$this->is_wordpress_environment()) {
+        if (!$this->isWordpressEnvironment()) {
             return;
         }
 
@@ -588,9 +604,9 @@ class PuntworkLoadBalancer
     /**
      * Mark job as completed
      */
-    private function mark_job_completed($job_id)
+    private function markJobCompleted($job_id)
     {
-        if (!$this->is_wordpress_environment()) {
+        if (!$this->isWordpressEnvironment()) {
             return;
         }
 
@@ -613,9 +629,9 @@ class PuntworkLoadBalancer
     /**
      * Handle job failure
      */
-    private function handle_job_failure($job, $error)
+    private function handleJobFailure($job, $error)
     {
-        if (!$this->is_wordpress_environment()) {
+        if (!$this->isWordpressEnvironment()) {
             return;
         }
 
@@ -657,9 +673,9 @@ class PuntworkLoadBalancer
     /**
      * Get active instances
      */
-    private function get_active_instances()
+    private function getActiveInstances()
     {
-        if (!$this->is_wordpress_environment()) {
+        if (!$this->isWordpressEnvironment()) {
             return [];
         }
 
@@ -677,9 +693,9 @@ class PuntworkLoadBalancer
     /**
      * Get all instances
      */
-    private function get_all_instances()
+    private function getAllInstances()
     {
-        if (!$this->is_wordpress_environment()) {
+        if (!$this->isWordpressEnvironment()) {
             return [];
         }
 
@@ -696,9 +712,9 @@ class PuntworkLoadBalancer
     /**
      * Get load balancer statistics
      */
-    private function get_load_balancer_stats()
+    private function getLoadBalancerStats()
     {
-        if (!$this->is_wordpress_environment()) {
+        if (!$this->isWordpressEnvironment()) {
             return [
                 'active_instances' => 0,
                 'total_requests' => 0,
@@ -733,20 +749,20 @@ class PuntworkLoadBalancer
     /**
      * AJAX health check for all instances
      */
-    public function ajax_health_check_all()
+    public function ajaxHealthCheckAll()
     {
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => 'Insufficient permissions']);
             return;
         }
 
-        $instances = $this->get_all_instances();
+        $instances = $this->getAllInstances();
         $health_results = [];
 
         foreach ($instances as $instance) {
             $health_results[] = [
                 'instance_id' => $instance['instance_id'],
-                'healthy' => $this->check_instance_health($instance),
+                'healthy' => $this->checkInstanceHealth($instance),
                 'last_seen' => $instance['last_seen']
             ];
         }
@@ -760,7 +776,7 @@ class PuntworkLoadBalancer
     /**
      * Check health of specific instance
      */
-    private function check_instance_health($instance)
+    private function checkInstanceHealth($instance)
     {
         // In a real distributed setup, this would make HTTP request to instance health endpoint
         // For now, just check if instance was seen recently
@@ -773,14 +789,14 @@ class PuntworkLoadBalancer
     /**
      * AJAX get load balancer stats
      */
-    public function ajax_get_stats()
+    public function ajaxGetStats()
     {
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => 'Insufficient permissions']);
             return;
         }
 
-        $stats = $this->get_load_balancer_stats();
+        $stats = $this->getLoadBalancerStats();
 
         wp_send_json_success([
             'stats' => $stats,
@@ -791,7 +807,7 @@ class PuntworkLoadBalancer
     /**
      * Update load balancing strategy
      */
-    public function update_strategy($new_strategy)
+    public function updateStrategy($new_strategy)
     {
         $valid_strategies = ['round_robin', 'least_loaded', 'weighted', 'ip_hash'];
 

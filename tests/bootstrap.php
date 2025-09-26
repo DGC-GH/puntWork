@@ -367,8 +367,7 @@ $includes = array(
     'batch/batch-size-management.php',
     'batch/batch-utils.php',
 
-    // Import functionality - commented out
-    /*
+    // Import functionality - testing
     'import/combine-jsonl.php',
     'import/download-feed.php',
     'import/import-batch.php',
@@ -376,7 +375,6 @@ $includes = array(
     'import/import-setup.php',
     'import/process-batch-items.php',
     'import/reset-import.php',
-    */
     'import/process-xml-batch.php',
 
     // Utilities - only load essential ones
