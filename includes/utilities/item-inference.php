@@ -9,6 +9,8 @@
 
 namespace Puntwork;
 
+use Puntwork\AI\JobCategorizer;
+
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -107,4 +109,5 @@ function infer_item_details(&$item, $fallback_domain, $lang, &$job_obj) {
     $job_obj['job_posting'] = json_encode(build_job_schema($enhanced_title, $job_desc, $item, $norm_province, $job_time, $job_remote, $fg, $estimate_key));
     $job_obj['job_ecommerce'] = json_encode(build_ecomm_schema($enhanced_title, $job_desc, $item, $estimate_key));
     $job_obj['job_languages'] = $job_languages;
+    $job_obj['job_category'] = JobCategorizer::categorize($title, isset($item->description) ? (string)$item->description : '');
 }
