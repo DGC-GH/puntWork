@@ -163,6 +163,14 @@ function handle_trigger_import($request) {
         ];
         update_option('job_import_status', $initial_status, false);
 
+        // Reset import progress for fresh API-triggered import
+        update_option('job_import_progress', 0, false);
+        update_option('job_import_processed_guids', [], false);
+        delete_option('job_import_last_batch_time');
+        delete_option('job_import_last_batch_processed');
+        delete_option('job_import_batch_size');
+        delete_option('job_import_consecutive_small_batches');
+
         // Clear any previous cancellation before starting
         delete_transient('import_cancel');
 
@@ -175,8 +183,16 @@ function handle_trigger_import($request) {
             wp_schedule_single_event(time() + 1, 'puntwork_scheduled_import_async');
         } else {
             // Force synchronous execution for testing polling mechanism
-            error_log('[PUNTWORK] API: Running import synchronously for testing');
-            $result = \Puntwork\run_scheduled_import($test_mode, 'api');
+            error_log('[PUNTWORK] API: Forcing synchronous execution');
+            if (!function_exists('run_scheduled_import')) {
+                error_log('[PUNTWORK] API: run_scheduled_import function not found');
+                return new \WP_REST_Response([
+                    'success' => false,
+                    'message' => 'Import function not found',
+                    'async' => false
+                ], 500);
+            }
+            $result = run_scheduled_import($test_mode, 'api');
 
             // Clear test mode
             if ($test_mode) {
