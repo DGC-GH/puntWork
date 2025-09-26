@@ -35,9 +35,18 @@ function import_analytics_page() {
         }
     }
 
-    // Get analytics data
+    // Get analytics data with caching
     $period = sanitize_text_field($_GET['period'] ?? '30days');
-    $analytics_data = ImportAnalytics::get_analytics_data($period);
+
+    // Check if this is an AJAX request for lazy loading
+    if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
+        $analytics_data = ImportAnalytics::get_analytics_data($period);
+        wp_send_json([
+            'success' => true,
+            'data' => $analytics_data,
+            'period' => $period
+        ]);
+    }
 
     ?>
     <div class="wrap">
@@ -67,152 +76,19 @@ function import_analytics_page() {
             </form>
         </div>
 
-        <div class="analytics-dashboard">
-            <!-- Overview Metrics -->
-            <div class="analytics-section">
-                <h2><?php _e('Overview', 'puntwork'); ?></h2>
-                <div class="metrics-grid">
-                    <div class="metric-card">
-                        <div class="metric-value"><?php echo number_format($analytics_data['overview']['total_imports']); ?></div>
-                        <div class="metric-label"><?php _e('Total Imports', 'puntwork'); ?></div>
-                    </div>
-
-                    <div class="metric-card">
-                        <div class="metric-value"><?php echo number_format($analytics_data['overview']['total_processed']); ?></div>
-                        <div class="metric-label"><?php _e('Jobs Processed', 'puntwork'); ?></div>
-                    </div>
-
-                    <div class="metric-card">
-                        <div class="metric-value"><?php echo $analytics_data['overview']['avg_success_rate']; ?>%</div>
-                        <div class="metric-label"><?php _e('Avg Success Rate', 'puntwork'); ?></div>
-                    </div>
-
-                    <div class="metric-card">
-                        <div class="metric-value"><?php echo $analytics_data['overview']['avg_duration']; ?>s</div>
-                        <div class="metric-label"><?php _e('Avg Duration', 'puntwork'); ?></div>
-                    </div>
+        <!-- Analytics Dashboard Container -->
+        <div id="analytics-dashboard" class="analytics-dashboard">
+            <!-- Loading State -->
+            <div id="analytics-loading" class="analytics-loading">
+                <div class="loading-spinner">
+                    <i class="fas fa-chart-line fa-spin"></i>
+                    <div>Loading analytics data...</div>
                 </div>
             </div>
 
-            <!-- Performance Breakdown -->
-            <div class="analytics-section">
-                <h2><?php _e('Performance by Trigger Type', 'puntwork'); ?></h2>
-                <div class="performance-breakdown">
-                    <?php foreach ($analytics_data['performance'] as $trigger_type => $stats): ?>
-                        <div class="performance-card">
-                            <h3><?php echo esc_html(ucfirst($trigger_type)); ?> Imports</h3>
-                            <div class="performance-stats">
-                                <div class="stat">
-                                    <span class="stat-label"><?php _e('Count:', 'puntwork'); ?></span>
-                                    <span class="stat-value"><?php echo number_format($stats['count']); ?></span>
-                                </div>
-                                <div class="stat">
-                                    <span class="stat-label"><?php _e('Avg Duration:', 'puntwork'); ?></span>
-                                    <span class="stat-value"><?php echo $stats['avg_duration']; ?>s</span>
-                                </div>
-                                <div class="stat">
-                                    <span class="stat-label"><?php _e('Success Rate:', 'puntwork'); ?></span>
-                                    <span class="stat-value"><?php echo $stats['avg_success_rate']; ?>%</span>
-                                </div>
-                                <div class="stat">
-                                    <span class="stat-label"><?php _e('Jobs Processed:', 'puntwork'); ?></span>
-                                    <span class="stat-value"><?php echo number_format($stats['total_processed']); ?></span>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-
-            <!-- Trends Chart -->
-            <div class="analytics-section">
-                <h2><?php _e('Import Trends', 'puntwork'); ?></h2>
-                <div class="chart-container">
-                    <canvas id="trends-chart" width="400" height="200"></canvas>
-                </div>
-            </div>
-
-            <!-- Feed Statistics -->
-            <div class="analytics-section">
-                <h2><?php _e('Feed Performance', 'puntwork'); ?></h2>
-                <div class="feed-stats-grid">
-                    <div class="feed-stat-card">
-                        <div class="stat-value"><?php echo $analytics_data['feed_stats']['avg_feeds_processed']; ?></div>
-                        <div class="stat-label"><?php _e('Avg Feeds Processed', 'puntwork'); ?></div>
-                    </div>
-
-                    <div class="feed-stat-card">
-                        <div class="stat-value"><?php echo $analytics_data['feed_stats']['avg_feeds_successful']; ?></div>
-                        <div class="stat-label"><?php _e('Avg Feeds Successful', 'puntwork'); ?></div>
-                    </div>
-
-                    <div class="feed-stat-card">
-                        <div class="stat-value"><?php echo $analytics_data['feed_stats']['avg_feeds_failed']; ?></div>
-                        <div class="stat-label"><?php _e('Avg Feeds Failed', 'puntwork'); ?></div>
-                    </div>
-
-                    <div class="feed-stat-card">
-                        <div class="stat-value"><?php echo $analytics_data['feed_stats']['avg_response_time']; ?>s</div>
-                        <div class="stat-label"><?php _e('Avg Response Time', 'puntwork'); ?></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Job Statistics -->
-            <div class="analytics-section">
-                <h2><?php _e('Job Processing Statistics', 'puntwork'); ?></h2>
-                <div class="job-stats-breakdown">
-                    <div class="job-stat-item">
-                        <span class="job-stat-label"><?php _e('Published:', 'puntwork'); ?></span>
-                        <span class="job-stat-value"><?php echo number_format($analytics_data['overview']['total_published']); ?></span>
-                        <div class="job-stat-bar">
-                            <div class="job-stat-fill published" style="width: <?php echo $analytics_data['overview']['total_processed'] > 0 ? ($analytics_data['overview']['total_published'] / $analytics_data['overview']['total_processed'] * 100) : 0; ?>%"></div>
-                        </div>
-                    </div>
-
-                    <div class="job-stat-item">
-                        <span class="job-stat-label"><?php _e('Updated:', 'puntwork'); ?></span>
-                        <span class="job-stat-value"><?php echo number_format($analytics_data['overview']['total_updated']); ?></span>
-                        <div class="job-stat-bar">
-                            <div class="job-stat-fill updated" style="width: <?php echo $analytics_data['overview']['total_processed'] > 0 ? ($analytics_data['overview']['total_updated'] / $analytics_data['overview']['total_processed'] * 100) : 0; ?>%"></div>
-                        </div>
-                    </div>
-
-                    <div class="job-stat-item">
-                        <span class="job-stat-label"><?php _e('Duplicates:', 'puntwork'); ?></span>
-                        <span class="job-stat-value"><?php echo number_format($analytics_data['overview']['total_duplicates']); ?></span>
-                        <div class="job-stat-bar">
-                            <div class="job-stat-fill duplicates" style="width: <?php echo $analytics_data['overview']['total_processed'] > 0 ? ($analytics_data['overview']['total_duplicates'] / $analytics_data['overview']['total_processed'] * 100) : 0; ?>%"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Error Summary -->
-            <?php if ($analytics_data['errors']['total_errors'] > 0): ?>
-            <div class="analytics-section">
-                <h2><?php _e('Error Summary', 'puntwork'); ?></h2>
-                <div class="error-summary">
-                    <div class="error-count">
-                        <span class="error-number"><?php echo number_format($analytics_data['errors']['total_errors']); ?></span>
-                        <span class="error-label"><?php _e('imports had errors', 'puntwork'); ?></span>
-                    </div>
-                    <?php if ($analytics_data['errors']['error_messages']): ?>
-                        <div class="error-messages">
-                            <strong><?php _e('Common Error Messages:', 'puntwork'); ?></strong>
-                            <p><?php echo esc_html($analytics_data['errors']['error_messages']); ?></p>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-            <?php endif; ?>
-
-            <!-- Hourly Distribution -->
-            <div class="analytics-section">
-                <h2><?php _e('Import Activity by Hour', 'puntwork'); ?></h2>
-                <div class="hourly-chart-container">
-                    <canvas id="hourly-chart" width="400" height="150"></canvas>
-                </div>
+            <!-- Analytics Content (loaded via AJAX) -->
+            <div id="analytics-content" style="display: none;">
+                <!-- Content will be loaded here -->
             </div>
         </div>
     </div>
@@ -220,10 +96,197 @@ function import_analytics_page() {
     <!-- Chart.js for visualizations -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        // Analytics Lazy Loading
+        let currentAnalyticsPeriod = '<?php echo esc_js($period); ?>';
+
+        function loadAnalyticsData(period) {
+            const dashboard = document.getElementById('analytics-dashboard');
+            const loading = document.getElementById('analytics-loading');
+            const content = document.getElementById('analytics-content');
+
+            // Show loading state
+            loading.style.display = 'block';
+            content.style.display = 'none';
+
+            // Fetch analytics data
+            fetch(window.location.pathname + '?page=puntwork-analytics&period=' + period + '&ajax=1')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        renderAnalyticsContent(data.data, period);
+                        loading.style.display = 'none';
+                        content.style.display = 'block';
+                        currentAnalyticsPeriod = period;
+                    } else {
+                        throw new Error(data.message || 'Failed to load analytics data');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading analytics:', error);
+                    loading.innerHTML = `
+                        <div class="loading-spinner error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <div>Error loading analytics data. Please try again.</div>
+                            <button onclick="loadAnalyticsData('${period}')" class="button button-secondary" style="margin-top: 10px;">Retry</button>
+                        </div>
+                    `;
+                });
+        }
+
+        function renderAnalyticsContent(analytics_data, period) {
+            const content = document.getElementById('analytics-content');
+
+            content.innerHTML = `
+                <!-- Overview Metrics -->
+                <div class="analytics-section">
+                    <h2>Overview</h2>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-value">${number_format(analytics_data.overview.total_imports)}</div>
+                            <div class="metric-label">Total Imports</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">${number_format(analytics_data.overview.total_processed)}</div>
+                            <div class="metric-label">Jobs Processed</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">${analytics_data.overview.avg_success_rate}%</div>
+                            <div class="metric-label">Avg Success Rate</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">${analytics_data.overview.avg_duration}s</div>
+                            <div class="metric-label">Avg Duration</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Breakdown -->
+                <div class="analytics-section">
+                    <h2>Performance by Trigger Type</h2>
+                    <div class="performance-breakdown">
+                        ${Object.entries(analytics_data.performance).map(([trigger_type, stats]) => `
+                            <div class="performance-card">
+                                <h3>${trigger_type.charAt(0).toUpperCase() + trigger_type.slice(1)} Imports</h3>
+                                <div class="performance-stats">
+                                    <div class="stat">
+                                        <span class="stat-label">Count:</span>
+                                        <span class="stat-value">${number_format(stats.count)}</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-label">Avg Duration:</span>
+                                        <span class="stat-value">${stats.avg_duration}s</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-label">Success Rate:</span>
+                                        <span class="stat-value">${stats.avg_success_rate}%</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-label">Jobs Processed:</span>
+                                        <span class="stat-value">${number_format(stats.total_processed)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- Trends Chart -->
+                <div class="analytics-section">
+                    <h2>Import Trends</h2>
+                    <div class="chart-container">
+                        <canvas id="trends-chart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+
+                <!-- Feed Statistics -->
+                <div class="analytics-section">
+                    <h2>Feed Performance</h2>
+                    <div class="feed-stats-grid">
+                        <div class="feed-stat-card">
+                            <div class="stat-value">${analytics_data.feed_stats.avg_feeds_processed}</div>
+                            <div class="stat-label">Avg Feeds Processed</div>
+                        </div>
+                        <div class="feed-stat-card">
+                            <div class="stat-value">${analytics_data.feed_stats.avg_feeds_successful}</div>
+                            <div class="stat-label">Avg Feeds Successful</div>
+                        </div>
+                        <div class="feed-stat-card">
+                            <div class="stat-value">${analytics_data.feed_stats.avg_feeds_failed}</div>
+                            <div class="stat-label">Avg Feeds Failed</div>
+                        </div>
+                        <div class="feed-stat-card">
+                            <div class="stat-value">${analytics_data.feed_stats.avg_response_time}s</div>
+                            <div class="stat-label">Avg Response Time</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Job Statistics -->
+                <div class="analytics-section">
+                    <h2>Job Processing Statistics</h2>
+                    <div class="job-stats-breakdown">
+                        <div class="job-stat-item">
+                            <span class="job-stat-label">Published:</span>
+                            <span class="job-stat-value">${number_format(analytics_data.overview.total_published)}</span>
+                            <div class="job-stat-bar">
+                                <div class="job-stat-fill published" style="width: ${analytics_data.overview.total_processed > 0 ? (analytics_data.overview.total_published / analytics_data.overview.total_processed * 100) : 0}%;"></div>
+                            </div>
+                        </div>
+                        <div class="job-stat-item">
+                            <span class="job-stat-label">Updated:</span>
+                            <span class="job-stat-value">${number_format(analytics_data.overview.total_updated)}</span>
+                            <div class="job-stat-bar">
+                                <div class="job-stat-fill updated" style="width: ${analytics_data.overview.total_processed > 0 ? (analytics_data.overview.total_updated / analytics_data.overview.total_processed * 100) : 0}%;"></div>
+                            </div>
+                        </div>
+                        <div class="job-stat-item">
+                            <span class="job-stat-label">Duplicates:</span>
+                            <span class="job-stat-value">${number_format(analytics_data.overview.total_duplicates)}</span>
+                            <div class="job-stat-bar">
+                                <div class="job-stat-fill duplicates" style="width: ${analytics_data.overview.total_processed > 0 ? (analytics_data.overview.total_duplicates / analytics_data.overview.total_processed * 100) : 0}%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                ${analytics_data.errors.total_errors > 0 ? `
+                <!-- Error Summary -->
+                <div class="analytics-section">
+                    <h2>Error Summary</h2>
+                    <div class="error-summary">
+                        <div class="error-count">
+                            <span class="error-number">${number_format(analytics_data.errors.total_errors)}</span>
+                            <span class="error-label">imports had errors</span>
+                        </div>
+                        ${analytics_data.errors.error_messages ? `
+                            <div class="error-messages">
+                                <strong>Common Error Messages:</strong>
+                                <p>${analytics_data.errors.error_messages}</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Hourly Distribution -->
+                <div class="analytics-section">
+                    <h2>Import Activity by Hour</h2>
+                    <div class="hourly-chart-container">
+                        <canvas id="hourly-chart" width="400" height="150"></canvas>
+                    </div>
+                </div>
+            `;
+
+            // Initialize charts after content is rendered
+            setTimeout(() => {
+                initializeCharts(analytics_data);
+            }, 100);
+        }
+
+        function initializeCharts(analytics_data) {
             // Trends Chart
-            const trendsData = <?php echo json_encode($analytics_data['trends']['daily']); ?>;
-            if (trendsData.length > 0) {
+            const trendsData = analytics_data.trends.daily;
+            if (trendsData && trendsData.length > 0) {
                 const trendsCtx = document.getElementById('trends-chart').getContext('2d');
                 new Chart(trendsCtx, {
                     type: 'line',
@@ -271,8 +334,8 @@ function import_analytics_page() {
             }
 
             // Hourly Distribution Chart
-            const hourlyData = <?php echo json_encode($analytics_data['trends']['hourly']); ?>;
-            if (hourlyData.length > 0) {
+            const hourlyData = analytics_data.trends.hourly;
+            if (hourlyData && hourlyData.length > 0) {
                 const hourlyCtx = document.getElementById('hourly-chart').getContext('2d');
                 new Chart(hourlyCtx, {
                     type: 'bar',
@@ -300,6 +363,25 @@ function import_analytics_page() {
                     }
                 });
             }
+        }
+
+        function number_format(number) {
+            return new Intl.NumberFormat().format(number);
+        }
+
+        // Initialize analytics on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAnalyticsData(currentAnalyticsPeriod);
+
+            // Period selector change handler
+            document.getElementById('period-select').addEventListener('change', function() {
+                const newPeriod = this.value;
+                // Update URL without page reload
+                const url = new URL(window.location);
+                url.searchParams.set('period', newPeriod);
+                window.history.pushState({}, '', url);
+                loadAnalyticsData(newPeriod);
+            });
         });
     </script>
 
@@ -487,6 +569,34 @@ function import_analytics_page() {
         .hourly-chart-container {
             height: 200px;
             position: relative;
+        }
+    </style>
+
+    <style>
+        .analytics-loading {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .loading-spinner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .loading-spinner i {
+            font-size: 48px;
+            color: #007cba;
+        }
+
+        .loading-spinner.error i {
+            color: #dc3545;
+        }
+
+        .loading-spinner div {
+            font-size: 16px;
+            color: #6c757d;
         }
     </style>
     <?php

@@ -54,6 +54,32 @@ function create_database_indexes(): void {
         ON {$wpdb->postmeta} (meta_key, meta_value(255))
         WHERE meta_key = 'feed_url'
     ");
+
+    // Additional performance indexes
+    $wpdb->query("
+        CREATE INDEX IF NOT EXISTS idx_posts_job_date
+        ON {$wpdb->posts} (post_type, post_date, post_modified)
+        WHERE post_type = 'job'
+    ");
+
+    // Index for job title searches
+    $wpdb->query("
+        CREATE INDEX IF NOT EXISTS idx_posts_job_title
+        ON {$wpdb->posts} (post_type, post_title(100))
+        WHERE post_type = 'job'
+    ");
+
+    // Index for performance logs queries
+    $performance_table = $wpdb->prefix . 'puntwork_performance_logs';
+    $wpdb->query("
+        CREATE INDEX IF NOT EXISTS idx_performance_operation_time
+        ON {$performance_table} (operation, created_at)
+    ");
+
+    $wpdb->query("
+        CREATE INDEX IF NOT EXISTS idx_performance_duration
+        ON {$performance_table} (total_time, items_per_second)
+    ");
 }
 
 /**
@@ -184,6 +210,10 @@ function get_database_optimization_status(): array {
         'idx_postmeta_last_update' => false,
         'idx_posts_job_status' => false,
         'idx_postmeta_feed_url' => false,
+        'idx_posts_job_date' => false,
+        'idx_posts_job_title' => false,
+        'idx_performance_operation_time' => false,
+        'idx_performance_duration' => false,
     ];
 
     // Check which indexes exist
@@ -191,7 +221,7 @@ function get_database_optimization_status(): array {
         SELECT INDEX_NAME
         FROM information_schema.STATISTICS
         WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME IN ('{$wpdb->postmeta}', '{$wpdb->posts}')
+        AND TABLE_NAME IN ('{$wpdb->postmeta}', '{$wpdb->posts}', '{$wpdb->prefix}puntwork_performance_logs')
         AND INDEX_NAME IN ('" . implode("','", array_keys($indexes)) . "')
     ");
 
