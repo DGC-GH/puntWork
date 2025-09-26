@@ -8,12 +8,14 @@
 
 class PuntWorkAPITestSuite {
     private $baseUrl;
+    private $wpRootUrl;
     private $apiKey;
     private $testResults = [];
 
     public function __construct($baseUrl = null, $apiKey = null) {
-        $this->baseUrl = $baseUrl ?: 'https://belgiumjobs.work/wp-json/puntwork/v1';
-        $this->apiKey = $apiKey ?: 'etlBBlm0DdUftcafHbbkrof0EOnQSyZg';
+        $this->baseUrl = $baseUrl ?: 'http://localhost/wp-json/puntwork/v1';
+        $this->apiKey = $apiKey ?: 'test_api_key';
+        $this->wpRootUrl = preg_replace('/\/wp-json.*$/', '', $this->baseUrl);
     }
 
     /**
@@ -40,7 +42,7 @@ class PuntWorkAPITestSuite {
     private function testWordPressConnectivity() {
         echo "1. Testing WordPress REST API Connectivity\n";
 
-        $result = $this->makeRequest('/wp-json/', 'GET');
+        $result = $this->makeRequest('/wp-json/', 'GET', null, [], $this->wpRootUrl);
         $success = ($result['http_code'] >= 200 && $result['http_code'] < 300);
 
         $this->logTest('WordPress REST API', $success, [
@@ -60,7 +62,7 @@ class PuntWorkAPITestSuite {
         echo "2. Testing puntWork Plugin Activation\n";
 
         // Test if puntwork namespace exists
-        $result = $this->makeRequest('/wp-json/puntwork/v1/import-status?api_key=invalid', 'GET');
+        $result = $this->makeRequest('/wp-json/puntwork/v1/import-status?api_key=invalid', 'GET', null, [], $this->wpRootUrl);
         $pluginActive = ($result['http_code'] !== 404); // 404 means namespace doesn't exist
 
         $this->logTest('Plugin Activation', $pluginActive, [
@@ -214,8 +216,9 @@ class PuntWorkAPITestSuite {
     /**
      * Make HTTP request
      */
-    private function makeRequest($endpoint, $method = 'GET', $data = null, $headers = []) {
-        $url = $this->baseUrl . $endpoint;
+    private function makeRequest($endpoint, $method = 'GET', $data = null, $headers = [], $customBaseUrl = null) {
+        $baseUrl = $customBaseUrl ?: $this->baseUrl;
+        $url = $baseUrl . $endpoint;
         $startTime = microtime(true);
 
         $ch = curl_init();
@@ -334,15 +337,15 @@ class PuntWorkAPITestSuite {
     // Checklist helper methods
     private function checkPluginUploaded() { return true; } // Assume uploaded
     private function checkPluginActivated() {
-        $result = $this->makeRequest('/import-status?api_key=invalid', 'GET');
+        $result = $this->makeRequest('/wp-json/puntwork/v1/import-status?api_key=invalid', 'GET', null, [], $this->wpRootUrl);
         return $result['http_code'] !== 404;
     }
     private function checkApiKeyConfigured() {
-        $result = $this->makeRequest('/import-status?api_key=' . $this->apiKey, 'GET');
+        $result = $this->makeRequest('/wp-json/puntwork/v1/import-status?api_key=' . $this->apiKey, 'GET', null, [], $this->wpRootUrl);
         return $result['http_code'] === 200;
     }
     private function checkWordPressRestApi() {
-        $result = $this->makeRequest('/wp-json/', 'GET');
+        $result = $this->makeRequest('/wp-json/', 'GET', null, [], $this->wpRootUrl);
         return $result['http_code'] === 200;
     }
     private function checkHttpsConfigured() {
