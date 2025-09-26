@@ -116,36 +116,76 @@ function render_jobs_dashboard_ui() {
             </div>
         </div>
 
-        <!-- Performance Monitoring Section -->
+        <!-- Job Listings Section with Lazy Loading -->
         <div style="margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px;">Performance Monitoring</h2>
-            <p style="font-size: 14px; color: #8e8e93; margin: 0 0 16px;">Monitor import performance metrics and system benchmarks.</p>
+            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px;">Job Listings</h2>
+            <p style="font-size: 14px; color: #8e8e93; margin: 0 0 16px;">Browse and manage imported job posts with lazy loading for better performance.</p>
 
-            <div id="performance-monitoring-status" style="background-color: #f9f9f9; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <span style="font-size: 16px; font-weight: 500;">Performance Metrics</span>
-                    <span id="performance-status-badge" style="font-size: 12px; padding: 4px 8px; border-radius: 4px; background-color: #8e8e93; color: white;">
-                        <i class="fas fa-spinner fa-spin" style="margin-right: 4px;"></i>Loading...
-                    </span>
-                </div>
-                <div id="performance-metrics" style="font-size: 14px; color: #8e8e93;">
-                    <div style="display: flex; align-items: center;">
-                        <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>
-                        Loading performance metrics...
+            <!-- Job Filters -->
+            <div id="job-filters" style="background-color: #f9f9f9; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label for="job-status-filter" style="font-size: 14px; font-weight: 500;">Status:</label>
+                        <select id="job-status-filter" style="border-radius: 6px; padding: 6px 12px; border: 1px solid #d1d1d6; font-size: 14px;">
+                            <option value="any">All Statuses</option>
+                            <option value="publish">Published</option>
+                            <option value="draft">Draft</option>
+                            <option value="pending">Pending</option>
+                            <option value="trash">Trash</option>
+                        </select>
                     </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label for="job-search" style="font-size: 14px; font-weight: 500;">Search:</label>
+                        <input type="text" id="job-search" placeholder="Search job titles..." style="border-radius: 6px; padding: 6px 12px; border: 1px solid #d1d1d6; font-size: 14px; min-width: 200px;">
+                    </div>
+                    <button id="apply-job-filters" class="button button-secondary" style="border-radius: 6px; padding: 6px 16px; font-size: 14px;">Apply Filters</button>
+                    <button id="clear-job-filters" class="button button-outline" style="border-radius: 6px; padding: 6px 16px; font-size: 14px; background: transparent; border: 1px solid #d1d1d6;">Clear</button>
                 </div>
             </div>
 
-            <div style="display: flex; gap: 12px; align-items: center;">
-                <button id="refresh-performance" class="button button-primary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #007aff; border: none; color: white;">
-                    <span id="refresh-performance-text">Refresh Metrics</span>
-                    <span id="refresh-performance-loading" style="display: none;">Refreshing...</span>
-                </button>
-                <button id="clear-performance-logs" class="button button-secondary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #ff9500; border: none; color: white;">
-                    <span id="clear-performance-text">Clear Old Logs</span>
-                    <span id="clear-performance-loading" style="display: none;">Clearing...</span>
-                </button>
-                <span id="performance-status-msg" style="font-size: 14px; color: #8e8e93;"></span>
+            <!-- Job Listings Container -->
+            <div id="job-listings-container" style="border: 1px solid #e1e1e1; border-radius: 8px; overflow: hidden;">
+                <!-- Loading State -->
+                <div id="job-listings-loading" style="padding: 40px; text-align: center; background: #f9f9f9;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #007aff; margin-bottom: 12px;"></i>
+                    <div style="font-size: 16px; color: #8e8e93;">Loading job listings...</div>
+                </div>
+
+                <!-- Job Listings Table -->
+                <div id="job-listings-table" style="display: none;">
+                    <div style="background: #f8f9fa; padding: 12px 16px; border-bottom: 1px solid #e1e1e1; font-size: 14px; font-weight: 600; color: #495057;">
+                        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 100px; gap: 16px; align-items: center;">
+                            <span>Job Title</span>
+                            <span>Status</span>
+                            <span>Published</span>
+                            <span>Modified</span>
+                            <span>Actions</span>
+                        </div>
+                    </div>
+                    <div id="job-listings-body">
+                        <!-- Job rows will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="job-listings-empty" style="padding: 40px; text-align: center; display: none;">
+                    <i class="fas fa-briefcase" style="font-size: 48px; color: #dee2e6; margin-bottom: 16px;"></i>
+                    <div style="font-size: 18px; font-weight: 500; color: #6c757d; margin-bottom: 8px;">No jobs found</div>
+                    <div style="font-size: 14px; color: #8e8e93;">Try adjusting your filters or run an import to populate jobs.</div>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div id="job-pagination" style="display: none; margin-top: 16px; text-align: center;">
+                <div style="display: inline-flex; gap: 8px; align-items: center;">
+                    <button id="job-prev-page" class="button button-secondary" style="border-radius: 6px; padding: 8px 16px;" disabled>
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </button>
+                    <span id="job-page-info" style="font-size: 14px; color: #6c757d; padding: 8px 16px;">Page 1 of 1</span>
+                    <button id="job-next-page" class="button button-secondary" style="border-radius: 6px; padding: 8px 16px;" disabled>
+                        Next <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -287,22 +327,191 @@ function render_main_import_ui() {
         </div>
     </div>
 
+    <script>
+        // Job Listings Lazy Loading
+        let currentJobPage = 1;
+        let totalJobPages = 1;
+        let currentJobFilters = {
+            status: 'any',
+            search: ''
+        };
+
+        function loadJobListings(page = 1, filters = {}) {
+            const container = document.getElementById('job-listings-container');
+            const loading = document.getElementById('job-listings-loading');
+            const table = document.getElementById('job-listings-table');
+            const body = document.getElementById('job-listings-body');
+            const empty = document.getElementById('job-listings-empty');
+            const pagination = document.getElementById('job-pagination');
+
+            // Show loading state
+            loading.style.display = 'block';
+            table.style.display = 'none';
+            empty.style.display = 'none';
+            pagination.style.display = 'none';
+
+            // Prepare AJAX data
+            const ajaxData = {
+                action: 'puntwork_load_jobs',
+                page: page,
+                per_page: 20,
+                status: filters.status || 'any',
+                search: filters.search || '',
+                nonce: '<?php echo wp_create_nonce("puntwork_load_jobs"); ?>'
+            };
+
+            // Make AJAX request
+            fetch(ajaxurl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams(ajaxData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = 'none';
+
+                if (data.success && data.data && data.data.data && data.data.data.length > 0) {
+                    // Render job listings
+                    body.innerHTML = '';
+                    data.data.data.forEach(job => {
+                        const row = document.createElement('div');
+                        row.style.cssText = 'padding: 12px 16px; border-bottom: 1px solid #e1e1e1; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 100px; gap: 16px; align-items: center; font-size: 14px;';
+                        row.innerHTML = `
+                            <div style="font-weight: 500; color: #495057;">
+                                <a href="${job.permalink}" target="_blank" style="color: #007aff; text-decoration: none;">${job.title}</a>
+                            </div>
+                            <div>
+                                <span class="job-status status-${job.status}" style="padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">${job.status}</span>
+                            </div>
+                            <div style="color: #6c757d;">${new Date(job.date_created).toLocaleDateString()}</div>
+                            <div style="color: #6c757d;">${new Date(job.date_modified).toLocaleDateString()}</div>
+                            <div>
+                                <button class="job-action edit-job" data-id="${job.id}" title="Edit Job" style="background: none; border: none; color: #007aff; cursor: pointer; padding: 4px;">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="job-action view-job" data-id="${job.id}" title="View Job" style="background: none; border: none; color: #28a745; cursor: pointer; padding: 4px; margin-left: 8px;">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        `;
+                        body.appendChild(row);
+                    });
+
+                    table.style.display = 'block';
+
+                    // Update pagination
+                    currentJobPage = page;
+                    totalJobPages = data.data.pagination.total_pages;
+                    updateJobPagination(data.data.pagination);
+
+                } else {
+                    empty.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading job listings:', error);
+                loading.style.display = 'none';
+                empty.innerHTML = `
+                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #ffc107; margin-bottom: 16px;"></i>
+                    <div style="font-size: 18px; font-weight: 500; color: #6c757d; margin-bottom: 8px;">Error loading jobs</div>
+                    <div style="font-size: 14px; color: #8e8e93;">Please try again or check the console for details.</div>
+                `;
+                empty.style.display = 'block';
+            });
+        }
+
+        function updateJobPagination(pagination) {
+            const paginationEl = document.getElementById('job-pagination');
+            const pageInfo = document.getElementById('job-page-info');
+            const prevBtn = document.getElementById('job-prev-page');
+            const nextBtn = document.getElementById('job-next-page');
+
+            if (pagination.total_pages > 1) {
+                pageInfo.textContent = `Page ${pagination.page} of ${pagination.total_pages}`;
+                prevBtn.disabled = pagination.page <= 1;
+                nextBtn.disabled = pagination.page >= pagination.total_pages;
+                paginationEl.style.display = 'block';
+            } else {
+                paginationEl.style.display = 'none';
+            }
+        }
+
+        // Initialize job listings on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadJobListings(1, currentJobFilters);
+
+            // Job filter event listeners
+            document.getElementById('apply-job-filters').addEventListener('click', function() {
+                currentJobFilters.status = document.getElementById('job-status-filter').value;
+                currentJobFilters.search = document.getElementById('job-search').value.trim();
+                loadJobListings(1, currentJobFilters);
+            });
+
+            document.getElementById('clear-job-filters').addEventListener('click', function() {
+                document.getElementById('job-status-filter').selectedIndex = 0;
+                document.getElementById('job-search').value = '';
+                currentJobFilters = { status: 'any', search: '' };
+                loadJobListings(1, currentJobFilters);
+            });
+
+            document.getElementById('job-search').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    document.getElementById('apply-job-filters').click();
+                }
+            });
+
+            // Pagination event listeners
+            document.getElementById('job-prev-page').addEventListener('click', function() {
+                if (currentJobPage > 1) {
+                    loadJobListings(currentJobPage - 1, currentJobFilters);
+                }
+            });
+
+            document.getElementById('job-next-page').addEventListener('click', function() {
+                if (currentJobPage < totalJobPages) {
+                    loadJobListings(currentJobPage + 1, currentJobFilters);
+                }
+            });
+
+            // Job action event listeners (delegated)
+            document.getElementById('job-listings-body').addEventListener('click', function(e) {
+                const target = e.target.closest('.job-action');
+                if (!target) return;
+
+                const jobId = target.dataset.id;
+                if (target.classList.contains('edit-job')) {
+                    window.open(`<?php echo admin_url('post.php?action=edit&post='); ?>${jobId}`, '_blank');
+                } else if (target.classList.contains('view-job')) {
+                    window.open(`<?php echo get_permalink($jobId); ?>`, '_blank');
+                }
+            });
+        });
+    </script>
+
     <style>
-        /* Reset Import Button Styles */
-        #reset-import:hover {
-            background-color: #f2f2f7;
-            border-color: #007aff;
-            color: #007aff;
+        .job-status {
+            text-transform: capitalize;
         }
-        #reset-import:active {
-            background-color: #e5e5e7;
-            transform: translateY(1px);
+        .job-status.status-publish {
+            background-color: #d4edda;
+            color: #155724;
         }
-        #reset-import i {
-            transition: transform 0.2s ease;
+        .job-status.status-draft {
+            background-color: #fff3cd;
+            color: #856404;
         }
-        #reset-import:hover i {
-            transform: rotate(-180deg);
+        .job-status.status-pending {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        .job-status.status-trash {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .job-action:hover {
+            opacity: 0.7;
         }
     </style>
     <?php

@@ -426,9 +426,16 @@ class FeedHealthMonitor {
     }
 
     /**
-     * Get current health status for all feeds
+     * Get current health status for all feeds with caching
      */
     public static function get_feed_health_status() {
+        $cache_key = 'feed_health_status_all';
+        $cached_result = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
+
+        if ($cached_result !== false) {
+            return $cached_result;
+        }
+
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -448,24 +455,39 @@ class FeedHealthMonitor {
             }
         }
 
+        // Cache for 5 minutes - health status changes relatively frequently
+        CacheManager::set($cache_key, $status, CacheManager::GROUP_ANALYTICS, 5 * MINUTE_IN_SECONDS);
+
         return $status;
     }
 
     /**
-     * Get health history for a specific feed
+     * Get health history for a specific feed with caching
      */
     public static function get_feed_health_history($feed_key, $days = 7) {
+        $cache_key = 'feed_health_history_' . $feed_key . '_' . $days;
+        $cached_result = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
+
+        if ($cached_result !== false) {
+            return $cached_result;
+        }
+
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
 
-        return $wpdb->get_results($wpdb->prepare(
+        $history = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM $table_name
              WHERE feed_key = %s AND check_time >= %s
              ORDER BY check_time DESC",
             $feed_key,
             date('Y-m-d H:i:s', strtotime("-{$days} days"))
         ), ARRAY_A);
+
+        // Cache for 10 minutes - history data doesn't change often
+        CacheManager::set($cache_key, $history, CacheManager::GROUP_ANALYTICS, 10 * MINUTE_IN_SECONDS);
+
+        return $history;
     }
 
     /**
