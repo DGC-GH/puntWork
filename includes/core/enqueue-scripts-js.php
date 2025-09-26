@@ -28,16 +28,11 @@ function enqueue_job_import_scripts() {
     error_log('[PUNTWORK] Post type: ' . $post_type);
     error_log('[PUNTWORK] Current screen: ' . ($current_screen ? $current_screen->id : 'none'));
 
-    // Load scripts on job import dashboard and jobs dashboard pages
-    $should_load = in_array($current_page, ['job-feed-dashboard', 'jobs-dashboard']);
-
-    error_log('[PUNTWORK] Should load scripts: ' . ($should_load ? 'YES' : 'NO'));
+    // Load scripts on puntwork admin pages
+    $puntwork_pages = ['puntwork-dashboard', 'puntwork-analytics', 'puntwork-api-settings', 'puntwork-feed-health', 'puntwork-scheduling'];
+    $should_load = in_array($current_page, $puntwork_pages);
 
     if ($should_load) {
-        error_log('[PUNTWORK] Enqueueing scripts - loading on this page');
-        error_log('[PUNTWORK] Current page: ' . $current_page);
-        error_log('[PUNTWORK] Post type: ' . $post_type);
-        error_log('[PUNTWORK] Current screen: ' . ($current_screen ? $current_screen->id : 'none'));
 
         // Modern admin styles
         wp_enqueue_style(
@@ -430,6 +425,15 @@ function enqueue_job_import_scripts() {
             true
         );
 
+        // Enqueue PWA manager script
+        wp_enqueue_script(
+            'puntwork-pwa-manager',
+            PUNTWORK_URL . 'assets/js/puntwork-pwa-manager.js',
+            [],
+            PUNTWORK_VERSION,
+            true
+        );
+
         // Localize script with data
         wp_localize_script('job-import-admin-js', 'jobImportData', [
             'nonce' => wp_create_nonce('job_import_nonce'),
@@ -440,3 +444,21 @@ function enqueue_job_import_scripts() {
     }
 }
 add_action('admin_enqueue_scripts', __NAMESPACE__ . '\\enqueue_job_import_scripts');
+
+/**
+ * Add PWA manifest link to admin head for puntwork pages
+ */
+function add_pwa_manifest_link() {
+    $current_page = isset($_GET['page']) ? $_GET['page'] : '';
+    $puntwork_pages = ['puntwork-dashboard', 'puntwork-analytics', 'puntwork-api-settings', 'puntwork-feed-health', 'puntwork-scheduling'];
+
+    if (in_array($current_page, $puntwork_pages)) {
+        echo '<link rel="manifest" href="' . esc_url(PUNTWORK_URL . 'puntwork-admin.webmanifest') . '">' . "\n";
+        echo '<meta name="theme-color" content="#007aff">' . "\n";
+        echo '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n";
+        echo '<meta name="apple-mobile-web-app-status-bar-style" content="default">' . "\n";
+        echo '<meta name="apple-mobile-web-app-title" content="puntWork Admin">' . "\n";
+        echo '<link rel="apple-touch-icon" href="' . esc_url(PUNTWORK_URL . 'assets/images/icon.svg') . '">' . "\n";
+    }
+}
+add_action('admin_head', __NAMESPACE__ . '\\add_pwa_manifest_link');
