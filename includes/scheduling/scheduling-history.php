@@ -39,9 +39,9 @@ function run_scheduled_import($test_mode = false, $trigger_type = 'scheduled') {
         error_log('[PUNTWORK] ' . $log_message);
 
         // For scheduled imports, refresh the feed data first
-        // Skip feed refresh for API triggers to use existing data
-        if (!$test_mode && $trigger_type !== 'api') {
-            error_log('[PUNTWORK] Refreshing feed data for scheduled import');
+        // For API imports, also refresh to get latest data
+        if (!$test_mode) {
+            error_log('[PUNTWORK] Refreshing feed data for import');
             try {
                 fetch_and_generate_combined_json();
                 
