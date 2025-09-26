@@ -1,0 +1,28 @@
+{
+    "name": "puntWork Admin",
+    "short_name": "puntWork",
+    "description": "Advanced job import plugin administration",
+    "start_url": "/wp-admin/admin.php?page=puntwork-dashboard",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#007aff",
+    "orientation": "any",
+    "scope": "/wp-admin/",
+    "icons": [
+        {
+            "src": "/wp-content/plugins/puntwork/assets/images/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/wp-content/plugins/puntwork/assets/images/logo.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": ["productivity", "business", "utilities"],
+    "lang": "en-US",
+    "dir": "ltr"
+}

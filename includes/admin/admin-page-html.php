@@ -312,6 +312,15 @@ function puntwork_dashboard_page() {
         <h1 style="font-size: 34px; font-weight: 600; text-align: center; margin: 40px 0 20px;"><?php _e('puntWork Dashboard', 'puntwork'); ?></h1>
         <p style="font-size: 16px; color: #8e8e93; text-align: center; margin-bottom: 40px;"><?php _e('Manage your job feeds and content with ease', 'puntwork'); ?></p>
 
+        <!-- PWA Status Indicator -->
+        <div id="pwa-status-indicator" style="display: none; background: linear-gradient(135deg, #007aff 0%, #0056cc 100%); color: white; padding: 12px 20px; border-radius: 12px; text-align: center; margin-bottom: 24px; font-size: 14px; font-weight: 500; box-shadow: 0 2px 8px rgba(0,122,255,0.2);">
+            <i class="fas fa-mobile-alt" style="margin-right: 8px;"></i>
+            <?php _e('puntWork Admin is now available as a Progressive Web App!', 'puntwork'); ?>
+            <button id="pwa-install-btn" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 4px 12px; border-radius: 6px; font-size: 12px; margin-left: 12px; cursor: pointer; transition: background 0.2s ease;" aria-label="<?php esc_attr_e('Install puntWork Admin PWA', 'puntwork'); ?>">
+                <?php _e('Install', 'puntwork'); ?>
+            </button>
+        </div>
+
         <!-- Overview Cards -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 40px;">
             <!-- Feeds Card -->
@@ -415,6 +424,40 @@ function puntwork_dashboard_page() {
             </div>
         </div>
     </div>
+
+    <script>
+        // PWA Status Indicator
+        document.addEventListener('DOMContentLoaded', function() {
+            const pwaIndicator = document.getElementById('pwa-status-indicator');
+            const installBtn = document.getElementById('pwa-install-btn');
+
+            // Check if PWA is supported and not already installed
+            if ('serviceWorker' in navigator && 'BeforeInstallPromptEvent' in window) {
+                // Check if not running in standalone mode
+                if (!window.matchMedia('(display-mode: standalone)').matches) {
+                    pwaIndicator.style.display = 'block';
+
+                    // Handle install button click
+                    installBtn.addEventListener('click', function() {
+                        // The PWA manager will handle the install prompt
+                        if (window.PuntworkPWAManager && window.PuntworkPWAManager.deferredPrompt) {
+                            window.PuntworkPWAManager.installPWA();
+                        } else {
+                            // Fallback: try to trigger install prompt
+                            if ('serviceWorker' in navigator) {
+                                navigator.serviceWorker.getRegistrations().then(registrations => {
+                                    if (registrations.length > 0) {
+                                        // PWA is registered, show manual install instructions
+                                        alert('<?php echo esc_js(__("To install puntWork Admin as a PWA, click the install icon in your browser\'s address bar or use the browser menu.", "puntwork")); ?>');
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    </script>
 
     <style>
         .wrap > div:hover {
