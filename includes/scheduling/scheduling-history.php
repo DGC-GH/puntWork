@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Run the scheduled import
  */
-function run_scheduled_import($test_mode = false) {
+function run_scheduled_import($test_mode = false, $trigger_type = 'scheduled') {
     // Check if scheduling is still enabled (skip this check for test mode)
     if (!$test_mode) {
         $schedule = get_option('puntwork_import_schedule', ['enabled' => false]);
@@ -92,7 +92,7 @@ function run_scheduled_import($test_mode = false) {
             update_option('puntwork_last_import_details', $details);
 
             // Log this run to history
-            log_scheduled_run($details, $test_mode);
+            log_scheduled_run($details, $test_mode, $trigger_type);
         }
 
         return $result;
@@ -121,7 +121,7 @@ function run_scheduled_import($test_mode = false) {
             'skipped' => 0,
             'error_message' => $e->getMessage(),
             'timestamp' => time()
-        ], $test_mode);
+        ], $test_mode, $trigger_type);
 
         error_log('[PUNTWORK] Scheduled import failed: ' . $e->getMessage());
 
@@ -135,7 +135,7 @@ function run_scheduled_import($test_mode = false) {
 /**
  * Log a scheduled run to history
  */
-function log_scheduled_run($details, $test_mode = false) {
+function log_scheduled_run($details, $test_mode = false, $trigger_type = 'scheduled') {
     $run_entry = [
         'timestamp' => $details['timestamp'],
         'formatted_date' => wp_date('M j, Y H:i', $details['timestamp']),
@@ -147,7 +147,8 @@ function log_scheduled_run($details, $test_mode = false) {
         'updated' => $details['updated'],
         'skipped' => $details['skipped'],
         'error_message' => $details['error_message'] ?? '',
-        'test_mode' => $test_mode
+        'test_mode' => $test_mode,
+        'trigger_type' => $trigger_type
     ];
 
     // Get existing history
@@ -170,6 +171,52 @@ function log_scheduled_run($details, $test_mode = false) {
         '[PUNTWORK] Scheduled import %s%s - Duration: %.2fs, Processed: %d/%d, Published: %d, Updated: %d, Skipped: %d',
         $status,
         $mode,
+        $details['duration'],
+        $details['processed'],
+        $details['total'],
+        $details['published'],
+        $details['updated'],
+        $details['skipped']
+    ));
+}
+
+/**
+ * Log a manual import run to history
+ */
+function log_manual_import_run($details) {
+    $run_entry = [
+        'timestamp' => $details['timestamp'],
+        'formatted_date' => wp_date('M j, Y H:i', $details['timestamp']),
+        'duration' => $details['duration'],
+        'success' => $details['success'],
+        'processed' => $details['processed'],
+        'total' => $details['total'],
+        'published' => $details['published'],
+        'updated' => $details['updated'],
+        'skipped' => $details['skipped'],
+        'error_message' => $details['error_message'] ?? '',
+        'test_mode' => false,
+        'trigger_type' => 'manual'
+    ];
+
+    // Get existing history
+    $history = get_option('puntwork_import_run_history', []);
+
+    // Add new entry to the beginning
+    array_unshift($history, $run_entry);
+
+    // Keep only the last 20 runs to prevent the option from growing too large
+    if (count($history) > 20) {
+        $history = array_slice($history, 0, 20);
+    }
+
+    update_option('puntwork_import_run_history', $history);
+
+    // Log to debug log
+    $status = $details['success'] ? 'SUCCESS' : 'FAILED';
+    error_log(sprintf(
+        '[PUNTWORK] Manual import %s - Duration: %.2fs, Processed: %d/%d, Published: %d, Updated: %d, Skipped: %d',
+        $status,
         $details['duration'],
         $details['processed'],
         $details['total'],

@@ -133,7 +133,7 @@ function handle_trigger_import($request) {
         }
 
         // Trigger the import
-        $result = \Puntwork\run_scheduled_import();
+        $result = \Puntwork\run_scheduled_import(false, 'api');
 
         // Clear test mode
         if ($test_mode) {

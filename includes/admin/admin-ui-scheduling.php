@@ -127,19 +127,6 @@ function render_scheduling_ui() {
                 </div>
             </div>
 
-            <!-- Import History Card -->
-            <div class="scheduling-card" style="background-color: #ffffff; border-radius: 12px; padding: 24px; margin-bottom: 32px; border: 1px solid #e5e5e7; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-                    <h3 style="font-size: 20px; font-weight: 600; margin: 0; color: #1d1d1f;">Import History</h3>
-                    <button id="refresh-history" class="secondary-button" style="border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: 500; background-color: #f2f2f7; border: 1px solid #d1d1d6; color: #424245; transition: all 0.2s ease; cursor: pointer;" aria-label="Refresh import history">
-                        <i class="fas fa-sync-alt" style="margin-right: 6px;"></i>Refresh
-                    </button>
-                </div>
-                <div id="run-history-list" style="max-height: 600px; overflow-y: auto; font-size: 14px; border-radius: 8px; background-color: #fafbfc; padding: 20px;">
-                    <div style="color: #86868b; text-align: center; padding: 24px; font-style: italic;">Loading history...</div>
-                </div>
-            </div>
-
             <!-- Action Buttons -->
             <div style="display: flex; gap: 16px; justify-content: flex-end; padding-top: 24px; border-top: 1px solid #e5e5e7;">
                 <button id="save-schedule" class="primary-button" style="border-radius: 12px; padding: 14px 28px; font-size: 16px; font-weight: 600; background-color: #007aff; border: none; color: #ffffff; transition: all 0.2s ease; cursor: pointer; box-shadow: 0 2px 4px rgba(0,122,255,0.2);" aria-label="Save schedule settings">
