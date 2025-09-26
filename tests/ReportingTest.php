@@ -20,6 +20,7 @@ if (!defined('ABSPATH')) {
  */
 class ReportingTest extends PHPUnit\Framework\TestCase
 {
+    private \Puntwork\Reporting\ReportingEngine $reportingEngine;
     /**
      * Set up test environment
      */

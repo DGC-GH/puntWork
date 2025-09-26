@@ -115,7 +115,7 @@ class PerformanceMonitor
             'memory_peak' => memory_get_peak_usage(true),
             'memory_limit' => ini_get('memory_limit'),
             'php_version' => PHP_VERSION,
-            'wordpress_version' => get_bloginfo('version'),
+            'wordpress_version' => function_exists('get_bloginfo') ? get_bloginfo('version') : null,
             'load_average' => function_exists('sys_getloadavg') ? sys_getloadavg() : null,
         ];
     }
