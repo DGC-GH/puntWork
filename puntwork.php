@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'PUNTWORK_VERSION', '1.0.13' );
+define( 'PUNTWORK_VERSION', '1.0.14' );
 define( 'PUNTWORK_PATH', plugin_dir_path( __FILE__ ) );
 define( 'PUNTWORK_URL', plugin_dir_url( __FILE__ ) );
 define( 'PUNTWORK_LOGS', PUNTWORK_PATH . 'logs/import.log' );
@@ -139,6 +139,7 @@ function setup_job_import() {
         'utilities/puntwork-logger.php',
         'utilities/gzip-file.php',
         'utilities/handle-duplicates.php',
+        'utilities/advanced-deduplication.php',
         'utilities/heartbeat-control.php',
         'utilities/item-cleaning.php',
         'utilities/item-inference.php',

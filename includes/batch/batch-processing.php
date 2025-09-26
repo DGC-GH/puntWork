@@ -450,7 +450,14 @@ function process_batch_data(array $batch_guids, array $batch_items, array &$logs
     $existing_by_guid = get_posts_by_guids_with_status($batch_guids);
 
     $post_ids_by_guid = [];
-    handle_duplicates($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
+
+    // Use advanced deduplication if available and enabled
+    if (class_exists(__NAMESPACE__ . '\\JobDeduplicator') && apply_filters('puntwork_use_advanced_deduplication', true)) {
+        JobDeduplicator::handle_duplicates_advanced($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
+    } else {
+        // Fallback to original deduplication logic
+        handle_duplicates($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
+    }
 
     // Bulk fetch for all existing in batch
     $post_ids = array_values($post_ids_by_guid);
