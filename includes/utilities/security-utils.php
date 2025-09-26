@@ -169,6 +169,9 @@ class SecurityUtils {
                 case 'text':
                     $value = sanitize_text_field($value);
                     break;
+                case 'textarea':
+                    $value = sanitize_textarea_field($value);
+                    break;
                 case 'email':
                     $value = sanitize_email($value);
                     if (!is_email($value)) {
@@ -179,6 +182,34 @@ class SecurityUtils {
                     $value = esc_url_raw($value);
                     if (!filter_var($value, FILTER_VALIDATE_URL)) {
                         return new \WP_Error('validation', "{$field_name} must be a valid URL");
+                    }
+                    break;
+                case 'html':
+                    $value = wp_kses_post($value); // Allow safe HTML
+                    break;
+                case 'json':
+                    $value = strval($value);
+                    $decoded = json_decode($value, true);
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        return new \WP_Error('validation', "{$field_name} must be valid JSON");
+                    }
+                    $value = $decoded;
+                    break;
+                case 'array':
+                    if (!is_array($value)) {
+                        return new \WP_Error('validation', "{$field_name} must be an array");
+                    }
+                    // Sanitize array elements if rules specify element validation
+                    if (isset($rules['element_rules'])) {
+                        $sanitized_array = [];
+                        foreach ($value as $key => $element) {
+                            $result = self::validate_field($element, $rules['element_rules'], "{$field_name}[{$key}]");
+                            if (is_wp_error($result)) {
+                                return $result;
+                            }
+                            $sanitized_array[$key] = $result;
+                        }
+                        $value = $sanitized_array;
                     }
                     break;
             }
@@ -204,6 +235,17 @@ class SecurityUtils {
             }
         }
 
+        // Array size validation
+        if (is_array($value)) {
+            if (isset($rules['min_count']) && count($value) < $rules['min_count']) {
+                return new \WP_Error('validation', "{$field_name} must contain at least {$rules['min_count']} items");
+            }
+
+            if (isset($rules['max_count']) && count($value) > $rules['max_count']) {
+                return new \WP_Error('validation', "{$field_name} must contain at most {$rules['max_count']} items");
+            }
+        }
+
         // Enum validation
         if (isset($rules['enum']) && is_array($rules['enum']) && !in_array($value, $rules['enum'])) {
             return new \WP_Error('validation', "{$field_name} must be one of: " . implode(', ', $rules['enum']));
@@ -214,11 +256,20 @@ class SecurityUtils {
             return new \WP_Error('validation', "{$field_name} format is invalid");
         }
 
+        // Custom validation callback
+        if (isset($rules['callback']) && is_callable($rules['callback'])) {
+            $callback_result = call_user_func($rules['callback'], $value, $field_name);
+            if (is_wp_error($callback_result)) {
+                return $callback_result;
+            }
+            $value = $callback_result;
+        }
+
         return $value;
     }
 
     /**
-     * Sanitize and validate array of data
+     * Sanitize and validate array of data recursively
      *
      * @param array $data Data to sanitize
      * @param array $rules Validation rules
@@ -240,6 +291,97 @@ class SecurityUtils {
         }
 
         return $sanitized;
+    }
+
+    /**
+     * Sanitize all request input (GET, POST, etc.)
+     *
+     * @param string $method Request method ('GET', 'POST', etc.)
+     * @return array Sanitized input data
+     */
+    public static function sanitize_request_input(string $method = 'POST'): array {
+        $input = [];
+
+        switch ($method) {
+            case 'GET':
+                $input = $_GET;
+                break;
+            case 'POST':
+                $input = $_POST;
+                break;
+            case 'REQUEST':
+                $input = $_REQUEST;
+                break;
+            default:
+                return [];
+        }
+
+        $sanitized = [];
+        foreach ($input as $key => $value) {
+            $sanitized[$key] = self::sanitize_deep($value);
+        }
+
+        return $sanitized;
+    }
+
+    /**
+     * Recursively sanitize data
+     *
+     * @param mixed $data Data to sanitize
+     * @return mixed Sanitized data
+     */
+    public static function sanitize_deep($data) {
+        if (is_array($data)) {
+            $sanitized = [];
+            foreach ($data as $key => $value) {
+                $sanitized[sanitize_key($key)] = self::sanitize_deep($value);
+            }
+            return $sanitized;
+        } elseif (is_object($data)) {
+            $sanitized = new \stdClass();
+            foreach ($data as $key => $value) {
+                $sanitized->{sanitize_key($key)} = self::sanitize_deep($value);
+            }
+            return $sanitized;
+        } elseif (is_string($data)) {
+            return sanitize_text_field($data);
+        } else {
+            return $data;
+        }
+    }
+
+    /**
+     * Validate file upload security
+     *
+     * @param array $file $_FILES array entry
+     * @param array $allowed_types Allowed MIME types
+     * @param int $max_size Maximum file size in bytes
+     * @return bool|WP_Error True if valid, WP_Error if invalid
+     */
+    public static function validate_file_upload(array $file, array $allowed_types = [], int $max_size = 0) {
+        // Check if file was uploaded
+        if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+            return new \WP_Error('upload_error', 'No file was uploaded');
+        }
+
+        // Check file size
+        if ($max_size > 0 && $file['size'] > $max_size) {
+            return new \WP_Error('upload_error', 'File size exceeds maximum allowed size');
+        }
+
+        // Check MIME type
+        $file_type = wp_check_filetype($file['name']);
+        if (!empty($allowed_types) && !in_array($file_type['type'], $allowed_types)) {
+            return new \WP_Error('upload_error', 'File type not allowed');
+        }
+
+        // Check for malicious file content (basic check)
+        $file_content = file_get_contents($file['tmp_name']);
+        if (strpos($file_content, '<?php') !== false || strpos($file_content, '<script') !== false) {
+            return new \WP_Error('upload_error', 'File contains potentially malicious content');
+        }
+
+        return true;
     }
 
     /**
