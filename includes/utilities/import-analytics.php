@@ -15,14 +15,16 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+use Puntwork\Utilities\CacheManager;
+
 /**
  * ImportAnalytics Class
  * Provides comprehensive analytics and reporting for import operations
  */
 class ImportAnalytics
 {
-    const TABLE_NAME = 'puntwork_import_analytics';
-    const METRICS_TRANSIENT = 'puntwork_import_metrics';
+    public const TABLE_NAME = 'puntwork_import_analytics';
+    public const METRICS_TRANSIENT = 'puntwork_import_metrics';
 
     /**
      * Initialize the analytics system

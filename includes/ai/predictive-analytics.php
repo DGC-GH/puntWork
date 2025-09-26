@@ -23,17 +23,17 @@ class PredictiveAnalytics
     /**
      * Prediction confidence levels
      */
-    const CONFIDENCE_HIGH = 'high';
-    const CONFIDENCE_MEDIUM = 'medium';
-    const CONFIDENCE_LOW = 'low';
+    public const CONFIDENCE_HIGH = 'high';
+    public const CONFIDENCE_MEDIUM = 'medium';
+    public const CONFIDENCE_LOW = 'low';
 
     /**
      * Time periods for analysis
      */
-    const PERIOD_HOUR = 'hour';
-    const PERIOD_DAY = 'day';
-    const PERIOD_WEEK = 'week';
-    const PERIOD_MONTH = 'month';
+    public const PERIOD_HOUR = 'hour';
+    public const PERIOD_DAY = 'day';
+    public const PERIOD_WEEK = 'week';
+    public const PERIOD_MONTH = 'month';
 
     /**
      * Predict import success rate for a feed

@@ -15,6 +15,8 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
+use Puntwork\Utilities\CacheManager;
+
 /**
  * Geographic mappings and province data
  * Handles province name normalization and domain mappings

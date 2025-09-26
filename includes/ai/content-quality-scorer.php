@@ -23,10 +23,10 @@ class ContentQualityScorer
     /**
      * Quality score ranges
      */
-    const SCORE_EXCELLENT = 90;
-    const SCORE_GOOD = 70;
-    const SCORE_FAIR = 50;
-    const SCORE_POOR = 30;
+    public const SCORE_EXCELLENT = 90;
+    public const SCORE_GOOD = 70;
+    public const SCORE_FAIR = 50;
+    public const SCORE_POOR = 30;
 
     /**
      * Quality factors and their weights

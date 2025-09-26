@@ -10,7 +10,7 @@
 namespace Puntwork;
 
 use PHPUnit\Framework\TestCase;
-use Puntwork\PerformanceMonitor;
+use Puntwork\Utilities\PerformanceMonitor;
 
 class PerformanceRegressionTest extends TestCase
 {

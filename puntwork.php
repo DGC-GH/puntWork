@@ -190,7 +190,7 @@ function setup_job_import()
         'utilities/utility-helpers.php',
         'utilities/database-optimization.php',
         'utilities/async-processing.php',
-        'utilities/performance-monitor.php',
+        'utilities/performance-functions.php',
         'utilities/security-utils.php',
         'utilities/horizontal-scaling.php',
         'utilities/load-balancer.php',

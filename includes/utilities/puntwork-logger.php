@@ -23,19 +23,19 @@ if (!defined('ABSPATH')) {
 class PuntWorkLogger
 {
     // Log levels
-    const DEBUG = 'DEBUG';
-    const INFO = 'INFO';
-    const WARN = 'WARN';
-    const ERROR = 'ERROR';
+    public const DEBUG = 'DEBUG';
+    public const INFO = 'INFO';
+    public const WARN = 'WARN';
+    public const ERROR = 'ERROR';
 
     // Log contexts
-    const CONTEXT_AJAX = 'AJAX';
-    const CONTEXT_API = 'API';
-    const CONTEXT_BATCH = 'BATCH';
-    const CONTEXT_FEED = 'FEED';
-    const CONTEXT_UI = 'UI';
-    const CONTEXT_SYSTEM = 'SYSTEM';
-    const CONTEXT_SECURITY = 'SECURITY';
+    public const CONTEXT_AJAX = 'AJAX';
+    public const CONTEXT_API = 'API';
+    public const CONTEXT_BATCH = 'BATCH';
+    public const CONTEXT_FEED = 'FEED';
+    public const CONTEXT_UI = 'UI';
+    public const CONTEXT_SYSTEM = 'SYSTEM';
+    public const CONTEXT_SECURITY = 'SECURITY';
 
     /**
      * Log a debug message

@@ -8,6 +8,8 @@
  * @since      2.3.0
  */
 
+namespace Puntwork;
+
 // Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
@@ -16,7 +18,7 @@ if (!defined('ABSPATH')) {
 /**
  * CRM Admin Class
  */
-class Puntwork_CRM_Admin
+class PuntworkCrmAdmin
 {
     /**
      * CRM Manager instance
@@ -30,17 +32,17 @@ class Puntwork_CRM_Admin
     {
         $this->crm_manager = new \Puntwork\CRM\CRMManager();
 
-        add_action('admin_menu', [$this, 'add_crm_menu']);
-        add_action('admin_enqueue_scripts', [$this, 'enqueue_scripts']);
-        add_action('wp_ajax_puntwork_crm_test_platform', [$this, 'ajax_test_platform']);
-        add_action('wp_ajax_puntwork_crm_save_config', [$this, 'ajax_save_config']);
-        add_action('wp_ajax_puntwork_crm_sync_application', [$this, 'ajax_sync_application']);
+        add_action('admin_menu', [$this, 'addCrmMenu']);
+        add_action('admin_enqueueScripts', [$this, 'enqueueScripts']);
+        add_action('wp_ajax_puntwork_crm_test_platform', [$this, 'ajaxTestPlatform']);
+        add_action('wp_ajax_puntwork_crm_save_config', [$this, 'ajaxSaveConfig']);
+        add_action('wp_ajax_puntwork_crm_sync_application', [$this, 'ajaxSyncApplication']);
     }
 
     /**
      * Add CRM menu to admin
      */
-    public function add_crm_menu(): void
+    public function addCrmMenu(): void
     {
         add_submenu_page(
             'puntwork-admin',
@@ -48,14 +50,14 @@ class Puntwork_CRM_Admin
             __('CRM Integration', 'puntwork'),
             'manage_options',
             'puntwork-crm',
-            [$this, 'render_crm_page']
+            [$this, 'renderCrmPage']
         );
     }
 
     /**
      * Enqueue admin scripts and styles
      */
-    public function enqueue_scripts($hook): void
+    public function enqueueScripts($hook): void
     {
         if ($hook !== 'puntwork_page_puntwork-crm') {
             return;
@@ -96,7 +98,7 @@ class Puntwork_CRM_Admin
     /**
      * Render CRM admin page
      */
-    public function render_crm_page(): void
+    public function renderCrmPage(): void
     {
         $available_platforms = \Puntwork\CRM\CRMManager::getAvailablePlatforms();
         $platform_configs = \Puntwork\CRM\CRMManager::getAllPlatformConfigs();
@@ -161,7 +163,7 @@ class Puntwork_CRM_Admin
                             </div>
 
                             <div class="platform-config" style="display: <?php echo (isset($platform_configs[$platform_id]['enabled']) && $platform_configs[$platform_id]['enabled']) ? 'block' : 'none'; ?>;">
-                                <?php $this->render_platform_config($platform_id, $platform_configs[$platform_id] ?? []); ?>
+                                <?php $this->renderPlatformConfig($platform_id, $platform_configs[$platform_id] ?? []); ?>
 
                                 <div class="platform-actions">
                                     <button class="button button-secondary test-platform">
@@ -272,7 +274,7 @@ class Puntwork_CRM_Admin
                 <div id="logs-tab" class="tab-content">
                     <h2><?php _e('CRM Sync Logs', 'puntwork'); ?></h2>
                     <div id="sync-logs-container">
-                        <?php $this->render_sync_logs(); ?>
+                        <?php $this->renderSyncLogs(); ?>
                     </div>
                 </div>
             </div>
@@ -423,7 +425,7 @@ class Puntwork_CRM_Admin
     /**
      * Render platform-specific configuration
      */
-    private function render_platform_config(string $platform_id, array $config): void
+    private function renderPlatformConfig(string $platform_id, array $config): void
     {
         switch ($platform_id) {
             case 'hubspot':
@@ -452,7 +454,7 @@ class Puntwork_CRM_Admin
     /**
      * Render sync logs
      */
-    private function render_sync_logs(): void
+    private function renderSyncLogs(): void
     {
         global $wpdb;
         $table_name = $wpdb->prefix . 'puntwork_crm_sync_log';
@@ -509,7 +511,7 @@ class Puntwork_CRM_Admin
     /**
      * AJAX handler for testing platform connection
      */
-    public function ajax_test_platform(): void
+    public function ajaxTestPlatform(): void
     {
         check_ajax_referer('puntwork_crm_nonce', 'nonce');
 
@@ -535,7 +537,7 @@ class Puntwork_CRM_Admin
     /**
      * AJAX handler for saving platform configuration
      */
-    public function ajax_save_config(): void
+    public function ajaxSaveConfig(): void
     {
         check_ajax_referer('puntwork_crm_nonce', 'nonce');
 
@@ -568,7 +570,7 @@ class Puntwork_CRM_Admin
     /**
      * AJAX handler for manual application sync
      */
-    public function ajax_sync_application(): void
+    public function ajaxSyncApplication(): void
     {
         check_ajax_referer('puntwork_crm_nonce', 'nonce');
 

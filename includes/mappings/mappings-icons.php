@@ -15,6 +15,8 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
+use Puntwork\Utilities\CacheManager;
+
 /**
  * Icon mappings for job categories
  * Maps job categories to FontAwesome icon classes

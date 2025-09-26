@@ -20,10 +20,10 @@ if (!defined('ABSPATH')) {
  */
 class FeedProcessor
 {
-    const FORMAT_XML = 'xml';
-    const FORMAT_JSON = 'json';
-    const FORMAT_CSV = 'csv';
-    const FORMAT_JOB_BOARD = 'job_board';
+    public const FORMAT_XML = 'xml';
+    public const FORMAT_JSON = 'json';
+    public const FORMAT_CSV = 'csv';
+    public const FORMAT_JOB_BOARD = 'job_board';
 
     /**
      * Detect feed format from URL or content

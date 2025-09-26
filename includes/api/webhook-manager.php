@@ -20,8 +20,8 @@ if (!defined('ABSPATH')) {
  */
 class WebhookManager
 {
-    const TABLE_NAME = 'puntwork_webhooks';
-    const LOG_TABLE_NAME = 'puntwork_webhook_logs';
+    public const TABLE_NAME = 'puntwork_webhooks';
+    public const LOG_TABLE_NAME = 'puntwork_webhook_logs';
 
     /**
      * Initialize webhook system

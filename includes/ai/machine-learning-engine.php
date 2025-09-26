@@ -23,10 +23,10 @@ class MachineLearningEngine
     /**
      * Model types
      */
-    const MODEL_LINEAR_REGRESSION = 'linear_regression';
-    const MODEL_DECISION_TREE = 'decision_tree';
-    const MODEL_NEURAL_NETWORK = 'neural_network';
-    const MODEL_ENSEMBLE = 'ensemble';
+    public const MODEL_LINEAR_REGRESSION = 'linear_regression';
+    public const MODEL_DECISION_TREE = 'decision_tree';
+    public const MODEL_NEURAL_NETWORK = 'neural_network';
+    public const MODEL_ENSEMBLE = 'ensemble';
 
     /**
      * Training data storage

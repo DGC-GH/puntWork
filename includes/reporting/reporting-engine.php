@@ -25,19 +25,19 @@ class ReportingEngine
     /**
      * Report types
      */
-    const REPORT_TYPE_PERFORMANCE = 'performance';
-    const REPORT_TYPE_FEED_HEALTH = 'feed_health';
-    const REPORT_TYPE_JOB_ANALYTICS = 'job_analytics';
-    const REPORT_TYPE_NETWORK = 'network';
-    const REPORT_TYPE_ML_INSIGHTS = 'ml_insights';
+    public const REPORT_TYPE_PERFORMANCE = 'performance';
+    public const REPORT_TYPE_FEED_HEALTH = 'feed_health';
+    public const REPORT_TYPE_JOB_ANALYTICS = 'job_analytics';
+    public const REPORT_TYPE_NETWORK = 'network';
+    public const REPORT_TYPE_ML_INSIGHTS = 'ml_insights';
 
     /**
      * Report formats
      */
-    const FORMAT_HTML = 'html';
-    const FORMAT_PDF = 'pdf';
-    const FORMAT_CSV = 'csv';
-    const FORMAT_JSON = 'json';
+    public const FORMAT_HTML = 'html';
+    public const FORMAT_PDF = 'pdf';
+    public const FORMAT_CSV = 'csv';
+    public const FORMAT_JSON = 'json';
 
     /**
      * Dashboard widgets

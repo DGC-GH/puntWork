@@ -23,12 +23,12 @@ class PuntworkSocialMediaDb
     /**
      * Database version
      */
-    const DB_VERSION = '1.0';
+    public const DB_VERSION = '1.0';
 
     /**
      * Option name for database version
      */
-    const DB_VERSION_OPTION = 'puntwork_social_db_version';
+    public const DB_VERSION_OPTION = 'puntwork_social_db_version';
 
     /**
      * Initialize database

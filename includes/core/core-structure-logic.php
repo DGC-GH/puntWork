@@ -15,6 +15,8 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
+use Puntwork\Utilities\CacheManager;
+
 /**
  * Get all configured feeds with caching
  *

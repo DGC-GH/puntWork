@@ -15,27 +15,29 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+use Puntwork\Utilities\CacheManager;
+
 /**
  * Feed Health Monitor Class
  * Monitors feed availability, performance, and sends alerts
  */
 class FeedHealthMonitor
 {
-    const TABLE_NAME = 'puntwork_feed_health';
-    const ALERT_TRANSIENT_PREFIX = 'puntwork_feed_alert_';
-    const HEALTH_CHECK_TRANSIENT = 'puntwork_feed_health_check';
+    public const TABLE_NAME = 'puntwork_feed_health';
+    public const ALERT_TRANSIENT_PREFIX = 'puntwork_feed_alert_';
+    public const HEALTH_CHECK_TRANSIENT = 'puntwork_feed_health_check';
 
     // Health status constants
-    const STATUS_HEALTHY = 'healthy';
-    const STATUS_WARNING = 'warning';
-    const STATUS_CRITICAL = 'critical';
-    const STATUS_DOWN = 'down';
+    public const STATUS_HEALTHY = 'healthy';
+    public const STATUS_WARNING = 'warning';
+    public const STATUS_CRITICAL = 'critical';
+    public const STATUS_DOWN = 'down';
 
     // Alert types
-    const ALERT_FEED_DOWN = 'feed_down';
-    const ALERT_FEED_SLOW = 'feed_slow';
-    const ALERT_FEED_EMPTY = 'feed_empty';
-    const ALERT_FEED_CHANGED = 'feed_changed';
+    public const ALERT_FEED_DOWN = 'feed_down';
+    public const ALERT_FEED_SLOW = 'feed_slow';
+    public const ALERT_FEED_EMPTY = 'feed_empty';
+    public const ALERT_FEED_CHANGED = 'feed_changed';
 
     /**
      * Initialize the feed health monitoring system

@@ -5,6 +5,8 @@
  * Guides new users through initial setup and configuration
  */
 
+namespace Puntwork;
+
 class PuntworkOnboardingWizard
 {
     public function __construct()

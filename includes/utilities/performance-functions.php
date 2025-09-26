@@ -15,10 +15,13 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-use Puntwork\Utilities\PerformanceMonitor;
-use Puntwork\Utilities\DatabasePerformanceMonitor;
+use Puntwork\Utilities\CacheManager;
 use Puntwork\Utilities\EnhancedCacheManager;
 use Puntwork\Utilities\AdvancedMemoryManager;
+use Puntwork\Utilities\MemoryManager;
+use Puntwork\Utilities\CircuitBreaker;
+use Puntwork\Utilities\PerformanceMonitor;
+use Puntwork\Utilities\DatabasePerformanceMonitor;
 
 /**
  * Check if feed processing can proceed
