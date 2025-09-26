@@ -27,7 +27,8 @@
             "includes/utilities/feed-health-monitor.php",
             "includes/import/feed-processor.php",
             "includes/ai/job-categorizer.php",
-            "includes/ai/duplicate-detector.php"
+            "includes/ai/duplicate-detector.php",
+            "includes/ai/content-quality-scorer.php"
         ]
     },
     "config": {

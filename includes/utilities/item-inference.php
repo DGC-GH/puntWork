@@ -10,6 +10,7 @@
 namespace Puntwork;
 
 use Puntwork\AI\JobCategorizer;
+use Puntwork\AI\ContentQualityScorer;
 
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
@@ -110,4 +111,11 @@ function infer_item_details(&$item, $fallback_domain, $lang, &$job_obj) {
     $job_obj['job_ecommerce'] = json_encode(build_ecomm_schema($enhanced_title, $job_desc, $item, $estimate_key));
     $job_obj['job_languages'] = $job_languages;
     $job_obj['job_category'] = JobCategorizer::categorize($title, isset($item->description) ? (string)$item->description : '');
+
+    // Add content quality scoring
+    $qualityMetrics = ContentQualityScorer::getQualityMetrics($job_obj);
+    $job_obj['job_quality_score'] = $qualityMetrics['overall_score'];
+    $job_obj['job_quality_level'] = $qualityMetrics['quality_level'];
+    $job_obj['job_quality_factors'] = json_encode($qualityMetrics['factor_scores']);
+    $job_obj['job_quality_recommendations'] = json_encode($qualityMetrics['recommendations']);
 }
