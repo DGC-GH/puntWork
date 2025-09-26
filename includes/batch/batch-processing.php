@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 /**
  * Batch processing utilities
  *
@@ -10,12 +8,17 @@ declare(strict_types=1);
  * @since      1.0.0
  */
 
+declare(strict_types=1);
+
 namespace Puntwork;
 
 // Prevent direct access
 if (! defined('ABSPATH')) {
     exit;
 }
+
+use Puntwork\Utilities\CacheManager;
+use Puntwork\Utilities\EnhancedCacheManager;
 
 /**
  * Iterator for streaming JSONL file items to reduce memory usage.

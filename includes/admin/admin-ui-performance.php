@@ -15,6 +15,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+use Puntwork\Utilities\PerformanceMonitor;
+use Puntwork\Utilities\CacheManager;
+
 /**
  * Performance Metrics Dashboard Admin Page
  */

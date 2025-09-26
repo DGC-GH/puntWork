@@ -23,7 +23,7 @@ class DuplicateDetector
     /**
      * Similarity threshold for considering items as duplicates
      */
-    const SIMILARITY_THRESHOLD = 0.85;
+    public const SIMILARITY_THRESHOLD = 0.85;
 
     /**
      * Detect potential duplicates in a batch of jobs using content similarity

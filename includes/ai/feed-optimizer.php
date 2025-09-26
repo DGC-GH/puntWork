@@ -23,19 +23,19 @@ class FeedOptimizer
     /**
      * Optimization actions
      */
-    const ACTION_ADJUST_FREQUENCY = 'adjust_frequency';
-    const ACTION_ADJUST_BATCH_SIZE = 'adjust_batch_size';
-    const ACTION_ADJUST_TIMEOUT = 'adjust_timeout';
-    const ACTION_ENABLE_FEED = 'enable_feed';
-    const ACTION_DISABLE_FEED = 'disable_feed';
-    const ACTION_REORDER_FEEDS = 'reorder_feeds';
+    public const ACTION_ADJUST_FREQUENCY = 'adjust_frequency';
+    public const ACTION_ADJUST_BATCH_SIZE = 'adjust_batch_size';
+    public const ACTION_ADJUST_TIMEOUT = 'adjust_timeout';
+    public const ACTION_ENABLE_FEED = 'enable_feed';
+    public const ACTION_DISABLE_FEED = 'disable_feed';
+    public const ACTION_REORDER_FEEDS = 'reorder_feeds';
 
     /**
      * Optimization confidence thresholds
      */
-    const CONFIDENCE_HIGH = 'high';
-    const CONFIDENCE_MEDIUM = 'medium';
-    const CONFIDENCE_LOW = 'low';
+    public const CONFIDENCE_HIGH = 'high';
+    public const CONFIDENCE_MEDIUM = 'medium';
+    public const CONFIDENCE_LOW = 'low';
 
     /**
      * Initialize the feed optimizer
@@ -260,9 +260,8 @@ class FeedOptimizer
         // If reliability is poor and volume is decreasing, reduce frequency
         if ($reliabilityScore < 50 && $volumeTrend === 'decreasing') {
             $newFrequency = self::increaseFrequencyInterval($currentFrequency);
-        }
-        // If reliability is good and volume is increasing, increase frequency
-        elseif ($reliabilityScore > 80 && $volumeTrend === 'increasing') {
+        } elseif ($reliabilityScore > 80 && $volumeTrend === 'increasing') {
+            // If reliability is good and volume is increasing, increase frequency
             $newFrequency = self::decreaseFrequencyInterval($currentFrequency);
         }
 
@@ -303,9 +302,8 @@ class FeedOptimizer
         // If success rate is high and volume is increasing, increase batch size
         if ($successRate > 90 && $predictedVolume > $currentBatchSize * 1.2) {
             $newBatchSize = min($currentBatchSize * 2, 1000); // Max 1000
-        }
-        // If success rate is low, reduce batch size
-        elseif ($successRate < 70) {
+        } elseif ($successRate < 70) {
+            // If success rate is low, reduce batch size
             $newBatchSize = max($currentBatchSize / 2, 10); // Min 10
         }
 
@@ -348,9 +346,8 @@ class FeedOptimizer
         // If average response time is much lower than timeout, reduce timeout
         if ($avgResponseTime < $currentTimeout * 0.5) {
             $newTimeout = max($avgResponseTime * 2, 10); // At least 10 seconds, double the avg response
-        }
-        // If response time is approaching timeout, increase timeout
-        elseif ($avgResponseTime > $currentTimeout * 0.8) {
+        } elseif ($avgResponseTime > $currentTimeout * 0.8) {
+            // If response time is approaching timeout, increase timeout
             $newTimeout = min($currentTimeout * 1.5, 300); // Max 5 minutes
         }
 

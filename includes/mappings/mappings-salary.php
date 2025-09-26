@@ -15,6 +15,8 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
+use Puntwork\Utilities\CacheManager;
+
 /**
  * Salary estimates and compensation data
  * Handles salary ranges by job category and industry

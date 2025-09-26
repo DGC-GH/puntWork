@@ -15,6 +15,8 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
+use Puntwork\Utilities\PerformanceMonitor;
+
 /**
  * Get database optimization status
  */
@@ -180,8 +182,8 @@ function ajax_clear_performance_logs()
 
     try {
         // Import the cleanup function
-        if (function_exists(__NAMESPACE__ . '\\PerformanceMonitor::cleanup_old_logs')) {
-            \Puntwork\PerformanceMonitor::cleanup_old_logs(30); // Keep 30 days
+        if (class_exists('\\Puntwork\\Utilities\\PerformanceMonitor')) {
+            \Puntwork\Utilities\PerformanceMonitor::cleanup_old_logs(30); // Keep 30 days
             $message = 'Performance logs older than 30 days have been cleared.';
         } else {
             $message = 'Performance monitoring not available.';

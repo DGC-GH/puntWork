@@ -15,6 +15,8 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
+use Puntwork\Utilities\CacheManager;
+
 /**
  * ACF field definitions and field mappings
  * Handles field configurations and zero/empty field definitions

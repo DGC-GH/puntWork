@@ -35,10 +35,10 @@ class MultiSiteManager
     /**
      * Job distribution strategies
      */
-    const STRATEGY_ROUND_ROBIN = 'round_robin';
-    const STRATEGY_LOAD_BALANCED = 'load_balanced';
-    const STRATEGY_CAPABILITY_BASED = 'capability_based';
-    const STRATEGY_GEOGRAPHIC = 'geographic';
+    public const STRATEGY_ROUND_ROBIN = 'round_robin';
+    public const STRATEGY_LOAD_BALANCED = 'load_balanced';
+    public const STRATEGY_CAPABILITY_BASED = 'capability_based';
+    public const STRATEGY_GEOGRAPHIC = 'geographic';
 
     /**
      * Initialize multi-site support

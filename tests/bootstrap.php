@@ -380,7 +380,7 @@ $includes = array(
     // Utilities - only load essential ones
     'utilities/puntwork-logger.php',
     'utilities/handle-duplicates.php',
-    'utilities/performance-monitor.php',
+    'utilities/performance-functions.php',
     'utilities/horizontal-scaling.php',
     'utilities/load-balancer.php',
     'utilities/security-utils.php',
