@@ -939,6 +939,30 @@ function handle_bulk_operations($request)
 }
 
 /**
+ * Convert memory limit string to bytes
+ */
+function convert_memory_limit_to_bytes($memory_limit)
+{
+    if (is_numeric($memory_limit)) {
+        return (int) $memory_limit;
+    }
+
+    $unit = strtolower(substr($memory_limit, -1));
+    $value = (int) substr($memory_limit, 0, -1);
+
+    switch ($unit) {
+        case 'g':
+            return $value * 1024 * 1024 * 1024;
+        case 'm':
+            return $value * 1024 * 1024;
+        case 'k':
+            return $value * 1024;
+        default:
+            return (int) $memory_limit;
+    }
+}
+
+/**
  * Handle get health status request
  */
 function handle_get_health_status($request)
@@ -963,7 +987,7 @@ function handle_get_health_status($request)
             ],
             'system' => [
                 'memory_usage' => size_format($system_health['memory_current']),
-                'memory_limit' => size_format($system_health['memory_limit']),
+                'memory_limit' => size_format(convert_memory_limit_to_bytes($system_health['memory_limit'])),
                 'php_version' => $system_health['php_version'],
                 'wordpress_version' => $system_health['wordpress_version'],
                 'load_average' => $system_health['load_average'],

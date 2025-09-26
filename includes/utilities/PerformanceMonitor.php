@@ -109,7 +109,14 @@ class PerformanceMonitor
             'current_memory' => memory_get_usage(true),
             'peak_memory' => memory_get_peak_usage(true),
             'active_measurements' => count(self::$measurements),
-            'measurements' => self::$measurements
+            'measurements' => self::$measurements,
+            // Aliases for UI compatibility
+            'memory_current' => memory_get_usage(true),
+            'memory_peak' => memory_get_peak_usage(true),
+            'memory_limit' => ini_get('memory_limit'),
+            'php_version' => PHP_VERSION,
+            'wordpress_version' => get_bloginfo('version'),
+            'load_average' => function_exists('sys_getloadavg') ? sys_getloadavg() : null,
         ];
     }
 
