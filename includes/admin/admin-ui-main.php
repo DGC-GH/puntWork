@@ -77,6 +77,34 @@ function render_jobs_dashboard_ui() {
                 <span id="db-optimization-status-msg" style="font-size: 14px; color: #8e8e93;"></span>
             </div>
         </div>
+
+        <!-- Async Processing Configuration Section -->
+        <div style="margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px;">Async Processing</h2>
+            <p style="font-size: 14px; color: #8e8e93; margin: 0 0 16px;">Configure background processing for large imports to prevent timeouts and improve performance.</p>
+
+            <div id="async-processing-status" style="background-color: #f9f9f9; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="font-size: 16px; font-weight: 500;">Async Status</span>
+                    <span id="async-status-badge" style="font-size: 12px; padding: 4px 8px; border-radius: 4px; background-color: #34c759; color: white;">Available</span>
+                </div>
+                <div id="async-status-details" style="font-size: 14px; color: #8e8e93;">
+                    Loading async processing status...
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+                    <input type="checkbox" id="enable-async-processing" checked>
+                    Enable async processing for large imports (>500 items)
+                </label>
+                <button id="save-async-settings" class="button button-primary" style="border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: 500;">
+                    <span id="save-async-text">Save Settings</span>
+                    <span id="save-async-loading" style="display: none;">Saving...</span>
+                </button>
+                <span id="async-settings-status" style="font-size: 14px; color: #8e8e93;"></span>
+            </div>
+        </div>
     </div>
     <?php
 }

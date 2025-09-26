@@ -1,7 +1,7 @@
 # PuntWork Dev## Phase 2: Performance Optimization (Priority: High)
 - [x] Implement Redis/object caching for feed data and mappings
 - [x] Optimize database queries with proper indexing
-- [ ] Add async processing for large imports using Action Scheduler
+- [x] Add async processing for large imports using Action Scheduler
 - [ ] Implement progressive loading for admin UI
 - [ ] Add performance benchmarks and monitoring
 - [x] Refactor long functions (e.g., process_batch_items_logic) into smaller units
@@ -72,11 +72,12 @@
 - [x] Add strict_types declarations and comprehensive type hints
 - [x] Create JsonlIterator for memory-efficient streaming
 - [x] Fix PHP 8.1+ Iterator deprecation warnings
+- [x] Add async processing for large imports using Action Scheduler
 
 ## Current Status
 - **Last Updated**: September 26, 2025
 - **Version**: 1.0.9
-- **Next Priority**: Database query optimization and async processing (Phase 2)
+- **Next Priority**: Progressive loading for admin UI and performance benchmarks (Phase 2)
 - **Blockers**: Auto-deployment system not working - code fixes committed but not deployed
 - **Critical Issues**: Resolved duplicate function declarations; API progress tracking bug needs verification
 - **Infrastructure Issues**: Git push auto-deployment to WordPress plugin folder not functioning

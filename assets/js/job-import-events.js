@@ -74,6 +74,12 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 JobImportEvents.handleCheckDbStatus();
             });
 
+            // Async processing events
+            $('#save-async-settings').on('click', function(e) {
+                console.log('[PUNTWORK] Save async settings button clicked!');
+                JobImportEvents.handleSaveAsyncSettings();
+            });
+
             // Log toggle button
             // $('#toggle-log').on('click', function(e) {
             //     console.log('[PUNTWORK] Toggle log button clicked!');
@@ -228,6 +234,18 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             $('#resume-import').hide();
             $('#cancel-import').hide();
             $('#reset-import').hide();
+
+            // Load async processing status
+            JobImportAPI.getAsyncStatus().then(function(asyncResponse) {
+                console.log('[PUNTWORK] Async status response:', asyncResponse);
+                if (asyncResponse.success) {
+                    JobImportEvents.updateAsyncStatusDisplay(asyncResponse.data);
+                    // Update checkbox state
+                    $('#enable-async-processing').prop('checked', asyncResponse.data.enabled);
+                }
+            }).catch(function(error) {
+                console.log('[PUNTWORK] Async status load error:', error);
+            });
 
             JobImportAPI.getImportStatus().then(function(response) {
                 PuntWorkJSLogger.debug('Initial status response', 'EVENTS', response);
@@ -612,6 +630,87 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
             // Update indexes list
             $('#db-indexes-list').html(status.indexes_html || 'Unable to load index status');
+        },
+
+        /**
+         * Handle save async settings button click
+         */
+        handleSaveAsyncSettings: function() {
+            console.log('[PUNTWORK] Save async settings handler called');
+
+            $('#save-async-settings').prop('disabled', true);
+            $('#save-async-text').hide();
+            $('#save-async-loading').show();
+            $('#async-settings-status').text('Saving settings...');
+
+            var enableAsync = $('#enable-async-processing').is(':checked');
+
+            JobImportAPI.saveAsyncSettings(enableAsync).then(function(response) {
+                console.log('[PUNTWORK] Save async settings response:', response);
+
+                if (response.success) {
+                    $('#async-settings-status').text('Settings saved successfully!');
+                    JobImportEvents.updateAsyncStatusDisplay(response.data);
+                } else {
+                    $('#async-settings-status').text('Failed to save settings');
+                }
+
+                $('#save-async-settings').prop('disabled', false);
+                $('#save-async-text').show();
+                $('#save-async-loading').hide();
+            }).catch(function(xhr, status, error) {
+                console.log('[PUNTWORK] Save async settings error:', error);
+                $('#async-settings-status').text('Error: ' + error);
+                $('#save-async-settings').prop('disabled', false);
+                $('#save-async-text').show();
+                $('#save-async-loading').hide();
+            });
+        },
+
+        /**
+         * Update the async processing status display
+         */
+        updateAsyncStatusDisplay: function(status) {
+            console.log('[PUNTWORK] Updating async status display:', status);
+
+            // Update badge
+            var badgeElement = $('#async-status-badge');
+            var badgeClass = 'error';
+            var badgeText = 'Unavailable';
+
+            if (status.available) {
+                badgeClass = 'success';
+                badgeText = 'Available';
+            } else if (status.action_scheduler) {
+                badgeClass = 'warning';
+                badgeText = 'Limited';
+            }
+
+            badgeElement.removeClass('success warning error').addClass(badgeClass);
+            badgeElement.text(badgeText);
+
+            // Update status details
+            var detailsHtml = '';
+            if (status.available) {
+                detailsHtml += '<div>• Async processing is available</div>';
+                if (status.action_scheduler) {
+                    detailsHtml += '<div>• Using Action Scheduler (recommended)</div>';
+                } else {
+                    detailsHtml += '<div>• Using WordPress Cron (fallback)</div>';
+                }
+                detailsHtml += '<div>• Large imports will be processed in background</div>';
+            } else {
+                detailsHtml += '<div>• Async processing is not available</div>';
+                detailsHtml += '<div>• All imports will be processed synchronously</div>';
+            }
+
+            if (status.enabled) {
+                detailsHtml += '<div>• Auto-async enabled for imports > 500 items</div>';
+            } else {
+                detailsHtml += '<div>• Auto-async disabled</div>';
+            }
+
+            $('#async-status-details').html(detailsHtml);
         }
     };
 
