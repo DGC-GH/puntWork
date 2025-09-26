@@ -146,7 +146,7 @@ class PerformanceMonitor
      * @param int $days Days to keep
      * @return bool Success
      */
-    public static function cleanup_old_logs(int $days): bool
+    public static function cleanupOldLogs(int $days): bool
     {
         // Mock implementation - in real implementation would clean up old logs
         return true;
