@@ -1,0 +1,66 @@
+<?php
+/**
+ * Scheduling and trigger utilities
+ *
+ * @package    Puntwork
+ * @subpackage Scheduling
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+// Schedule daily via WP Cron at 3:33 in WordPress timezone
+// Uses wp_timezone() to respect WordPress timezone settings (Brussels time)
+add_action('wp', function() {
+    if (!wp_next_scheduled('fetch_combined_jobs_json')) {
+        // Use WordPress configured timezone
+        $wp_timezone = wp_timezone();
+        $now = new \DateTime('now', $wp_timezone);
+        $target = new \DateTime('today 03:33', $wp_timezone);
+        if ($now > $target) $target->modify('+1 day');
+        wp_schedule_event($target->getTimestamp(), 'daily', 'fetch_combined_jobs_json');
+        error_log('[PUNTWORK] Combined jobs fetch scheduled for: ' . wp_date('Y-m-d H:i:s', $target->getTimestamp()) . ' (' . wp_timezone_string() . ')');
+    }
+});
+add_action('fetch_combined_jobs_json', __NAMESPACE__ . '\\fetch_and_generate_combined_json');
+
+// Register the scheduled import hook
+add_action('puntwork_scheduled_import', function() {
+    error_log('[PUNTWORK] Scheduled import cron triggered');
+
+    // Check if an import is already running or paused
+    $import_status = get_option('job_import_status', []);
+    if (isset($import_status['complete']) && !$import_status['complete'] && !isset($import_status['paused'])) {
+        error_log('[PUNTWORK] Scheduled import cron skipped - import already running');
+        return;
+    }
+
+    // If import is paused, continue it instead of starting new
+    if (isset($import_status['paused']) && $import_status['paused']) {
+        error_log('[PUNTWORK] Scheduled import cron continuing paused import');
+        try {
+            \Puntwork\continue_paused_import();
+            return;
+        } catch (\Exception $e) {
+            error_log('[PUNTWORK] Failed to continue paused import: ' . $e->getMessage());
+            return;
+        }
+    }
+
+    try {
+        $result = \Puntwork\run_scheduled_import();
+
+        if ($result['success']) {
+            error_log('[PUNTWORK] Scheduled import cron completed successfully');
+        } else {
+            error_log('[PUNTWORK] Scheduled import cron failed: ' . ($result['message'] ?? 'Unknown error'));
+        }
+    } catch (\Exception $e) {
+        error_log('[PUNTWORK] Scheduled import cron exception: ' . $e->getMessage());
+    }
+});

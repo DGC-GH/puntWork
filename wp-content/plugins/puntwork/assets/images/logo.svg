@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="477.36798" height="477.36798" viewBox="0 0 477.36798 477.36798">
+  <defs>
+    <clipPath clipPathUnits="userSpaceOnUse" id="SvgjsClipPath1019">
+      <path d="M 0,380 H 396 V 0 H 0 Z" transform="translate(-200.71831,-8.8228027)" />
+    </clipPath>
+    <clipPath clipPathUnits="userSpaceOnUse" id="SvgjsClipPath1016">
+      <path d="M 0,380 H 396 V 0 H 0 Z" transform="translate(-215.92381,-234.46391)" />
+    </clipPath>
+  </defs>
+  <g>
+    <path d="m 0,0 c -99.121,0 -125.802,5.021 -148.897,28.116 -23.239,23.238 -28.116,49.776 -28.116,148.897 0,99.121 5.021,125.659 28.116,148.897 23.095,23.095 49.776,28.116 148.897,28.116 99.122,0 125.803,-5.021 148.897,-28.116 23.239,-23.238 28.116,-49.776 28.116,-148.897 0,-99.121 -4.877,-125.659 -28.116,-148.897 C 125.803,5.021 99.122,0 0,0" style="fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#ffffff;stroke-width:4;stroke-opacity:1" transform="matrix(1.3333333,0,0,-1.3333333,238.6844,474.70293)"/>
+    <text x="-10" y="65" fill="#ffffff" font-size="90" font-family="sans-serif" text-anchor="middle" transform="matrix(1.3333333,0,0,1.3333333,258.9584,173.84813)">.work</text>
+  </g>
+  <style>@media (prefers-color-scheme: light) { :root { filter: none; } }
+@media (prefers-color-scheme: dark) { :root { filter: none; } }
+</style>
+</svg>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="" tests="8" assertions="18" errors="0" warnings="0" failures="0" skipped="1" time="0.001195">
+    <testsuite name="PuntWork Test Suite" tests="8" assertions="18" errors="0" warnings="0" failures="0" skipped="1" time="0.001195">
+      <testsuite name="Puntwork\ImportTest" file="/Users/dg/Documents/GitHub/puntWork/tests/ImportTest.php" tests="8" assertions="18" errors="0" warnings="0" failures="0" skipped="1" time="0.001195">
+        <testcase name="testGetSalaryEstimates" class="Puntwork\ImportTest" classname="Puntwork.ImportTest" file="/Users/dg/Documents/GitHub/puntWork/tests/ImportTest.php" line="26" assertions="3" time="0.000783"/>
+        <testcase name="testGetIconMap" class="Puntwork\ImportTest" classname="Puntwork.ImportTest" file="/Users/dg/Documents/GitHub/puntWork/tests/ImportTest.php" line="33" assertions="2" time="0.000033"/>
+        <testcase name="testBuildJobSchema" class="Puntwork\ImportTest" classname="Puntwork.ImportTest" file="/Users/dg/Documents/GitHub/puntWork/tests/ImportTest.php" line="51" assertions="3" time="0.000087"/>
+        <testcase name="testHandleDuplicates" class="Puntwork\ImportTest" classname="Puntwork.ImportTest" file="/Users/dg/Documents/GitHub/puntWork/tests/ImportTest.php" line="71" assertions="3" time="0.000028"/>
+        <testcase name="testGetProvinceMap" class="Puntwork\ImportTest" classname="Puntwork.ImportTest" file="/Users/dg/Documents/GitHub/puntWork/tests/ImportTest.php" line="19" assertions="3" time="0.000026"/>
+        <testcase name="testGetAcfFields" class="Puntwork\ImportTest" classname="Puntwork.ImportTest" file="/Users/dg/Documents/GitHub/puntWork/tests/ImportTest.php" line="39" assertions="2" time="0.000074"/>
+        <testcase name="testGetZeroEmptyFields" class="Puntwork\ImportTest" classname="Puntwork.ImportTest" file="/Users/dg/Documents/GitHub/puntWork/tests/ImportTest.php" line="45" assertions="2" time="0.000022"/>
+        <testcase name="testProcessXmlBatch" class="Puntwork\ImportTest" classname="Puntwork.ImportTest" file="/Users/dg/Documents/GitHub/puntWork/tests/ImportTest.php" line="66" assertions="0" time="0.000142">
+          <skipped/>
+        </testcase>
+      </testsuite>
+    </testsuite>
+  </testsuite>
+</testsuites>
