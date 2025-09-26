@@ -91,8 +91,17 @@ function run_scheduled_import($test_mode = false, $trigger_type = 'scheduled') {
 
             update_option('puntwork_last_import_details', $details);
 
-            // Log this run to history
-            log_scheduled_run($details, $test_mode, $trigger_type);
+            // Store trigger info in status for later logging
+            $current_status = get_option('job_import_status', []);
+            $current_status['trigger_type'] = $trigger_type;
+            $current_status['test_mode'] = $test_mode;
+            update_option('job_import_status', $current_status, false);
+
+            // Only log to history if the import is actually complete (not paused)
+            // Paused imports will be logged when they resume and complete
+            if (!isset($result['paused']) || !$result['paused']) {
+                log_scheduled_run($details, $test_mode, $trigger_type);
+            }
         }
 
         return $result;

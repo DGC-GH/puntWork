@@ -75,6 +75,39 @@ function finalize_batch_import($result) {
 
     update_option('job_import_status', $status, false);
 
+    // Log completed import to history
+    if ($result['complete'] && $result['success']) {
+        $trigger_type = $status['trigger_type'] ?? 'scheduled';
+        $test_mode = $status['test_mode'] ?? false;
+
+        $details = [
+            'success' => true,
+            'duration' => $total_elapsed,
+            'processed' => $result['processed'],
+            'total' => $result['total'],
+            'published' => $result['published'],
+            'updated' => $result['updated'],
+            'skipped' => $result['skipped'],
+            'error_message' => '',
+            'timestamp' => time()
+        ];
+
+        // Use the appropriate logging function based on trigger type
+        if ($trigger_type === 'manual') {
+            \Puntwork\log_manual_import_run($details);
+        } else {
+            \Puntwork\log_scheduled_run($details, $test_mode, $trigger_type);
+        }
+
+        error_log(sprintf(
+            '[PUNTWORK] Import completed and logged to history - Trigger: %s, Duration: %.2fs, Processed: %d/%d',
+            $trigger_type,
+            $total_elapsed,
+            $result['processed'],
+            $result['total']
+        ));
+    }
+
     return $result;
 }
 
