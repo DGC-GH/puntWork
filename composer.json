@@ -25,7 +25,8 @@
             "includes/utilities/import-analytics.php",
             "includes/utilities/advanced-deduplication.php",
             "includes/utilities/feed-health-monitor.php",
-            "includes/import/feed-processor.php"
+            "includes/import/feed-processor.php",
+            "includes/ai/job-categorizer.php"
         ]
     },
     "config": {
