@@ -1,6 +1,10 @@
 # PuntWork Development Roadmap
 
 ## Phase 1: Code Quality & Testing (Priority: High)
+- [ ] **CRITICAL BUG**: Fix API import progress tracking - API calls show "0 / X items" instead of actual progress while manual/scheduled imports work correctly
+  - **Root Cause**: Status preservation logic conflict between API and batch processing
+  - **Impact**: API imports appear broken to external systems
+  - **Status**: Code fix implemented, awaiting deployment
 - [ ] Set up PHPUnit testing framework with composer.json
 - [ ] Add comprehensive unit tests for all core functions (mappings, batch processing, scheduling)
 - [ ] Implement integration tests for import workflows
@@ -54,5 +58,7 @@
 ## Current Status
 - **Last Updated**: September 26, 2025
 - **Version**: 1.0.7
-- **Next Priority**: Phase 2 - Performance optimization (Redis caching, DB indexing)
-- **Blockers**: None identified
+- **Next Priority**: Fix critical API import progress tracking bug (Phase 1)
+- **Blockers**: Auto-deployment system not working - code fixes committed but not deployed
+- **Critical Issues**: API import progress shows 0 items processed despite successful imports
+- **Infrastructure Issues**: Git push auto-deployment to WordPress plugin folder not functioning
