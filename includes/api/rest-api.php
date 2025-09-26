@@ -240,7 +240,7 @@ function handle_trigger_import($request) {
 
                 return new \WP_REST_Response([
                     'success' => true,
-                    'message' => 'Import completed successfully',
+                    'message' => 'Import completed successfully - SYNC MODE',
                     'data' => $result,
                     'debug' => $debug_info,
                     'async' => false
