@@ -71,4 +71,13 @@ add_action('admin_menu', function() {
         'puntwork-feed-health',
         __NAMESPACE__ . '\\feed_health_monitor_page'
     );
+
+    add_submenu_page(
+        'puntwork-dashboard',
+        'Import Analytics',
+        'Analytics',
+        'manage_options',
+        'puntwork-analytics',
+        __NAMESPACE__ . '\\import_analytics_page'
+    );
 });

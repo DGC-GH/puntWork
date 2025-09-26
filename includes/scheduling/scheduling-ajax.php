@@ -395,6 +395,13 @@ add_action('puntwork_manual_import', __NAMESPACE__ . '\\run_manual_import_cron')
 // Register async action hooks
 add_action('puntwork_scheduled_import_async', __NAMESPACE__ . '\\run_scheduled_import_async');
 
+// Register analytics cleanup hook
+add_action('puntwork_analytics_cleanup', [__NAMESPACE__ . '\\ImportAnalytics', 'cleanup_old_data']);
+
+/**
+ * Run scheduled import asynchronously (non-blocking)
+ */
+
 /**
  * Run scheduled import asynchronously (non-blocking)
  */
