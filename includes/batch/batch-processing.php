@@ -459,7 +459,7 @@ function process_batch_data(array $batch_guids, array $batch_items, array &$logs
         handle_duplicates($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
     }
 
-    // Bulk fetch for all existing in batch
+    // Bulk fetch for all existing in batch with caching
     $post_ids = array_values($post_ids_by_guid);
     $max_chunk_size = 50;
     $post_id_chunks = array_chunk($post_ids, $max_chunk_size);
@@ -467,26 +467,47 @@ function process_batch_data(array $batch_guids, array $batch_items, array &$logs
     $all_hashes_by_post = [];
 
     if (!empty($post_ids)) {
-        foreach ($post_id_chunks as $chunk) {
-            if (empty($chunk)) continue;
-            $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
-            $chunk_last = $wpdb->get_results($wpdb->prepare(
-                "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_last_import_update' AND post_id IN ($placeholders)",
-                $chunk
-            ), OBJECT_K);
-            $last_updates += (array)$chunk_last;
+        // Cache key for last updates
+        sort($post_ids);
+        $last_updates_cache_key = 'batch_last_updates_' . md5(implode(',', $post_ids));
+        $cached_last_updates = CacheManager::get($last_updates_cache_key, CacheManager::GROUP_ANALYTICS);
+
+        if ($cached_last_updates !== false) {
+            $last_updates = $cached_last_updates;
+        } else {
+            foreach ($post_id_chunks as $chunk) {
+                if (empty($chunk)) continue;
+                $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
+                $chunk_last = $wpdb->get_results($wpdb->prepare(
+                    "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_last_import_update' AND post_id IN ($placeholders)",
+                    $chunk
+                ), OBJECT_K);
+                $last_updates += (array)$chunk_last;
+            }
+            // Cache last updates for 5 minutes during import processing
+            CacheManager::set($last_updates_cache_key, $last_updates, CacheManager::GROUP_ANALYTICS, 5 * MINUTE_IN_SECONDS);
         }
 
-        foreach ($post_id_chunks as $chunk) {
-            if (empty($chunk)) continue;
-            $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
-            $chunk_hashes = $wpdb->get_results($wpdb->prepare(
-                "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
-                $chunk
-            ), OBJECT_K);
-            foreach ($chunk_hashes as $id => $obj) {
-                $all_hashes_by_post[$id] = $obj->meta_value;
+        // Cache key for import hashes
+        $hashes_cache_key = 'batch_import_hashes_' . md5(implode(',', $post_ids));
+        $cached_hashes = CacheManager::get($hashes_cache_key, CacheManager::GROUP_ANALYTICS);
+
+        if ($cached_hashes !== false) {
+            $all_hashes_by_post = $cached_hashes;
+        } else {
+            foreach ($post_id_chunks as $chunk) {
+                if (empty($chunk)) continue;
+                $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
+                $chunk_hashes = $wpdb->get_results($wpdb->prepare(
+                    "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
+                    $chunk
+                ), OBJECT_K);
+                foreach ($chunk_hashes as $id => $obj) {
+                    $all_hashes_by_post[$id] = $obj->meta_value;
+                }
             }
+            // Cache import hashes for 5 minutes during import processing
+            CacheManager::set($hashes_cache_key, $all_hashes_by_post, CacheManager::GROUP_ANALYTICS, 5 * MINUTE_IN_SECONDS);
         }
     }
 

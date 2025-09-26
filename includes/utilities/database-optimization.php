@@ -127,6 +127,15 @@ function bulk_get_post_statuses(array $post_ids): array {
         return [];
     }
 
+    // Create cache key from sorted post IDs
+    sort($post_ids);
+    $cache_key = 'post_statuses_' . md5(implode(',', $post_ids));
+    $cached_result = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
+
+    if ($cached_result !== false) {
+        return $cached_result;
+    }
+
     $placeholders = implode(',', array_fill(0, count($post_ids), '%d'));
     $query = $wpdb->prepare("
         SELECT ID, post_status
@@ -140,6 +149,9 @@ function bulk_get_post_statuses(array $post_ids): array {
     foreach ($results as $post_id => $post) {
         $statuses[$post_id] = $post->post_status;
     }
+
+    // Cache for 15 minutes - post statuses change less frequently
+    CacheManager::set($cache_key, $statuses, CacheManager::GROUP_ANALYTICS, 15 * MINUTE_IN_SECONDS);
 
     return $statuses;
 }
