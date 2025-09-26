@@ -156,14 +156,19 @@ function get_import_schedule_ajax() {
  * Get import run history via AJAX
  */
 function get_import_run_history_ajax() {
+    error_log('[PUNTWORK] get_import_run_history_ajax called');
+
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
+        error_log('[PUNTWORK] get_import_run_history_ajax: Nonce verification failed');
         wp_send_json_error(['message' => 'Nonce verification failed']);
     }
     if (!current_user_can('manage_options')) {
+        error_log('[PUNTWORK] get_import_run_history_ajax: Permission denied');
         wp_send_json_error(['message' => 'Permission denied']);
     }
 
     $history = get_option('puntwork_import_run_history', []);
+    error_log('[PUNTWORK] get_import_run_history_ajax: Retrieved history with ' . count($history) . ' entries');
 
     // Format dates for history entries - timestamps are stored in UTC
     foreach ($history as &$entry) {
@@ -172,6 +177,7 @@ function get_import_run_history_ajax() {
         }
     }
 
+    error_log('[PUNTWORK] get_import_run_history_ajax: Returning history data');
     wp_send_json_success([
         'history' => $history,
         'count' => count($history)
