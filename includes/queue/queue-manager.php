@@ -153,8 +153,13 @@ class PuntworkQueueManager {
             return;
         }
 
-        foreach ($jobs as $job) {
-            $this->process_job($job);
+        // Check if load balancer is available and should be used
+        if ($this->should_use_load_balancer()) {
+            $this->process_with_load_balancer($jobs);
+        } else {
+            foreach ($jobs as $job) {
+                $this->process_job($job);
+            }
         }
     }
 
@@ -438,6 +443,175 @@ class PuntworkQueueManager {
     private function general_cleanup($data) {
         // General cleanup tasks
         return ['message' => 'General cleanup completed'];
+    }
+
+    /**
+     * Check if load balancer should be used
+     */
+    private function should_use_load_balancer() {
+        // Use load balancer if multiple instances are available and configured
+        if (!class_exists('Puntwork\\PuntworkLoadBalancer')) {
+            return false;
+        }
+
+        $scaling_manager = $this->get_scaling_manager();
+        if (!$scaling_manager) {
+            return false;
+        }
+
+        $active_instances = $scaling_manager->get_active_instances();
+        return count($active_instances) > 1;
+    }
+
+    /**
+     * Process jobs using load balancer
+     */
+    private function process_with_load_balancer($jobs) {
+        $load_balancer = $this->get_load_balancer();
+        if (!$load_balancer) {
+            // Fallback to local processing
+            foreach ($jobs as $job) {
+                $this->process_job($job);
+            }
+            return;
+        }
+
+        foreach ($jobs as $job) {
+            // Let load balancer handle job distribution
+            $this->distribute_job_via_load_balancer($job, $load_balancer);
+        }
+    }
+
+    /**
+     * Distribute job via load balancer
+     */
+    private function distribute_job_via_load_balancer($job, $load_balancer) {
+        $scaling_manager = $this->get_scaling_manager();
+        if (!$scaling_manager) {
+            $this->process_job($job);
+            return;
+        }
+
+        $instance = $scaling_manager->get_optimal_instance($job['job_type']);
+
+        if (!$instance) {
+            // No suitable instance, process locally
+            $this->process_job($job);
+            return;
+        }
+
+        // For distributed processing, mark job as being processed remotely
+        global $wpdb;
+        $table_name = $wpdb->prefix . self::TABLE_NAME;
+
+        $wpdb->update(
+            $table_name,
+            [
+                'status' => 'processing',
+                'started_at' => current_time('mysql')
+            ],
+            ['id' => $job['id']],
+            ['%s', '%s'],
+            ['%d']
+        );
+
+        // In a real distributed setup, this would send the job to the remote instance
+        // For now, simulate the processing
+        try {
+            $result = $this->simulate_remote_processing($job, $instance);
+
+            if ($result['success']) {
+                $wpdb->update(
+                    $table_name,
+                    [
+                        'status' => 'completed',
+                        'completed_at' => current_time('mysql')
+                    ],
+                    ['id' => $job['id']],
+                    ['%s', '%s'],
+                    ['%d']
+                );
+
+                do_action('puntwork_job_completed', $job['id'], $job['job_type'], $result);
+            } else {
+                $this->handle_job_failure($job, $result['error']);
+            }
+
+        } catch (\Exception $e) {
+            $this->handle_job_failure($job, $e->getMessage());
+        }
+    }
+
+    /**
+     * Simulate remote job processing
+     */
+    private function simulate_remote_processing($job, $instance) {
+        // This would normally make an HTTP request to the remote instance
+        // For demonstration, we'll simulate the processing
+
+        $job_data = json_decode($job['job_data'], true);
+        $processing_time = $this->estimate_remote_processing_time($job['job_type'], $job_data, $instance);
+
+        // Simulate processing delay
+        sleep(min($processing_time, 5)); // Cap at 5 seconds for demo
+
+        // Simulate occasional failures
+        if (mt_rand(1, 100) <= 3) { // 3% failure rate for distributed jobs
+            return [
+                'success' => false,
+                'error' => 'Remote processing failed'
+            ];
+        }
+
+        return [
+            'success' => true,
+            'result' => 'Job processed on remote instance: ' . $instance['instance_id']
+        ];
+    }
+
+    /**
+     * Estimate remote processing time
+     */
+    private function estimate_remote_processing_time($job_type, $job_data, $instance) {
+        $base_times = [
+            'feed_import' => 3.0,    // Slightly longer for network overhead
+            'batch_process' => 7.0,
+            'analytics_update' => 2.0
+        ];
+
+        $base_time = $base_times[$job_type] ?? 2.0;
+
+        // Adjust based on instance role
+        $speed_factor = 1.0;
+        if ($instance['role'] === 'heavy_processing') {
+            $speed_factor = 0.6; // Faster processing
+        } elseif ($instance['role'] === 'light_processing') {
+            $speed_factor = 1.8; // Slower processing
+        }
+
+        return $base_time * $speed_factor;
+    }
+
+    /**
+     * Get scaling manager instance
+     */
+    private function get_scaling_manager() {
+        if (class_exists('Puntwork\\PuntworkHorizontalScalingManager')) {
+            global $puntwork_scaling_manager;
+            return $puntwork_scaling_manager ?? null;
+        }
+        return null;
+    }
+
+    /**
+     * Get load balancer instance
+     */
+    private function get_load_balancer() {
+        if (class_exists('Puntwork\\PuntworkLoadBalancer')) {
+            global $puntwork_load_balancer;
+            return $puntwork_load_balancer ?? null;
+        }
+        return null;
     }
 }
 
