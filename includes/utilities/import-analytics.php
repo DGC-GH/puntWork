@@ -29,15 +29,15 @@ class ImportAnalytics
      */
     public static function init()
     {
-        self::create_analytics_table();
-        add_action('puntwork_import_completed', [__CLASS__, 'record_import_metrics'], 10, 1);
-        add_action('admin_init', [__CLASS__, 'schedule_analytics_cleanup']);
+        self::createAnalyticsTable();
+        add_action('puntwork_import_completed', [__CLASS__, 'recordImportMetrics'], 10, 1);
+        add_action('admin_init', [__CLASS__, 'scheduleAnalyticsCleanup']);
     }
 
     /**
      * Create the analytics database table
      */
-    private static function create_analytics_table()
+    private static function createAnalyticsTable()
     {
         global $wpdb;
 
@@ -80,7 +80,7 @@ class ImportAnalytics
     /**
      * Schedule cleanup of old analytics data
      */
-    public static function schedule_analytics_cleanup()
+    public static function scheduleAnalyticsCleanup()
     {
         if (!wp_next_scheduled('puntwork_analytics_cleanup')) {
             // Run cleanup weekly
@@ -91,7 +91,7 @@ class ImportAnalytics
     /**
      * Record import metrics when an import completes
      */
-    public static function record_import_metrics($import_data)
+    public static function recordImportMetrics($import_data)
     {
         global $wpdb;
 
@@ -125,7 +125,7 @@ class ImportAnalytics
         $memory_peak = memory_get_peak_usage(true);
 
         // Get feed processing stats
-        $feed_stats = self::get_feed_processing_stats();
+        $feed_stats = self::getFeedProcessingStats();
 
         $wpdb->insert(
             $table_name,
@@ -167,7 +167,7 @@ class ImportAnalytics
     /**
      * Get feed processing statistics for the current import
      */
-    private static function get_feed_processing_stats()
+    private static function getFeedProcessingStats()
     {
         $feeds = get_feeds();
         $processed = count($feeds);
@@ -212,7 +212,7 @@ class ImportAnalytics
     /**
      * Get comprehensive analytics data
      */
-    public static function get_analytics_data($period = '30days')
+    public static function getAnalyticsData($period = '30days')
     {
         $cache_key = 'analytics_data_' . $period;
         $cached_data = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
@@ -222,12 +222,12 @@ class ImportAnalytics
         }
 
         $data = [
-            'overview' => self::get_overview_metrics($period),
-            'performance' => self::get_performance_metrics($period),
-            'trends' => self::get_trends_data($period),
-            'feed_stats' => self::get_feed_statistics($period),
-            'errors' => self::get_error_summary($period),
-            'predictions' => self::get_predictive_analytics($period)
+            'overview' => self::getOverviewMetrics($period),
+            'performance' => self::getPerformanceMetrics($period),
+            'trends' => self::getTrendsData($period),
+            'feed_stats' => self::getFeedStatistics($period),
+            'errors' => self::getErrorSummary($period),
+            'predictions' => self::getPredictiveAnalytics($period)
         ];
 
         // Cache for 1 hour
@@ -239,12 +239,12 @@ class ImportAnalytics
     /**
      * Get overview metrics
      */
-    private static function get_overview_metrics($period)
+    private static function getOverviewMetrics($period)
     {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
-        $date_filter = self::get_date_filter($period);
+        $date_filter = self::getDateFilter($period);
 
         $sql = $wpdb->prepare("
             SELECT
@@ -277,12 +277,12 @@ class ImportAnalytics
     /**
      * Get performance metrics
      */
-    private static function get_performance_metrics($period)
+    private static function getPerformanceMetrics($period)
     {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
-        $date_filter = self::get_date_filter($period);
+        $date_filter = self::getDateFilter($period);
 
         $sql = $wpdb->prepare("
             SELECT
@@ -315,12 +315,12 @@ class ImportAnalytics
     /**
      * Get trends data for charts
      */
-    private static function get_trends_data($period)
+    private static function getTrendsData($period)
     {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
-        $date_filter = self::get_date_filter($period);
+        $date_filter = self::getDateFilter($period);
 
         // Daily trends
         $sql = $wpdb->prepare("
@@ -361,12 +361,12 @@ class ImportAnalytics
     /**
      * Get feed statistics
      */
-    private static function get_feed_statistics($period)
+    private static function getFeedStatistics($period)
     {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
-        $date_filter = self::get_date_filter($period);
+        $date_filter = self::getDateFilter($period);
 
         $sql = $wpdb->prepare("
             SELECT
@@ -391,12 +391,12 @@ class ImportAnalytics
     /**
      * Get error summary
      */
-    private static function get_error_summary($period)
+    private static function getErrorSummary($period)
     {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
-        $date_filter = self::get_date_filter($period);
+        $date_filter = self::getDateFilter($period);
 
         $sql = $wpdb->prepare("
             SELECT
@@ -417,7 +417,7 @@ class ImportAnalytics
     /**
      * Get predictive analytics data
      */
-    private static function get_predictive_analytics($period)
+    private static function getPredictiveAnalytics($period)
     {
         // Import the PredictiveAnalytics class
         if (!class_exists('\Puntwork\AI\PredictiveAnalytics')) {
@@ -434,16 +434,16 @@ class ImportAnalytics
 
             // Get content quality predictions
             $predictions['content_quality'] = \Puntwork\AI\PredictiveAnalytics::predictContentQualityTrends(
-                self::get_period_days($period)
+                self::getPeriodDays($period)
             );
 
             // Get duplicate pattern predictions
             $predictions['duplicate_patterns'] = \Puntwork\AI\PredictiveAnalytics::predictDuplicatePatterns(
-                self::get_period_days($period)
+                self::getPeriodDays($period)
             );
 
             // Get feed reliability predictions for top feeds
-            $predictions['feed_reliability'] = self::get_feed_reliability_predictions();
+            $predictions['feed_reliability'] = self::getFeedReliabilityPredictions();
         } catch (\Exception $e) {
             PuntWorkLogger::error('Error generating predictive analytics', PuntWorkLogger::CONTEXT_ANALYTICS, [
                 'error' => $e->getMessage()
@@ -460,7 +460,7 @@ class ImportAnalytics
     /**
      * Get feed reliability predictions for active feeds
      */
-    private static function get_feed_reliability_predictions()
+    private static function getFeedReliabilityPredictions()
     {
         $feeds = get_feeds();
         $predictions = [];
@@ -484,7 +484,7 @@ class ImportAnalytics
     /**
      * Convert period string to days for predictive analytics
      */
-    private static function get_period_days($period)
+    private static function getPeriodDays($period)
     {
         switch ($period) {
             case '7days':
@@ -501,7 +501,7 @@ class ImportAnalytics
     /**
      * Get date filter for SQL queries
      */
-    private static function get_date_filter($period)
+    private static function getDateFilter($period)
     {
         $now = current_time('timestamp');
 
@@ -520,7 +520,7 @@ class ImportAnalytics
     /**
      * Clean up old analytics data (keep last 90 days)
      */
-    public static function cleanup_old_data()
+    public static function cleanupOldData()
     {
         global $wpdb;
 
@@ -544,12 +544,12 @@ class ImportAnalytics
     /**
      * Export analytics data as CSV
      */
-    public static function export_analytics_csv($period = '30days')
+    public static function exportAnalyticsCsv($period = '30days')
     {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
-        $date_filter = self::get_date_filter($period);
+        $date_filter = self::getDateFilter($period);
 
         $sql = $wpdb->prepare("
             SELECT * FROM $table_name
@@ -599,7 +599,7 @@ class ImportAnalytics
      *
      * @param array $batch_data Batch processing data
      */
-    public static function record_batch_metrics(array $batch_data): void
+    public static function recordBatchMetrics(array $batch_data): void
     {
         global $wpdb;
 

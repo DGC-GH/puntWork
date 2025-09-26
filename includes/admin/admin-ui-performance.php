@@ -324,9 +324,9 @@ function performance_metrics_page()
                                     <br><small><em><?php echo esc_html($rec['suggested_action']); ?></em></small>
                                 <?php endif; ?>
                                     </div>
-                                <?php endforeach; ?>
+                        <?php endforeach; ?>
                             </div>
-                        <?php endif; ?>
+                <?php endif; ?>
                     </div>
                 </div>
             </div>

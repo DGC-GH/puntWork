@@ -42,15 +42,15 @@ class FeedHealthMonitor
      */
     public static function init()
     {
-        self::create_health_table();
-        add_action('puntwork_feed_health_check', [__CLASS__, 'perform_health_check']);
-        add_action('admin_init', [__CLASS__, 'schedule_health_checks']);
+        self::createHealthTable();
+        add_action('puntwork_feed_health_check', [__CLASS__, 'performHealthCheck']);
+        add_action('admin_init', [__CLASS__, 'scheduleHealthChecks']);
     }
 
     /**
      * Create the feed health monitoring database table
      */
-    private static function create_health_table()
+    private static function createHealthTable()
     {
         global $wpdb;
 
@@ -82,7 +82,7 @@ class FeedHealthMonitor
     /**
      * Schedule regular health checks
      */
-    public static function schedule_health_checks()
+    public static function scheduleHealthChecks()
     {
         if (!wp_next_scheduled('puntwork_feed_health_check')) {
             // Run health checks every 15 minutes
@@ -93,7 +93,7 @@ class FeedHealthMonitor
     /**
      * Perform health check on all feeds
      */
-    public static function perform_health_check()
+    public static function performHealthCheck()
     {
         $feeds = get_feeds();
 
@@ -103,17 +103,17 @@ class FeedHealthMonitor
         }
 
         foreach ($feeds as $feed_key => $feed_url) {
-            self::check_feed_health($feed_key, $feed_url);
+            self::checkFeedHealth($feed_key, $feed_url);
         }
 
         // Clean up old health records (keep last 30 days)
-        self::cleanup_old_records();
+        self::cleanupOldRecords();
     }
 
     /**
      * Check health of a specific feed
      */
-    public static function check_feed_health($feed_key, $feed_url)
+    public static function checkFeedHealth($feed_key, $feed_url)
     {
         $start_time = microtime(true);
 
@@ -132,15 +132,15 @@ class FeedHealthMonitor
             $http_code = wp_remote_retrieve_response_code($response);
 
             if (is_wp_error($response)) {
-                self::record_health_check($feed_key, $feed_url, self::STATUS_DOWN, $response_time, null, null, null, $response->get_error_message());
-                self::send_alert($feed_key, $feed_url, self::ALERT_FEED_DOWN, ['error' => $response->get_error_message()]);
+                self::recordHealthCheck($feed_key, $feed_url, self::STATUS_DOWN, $response_time, null, null, null, $response->get_error_message());
+                self::sendAlert($feed_key, $feed_url, self::ALERT_FEED_DOWN, ['error' => $response->get_error_message()]);
                 return;
             }
 
             // Check if response is successful
             if ($http_code < 200 || $http_code >= 300) {
-                self::record_health_check($feed_key, $feed_url, self::STATUS_DOWN, $response_time, $http_code, null, null, "HTTP $http_code");
-                self::send_alert($feed_key, $feed_url, self::ALERT_FEED_DOWN, ['http_code' => $http_code]);
+                self::recordHealthCheck($feed_key, $feed_url, self::STATUS_DOWN, $response_time, $http_code, null, null, "HTTP $http_code");
+                self::sendAlert($feed_key, $feed_url, self::ALERT_FEED_DOWN, ['http_code' => $http_code]);
                 return;
             }
 
@@ -152,7 +152,7 @@ class FeedHealthMonitor
             ]);
 
             if (is_wp_error($content_response)) {
-                self::record_health_check($feed_key, $feed_url, self::STATUS_WARNING, $response_time, $http_code, null, null, 'Content fetch failed: ' . $content_response->get_error_message());
+                self::recordHealthCheck($feed_key, $feed_url, self::STATUS_WARNING, $response_time, $http_code, null, null, 'Content fetch failed: ' . $content_response->get_error_message());
                 return;
             }
 
@@ -161,8 +161,8 @@ class FeedHealthMonitor
 
             // Check for empty or very small content
             if ($content_length < 1000) {
-                self::record_health_check($feed_key, $feed_url, self::STATUS_CRITICAL, $response_time, $http_code, 0, null, 'Feed content too small');
-                self::send_alert($feed_key, $feed_url, self::ALERT_FEED_EMPTY, ['content_length' => $content_length]);
+                self::recordHealthCheck($feed_key, $feed_url, self::STATUS_CRITICAL, $response_time, $http_code, 0, null, 'Feed content too small');
+                self::sendAlert($feed_key, $feed_url, self::ALERT_FEED_EMPTY, ['content_length' => $content_length]);
                 return;
             }
 
@@ -171,8 +171,8 @@ class FeedHealthMonitor
             $xml = simplexml_load_string($body);
 
             if (!$xml) {
-                self::record_health_check($feed_key, $feed_url, self::STATUS_CRITICAL, $response_time, $http_code, null, null, 'Invalid XML format');
-                self::send_alert($feed_key, $feed_url, self::ALERT_FEED_CHANGED, ['error' => 'Invalid XML format']);
+                self::recordHealthCheck($feed_key, $feed_url, self::STATUS_CRITICAL, $response_time, $http_code, null, null, 'Invalid XML format');
+                self::sendAlert($feed_key, $feed_url, self::ALERT_FEED_CHANGED, ['error' => 'Invalid XML format']);
                 return;
             }
 
@@ -197,7 +197,7 @@ class FeedHealthMonitor
 
             if ($response_time > 10) { // Slow response
                 $status = self::STATUS_WARNING;
-                self::send_alert($feed_key, $feed_url, self::ALERT_FEED_SLOW, [
+                self::sendAlert($feed_key, $feed_url, self::ALERT_FEED_SLOW, [
                     'response_time' => round($response_time, 2),
                     'threshold' => 10
                 ]);
@@ -205,31 +205,31 @@ class FeedHealthMonitor
 
             if ($item_count === 0) {
                 $status = self::STATUS_CRITICAL;
-                self::send_alert($feed_key, $feed_url, self::ALERT_FEED_EMPTY, ['item_count' => $item_count]);
+                self::sendAlert($feed_key, $feed_url, self::ALERT_FEED_EMPTY, ['item_count' => $item_count]);
             }
 
             // Check for significant content changes
-            $previous_hash = self::get_previous_content_hash($feed_key);
+            $previous_hash = self::getPreviousContentHash($feed_key);
             if ($previous_hash && $previous_hash !== $content_hash) {
-                self::send_alert($feed_key, $feed_url, self::ALERT_FEED_CHANGED, [
+                self::sendAlert($feed_key, $feed_url, self::ALERT_FEED_CHANGED, [
                     'old_hash' => substr($previous_hash, 0, 8),
                     'new_hash' => substr($content_hash, 0, 8),
                     'item_count' => $item_count
                 ]);
             }
 
-            self::record_health_check($feed_key, $feed_url, $status, $response_time, $http_code, $item_count, $last_modified, null, $content_hash);
+            self::recordHealthCheck($feed_key, $feed_url, $status, $response_time, $http_code, $item_count, $last_modified, null, $content_hash);
         } catch (\Exception $e) {
             $response_time = microtime(true) - $start_time;
-            self::record_health_check($feed_key, $feed_url, self::STATUS_DOWN, $response_time, null, null, null, $e->getMessage());
-            self::send_alert($feed_key, $feed_url, self::ALERT_FEED_DOWN, ['error' => $e->getMessage()]);
+            self::recordHealthCheck($feed_key, $feed_url, self::STATUS_DOWN, $response_time, null, null, null, $e->getMessage());
+            self::sendAlert($feed_key, $feed_url, self::ALERT_FEED_DOWN, ['error' => $e->getMessage()]);
         }
     }
 
     /**
      * Record a health check result in the database
      */
-    private static function record_health_check($feed_key, $feed_url, $status, $response_time, $http_code, $item_count, $last_modified, $error_message = null, $content_hash = null)
+    private static function recordHealthCheck($feed_key, $feed_url, $status, $response_time, $http_code, $item_count, $last_modified, $error_message = null, $content_hash = null)
     {
         global $wpdb;
 
@@ -264,7 +264,7 @@ class FeedHealthMonitor
     /**
      * Send an alert for a feed issue
      */
-    private static function send_alert($feed_key, $feed_url, $alert_type, $data = [])
+    private static function sendAlert($feed_key, $feed_url, $alert_type, $data = [])
     {
         $alert_key = $alert_type . '_' . $feed_key;
         $transient_key = self::ALERT_TRANSIENT_PREFIX . $alert_key;
@@ -293,8 +293,8 @@ class FeedHealthMonitor
             return;
         }
 
-        $subject = self::get_alert_subject($alert_type, $feed_key);
-        $message = self::get_alert_message($alert_type, $feed_key, $feed_url, $data);
+        $subject = self::getAlertSubject($alert_type, $feed_key);
+        $message = self::getAlertMessage($alert_type, $feed_key, $feed_url, $data);
 
         // Send email alert
         if (!empty($alert_settings['email_enabled']) && !empty($alert_settings['email_recipients'])) {
@@ -321,7 +321,7 @@ class FeedHealthMonitor
     /**
      * Get alert subject line
      */
-    private static function get_alert_subject($alert_type, $feed_key)
+    private static function getAlertSubject($alert_type, $feed_key)
     {
         $subjects = [
             self::ALERT_FEED_DOWN => "🚨 Feed Down Alert: $feed_key",
@@ -336,7 +336,7 @@ class FeedHealthMonitor
     /**
      * Get alert message content
      */
-    private static function get_alert_message($alert_type, $feed_key, $feed_url, $data)
+    private static function getAlertMessage($alert_type, $feed_key, $feed_url, $data)
     {
         $site_name = get_bloginfo('name');
         $site_url = get_site_url();
@@ -406,7 +406,7 @@ class FeedHealthMonitor
     /**
      * Get the previous content hash for a feed
      */
-    private static function get_previous_content_hash($feed_key)
+    private static function getPreviousContentHash($feed_key)
     {
         global $wpdb;
 
@@ -423,7 +423,7 @@ class FeedHealthMonitor
     /**
      * Clean up old health records (keep last 30 days)
      */
-    private static function cleanup_old_records()
+    private static function cleanupOldRecords()
     {
         global $wpdb;
 
@@ -439,7 +439,7 @@ class FeedHealthMonitor
     /**
      * Get current health status for all feeds with caching
      */
-    public static function get_feed_health_status()
+    public static function getFeedHealthStatus()
     {
         $cache_key = 'feed_health_status_all';
         $cached_result = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
@@ -476,7 +476,7 @@ class FeedHealthMonitor
     /**
      * Get health history for a specific feed with caching
      */
-    public static function get_feed_health_history($feed_key, $days = 7)
+    public static function getFeedHealthHistory($feed_key, $days = 7)
     {
         $cache_key = 'feed_health_history_' . $feed_key . '_' . $days;
         $cached_result = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
@@ -506,8 +506,8 @@ class FeedHealthMonitor
     /**
      * Manually trigger a health check for all feeds
      */
-    public static function trigger_manual_check()
+    public static function triggerManualCheck()
     {
-        self::perform_health_check();
+        self::performHealthCheck();
     }
 }

@@ -579,8 +579,10 @@ class MachineLearningEngine
         foreach ($targets as $target) {
             $modelKey = $feedKey . '_' . $target;
 
-            if (isset($existingModels[$modelKey]) &&
-                (current_time('timestamp') - $existingModels[$modelKey]['trained_at']) < 7 * DAY_IN_SECONDS) {
+            if (
+                isset($existingModels[$modelKey]) &&
+                (current_time('timestamp') - $existingModels[$modelKey]['trained_at']) < 7 * DAY_IN_SECONDS
+            ) {
                 // Use existing model if less than 7 days old
                 $models[$target] = $existingModels[$modelKey]['model_id'];
             } else {
@@ -745,7 +747,9 @@ class MachineLearningEngine
     {
         // Simplified moving average calculation
         $index = array_search($currentRecord, $data);
-        if ($index === false) return 0;
+        if ($index === false) {
+            return 0;
+        }
 
         $start = max(0, $index - $window + 1);
         $values = array_slice($data, $start, $window);
@@ -756,7 +760,9 @@ class MachineLearningEngine
     private static function calculateVolatility(array $data, array $currentRecord, int $window): float
     {
         $index = array_search($currentRecord, $data);
-        if ($index === false) return 0;
+        if ($index === false) {
+            return 0;
+        }
 
         $start = max(0, $index - $window + 1);
         $values = array_column(array_slice($data, $start, $window), 'success_rate');
@@ -914,10 +920,14 @@ class MachineLearningEngine
 
         foreach ($feeds as $feed) {
             $feedKey = get_post_meta($feed->ID, 'feed_url', true);
-            if (!$feedKey) continue;
+            if (!$feedKey) {
+                continue;
+            }
 
             $historicalData = self::getFeedHistoricalData($feedKey, 90);
-            if (empty($historicalData)) continue;
+            if (empty($historicalData)) {
+                continue;
+            }
 
             $targets = ['success_rate', 'response_time', 'error_rate', 'volume'];
 
@@ -990,7 +1000,7 @@ class MachineLearningEngine
         }
 
         // Sort by importance
-        usort($importance, function($a, $b) {
+        usort($importance, function ($a, $b) {
             return $b['importance'] <=> $a['importance'];
         });
 

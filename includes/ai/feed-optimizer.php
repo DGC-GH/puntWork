@@ -77,7 +77,6 @@ class FeedOptimizer
                 'timestamp' => current_time('timestamp'),
                 'results' => $results
             ]);
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('Scheduled feed optimization failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AI);
         }
@@ -112,7 +111,6 @@ class FeedOptimizer
                 'message' => 'Feed optimization completed successfully',
                 'results' => $results
             ]);
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('Manual feed optimization failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AI);
             wp_send_json_error(['message' => 'Optimization failed: ' . $e->getMessage()]);
@@ -182,7 +180,6 @@ class FeedOptimizer
                     'recommendations' => $globalOptimizations
                 ];
             }
-
         } catch (\Exception $e) {
             $results['errors'][] = 'Optimization failed: ' . $e->getMessage();
             PuntWorkLogger::error('Feed optimization error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AI);
@@ -570,7 +567,6 @@ class FeedOptimizer
 
             $globalRecs = self::getGlobalRecommendations();
             $recommendations['global_optimizations'] = $globalRecs;
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('Error getting optimization recommendations: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AI);
         }

@@ -10,6 +10,8 @@
  * @since      2.3.0
  */
 
+namespace Puntwork;
+
 // Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
@@ -29,15 +31,15 @@ class MultiSiteAdminUI
             return;
         }
 
-        add_action('admin_menu', [self::class, 'add_admin_menu']);
-        add_action('admin_enqueue_scripts', [self::class, 'enqueue_scripts']);
-        add_action('wp_ajax_puntwork_network_test_connection', [self::class, 'ajax_test_connection']);
+        add_action('admin_menu', [self::class, 'addAdminMenu']);
+        add_action('admin_enqueueScripts', [self::class, 'enqueueScripts']);
+        add_action('wp_ajax_puntwork_network_test_connection', [self::class, 'ajaxTestConnection']);
     }
 
     /**
      * Add admin menu
      */
-    public static function add_admin_menu(): void
+    public static function addAdminMenu(): void
     {
         add_submenu_page(
             'puntwork-admin',
@@ -45,14 +47,14 @@ class MultiSiteAdminUI
             __('Network', 'puntwork'),
             'manage_options',
             'puntwork-network',
-            [self::class, 'render_admin_page']
+            [self::class, 'renderAdminPage']
         );
     }
 
     /**
      * Enqueue admin scripts and styles
      */
-    public static function enqueue_scripts(string $hook): void
+    public static function enqueueScripts(string $hook): void
     {
         if ($hook !== 'puntwork_page_puntwork-network') {
             return;
@@ -84,7 +86,7 @@ class MultiSiteAdminUI
     /**
      * Render admin page
      */
-    public static function render_admin_page(): void
+    public static function renderAdminPage(): void
     {
         if (!current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.'));
@@ -687,7 +689,7 @@ class MultiSiteAdminUI
     /**
      * AJAX handler for testing site connections
      */
-    public static function ajax_test_connection(): void
+    public static function ajaxTestConnection(): void
     {
         try {
             $site_id = intval($_POST['site_id'] ?? 0);
@@ -711,7 +713,6 @@ class MultiSiteAdminUI
             } else {
                 wp_send_json_error('Connection failed');
             }
-
         } catch (\Exception $e) {
             wp_send_json_error('Connection test failed: ' . $e->getMessage());
         }

@@ -25,16 +25,16 @@ class JobBoardAdmin
      */
     public static function init(): void
     {
-        add_action('admin_menu', [self::class, 'add_admin_menu']);
-        add_action('admin_enqueue_scripts', [self::class, 'enqueue_scripts']);
-        add_action('wp_ajax_puntwork_test_job_board', [self::class, 'ajax_test_job_board']);
-        add_action('wp_ajax_puntwork_save_job_board', [self::class, 'ajax_save_job_board']);
+        add_action('admin_menu', [self::class, 'addAdminMenu']);
+        add_action('admin_enqueueScripts', [self::class, 'enqueueScripts']);
+        add_action('wp_ajax_puntwork_test_job_board', [self::class, 'ajaxTestJobBoard']);
+        add_action('wp_ajax_puntwork_save_job_board', [self::class, 'ajaxSaveJobBoard']);
     }
 
     /**
      * Add admin menu
      */
-    public static function add_admin_menu(): void
+    public static function addAdminMenu(): void
     {
         add_submenu_page(
             'puntwork-admin',
@@ -42,14 +42,14 @@ class JobBoardAdmin
             __('Job Boards', 'puntwork'),
             'manage_options',
             'puntwork-job-boards',
-            [self::class, 'render_admin_page']
+            [self::class, 'renderAdminPage']
         );
     }
 
     /**
      * Enqueue admin scripts and styles
      */
-    public static function enqueue_scripts($hook): void
+    public static function enqueueScripts($hook): void
     {
         if ($hook !== 'puntwork_page_puntwork-job-boards') {
             return;
@@ -75,7 +75,7 @@ class JobBoardAdmin
     /**
      * Render the admin page
      */
-    public static function render_admin_page(): void
+    public static function renderAdminPage(): void
     {
         if (!current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.'));
@@ -113,7 +113,7 @@ class JobBoardAdmin
 
                             <div class="puntwork-job-board-content">
                                 <form class="puntwork-board-config-form" style="<?php echo $is_enabled ? '' : 'display: none;'; ?>">
-                                    <?php self::render_board_config_fields($board_id, $config); ?>
+                                    <?php self::renderBoardConfigFields($board_id, $config); ?>
                                     <div class="puntwork-form-actions">
                                         <button type="button" class="button puntwork-test-connection">
                                             <?php _e('Test Connection', 'puntwork'); ?>
@@ -144,7 +144,7 @@ class JobBoardAdmin
     /**
      * Render configuration fields for a specific job board
      */
-    private static function render_board_config_fields(string $board_id, array $config): void
+    private static function renderBoardConfigFields(string $board_id, array $config): void
     {
         switch ($board_id) {
             case 'indeed':
@@ -186,7 +186,7 @@ class JobBoardAdmin
     /**
      * AJAX handler for testing job board connections
      */
-    public static function ajax_test_job_board(): void
+    public static function ajaxTestJobBoard(): void
     {
         check_ajax_referer('puntwork_job_boards', 'nonce');
 
@@ -202,7 +202,7 @@ class JobBoardAdmin
         }
 
         // Sanitize config
-        $config = self::sanitize_board_config($board_id, $config);
+        $config = self::sanitizeBoardConfig($board_id, $config);
 
         try {
             require_once plugin_dir_path(dirname(__FILE__, 2)) . 'jobboards/jobboard-manager.php';
@@ -245,7 +245,7 @@ class JobBoardAdmin
     /**
      * AJAX handler for saving job board configurations
      */
-    public static function ajax_save_job_board(): void
+    public static function ajaxSaveJobBoard(): void
     {
         check_ajax_referer('puntwork_job_boards', 'nonce');
 
@@ -262,7 +262,7 @@ class JobBoardAdmin
         }
 
         // Sanitize config
-        $config = self::sanitize_board_config($board_id, $config);
+        $config = self::sanitizeBoardConfig($board_id, $config);
         $config['enabled'] = $enabled;
 
         try {
@@ -289,7 +289,7 @@ class JobBoardAdmin
     /**
      * Sanitize board configuration data
      */
-    private static function sanitize_board_config(string $board_id, array $config): array
+    private static function sanitizeBoardConfig(string $board_id, array $config): array
     {
         $sanitized = [];
 

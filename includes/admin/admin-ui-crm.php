@@ -30,11 +30,11 @@ class CRMAdmin
      */
     public function __construct()
     {
-        add_action('admin_menu', [$this, 'add_admin_menu']);
-        add_action('admin_enqueue_scripts', [$this, 'enqueue_scripts']);
-        add_action('wp_ajax_puntwork_crm_test_connection', [$this, 'ajax_test_connection']);
-        add_action('wp_ajax_puntwork_crm_save_config', [$this, 'ajax_save_config']);
-        add_action('wp_ajax_puntwork_crm_sync_test', [$this, 'ajax_sync_test']);
+        add_action('admin_menu', [$this, 'addAdminMenu']);
+        add_action('admin_enqueueScripts', [$this, 'enqueueScripts']);
+        add_action('wp_ajax_puntwork_crm_test_connection', [$this, 'ajaxTestConnection']);
+        add_action('wp_ajax_puntwork_crm_save_config', [$this, 'ajaxSaveConfig']);
+        add_action('wp_ajax_puntwork_crm_sync_test', [$this, 'ajaxSyncTest']);
 
         // Initialize CRM manager
         $this->crm_manager = new \Puntwork\CRM\CRMManager();
@@ -43,7 +43,7 @@ class CRMAdmin
     /**
      * Add CRM admin menu
      */
-    public function add_admin_menu(): void
+    public function addAdminMenu(): void
     {
         add_submenu_page(
             'puntwork-admin',
@@ -51,14 +51,14 @@ class CRMAdmin
             __('CRM Integration', 'puntwork'),
             'manage_options',
             'puntwork-crm',
-            [$this, 'render_admin_page']
+            [$this, 'renderAdminPage']
         );
     }
 
     /**
      * Enqueue admin scripts and styles
      */
-    public function enqueue_scripts(string $hook): void
+    public function enqueueScripts(string $hook): void
     {
         if ($hook !== 'puntwork_page_puntwork-crm') {
             return;
@@ -87,7 +87,7 @@ class CRMAdmin
     /**
      * Render admin page
      */
-    public function render_admin_page(): void
+    public function renderAdminPage(): void
     {
         if (!current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.'));
@@ -129,14 +129,14 @@ class CRMAdmin
                 <div class="crm-platforms-section">
                     <h2><?php _e('CRM Platform Configuration', 'puntwork'); ?></h2>
 
-                    <?php foreach ($available_platforms as $platform_id => $platform_info): ?>
+                    <?php foreach ($available_platforms as $platform_id => $platform_info) : ?>
                         <div class="crm-platform-card" data-platform="<?php echo esc_attr($platform_id); ?>">
                             <div class="platform-header">
                                 <h3><?php echo esc_html($platform_info['name']); ?></h3>
                                 <div class="platform-status">
-                                    <?php if (in_array($platform_id, $configured_platforms)): ?>
+                                    <?php if (in_array($platform_id, $configured_platforms)) : ?>
                                         <span class="status-badge status-active"><?php _e('Active', 'puntwork'); ?></span>
-                                    <?php else: ?>
+                                    <?php else : ?>
                                         <span class="status-badge status-inactive"><?php _e('Not Configured', 'puntwork'); ?></span>
                                     <?php endif; ?>
                                 </div>
@@ -146,7 +146,7 @@ class CRMAdmin
                                 <form class="crm-config-form" data-platform="<?php echo esc_attr($platform_id); ?>">
                                     <?php
                                     $current_config = \Puntwork\CRM\CRMManager::getPlatformConfig($platform_id) ?: [];
-                                    $this->render_platform_config_form($platform_id, $platform_info['required_config'], $current_config);
+                                    $this->renderPlatformConfigForm($platform_id, $platform_info['required_config'], $current_config);
                                     ?>
                                 </form>
 
@@ -157,7 +157,7 @@ class CRMAdmin
                                     <button type="button" class="button button-primary save-config" data-platform="<?php echo esc_attr($platform_id); ?>">
                                         <?php _e('Save Configuration', 'puntwork'); ?>
                                     </button>
-                                    <?php if (in_array($platform_id, $configured_platforms)): ?>
+                                    <?php if (in_array($platform_id, $configured_platforms)) : ?>
                                         <button type="button" class="button button-secondary sync-test" data-platform="<?php echo esc_attr($platform_id); ?>">
                                             <?php _e('Test Sync', 'puntwork'); ?>
                                         </button>
@@ -193,8 +193,8 @@ class CRMAdmin
                                 <td>
                                     <?php
                                     $sync_platforms = get_option('puntwork_crm_sync_platforms', []);
-                                    foreach ($available_platforms as $platform_id => $platform_info):
-                                    ?>
+                                    foreach ($available_platforms as $platform_id => $platform_info) :
+                                        ?>
                                         <label style="display: block; margin-bottom: 5px;">
                                             <input type="checkbox" name="puntwork_crm_sync_platforms[]" value="<?php echo esc_attr($platform_id); ?>" <?php checked(in_array($platform_id, $sync_platforms)); ?> />
                                             <?php echo esc_html($platform_info['name']); ?>
@@ -227,33 +227,33 @@ class CRMAdmin
     /**
      * Render platform configuration form
      */
-    private function render_platform_config_form(string $platform_id, array $required_config, array $current_config): void
+    private function renderPlatformConfigForm(string $platform_id, array $required_config, array $current_config): void
     {
         ?>
         <div class="config-fields">
-            <?php foreach ($required_config as $field => $field_config): ?>
+            <?php foreach ($required_config as $field => $field_config) : ?>
                 <div class="config-field">
                     <label for="<?php echo esc_attr("{$platform_id}_{$field}"); ?>">
                         <?php echo esc_html($field_config['label']); ?>
-                        <?php if (!empty($field_config['required'])): ?>
+                        <?php if (!empty($field_config['required'])) : ?>
                             <span class="required">*</span>
                         <?php endif; ?>
                     </label>
 
-                    <?php if ($field_config['type'] === 'password'): ?>
+                    <?php if ($field_config['type'] === 'password') : ?>
                         <input type="password"
                                id="<?php echo esc_attr("{$platform_id}_{$field}"); ?>"
                                name="<?php echo esc_attr($field); ?>"
                                value="<?php echo esc_attr($current_config[$field] ?? ''); ?>"
                                class="regular-text"
                                <?php echo !empty($field_config['required']) ? 'required' : ''; ?> />
-                    <?php elseif ($field_config['type'] === 'textarea'): ?>
+                    <?php elseif ($field_config['type'] === 'textarea') : ?>
                         <textarea id="<?php echo esc_attr("{$platform_id}_{$field}"); ?>"
                                   name="<?php echo esc_attr($field); ?>"
                                   class="large-text"
                                   rows="3"
                                   <?php echo !empty($field_config['required']) ? 'required' : ''; ?>><?php echo esc_textarea($current_config[$field] ?? ''); ?></textarea>
-                    <?php else: ?>
+                    <?php else : ?>
                         <input type="text"
                                id="<?php echo esc_attr("{$platform_id}_{$field}"); ?>"
                                name="<?php echo esc_attr($field); ?>"
@@ -262,7 +262,7 @@ class CRMAdmin
                                <?php echo !empty($field_config['required']) ? 'required' : ''; ?> />
                     <?php endif; ?>
 
-                    <?php if (!empty($field_config['description'])): ?>
+                    <?php if (!empty($field_config['description'])) : ?>
                         <p class="description"><?php echo esc_html($field_config['description']); ?></p>
                     <?php endif; ?>
                 </div>
@@ -281,7 +281,7 @@ class CRMAdmin
     /**
      * AJAX handler for testing connection
      */
-    public function ajax_test_connection(): void
+    public function ajaxTestConnection(): void
     {
         check_ajax_referer('puntwork_crm_admin', 'nonce');
 
@@ -314,7 +314,7 @@ class CRMAdmin
     /**
      * AJAX handler for saving configuration
      */
-    public function ajax_save_config(): void
+    public function ajaxSaveConfig(): void
     {
         check_ajax_referer('puntwork_crm_admin', 'nonce');
 
@@ -347,7 +347,7 @@ class CRMAdmin
     /**
      * AJAX handler for sync test
      */
-    public function ajax_sync_test(): void
+    public function ajaxSyncTest(): void
     {
         check_ajax_referer('puntwork_crm_admin', 'nonce');
 
