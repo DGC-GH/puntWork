@@ -211,6 +211,57 @@ function add_custom_favicon() {
     echo '<link rel="icon" type="image/svg+xml" href="' . esc_url( $favicon_url ) . '">' . "\n";
 }
 
+// Add security headers
+add_action( 'wp_head', __NAMESPACE__ . '\\add_security_headers' );
+function add_security_headers() {
+    if (is_admin()) {
+        // Content Security Policy for admin pages
+        $csp = "default-src 'self'; ";
+        $csp .= "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; ";
+        $csp .= "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; ";
+        $csp .= "font-src 'self' https://fonts.gstatic.com; ";
+        $csp .= "img-src 'self' data: https:; ";
+        $csp .= "connect-src 'self'; ";
+        $csp .= "frame-ancestors 'none';";
+        
+        header("Content-Security-Policy: " . $csp);
+        
+        // Other security headers
+        header("X-Content-Type-Options: nosniff");
+        header("X-Frame-Options: DENY");
+        header("X-XSS-Protection: 1; mode=block");
+        header("Referrer-Policy: strict-origin-when-cross-origin");
+        
+        // HSTS for HTTPS sites
+        if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+            header("Strict-Transport-Security: max-age=31536000; includeSubDomains");
+        }
+    }
+}
+
+// Add REST API security headers
+add_action( 'rest_api_init', __NAMESPACE__ . '\\add_rest_api_security_headers' );
+function add_rest_api_security_headers() {
+    header("X-Content-Type-Options: nosniff");
+    header("X-Frame-Options: DENY");
+    header("X-XSS-Protection: 1; mode=block");
+    header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-API-Key");
+    header("Access-Control-Max-Age: 86400");
+}
+
+// Handle preflight OPTIONS requests for CORS
+add_action( 'init', __NAMESPACE__ . '\\handle_cors_preflight' );
+function handle_cors_preflight() {
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        header("Access-Control-Allow-Origin: " . get_site_url());
+        header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+        header("Access-Control-Allow-Headers: Content-Type, Authorization, X-API-Key");
+        header("Access-Control-Max-Age: 86400");
+        exit(0);
+    }
+}
+
 // Uninstall hook (cleanup)
 register_uninstall_hook( __FILE__, __NAMESPACE__ . '\\job_import_uninstall' );
 function job_import_uninstall() {
