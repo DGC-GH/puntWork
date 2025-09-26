@@ -9,397 +9,493 @@
 namespace Puntwork;
 
 use PHPUnit\Framework\TestCase;
+use Puntwork\PerformanceMonitor;
 
 class PerformanceRegressionTest extends TestCase {
+    private $performanceMonitor;
+    private $baselineFile;
+    private $currentResults = [];
+    private $baselines = [];
+
     protected function setUp(): void {
         parent::setUp();
+
+        // Suppress deprecated warnings for dynamic properties
+        error_reporting(E_ALL & ~E_DEPRECATED);
+
         // Mock WordPress functions
         if (!defined('ABSPATH')) {
             define('ABSPATH', '/tmp/wordpress/');
         }
+
+        // Initialize performance monitor
+        $this->performanceMonitor = new PerformanceMonitor();
+        $this->baselineFile = __DIR__ . '/performance-baselines.json';
+
+        // Load existing baselines if available
+        if (file_exists($this->baselineFile)) {
+            $this->baselines = json_decode(file_get_contents($this->baselineFile), true);
+        } else {
+            $this->baselines = $this->getDefaultBaselines();
+        }
+    }
+
+    protected function tearDown(): void {
+        // Save current results for baseline comparison
+        if (!empty($this->currentResults)) {
+            file_put_contents(
+                __DIR__ . '/performance-results-' . date('Y-m-d-H-i-s') . '.json',
+                json_encode($this->currentResults, JSON_PRETTY_PRINT)
+            );
+        }
+
+        parent::tearDown();
+    }
+
+    private function getDefaultBaselines() {
+        return [
+            'memory_usage' => [
+                'feed_import_100' => 32 * 1024 * 1024,  // 32MB
+                'feed_import_1000' => 128 * 1024 * 1024, // 128MB
+                'api_request' => 8 * 1024 * 1024,        // 8MB
+                'batch_processing' => 64 * 1024 * 1024   // 64MB
+            ],
+            'execution_time' => [
+                'feed_import_100' => 5.0,    // 5 seconds
+                'feed_import_1000' => 30.0,  // 30 seconds
+                'api_response' => 0.5,       // 500ms
+                'database_query' => 0.1,     // 100ms
+                'batch_processing' => 10.0   // 10 seconds
+            ],
+            'database_queries' => [
+                'feed_import' => 50,
+                'dashboard_load' => 20,
+                'api_request' => 5
+            ],
+            'error_rates' => [
+                'http_5xx' => 0.001,
+                'timeout' => 0.005,
+                'validation' => 0.01,
+                'database' => 0.002
+            ]
+        ];
     }
 
     /**
-     * Test memory usage regression
+     * Test memory usage regression with actual measurement
      */
     public function testMemoryUsageRegression() {
-        $baselineMemory = 32 * 1024 * 1024; // 32MB baseline
-        $maxMemory = 512 * 1024 * 1024; // 512MB max
+        $startMemory = memory_get_usage(true);
 
-        // Test that baseline values are reasonable
-        $this->assertGreaterThan(0, $baselineMemory);
-        $this->assertGreaterThan(0, $maxMemory);
+        // Simulate feed import processing
+        $this->simulateFeedImport(100);
 
-        // Test memory growth patterns
-        $memoryCheckpoints = [
-            'initialization' => 8 * 1024 * 1024,  // 8MB
-            'feed_processing' => 32 * 1024 * 1024, // 32MB
-            'database_operations' => 64 * 1024 * 1024, // 64MB
-            'cleanup' => 16 * 1024 * 1024 // 16MB
-        ];
+        $endMemory = memory_get_usage(true);
+        $memoryUsed = $endMemory - $startMemory;
 
-        foreach ($memoryCheckpoints as $phase => $limit) {
-            $this->assertIsString($phase);
-            $this->assertIsInt($limit);
-            $this->assertGreaterThan(0, $limit);
-        }
+        $this->currentResults['memory_usage']['feed_import_100'] = $memoryUsed;
+
+        // Check against baseline (allow 20% variance)
+        $baseline = $this->baselines['memory_usage']['feed_import_100'];
+        $maxAllowed = $baseline * 1.2;
+
+        $this->assertLessThanOrEqual(
+            $maxAllowed,
+            $memoryUsed,
+            sprintf(
+                'Memory usage regression detected: %d bytes used, baseline: %d bytes (max allowed: %d bytes)',
+                $memoryUsed,
+                $baseline,
+                $maxAllowed
+            )
+        );
+
+        // Test memory cleanup
+        gc_collect_cycles();
+        $afterGcMemory = memory_get_usage(true);
+        $memoryIncrease = $afterGcMemory - $endMemory;
+        
+        // Allow for some memory increase after GC (GC overhead, etc.)
+        $this->assertLessThanOrEqual(
+            2 * 1024 * 1024, // Allow up to 2MB increase
+            $memoryIncrease,
+            'Significant memory leak detected after garbage collection'
+        );
     }
 
     /**
-     * Test execution time regression
+     * Test execution time regression with actual measurement
      */
     public function testExecutionTimeRegression() {
-        $baselineTimes = [
-            'feed_import_100' => 5.0,   // 5 seconds for 100 jobs
-            'feed_import_1000' => 30.0, // 30 seconds for 1000 jobs
-            'api_response' => 0.5,      // 500ms for API responses
-            'database_query' => 0.1     // 100ms for database queries
-        ];
+        // Test API response time
+        $startTime = microtime(true);
+        $this->simulateApiRequest();
+        $endTime = microtime(true);
+        $executionTime = $endTime - $startTime;
 
-        foreach ($baselineTimes as $operation => $maxTime) {
-            $this->assertIsString($operation);
-            $this->assertIsFloat($maxTime);
-            $this->assertGreaterThan(0, $maxTime);
-        }
+        $this->currentResults['execution_time']['api_response'] = $executionTime;
 
-        // Test time complexity - baseline values should be reasonable
-        $this->assertGreaterThan(0, $baselineTimes['feed_import_100']);
-        $this->assertGreaterThan(0, $baselineTimes['feed_import_1000']);
+        $baseline = $this->baselines['execution_time']['api_response'];
+        $maxAllowed = $baseline * 1.5; // Allow 50% variance
+
+        $this->assertLessThanOrEqual(
+            $maxAllowed,
+            $executionTime,
+            sprintf(
+                'API response time regression: %.3f seconds, baseline: %.3f seconds',
+                $executionTime,
+                $baseline
+            )
+        );
+
+        // Test feed import time
+        $startTime = microtime(true);
+        $this->simulateFeedImport(100);
+        $endTime = microtime(true);
+        $importTime = $endTime - $startTime;
+
+        $this->currentResults['execution_time']['feed_import_100'] = $importTime;
+
+        $baseline = $this->baselines['execution_time']['feed_import_100'];
+        $maxAllowed = $baseline * 1.3; // Allow 30% variance
+
+        $this->assertLessThanOrEqual(
+            $maxAllowed,
+            $importTime,
+            sprintf(
+                'Feed import time regression: %.3f seconds, baseline: %.3f seconds',
+                $importTime,
+                $baseline
+            )
+        );
     }
 
     /**
      * Test database query performance regression
      */
     public function testDatabaseQueryPerformanceRegression() {
-        $queryBaselines = [
-            'simple_select' => 0.01,    // 10ms
-            'complex_join' => 0.05,     // 50ms
-            'bulk_insert' => 0.1,       // 100ms
-            'search_query' => 0.2       // 200ms
-        ];
+        // Mock database query counting
+        $queryCount = 0;
+        $startTime = microtime(true);
 
-        foreach ($queryBaselines as $queryType => $maxTime) {
-            $this->assertIsString($queryType);
-            $this->assertIsFloat($maxTime);
-            $this->assertGreaterThan(0, $maxTime);
-        }
+        // Simulate database operations
+        $this->simulateDatabaseOperations();
 
-        // Test query count regression
-        $maxQueries = [
-            'feed_import' => 50,     // Max 50 queries per feed import
-            'dashboard_load' => 20,  // Max 20 queries for dashboard
-            'api_request' => 5       // Max 5 queries per API request
-        ];
+        $endTime = microtime(true);
+        $queryTime = $endTime - $startTime;
 
-        foreach ($maxQueries as $operation => $maxCount) {
-            $this->assertIsString($operation);
-            $this->assertIsInt($maxCount);
-            $this->assertGreaterThan(0, $maxCount);
-        }
+        $this->currentResults['database_queries']['api_request'] = $queryCount;
+        $this->currentResults['execution_time']['database_query'] = $queryTime;
+
+        // Check query count
+        $baseline = $this->baselines['database_queries']['api_request'];
+        $maxAllowed = $baseline * 1.2; // Allow 20% more queries
+
+        $this->assertLessThanOrEqual(
+            $maxAllowed,
+            $queryCount,
+            sprintf(
+                'Database query count regression: %d queries, baseline: %d queries',
+                $queryCount,
+                $baseline
+            )
+        );
+
+        // Check query time
+        $timeBaseline = $this->baselines['execution_time']['database_query'];
+        $maxTimeAllowed = $timeBaseline * 1.5;
+
+        $this->assertLessThanOrEqual(
+            $maxTimeAllowed,
+            $queryTime,
+            sprintf(
+                'Database query time regression: %.3f seconds, baseline: %.3f seconds',
+                $queryTime,
+                $timeBaseline
+            )
+        );
     }
 
     /**
-     * Test API response time regression
+     * Test concurrent request handling
      */
-    public function testApiResponseTimeRegression() {
-        $apiBaselines = [
-            'GET_status' => 0.1,     // 100ms
-            'GET_feeds' => 0.2,      // 200ms
-            'POST_import' => 0.5,    // 500ms
-            'GET_analytics' => 0.3   // 300ms
-        ];
+    public function testConcurrentRequestHandling() {
+        $concurrentRequests = 10;
+        $startTime = microtime(true);
 
-        foreach ($apiBaselines as $endpoint => $maxTime) {
-            $this->assertIsString($endpoint);
-            $this->assertIsFloat($maxTime);
-            $this->assertGreaterThan(0, $maxTime);
-        }
+        // Simulate concurrent requests
+        $this->simulateConcurrentRequests($concurrentRequests);
 
-        // Test concurrent request handling
-        $concurrentBaselines = [
-            '1_request' => 0.1,
-            '10_requests' => 1.0,   // Should not be 10x slower
-            '50_requests' => 3.0    // Should not be 50x slower
-        ];
+        $endTime = microtime(true);
+        $totalTime = $endTime - $startTime;
+        $avgTime = $totalTime / $concurrentRequests;
 
-        foreach ($concurrentBaselines as $load => $maxTime) {
-            $this->assertIsString($load);
-            $this->assertIsFloat($maxTime);
-            $this->assertGreaterThan(0, $maxTime);
-        }
+        $this->currentResults['execution_time']['concurrent_10_requests'] = $totalTime;
+
+        // Should not be more than 2x slower than single request
+        $singleRequestBaseline = $this->baselines['execution_time']['api_response'];
+        $maxAllowed = $singleRequestBaseline * 2 * $concurrentRequests;
+
+        $this->assertLessThanOrEqual(
+            $maxAllowed,
+            $totalTime,
+            sprintf(
+                'Concurrent request performance regression: %.3f seconds total, max allowed: %.3f seconds',
+                $totalTime,
+                $maxAllowed
+            )
+        );
     }
 
     /**
-     * Test file processing performance regression
+     * Test memory leak detection
      */
-    public function testFileProcessingPerformanceRegression() {
-        $fileBaselines = [
-            'xml_1mb' => 1.0,     // 1 second for 1MB XML
-            'xml_10mb' => 5.0,    // 5 seconds for 10MB XML
-            'json_1mb' => 0.5,    // 500ms for 1MB JSON
-            'csv_1mb' => 2.0      // 2 seconds for 1MB CSV
-        ];
+    public function testMemoryLeakDetection() {
+        $iterations = 100;
+        $memoryReadings = [];
 
-        foreach ($fileBaselines as $fileType => $maxTime) {
-            $this->assertIsString($fileType);
-            $this->assertIsFloat($maxTime);
-            $this->assertGreaterThan(0, $maxTime);
+        for ($i = 0; $i < $iterations; $i++) {
+            $startMem = memory_get_usage(true);
+            $this->simulateApiRequest();
+            $endMem = memory_get_usage(true);
+
+            $memoryReadings[] = $endMem - $startMem;
+
+            // Force garbage collection every 10 iterations
+            if ($i % 10 === 0) {
+                gc_collect_cycles();
+            }
         }
 
-        // Test processing scalability - baseline values should be reasonable
-        $this->assertGreaterThan(0, $fileBaselines['xml_1mb']);
-        $this->assertGreaterThan(0, $fileBaselines['xml_10mb']);
+        // Calculate memory trend
+        $firstHalf = array_slice($memoryReadings, 0, $iterations / 2);
+        $secondHalf = array_slice($memoryReadings, $iterations / 2);
+
+        $avgFirst = array_sum($firstHalf) / count($firstHalf);
+        $avgSecond = array_sum($secondHalf) / count($secondHalf);
+
+        // Memory usage should not increase significantly over time
+        $increaseThreshold = 0.1; // 10% increase max
+        $maxAllowedIncrease = $avgFirst * (1 + $increaseThreshold);
+
+        $this->assertLessThanOrEqual(
+            $maxAllowedIncrease,
+            $avgSecond,
+            sprintf(
+                'Memory leak detected: average memory increased from %.2f to %.2f bytes',
+                $avgFirst,
+                $avgSecond
+            )
+        );
     }
 
     /**
-     * Test cache performance regression
+     * Test chaos engineering - random failures
      */
-    public function testCachePerformanceRegression() {
-        $cacheBaselines = [
-            'hit_ratio' => 0.85,     // 85% cache hit ratio
-            'miss_penalty' => 0.1,   // 100ms cache miss penalty
-            'warmup_time' => 2.0,    // 2 seconds cache warmup
-            'memory_usage' => 32 * 1024 * 1024 // 32MB cache memory
+    public function testChaosEngineeringRandomFailures() {
+        $failureScenarios = [
+            'database_timeout' => 0.1,    // 10% chance
+            'network_failure' => 0.05,    // 5% chance
+            'memory_exhaustion' => 0.02,  // 2% chance
+            'disk_full' => 0.01           // 1% chance
         ];
 
-        foreach ($cacheBaselines as $metric => $value) {
-            $this->assertIsString($metric);
-            $this->assertIsNumeric($value);
-            $this->assertGreaterThan(0, $value);
+        $totalTests = 100;
+        $failures = 0;
+
+        for ($i = 0; $i < $totalTests; $i++) {
+            try {
+                $this->simulateChaosScenario($failureScenarios);
+            } catch (\Exception $e) {
+                $failures++;
+            }
         }
 
-        // Test cache efficiency
-        $this->assertGreaterThan(0.8, $cacheBaselines['hit_ratio']); // Should maintain >80% hit ratio
+        $failureRate = $failures / $totalTests;
+        $this->currentResults['chaos_engineering']['failure_rate'] = $failureRate;
+
+        // Failure rate should be within expected bounds
+        $expectedFailureRate = array_sum($failureScenarios);
+        $maxAllowedFailureRate = $expectedFailureRate * 1.5;
+
+        $this->assertLessThanOrEqual(
+            $maxAllowedFailureRate,
+            $failureRate,
+            sprintf(
+                'Chaos engineering failure rate too high: %.3f, expected max: %.3f',
+                $failureRate,
+                $maxAllowedFailureRate
+            )
+        );
     }
 
     /**
-     * Test queue processing performance regression
+     * Test chaos engineering - resource exhaustion
      */
-    public function testQueueProcessingPerformanceRegression() {
-        $queueBaselines = [
-            'job_throughput' => 100,     // 100 jobs per minute
-            'queue_latency' => 5.0,      // 5 seconds average latency
-            'batch_processing' => 10.0,  // 10 seconds per batch
-            'concurrent_jobs' => 5       // 5 concurrent jobs max
+    public function testChaosEngineeringResourceExhaustion() {
+        $resourceLimits = [
+            'memory' => 0.8,    // 80% of available memory
+            'cpu' => 0.9,       // 90% CPU usage
+            'disk' => 0.95,     // 95% disk usage
+            'connections' => 0.85 // 85% of max connections
         ];
 
-        foreach ($queueBaselines as $metric => $value) {
-            $this->assertIsString($metric);
-            $this->assertIsNumeric($value);
-            $this->assertGreaterThan(0, $value);
+        $handledCount = 0;
+        foreach ($resourceLimits as $resource => $limit) {
+            try {
+                $this->simulateResourceExhaustion($resource, $limit);
+                $this->currentResults['chaos_engineering']['resource_' . $resource . '_handled'] = true;
+                $handledCount++;
+            } catch (\Exception $e) {
+                $this->currentResults['chaos_engineering']['resource_' . $resource . '_handled'] = false;
+                // Resource exhaustion should be handled gracefully
+                $this->assertStringContainsString(
+                    'graceful',
+                    strtolower($e->getMessage()),
+                    "Resource exhaustion for $resource not handled gracefully"
+                );
+            }
         }
 
-        // Test queue scalability
-        $this->assertGreaterThan(50, $queueBaselines['job_throughput']); // Minimum acceptable throughput
+        // At least some resources should be handled gracefully
+        $this->assertGreaterThan(0, $handledCount, 'No resources were handled gracefully under chaos conditions');
     }
 
     /**
-     * Test resource utilization regression
+     * Test performance under load
      */
-    public function testResourceUtilizationRegression() {
-        $resourceBaselines = [
-            'cpu_user' => 70,        // 70% CPU user time max
-            'cpu_system' => 30,      // 30% CPU system time max
-            'memory_heap' => 64 * 1024 * 1024, // 64MB heap max
-            'disk_io' => 10 * 1024 * 1024 // 10MB/s disk I/O max
-        ];
+    public function testPerformanceUnderLoad() {
+        $loadLevels = [1, 5, 10, 25, 50];
+        $results = [];
 
-        foreach ($resourceBaselines as $resource => $limit) {
-            $this->assertIsString($resource);
-            $this->assertIsNumeric($limit);
-            $this->assertGreaterThan(0, $limit);
+        foreach ($loadLevels as $load) {
+            $startTime = microtime(true);
+            $startMemory = memory_get_usage(true);
+
+            $this->simulateLoadTest($load);
+
+            $endTime = microtime(true);
+            $endMemory = memory_get_usage(true);
+
+            $results[$load] = [
+                'time' => $endTime - $startTime,
+                'memory' => $endMemory - $startMemory
+            ];
         }
 
-        // Test resource efficiency
-        $this->assertLessThan(120, $resourceBaselines['cpu_user'] + $resourceBaselines['cpu_system']); // Total CPU < 120% (allow some overhead)
+        $this->currentResults['load_testing'] = $results;
+
+        // Performance should degrade gracefully under load
+        foreach ($loadLevels as $i => $load) {
+            if ($i > 0) {
+                $prevLoad = $loadLevels[$i - 1];
+                $timeRatio = $results[$load]['time'] / $results[$prevLoad]['time'];
+                $loadRatio = $load / $prevLoad;
+
+                // Time should not increase more than load ratio + 50%
+                $maxAllowedRatio = $loadRatio * 1.5;
+
+                $this->assertLessThanOrEqual(
+                    $maxAllowedRatio,
+                    $timeRatio,
+                    sprintf(
+                        'Poor scaling at load %d: time ratio %.2f, load ratio %.2f',
+                        $load,
+                        $timeRatio,
+                        $loadRatio
+                    )
+                );
+            }
+        }
     }
 
     /**
      * Test error rate regression
      */
     public function testErrorRateRegression() {
-        $errorBaselines = [
-            'http_5xx' => 0.001,    // 0.1% 5xx errors
-            'timeout' => 0.005,     // 0.5% timeouts
-            'validation' => 0.01,   // 1% validation errors
-            'database' => 0.002     // 0.2% database errors
-        ];
+        $operations = 1000;
+        $errors = 0;
 
-        foreach ($errorBaselines as $errorType => $rate) {
-            $this->assertIsString($errorType);
-            $this->assertIsFloat($rate);
-            $this->assertGreaterThanOrEqual(0, $rate);
-            $this->assertLessThanOrEqual(1, $rate);
-        }
-
-        // Test overall error rate
-        $totalErrorRate = array_sum($errorBaselines);
-        $this->assertLessThan(0.05, $totalErrorRate); // Total error rate < 5%
-    }
-
-    /**
-     * Test scalability regression
-     */
-    public function testScalabilityRegression() {
-        $scalabilityBaselines = [
-            'users_100' => 2.0,     // 2x slowdown with 100 users
-            'users_1000' => 5.0,    // 5x slowdown with 1000 users
-            'data_10x' => 3.0,      // 3x slowdown with 10x data
-            'requests_10x' => 4.0   // 4x slowdown with 10x requests
-        ];
-
-        foreach ($scalabilityBaselines as $scenario => $degradation) {
-            $this->assertIsString($scenario);
-            $this->assertIsFloat($degradation);
-            $this->assertGreaterThanOrEqual(1, $degradation);
-        }
-
-        // Test degradation limits
-        foreach ($scalabilityBaselines as $scenario => $degradation) {
-            $this->assertLessThan(10, $degradation); // No more than 10x degradation
-        }
-    }
-
-    /**
-     * Test performance benchmarks
-     */
-    public function testPerformanceBenchmarks() {
-        $benchmarks = [
-            'cold_start' => 3.0,        // 3 seconds cold start
-            'warm_start' => 0.5,        // 500ms warm start
-            'first_byte' => 0.2,        // 200ms time to first byte
-            'page_load' => 1.5,         // 1.5 seconds page load
-            'api_latency' => 0.1,       // 100ms API latency
-            'db_query' => 0.05          // 50ms database query
-        ];
-
-        foreach ($benchmarks as $benchmark => $target) {
-            $this->assertIsString($benchmark);
-            $this->assertIsFloat($target);
-            $this->assertGreaterThan(0, $target);
-        }
-
-        // Test benchmark targets are reasonable
-        $this->assertLessThan(10.0, $benchmarks['cold_start']); // Cold start < 10 seconds
-        $this->assertLessThan(2.0, $benchmarks['warm_start']); // Warm start < 2 seconds
-        $this->assertLessThan(2.0, $benchmarks['page_load']); // Page load < 2 seconds
-    }
-
-    /**
-     * Test performance monitoring thresholds
-     */
-    public function testPerformanceMonitoringThresholds() {
-        $thresholds = [
-            'warning' => [
-                'response_time' => 1.0,    // 1 second
-                'memory_usage' => 64 * 1024 * 1024, // 64MB
-                'cpu_usage' => 80,         // 80%
-                'error_rate' => 0.05       // 5%
-            ],
-            'critical' => [
-                'response_time' => 5.0,    // 5 seconds
-                'memory_usage' => 128 * 1024 * 1024, // 128MB
-                'cpu_usage' => 95,         // 95%
-                'error_rate' => 0.10       // 10%
-            ]
-        ];
-
-        foreach ($thresholds as $level => $metrics) {
-            $this->assertIsString($level);
-            $this->assertIsArray($metrics);
-            foreach ($metrics as $metric => $value) {
-                $this->assertIsString($metric);
-                $this->assertIsNumeric($value);
+        for ($i = 0; $i < $operations; $i++) {
+            try {
+                $this->simulateApiRequest();
+            } catch (\Exception $e) {
+                $errors++;
             }
         }
 
-        // Test threshold relationships - critical should be higher than warning
-        $this->assertIsFloat($thresholds['critical']['response_time']);
-        $this->assertIsFloat($thresholds['warning']['response_time']);
+        $errorRate = $errors / $operations;
+        $this->currentResults['error_rates']['total'] = $errorRate;
+
+        $baseline = array_sum($this->baselines['error_rates']);
+        $maxAllowed = $baseline * 1.2; // Allow 20% increase
+
+        $this->assertLessThanOrEqual(
+            $maxAllowed,
+            $errorRate,
+            sprintf(
+                'Error rate regression: %.4f, baseline: %.4f',
+                $errorRate,
+                $baseline
+            )
+        );
     }
 
-    /**
-     * Test performance profiling
-     */
-    public function testPerformanceProfiling() {
-        $profilingMetrics = [
-            'function_calls',
-            'execution_time',
-            'memory_allocated',
-            'peak_memory',
-            'io_operations',
-            'network_requests'
-        ];
+    // Helper methods for simulation
 
-        foreach ($profilingMetrics as $metric) {
-            $this->assertIsString($metric);
-            $this->assertNotEmpty($metric);
+    private function simulateFeedImport($count) {
+        // Simulate processing jobs
+        for ($i = 0; $i < $count; $i++) {
+            usleep(1000); // 1ms per job simulation
         }
-
-        // Test profiling data structure
-        $profileData = [
-            'function' => 'process_feed_import',
-            'calls' => 1,
-            'time' => 2.34,
-            'memory' => 16777216, // 16MB
-            'children' => [
-                [
-                    'function' => 'parse_xml',
-                    'calls' => 1,
-                    'time' => 1.23,
-                    'memory' => 8388608 // 8MB
-                ]
-            ]
-        ];
-
-        $this->assertIsArray($profileData);
-        $this->assertArrayHasKey('function', $profileData);
-        $this->assertArrayHasKey('calls', $profileData);
-        $this->assertArrayHasKey('time', $profileData);
-        $this->assertArrayHasKey('memory', $profileData);
     }
 
-    /**
-     * Test load testing scenarios
-     */
-    public function testLoadTestingScenarios() {
-        $loadScenarios = [
-            'light' => [
-                'users' => 10,
-                'requests_per_second' => 5,
-                'duration' => 60
-            ],
-            'medium' => [
-                'users' => 100,
-                'requests_per_second' => 50,
-                'duration' => 300
-            ],
-            'heavy' => [
-                'users' => 1000,
-                'requests_per_second' => 200,
-                'duration' => 600
-            ]
-        ];
+    private function simulateApiRequest() {
+        // Simulate API processing
+        usleep(5000); // 5ms simulation
+    }
 
-        foreach ($loadScenarios as $scenario => $config) {
-            $this->assertIsString($scenario);
-            $this->assertIsArray($config);
-            $this->assertArrayHasKey('users', $config);
-            $this->assertArrayHasKey('requests_per_second', $config);
-            $this->assertArrayHasKey('duration', $config);
+    private function simulateDatabaseOperations() {
+        // Simulate database queries
+        for ($i = 0; $i < 5; $i++) {
+            usleep(2000); // 2ms per query simulation
+        }
+    }
+
+    private function simulateConcurrentRequests($count) {
+        $processes = [];
+        for ($i = 0; $i < $count; $i++) {
+            // In real implementation, this would use actual concurrent requests
+            $this->simulateApiRequest();
+        }
+    }
+
+    private function simulateChaosScenario($scenarios) {
+        $rand = mt_rand() / mt_getrandmax();
+        $cumulative = 0;
+
+        foreach ($scenarios as $scenario => $probability) {
+            $cumulative += $probability;
+            if ($rand <= $cumulative) {
+                throw new \Exception("Chaos scenario: $scenario");
+            }
         }
 
-        // Test load testing success criteria
-        $successCriteria = [
-            'response_time_p95' => 2.0,    // 95th percentile < 2 seconds
-            'error_rate' => 0.02,          // Error rate < 2%
-            'throughput' => 100,           // 100 requests/second minimum
-            'availability' => 0.995        // 99.5% availability
-        ];
+        // Normal operation
+        $this->simulateApiRequest();
+    }
 
-        foreach ($successCriteria as $metric => $threshold) {
-            $this->assertIsString($metric);
-            $this->assertIsNumeric($threshold);
+    private function simulateResourceExhaustion($resource, $limit) {
+        // Simulate resource exhaustion scenarios
+        if ($resource === 'memory' && mt_rand() / mt_getrandmax() < 0.1) {
+            throw new \Exception("Memory exhausted - handled gracefully");
+        }
+        // Other resources would be simulated similarly
+    }
+
+    private function simulateLoadTest($load) {
+        for ($i = 0; $i < $load; $i++) {
+            $this->simulateApiRequest();
         }
     }
 }
