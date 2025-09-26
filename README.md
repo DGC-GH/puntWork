@@ -182,6 +182,12 @@ puntwork/
 # Run specific tests
 ./vendor/bin/phpunit tests/ImportTest.php
 
+# Run performance benchmarks
+./vendor/bin/phpunit tests/PerformanceBenchmarkTest.php
+
+# Run security tests
+./vendor/bin/phpunit tests/SecurityTest.php
+
 # Generate coverage report
 ./vendor/bin/phpunit --coverage-html coverage
 ```
