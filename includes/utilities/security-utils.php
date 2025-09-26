@@ -34,7 +34,7 @@ class SecurityUtils
      * @param array $validation_rules Validation rules for fields
      * @return array|WP_Error Validation result or error
      */
-    public static function validate_ajax_request(
+    public static function validateAjaxRequest(
         string $action,
         string $nonce_action = 'puntwork_admin_nonce',
         array $required_fields = [],
@@ -42,7 +42,7 @@ class SecurityUtils
     ) {
         try {
             // Check rate limiting first
-            $rate_limit_check = self::check_rate_limit($action);
+            $rate_limit_check = self::checkRateLimit($action);
             if (is_wp_error($rate_limit_check)) {
                 PuntWorkLogger::warning("Rate limit exceeded for action: {$action}", PuntWorkLogger::CONTEXT_SECURITY);
                 return $rate_limit_check;
@@ -71,7 +71,7 @@ class SecurityUtils
             // Apply validation rules
             foreach ($validation_rules as $field => $rules) {
                 if (isset($_POST[$field])) {
-                    $validation_result = self::validate_field($_POST[$field], $rules, $field);
+                    $validation_result = self::validateField($_POST[$field], $rules, $field);
                     if (is_wp_error($validation_result)) {
                         PuntWorkLogger::error("Field validation failed for {$field}: " . $validation_result->get_error_message(), PuntWorkLogger::CONTEXT_SECURITY);
                         return $validation_result;
@@ -97,7 +97,7 @@ class SecurityUtils
      * @param int $time_window Time window in seconds
      * @return bool|WP_Error True if allowed, WP_Error if rate limited
      */
-    public static function check_rate_limit(string $action, int $max_requests = 10, int $time_window = 60)
+    public static function checkRateLimit(string $action, int $max_requests = 10, int $time_window = 60)
     {
         $user_id = get_current_user_id();
         $key = "rate_limit_{$action}_{$user_id}";
@@ -136,7 +136,7 @@ class SecurityUtils
      * @param string $field_name Field name for error messages
      * @return mixed|WP_Error Sanitized value or error
      */
-    public static function validate_field($value, array $rules, string $field_name)
+    public static function validateField($value, array $rules, string $field_name)
     {
         // Type validation
         if (isset($rules['type'])) {
@@ -277,13 +277,13 @@ class SecurityUtils
      * @param array $rules Validation rules
      * @return array|WP_Error Sanitized data or error
      */
-    public static function sanitize_data_array(array $data, array $rules)
+    public static function sanitizeDataArray(array $data, array $rules)
     {
         $sanitized = [];
 
         foreach ($rules as $field => $field_rules) {
             if (isset($data[$field])) {
-                $result = self::validate_field($data[$field], $field_rules, $field);
+                $result = self::validateField($data[$field], $field_rules, $field);
                 if (is_wp_error($result)) {
                     return $result;
                 }
@@ -302,7 +302,7 @@ class SecurityUtils
      * @param string $method Request method ('GET', 'POST', etc.)
      * @return array Sanitized input data
      */
-    public static function sanitize_request_input(string $method = 'POST'): array
+    public static function sanitizeRequestInput(string $method = 'POST'): array
     {
         $input = [];
 
@@ -322,7 +322,7 @@ class SecurityUtils
 
         $sanitized = [];
         foreach ($input as $key => $value) {
-            $sanitized[$key] = self::sanitize_deep($value);
+            $sanitized[$key] = self::sanitizeDeep($value);
         }
 
         return $sanitized;
@@ -334,18 +334,18 @@ class SecurityUtils
      * @param mixed $data Data to sanitize
      * @return mixed Sanitized data
      */
-    public static function sanitize_deep($data)
+    public static function sanitizeDeep($data)
     {
         if (is_array($data)) {
             $sanitized = [];
             foreach ($data as $key => $value) {
-                $sanitized[sanitize_key($key)] = self::sanitize_deep($value);
+                $sanitized[sanitize_key($key)] = self::sanitizeDeep($value);
             }
             return $sanitized;
         } elseif (is_object($data)) {
             $sanitized = new \stdClass();
             foreach ($data as $key => $value) {
-                $sanitized->{sanitize_key($key)} = self::sanitize_deep($value);
+                $sanitized->{sanitize_key($key)} = self::sanitizeDeep($value);
             }
             return $sanitized;
         } elseif (is_string($data)) {
@@ -363,7 +363,7 @@ class SecurityUtils
      * @param int $max_size Maximum file size in bytes
      * @return bool|WP_Error True if valid, WP_Error if invalid
      */
-    public static function validate_file_upload(array $file, array $allowed_types = [], int $max_size = 0)
+    public static function validateFileUpload(array $file, array $allowed_types = [], int $max_size = 0)
     {
         // Check if file was uploaded
         if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
@@ -396,7 +396,7 @@ class SecurityUtils
      * @param int $length Length of the string
      * @return string Random string
      */
-    public static function generate_secure_token(int $length = 32): string
+    public static function generateSecureToken(int $length = 32): string
     {
         return bin2hex(random_bytes($length / 2));
     }
@@ -407,11 +407,11 @@ class SecurityUtils
      * @param string $event Event type
      * @param array $data Additional data
      */
-    public static function log_security_event(string $event, array $data = [])
+    public static function logSecurityEvent(string $event, array $data = [])
     {
         $log_data = array_merge($data, [
             'user_id' => get_current_user_id(),
-            'user_ip' => self::get_client_ip(),
+            'user_ip' => self::getClientIp(),
             'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
             'timestamp' => current_time('mysql')
         ]);
@@ -424,7 +424,7 @@ class SecurityUtils
      *
      * @return string Client IP
      */
-    public static function get_client_ip(): string
+    public static function getClientIp(): string
     {
         $headers = [
             'HTTP_CF_CONNECTING_IP',
@@ -454,7 +454,7 @@ class SecurityUtils
      *
      * @return bool True if trusted
      */
-    public static function is_trusted_request(): bool
+    public static function isTrustedRequest(): bool
     {
         // Check if request is from same domain
         $referer = wp_get_referer();
@@ -478,7 +478,7 @@ class AjaxErrorHandler
      * @param string|WP_Error $error Error message or WP_Error object
      * @param array $additional_data Additional data to include
      */
-    public static function send_error($error, array $additional_data = [])
+    public static function sendError($error, array $additional_data = [])
     {
         $error_data = [
             'success' => false,
@@ -519,7 +519,7 @@ class AjaxErrorHandler
      * @param mixed $data Response data
      * @param array $additional_data Additional data to include
      */
-    public static function send_success($data = null, array $additional_data = [])
+    public static function sendSuccess($data = null, array $additional_data = [])
     {
         $response_data = [
             'success' => true,

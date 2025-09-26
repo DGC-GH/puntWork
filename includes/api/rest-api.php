@@ -253,22 +253,22 @@ function verify_api_key($request)
     $api_key = $request->get_param('api_key');
 
     if (empty($api_key)) {
-        SecurityUtils::log_security_event('api_key_missing', [
+        SecurityUtils::logSecurityEvent('api_key_missing', [
             'endpoint' => $request->get_route(),
             'method' => $request->get_method(),
-            'ip' => SecurityUtils::get_client_ip()
+            'ip' => SecurityUtils::getClientIp()
         ]);
         return new \WP_Error('missing_api_key', 'API key is required', ['status' => 401]);
     }
 
     // Rate limiting for API key attempts
-    $rate_limit_key = 'api_key_attempts_' . SecurityUtils::get_client_ip();
+    $rate_limit_key = 'api_key_attempts_' . SecurityUtils::getClientIp();
     $attempts = get_transient($rate_limit_key) ?: 0;
 
     if ($attempts >= 6) {
-        SecurityUtils::log_security_event('api_rate_limit_exceeded', [
+        SecurityUtils::logSecurityEvent('api_rate_limit_exceeded', [
             'endpoint' => $request->get_route(),
-            'ip' => SecurityUtils::get_client_ip()
+            'ip' => SecurityUtils::getClientIp()
         ]);
         return new \WP_Error('rate_limit_exceeded', 'Too many API key attempts', ['status' => 429]);
     }
@@ -276,18 +276,18 @@ function verify_api_key($request)
     $stored_key = get_option('puntwork_api_key');
 
     if (empty($stored_key)) {
-        SecurityUtils::log_security_event('api_not_configured', [
+        SecurityUtils::logSecurityEvent('api_not_configured', [
             'endpoint' => $request->get_route(),
-            'ip' => SecurityUtils::get_client_ip()
+            'ip' => SecurityUtils::getClientIp()
         ]);
         return new \WP_Error('api_not_configured', 'API key not configured', ['status' => 403]);
     }
 
     if (!hash_equals($stored_key, $api_key)) {
         set_transient($rate_limit_key, $attempts + 1, 300); // 5 minutes
-        SecurityUtils::log_security_event('api_key_invalid', [
+        SecurityUtils::logSecurityEvent('api_key_invalid', [
             'endpoint' => $request->get_route(),
-            'ip' => SecurityUtils::get_client_ip()
+            'ip' => SecurityUtils::getClientIp()
         ]);
         return new \WP_Error('invalid_api_key', 'Invalid API key', ['status' => 401]);
     }

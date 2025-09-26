@@ -1,7 +1,9 @@
 <?php
+
 /**
  * Plugin Name: puntWork
- * Description: Advanced job import plugin with multi-format feed support, real-time analytics, health monitoring, and comprehensive API integration.
+ * Description: Advanced job import plugin with multi-format feed support,
+ *     real-time analytics, health monitoring, and comprehensive API integration.
  * Version: 2.0.0
  * Author: DGC-GH
  * Requires at least: 5.0
@@ -16,14 +18,14 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
-define( 'PUNTWORK_VERSION', '2.0.0' );
-define( 'PUNTWORK_PATH', plugin_dir_path( __FILE__ ) );
-define( 'PUNTWORK_URL', plugin_dir_url( __FILE__ ) );
-define( 'PUNTWORK_LOGS', PUNTWORK_PATH . 'logs/import.log' );
+define('PUNTWORK_VERSION', '2.0.0');
+define('PUNTWORK_PATH', plugin_dir_path(__FILE__));
+define('PUNTWORK_URL', plugin_dir_url(__FILE__));
+define('PUNTWORK_LOGS', PUNTWORK_PATH . 'logs/import.log');
 
 // Load Composer autoloader if available
 if (file_exists(PUNTWORK_PATH . 'vendor/autoload.php')) {
@@ -31,28 +33,29 @@ if (file_exists(PUNTWORK_PATH . 'vendor/autoload.php')) {
 }
 
 // Activation hook
-register_activation_hook( __FILE__, __NAMESPACE__ . '\\job_import_activate' );
-function job_import_activate() {
+register_activation_hook(__FILE__, __NAMESPACE__ . '\\job_import_activate');
+function job_import_activate()
+{
     // Schedule cron
-    if ( ! wp_next_scheduled( 'job_import_cron' ) ) {
-        wp_schedule_event( current_time('timestamp'), 'daily', 'job_import_cron' );
+    if (! wp_next_scheduled('job_import_cron')) {
+        wp_schedule_event(current_time('timestamp'), 'daily', 'job_import_cron');
     }
 
     // Schedule social media cron
-    if ( ! wp_next_scheduled( 'puntwork_social_cron' ) ) {
-        wp_schedule_event( current_time('timestamp'), 'puntwork_hourly', 'puntwork_social_cron' );
+    if (! wp_next_scheduled('puntwork_social_cron')) {
+        wp_schedule_event(current_time('timestamp'), 'puntwork_hourly', 'puntwork_social_cron');
     }
 
     // Create logs dir if needed
-    $logs_dir = dirname( PUNTWORK_LOGS );
-    if ( ! file_exists( $logs_dir ) ) {
-        wp_mkdir_p( $logs_dir );
+    $logs_dir = dirname(PUNTWORK_LOGS);
+    if (! file_exists($logs_dir)) {
+        wp_mkdir_p($logs_dir);
     }
     // Flush rewrite rules if CPTs involved (though ACF handles)
     flush_rewrite_rules();
 
     // Clear any cached admin menu data to ensure icon updates
-    if ( function_exists( 'wp_cache_flush' ) ) {
+    if (function_exists('wp_cache_flush')) {
         wp_cache_flush();
     }
 
@@ -63,15 +66,17 @@ function job_import_activate() {
 }
 
 // Deactivation hook
-register_deactivation_hook( __FILE__, __NAMESPACE__ . '\\job_import_deactivate' );
-function job_import_deactivate() {
-    wp_clear_scheduled_hook( 'job_import_cron' );
-    wp_clear_scheduled_hook( 'puntwork_social_cron' );
+register_deactivation_hook(__FILE__, __NAMESPACE__ . '\\job_import_deactivate');
+function job_import_deactivate()
+{
+    wp_clear_scheduled_hook('job_import_cron');
+    wp_clear_scheduled_hook('puntwork_social_cron');
 }
 
 // Register custom cron schedules
 add_filter('cron_schedules', __NAMESPACE__ . '\\register_custom_cron_schedules');
-function register_custom_cron_schedules($schedules) {
+function register_custom_cron_schedules($schedules)
+{
     $schedules['puntwork_hourly'] = [
         'interval' => HOUR_IN_SECONDS,
         'display' => __('Hourly', 'puntwork')
@@ -107,7 +112,8 @@ function register_custom_cron_schedules($schedules) {
 
 // Add social media cron handler
 add_action('puntwork_social_cron', __NAMESPACE__ . '\\process_social_media_posts');
-function process_social_media_posts() {
+function process_social_media_posts()
+{
     if (class_exists(__NAMESPACE__ . '\\SocialMedia\\SocialMediaManager')) {
         $social_manager = new \Puntwork\SocialMedia\SocialMediaManager();
         $social_manager->processScheduledPosts();
@@ -115,8 +121,9 @@ function process_social_media_posts() {
 }
 
 // Init setup
-add_action( 'init', __NAMESPACE__ . '\\setup_job_import' );
-function setup_job_import() {
+add_action('init', __NAMESPACE__ . '\\setup_job_import');
+function setup_job_import()
+{
     // Global batch limit (from old 1)
     global $job_import_batch_limit;
     $job_import_batch_limit = 500;
@@ -222,15 +229,15 @@ function setup_job_import() {
         'scheduling/scheduling-triggers.php',
         'scheduling/test-scheduling.php',
     );
-    foreach ( $includes as $include ) {
+    foreach ($includes as $include) {
         $file = PUNTWORK_PATH . 'includes/' . $include;
-        if ( file_exists( $file ) ) {
+        if (file_exists($file)) {
             require_once $file;
         }
     }
 
     // Load text domain for internationalization
-    load_plugin_textdomain( 'puntwork', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+    load_plugin_textdomain('puntwork', false, dirname(plugin_basename(__FILE__)) . '/languages');
 
     // Initialize scheduling
     if (function_exists(__NAMESPACE__ . '\\init_scheduling')) {
@@ -259,33 +266,38 @@ function setup_job_import() {
 }
 
 // Add custom favicon
-add_action( 'wp_head', __NAMESPACE__ . '\\add_custom_favicon' );
-function add_custom_favicon() {
+add_action('wp_head', __NAMESPACE__ . '\\add_custom_favicon');
+function add_custom_favicon()
+{
     $favicon_url = PUNTWORK_URL . 'assets/images/icon.svg?v=' . PUNTWORK_VERSION;
-    echo '<link rel="icon" type="image/svg+xml" href="' . esc_url( $favicon_url ) . '">' . "\n";
+    echo '<link rel="icon" type="image/svg+xml" href="' . esc_url($favicon_url) . '">' . "\n";
 }
 
 // Add security headers
-add_action( 'wp_head', __NAMESPACE__ . '\\add_security_headers' );
-function add_security_headers() {
+add_action('wp_head', __NAMESPACE__ . '\\add_security_headers');
+function add_security_headers()
+{
     if (is_admin()) {
         // Content Security Policy for admin pages
         $csp = "default-src 'self'; ";
-        $csp .= "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://code.jquery.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; ";
-        $csp .= "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; ";
+        $csp .= "script-src 'self' 'unsafe-inline' 'unsafe-eval' ";
+        $csp .= "https://code.jquery.com https://cdn.jsdelivr.net ";
+        $csp .= "https://cdnjs.cloudflare.com; ";
+        $csp .= "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com ";
+        $csp .= "https://cdn.jsdelivr.net; ";
         $csp .= "font-src 'self' https://fonts.gstatic.com; ";
         $csp .= "img-src 'self' data: https:; ";
         $csp .= "connect-src 'self'; ";
         $csp .= "frame-ancestors 'none';";
-        
+
         header("Content-Security-Policy: " . $csp);
-        
+
         // Other security headers
         header("X-Content-Type-Options: nosniff");
         header("X-Frame-Options: DENY");
         header("X-XSS-Protection: 1; mode=block");
         header("Referrer-Policy: strict-origin-when-cross-origin");
-        
+
         // HSTS for HTTPS sites
         if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
             header("Strict-Transport-Security: max-age=31536000; includeSubDomains");
@@ -294,8 +306,9 @@ function add_security_headers() {
 }
 
 // Add REST API security headers
-add_action( 'rest_api_init', __NAMESPACE__ . '\\add_rest_api_security_headers' );
-function add_rest_api_security_headers() {
+add_action('rest_api_init', __NAMESPACE__ . '\\add_rest_api_security_headers');
+function add_rest_api_security_headers()
+{
     header("X-Content-Type-Options: nosniff");
     header("X-Frame-Options: DENY");
     header("X-XSS-Protection: 1; mode=block");
@@ -305,8 +318,9 @@ function add_rest_api_security_headers() {
 }
 
 // Handle preflight OPTIONS requests for CORS
-add_action( 'init', __NAMESPACE__ . '\\handle_cors_preflight' );
-function handle_cors_preflight() {
+add_action('init', __NAMESPACE__ . '\\handle_cors_preflight');
+function handle_cors_preflight()
+{
     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
         header("Access-Control-Allow-Origin: " . get_site_url());
         header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
@@ -317,10 +331,11 @@ function handle_cors_preflight() {
 }
 
 // Uninstall hook (cleanup)
-register_uninstall_hook( __FILE__, __NAMESPACE__ . '\\job_import_uninstall' );
-function job_import_uninstall() {
+register_uninstall_hook(__FILE__, __NAMESPACE__ . '\\job_import_uninstall');
+function job_import_uninstall()
+{
     // Delete options, transients; optional: delete job-feed posts
-    delete_option( 'job_import_last_run' );
+    delete_option('job_import_last_run');
     // Clear cron
-    wp_clear_scheduled_hook( 'job_import_cron' );
+    wp_clear_scheduled_hook('job_import_cron');
 }

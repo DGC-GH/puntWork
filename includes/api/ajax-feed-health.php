@@ -24,9 +24,9 @@ function get_feed_health_status_ajax()
     PuntWorkLogger::logAjaxRequest('get_feed_health_status', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validate_ajax_request('get_feed_health_status', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('get_feed_health_status', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -37,13 +37,13 @@ function get_feed_health_status_ajax()
             'status_count' => count($health_status)
         ]);
 
-        AjaxErrorHandler::send_success([
+        AjaxErrorHandler::sendSuccess([
             'health_status' => $health_status,
             'timestamp' => current_time('timestamp')
         ]);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Get feed health status failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_MONITORING);
-        AjaxErrorHandler::send_error('Get feed health status failed: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Get feed health status failed: ' . $e->getMessage());
     }
 }
 
@@ -56,19 +56,19 @@ function get_feed_health_history_ajax()
     PuntWorkLogger::logAjaxRequest('get_feed_health_history', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validate_ajax_request('get_feed_health_history', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('get_feed_health_history', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
     try {
         // Validate and sanitize input fields
-        $feed_key = SecurityUtils::validate_field($_POST, 'feed_key', 'string', [
+        $feed_key = SecurityUtils::validateField($_POST, 'feed_key', 'string', [
             'required' => true,
             'max_length' => 100
         ]);
-        $days = SecurityUtils::validate_field($_POST, 'days', 'integer', [
+        $days = SecurityUtils::validateField($_POST, 'days', 'integer', [
             'min' => 1,
             'max' => 30,
             'default' => 7
@@ -82,14 +82,14 @@ function get_feed_health_history_ajax()
             'history_count' => count($history)
         ]);
 
-        AjaxErrorHandler::send_success([
+        AjaxErrorHandler::sendSuccess([
             'feed_key' => $feed_key,
             'history' => $history,
             'days' => $days
         ]);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Get feed health history failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_MONITORING);
-        AjaxErrorHandler::send_error('Get feed health history failed: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Get feed health history failed: ' . $e->getMessage());
     }
 }
 
@@ -102,9 +102,9 @@ function trigger_feed_health_check_ajax()
     PuntWorkLogger::logAjaxRequest('trigger_feed_health_check', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validate_ajax_request('trigger_feed_health_check', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('trigger_feed_health_check', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -117,13 +117,13 @@ function trigger_feed_health_check_ajax()
             'message' => 'Health check completed'
         ]);
 
-        AjaxErrorHandler::send_success([
+        AjaxErrorHandler::sendSuccess([
             'message' => 'Feed health check completed successfully',
             'timestamp' => current_time('timestamp')
         ]);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Trigger feed health check failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_MONITORING);
-        AjaxErrorHandler::send_error('Trigger feed health check failed: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Trigger feed health check failed: ' . $e->getMessage());
     }
 }
 
@@ -136,16 +136,16 @@ function update_feed_alert_settings_ajax()
     PuntWorkLogger::logAjaxRequest('update_feed_alert_settings', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validate_ajax_request('update_feed_alert_settings', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('update_feed_alert_settings', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
     try {
         // Validate and sanitize alert settings
-        $email_enabled = SecurityUtils::validate_field($_POST, 'email_enabled', 'boolean', ['default' => false]);
-        $email_recipients = SecurityUtils::validate_field($_POST, 'email_recipients', 'string', [
+        $email_enabled = SecurityUtils::validateField($_POST, 'email_enabled', 'boolean', ['default' => false]);
+        $email_recipients = SecurityUtils::validateField($_POST, 'email_recipients', 'string', [
             'default' => get_option('admin_email'),
             'max_length' => 500
         ]);
@@ -160,7 +160,7 @@ function update_feed_alert_settings_ajax()
         ];
 
         foreach ($valid_alert_types as $alert_type) {
-            $alert_types[$alert_type] = SecurityUtils::validate_field($_POST, 'alert_types[' . $alert_type . ']', 'boolean', ['default' => false]);
+            $alert_types[$alert_type] = SecurityUtils::validateField($_POST, 'alert_types[' . $alert_type . ']', 'boolean', ['default' => false]);
         }
 
         $alert_settings = [
@@ -180,12 +180,12 @@ function update_feed_alert_settings_ajax()
             'message' => 'Alert settings updated'
         ]);
 
-        AjaxErrorHandler::send_success([
+        AjaxErrorHandler::sendSuccess([
             'message' => 'Feed alert settings updated successfully',
             'settings' => $alert_settings
         ]);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Update feed alert settings failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_MONITORING);
-        AjaxErrorHandler::send_error('Update feed alert settings failed: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Update feed alert settings failed: ' . $e->getMessage());
     }
 }

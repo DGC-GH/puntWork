@@ -27,7 +27,7 @@ function run_job_import_batch_ajax()
     PuntWorkLogger::logAjaxRequest('run_job_import_batch', $_POST);
 
     // Use comprehensive security validation with field validation
-    $validation = SecurityUtils::validate_ajax_request(
+    $validation = SecurityUtils::validateAjaxRequest(
         'run_job_import_batch',
         'job_import_nonce',
         ['start'], // required fields
@@ -37,7 +37,7 @@ function run_job_import_batch_ajax()
     );
 
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -61,10 +61,10 @@ function run_job_import_batch_ajax()
         ];
 
         PuntWorkLogger::logAjaxResponse('run_job_import_batch', $log_summary, isset($result['success']) && $result['success']);
-        AjaxErrorHandler::send_success($result);
+        AjaxErrorHandler::sendSuccess($result);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Batch import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::send_error('Batch import failed: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Batch import failed: ' . $e->getMessage());
     }
 }
 
@@ -74,9 +74,9 @@ function cancel_job_import_ajax()
     PuntWorkLogger::logAjaxRequest('cancel_job_import', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validate_ajax_request('cancel_job_import', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('cancel_job_import', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -88,10 +88,10 @@ function cancel_job_import_ajax()
         PuntWorkLogger::info('Import cancelled and status cleared', PuntWorkLogger::CONTEXT_BATCH);
 
         PuntWorkLogger::logAjaxResponse('cancel_job_import', ['message' => 'Import cancelled']);
-        AjaxErrorHandler::send_success(null, ['message' => 'Import cancelled']);
+        AjaxErrorHandler::sendSuccess(null, ['message' => 'Import cancelled']);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Cancel import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::send_error('Failed to cancel import: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Failed to cancel import: ' . $e->getMessage());
     }
 }
 
@@ -101,9 +101,9 @@ function clear_import_cancel_ajax()
     PuntWorkLogger::logAjaxRequest('clear_import_cancel', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validate_ajax_request('clear_import_cancel', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('clear_import_cancel', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -112,10 +112,10 @@ function clear_import_cancel_ajax()
         PuntWorkLogger::info('Import cancellation flag cleared', PuntWorkLogger::CONTEXT_BATCH);
 
         PuntWorkLogger::logAjaxResponse('clear_import_cancel', ['message' => 'Cancellation cleared']);
-        AjaxErrorHandler::send_success(null, ['message' => 'Cancellation cleared']);
+        AjaxErrorHandler::sendSuccess(null, ['message' => 'Cancellation cleared']);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Clear import cancel error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::send_error('Failed to clear cancellation: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Failed to clear cancellation: ' . $e->getMessage());
     }
 }
 
@@ -125,9 +125,9 @@ function reset_job_import_ajax()
     PuntWorkLogger::logAjaxRequest('reset_job_import', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validate_ajax_request('reset_job_import', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('reset_job_import', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -145,10 +145,10 @@ function reset_job_import_ajax()
         PuntWorkLogger::info('Import system completely reset', PuntWorkLogger::CONTEXT_BATCH);
 
         PuntWorkLogger::logAjaxResponse('reset_job_import', ['message' => 'Import system reset']);
-        AjaxErrorHandler::send_success(null, ['message' => 'Import system reset']);
+        AjaxErrorHandler::sendSuccess(null, ['message' => 'Import system reset']);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Reset import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::send_error('Failed to reset import: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Failed to reset import: ' . $e->getMessage());
     }
 }
 
@@ -158,9 +158,9 @@ function get_job_import_status_ajax()
     PuntWorkLogger::logAjaxRequest('get_job_import_status', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validate_ajax_request('get_job_import_status', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('get_job_import_status', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -317,10 +317,10 @@ function get_job_import_status_ajax()
         ];
 
         PuntWorkLogger::logAjaxResponse('get_job_import_status', $log_summary);
-        AjaxErrorHandler::send_success($progress);
+        AjaxErrorHandler::sendSuccess($progress);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Get import status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::send_error('Failed to get import status: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Failed to get import status: ' . $e->getMessage());
     }
 }
 
@@ -330,7 +330,7 @@ function log_manual_import_run_ajax()
     PuntWorkLogger::logAjaxRequest('log_manual_import_run', $_POST);
 
     // Use comprehensive security validation with field validation
-    $validation = SecurityUtils::validate_ajax_request(
+    $validation = SecurityUtils::validateAjaxRequest(
         'log_manual_import_run',
         'job_import_nonce',
         ['timestamp', 'duration', 'success', 'processed', 'total', 'published', 'updated', 'skipped'], // required fields
@@ -348,7 +348,7 @@ function log_manual_import_run_ajax()
     );
 
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -379,10 +379,10 @@ function log_manual_import_run_ajax()
         ]);
 
         PuntWorkLogger::logAjaxResponse('log_manual_import_run', ['message' => 'Manual import run logged']);
-        AjaxErrorHandler::send_success(null, ['message' => 'Manual import run logged to history']);
+        AjaxErrorHandler::sendSuccess(null, ['message' => 'Manual import run logged to history']);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Log manual import run error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::send_error('Failed to log manual import run: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Failed to log manual import run: ' . $e->getMessage());
     }
 }
 
@@ -392,9 +392,9 @@ function get_api_key_ajax()
     PuntWorkLogger::logAjaxRequest('get_api_key', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validate_ajax_request('get_api_key', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('get_api_key', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -403,14 +403,14 @@ function get_api_key_ajax()
 
         if (empty($api_key)) {
             PuntWorkLogger::warn('API key requested but not configured', PuntWorkLogger::CONTEXT_AJAX);
-            AjaxErrorHandler::send_error('API key not configured');
+            AjaxErrorHandler::sendError('API key not configured');
             return;
         }
 
         PuntWorkLogger::logAjaxResponse('get_api_key', ['message' => 'API key retrieved']);
-        AjaxErrorHandler::send_success(['api_key' => $api_key]);
+        AjaxErrorHandler::sendSuccess(['api_key' => $api_key]);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Get API key error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::send_error('Failed to get API key: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Failed to get API key: ' . $e->getMessage());
     }
 }
