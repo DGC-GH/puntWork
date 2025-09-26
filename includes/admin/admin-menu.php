@@ -62,4 +62,13 @@ add_action('admin_menu', function() {
         'puntwork-api-settings',
         __NAMESPACE__ . '\\api_settings_page'
     );
+
+    add_submenu_page(
+        'puntwork-dashboard',
+        'Feed Health Monitor',
+        'Health Monitor',
+        'manage_options',
+        'puntwork-feed-health',
+        __NAMESPACE__ . '\\feed_health_monitor_page'
+    );
 });
