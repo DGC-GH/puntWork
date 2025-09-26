@@ -434,6 +434,60 @@ function enqueue_job_import_scripts() {
             true
         );
 
+        // Enqueue onboarding styles and scripts
+        wp_enqueue_style(
+            'puntwork-onboarding',
+            PUNTWORK_URL . 'assets/css/onboarding.css',
+            ['font-awesome'],
+            PUNTWORK_VERSION
+        );
+
+        wp_enqueue_script(
+            'puntwork-onboarding',
+            PUNTWORK_URL . 'assets/js/onboarding.js',
+            ['jquery'],
+            PUNTWORK_VERSION,
+            true
+        );
+
+        // Localize onboarding script
+        wp_localize_script('puntwork-onboarding', 'puntworkOnboarding', [
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('puntwork_onboarding_nonce'),
+            'steps' => [
+                [
+                    'title' => __('Welcome to puntWork', 'puntwork'),
+                    'content' => __('Let\'s get you set up with puntWork, the powerful job feed import system for WordPress. This wizard will guide you through the initial configuration.', 'puntwork'),
+                    'icon' => 'fas fa-rocket',
+                    'action' => __('Get Started', 'puntwork')
+                ],
+                [
+                    'title' => __('Configure Job Feeds', 'puntwork'),
+                    'content' => __('Add your job feed sources to start importing job listings. You can add multiple feeds from different providers and configure them individually.', 'puntwork'),
+                    'icon' => 'fas fa-rss',
+                    'action' => __('Configure Feeds', 'puntwork')
+                ],
+                [
+                    'title' => __('Set Up Scheduling', 'puntwork'),
+                    'content' => __('Configure automatic import schedules to keep your job listings fresh. Choose how often to check for new jobs and when to run imports.', 'puntwork'),
+                    'icon' => 'fas fa-clock',
+                    'action' => __('Set Schedule', 'puntwork')
+                ],
+                [
+                    'title' => __('API Configuration', 'puntwork'),
+                    'content' => __('Set up your API credentials and configure advanced options. This enables real-time updates and enhanced functionality.', 'puntwork'),
+                    'icon' => 'fas fa-cog',
+                    'action' => __('Configure API', 'puntwork')
+                ],
+                [
+                    'title' => __('You\'re All Set!', 'puntwork'),
+                    'content' => __('puntWork is now configured and ready to start importing job feeds. You can always access these settings later from the admin menu.', 'puntwork'),
+                    'icon' => 'fas fa-check-circle',
+                    'action' => __('Finish Setup', 'puntwork')
+                ]
+            ]
+        ]);
+
         // Localize script with data
         wp_localize_script('job-import-admin-js', 'jobImportData', [
             'nonce' => wp_create_nonce('job_import_nonce'),

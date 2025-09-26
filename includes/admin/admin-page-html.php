@@ -19,6 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once __DIR__ . '/admin-ui-main.php';
 require_once __DIR__ . '/admin-ui-scheduling.php';
 require_once __DIR__ . '/admin-feed-config.php';
+require_once __DIR__ . '/onboarding-wizard.php';
 
 function feeds_dashboard_page() {
     // Remove debug logging for security
@@ -425,6 +426,9 @@ function puntwork_dashboard_page() {
         </div>
     </div>
 
+    <!-- Onboarding Modal -->
+    <?php render_onboarding_modal(); ?>
+
     <script>
         // PWA Status Indicator
         document.addEventListener('DOMContentLoaded', function() {
@@ -465,6 +469,68 @@ function puntwork_dashboard_page() {
             box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         }
     </style>
+    <?php
+}
+
+/**
+ * Render the onboarding modal HTML
+ */
+function render_onboarding_modal() {
+    // Check if onboarding has been completed
+    $onboarding_completed = get_option('puntwork_onboarding_completed', false);
+
+    // Only show if not completed
+    if ($onboarding_completed) {
+        return;
+    }
+
+    ?>
+    <!-- Onboarding Modal Overlay -->
+    <div class="onboarding-overlay" id="onboarding-overlay" style="display: none;"></div>
+
+    <!-- Onboarding Modal -->
+    <div class="puntwork-onboarding-modal" id="puntwork-onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="onboarding-title" aria-hidden="true" style="display: none;">
+        <!-- Modal Header -->
+        <div class="onboarding-header">
+            <button type="button" id="onboarding-close" class="onboarding-close-btn" aria-label="<?php esc_attr_e('Close onboarding', 'puntwork'); ?>">
+                <i class="fas fa-times"></i>
+            </button>
+            <button type="button" id="onboarding-skip" class="onboarding-skip-btn" aria-label="<?php esc_attr_e('Skip onboarding', 'puntwork'); ?>">
+                <?php _e('Skip', 'puntwork'); ?>
+            </button>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="onboarding-progress">
+            <div class="onboarding-progress-fill" id="onboarding-progress-fill"></div>
+        </div>
+
+        <!-- Step Indicators -->
+        <div class="step-indicators">
+            <div class="step-indicator active" data-step="0" aria-label="<?php esc_attr_e('Welcome step', 'puntwork'); ?>"></div>
+            <div class="step-indicator" data-step="1" aria-label="<?php esc_attr_e('Configure feeds step', 'puntwork'); ?>"></div>
+            <div class="step-indicator" data-step="2" aria-label="<?php esc_attr_e('Set up scheduling step', 'puntwork'); ?>"></div>
+            <div class="step-indicator" data-step="3" aria-label="<?php esc_attr_e('API configuration step', 'puntwork'); ?>"></div>
+            <div class="step-indicator" data-step="4" aria-label="<?php esc_attr_e('Setup complete step', 'puntwork'); ?>"></div>
+        </div>
+
+        <!-- Step Content -->
+        <div class="onboarding-content">
+            <div id="onboarding-step-content" class="step-content">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="onboarding-navigation">
+            <button type="button" id="onboarding-prev" class="onboarding-nav-btn prev-btn" style="display: none;" aria-label="<?php esc_attr_e('Previous step', 'puntwork'); ?>">
+                <i class="fas fa-arrow-left"></i> <?php _e('Previous', 'puntwork'); ?>
+            </button>
+            <button type="button" id="onboarding-next" class="onboarding-nav-btn next-btn" aria-label="<?php esc_attr_e('Next step', 'puntwork'); ?>">
+                <?php _e('Next', 'puntwork'); ?> <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
     <?php
 }
 
