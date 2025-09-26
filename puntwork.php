@@ -122,6 +122,7 @@ function setup_job_import() {
         'admin/admin-ui-performance.php',
         'admin/admin-feed-config.php',
         'admin/admin-modern-styles.php',
+        'admin/onboarding-wizard.php',
 
         // API handlers (functions)
         'api/ajax-feed-processing.php',

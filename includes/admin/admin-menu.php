@@ -90,6 +90,15 @@ add_action('admin_menu', function() {
         __NAMESPACE__ . '\\performance_metrics_page'
     );
 
+    add_submenu_page(
+        'puntwork-dashboard',
+        __('API Settings', 'puntwork'),
+        __('API Settings', 'puntwork'),
+        'manage_options',
+        'puntwork-api-settings',
+        __NAMESPACE__ . '\\api_settings_page'
+    );
+
     // Onboarding menu item (only show if onboarding not completed)
     if (!\PuntworkOnboardingWizard::isOnboardingCompleted()) {
         add_submenu_page(
