@@ -175,7 +175,7 @@ function handle_trigger_import($request) {
         delete_transient('import_cancel');
 
         // Determine execution mode
-        $use_async = false; // Force synchronous for debugging
+        $use_async = false; // Force synchronous for debugging - updated
         
         if ($use_async && function_exists('as_schedule_single_action')) {
             // Use Action Scheduler if available
