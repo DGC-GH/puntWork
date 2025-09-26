@@ -20,6 +20,7 @@ require_once __DIR__ . '/admin-ui-main.php';
 require_once __DIR__ . '/admin-ui-scheduling.php';
 require_once __DIR__ . '/admin-api-settings.php';
 require_once __DIR__ . '/admin-feed-config.php';
+require_once __DIR__ . '/job-board-admin.php';
 require_once __DIR__ . '/onboarding-wizard.php';
 require_once __DIR__ . '/accessibility.php';
 
