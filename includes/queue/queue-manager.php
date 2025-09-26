@@ -22,7 +22,10 @@ class PuntworkQueueManager {
 
     public function __construct() {
         $this->init_hooks();
-        $this->create_queue_table();
+        // Only create table in WordPress environment, not during testing
+        if (function_exists('dbDelta') && defined('ABSPATH')) {
+            $this->create_queue_table();
+        }
     }
 
     /**

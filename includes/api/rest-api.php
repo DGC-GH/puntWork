@@ -1005,3 +1005,12 @@ function get_or_create_api_key() {
 
     return $existing_key;
 }
+
+/**
+ * Regenerate API key
+ */
+function regenerate_api_key() {
+    $new_key = generate_api_key();
+    update_option('puntwork_api_key', $new_key);
+    return $new_key;
+}

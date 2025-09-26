@@ -154,6 +154,7 @@ $includes = array(
     'admin/admin-api-settings.php',
     'admin/admin-ui-feed-health.php',
     'admin/admin-ui-analytics.php',
+    'admin/onboarding-wizard.php',
     
     // API handlers
     'api/ajax-feed-processing.php',
@@ -216,5 +217,39 @@ foreach ( $includes as $include ) {
     $file = dirname(__DIR__) . '/includes/' . $include;
     if ( file_exists( $file ) ) {
         require_once $file;
+    }
+}
+
+// Additional mock functions for testing
+if (!function_exists('wp_kses')) {
+    function wp_kses($string, $allowed_html = []) {
+        // Simple mock - just return the string for testing
+        return $string;
+    }
+}
+
+if (!function_exists('wp_kses_allowed_html')) {
+    function wp_kses_allowed_html($context = 'post') {
+        // Return basic allowed HTML tags for testing
+        return [
+            'a' => ['href' => [], 'title' => []],
+            'br' => [],
+            'em' => [],
+            'strong' => [],
+            'p' => [],
+        ];
+    }
+}
+
+if (!function_exists('wp_kses_post')) {
+    function wp_kses_post($content) {
+        return wp_kses($content, wp_kses_allowed_html('post'));
+    }
+}
+
+if (!function_exists('sanitize_title')) {
+    function sanitize_title($title) {
+        // Simple mock - convert to lowercase and replace spaces with hyphens
+        return strtolower(str_replace(' ', '-', $title));
     }
 }

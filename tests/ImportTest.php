@@ -64,8 +64,9 @@ class ImportTest extends TestCase {
     }
 
     public function testProcessXmlBatch() {
-        // This would require actual XML file, so skip for now
-        $this->markTestIncomplete('XML processing test requires test files');
+        // This test requires extensive XML structure mocking and WordPress function mocking
+        // For now, we'll mark it incomplete and focus on other test coverage
+        $this->markTestIncomplete('XML processing test requires extensive mocking of WordPress functions and complex XML structures');
     }
 
     public function testHandleDuplicates() {
