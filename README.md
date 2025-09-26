@@ -45,6 +45,34 @@ Endpoint: `GET {site_url}/wp-json/wp/v2/types`
 - WordPress Admin > Posts > Filter by post type
 - ACF Pro interface shows custom post types
 
+## Testing and Deployment
+
+### Local vs Live Testing
+**IMPORTANT**: When testing API endpoints or functionality, remember that:
+
+- **Local repository changes** are only available in your development environment
+- **Live server testing** requires uploading modified files to the production server
+- **API tests** run against `https://belgiumjobs.work/` use the server's current code, not local changes
+
+### Deployment Process
+1. **Commit changes** to local repository
+2. **Upload files** to the live server (FTP, SFTP, or hosting panel)
+3. **Test functionality** on the live site
+4. **Verify API endpoints** work as expected
+
+### Common Testing Issues
+- **API timeouts or failures**: Server may be running old code - upload latest changes
+- **Missing features**: New functionality not deployed yet
+- **Inconsistent behavior**: Local and live environments out of sync
+
+### Development Workflow
+1. Make code changes locally
+2. Test basic functionality locally (if possible)
+3. Commit and push changes
+4. Upload files to live server
+5. Test on live site with real data
+6. Update this README with any new findings
+
 ## Plugin Architecture
 
 ### File Structure
