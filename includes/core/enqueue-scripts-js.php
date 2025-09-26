@@ -488,6 +488,28 @@ function enqueue_job_import_scripts() {
             ]
         ]);
 
+        // Enqueue accessibility styles and scripts
+        wp_enqueue_style(
+            'puntwork-accessibility',
+            PUNTWORK_URL . 'assets/css/accessibility.css',
+            [],
+            PUNTWORK_VERSION
+        );
+
+        wp_enqueue_script(
+            'puntwork-accessibility',
+            PUNTWORK_URL . 'assets/js/accessibility.js',
+            ['jquery'],
+            PUNTWORK_VERSION,
+            true
+        );
+
+        // Localize accessibility script
+        wp_localize_script('puntwork-accessibility', 'puntworkAjax', [
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('puntwork_accessibility_nonce')
+        ]);
+
         // Localize script with data
         wp_localize_script('job-import-admin-js', 'jobImportData', [
             'nonce' => wp_create_nonce('job_import_nonce'),

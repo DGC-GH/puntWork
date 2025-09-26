@@ -20,6 +20,7 @@ require_once __DIR__ . '/admin-ui-main.php';
 require_once __DIR__ . '/admin-ui-scheduling.php';
 require_once __DIR__ . '/admin-feed-config.php';
 require_once __DIR__ . '/onboarding-wizard.php';
+require_once __DIR__ . '/accessibility.php';
 
 function feeds_dashboard_page() {
     // Remove debug logging for security
