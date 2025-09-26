@@ -183,7 +183,7 @@ function ajax_clear_performance_logs()
     try {
         // Import the cleanup function
         if (class_exists('\\Puntwork\\Utilities\\PerformanceMonitor')) {
-            \Puntwork\Utilities\PerformanceMonitor::cleanup_old_logs(30); // Keep 30 days
+            \Puntwork\Utilities\PerformanceMonitor::cleanupOldLogs(30); // Keep 30 days
             $message = 'Performance logs older than 30 days have been cleared.';
         } else {
             $message = 'Performance monitoring not available.';
