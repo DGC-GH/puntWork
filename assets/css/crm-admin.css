@@ -1,0 +1,312 @@
+/**
+ * CRM Admin Styles
+ *
+ * @package    Puntwork
+ * @subpackage Admin
+ * @since      2.3.0
+ */
+
+.puntwork-crm-container {
+    max-width: 1200px;
+    margin: 20px 0;
+}
+
+.crm-stats-card {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.crm-stats-card h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #23282d;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #e1e1e1;
+}
+
+.stat-number {
+    display: block;
+    font-size: 28px;
+    font-weight: 700;
+    color: #23282d;
+    line-height: 1.2;
+    margin-bottom: 5px;
+}
+
+.stat-number.success {
+    color: #46b450;
+}
+
+.stat-number.error {
+    color: #dc3232;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.crm-platforms-section h2,
+.crm-settings-section h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #23282d;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ccd0d4;
+}
+
+.crm-platform-card {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.platform-header {
+    background: #f8f9fa;
+    padding: 15px 20px;
+    border-bottom: 1px solid #e1e1e1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.platform-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #23282d;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.status-active {
+    background: #46b450;
+    color: #fff;
+}
+
+.status-badge.status-inactive {
+    background: #f0f0f1;
+    color: #50575e;
+}
+
+.platform-content {
+    padding: 20px;
+}
+
+.config-fields {
+    margin-bottom: 20px;
+}
+
+.config-field {
+    margin-bottom: 15px;
+}
+
+.config-field label {
+    display: block;
+    font-weight: 600;
+    color: #23282d;
+    margin-bottom: 5px;
+}
+
+.config-field .required {
+    color: #dc3232;
+}
+
+.config-field input[type="text"],
+.config-field input[type="password"],
+.config-field textarea {
+    width: 100%;
+    max-width: 400px;
+}
+
+.config-field .description {
+    color: #666;
+    font-size: 12px;
+    margin-top: 3px;
+    font-style: italic;
+}
+
+.platform-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.platform-messages {
+    min-height: 20px;
+}
+
+.message {
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+.message.success {
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.message.error {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+.message.info {
+    background: #d1ecf1;
+    border: 1px solid #bee5eb;
+    color: #0c5460;
+}
+
+.crm-settings-section {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+/* Loading states */
+.platform-actions .button.loading {
+    opacity: 0.7;
+    pointer-events: none;
+    position: relative;
+}
+
+.platform-actions .button.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    margin: auto;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #2271b1;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    top: 0;
+    bottom: 0;
+    right: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive design */
+@media screen and (max-width: 782px) {
+    .platform-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .platform-actions {
+        flex-direction: column;
+    }
+
+    .platform-actions .button {
+        width: 100%;
+        text-align: center;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stat-item {
+        padding: 10px;
+    }
+
+    .stat-number {
+        font-size: 24px;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .crm-stats-card,
+    .crm-platform-card,
+    .crm-settings-section {
+        background: #1e1e1e;
+        border-color: #2c2c2c;
+        color: #f0f0f0;
+    }
+
+    .platform-header {
+        background: #2c2c2c;
+        border-bottom-color: #404040;
+    }
+
+    .platform-header h3,
+    .config-field label {
+        color: #f0f0f0;
+    }
+
+    .stat-item {
+        background: #2c2c2c;
+        border-color: #404040;
+    }
+
+    .stat-number {
+        color: #f0f0f0;
+    }
+
+    .stat-label {
+        color: #cccccc;
+    }
+
+    .message.success {
+        background: #1a4d1a;
+        border-color: #2d5a2d;
+        color: #90ee90;
+    }
+
+    .message.error {
+        background: #4d1a1a;
+        border-color: #5a2d2d;
+        color: #ff9999;
+    }
+
+    .message.info {
+        background: #1a4d4d;
+        border-color: #2d5a5a;
+        color: #90eeee;
+    }
+}
