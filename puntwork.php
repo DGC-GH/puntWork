@@ -1,8 +1,15 @@
 </**
  * Plugin Name: puntWork
- * Description: Imports jobs from XML feeds via job-feed CPT.
- * Version: 1.0.12
+ * Description: Advanced job import plugin with multi-format feed support, real-time analytics, health monitoring, and comprehensive API integration.
+ * Version: 2.0.0
  * Author: DGC-GH
+ * Requires at least: 5.0
+ * Tested up to: 6.6
+ * Requires PHP: 7.4
+ * License: GPL v2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain: puntwork
+ * Domain Path: /languages
  */
 
 namespace Puntwork;
@@ -12,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'PUNTWORK_VERSION', '1.0.15' );
+define( 'PUNTWORK_VERSION', '2.0.0' );
 define( 'PUNTWORK_PATH', plugin_dir_path( __FILE__ ) );
 define( 'PUNTWORK_URL', plugin_dir_url( __FILE__ ) );
 define( 'PUNTWORK_LOGS', PUNTWORK_PATH . 'logs/import.log' );
