@@ -106,6 +106,9 @@ class JsonlIterator implements \Iterator {
  * @return array Processing results.
  */
 function process_batch_items_logic(array $setup): array {
+    // Start performance monitoring
+    $perf_id = start_performance_monitoring('batch_processing');
+
     extract($setup);
 
     $batch_start_time = microtime(true); // Record start time for this batch
@@ -130,16 +133,32 @@ function process_batch_items_logic(array $setup): array {
     try {
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Starting batch from $start_index to $end_index (size $batch_size)";
 
+        // Checkpoint: Batch setup complete
+        checkpoint_performance($perf_id, 'batch_setup', [
+            'batch_size' => $batch_size,
+            'start_index' => $start_index,
+            'end_index' => $end_index
+        ]);
+
         // Load and prepare batch items from JSONL
         $batch_load_info = load_and_prepare_batch_items($json_path, $start_index, $batch_size, $batch_size_info['threshold'], $logs);
         $batch_items = $batch_load_info['batch_items'];
         $batch_guids = $batch_load_info['batch_guids'];
+
+        // Checkpoint: Batch items loaded
+        checkpoint_performance($perf_id, 'batch_loaded', [
+            'items_loaded' => count($batch_guids),
+            'memory_usage' => memory_get_usage(true)
+        ]);
 
         if ($batch_load_info['cancelled']) {
             update_option('job_import_progress', $end_index, false);
             update_option('job_import_processed_guids', $processed_guids, false);
             $time_elapsed = microtime(true) - $start_time;
             $batch_time = microtime(true) - $batch_start_time; // Calculate actual batch processing time
+
+            // End performance monitoring
+            $perf_data = end_performance_monitoring($perf_id);
 
             // Update import status for UI polling
             $current_status = get_option('job_import_status', []);
@@ -180,12 +199,22 @@ function process_batch_items_logic(array $setup): array {
                 'schema_generated' => $schema_generated,
                 'batch_time' => $batch_time,
                 'batch_processed' => 0,
+                'performance' => $perf_data,
                 'message' => '' // No error message for success
             ];
         }
 
         // Process batch items
         $result = process_batch_data($batch_guids, $batch_items, $logs, $published, $updated, $skipped, $duplicates_drafted);
+
+        // Checkpoint: Batch processing complete
+        checkpoint_performance($perf_id, 'batch_processed', [
+            'items_processed' => $result['processed_count'],
+            'published' => $published,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'duplicates_drafted' => $duplicates_drafted
+        ]);
 
         unset($batch_items, $batch_guids);
 
@@ -201,6 +230,9 @@ function process_batch_items_logic(array $setup): array {
         // Store batch timing data for status retrieval
         update_option('job_import_last_batch_time', $batch_time, false);
         update_option('job_import_last_batch_processed', $result['processed_count'], false);
+
+        // End performance monitoring
+        $perf_data = end_performance_monitoring($perf_id);
 
         // Update import status for UI polling
         $current_status = get_option('job_import_status', []);
@@ -242,13 +274,22 @@ function process_batch_items_logic(array $setup): array {
             'batch_time' => $batch_time,  // Time for this specific batch
             'batch_processed' => $result['processed_count'],  // Items processed in this batch
             'start_time' => $start_time,
+            'performance' => $perf_data,
             'message' => '' // No error message for success
         ];
     } catch (\Exception $e) {
+        // End performance monitoring on error
+        $perf_data = end_performance_monitoring($perf_id);
+
         $error_msg = 'Batch import error: ' . $e->getMessage();
         error_log($error_msg);
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
-        return ['success' => false, 'message' => 'Batch failed: ' . $e->getMessage(), 'logs' => $logs];
+        return [
+            'success' => false,
+            'message' => 'Batch failed: ' . $e->getMessage(),
+            'logs' => $logs,
+            'performance' => $perf_data
+        ];
     }
 }
 

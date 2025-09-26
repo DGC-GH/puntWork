@@ -142,6 +142,7 @@ function setup_job_import() {
         'utilities/utility-helpers.php',
         'utilities/database-optimization.php',
         'utilities/async-processing.php',
+        'utilities/performance-monitor.php',
         
         // Mappings
         'mappings/mappings-constants.php',

@@ -80,6 +80,17 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 JobImportEvents.handleSaveAsyncSettings();
             });
 
+            // Performance monitoring events
+            $('#refresh-performance').on('click', function(e) {
+                console.log('[PUNTWORK] Refresh performance button clicked!');
+                JobImportEvents.handleRefreshPerformance();
+            });
+
+            $('#clear-performance-logs').on('click', function(e) {
+                console.log('[PUNTWORK] Clear performance logs button clicked!');
+                JobImportEvents.handleClearPerformanceLogs();
+            });
+
             // Log toggle button
             // $('#toggle-log').on('click', function(e) {
             //     console.log('[PUNTWORK] Toggle log button clicked!');
@@ -281,72 +292,6 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
             // Load import status last (most important for user interaction)
             JobImportAPI.getImportStatus().then(function(response) {
-                PuntWorkJSLogger.debug('Initial status response', 'EVENTS', response);
-                console.log('[PUNTWORK] Initial status response:', response);
-
-                // Handle both response formats: direct data or wrapped in .data
-                var statusData = JobImportUI.normalizeResponseData(response);
-
-                // Determine if there's actually an incomplete import to resume
-                var hasIncompleteImport = response.success && (
-                    (statusData.processed > 0 && !statusData.complete) || // Partially completed import
-                    (statusData.resume_progress > 0) || // Has resume progress
-                    (!statusData.complete && statusData.total > 0) // Incomplete with total set
-                );
-
-                if (hasIncompleteImport) {
-                    JobImportUI.updateProgress(statusData);
-                    JobImportUI.appendLogs(statusData.logs || []);
-                    
-                    // Check if import appears to be currently running (updated within last 5 minutes)
-                    // This aligns with the PHP stuck import detection threshold
-                    var currentTime = Math.floor(Date.now() / 1000);
-                    var timeSinceLastUpdate = currentTime - (statusData.last_update || 0);
-                    var isRecentlyActive = timeSinceLastUpdate < 300; // 5 minutes
-                    
-                    if (isRecentlyActive && statusData.processed > 0) {
-                        // Import appears to be currently running - show progress UI with cancel and reset
-                        $('#start-import').hide();
-                        $('#resume-import').hide();
-                        $('#cancel-import').show();
-                        $('#reset-import').show();
-                        JobImportUI.showImportUI();
-                        $('#status-message').text('Import in progress...');
-                        console.log('[PUNTWORK] Import appears to be currently running - starting status polling');
-                        
-                        // Start polling for status updates
-                        JobImportEvents.startStatusPolling();
-                    } else {
-                        // Import was interrupted - show resume and reset options
-                        $('#start-import').hide();
-                        $('#resume-import').show();
-                        $('#reset-import').show();
-                        $('#cancel-import').hide();
-                        JobImportUI.showImportUI();
-                        $('#status-message').text('Previous import interrupted. Resume or reset?');
-                        console.log('[PUNTWORK] Import was interrupted, showing resume and reset options');
-                    }
-                } else {
-                    // Clean state - hide all import controls except start
-                    $('#start-import').show().text('Start Import');
-                    $('#resume-import').hide();
-                    $('#cancel-import').hide();
-                    $('#reset-import').hide();
-                    JobImportUI.hideImportUI();
-                    console.log('[PUNTWORK] Clean state detected - showing start button only');
-                }
-            }).catch(function(xhr, status, error) {
-                PuntWorkJSLogger.error('Initial status AJAX error', 'EVENTS', error);
-                JobImportUI.appendLogs(['Initial status AJAX error: ' + error]);
-                // Ensure UI is in clean state even on error
-                JobImportUI.clearProgress();
-                JobImportUI.hideImportUI();
-                $('#start-import').show().text('Start Import');
-                $('#resume-import').hide();
-                $('#cancel-import').hide();
-                $('#reset-import').hide();
-            });
-        },
                 PuntWorkJSLogger.debug('Initial status response', 'EVENTS', response);
                 console.log('[PUNTWORK] Initial status response:', response);
 
@@ -791,6 +736,135 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             }
 
             $('#async-status-details').html(detailsHtml);
+        },
+
+        /**
+         * Handle refresh performance metrics button click
+         */
+        handleRefreshPerformance: function() {
+            console.log('[PUNTWORK] Refresh performance handler called');
+
+            $('#refresh-performance').prop('disabled', true);
+            $('#refresh-performance-text').hide();
+            $('#refresh-performance-loading').show();
+            $('#performance-status-msg').text('Refreshing metrics...');
+
+            JobImportAPI.getPerformanceStatus().then(function(response) {
+                console.log('[PUNTWORK] Performance status response:', response);
+
+                if (response.success) {
+                    JobImportEvents.updatePerformanceDisplay(response.stats, response.snapshot);
+                    $('#performance-status-msg').text('Metrics refreshed successfully');
+                } else {
+                    $('#performance-status-msg').text('Failed to refresh metrics');
+                }
+
+                $('#refresh-performance').prop('disabled', false);
+                $('#refresh-performance-text').show();
+                $('#refresh-performance-loading').hide();
+            }).catch(function(xhr, status, error) {
+                console.log('[PUNTWORK] Performance status error:', error);
+                $('#performance-status-msg').text('Error: ' + error);
+                $('#refresh-performance').prop('disabled', false);
+                $('#refresh-performance-text').show();
+                $('#refresh-performance-loading').hide();
+            });
+        },
+
+        /**
+         * Handle clear performance logs button click
+         */
+        handleClearPerformanceLogs: function() {
+            console.log('[PUNTWORK] Clear performance logs handler called');
+
+            if (!confirm('This will delete performance logs older than 30 days. Continue?')) {
+                return;
+            }
+
+            $('#clear-performance-logs').prop('disabled', true);
+            $('#clear-performance-text').hide();
+            $('#clear-performance-loading').show();
+            $('#performance-status-msg').text('Clearing old logs...');
+
+            JobImportAPI.clearPerformanceLogs().then(function(response) {
+                console.log('[PUNTWORK] Clear performance logs response:', response);
+
+                if (response.success) {
+                    $('#performance-status-msg').text(response.message || 'Old logs cleared successfully');
+                } else {
+                    $('#performance-status-msg').text('Failed to clear logs');
+                }
+
+                $('#clear-performance-logs').prop('disabled', false);
+                $('#clear-performance-text').show();
+                $('#clear-performance-loading').hide();
+            }).catch(function(xhr, status, error) {
+                console.log('[PUNTWORK] Clear performance logs error:', error);
+                $('#performance-status-msg').text('Error: ' + error);
+                $('#clear-performance-logs').prop('disabled', false);
+                $('#clear-performance-text').show();
+                $('#clear-performance-loading').hide();
+            });
+        },
+
+        /**
+         * Update the performance monitoring status display
+         */
+        updatePerformanceDisplay: function(stats, snapshot) {
+            console.log('[PUNTWORK] Updating performance display:', stats, snapshot);
+
+            // Update badge
+            var badgeElement = $('#performance-status-badge');
+            badgeElement.removeClass('success warning error').addClass('success');
+            badgeElement.html('<i class="fas fa-check-circle" style="margin-right: 4px;"></i>Active');
+
+            // Update metrics display
+            var metricsHtml = '';
+
+            if (stats && stats.total_runs > 0) {
+                metricsHtml += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px;">';
+
+                // Performance stats
+                metricsHtml += '<div style="background: linear-gradient(135deg, #007aff 0%, #5856d6 100%); border-radius: 8px; padding: 12px; color: white;">';
+                metricsHtml += '<div style="font-size: 12px; opacity: 0.8; margin-bottom: 4px;">Avg Time</div>';
+                metricsHtml += '<div style="font-size: 18px; font-weight: 600;">' + (stats.avg_time_seconds || 0) + 's</div>';
+                metricsHtml += '</div>';
+
+                metricsHtml += '<div style="background: linear-gradient(135deg, #32d74b 0%, #34c759 100%); border-radius: 8px; padding: 12px; color: white;">';
+                metricsHtml += '<div style="font-size: 12px; opacity: 0.8; margin-bottom: 4px;">Items/sec</div>';
+                metricsHtml += '<div style="font-size: 18px; font-weight: 600;">' + (stats.avg_items_per_second || 0) + '</div>';
+                metricsHtml += '</div>';
+
+                metricsHtml += '<div style="background: linear-gradient(135deg, #ff9500 0%, #ff6b35 100%); border-radius: 8px; padding: 12px; color: white;">';
+                metricsHtml += '<div style="font-size: 12px; opacity: 0.8; margin-bottom: 4px;">Memory Used</div>';
+                metricsHtml += '<div style="font-size: 18px; font-weight: 600;">' + (stats.avg_memory_mb || 0) + 'MB</div>';
+                metricsHtml += '</div>';
+
+                metricsHtml += '<div style="background: linear-gradient(135deg, #af52de 0%, #8e5de8 100%); border-radius: 8px; padding: 12px; color: white;">';
+                metricsHtml += '<div style="font-size: 12px; opacity: 0.8; margin-bottom: 4px;">Total Runs</div>';
+                metricsHtml += '<div style="font-size: 18px; font-weight: 600;">' + (stats.total_runs || 0) + '</div>';
+                metricsHtml += '</div>';
+
+                metricsHtml += '</div>';
+
+                metricsHtml += '<div style="font-size: 12px; color: #666;">Last ' + (stats.period_days || 30) + ' days • Peak memory: ' + (stats.max_peak_memory_mb || 0) + 'MB</div>';
+            } else {
+                metricsHtml += '<div>No performance data available yet. Run an import to collect metrics.</div>';
+            }
+
+            // Current system snapshot
+            if (snapshot) {
+                metricsHtml += '<div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e0e0e0;">';
+                metricsHtml += '<div style="font-size: 14px; font-weight: 500; margin-bottom: 8px;">Current System Status</div>';
+                metricsHtml += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; font-size: 12px;">';
+                metricsHtml += '<div>Memory: ' + Math.round((snapshot.memory_current || 0) / 1024 / 1024) + 'MB</div>';
+                metricsHtml += '<div>Peak: ' + Math.round((snapshot.memory_peak || 0) / 1024 / 1024) + 'MB</div>';
+                metricsHtml += '<div>PHP: ' + (snapshot.php_version || 'Unknown') + '</div>';
+                metricsHtml += '<div>WP: ' + (snapshot.wordpress_version || 'Unknown') + '</div>';
+                metricsHtml += '</div></div>';
+            }
+
+            $('#performance-metrics').html(metricsHtml);
         }
     };
 
