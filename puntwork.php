@@ -1,7 +1,7 @@
 </**
  * Plugin Name: puntWork
  * Description: Imports jobs from XML feeds via job-feed CPT.
- * Version: 1.0.11
+ * Version: 1.0.12
  * Author: DGC-GH
  */
 
@@ -12,20 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'PUNTWORK_VERSION', '1.0.11' );gin Name: puntWork
- * Description: Imports jobs from XML feeds via job-feed CPT.
- * Version: 1.0.8
- * Author: DGC-GH
- */
-
-namespace Puntwork;
-
-// Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
-
-define( 'PUNTWORK_VERSION', '1.0.8' );
+define( 'PUNTWORK_VERSION', '1.0.12' );
 define( 'PUNTWORK_PATH', plugin_dir_path( __FILE__ ) );
 define( 'PUNTWORK_URL', plugin_dir_url( __FILE__ ) );
 define( 'PUNTWORK_LOGS', PUNTWORK_PATH . 'logs/import.log' );
@@ -119,6 +106,7 @@ function setup_job_import() {
         'admin/admin-ui-scheduling.php',
         'admin/admin-api-settings.php',
         'admin/admin-ui-feed-health.php',
+        'admin/admin-ui-analytics.php',
         
         // API handlers
         'api/ajax-feed-processing.php',
@@ -160,6 +148,7 @@ function setup_job_import() {
         'utilities/performance-monitor.php',
         'utilities/security-utils.php',
         'utilities/feed-health-monitor.php',
+        'utilities/import-analytics.php',
         
         // Mappings
         'mappings/mappings-constants.php',
@@ -196,6 +185,11 @@ function setup_job_import() {
     // Initialize feed health monitoring
     if (class_exists(__NAMESPACE__ . '\\FeedHealthMonitor')) {
         call_user_func([__NAMESPACE__ . '\\FeedHealthMonitor', 'init']);
+    }
+
+    // Initialize import analytics
+    if (class_exists(__NAMESPACE__ . '\\ImportAnalytics')) {
+        call_user_func([__NAMESPACE__ . '\\ImportAnalytics', 'init']);
     }
 }
 
