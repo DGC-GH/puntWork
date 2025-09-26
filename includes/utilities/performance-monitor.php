@@ -1243,8 +1243,8 @@ class AdvancedMemoryManager extends MemoryManager
         return [
             'predicted_peak' => $predictedPeak,
             'memory_limit' => $memoryLimit,
-            'will_exceed_limit' => $predictedPeak > $memoryLimit,
-            'recommended_batch_size' => $predictedPeak > $memoryLimit ?
+            'will_exceed_limit' => $predicted_peak > $memoryLimit,
+            'recommended_batch_size' => $predicted_peak > $memoryLimit ?
                 max(1, (int)($batchSize * ($memoryLimit - $baseMemory - $safetyBuffer) / $estimatedBatchMemory)) :
                 $batchSize
         ];
@@ -1402,3 +1402,95 @@ function ajax_clear_memory_pool(): void
     }
 }
 add_action('wp_ajax_clear_memory_pool', 'ajax_clear_memory_pool');
+
+/**
+ * AJAX handler for running ML feed optimization
+ */
+function ajax_run_ml_feed_optimization(): void
+{
+    try {
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_ml_optimization')) {
+            wp_send_json_error('Security check failed');
+            return;
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+            return;
+        }
+
+        $results = \Puntwork\AI\FeedOptimizer::runOptimization();
+
+        wp_send_json_success([
+            'message' => 'ML feed optimization completed successfully',
+            'optimizations_applied' => $results['optimizations_applied'],
+            'feeds_analyzed' => $results['feeds_analyzed'],
+            'results' => $results
+        ]);
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('ML feed optimization failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AI);
+        wp_send_json_error('ML optimization failed: ' . $e->getMessage());
+    }
+}
+add_action('wp_ajax_run_ml_feed_optimization', 'ajax_run_ml_feed_optimization');
+
+/**
+ * AJAX handler for training ML models
+ */
+function ajax_train_ml_models(): void
+{
+    try {
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_train_models')) {
+            wp_send_json_error('Security check failed');
+            return;
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+            return;
+        }
+
+        $results = \Puntwork\AI\MachineLearningEngine::trainAllModels();
+
+        wp_send_json_success([
+            'message' => 'Model training completed successfully',
+            'models_trained' => $results['models_trained'],
+            'avg_accuracy' => round($results['avg_accuracy'] * 100, 1),
+            'results' => $results
+        ]);
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Model training failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AI);
+        wp_send_json_error('Model training failed: ' . $e->getMessage());
+    }
+}
+add_action('wp_ajax_train_ml_models', 'ajax_train_ml_models');
+
+/**
+ * AJAX handler for getting ML insights
+ */
+function ajax_get_ml_insights(): void
+{
+    try {
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_ml_insights')) {
+            wp_send_json_error('Security check failed');
+            return;
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+            return;
+        }
+
+        $insights = \Puntwork\AI\MachineLearningEngine::getInsights();
+
+        wp_send_json_success([
+            'insights' => $insights
+        ]);
+
+    } catch (\Exception $e) {
+        wp_send_json_error('Failed to get ML insights: ' . $e->getMessage());
+    }
+}
+add_action('wp_ajax_get_ml_insights', 'ajax_get_ml_insights');
