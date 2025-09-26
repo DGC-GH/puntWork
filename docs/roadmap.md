@@ -1,4 +1,12 @@
-# PuntWork Development Roadmap
+# PuntWork Dev## Phase 2: Performance Optimization (Priority: High)
+- [x] Implement Redis/object caching for feed data and mappings
+- [x] Optimize database queries with proper indexing
+- [ ] Add async processing for large imports using Action Scheduler
+- [ ] Implement progressive loading for admin UI
+- [ ] Add performance benchmarks and monitoring
+- [x] Refactor long functions (e.g., process_batch_items_logic) into smaller units
+- [x] Optimize memory usage in batch processing (JsonlIterator for streaming)
+- [x] Add type hints and strict typing throughout codebaseRoadmap
 
 ## Phase 1: Code Quality & Testing (Priority: High)
 - [x] **CRITICAL BUG**: Fix API import progress tracking - API calls show "0 / X items" instead of actual progress while manual/scheduled imports work correctly
@@ -14,7 +22,9 @@
 
 ## Phase 2: Performance Optimization (Priority: High)
 - [x] Implement Redis/object caching for feed data and mappings
-- [ ] Optimize database queries with proper indexing
+- [x] Optimize database queries with proper indexing and bulk operations
+- [x] Eliminate N+1 query patterns in batch processing
+- [x] Add database optimization UI for index management
 - [ ] Add async processing for large imports using Action Scheduler
 - [ ] Implement progressive loading for admin UI
 - [ ] Add performance benchmarks and monitoring

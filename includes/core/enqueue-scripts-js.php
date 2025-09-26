@@ -339,6 +339,20 @@ function enqueue_job_import_scripts() {
                     transition-duration: 0.01ms !important;
                 }
             }
+
+            /* Database Optimization Styles */
+            #db-status-badge.success {
+                background-color: #34c759 !important;
+                color: white !important;
+            }
+            #db-status-badge.warning {
+                background-color: #ff9500 !important;
+                color: white !important;
+            }
+            #db-status-badge.error {
+                background-color: #ff3b30 !important;
+                color: white !important;
+            }
         ');
 
         // Enqueue JavaScript modules
