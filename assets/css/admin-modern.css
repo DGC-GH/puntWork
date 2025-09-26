@@ -1,0 +1,779 @@
+/* ==========================================================================
+   Modern Admin UI Styles for puntWork
+   ========================================================================== */
+
+/* CSS Custom Properties (Design Tokens) */
+:root {
+  /* Colors */
+  --color-primary: #007aff;
+  --color-primary-dark: #0056cc;
+  --color-primary-light: #4da3ff;
+  --color-secondary: #6c757d;
+  --color-success: #34c759;
+  --color-success-dark: #28a745;
+  --color-warning: #ff9500;
+  --color-warning-dark: #e8890b;
+  --color-danger: #ff3b30;
+  --color-danger-dark: #d63027;
+  --color-info: #5ac8fa;
+  --color-info-dark: #007aff;
+
+  /* Neutral Colors */
+  --color-white: #ffffff;
+  --color-gray-50: #f9f9f9;
+  --color-gray-100: #f2f2f7;
+  --color-gray-200: #e5e5e7;
+  --color-gray-300: #d1d1d6;
+  --color-gray-400: #c7c7cc;
+  --color-gray-500: #aeaeb2;
+  --color-gray-600: #8e8e93;
+  --color-gray-700: #86868b;
+  --color-gray-800: #636366;
+  --color-gray-900: #48484a;
+  --color-black: #1d1d1f;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 50%;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.25);
+
+  /* Typography */
+  --font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-family-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 30px;
+  --font-size-4xl: 36px;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+
+  /* Z-index */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-toast: 1080;
+}
+
+/* ==========================================================================
+   Base Styles
+   ========================================================================== */
+
+.puntwork-admin {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-black);
+  background-color: var(--color-gray-50);
+  min-height: 100vh;
+}
+
+/* ==========================================================================
+   Layout Components
+   ========================================================================== */
+
+.puntwork-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-lg);
+}
+
+@media (max-width: 768px) {
+  .puntwork-container {
+    padding: 0 var(--spacing-md);
+  }
+}
+
+.puntwork-header {
+  background: var(--color-white);
+  border-bottom: 1px solid var(--color-gray-200);
+  padding: var(--spacing-xl) 0;
+  margin-bottom: var(--spacing-2xl);
+}
+
+.puntwork-header__title {
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-black);
+  margin: 0 0 var(--spacing-sm) 0;
+  text-align: center;
+}
+
+.puntwork-header__subtitle {
+  font-size: var(--font-size-lg);
+  color: var(--color-gray-600);
+  text-align: center;
+  margin: 0;
+}
+
+/* ==========================================================================
+   Card Components
+   ========================================================================== */
+
+.puntwork-card {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--color-gray-200);
+  overflow: hidden;
+  transition: var(--transition-normal);
+}
+
+.puntwork-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.puntwork-card__header {
+  padding: var(--spacing-xl);
+  border-bottom: 1px solid var(--color-gray-100);
+  background: linear-gradient(135deg, var(--color-gray-50) 0%, var(--color-white) 100%);
+}
+
+.puntwork-card__title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-black);
+  margin: 0 0 var(--spacing-xs) 0;
+}
+
+.puntwork-card__subtitle {
+  font-size: var(--font-size-base);
+  color: var(--color-gray-600);
+  margin: 0;
+}
+
+.puntwork-card__body {
+  padding: var(--spacing-xl);
+}
+
+.puntwork-card__footer {
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-top: 1px solid var(--color-gray-100);
+  background: var(--color-gray-50);
+}
+
+/* ==========================================================================
+   Button Components
+   ========================================================================== */
+
+.puntwork-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  text-decoration: none;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.puntwork-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.puntwork-btn--primary {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  color: var(--color-white);
+  box-shadow: 0 2px 4px rgba(0, 122, 255, 0.2);
+}
+
+.puntwork-btn--primary:hover {
+  background: linear-gradient(135deg, var(--color-primary-dark) 0%, #004499 100%);
+  box-shadow: 0 4px 8px rgba(0, 122, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.puntwork-btn--secondary {
+  background: var(--color-gray-100);
+  color: var(--color-gray-700);
+  border: 1px solid var(--color-gray-300);
+}
+
+.puntwork-btn--secondary:hover {
+  background: var(--color-gray-200);
+  border-color: var(--color-gray-400);
+  transform: translateY(-1px);
+}
+
+.puntwork-btn--success {
+  background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-dark) 100%);
+  color: var(--color-white);
+  box-shadow: 0 2px 4px rgba(52, 199, 89, 0.2);
+}
+
+.puntwork-btn--success:hover {
+  background: linear-gradient(135deg, var(--color-success-dark) 0%, #1e7e34 100%);
+  box-shadow: 0 4px 8px rgba(52, 199, 89, 0.3);
+  transform: translateY(-1px);
+}
+
+.puntwork-btn--danger {
+  background: linear-gradient(135deg, var(--color-danger) 0%, var(--color-danger-dark) 100%);
+  color: var(--color-white);
+  box-shadow: 0 2px 4px rgba(255, 59, 48, 0.2);
+}
+
+.puntwork-btn--danger:hover {
+  background: linear-gradient(135deg, var(--color-danger-dark) 0%, #b22222 100%);
+  box-shadow: 0 4px 8px rgba(255, 59, 48, 0.3);
+  transform: translateY(-1px);
+}
+
+.puntwork-btn--outline {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.puntwork-btn--outline:hover {
+  background: var(--color-primary);
+  color: var(--color-white);
+  transform: translateY(-1px);
+}
+
+.puntwork-btn__icon {
+  margin-right: var(--spacing-xs);
+}
+
+.puntwork-btn__icon--right {
+  margin-left: var(--spacing-xs);
+  margin-right: 0;
+}
+
+/* ==========================================================================
+   Form Components
+   ========================================================================== */
+
+.puntwork-form-group {
+  margin-bottom: var(--spacing-lg);
+}
+
+.puntwork-form-group:last-child {
+  margin-bottom: 0;
+}
+
+.puntwork-form-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-700);
+  margin-bottom: var(--spacing-xs);
+}
+
+.puntwork-form-control {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+  line-height: var(--line-height-normal);
+  color: var(--color-black);
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  transition: var(--transition-fast);
+}
+
+.puntwork-form-control:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+}
+
+.puntwork-form-control:hover {
+  border-color: var(--color-gray-400);
+}
+
+.puntwork-form-control:disabled {
+  background: var(--color-gray-100);
+  color: var(--color-gray-500);
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Progress Components
+   ========================================================================== */
+
+.puntwork-progress {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  background: var(--color-gray-200);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.puntwork-progress__bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  border-radius: var(--radius-full);
+  transition: width var(--transition-normal);
+  position: relative;
+}
+
+.puntwork-progress__bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+  animation: progress-shine 2s infinite;
+}
+
+@keyframes progress-shine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ==========================================================================
+   Status Components
+   ========================================================================== */
+
+.puntwork-status {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.puntwork-status--success {
+  background: rgba(52, 199, 89, 0.1);
+  color: var(--color-success-dark);
+}
+
+.puntwork-status--warning {
+  background: rgba(255, 149, 0, 0.1);
+  color: var(--color-warning-dark);
+}
+
+.puntwork-status--danger {
+  background: rgba(255, 59, 48, 0.1);
+  color: var(--color-danger-dark);
+}
+
+.puntwork-status--info {
+  background: rgba(90, 200, 250, 0.1);
+  color: var(--color-info-dark);
+}
+
+.puntwork-status--neutral {
+  background: var(--color-gray-100);
+  color: var(--color-gray-700);
+}
+
+/* ==========================================================================
+   Grid Components
+   ========================================================================== */
+
+.puntwork-grid {
+  display: grid;
+  gap: var(--spacing-lg);
+}
+
+.puntwork-grid--2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.puntwork-grid--3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.puntwork-grid--4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 768px) {
+  .puntwork-grid--2,
+  .puntwork-grid--3,
+  .puntwork-grid--4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   Stats Components
+   ========================================================================== */
+
+.puntwork-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.puntwork-stat {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  color: var(--color-white);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  transition: var(--transition-normal);
+}
+
+.puntwork-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.puntwork-stat--success {
+  background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-dark) 100%);
+}
+
+.puntwork-stat--warning {
+  background: linear-gradient(135deg, var(--color-warning) 0%, var(--color-warning-dark) 100%);
+}
+
+.puntwork-stat--danger {
+  background: linear-gradient(135deg, var(--color-danger) 0%, var(--color-danger-dark) 100%);
+}
+
+.puntwork-stat__icon {
+  width: 24px;
+  height: 24px;
+  margin-bottom: var(--spacing-sm);
+  opacity: 0.9;
+}
+
+.puntwork-stat__value {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--spacing-xs);
+}
+
+.puntwork-stat__label {
+  font-size: var(--font-size-sm);
+  opacity: 0.9;
+  font-weight: var(--font-weight-medium);
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+  .puntwork-header__title {
+    font-size: var(--font-size-3xl);
+  }
+}
+
+@media (max-width: 768px) {
+  .puntwork-admin {
+    padding: var(--spacing-md);
+  }
+
+  .puntwork-header {
+    padding: var(--spacing-lg) 0;
+    margin-bottom: var(--spacing-xl);
+  }
+
+  .puntwork-header__title {
+    font-size: var(--font-size-2xl);
+  }
+
+  .puntwork-card__header,
+  .puntwork-card__body,
+  .puntwork-card__footer {
+    padding: var(--spacing-lg);
+  }
+
+  .puntwork-btn {
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: var(--font-size-base);
+  }
+
+  .puntwork-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .puntwork-container {
+    padding: 0 var(--spacing-sm);
+  }
+
+  .puntwork-header__title {
+    font-size: var(--font-size-xl);
+  }
+
+  .puntwork-card__header,
+  .puntwork-card__body,
+  .puntwork-card__footer {
+    padding: var(--spacing-md);
+  }
+}
+
+/* ==========================================================================
+   Accessibility
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-contrast: high) {
+  .puntwork-card {
+    border: 2px solid var(--color-gray-300);
+  }
+
+  .puntwork-btn--outline {
+    border-width: 2px;
+  }
+}
+
+/* Focus states */
+.puntwork-btn:focus,
+.puntwork-form-control:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Dark Mode Support (Future Enhancement)
+   ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+  /* Dark mode styles can be added here in the future */
+}
+
+/* ==========================================================================
+   Status Badge Styles
+   ========================================================================== */
+
+.puntwork-status--success {
+  background: rgba(52, 199, 89, 0.1);
+  color: var(--color-success-dark);
+}
+
+.puntwork-status--warning {
+  background: rgba(255, 149, 0, 0.1);
+  color: var(--color-warning-dark);
+}
+
+.puntwork-status--danger {
+  background: rgba(255, 59, 48, 0.1);
+  color: var(--color-danger-dark);
+}
+
+.puntwork-status--info {
+  background: rgba(90, 200, 250, 0.1);
+  color: var(--color-info-dark);
+}
+
+.puntwork-status--neutral {
+  background: var(--color-gray-100);
+  color: var(--color-gray-700);
+}
+
+/* ==========================================================================
+   Job Status Styles
+   ========================================================================== */
+
+.job-status {
+  text-transform: capitalize;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  display: inline-block;
+}
+
+.job-status.status-publish {
+  background-color: rgba(52, 199, 89, 0.1);
+  color: var(--color-success-dark);
+}
+
+.job-status.status-draft {
+  background-color: rgba(255, 149, 0, 0.1);
+  color: var(--color-warning-dark);
+}
+
+.job-status.status-pending {
+  background-color: rgba(90, 200, 250, 0.1);
+  color: var(--color-info-dark);
+}
+
+.job-status.status-trash {
+  background-color: rgba(255, 59, 48, 0.1);
+  color: var(--color-danger-dark);
+}
+
+/* ==========================================================================
+   Job Listings Table Styles
+   ========================================================================== */
+
+.job-listings-row {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--color-gray-200);
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 100px;
+  gap: var(--spacing-lg);
+  align-items: center;
+  font-size: var(--font-size-sm);
+  transition: var(--transition-fast);
+}
+
+.job-listings-row:hover {
+  background-color: var(--color-gray-50);
+}
+
+.job-listings-row:last-child {
+  border-bottom: none;
+}
+
+.job-listings-title {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-900);
+}
+
+.job-listings-title a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+.job-listings-title a:hover {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+}
+
+.job-listings-meta {
+  color: var(--color-gray-600);
+}
+
+.job-listings-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+  justify-content: flex-end;
+}
+
+.job-action {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+  font-size: var(--font-size-sm);
+}
+
+.job-action:hover {
+  background-color: var(--color-gray-100);
+  color: var(--color-primary-dark);
+}
+
+.job-action--edit {
+  color: var(--color-primary);
+}
+
+.job-action--view {
+  color: var(--color-success);
+}
+
+/* ==========================================================================
+   Loading States
+   ========================================================================== */
+
+.puntwork-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  color: var(--color-gray-600);
+}
+
+.puntwork-loading__spinner {
+  font-size: var(--font-size-2xl);
+  margin-right: var(--spacing-md);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   Empty States
+   ========================================================================== */
+
+.puntwork-empty {
+  text-align: center;
+  padding: var(--spacing-2xl);
+  color: var(--color-gray-600);
+}
+
+.puntwork-empty__icon {
+  font-size: var(--font-size-4xl);
+  margin-bottom: var(--spacing-lg);
+  opacity: 0.5;
+}
+
+.puntwork-empty__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+  margin-bottom: var(--spacing-sm);
+  color: var(--color-gray-700);
+}
+
+.puntwork-empty__message {
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-600);
+}

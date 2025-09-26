@@ -22,83 +22,114 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function render_jobs_dashboard_ui(): void {
     ?>
-    <div class="wrap" style="max-width: 800px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1d1d1f; padding: 0 20px;">
-        <h1 style="font-size: 34px; font-weight: 600; text-align: center; margin: 40px 0 20px;">Jobs Dashboard</h1>
+    <div class="puntwork-admin">
+        <div class="puntwork-container">
+            <header class="puntwork-header">
+                <h1 class="puntwork-header__title">Jobs Dashboard</h1>
+                <p class="puntwork-header__subtitle">Manage and monitor your job import operations</p>
+            </header>
 
-        <!-- Delete Drafts and Trash Section -->
-        <div style="margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px;">Delete Drafts and Trash</h2>
-            <p style="font-size: 14px; color: #8e8e93; margin: 0 0 16px;">Permanently delete all job posts that are in Draft or Trash status. This action cannot be undone.</p>
-
-            <!-- Cleanup Progress Section -->
-            <div id="cleanup-progress" style="background-color: #f9f9f9; border-radius: 8px; padding: 16px; margin-bottom: 16px; display: none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span id="cleanup-progress-percent" style="font-size: 18px; font-weight: 600; color: #007aff;">0%</span>
-                    <span id="cleanup-time-elapsed" style="font-size: 14px; color: #8e8e93;">0s</span>
+            <!-- Delete Drafts and Trash Section -->
+            <div class="puntwork-card" style="margin-bottom: var(--spacing-xl);">
+                <div class="puntwork-card__header">
+                    <h2 class="puntwork-card__title">Cleanup Operations</h2>
+                    <p class="puntwork-card__subtitle">Permanently delete all job posts that are in Draft or Trash status. This action cannot be undone.</p>
                 </div>
-                <div id="cleanup-progress-bar" style="width: 100%; height: 6px; border-radius: 3px; background-color: #f2f2f7; display: flex; overflow: hidden;"></div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                    <span id="cleanup-status-message" style="font-size: 14px; color: #8e8e93;">Ready to start.</span>
-                    <span id="cleanup-items-left" style="font-size: 14px; color: #8e8e93;">0 left</span>
+
+                <!-- Cleanup Progress Section -->
+                <div id="cleanup-progress" class="puntwork-card__body" style="background-color: var(--color-gray-50); border-radius: var(--radius-md); margin-bottom: var(--spacing-lg); display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-sm);">
+                        <span id="cleanup-progress-percent" style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">0%</span>
+                        <span id="cleanup-time-elapsed" style="font-size: var(--font-size-sm); color: var(--color-gray-600);">0s</span>
+                    </div>
+                    <div class="puntwork-progress">
+                        <div id="cleanup-progress-bar" class="puntwork-progress__bar" style="width: 0%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: var(--spacing-sm);">
+                        <span id="cleanup-status-message" style="font-size: var(--font-size-sm); color: var(--color-gray-600);">Ready to start.</span>
+                        <span id="cleanup-items-left" style="font-size: var(--font-size-sm); color: var(--color-gray-600);">0 left</span>
+                    </div>
                 </div>
-            </div>
 
-            <div style="display: flex; gap: 12px; align-items: center;">
-                <button id="cleanup-duplicates" class="button button-secondary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #ff9500; border: none; color: white;">
-                    <span id="cleanup-text">Delete Drafts & Trash</span>
-                    <span id="cleanup-loading" style="display: none;">Deleting...</span>
-                </button>
-                <span id="cleanup-status" style="font-size: 14px; color: #8e8e93;"></span>
-            </div>
-        </div>
-
-        <!-- Database Optimization Section -->
-        <div style="margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px;">Database Optimization</h2>
-            <p style="font-size: 14px; color: #8e8e93; margin: 0 0 16px;">Optimize database performance with proper indexes for faster imports.</p>
-
-            <div id="db-optimization-status" style="background-color: #f9f9f9; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <span style="font-size: 16px; font-weight: 500;">Index Status</span>
-                    <span id="db-status-badge" style="font-size: 12px; padding: 4px 8px; border-radius: 4px; background-color: #8e8e93; color: white;">
-                        <i class="fas fa-spinner fa-spin" style="margin-right: 4px;"></i>Loading...
-                    </span>
-                </div>
-                <div id="db-indexes-list" style="font-size: 14px; color: #8e8e93;">
-                    <div style="display: flex; align-items: center;">
-                        <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>
-                        Loading database optimization status...
+                <div class="puntwork-card__footer">
+                    <div style="display: flex; gap: var(--spacing-md); align-items: center;">
+                        <button id="cleanup-duplicates" class="puntwork-btn puntwork-btn--danger">
+                            <i class="fas fa-trash-alt puntwork-btn__icon"></i>
+                            <span id="cleanup-text">Delete Drafts & Trash</span>
+                            <span id="cleanup-loading" style="display: none;">Deleting...</span>
+                        </button>
+                        <span id="cleanup-status" style="font-size: var(--font-size-sm); color: var(--color-gray-600);"></span>
                     </div>
                 </div>
             </div>
 
-            <div style="display: flex; gap: 12px; align-items: center;">
-                <button id="optimize-database" class="button button-primary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #007aff; border: none; color: white;">
-                    <span id="optimize-text">Create Missing Indexes</span>
-                    <span id="optimize-loading" style="display: none;">Creating Indexes...</span>
-                </button>
-                <button id="check-db-status" class="button button-secondary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500;">
-                    <span id="check-text">Check Status</span>
-                    <span id="check-loading" style="display: none;">Checking...</span>
-                </button>
-                <span id="db-optimization-status-msg" style="font-size: 14px; color: #8e8e93;"></span>
+            <!-- Database Optimization Section -->
+            <div class="puntwork-card" style="margin-bottom: var(--spacing-xl);">
+                <div class="puntwork-card__header">
+                    <h2 class="puntwork-card__title">Database Optimization</h2>
+                    <p class="puntwork-card__subtitle">Optimize database performance with proper indexes for faster imports.</p>
+                </div>
+
+                <div class="puntwork-card__body">
+                    <div id="db-optimization-status" style="background-color: var(--color-gray-50); border-radius: var(--radius-md); padding: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+                            <span style="font-size: var(--font-size-base); font-weight: var(--font-weight-medium);">Index Status</span>
+                            <span id="db-status-badge" class="puntwork-status puntwork-status--neutral">
+                                <i class="fas fa-spinner fa-spin" style="margin-right: var(--spacing-xs);"></i>Loading...
+                            </span>
+                        </div>
+                        <div id="db-indexes-list" style="font-size: var(--font-size-sm); color: var(--color-gray-600);">
+                            <div style="display: flex; align-items: center;">
+                                <i class="fas fa-spinner fa-spin" style="margin-right: var(--spacing-xs);"></i>
+                                Loading database optimization status...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="puntwork-card__footer">
+                    <div style="display: flex; gap: var(--spacing-md); align-items: center;">
+                        <button id="optimize-database" class="puntwork-btn puntwork-btn--primary">
+                            <i class="fas fa-database puntwork-btn__icon"></i>
+                            <span id="optimize-text">Create Missing Indexes</span>
+                            <span id="optimize-loading" style="display: none;">Creating Indexes...</span>
+                        </button>
+                        <button id="check-db-status" class="puntwork-btn puntwork-btn--secondary">
+                            <i class="fas fa-sync puntwork-btn__icon"></i>
+                            <span id="check-text">Check Status</span>
+                            <span id="check-loading" style="display: none;">Checking...</span>
+                        </button>
+                        <span id="db-optimization-status-msg" style="font-size: var(--font-size-sm); color: var(--color-gray-600);"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Async Processing Configuration Section -->
+            <div class="puntwork-card">
+                <div class="puntwork-card__header">
+                    <h2 class="puntwork-card__title">Async Processing</h2>
+                    <p class="puntwork-card__subtitle">Configure background processing for large imports to prevent timeouts and improve performance.</p>
+                </div>
+
+                <div class="puntwork-card__body">
+                    <div id="async-processing-status" style="background-color: var(--color-gray-50); border-radius: var(--radius-md); padding: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+                            <span style="font-size: var(--font-size-base); font-weight: var(--font-weight-medium);">Async Status</span>
+                            <span id="async-status-badge" class="puntwork-status puntwork-status--neutral">
+                                <i class="fas fa-spinner fa-spin" style="margin-right: var(--spacing-xs);"></i>Loading...
+                            </span>
+                        </div>
+                        <div id="async-status-details" style="font-size: var(--font-size-sm); color: var(--color-gray-600);">
+                            <div style="display: flex; align-items: center;">
+                                <i class="fas fa-spinner fa-spin" style="margin-right: var(--spacing-xs);"></i>
+                                Loading async processing status...
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-
-        <!-- Async Processing Configuration Section -->
-        <div style="margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px;">Async Processing</h2>
-            <p style="font-size: 14px; color: #8e8e93; margin: 0 0 16px;">Configure background processing for large imports to prevent timeouts and improve performance.</p>
-
-            <div id="async-processing-status" style="background-color: #f9f9f9; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <span style="font-size: 16px; font-weight: 500;">Async Status</span>
-                    <span id="async-status-badge" style="font-size: 12px; padding: 4px 8px; border-radius: 4px; background-color: #8e8e93; color: white;">
-                        <i class="fas fa-spinner fa-spin" style="margin-right: 4px;"></i>Loading...
-                    </span>
-                </div>
-                <div id="async-status-details" style="font-size: 14px; color: #8e8e93;">
-                    <div style="display: flex; align-items: center;">
+    </div>
                         <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>
                         Loading async processing status...
                     </div>
@@ -119,9 +150,73 @@ function render_jobs_dashboard_ui(): void {
         </div>
 
         <!-- Job Listings Section with Lazy Loading -->
-        <div style="margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px;">Job Listings</h2>
-            <p style="font-size: 14px; color: #8e8e93; margin: 0 0 16px;">Browse and manage imported job posts with lazy loading for better performance.</p>
+        <div class="puntwork-card" style="margin-bottom: var(--spacing-xl);">
+            <div class="puntwork-card__header">
+                <h2 class="puntwork-card__title">Job Listings</h2>
+                <p class="puntwork-card__subtitle">Browse and manage imported job posts with lazy loading for better performance.</p>
+            </div>
+
+            <div class="puntwork-card__body">
+                <!-- Filters -->
+                <div style="display: flex; gap: var(--spacing-md); align-items: center; margin-bottom: var(--spacing-lg); flex-wrap: wrap;">
+                    <div class="puntwork-form-group" style="margin: 0;">
+                        <label for="job-status-filter" class="puntwork-form-label" style="margin-bottom: var(--spacing-xs);">Status</label>
+                        <select id="job-status-filter" class="puntwork-form-control" style="width: auto; min-width: 120px;">
+                            <option value="any">All Status</option>
+                            <option value="publish">Published</option>
+                            <option value="draft">Draft</option>
+                            <option value="pending">Pending</option>
+                            <option value="trash">Trash</option>
+                        </select>
+                    </div>
+                    <div class="puntwork-form-group" style="margin: 0; flex: 1; min-width: 200px;">
+                        <label for="job-search" class="puntwork-form-label" style="margin-bottom: var(--spacing-xs);">Search</label>
+                        <input type="text" id="job-search" class="puntwork-form-control" placeholder="Search by title, company, or location...">
+                    </div>
+                    <div style="display: flex; gap: var(--spacing-sm); align-items: end;">
+                        <button id="apply-job-filters" class="puntwork-btn puntwork-btn--primary">
+                            <i class="fas fa-search puntwork-btn__icon"></i>Search
+                        </button>
+                        <button id="clear-job-filters" class="puntwork-btn puntwork-btn--secondary">
+                            <i class="fas fa-times puntwork-btn__icon"></i>Clear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div id="job-listings-loading" class="puntwork-loading" style="display: none;">
+                    <i class="fas fa-spinner fa-spin puntwork-loading__spinner"></i>
+                    <div>Loading job listings...</div>
+                </div>
+
+                <!-- Job Listings Table -->
+                <div id="job-listings-table" style="display: none;">
+                    <div style="overflow-x: auto; border: 1px solid var(--color-gray-200); border-radius: var(--radius-md);">
+                        <div id="job-listings-body" style="min-height: 200px;">
+                            <!-- Job rows will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="job-listings-empty" class="puntwork-empty" style="display: none;">
+                    <i class="fas fa-inbox puntwork-empty__icon"></i>
+                    <div class="puntwork-empty__title">No jobs found</div>
+                    <div class="puntwork-empty__message">Try adjusting your search criteria or import some jobs first.</div>
+                </div>
+
+                <!-- Pagination -->
+                <div id="job-pagination" style="display: flex; justify-content: center; align-items: center; gap: var(--spacing-md); margin-top: var(--spacing-lg); display: none;">
+                    <button id="job-prev-page" class="puntwork-btn puntwork-btn--outline" disabled>
+                        <i class="fas fa-chevron-left puntwork-btn__icon"></i>Previous
+                    </button>
+                    <span id="job-page-info" style="font-size: var(--font-size-sm); color: var(--color-gray-600);">Page 1 of 1</span>
+                    <button id="job-next-page" class="puntwork-btn puntwork-btn--outline" disabled>
+                        Next<i class="fas fa-chevron-right puntwork-btn__icon puntwork-btn__icon--right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
 
             <!-- Job Filters -->
             <div id="job-filters" style="background-color: #f9f9f9; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
@@ -198,135 +293,140 @@ function render_jobs_dashboard_ui(): void {
  */
 function render_main_import_ui(): void {
     ?>
-    <div class="wrap" style="max-width: 800px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1d1d1f; padding: 0 20px;">
-        <h1 style="font-size: 34px; font-weight: 600; text-align: center; margin: 40px 0 20px;">Feeds Dashboard</h1>
+    <div class="puntwork-admin">
+        <div class="puntwork-container">
+            <header class="puntwork-header">
+                <h1 class="puntwork-header__title">Feeds Dashboard</h1>
+                <p class="puntwork-header__subtitle">Manage and monitor your job feed imports</p>
+            </header>
 
-        <!-- Import Controls Section -->
-        <div style="margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-            <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px;">Import Controls</h2>
-            <p style="font-size: 14px; color: #8e8e93; margin: 0 0 16px;">Start, pause, or resume job imports from configured feeds.</p>
+            <!-- Import Controls Section -->
+            <div class="puntwork-card" style="margin-bottom: var(--spacing-xl);">
+                <div class="puntwork-card__header">
+                    <h2 class="puntwork-card__title">Import Controls</h2>
+                    <p class="puntwork-card__subtitle">Start, pause, or resume job imports from configured feeds.</p>
+                </div>
 
-            <div style="display: flex; gap: 12px; align-items: center;">
-                <button id="start-import" class="button button-primary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #007aff; border: none; color: white;">
-                    <span id="start-text">Start Import</span>
-                    <span id="start-loading" style="display: none;">Starting...</span>
-                </button>
-                <button id="cancel-import" class="button button-secondary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #ff3b30; border: none; color: white; display: none;">Cancel Import</button>
-                <button id="resume-import" class="button button-secondary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #34c759; border: none; color: white; display: none;">Resume Import</button>
-                <button id="reset-import" class="button button-outline" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: transparent; border: 1px solid #d1d1d6; color: #424245; transition: all 0.2s ease;">
-                    <i class="fas fa-undo" style="margin-right: 6px;"></i>Reset Import
-                </button>
-                <span id="import-status" style="font-size: 14px; color: #8e8e93;"></span>
+                <div class="puntwork-card__footer">
+                    <div style="display: flex; gap: var(--spacing-md); align-items: center; flex-wrap: wrap;">
+                        <button id="start-import" class="puntwork-btn puntwork-btn--primary">
+                            <i class="fas fa-play puntwork-btn__icon"></i>
+                            <span id="start-text">Start Import</span>
+                            <span id="start-loading" style="display: none;">Starting...</span>
+                        </button>
+                        <button id="cancel-import" class="puntwork-btn puntwork-btn--danger" style="display: none;">
+                            <i class="fas fa-stop puntwork-btn__icon"></i>Cancel Import
+                        </button>
+                        <button id="resume-import" class="puntwork-btn puntwork-btn--success" style="display: none;">
+                            <i class="fas fa-play-circle puntwork-btn__icon"></i>Resume Import
+                        </button>
+                        <button id="reset-import" class="puntwork-btn puntwork-btn--outline">
+                            <i class="fas fa-undo puntwork-btn__icon"></i>Reset Import
+                        </button>
+                        <span id="import-status" style="font-size: var(--font-size-sm); color: var(--color-gray-600);"></span>
+                    </div>
+                </div>
             </div>
-        </div>
 
         <!-- Import Progress Section -->
-        <div id="import-progress" style="max-width: 800px; margin: 0 auto; margin-top: 32px; background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                <h2 style="font-size: 20px; font-weight: 600; margin: 0;">Import Progress</h2>
-                <span id="progress-percent" style="font-size: 24px; font-weight: 600; color: #007aff;">0%</span>
-            </div>
-
-            <!-- Progress Bar -->
-            <div id="progress-bar" style="width: 100%; height: 6px; border-radius: 3px; background-color: #f2f2f7; display: flex; margin-bottom: 16px; overflow: hidden;"></div>
-
-            <!-- Time Counters -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; font-size: 14px; color: #8e8e93;">
-                <span>Elapsed: <span id="time-elapsed" style="font-weight: 500;">0s</span></span>
-                <span>Remaining: <span id="time-left" style="font-weight: 500;">Calculating...</span></span>
-            </div>
-
-            <!-- Statistics Grid -->
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px;">
-                <!-- Progress Overview -->
-                <div style="background: linear-gradient(135deg, #007aff 0%, #5856d6 100%); border-radius: 12px; padding: 16px; color: white; box-shadow: 0 2px 8px rgba(0,122,255,0.2);">
-                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                        <div style="width: 8px; height: 8px; border-radius: 50%; background-color: rgba(255,255,255,0.8); margin-right: 8px;"></div>
-                        <span style="font-size: 13px; font-weight: 500; opacity: 0.9;">Progress</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                        <div>
-                            <div style="font-size: 24px; font-weight: 700; margin-bottom: 2px;" id="processed-items">0</div>
-                            <div style="font-size: 11px; opacity: 0.8;">of <span id="total-items">0</span> processed</div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 14px; font-weight: 600; margin-bottom: 2px;" id="items-left">0</div>
-                            <div style="font-size: 11px; opacity: 0.8;">remaining</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Success Metrics -->
-                <div style="background: linear-gradient(135deg, #32d74b 0%, #34c759 100%); border-radius: 12px; padding: 16px; color: white; box-shadow: 0 2px 8px rgba(52,199,89,0.2);">
-                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                        <div style="width: 8px; height: 8px; border-radius: 50%; background-color: rgba(255,255,255,0.8); margin-right: 8px;"></div>
-                        <span style="font-size: 13px; font-weight: 500; opacity: 0.9;">Success</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                        <div>
-                            <div style="font-size: 24px; font-weight: 700; margin-bottom: 2px;" id="published-items">0</div>
-                            <div style="font-size: 11px; opacity: 0.8;">published</div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 14px; font-weight: 600; margin-bottom: 2px;" id="updated-items">0</div>
-                            <div style="font-size: 11px; opacity: 0.8;">updated</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Skipped Items -->
-                <div style="background: linear-gradient(135deg, #af52de 0%, #8e5de8 100%); border-radius: 12px; padding: 16px; color: white; box-shadow: 0 2px 8px rgba(175,82,222,0.2);">
-                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                        <div style="width: 8px; height: 8px; border-radius: 50%; background-color: rgba(255,255,255,0.8); margin-right: 8px;"></div>
-                        <span style="font-size: 13px; font-weight: 500; opacity: 0.9;">Up to Date</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                        <div>
-                            <div style="font-size: 24px; font-weight: 700; margin-bottom: 2px;" id="skipped-items">0</div>
-                            <div style="font-size: 11px; opacity: 0.8;">already current</div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 14px; font-weight: 600; margin-bottom: 2px; opacity: 0.7;"><i class="fas fa-check"></i></div>
-                            <div style="font-size: 11px; opacity: 0.8;">no changes</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Issues & Actions -->
-                <div style="background: linear-gradient(135deg, #ff9500 0%, #ff6b35 100%); border-radius: 12px; padding: 16px; color: white; box-shadow: 0 2px 8px rgba(255,149,0,0.2);">
-                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                        <div style="width: 8px; height: 8px; border-radius: 50%; background-color: rgba(255,255,255,0.8); margin-right: 8px;"></div>
-                        <span style="font-size: 13px; font-weight: 500; opacity: 0.8;">Issues</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                        <div>
-                            <div style="font-size: 24px; font-weight: 700; margin-bottom: 2px;" id="duplicates-drafted">0</div>
-                            <div style="font-size: 11px; opacity: 0.8;">drafted</div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 14px; font-weight: 600; margin-bottom: 2px; opacity: 0.7;"><i class="fas fa-exclamation-triangle"></i></div>
-                            <div style="font-size: 11px; opacity: 0.8;">needs review</div>
+        <div id="import-progress" class="puntwork-card" style="margin-bottom: var(--spacing-xl); display: none;">
+            <div class="puntwork-card__header">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2 class="puntwork-card__title">Import Progress</h2>
+                        <div style="display: flex; align-items: baseline; gap: var(--spacing-md); margin-top: var(--spacing-xs);">
+                            <span id="progress-percent" style="font-size: var(--font-size-3xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">0%</span>
+                            <span style="font-size: var(--font-size-sm); color: var(--color-gray-600);">complete</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Status Message -->
-            <div style="background-color: #f9f9f9; border-radius: 8px; padding: 12px; text-align: center;">
-                <span id="status-message" style="font-size: 14px; color: #8e8e93;">Ready to start.</span>
-            </div>
+            <div class="puntwork-card__body">
+                <!-- Progress Bar -->
+                <div class="puntwork-progress" style="margin-bottom: var(--spacing-lg);">
+                    <div id="progress-bar" class="puntwork-progress__bar" style="width: 0%;"></div>
+                </div>
+
+                <!-- Time Counters -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xl); font-size: var(--font-size-sm); color: var(--color-gray-600);">
+                    <span>Elapsed: <span id="time-elapsed" style="font-weight: var(--font-weight-medium);">0s</span></span>
+                    <span>Remaining: <span id="time-left" style="font-weight: var(--font-weight-medium);">Calculating...</span></span>
+                </div>
+
+                <!-- Statistics Grid -->
+                <div class="puntwork-stats" style="margin-bottom: var(--spacing-lg);">
+                    <!-- Progress Overview -->
+                    <div class="puntwork-stat">
+                        <div class="puntwork-stat__icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="puntwork-stat__value" id="processed-items">0</div>
+                        <div class="puntwork-stat__label">of <span id="total-items">0</span> processed</div>
+                    </div>
+
+                    <!-- Success Metrics -->
+                    <div class="puntwork-stat puntwork-stat--success">
+                        <div class="puntwork-stat__icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="puntwork-stat__value" id="published-items">0</div>
+                        <div class="puntwork-stat__label">published</div>
+                    </div>
+
+                    <!-- Updated Items -->
+                    <div class="puntwork-stat puntwork-stat--success">
+                        <div class="puntwork-stat__icon">
+                            <i class="fas fa-sync-alt"></i>
+                        </div>
+                        <div class="puntwork-stat__value" id="updated-items">0</div>
+                        <div class="puntwork-stat__label">updated</div>
+                    </div>
+
+                    <!-- Skipped Items -->
+                    <div class="puntwork-stat puntwork-stat--warning">
+                        <div class="puntwork-stat__icon">
+                            <i class="fas fa-forward"></i>
+                        </div>
+                        <div class="puntwork-stat__value" id="skipped-items">0</div>
+                        <div class="puntwork-stat__label">already current</div>
+                    </div>
+
+                    <!-- Issues & Actions -->
+                    <div class="puntwork-stat puntwork-stat--danger">
+                        <div class="puntwork-stat__icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="puntwork-stat__value" id="duplicates-drafted">0</div>
+                        <div class="puntwork-stat__label">drafted</div>
+                    </div>
+
+                    <!-- Items Left -->
+                    <div class="puntwork-stat puntwork-stat--info">
+                        <div class="puntwork-stat__icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="puntwork-stat__value" id="items-left">0</div>
+                        <div class="puntwork-stat__label">remaining</div>
+                    </div>
+                </div>
+
+                <!-- Status Message -->
+                <div style="background-color: var(--color-gray-50); border-radius: var(--radius-md); padding: var(--spacing-md); text-align: center; margin-bottom: var(--spacing-lg);">
+                    <span id="status-message" style="font-size: var(--font-size-sm); color: var(--color-gray-600);">Ready to start.</span>
+                </div>
 
             <!-- Integrated Log Section -->
-            <div id="integrated-log" style="margin-top: 12px;">
-                <div style="display: flex; align-items: center; margin-bottom: 16px;">
-                    <div style="width: 6px; height: 6px; border-radius: 50%; background-color: #007aff; margin-right: 10px;"></div>
-                    <h3 style="font-size: 16px; font-weight: 600; margin: 0; color: #1d1d1f;">Import Details</h3>
-                    <div style="margin-left: auto; font-size: 12px; color: #8e8e93;">
-                        <i class="fas fa-terminal" style="margin-right: 4px;"></i>
+            <div id="integrated-log" style="margin-top: var(--spacing-lg);">
+                <div style="display: flex; align-items: center; margin-bottom: var(--spacing-md);">
+                    <div style="width: 6px; height: 6px; border-radius: 50%; background-color: var(--color-primary); margin-right: 10px;"></div>
+                    <h3 style="font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); margin: 0; color: var(--color-black);">Import Details</h3>
+                    <div style="margin-left: auto; font-size: var(--font-size-xs); color: var(--color-gray-600);">
+                        <i class="fas fa-terminal" style="margin-right: var(--spacing-xs);"></i>
                         Live Log
                     </div>
                 </div>
-                <textarea id="log-textarea" readonly style="width: 100%; height: 180px; padding: 12px; border: 1px solid #d1d1d6; border-radius: 8px; font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace; font-size: 12px; line-height: 1.4; resize: vertical; background-color: #f9f9f9; transition: all 0.3s ease;"></textarea>
+                <textarea id="log-textarea" readonly style="width: 100%; height: 180px; padding: var(--spacing-md); border: 1px solid var(--color-gray-300); border-radius: var(--radius-md); font-family: var(--font-family-mono); font-size: var(--font-size-xs); line-height: var(--line-height-normal); resize: vertical; background-color: var(--color-gray-50); transition: var(--transition-fast);"></textarea>
             </div>
         </div>
     </div>
@@ -381,21 +481,21 @@ function render_main_import_ui(): void {
                     body.innerHTML = '';
                     data.data.data.forEach(job => {
                         const row = document.createElement('div');
-                        row.style.cssText = 'padding: 12px 16px; border-bottom: 1px solid #e1e1e1; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 100px; gap: 16px; align-items: center; font-size: 14px;';
+                        row.className = 'job-listings-row';
                         row.innerHTML = `
-                            <div style="font-weight: 500; color: #495057;">
-                                <a href="${job.permalink}" target="_blank" style="color: #007aff; text-decoration: none;">${job.title}</a>
+                            <div class="job-listings-title">
+                                <a href="${job.permalink}" target="_blank">${job.title}</a>
                             </div>
-                            <div>
-                                <span class="job-status status-${job.status}" style="padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">${job.status}</span>
+                            <div class="job-listings-meta">
+                                <span class="job-status status-${job.status}">${job.status}</span>
                             </div>
-                            <div style="color: #6c757d;">${new Date(job.date_created).toLocaleDateString()}</div>
-                            <div style="color: #6c757d;">${new Date(job.date_modified).toLocaleDateString()}</div>
-                            <div>
-                                <button class="job-action edit-job" data-id="${job.id}" title="Edit Job" style="background: none; border: none; color: #007aff; cursor: pointer; padding: 4px;">
+                            <div class="job-listings-meta">${new Date(job.date_created).toLocaleDateString()}</div>
+                            <div class="job-listings-meta">${new Date(job.date_modified).toLocaleDateString()}</div>
+                            <div class="job-listings-actions">
+                                <button class="job-action job-action--edit" data-id="${job.id}" title="Edit Job">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="job-action view-job" data-id="${job.id}" title="View Job" style="background: none; border: none; color: #28a745; cursor: pointer; padding: 4px; margin-left: 8px;">
+                                <button class="job-action job-action--view" data-id="${job.id}" title="View Job">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
@@ -493,30 +593,5 @@ function render_main_import_ui(): void {
             });
         });
     </script>
-
-    <style>
-        .job-status {
-            text-transform: capitalize;
-        }
-        .job-status.status-publish {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        .job-status.status-draft {
-            background-color: #fff3cd;
-            color: #856404;
-        }
-        .job-status.status-pending {
-            background-color: #d1ecf1;
-            color: #0c5460;
-        }
-        .job-status.status-trash {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-        .job-action:hover {
-            opacity: 0.7;
-        }
-    </style>
     <?php
 }
