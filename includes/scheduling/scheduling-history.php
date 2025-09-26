@@ -43,13 +43,25 @@ function run_scheduled_import($test_mode = false, $trigger_type = 'scheduled') {
         if (!$test_mode) {
             error_log('[PUNTWORK] Refreshing feed data for import');
             try {
-                fetch_and_generate_combined_json();
-                
-                // Update status after feed refresh
-                $feed_status = get_option('job_import_status', []);
-                if (!empty($feed_status)) {
-                    $feed_status['logs'][] = 'Feed data refreshed successfully';
-                    update_option('job_import_status', $feed_status, false);
+                // Check if feeds are configured before refreshing
+                $feeds = \Puntwork\get_feeds();
+                if (empty($feeds)) {
+                    error_log('[PUNTWORK] No feeds configured - skipping feed refresh and using existing data');
+                    // Update status to indicate using existing data
+                    $feed_status = get_option('job_import_status', []);
+                    if (!empty($feed_status)) {
+                        $feed_status['logs'][] = 'No feeds configured - using existing data';
+                        update_option('job_import_status', $feed_status, false);
+                    }
+                } else {
+                    fetch_and_generate_combined_json();
+                    
+                    // Update status after feed refresh
+                    $feed_status = get_option('job_import_status', []);
+                    if (!empty($feed_status)) {
+                        $feed_status['logs'][] = 'Feed data refreshed successfully';
+                        update_option('job_import_status', $feed_status, false);
+                    }
                 }
             } catch (\Exception $e) {
                 error_log('[PUNTWORK] Feed refresh failed: ' . $e->getMessage());
