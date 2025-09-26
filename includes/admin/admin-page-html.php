@@ -256,11 +256,9 @@ function render_import_history_ui() {
                 </button>
             </div>
 
-            <!-- Import History Card -->
-            <div class="history-card" style="background-color: #ffffff; border-radius: 12px; padding: 24px; border: 1px solid #e5e5e7; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
-                <div id="run-history-list" style="max-height: 600px; overflow-y: auto; font-size: 14px; border-radius: 8px; background-color: #fafbfc; padding: 20px;">
-                    <div style="color: #86868b; text-align: center; padding: 24px; font-style: italic;">Loading history...</div>
-                </div>
+            <!-- Import History Content -->
+            <div id="run-history-list" style="max-height: 600px; overflow-y: auto; font-size: 14px; border-radius: 8px; background-color: #fafbfc; padding: 20px;">
+                <div style="color: #86868b; text-align: center; padding: 24px; font-style: italic;">Loading history...</div>
             </div>
         </div>
     </div>
@@ -273,7 +271,7 @@ function render_import_history_ui() {
         }
 
         /* Loading animation for refresh button */
-        #import-history #refresh-history.loading i {
+        #import-history #refresh-history-main.loading i {
             animation: spin 1s linear infinite;
         }
 
@@ -287,10 +285,6 @@ function render_import_history_ui() {
             #import-history {
                 margin: 20px 16px;
                 padding: 24px 20px;
-            }
-
-            #import-history .history-card {
-                padding: 20px 16px;
             }
 
             #import-history h2 {
