@@ -17,7 +17,13 @@
     "autoload": {
         "psr-4": {
             "Puntwork\\": "includes/"
-        }
+        },
+        "classmap": [
+            "includes/utilities/import-analytics.php",
+            "includes/utilities/advanced-deduplication.php",
+            "includes/utilities/feed-health-monitor.php",
+            "includes/import/feed-processor.php"
+        ]
     },
     "config": {
         "allow-plugins": {
