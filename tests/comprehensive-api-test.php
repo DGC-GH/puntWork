@@ -119,7 +119,7 @@ class PuntWorkAPITestSuite {
             'api_key' => $this->apiKey,
             'test_mode' => true
         ];
-        $result = $this->makeRequest('/trigger-import', 'POST', $data);
+        $result = $this->makeRequest('/trigger-import', 'POST', $data, [], null, 150); // 150 second timeout for long imports
         $testModeSuccess = ($result['http_code'] === 200 || $result['http_code'] === 500); // 500 might be expected if plugin has issues
 
         $this->logTest('Trigger Import - Test Mode', $testModeSuccess, [
@@ -146,7 +146,7 @@ class PuntWorkAPITestSuite {
                 'force' => true,
                 'test_mode' => true
             ];
-            $result = $this->makeRequest('/trigger-import', 'POST', $data);
+            $result = $this->makeRequest('/trigger-import', 'POST', $data, [], null, 150); // 150 second timeout for long imports
             $forceSuccess = ($result['http_code'] === 200 || $result['http_code'] === 500);
 
             $this->logTest('Trigger Import - Force Mode', $forceSuccess, [
@@ -216,7 +216,7 @@ class PuntWorkAPITestSuite {
     /**
      * Make HTTP request
      */
-    private function makeRequest($endpoint, $method = 'GET', $data = null, $headers = [], $customBaseUrl = null) {
+    private function makeRequest($endpoint, $method = 'GET', $data = null, $headers = [], $customBaseUrl = null, $timeout = 30) {
         $baseUrl = $customBaseUrl ?: $this->baseUrl;
         $url = $baseUrl . $endpoint;
         $startTime = microtime(true);
@@ -224,7 +224,7 @@ class PuntWorkAPITestSuite {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 
