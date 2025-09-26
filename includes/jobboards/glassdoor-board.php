@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Glassdoor Job Board Integration
  *
@@ -17,8 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * Glassdoor job board integration
  */
-class GlassdoorBoard extends JobBoard {
-
+class GlassdoorBoard extends JobBoard
+{
     /**
      * Partner ID for Glassdoor API
      */
@@ -32,7 +33,8 @@ class GlassdoorBoard extends JobBoard {
     /**
      * Constructor
      */
-    public function __construct(array $config = []) {
+    public function __construct(array $config = [])
+    {
         $this->board_id = 'glassdoor';
         $this->board_name = 'Glassdoor';
         $this->api_url = 'https://api.glassdoor.com/api';
@@ -43,7 +45,8 @@ class GlassdoorBoard extends JobBoard {
     /**
      * Configure Glassdoor integration
      */
-    public function configure(array $config): void {
+    public function configure(array $config): void
+    {
         parent::configure($config);
 
         if (isset($config['partner_id'])) {
@@ -58,14 +61,16 @@ class GlassdoorBoard extends JobBoard {
     /**
      * Check if Glassdoor is properly configured
      */
-    public function isConfigured(): bool {
+    public function isConfigured(): bool
+    {
         return parent::isConfigured() && !empty($this->partner_id) && !empty($this->partner_key);
     }
 
     /**
      * Fetch jobs from Glassdoor
      */
-    public function fetchJobs(array $params = []): array {
+    public function fetchJobs(array $params = []): array
+    {
         if (!$this->isConfigured()) {
             throw new \Exception('Glassdoor integration not properly configured');
         }
@@ -97,7 +102,6 @@ class GlassdoorBoard extends JobBoard {
             }
 
             return $jobs;
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('Glassdoor API error', PuntWorkLogger::CONTEXT_IMPORT, [
                 'error' => $e->getMessage(),
@@ -110,7 +114,8 @@ class GlassdoorBoard extends JobBoard {
     /**
      * Get job details by ID
      */
-    public function getJobDetails(string $jobId): ?array {
+    public function getJobDetails(string $jobId): ?array
+    {
         // Glassdoor doesn't provide detailed job info via API
         // Return basic info if we have it cached, otherwise null
         return null;
@@ -119,7 +124,8 @@ class GlassdoorBoard extends JobBoard {
     /**
      * Search jobs with filters
      */
-    public function searchJobs(array $filters = []): array {
+    public function searchJobs(array $filters = []): array
+    {
         $params = [];
 
         if (isset($filters['keywords'])) {
@@ -144,7 +150,8 @@ class GlassdoorBoard extends JobBoard {
     /**
      * Normalize Glassdoor job data
      */
-    private function normalizeGlassdoorJob(array $jobData): array {
+    private function normalizeGlassdoorJob(array $jobData): array
+    {
         return [
             'id' => $jobData['id'] ?? uniqid('glassdoor_'),
             'title' => $jobData['jobTitle'] ?? '',
@@ -164,7 +171,8 @@ class GlassdoorBoard extends JobBoard {
     /**
      * Format Glassdoor salary information
      */
-    private function formatGlassdoorSalary(array $jobData): string {
+    private function formatGlassdoorSalary(array $jobData): string
+    {
         $salary = '';
 
         if (isset($jobData['payLow']) && isset($jobData['payHigh'])) {
@@ -182,7 +190,8 @@ class GlassdoorBoard extends JobBoard {
     /**
      * Get user IP address for Glassdoor API
      */
-    private function getUserIP(): string {
+    private function getUserIP(): string
+    {
         if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
             return $_SERVER['HTTP_CLIENT_IP'];
         } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
@@ -195,7 +204,8 @@ class GlassdoorBoard extends JobBoard {
     /**
      * Get user agent for Glassdoor API
      */
-    private function getUserAgent(): string {
+    private function getUserAgent(): string
+    {
         return $_SERVER['HTTP_USER_AGENT'] ?? 'PuntWork/' . PUNTWORK_VERSION;
     }
 }

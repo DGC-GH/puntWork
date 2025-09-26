@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AJAX handlers for job import plugin
  *
@@ -10,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -38,7 +39,8 @@ require_once __DIR__ . '/../scheduling/scheduling-ajax.php';
  * AJAX handler for loading job listings with lazy loading
  */
 add_action('wp_ajax_puntwork_load_jobs', __NAMESPACE__ . '\\handle_load_jobs_ajax');
-function handle_load_jobs_ajax() {
+function handle_load_jobs_ajax()
+{
     // Verify nonce
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_load_jobs')) {
         wp_die(json_encode([
@@ -79,7 +81,6 @@ function handle_load_jobs_ajax() {
                 'message' => 'Failed to load jobs'
             ]));
         }
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('AJAX load jobs error', PuntWorkLogger::CONTEXT_AJAX, [
             'error' => $e->getMessage()
@@ -96,7 +97,8 @@ function handle_load_jobs_ajax() {
  * AJAX handler for loading analytics data with lazy loading
  */
 add_action('wp_ajax_puntwork_load_analytics', __NAMESPACE__ . '\\handle_load_analytics_ajax');
-function handle_load_analytics_ajax() {
+function handle_load_analytics_ajax()
+{
     // Verify nonce
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_analytics_nonce')) {
         wp_die(json_encode([
@@ -136,7 +138,6 @@ function handle_load_analytics_ajax() {
                 'analytics_data' => $analytics_data
             ]
         ]));
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('AJAX load analytics error', PuntWorkLogger::CONTEXT_AJAX, [
             'error' => $e->getMessage()
@@ -152,7 +153,8 @@ function handle_load_analytics_ajax() {
 /**
  * Generate HTML content for analytics dashboard
  */
-function generate_analytics_html($analytics_data, $period) {
+function generate_analytics_html($analytics_data, $period)
+{
     ob_start();
     ?>
     <!-- Overview Metrics -->
@@ -182,7 +184,7 @@ function generate_analytics_html($analytics_data, $period) {
     <div class="analytics-section">
         <h2>Performance by Trigger Type</h2>
         <div class="performance-breakdown">
-            <?php foreach ($analytics_data['performance'] as $trigger_type => $stats): ?>
+            <?php foreach ($analytics_data['performance'] as $trigger_type => $stats) : ?>
                 <div class="performance-card">
                     <h3><?php echo ucfirst($trigger_type); ?> Imports</h3>
                     <div class="performance-stats">
@@ -267,7 +269,7 @@ function generate_analytics_html($analytics_data, $period) {
         </div>
     </div>
 
-    <?php if ($analytics_data['errors']['total_errors'] > 0): ?>
+    <?php if ($analytics_data['errors']['total_errors'] > 0) : ?>
     <!-- Error Summary -->
     <div class="analytics-section">
         <h2>Error Summary</h2>
@@ -276,7 +278,7 @@ function generate_analytics_html($analytics_data, $period) {
                 <span class="error-number"><?php echo number_format($analytics_data['errors']['total_errors']); ?></span>
                 <span class="error-label">imports had errors</span>
             </div>
-            <?php if ($analytics_data['errors']['error_messages']): ?>
+            <?php if ($analytics_data['errors']['error_messages']) : ?>
                 <div class="error-messages">
                     <strong>Common Error Messages:</strong>
                     <p><?php echo esc_html($analytics_data['errors']['error_messages']); ?></p>
@@ -306,7 +308,8 @@ function generate_analytics_html($analytics_data, $period) {
  * AJAX handler for saving feed configuration (create/update)
  */
 add_action('wp_ajax_puntwork_save_feed', __NAMESPACE__ . '\\handle_save_feed_ajax');
-function handle_save_feed_ajax() {
+function handle_save_feed_ajax()
+{
     // Verify nonce
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_feed_config')) {
         wp_die(json_encode([
@@ -382,7 +385,8 @@ function handle_save_feed_ajax() {
  * AJAX handler for toggling feed enabled/disabled status
  */
 add_action('wp_ajax_puntwork_toggle_feed', __NAMESPACE__ . '\\handle_toggle_feed_ajax');
-function handle_toggle_feed_ajax() {
+function handle_toggle_feed_ajax()
+{
     // Verify nonce
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_feed_config')) {
         wp_die(json_encode([
@@ -427,7 +431,8 @@ function handle_toggle_feed_ajax() {
  * AJAX handler for deleting feeds
  */
 add_action('wp_ajax_puntwork_delete_feed', __NAMESPACE__ . '\\handle_delete_feed_ajax');
-function handle_delete_feed_ajax() {
+function handle_delete_feed_ajax()
+{
     // Verify nonce
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_feed_config')) {
         wp_die(json_encode([
@@ -480,7 +485,8 @@ function handle_delete_feed_ajax() {
  * AJAX handler for saving feed order (drag-and-drop)
  */
 add_action('wp_ajax_puntwork_save_feed_order', __NAMESPACE__ . '\\handle_save_feed_order_ajax');
-function handle_save_feed_order_ajax() {
+function handle_save_feed_order_ajax()
+{
     // Verify nonce
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_feed_config')) {
         wp_die(json_encode([

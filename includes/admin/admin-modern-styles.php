@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Modern Admin UI Styles for puntWork
  *
@@ -17,7 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * Enqueue modern admin styles
  */
-function enqueue_modern_admin_styles() {
+function enqueue_modern_admin_styles()
+{
     $current_page = isset($_GET['page']) ? $_GET['page'] : '';
 
     // Load styles on job import dashboard and jobs dashboard pages

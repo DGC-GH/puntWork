@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Accessibility and Keyboard Shortcuts Handler for puntWork
  * Provides server-side support for accessibility features
@@ -14,7 +15,8 @@ if (!defined('ABSPATH')) {
 /**
  * Handle AJAX request to clear cache
  */
-function handle_clear_cache() {
+function handle_clear_cache()
+{
     // Verify nonce
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_accessibility_nonce')) {
         wp_send_json_error(['message' => __('Security check failed.', 'puntwork')]);
@@ -47,7 +49,6 @@ function handle_clear_cache() {
         wp_send_json_success([
             'message' => __('Cache cleared successfully. Page will refresh.', 'puntwork')
         ]);
-
     } catch (Exception $e) {
         wp_send_json_error([
             'message' => __('Error clearing cache: ', 'puntwork') . $e->getMessage()
@@ -59,15 +60,16 @@ add_action('wp_ajax_puntwork_clear_cache', __NAMESPACE__ . '\\handle_clear_cache
 /**
  * Add accessibility meta tags and headers
  */
-function add_accessibility_headers() {
+function add_accessibility_headers()
+{
     if (is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0) {
         // Add viewport meta tag for proper mobile accessibility
-        add_action('admin_head', function() {
+        add_action('admin_head', function () {
             echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">' . "\n";
         });
 
         // Add accessibility-related meta tags
-        add_action('admin_head', function() {
+        add_action('admin_head', function () {
             echo '<meta name="application-name" content="puntWork Admin">' . "\n";
             echo '<meta name="theme-color" content="#007aff">' . "\n";
         });
@@ -78,7 +80,8 @@ add_action('admin_init', __NAMESPACE__ . '\\add_accessibility_headers');
 /**
  * Add accessibility attributes to admin menu items
  */
-function enhance_admin_menu_accessibility($menu) {
+function enhance_admin_menu_accessibility($menu)
+{
     if (is_admin()) {
         foreach ($menu as &$item) {
             if (isset($item[2]) && strpos($item[2], 'puntwork') === 0) {
@@ -94,7 +97,8 @@ add_filter('admin_menu', __NAMESPACE__ . '\\enhance_admin_menu_accessibility');
 /**
  * Add keyboard shortcuts help to admin bar
  */
-function add_keyboard_shortcuts_help($wp_admin_bar) {
+function add_keyboard_shortcuts_help($wp_admin_bar)
+{
     if (is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0) {
         $wp_admin_bar->add_node([
             'id' => 'puntwork-keyboard-help',
@@ -112,15 +116,16 @@ add_action('admin_bar_menu', __NAMESPACE__ . '\\add_keyboard_shortcuts_help', 10
 /**
  * Add accessibility notices for screen readers
  */
-function add_accessibility_notices() {
+function add_accessibility_notices()
+{
     if (is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0) {
         // Add live region for dynamic content updates
-        add_action('admin_footer', function() {
+        add_action('admin_footer', function () {
             echo '<div id="puntwork-live-region" aria-live="polite" aria-atomic="true" class="screen-reader-only"></div>' . "\n";
         });
 
         // Add main content landmark
-        add_action('admin_footer', function() {
+        add_action('admin_footer', function () {
             echo '<div id="main-content" role="main" aria-label="' . esc_attr__('puntWork Main Content', 'puntwork') . '"></div>' . "\n";
         });
     }
@@ -130,10 +135,11 @@ add_action('admin_init', __NAMESPACE__ . '\\add_accessibility_notices');
 /**
  * Enhance form accessibility
  */
-function enhance_form_accessibility() {
+function enhance_form_accessibility()
+{
     if (is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0) {
         // Add required field indicators
-        add_action('admin_footer', function() {
+        add_action('admin_footer', function () {
             ?>
             <script>
                 document.addEventListener('DOMContentLoaded', function() {
@@ -174,9 +180,10 @@ add_action('admin_init', __NAMESPACE__ . '\\enhance_form_accessibility');
 /**
  * Add accessibility testing utilities (for development)
  */
-function add_accessibility_testing() {
+function add_accessibility_testing()
+{
     if (defined('WP_DEBUG') && WP_DEBUG && is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0) {
-        add_action('admin_footer', function() {
+        add_action('admin_footer', function () {
             ?>
             <script>
                 // Add accessibility testing utilities

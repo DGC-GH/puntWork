@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Core structure and logic for job import plugin
  *
@@ -10,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -19,7 +20,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @return array Array of feed URLs keyed by feed slug
  */
-function get_feeds(): array {
+function get_feeds(): array
+{
     $cache_key = 'puntwork_feeds';
     $feeds = CacheManager::get($cache_key, CacheManager::GROUP_MAPPINGS);
 
@@ -104,7 +106,8 @@ function get_feeds(): array {
  *
  * @return array Array of job board feed URLs
  */
-function get_job_board_feeds(): array {
+function get_job_board_feeds(): array
+{
     $job_board_feeds = [];
 
     // Include the JobBoardManager
@@ -123,7 +126,7 @@ function get_job_board_feeds(): array {
 }
 
 // Clear feeds cache when job-feed post is updated
-add_action('save_post', function($post_id, $post, $update) {
+add_action('save_post', function ($post_id, $post, $update) {
     if ($post->post_type === 'job-feed' && $post->post_status === 'publish') {
         CacheManager::delete('puntwork_feeds', CacheManager::GROUP_MAPPINGS);
     }
@@ -140,7 +143,8 @@ add_action('save_post', function($post_id, $post, $update) {
  * @return int Number of items processed from this feed
  * @throws \Exception If feed processing fails
  */
-function process_one_feed(string $feed_key, string $url, string $output_dir, string $fallback_domain, array &$logs): int {
+function process_one_feed(string $feed_key, string $url, string $output_dir, string $fallback_domain, array &$logs): int
+{
     // Determine file extension based on URL
     $extension = FeedProcessor::detect_format($url);
     $feed_path = $output_dir . $feed_key . '.' . $extension;
@@ -164,7 +168,9 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
     $format = $detected_format ?: FeedProcessor::detect_format($url);
 
     $handle = fopen($json_path, 'w');
-    if (!$handle) throw new \Exception("Can't open $json_path");
+    if (!$handle) {
+        throw new \Exception("Can't open $json_path");
+    }
     $batch_size = 100;
     $total_items = 0;
 
@@ -185,7 +191,8 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
  * @return array Import logs containing processing details and any errors
  * @throws \Exception If feed processing setup fails
  */
-function fetch_and_generate_combined_json(): array {
+function fetch_and_generate_combined_json(): array
+{
     global $import_logs;
     $import_logs = [];
     ini_set('memory_limit', '512M');

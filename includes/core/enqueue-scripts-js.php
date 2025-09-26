@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Enqueue admin scripts and styles for job import dashboard.
  *
@@ -10,14 +11,15 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
 /**
  * Enqueue admin scripts and styles for job import dashboard.
  */
-function enqueue_job_import_scripts() {
+function enqueue_job_import_scripts()
+{
     // Check if we're on the job import dashboard page
     $current_page = isset($_GET['page']) ? $_GET['page'] : '';
     $post_type = isset($_GET['post_type']) ? $_GET['post_type'] : '';
@@ -33,7 +35,6 @@ function enqueue_job_import_scripts() {
     $should_load = in_array($current_page, $puntwork_pages);
 
     if ($should_load) {
-
         // Modern admin styles
         wp_enqueue_style(
             'puntwork-admin-modern',
@@ -546,7 +547,8 @@ add_action('admin_enqueue_scripts', __NAMESPACE__ . '\\enqueue_job_import_script
 /**
  * Add PWA manifest link to admin head for puntwork pages
  */
-function add_pwa_manifest_link() {
+function add_pwa_manifest_link()
+{
     $current_page = isset($_GET['page']) ? $_GET['page'] : '';
     $puntwork_pages = ['puntwork-dashboard', 'puntwork-analytics', 'puntwork-api-settings', 'puntwork-feed-health', 'puntwork-scheduling'];
 

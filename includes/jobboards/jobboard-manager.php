@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Job Board Manager
  *
@@ -17,8 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * Manages multiple job board integrations
  */
-class JobBoardManager {
-
+class JobBoardManager
+{
     /**
      * Available job board classes
      */
@@ -36,14 +37,16 @@ class JobBoardManager {
     /**
      * Constructor - loads configured job boards
      */
-    public function __construct() {
+    public function __construct()
+    {
         $this->loadConfiguredBoards();
     }
 
     /**
      * Load configured job boards from WordPress options
      */
-    private function loadConfiguredBoards(): void {
+    private function loadConfiguredBoards(): void
+    {
         $board_configs = get_option('puntwork_job_boards', []);
 
         foreach ($board_configs as $board_id => $config) {
@@ -64,7 +67,8 @@ class JobBoardManager {
     /**
      * Get all available job board types
      */
-    public static function getAvailableBoards(): array {
+    public static function getAvailableBoards(): array
+    {
         $boards = [];
 
         foreach (self::$available_boards as $board_id => $board_class) {
@@ -80,21 +84,24 @@ class JobBoardManager {
     /**
      * Get configured job boards
      */
-    public function getConfiguredBoards(): array {
+    public function getConfiguredBoards(): array
+    {
         return array_keys($this->boards);
     }
 
     /**
      * Check if a job board is configured
      */
-    public function isBoardConfigured(string $board_id): bool {
+    public function isBoardConfigured(string $board_id): bool
+    {
         return isset($this->boards[$board_id]);
     }
 
     /**
      * Get a specific job board instance
      */
-    public function getBoard(string $board_id): ?JobBoard {
+    public function getBoard(string $board_id): ?JobBoard
+    {
         return $this->boards[$board_id] ?? null;
     }
 
@@ -105,7 +112,8 @@ class JobBoardManager {
      * @param array $board_ids Specific board IDs to search (empty = all)
      * @return array Combined job results
      */
-    public function fetchAllJobs(array $params = [], array $board_ids = []): array {
+    public function fetchAllJobs(array $params = [], array $board_ids = []): array
+    {
         $all_jobs = [];
         $boards_to_search = empty($board_ids) ? $this->boards : array_intersect_key($this->boards, array_flip($board_ids));
 
@@ -118,7 +126,6 @@ class JobBoardManager {
                     'board_id' => $board_id,
                     'job_count' => count($jobs)
                 ]);
-
             } catch (\Exception $e) {
                 PuntWorkLogger::error('Failed to fetch jobs from board', PuntWorkLogger::CONTEXT_IMPORT, [
                     'board_id' => $board_id,
@@ -137,7 +144,8 @@ class JobBoardManager {
      * @param array $board_ids Specific board IDs to search (empty = all)
      * @return array Combined search results
      */
-    public function searchAllBoards(array $filters = [], array $board_ids = []): array {
+    public function searchAllBoards(array $filters = [], array $board_ids = []): array
+    {
         $all_jobs = [];
         $boards_to_search = empty($board_ids) ? $this->boards : array_intersect_key($this->boards, array_flip($board_ids));
 
@@ -159,7 +167,8 @@ class JobBoardManager {
     /**
      * Get job details from specific board
      */
-    public function getJobDetails(string $board_id, string $job_id): ?array {
+    public function getJobDetails(string $board_id, string $job_id): ?array
+    {
         $board = $this->getBoard($board_id);
 
         if (!$board) {
@@ -181,7 +190,8 @@ class JobBoardManager {
     /**
      * Configure a job board
      */
-    public static function configureBoard(string $board_id, array $config): bool {
+    public static function configureBoard(string $board_id, array $config): bool
+    {
         if (!isset(self::$available_boards[$board_id])) {
             return false;
         }
@@ -195,7 +205,8 @@ class JobBoardManager {
     /**
      * Remove a job board configuration
      */
-    public static function removeBoard(string $board_id): bool {
+    public static function removeBoard(string $board_id): bool
+    {
         $board_configs = get_option('puntwork_job_boards', []);
 
         if (isset($board_configs[$board_id])) {
@@ -209,7 +220,8 @@ class JobBoardManager {
     /**
      * Get board configuration
      */
-    public static function getBoardConfig(string $board_id): ?array {
+    public static function getBoardConfig(string $board_id): ?array
+    {
         $board_configs = get_option('puntwork_job_boards', []);
         return $board_configs[$board_id] ?? null;
     }
@@ -217,14 +229,16 @@ class JobBoardManager {
     /**
      * Get all board configurations
      */
-    public static function getAllBoardConfigs(): array {
+    public static function getAllBoardConfigs(): array
+    {
         return get_option('puntwork_job_boards', []);
     }
 
     /**
      * Test board configuration
      */
-    public function testBoard(string $board_id): array {
+    public function testBoard(string $board_id): array
+    {
         $board = $this->getBoard($board_id);
 
         if (!$board) {
@@ -243,7 +257,6 @@ class JobBoardManager {
                 'message' => 'Board connection successful',
                 'job_count' => count($test_jobs)
             ];
-
         } catch (\Exception $e) {
             return [
                 'success' => false,
@@ -255,7 +268,8 @@ class JobBoardManager {
     /**
      * Get supported filters for all boards
      */
-    public function getSupportedFilters(): array {
+    public function getSupportedFilters(): array
+    {
         $all_filters = [];
 
         foreach ($this->boards as $board) {

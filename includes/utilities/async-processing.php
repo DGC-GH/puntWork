@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Async processing utilities using Action Scheduler
  *
@@ -10,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -19,7 +20,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @return bool True if Action Scheduler is available
  */
-function is_action_scheduler_available(): bool {
+function is_action_scheduler_available(): bool
+{
     return function_exists('as_schedule_single_action') ||
            function_exists('as_schedule_recurring_action') ||
            class_exists('ActionScheduler');
@@ -32,7 +34,8 @@ function is_action_scheduler_available(): bool {
  * @param int $priority Priority (default: 10)
  * @return string|null Action ID if scheduled, null if failed
  */
-function schedule_async_batch_job(array $batch_data, int $priority = 10): ?string {
+function schedule_async_batch_job(array $batch_data, int $priority = 10): ?string
+{
     $hook = 'puntwork_process_batch_async';
 
     if (is_action_scheduler_available() && function_exists('as_schedule_single_action')) {
@@ -60,7 +63,8 @@ function schedule_async_batch_job(array $batch_data, int $priority = 10): ?strin
  * @param array $setup Import setup data
  * @return array Array of job IDs scheduled
  */
-function schedule_async_import_batches(string $json_path, int $total_items, int $batch_size, array $setup): array {
+function schedule_async_import_batches(string $json_path, int $total_items, int $batch_size, array $setup): array
+{
     $job_ids = [];
     $start_index = 0;
 
@@ -92,7 +96,8 @@ function schedule_async_import_batches(string $json_path, int $total_items, int 
  * @param array $batch_data Batch data from the scheduled job
  * @return array Processing result
  */
-function process_async_batch_job(array $batch_data): array {
+function process_async_batch_job(array $batch_data): array
+{
     try {
         $json_path = $batch_data['json_path'];
         $start_index = $batch_data['start_index'];
@@ -118,7 +123,6 @@ function process_async_batch_job(array $batch_data): array {
         update_option('puntwork_async_batch_results', $batch_results);
 
         return $result;
-
     } catch (\Exception $e) {
         error_log('[PUNTWORK] Async batch processing error: ' . $e->getMessage());
         return [
@@ -135,7 +139,8 @@ function process_async_batch_job(array $batch_data): array {
  * @param array $job_ids Array of job IDs to aggregate
  * @return array Aggregated results
  */
-function aggregate_async_batch_results(array $job_ids): array {
+function aggregate_async_batch_results(array $job_ids): array
+{
     $batch_results = get_option('puntwork_async_batch_results', []);
     $aggregated = [
         'success' => true,
@@ -176,7 +181,7 @@ function aggregate_async_batch_results(array $job_ids): array {
 
     // Clean up old batch results (keep only last 24 hours)
     $cutoff_time = time() - (24 * 60 * 60);
-    $filtered_results = array_filter($batch_results, function($result) use ($cutoff_time) {
+    $filtered_results = array_filter($batch_results, function ($result) use ($cutoff_time) {
         return ($result['timestamp'] ?? 0) > $cutoff_time;
     });
     update_option('puntwork_async_batch_results', $filtered_results);
@@ -191,7 +196,8 @@ function aggregate_async_batch_results(array $job_ids): array {
  *
  * @return bool True if async processing can be used
  */
-function is_async_processing_enabled(): bool {
+function is_async_processing_enabled(): bool
+{
     // Check if explicitly disabled
     if (defined('PUNTWORK_DISABLE_ASYNC') && PUNTWORK_DISABLE_ASYNC) {
         return false;
@@ -207,7 +213,8 @@ function is_async_processing_enabled(): bool {
  * @param int $total_items Total items to process
  * @return int Recommended batch size
  */
-function get_async_batch_size(int $total_items): int {
+function get_async_batch_size(int $total_items): int
+{
     $memory_limit = get_memory_limit_bytes();
     $base_batch_size = 50; // Conservative starting point
 
@@ -231,7 +238,8 @@ function get_async_batch_size(int $total_items): int {
 /**
  * Initialize async processing hooks
  */
-function init_async_processing(): void {
+function init_async_processing(): void
+{
     // Hook for Action Scheduler / WP-Cron
     add_action('puntwork_process_batch_async', __NAMESPACE__ . '\\handle_async_batch_job', 10, 1);
 
@@ -244,7 +252,8 @@ function init_async_processing(): void {
  *
  * @param array $batch_data Batch data
  */
-function handle_async_batch_job(array $batch_data): void {
+function handle_async_batch_job(array $batch_data): void
+{
     process_async_batch_job($batch_data);
 }
 
@@ -253,7 +262,8 @@ function handle_async_batch_job(array $batch_data): void {
  *
  * @return array Result of feed preparation
  */
-function prepare_feeds_for_import(): array {
+function prepare_feeds_for_import(): array
+{
     try {
         // Use existing feed processing logic
         if (!function_exists('process_feeds_to_jsonl')) {
@@ -285,7 +295,6 @@ function prepare_feeds_for_import(): array {
             'total_items' => $total_items,
             'message' => "Prepared {$total_items} items for import"
         ];
-
     } catch (\Exception $e) {
         return [
             'success' => false,
@@ -299,7 +308,8 @@ function prepare_feeds_for_import(): array {
  *
  * @return array Current status of async import
  */
-function check_async_import_status(): array {
+function check_async_import_status(): array
+{
     $async_jobs = get_option('puntwork_async_import_jobs', []);
     $import_status = get_option('job_import_status', []);
 
@@ -351,7 +361,8 @@ function check_async_import_status(): array {
  *
  * @return array Status information
  */
-function get_async_processing_status(): array {
+function get_async_processing_status(): array
+{
     $enabled = get_option('puntwork_async_enabled', true); // Default to enabled
     $available = is_async_processing_enabled();
     $action_scheduler = function_exists('as_schedule_single_action');

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Debug UI components for job import plugin
  * Contains debug information and testing tools
@@ -11,14 +12,15 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
 /**
  * Render debug UI section (only in development)
  */
-function render_debug_ui() {
+function render_debug_ui()
+{
     if (!defined('WP_DEBUG') || !WP_DEBUG) {
         return;
     }

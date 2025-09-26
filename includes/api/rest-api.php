@@ -1,4 +1,5 @@
 <?php
+
 /**
  * REST API endpoints for remote import triggering
  *
@@ -10,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -22,7 +23,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Register REST API routes
  */
 add_action('rest_api_init', __NAMESPACE__ . '\\register_import_api_routes');
-function register_import_api_routes() {
+function register_import_api_routes()
+{
     // Existing endpoints
     register_rest_route('puntwork/v1', '/trigger-import', [
         'methods' => 'POST',
@@ -246,7 +248,8 @@ function register_import_api_routes() {
 /**
  * Verify API key for authentication with enhanced security
  */
-function verify_api_key($request) {
+function verify_api_key($request)
+{
     $api_key = $request->get_param('api_key');
 
     if (empty($api_key)) {
@@ -261,7 +264,7 @@ function verify_api_key($request) {
     // Rate limiting for API key attempts
     $rate_limit_key = 'api_key_attempts_' . SecurityUtils::get_client_ip();
     $attempts = get_transient($rate_limit_key) ?: 0;
-    
+
     if ($attempts >= 5) {
         SecurityUtils::log_security_event('api_rate_limit_exceeded', [
             'endpoint' => $request->get_route(),
@@ -298,7 +301,8 @@ function verify_api_key($request) {
 /**
  * Handle trigger import request
  */
-function handle_trigger_import($request) {
+function handle_trigger_import($request)
+{
     $force = $request->get_param('force');
     $test_mode = $request->get_param('test_mode');
 
@@ -431,7 +435,7 @@ function handle_trigger_import($request) {
                     'async' => false
                 ], 500);
             }
-            
+
             $result = run_scheduled_import($test_mode, 'api');
             error_log('[PUNTWORK] API: run_scheduled_import returned: ' . json_encode($result));
 
@@ -480,7 +484,6 @@ function handle_trigger_import($request) {
                 ], 500);
             }
         }
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Remote import trigger exception', PuntWorkLogger::CONTEXT_API, [
             'error' => $e->getMessage(),
@@ -497,7 +500,8 @@ function handle_trigger_import($request) {
 /**
  * Handle get analytics request
  */
-function handle_get_analytics($request) {
+function handle_get_analytics($request)
+{
     $period = $request->get_param('period');
 
     try {
@@ -510,7 +514,6 @@ function handle_get_analytics($request) {
             'data' => $analytics_data,
             'period' => $period
         ], 200);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Analytics API error', PuntWorkLogger::CONTEXT_API, [
             'error' => $e->getMessage()
@@ -526,7 +529,8 @@ function handle_get_analytics($request) {
 /**
  * Handle get feeds request
  */
-function handle_get_feeds($request) {
+function handle_get_feeds($request)
+{
     try {
         $feeds = get_feeds();
         $feed_health = FeedHealthMonitor::get_feed_health_status();
@@ -551,7 +555,6 @@ function handle_get_feeds($request) {
             'data' => $feeds_data,
             'total' => count($feeds_data)
         ], 200);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Feeds API error', PuntWorkLogger::CONTEXT_API, [
             'error' => $e->getMessage()
@@ -567,7 +570,8 @@ function handle_get_feeds($request) {
 /**
  * Handle get feed details request
  */
-function handle_get_feed_details($request) {
+function handle_get_feed_details($request)
+{
     $feed_key = $request->get_param('feed_key');
 
     try {
@@ -604,7 +608,6 @@ function handle_get_feed_details($request) {
             'success' => true,
             'data' => $feed_data
         ], 200);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Feed details API error', PuntWorkLogger::CONTEXT_API, [
             'error' => $e->getMessage(),
@@ -621,7 +624,8 @@ function handle_get_feed_details($request) {
 /**
  * Handle get performance request
  */
-function handle_get_performance($request) {
+function handle_get_performance($request)
+{
     $period = $request->get_param('period');
     $operation = $request->get_param('operation');
 
@@ -641,7 +645,6 @@ function handle_get_performance($request) {
             'period' => $period,
             'operation' => $operation
         ], 200);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Performance API error', PuntWorkLogger::CONTEXT_API, [
             'error' => $e->getMessage()
@@ -657,7 +660,8 @@ function handle_get_performance($request) {
 /**
  * Handle get jobs request
  */
-function handle_get_jobs($request) {
+function handle_get_jobs($request)
+{
     $page = $request->get_param('page');
     $per_page = $request->get_param('per_page');
     $status = $request->get_param('status');
@@ -709,7 +713,6 @@ function handle_get_jobs($request) {
                 'total_pages' => $query->max_num_pages,
             ]
         ], 200);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Jobs API error', PuntWorkLogger::CONTEXT_API, [
             'error' => $e->getMessage()
@@ -725,7 +728,8 @@ function handle_get_jobs($request) {
 /**
  * Handle get job request
  */
-function handle_get_job($request) {
+function handle_get_job($request)
+{
     $job_id = $request->get_param('id');
 
     try {
@@ -768,7 +772,6 @@ function handle_get_job($request) {
             'success' => true,
             'data' => $job_data
         ], 200);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Job details API error', PuntWorkLogger::CONTEXT_API, [
             'error' => $e->getMessage(),
@@ -785,7 +788,8 @@ function handle_get_job($request) {
 /**
  * Handle bulk operations request
  */
-function handle_bulk_operations($request) {
+function handle_bulk_operations($request)
+{
     $operation = $request->get_param('operation');
     $job_ids = $request->get_param('job_ids');
     $status = $request->get_param('status');
@@ -880,7 +884,6 @@ function handle_bulk_operations($request) {
                         ];
                         $error_count++;
                 }
-
             } catch (\Exception $e) {
                 $results[] = [
                     'id' => $job_id,
@@ -908,7 +911,6 @@ function handle_bulk_operations($request) {
                 'results' => $results
             ]
         ], 200);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Bulk operations API error', PuntWorkLogger::CONTEXT_API, [
             'error' => $e->getMessage(),
@@ -925,7 +927,8 @@ function handle_bulk_operations($request) {
 /**
  * Handle get health status request
  */
-function handle_get_health_status($request) {
+function handle_get_health_status($request)
+{
     try {
         $feed_health = FeedHealthMonitor::get_feed_health_status();
         $import_status = get_option('job_import_status', []);
@@ -971,7 +974,6 @@ function handle_get_health_status($request) {
                 'timestamp' => current_time('timestamp')
             ]
         ], 200);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Health status API error', PuntWorkLogger::CONTEXT_API, [
             'error' => $e->getMessage()
@@ -987,14 +989,16 @@ function handle_get_health_status($request) {
 /**
  * Generate a new API key
  */
-function generate_api_key() {
+function generate_api_key()
+{
     return wp_generate_password(32, false);
 }
 
 /**
  * Get or create API key
  */
-function get_or_create_api_key() {
+function get_or_create_api_key()
+{
     $existing_key = get_option('puntwork_api_key');
 
     if (!$existing_key) {
@@ -1009,7 +1013,8 @@ function get_or_create_api_key() {
 /**
  * Regenerate API key
  */
-function regenerate_api_key() {
+function regenerate_api_key()
+{
     $new_key = generate_api_key();
     update_option('puntwork_api_key', $new_key);
     return $new_key;

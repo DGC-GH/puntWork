@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Core scheduling functionality for job import plugin
  * Handles time calculations, cron management, and scheduling logic
@@ -11,12 +12,12 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
 // Register custom cron intervals
-add_filter('cron_schedules', function($schedules) {
+add_filter('cron_schedules', function ($schedules) {
     $schedules['puntwork_hourly'] = [
         'interval' => HOUR_IN_SECONDS,
         'display' => __('Every Hour (Puntwork)', 'puntwork')
@@ -53,7 +54,8 @@ add_filter('cron_schedules', function($schedules) {
  * Calculate the next run time based on schedule settings
  * Uses UTC for all time calculations (WordPress standard)
  */
-function calculate_next_run_time($schedule_data) {
+function calculate_next_run_time($schedule_data)
+{
     // Get current time in UTC (Unix timestamp is always UTC)
     $current_time = time();
     $hour = $schedule_data['hour'] ?? 9;
@@ -129,7 +131,8 @@ function calculate_next_run_time($schedule_data) {
 /**
  * Update WordPress cron schedule based on settings
  */
-function update_cron_schedule($schedule_data) {
+function update_cron_schedule($schedule_data)
+{
     $hook = 'puntwork_scheduled_import';
 
     // Clear existing schedule
@@ -147,7 +150,8 @@ function update_cron_schedule($schedule_data) {
     }
 }
 
-function get_cron_interval($schedule_data) {
+function get_cron_interval($schedule_data)
+{
     switch ($schedule_data['frequency']) {
         case 'hourly':
             return 'puntwork_hourly';
@@ -175,7 +179,8 @@ function get_cron_interval($schedule_data) {
 /**
  * Get next scheduled run time
  */
-function get_next_scheduled_time() {
+function get_next_scheduled_time()
+{
     $next_scheduled = wp_next_scheduled('puntwork_scheduled_import');
 
     if ($next_scheduled) {
@@ -211,7 +216,8 @@ function get_next_scheduled_time() {
 /**
  * Get schedule status information
  */
-function get_schedule_status() {
+function get_schedule_status()
+{
     $schedule = get_option('puntwork_import_schedule', ['enabled' => false]);
     $next_run = get_next_scheduled_time();
     $last_run = get_option('puntwork_last_import_run', null);
@@ -239,7 +245,8 @@ function get_schedule_status() {
  * Health check for stuck imports
  * Similar to WooCommerce's cron healthcheck system
  */
-function check_import_health() {
+function check_import_health()
+{
     $status = get_option('job_import_status', []);
 
     // Check if there's an active import that's been running too long
@@ -276,7 +283,7 @@ function check_import_health() {
 }
 
 // Schedule health check to run every 5 minutes
-add_action('wp', function() {
+add_action('wp', function () {
     if (!wp_next_scheduled('puntwork_import_health_check')) {
         wp_schedule_event(time(), 'puntwork_5min', 'puntwork_import_health_check');
     }

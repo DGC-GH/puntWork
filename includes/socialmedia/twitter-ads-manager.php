@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Twitter/X Ads Integration
  *
@@ -17,8 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * Twitter/X Ads Manager
  */
-class TwitterAdsManager {
-
+class TwitterAdsManager
+{
     /**
      * Twitter Platform instance
      */
@@ -32,14 +33,16 @@ class TwitterAdsManager {
     /**
      * Constructor
      */
-    public function __construct(TwitterPlatform $twitter_platform) {
+    public function __construct(TwitterPlatform $twitter_platform)
+    {
         $this->twitter_platform = $twitter_platform;
     }
 
     /**
      * Create a Twitter Ads campaign
      */
-    public function createCampaign(array $campaign_data): array {
+    public function createCampaign(array $campaign_data): array
+    {
         $required_fields = ['name', 'account_id', 'objective', 'budget', 'start_time', 'end_time'];
         foreach ($required_fields as $field) {
             if (!isset($campaign_data[$field])) {
@@ -69,7 +72,8 @@ class TwitterAdsManager {
     /**
      * Create a promoted tweet
      */
-    public function createPromotedTweet(string $tweet_id, array $options): array {
+    public function createPromotedTweet(string $tweet_id, array $options): array
+    {
         $params = [
             'tweet_id' => $tweet_id,
             'paused' => $options['paused'] ?? false
@@ -87,7 +91,8 @@ class TwitterAdsManager {
     /**
      * Create targeting criteria for ads
      */
-    public function createTargeting(array $targeting_data): array {
+    public function createTargeting(array $targeting_data): array
+    {
         $params = [];
 
         // Location targeting
@@ -102,7 +107,7 @@ class TwitterAdsManager {
 
         // Keyword targeting
         if (!empty($targeting_data['keywords'])) {
-            $params['phrase_keyword'] = array_map(function($keyword) {
+            $params['phrase_keyword'] = array_map(function ($keyword) {
                 return ['phrase' => $keyword];
             }, $targeting_data['keywords']);
         }
@@ -127,7 +132,8 @@ class TwitterAdsManager {
     /**
      * Post job with ads campaign
      */
-    public function postJobWithAds(array $job_data, array $ads_config): array {
+    public function postJobWithAds(array $job_data, array $ads_config): array
+    {
         // First post the tweet
         $tweet_result = $this->twitter_platform->post([
             'text' => $this->createJobAdText($job_data),
@@ -163,7 +169,6 @@ class TwitterAdsManager {
                 'targeting_ids' => $targeting_result['targeting_ids'],
                 'total_cost' => $ads_config['campaign']['budget']
             ];
-
         } catch (\Exception $e) {
             // If ads creation fails, the tweet still exists
             PuntWorkLogger::error('Twitter ads creation failed', PuntWorkLogger::CONTEXT_SOCIAL, [
@@ -182,7 +187,8 @@ class TwitterAdsManager {
     /**
      * Create compelling ad text for job posting
      */
-    private function createJobAdText(array $job_data): string {
+    private function createJobAdText(array $job_data): string
+    {
         $title = $job_data['title'] ?? '';
         $company = $job_data['company'] ?? '';
         $location = $job_data['location'] ?? '';
@@ -210,7 +216,8 @@ class TwitterAdsManager {
     /**
      * Get campaign performance metrics
      */
-    public function getCampaignMetrics(string $campaign_id, string $account_id): array {
+    public function getCampaignMetrics(string $campaign_id, string $account_id): array
+    {
         $response = $this->makeAdsApiRequest(
             "accounts/{$account_id}/campaigns/{$campaign_id}/stats",
             ['granularity' => 'DAY'],
@@ -229,14 +236,16 @@ class TwitterAdsManager {
     /**
      * Convert currency to micro units
      */
-    private function convertToMicro(float $amount): int {
+    private function convertToMicro(float $amount): int
+    {
         return (int)($amount * 1000000);
     }
 
     /**
      * Make Ads API request
      */
-    private function makeAdsApiRequest(string $endpoint, array $params, string $method) {
+    private function makeAdsApiRequest(string $endpoint, array $params, string $method)
+    {
         $url = $this->ads_api_base . '/' . $endpoint;
 
         // Use the same authentication as the main Twitter platform

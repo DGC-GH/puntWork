@@ -10,7 +10,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -25,7 +25,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @param array $result Processing result.
  * @return array Final result.
  */
-function finalize_batch_import($result) {
+function finalize_batch_import($result)
+{
     if (is_wp_error($result) || !$result['success']) {
         return $result;
     }
@@ -121,7 +122,8 @@ function finalize_batch_import($result) {
  *
  * @return void
  */
-function cleanup_import_data() {
+function cleanup_import_data()
+{
     // Clean up transients
     delete_transient('import_cancel');
 
@@ -147,7 +149,8 @@ function cleanup_import_data() {
  *
  * @return array Status summary.
  */
-function get_import_status_summary() {
+function get_import_status_summary()
+{
     $status = get_option('job_import_status', []);
 
     return [
@@ -171,7 +174,8 @@ function get_import_status_summary() {
  * @param array $status Current import status.
  * @return float Estimated time remaining in seconds.
  */
-function calculate_estimated_time_remaining($status) {
+function calculate_estimated_time_remaining($status)
+{
     if ($status['complete'] || $status['processed'] == 0 || $status['job_importing_time_elapsed'] == 0) {
         return 0;
     }
@@ -198,7 +202,8 @@ function calculate_estimated_time_remaining($status) {
  * @param array $import_result The import result data
  * @return void
  */
-function post_new_jobs_to_social_media($import_result) {
+function post_new_jobs_to_social_media($import_result)
+{
     if (!class_exists('\\Puntwork\\SocialMedia\\SocialMediaManager')) {
         return;
     }
@@ -262,7 +267,6 @@ function post_new_jobs_to_social_media($import_result) {
                 'platforms' => $default_platforms
             ]);
         }
-
     } catch (\Exception $e) {
         \Puntwork\PuntWorkLogger::error('Failed to auto-post jobs to social media', \Puntwork\PuntWorkLogger::CONTEXT_SOCIAL, [
             'error' => $e->getMessage()
@@ -276,7 +280,8 @@ function post_new_jobs_to_social_media($import_result) {
  * @param array $import_result The import result data
  * @return array Array of job post objects
  */
-function get_recent_imported_jobs($import_result) {
+function get_recent_imported_jobs($import_result)
+{
     $jobs = [];
 
     // Get jobs imported in the last hour (to be safe)

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * History and logging functionality for scheduling
  * Handles import run history, logging, and cleanup operations
@@ -11,7 +12,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -19,9 +20,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Mark existing jobs as processed when no feeds are configured
  * Used when we want to show existing jobs as "processed" without re-importing
  */
-function mark_existing_jobs_as_processed() {
+function mark_existing_jobs_as_processed()
+{
     global $wpdb;
-    
+
     try {
         // Count existing published jobs
         $job_count = $wpdb->get_var("
@@ -30,19 +32,18 @@ function mark_existing_jobs_as_processed() {
             WHERE p.post_type = 'job' 
             AND p.post_status = 'publish'
         ");
-        
+
         if ($job_count === null) {
             $job_count = 0;
         }
-        
+
         error_log('[PUNTWORK] Found ' . $job_count . ' existing published jobs');
-        
+
         return [
             'success' => true,
             'message' => 'Existing jobs marked as processed',
             'total' => (int) $job_count
         ];
-        
     } catch (\Exception $e) {
         error_log('[PUNTWORK] Failed to count existing jobs: ' . $e->getMessage());
         return [
@@ -52,9 +53,10 @@ function mark_existing_jobs_as_processed() {
         ];
     }
 }
-function run_scheduled_import($test_mode = false, $trigger_type = 'scheduled') {
+function run_scheduled_import($test_mode = false, $trigger_type = 'scheduled')
+{
     error_log('[PUNTWORK] run_scheduled_import called with test_mode=' . ($test_mode ? 'true' : 'false') . ', trigger_type=' . $trigger_type);
-    
+
     // Check if scheduling is still enabled (skip this check for test mode or API triggers)
     if (!$test_mode && $trigger_type !== 'api') {
         $schedule = get_option('puntwork_import_schedule', ['enabled' => false]);
@@ -83,9 +85,9 @@ function run_scheduled_import($test_mode = false, $trigger_type = 'scheduled') {
                 $feeds = \Puntwork\get_feeds();
                 $json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
                 $jsonl_exists = file_exists($json_path) && \Puntwork\get_json_item_count($json_path) > 0;
-                
+
                 error_log('[PUNTWORK] Feed check: feeds found = ' . count($feeds) . ', jsonl_exists = ' . ($jsonl_exists ? 'true' : 'false'));
-                
+
                 if (empty($feeds)) {
                     if ($jsonl_exists) {
                         // No feeds configured but JSONL file exists - use existing data
@@ -102,14 +104,14 @@ function run_scheduled_import($test_mode = false, $trigger_type = 'scheduled') {
                                 'message' => 'Failed to mark existing jobs as processed: ' . $result['message']
                             ];
                         }
-                        
+
                         // Update status to indicate using existing data
                         $feed_status = get_option('job_import_status', []);
                         if (!empty($feed_status)) {
                             $feed_status['logs'][] = 'No feeds configured - marked ' . $result['total'] . ' existing jobs as processed';
                             update_option('job_import_status', $feed_status, false);
                         }
-                        
+
                         // Return success with processed count
                         return [
                             'success' => true,
@@ -129,7 +131,7 @@ function run_scheduled_import($test_mode = false, $trigger_type = 'scheduled') {
                 } else {
                     error_log('[PUNTWORK] Feeds configured, refreshing feed data');
                     fetch_and_generate_combined_json();
-                    
+
                     // Update status after feed refresh
                     $feed_status = get_option('job_import_status', []);
                     if (!empty($feed_status)) {
@@ -196,7 +198,6 @@ function run_scheduled_import($test_mode = false, $trigger_type = 'scheduled') {
         }
 
         return $result;
-
     } catch (\Exception $e) {
         $end_time = microtime(true);
         $duration = $end_time - $start_time;
@@ -235,7 +236,8 @@ function run_scheduled_import($test_mode = false, $trigger_type = 'scheduled') {
 /**
  * Log a scheduled run to history
  */
-function log_scheduled_run($details, $test_mode = false, $trigger_type = 'scheduled') {
+function log_scheduled_run($details, $test_mode = false, $trigger_type = 'scheduled')
+{
     $run_entry = [
         'timestamp' => $details['timestamp'],
         'formatted_date' => wp_date('M j, Y H:i', $details['timestamp']),
@@ -283,7 +285,8 @@ function log_scheduled_run($details, $test_mode = false, $trigger_type = 'schedu
 /**
  * Log a manual import run to history
  */
-function log_manual_import_run($details) {
+function log_manual_import_run($details)
+{
     $run_entry = [
         'timestamp' => $details['timestamp'],
         'formatted_date' => wp_date('M j, Y H:i', $details['timestamp']),
@@ -329,7 +332,8 @@ function log_manual_import_run($details) {
 /**
  * Cleanup scheduled imports on plugin deactivation
  */
-function cleanup_scheduled_imports() {
+function cleanup_scheduled_imports()
+{
     wp_clear_scheduled_hook('puntwork_scheduled_import');
     delete_option('puntwork_import_schedule');
     delete_option('puntwork_last_import_run');

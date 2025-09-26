@@ -1,4 +1,5 @@
 <?php
+
 /**
  * LinkedIn Jobs Integration
  *
@@ -17,8 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * LinkedIn Jobs integration
  */
-class LinkedInBoard extends JobBoard {
-
+class LinkedInBoard extends JobBoard
+{
     /**
      * Access token for LinkedIn API
      */
@@ -27,7 +28,8 @@ class LinkedInBoard extends JobBoard {
     /**
      * Constructor
      */
-    public function __construct(array $config = []) {
+    public function __construct(array $config = [])
+    {
         $this->board_id = 'linkedin';
         $this->board_name = 'LinkedIn Jobs';
         $this->api_url = 'https://api.linkedin.com/v2';
@@ -38,7 +40,8 @@ class LinkedInBoard extends JobBoard {
     /**
      * Configure LinkedIn integration
      */
-    public function configure(array $config): void {
+    public function configure(array $config): void
+    {
         parent::configure($config);
 
         if (isset($config['access_token'])) {
@@ -49,14 +52,16 @@ class LinkedInBoard extends JobBoard {
     /**
      * Check if LinkedIn is properly configured
      */
-    public function isConfigured(): bool {
+    public function isConfigured(): bool
+    {
         return parent::isConfigured() && !empty($this->access_token);
     }
 
     /**
      * Get authentication headers
      */
-    protected function getHeaders(): array {
+    protected function getHeaders(): array
+    {
         $headers = parent::getHeaders();
         if (!empty($this->access_token)) {
             $headers['Authorization'] = 'Bearer ' . $this->access_token;
@@ -67,7 +72,8 @@ class LinkedInBoard extends JobBoard {
     /**
      * Fetch jobs from LinkedIn
      */
-    public function fetchJobs(array $params = []): array {
+    public function fetchJobs(array $params = []): array
+    {
         if (!$this->isConfigured()) {
             throw new \Exception('LinkedIn integration not properly configured');
         }
@@ -96,7 +102,6 @@ class LinkedInBoard extends JobBoard {
             }
 
             return $jobs;
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('LinkedIn API error', PuntWorkLogger::CONTEXT_IMPORT, [
                 'error' => $e->getMessage(),
@@ -109,7 +114,8 @@ class LinkedInBoard extends JobBoard {
     /**
      * Get job details by ID
      */
-    public function getJobDetails(string $jobId): ?array {
+    public function getJobDetails(string $jobId): ?array
+    {
         if (empty($jobId)) {
             return null;
         }
@@ -122,7 +128,6 @@ class LinkedInBoard extends JobBoard {
             }
 
             return $this->normalizeLinkedInJob($response);
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('LinkedIn job details error', PuntWorkLogger::CONTEXT_IMPORT, [
                 'job_id' => $jobId,
@@ -135,7 +140,8 @@ class LinkedInBoard extends JobBoard {
     /**
      * Search jobs with filters
      */
-    public function searchJobs(array $filters = []): array {
+    public function searchJobs(array $filters = []): array
+    {
         $params = [];
 
         if (isset($filters['keywords'])) {
@@ -164,7 +170,8 @@ class LinkedInBoard extends JobBoard {
     /**
      * Normalize LinkedIn job data
      */
-    private function normalizeLinkedInJob(array $jobData): array {
+    private function normalizeLinkedInJob(array $jobData): array
+    {
         return [
             'id' => $jobData['id'] ?? uniqid('linkedin_'),
             'title' => $jobData['title'] ?? '',
@@ -188,7 +195,8 @@ class LinkedInBoard extends JobBoard {
     /**
      * Format salary information
      */
-    private function formatSalary(array $compensation): string {
+    private function formatSalary(array $compensation): string
+    {
         if (empty($compensation)) {
             return '';
         }
@@ -213,7 +221,8 @@ class LinkedInBoard extends JobBoard {
     /**
      * Map LinkedIn job types
      */
-    private function mapLinkedInJobType(string $linkedinType): string {
+    private function mapLinkedInJobType(string $linkedinType): string
+    {
         $type_map = [
             'FULL_TIME' => 'full-time',
             'PART_TIME' => 'part-time',
@@ -229,7 +238,8 @@ class LinkedInBoard extends JobBoard {
     /**
      * Map standard job type to LinkedIn format
      */
-    private function mapJobTypeToLinkedIn(string $jobType): string {
+    private function mapJobTypeToLinkedIn(string $jobType): string
+    {
         $type_map = [
             'full-time' => 'FULL_TIME',
             'part-time' => 'PART_TIME',
@@ -244,7 +254,8 @@ class LinkedInBoard extends JobBoard {
     /**
      * Map experience level
      */
-    private function mapExperienceLevel(string $level): string {
+    private function mapExperienceLevel(string $level): string
+    {
         $level_map = [
             'entry' => 'ENTRY_LEVEL',
             'mid' => 'MID_SENIOR',
@@ -258,7 +269,8 @@ class LinkedInBoard extends JobBoard {
     /**
      * Parse LinkedIn timestamp
      */
-    private function parseLinkedInDate(int $timestamp): string {
+    private function parseLinkedInDate(int $timestamp): string
+    {
         if ($timestamp === 0) {
             return '';
         }

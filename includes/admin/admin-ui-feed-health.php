@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Admin UI for Feed Health Monitor
  *
@@ -17,7 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * Feed Health Monitor Admin Page
  */
-function feed_health_monitor_page() {
+function feed_health_monitor_page()
+{
     // Handle AJAX actions
     if (isset($_POST['action'])) {
         switch ($_POST['action']) {
@@ -58,13 +60,13 @@ function feed_health_monitor_page() {
             <div class="health-status-overview">
                 <h2><?php _e('Current Feed Status', 'puntwork'); ?></h2>
 
-                <?php if (empty($health_status)): ?>
+                <?php if (empty($health_status)) : ?>
                     <div class="notice notice-info">
                         <p><?php _e('No health checks have been performed yet. Click "Run Health Check" to start monitoring your feeds.', 'puntwork'); ?></p>
                     </div>
-                <?php else: ?>
+                <?php else : ?>
                     <div class="health-status-grid">
-                        <?php foreach ($health_status as $feed_key => $status): ?>
+                        <?php foreach ($health_status as $feed_key => $status) : ?>
                             <div class="health-status-card status-<?php echo esc_attr($status['status']); ?>">
                                 <div class="status-header">
                                     <h3><?php echo esc_html($feed_key); ?></h3>
@@ -94,7 +96,7 @@ function feed_health_monitor_page() {
                                         <span class="value"><?php echo $status['check_time'] ? wp_date('M j, H:i', strtotime($status['check_time'])) : 'Never'; ?></span>
                                     </div>
 
-                                    <?php if ($status['error_message']): ?>
+                                    <?php if ($status['error_message']) : ?>
                                         <div class="error-message">
                                             <strong><?php _e('Error', 'puntwork'); ?>:</strong> <?php echo esc_html($status['error_message']); ?>
                                         </div>
@@ -183,25 +185,25 @@ function feed_health_monitor_page() {
             </div>
 
             <!-- Health History -->
-            <?php if (!empty($health_status)): ?>
+            <?php if (!empty($health_status)) : ?>
             <div class="health-history">
                 <h2><?php _e('Health History', 'puntwork'); ?></h2>
 
                 <div class="feed-history-tabs">
-                    <?php foreach (array_keys($health_status) as $index => $feed_key): ?>
+                    <?php foreach (array_keys($health_status) as $index => $feed_key) : ?>
                         <button class="tab-button <?php echo $index === 0 ? 'active' : ''; ?>" data-feed="<?php echo esc_attr($feed_key); ?>">
                             <?php echo esc_html($feed_key); ?>
                         </button>
                     <?php endforeach; ?>
                 </div>
 
-                <?php foreach ($health_status as $feed_key => $current_status): ?>
+                <?php foreach ($health_status as $feed_key => $current_status) : ?>
                     <div class="feed-history-content" id="history-<?php echo esc_attr($feed_key); ?>" style="<?php echo $feed_key === array_key_first($health_status) ? '' : 'display: none;'; ?>">
                         <?php
                         $history = FeedHealthMonitor::get_feed_health_history($feed_key, 7);
-                        if (empty($history)): ?>
+                        if (empty($history)) : ?>
                             <p><?php _e('No historical data available for this feed.', 'puntwork'); ?></p>
-                        <?php else: ?>
+                        <?php else : ?>
                             <div class="history-chart">
                                 <canvas id="chart-<?php echo esc_attr($feed_key); ?>" width="400" height="200"></canvas>
                             </div>
@@ -218,7 +220,7 @@ function feed_health_monitor_page() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach (array_slice($history, 0, 50) as $record): ?>
+                                    <?php foreach (array_slice($history, 0, 50) as $record) : ?>
                                         <tr>
                                             <td><?php echo wp_date('M j, H:i', strtotime($record['check_time'])); ?></td>
                                             <td>
@@ -379,7 +381,8 @@ function feed_health_monitor_page() {
 /**
  * Update alert settings from form submission
  */
-function update_alert_settings() {
+function update_alert_settings()
+{
     $alert_settings = [
         'email_enabled' => isset($_POST['email_enabled']),
         'email_recipients' => sanitize_text_field($_POST['email_recipients']),

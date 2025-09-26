@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Background Queue System for puntWork
  * Provides asynchronous job processing for improved scalability
@@ -15,12 +16,14 @@ if (!defined('ABSPATH')) {
  * Queue Manager Class
  * Handles background job processing with database-backed queue
  */
-class PuntworkQueueManager {
+class PuntworkQueueManager
+{
     private const TABLE_NAME = 'puntwork_queue';
     private const MAX_RETRIES = 3;
     private const BATCH_SIZE = 10;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->init_hooks();
         // Only create table in WordPress environment, not during testing
         if (function_exists('dbDelta') && defined('ABSPATH')) {
@@ -31,7 +34,8 @@ class PuntworkQueueManager {
     /**
      * Initialize WordPress hooks
      */
-    private function init_hooks() {
+    private function init_hooks()
+    {
         add_action('init', [$this, 'process_queue']);
         add_action('puntwork_process_queue', [$this, 'process_queue_cron']);
         add_action('wp_ajax_puntwork_process_queue', [$this, 'ajax_process_queue']);
@@ -48,7 +52,8 @@ class PuntworkQueueManager {
     /**
      * Add custom cron schedule for queue processing
      */
-    public function add_queue_cron_schedule($schedules) {
+    public function add_queue_cron_schedule($schedules)
+    {
         $schedules['puntwork_queue_interval'] = [
             'interval' => 30, // 30 seconds
             'display' => __('Every 30 seconds - puntWork Queue')
@@ -59,7 +64,8 @@ class PuntworkQueueManager {
     /**
      * Create queue table if it doesn't exist
      */
-    private function create_queue_table() {
+    private function create_queue_table()
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -91,7 +97,8 @@ class PuntworkQueueManager {
     /**
      * Add job to queue
      */
-    public function add_job($job_type, $job_data, $priority = 10, $delay = 0) {
+    public function add_job($job_type, $job_data, $priority = 10, $delay = 0)
+    {
         global $wpdb;
 
         $scheduled_time = $delay > 0 ? date('Y-m-d H:i:s', time() + $delay) : current_time('mysql');
@@ -128,7 +135,8 @@ class PuntworkQueueManager {
     /**
      * Get pending jobs for processing
      */
-    private function get_pending_jobs($limit = self::BATCH_SIZE) {
+    private function get_pending_jobs($limit = self::BATCH_SIZE)
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -146,7 +154,8 @@ class PuntworkQueueManager {
     /**
      * Process queue jobs
      */
-    public function process_queue() {
+    public function process_queue()
+    {
         $jobs = $this->get_pending_jobs();
 
         if (empty($jobs)) {
@@ -166,7 +175,8 @@ class PuntworkQueueManager {
     /**
      * Process single job
      */
-    private function process_job($job) {
+    private function process_job($job)
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -206,7 +216,6 @@ class PuntworkQueueManager {
             );
 
             do_action('puntwork_job_completed', $job['id'], $job['job_type'], $result);
-
         } catch (\Exception $e) {
             error_log('[PUNTWORK] Job failed: ' . $e->getMessage());
 
@@ -237,7 +246,8 @@ class PuntworkQueueManager {
     /**
      * Execute job based on type
      */
-    private function execute_job($job_type, $job_data) {
+    private function execute_job($job_type, $job_data)
+    {
         switch ($job_type) {
             case 'feed_import':
                 return $this->process_feed_import($job_data);
@@ -262,7 +272,8 @@ class PuntworkQueueManager {
     /**
      * Process feed import job
      */
-    private function process_feed_import($job_data) {
+    private function process_feed_import($job_data)
+    {
         // Import feed processing logic
         $feed_id = $job_data['feed_id'] ?? null;
         $force = $job_data['force'] ?? false;
@@ -283,7 +294,8 @@ class PuntworkQueueManager {
     /**
      * Process batch job
      */
-    private function process_batch($job_data) {
+    private function process_batch($job_data)
+    {
         $batch_id = $job_data['batch_id'] ?? null;
 
         if (!$batch_id) {
@@ -301,7 +313,8 @@ class PuntworkQueueManager {
     /**
      * Process cleanup job
      */
-    private function process_cleanup($job_data) {
+    private function process_cleanup($job_data)
+    {
         $type = $job_data['type'] ?? 'general';
 
         switch ($type) {
@@ -322,7 +335,8 @@ class PuntworkQueueManager {
     /**
      * Send notification job
      */
-    private function send_notification($job_data) {
+    private function send_notification($job_data)
+    {
         $type = $job_data['type'] ?? 'email';
         $recipients = $job_data['recipients'] ?? [];
         $subject = $job_data['subject'] ?? '';
@@ -344,7 +358,8 @@ class PuntworkQueueManager {
     /**
      * Update analytics job
      */
-    private function update_analytics($job_data) {
+    private function update_analytics($job_data)
+    {
         // Update analytics data
         require_once __DIR__ . '/../analytics/analytics-processor.php';
 
@@ -354,7 +369,8 @@ class PuntworkQueueManager {
     /**
      * Cron-based queue processing
      */
-    public function process_queue_cron() {
+    public function process_queue_cron()
+    {
         // Only process if not already running
         if (get_transient('puntwork_queue_processing')) {
             return;
@@ -372,7 +388,8 @@ class PuntworkQueueManager {
     /**
      * AJAX queue processing for immediate execution
      */
-    public function ajax_process_queue() {
+    public function ajax_process_queue()
+    {
         // Verify nonce and permissions
         if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
             wp_send_json_error(['message' => 'Security check failed']);
@@ -395,7 +412,8 @@ class PuntworkQueueManager {
     /**
      * Get queue statistics
      */
-    public function get_queue_stats() {
+    public function get_queue_stats()
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -416,19 +434,22 @@ class PuntworkQueueManager {
     /**
      * Cleanup methods
      */
-    private function cleanup_old_logs($data) {
+    private function cleanup_old_logs($data)
+    {
         $days = $data['days'] ?? 30;
         // Cleanup old log files
         return ['cleaned' => 0, 'message' => 'Log cleanup not implemented yet'];
     }
 
-    private function cleanup_temp_files($data) {
+    private function cleanup_temp_files($data)
+    {
         $path = $data['path'] ?? sys_get_temp_dir();
         // Cleanup temp files
         return ['cleaned' => 0, 'message' => 'Temp file cleanup not implemented yet'];
     }
 
-    private function cleanup_cache($data) {
+    private function cleanup_cache($data)
+    {
         // Clear various caches
         if (function_exists('wp_cache_flush')) {
             wp_cache_flush();
@@ -440,7 +461,8 @@ class PuntworkQueueManager {
         return ['message' => 'Cache cleared successfully'];
     }
 
-    private function general_cleanup($data) {
+    private function general_cleanup($data)
+    {
         // General cleanup tasks
         return ['message' => 'General cleanup completed'];
     }
@@ -448,7 +470,8 @@ class PuntworkQueueManager {
     /**
      * Check if load balancer should be used
      */
-    private function should_use_load_balancer() {
+    private function should_use_load_balancer()
+    {
         // Use load balancer if multiple instances are available and configured
         if (!class_exists('Puntwork\\PuntworkLoadBalancer')) {
             return false;
@@ -466,7 +489,8 @@ class PuntworkQueueManager {
     /**
      * Process jobs using load balancer
      */
-    private function process_with_load_balancer($jobs) {
+    private function process_with_load_balancer($jobs)
+    {
         $load_balancer = $this->get_load_balancer();
         if (!$load_balancer) {
             // Fallback to local processing
@@ -485,7 +509,8 @@ class PuntworkQueueManager {
     /**
      * Distribute job via load balancer
      */
-    private function distribute_job_via_load_balancer($job, $load_balancer) {
+    private function distribute_job_via_load_balancer($job, $load_balancer)
+    {
         $scaling_manager = $this->get_scaling_manager();
         if (!$scaling_manager) {
             $this->process_job($job);
@@ -536,7 +561,6 @@ class PuntworkQueueManager {
             } else {
                 $this->handle_job_failure($job, $result['error']);
             }
-
         } catch (\Exception $e) {
             $this->handle_job_failure($job, $e->getMessage());
         }
@@ -545,7 +569,8 @@ class PuntworkQueueManager {
     /**
      * Simulate remote job processing
      */
-    private function simulate_remote_processing($job, $instance) {
+    private function simulate_remote_processing($job, $instance)
+    {
         // This would normally make an HTTP request to the remote instance
         // For demonstration, we'll simulate the processing
 
@@ -572,7 +597,8 @@ class PuntworkQueueManager {
     /**
      * Estimate remote processing time
      */
-    private function estimate_remote_processing_time($job_type, $job_data, $instance) {
+    private function estimate_remote_processing_time($job_type, $job_data, $instance)
+    {
         $base_times = [
             'feed_import' => 3.0,    // Slightly longer for network overhead
             'batch_process' => 7.0,
@@ -595,7 +621,8 @@ class PuntworkQueueManager {
     /**
      * Get scaling manager instance
      */
-    private function get_scaling_manager() {
+    private function get_scaling_manager()
+    {
         if (class_exists('Puntwork\\PuntworkHorizontalScalingManager')) {
             global $puntwork_scaling_manager;
             return $puntwork_scaling_manager ?? null;
@@ -606,7 +633,8 @@ class PuntworkQueueManager {
     /**
      * Get load balancer instance
      */
-    private function get_load_balancer() {
+    private function get_load_balancer()
+    {
         if (class_exists('Puntwork\\PuntworkLoadBalancer')) {
             global $puntwork_load_balancer;
             return $puntwork_load_balancer ?? null;

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Social Media Integration System
  *
@@ -17,8 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * Abstract base class for social media platforms
  */
-abstract class SocialMediaPlatform {
-
+abstract class SocialMediaPlatform
+{
     /**
      * Platform identifier
      */
@@ -45,14 +46,16 @@ abstract class SocialMediaPlatform {
     /**
      * Constructor
      */
-    public function __construct(array $config = []) {
+    public function __construct(array $config = [])
+    {
         $this->configure($config);
     }
 
     /**
      * Configure the platform
      */
-    public function configure(array $config): void {
+    public function configure(array $config): void
+    {
         if (isset($config['credentials'])) {
             $this->credentials = $config['credentials'];
         }
@@ -65,21 +68,24 @@ abstract class SocialMediaPlatform {
     /**
      * Get platform identifier
      */
-    public function getPlatformId(): string {
+    public function getPlatformId(): string
+    {
         return $this->platform_id;
     }
 
     /**
      * Get platform name
      */
-    public function getPlatformName(): string {
+    public function getPlatformName(): string
+    {
         return $this->platform_name;
     }
 
     /**
      * Check if platform is properly configured
      */
-    public function isConfigured(): bool {
+    public function isConfigured(): bool
+    {
         return !empty($this->credentials);
     }
 
@@ -96,7 +102,8 @@ abstract class SocialMediaPlatform {
     /**
      * Validate content for platform requirements
      */
-    public function validateContent(array $content): array {
+    public function validateContent(array $content): array
+    {
         $errors = [];
 
         if (empty($content['text']) && empty($content['media'])) {
@@ -113,14 +120,16 @@ abstract class SocialMediaPlatform {
     /**
      * Get maximum text length for posts
      */
-    protected function getMaxTextLength(): int {
+    protected function getMaxTextLength(): int
+    {
         return 280; // Default Twitter-like limit
     }
 
     /**
      * Check rate limits
      */
-    protected function checkRateLimit(): bool {
+    protected function checkRateLimit(): bool
+    {
         $transient_key = 'socialmedia_ratelimit_' . $this->platform_id;
         $posts_today = get_transient($transient_key) ?: 0;
 
@@ -142,7 +151,8 @@ abstract class SocialMediaPlatform {
     /**
      * Record a successful post for rate limiting
      */
-    protected function recordPost(): void {
+    protected function recordPost(): void
+    {
         $transient_key = 'socialmedia_ratelimit_' . $this->platform_id;
         $posts_today = get_transient($transient_key) ?: 0;
         set_transient($transient_key, $posts_today + 1, DAY_IN_SECONDS);
@@ -155,7 +165,8 @@ abstract class SocialMediaPlatform {
     /**
      * Make API request with error handling
      */
-    protected function makeApiRequest(string $endpoint, array $params = [], string $method = 'POST'): array {
+    protected function makeApiRequest(string $endpoint, array $params = [], string $method = 'POST'): array
+    {
         // Rate limiting check
         if (!$this->checkRateLimit()) {
             throw new \Exception("Rate limit exceeded for {$this->platform_name}");

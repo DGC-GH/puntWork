@@ -1,4 +1,5 @@
 <?php
+
 /**
  * puntWork Logging Utility
  * Centralized logging system for development and debugging
@@ -19,8 +20,8 @@ if (!defined('ABSPATH')) {
  * Centralized logging utility for puntWork plugin
  * Provides structured logging with different levels and contexts
  */
-class PuntWorkLogger {
-
+class PuntWorkLogger
+{
     // Log levels
     const DEBUG = 'DEBUG';
     const INFO = 'INFO';
@@ -42,7 +43,8 @@ class PuntWorkLogger {
      * @param string $context Context identifier
      * @param array $data Additional data to log
      */
-    public static function debug($message, $context = self::CONTEXT_SYSTEM, $data = []) {
+    public static function debug($message, $context = self::CONTEXT_SYSTEM, $data = [])
+    {
         self::log($message, self::DEBUG, $context, $data);
     }
 
@@ -53,7 +55,8 @@ class PuntWorkLogger {
      * @param string $context Context identifier
      * @param array $data Additional data to log
      */
-    public static function info($message, $context = self::CONTEXT_SYSTEM, $data = []) {
+    public static function info($message, $context = self::CONTEXT_SYSTEM, $data = [])
+    {
         self::log($message, self::INFO, $context, $data);
     }
 
@@ -64,7 +67,8 @@ class PuntWorkLogger {
      * @param string $context Context identifier
      * @param array $data Additional data to log
      */
-    public static function warn($message, $context = self::CONTEXT_SYSTEM, $data = []) {
+    public static function warn($message, $context = self::CONTEXT_SYSTEM, $data = [])
+    {
         self::log($message, self::WARN, $context, $data);
     }
 
@@ -75,7 +79,8 @@ class PuntWorkLogger {
      * @param string $context Context identifier
      * @param array $data Additional data to log
      */
-    public static function error($message, $context = self::CONTEXT_SYSTEM, $data = []) {
+    public static function error($message, $context = self::CONTEXT_SYSTEM, $data = [])
+    {
         self::log($message, self::ERROR, $context, $data);
     }
 
@@ -87,7 +92,8 @@ class PuntWorkLogger {
      * @param string $context Context identifier
      * @param array $data Additional data to log
      */
-    private static function log($message, $level, $context, $data = []) {
+    private static function log($message, $level, $context, $data = [])
+    {
         // Skip debug logs in production unless WP_DEBUG is true
         if ($level === self::DEBUG && (!defined('WP_DEBUG') || !WP_DEBUG)) {
             return;
@@ -129,7 +135,8 @@ class PuntWorkLogger {
      *
      * @return string|null Calling function name
      */
-    private static function getCallingFunction() {
+    private static function getCallingFunction()
+    {
         $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
 
         // Skip the first two entries (this method and the calling log method)
@@ -154,7 +161,8 @@ class PuntWorkLogger {
      * @param string $action AJAX action name
      * @param array $postData POST data
      */
-    public static function logAjaxRequest($action, $postData = []) {
+    public static function logAjaxRequest($action, $postData = [])
+    {
         $safeData = self::sanitizeLogData($postData);
         self::debug("AJAX Request: {$action}", self::CONTEXT_AJAX, $safeData);
     }
@@ -166,7 +174,8 @@ class PuntWorkLogger {
      * @param mixed $response Response data
      * @param bool $success Whether the request was successful
      */
-    public static function logAjaxResponse($action, $response, $success = true) {
+    public static function logAjaxResponse($action, $response, $success = true)
+    {
         $level = $success ? self::DEBUG : self::ERROR;
         $status = $success ? 'SUCCESS' : 'FAILED';
 
@@ -186,7 +195,8 @@ class PuntWorkLogger {
      * @param int $batchSize Current batch size
      * @param float $timeElapsed Time elapsed in seconds
      */
-    public static function logBatchProgress($processed, $total, $batchSize, $timeElapsed) {
+    public static function logBatchProgress($processed, $total, $batchSize, $timeElapsed)
+    {
         $percent = $total > 0 ? round(($processed / $total) * 100, 1) : 0;
         $message = "Batch Progress: {$processed}/{$total} ({$percent}%) | Batch Size: {$batchSize} | Time: {$timeElapsed}s";
 
@@ -207,7 +217,8 @@ class PuntWorkLogger {
      * @param int $itemCount Number of items processed
      * @param bool $success Whether processing was successful
      */
-    public static function logFeedProcessing($feedKey, $url, $itemCount, $success = true) {
+    public static function logFeedProcessing($feedKey, $url, $itemCount, $success = true)
+    {
         $status = $success ? 'SUCCESS' : 'FAILED';
         $message = "Feed Processing: {$feedKey} - {$status} | Items: {$itemCount}";
 
@@ -231,14 +242,16 @@ class PuntWorkLogger {
      * @param mixed $data Data to sanitize
      * @return mixed Sanitized data
      */
-    private static function sanitizeLogData($data) {
+    private static function sanitizeLogData($data)
+    {
         if (is_array($data)) {
             $sanitized = [];
             foreach ($data as $key => $value) {
                 if (strpos(strtolower($key), 'password') !== false ||
                     strpos(strtolower($key), 'key') !== false ||
                     strpos(strtolower($key), 'secret') !== false ||
-                    strpos(strtolower($key), 'token') !== false) {
+                    strpos(strtolower($key), 'token') !== false
+                ) {
                     $sanitized[$key] = '[REDACTED]';
                 } elseif (is_array($value) || is_object($value)) {
                     $sanitized[$key] = self::sanitizeLogData($value);
@@ -260,7 +273,8 @@ class PuntWorkLogger {
      * @param string $url URL to sanitize
      * @return string Sanitized URL
      */
-    private static function sanitizeUrl($url) {
+    private static function sanitizeUrl($url)
+    {
         // Remove potential sensitive parameters
         $parsed = parse_url($url);
         if (isset($parsed['query'])) {
@@ -278,7 +292,8 @@ class PuntWorkLogger {
      * @param array $parsed Parsed URL components
      * @return string Built URL
      */
-    private static function buildUrl($parsed) {
+    private static function buildUrl($parsed)
+    {
         $url = '';
         if (isset($parsed['scheme'])) {
             $url .= $parsed['scheme'] . '://';
@@ -315,7 +330,8 @@ class PuntWorkLogger {
      * @param string $level Log level
      * @param string $context Context identifier
      */
-    public static function addAdminLog($message, $level = self::INFO, $context = self::CONTEXT_SYSTEM) {
+    public static function addAdminLog($message, $level = self::INFO, $context = self::CONTEXT_SYSTEM)
+    {
         $timestamp = date('d-M-Y H:i:s T');
         $formattedMessage = "[{$timestamp}] [{$level}] [{$context}] {$message}";
 

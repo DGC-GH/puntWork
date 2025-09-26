@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Queue AJAX Handlers for puntWork
  * Server-side handlers for queue management operations
@@ -14,7 +15,8 @@ if (!defined('ABSPATH')) {
 /**
  * Get queue statistics via AJAX
  */
-function get_queue_stats_ajax() {
+function get_queue_stats_ajax()
+{
     // Verify nonce and permissions
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
         wp_send_json_error(['message' => 'Security check failed']);
@@ -41,7 +43,6 @@ function get_queue_stats_ajax() {
         ", ARRAY_A);
 
         wp_send_json_success($stats ?: ['pending' => 0, 'processing' => 0, 'completed' => 0, 'failed' => 0, 'total' => 0]);
-
     } catch (\Exception $e) {
         wp_send_json_error(['message' => 'Failed to get queue stats: ' . $e->getMessage()]);
     }
@@ -50,7 +51,8 @@ function get_queue_stats_ajax() {
 /**
  * Get recent jobs via AJAX
  */
-function get_recent_jobs_ajax() {
+function get_recent_jobs_ajax()
+{
     // Verify nonce and permissions
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
         wp_send_json_error(['message' => 'Security check failed']);
@@ -74,7 +76,6 @@ function get_recent_jobs_ajax() {
         ", ARRAY_A);
 
         wp_send_json_success($jobs ?: []);
-
     } catch (\Exception $e) {
         wp_send_json_error(['message' => 'Failed to get recent jobs: ' . $e->getMessage()]);
     }
@@ -83,7 +84,8 @@ function get_recent_jobs_ajax() {
 /**
  * Clear completed jobs via AJAX
  */
-function clear_completed_jobs_ajax() {
+function clear_completed_jobs_ajax()
+{
     // Verify nonce and permissions
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
         wp_send_json_error(['message' => 'Security check failed']);
@@ -105,7 +107,6 @@ function clear_completed_jobs_ajax() {
             'message' => "Cleared $deleted completed jobs",
             'deleted' => $deleted
         ]);
-
     } catch (\Exception $e) {
         wp_send_json_error(['message' => 'Failed to clear completed jobs: ' . $e->getMessage()]);
     }
@@ -114,7 +115,8 @@ function clear_completed_jobs_ajax() {
 /**
  * Add test job via AJAX
  */
-function add_test_job_ajax() {
+function add_test_job_ajax()
+{
     // Verify nonce and permissions
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
         wp_send_json_error(['message' => 'Security check failed']);
@@ -142,7 +144,6 @@ function add_test_job_ajax() {
             'message' => 'Test job added successfully',
             'job_id' => $job_id
         ]);
-
     } catch (\Exception $e) {
         wp_send_json_error(['message' => 'Failed to add test job: ' . $e->getMessage()]);
     }
@@ -151,7 +152,8 @@ function add_test_job_ajax() {
 /**
  * Manual queue processing trigger
  */
-function manual_process_queue_ajax() {
+function manual_process_queue_ajax()
+{
     // Verify nonce and permissions
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
         wp_send_json_error(['message' => 'Security check failed']);
@@ -171,7 +173,6 @@ function manual_process_queue_ajax() {
         $queue_manager->process_queue();
 
         wp_send_json_success(['message' => 'Queue processed manually']);
-
     } catch (\Exception $e) {
         wp_send_json_error(['message' => 'Failed to process queue: ' . $e->getMessage()]);
     }
@@ -180,7 +181,8 @@ function manual_process_queue_ajax() {
 /**
  * Get queue configuration
  */
-function get_queue_config() {
+function get_queue_config()
+{
     return [
         'max_retries' => 3,
         'batch_size' => 10,
@@ -193,7 +195,8 @@ function get_queue_config() {
 /**
  * Clean up old queue entries
  */
-function cleanup_old_queue_entries() {
+function cleanup_old_queue_entries()
+{
     global $wpdb;
     $table_name = $wpdb->prefix . 'puntwork_queue';
 

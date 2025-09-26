@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Geographic mapping definitions
  *
@@ -10,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -25,7 +26,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return array Province mappings.
  */
 if (!function_exists('GetProvinceMap')) {
-    function GetProvinceMap(): array {
+    function GetProvinceMap(): array
+    {
         $cached = CacheManager::get('province_map', CacheManager::GROUP_MAPPINGS);
         if (false === $cached) {
             $cached = [

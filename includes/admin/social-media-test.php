@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Social Media Integration Test
  *
@@ -15,7 +16,8 @@ if (!defined('ABSPATH')) {
 /**
  * Test social media platform configurations and posting
  */
-function test_social_media_integration() {
+function test_social_media_integration()
+{
     echo "<h2>Social Media Integration Test</h2>";
 
     if (!class_exists('\\Puntwork\\SocialMedia\\SocialMediaManager')) {
@@ -102,14 +104,14 @@ function test_social_media_integration() {
 }
 
 // Add to admin page for testing
-add_action('admin_menu', function() {
+add_action('admin_menu', function () {
     add_submenu_page(
         'puntwork-admin',
         __('Social Media Test', 'puntwork'),
         __('Social Media Test', 'puntwork'),
         'manage_options',
         'puntwork-social-test',
-        function() {
+        function () {
             echo '<div class="wrap">';
             test_social_media_integration();
             echo '</div>';

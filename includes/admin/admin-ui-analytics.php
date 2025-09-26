@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Admin UI for Import Analytics Dashboard
  *
@@ -17,7 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * Import Analytics Dashboard Admin Page
  */
-function import_analytics_page() {
+function import_analytics_page()
+{
     // Handle CSV export
     if (isset($_POST['export_csv']) && check_admin_referer('analytics_export_nonce')) {
         $period = sanitize_text_field($_POST['export_period'] ?? '30days');

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Security and validation utilities
  *
@@ -10,15 +11,15 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
 /**
  * Security utilities class
  */
-class SecurityUtils {
-
+class SecurityUtils
+{
     /**
      * Rate limiting storage
      */
@@ -82,7 +83,6 @@ class SecurityUtils {
 
             PuntWorkLogger::debug("AJAX request validation passed for action: {$action}", PuntWorkLogger::CONTEXT_SECURITY);
             return true;
-
         } catch (\Exception $e) {
             PuntWorkLogger::error("Exception during AJAX validation for {$action}: " . $e->getMessage(), PuntWorkLogger::CONTEXT_SECURITY);
             return new \WP_Error('exception', 'Validation error: ' . $e->getMessage());
@@ -97,7 +97,8 @@ class SecurityUtils {
      * @param int $time_window Time window in seconds
      * @return bool|WP_Error True if allowed, WP_Error if rate limited
      */
-    public static function check_rate_limit(string $action, int $max_requests = 10, int $time_window = 60) {
+    public static function check_rate_limit(string $action, int $max_requests = 10, int $time_window = 60)
+    {
         $user_id = get_current_user_id();
         $key = "rate_limit_{$action}_{$user_id}";
 
@@ -109,7 +110,7 @@ class SecurityUtils {
         }
 
         // Remove old requests outside the time window
-        $requests = array_filter($requests, function($timestamp) use ($current_time, $time_window) {
+        $requests = array_filter($requests, function ($timestamp) use ($current_time, $time_window) {
             return ($current_time - $timestamp) < $time_window;
         });
 
@@ -135,7 +136,8 @@ class SecurityUtils {
      * @param string $field_name Field name for error messages
      * @return mixed|WP_Error Sanitized value or error
      */
-    public static function validate_field($value, array $rules, string $field_name) {
+    public static function validate_field($value, array $rules, string $field_name)
+    {
         // Type validation
         if (isset($rules['type'])) {
             switch ($rules['type']) {
@@ -275,7 +277,8 @@ class SecurityUtils {
      * @param array $rules Validation rules
      * @return array|WP_Error Sanitized data or error
      */
-    public static function sanitize_data_array(array $data, array $rules) {
+    public static function sanitize_data_array(array $data, array $rules)
+    {
         $sanitized = [];
 
         foreach ($rules as $field => $field_rules) {
@@ -299,7 +302,8 @@ class SecurityUtils {
      * @param string $method Request method ('GET', 'POST', etc.)
      * @return array Sanitized input data
      */
-    public static function sanitize_request_input(string $method = 'POST'): array {
+    public static function sanitize_request_input(string $method = 'POST'): array
+    {
         $input = [];
 
         switch ($method) {
@@ -330,7 +334,8 @@ class SecurityUtils {
      * @param mixed $data Data to sanitize
      * @return mixed Sanitized data
      */
-    public static function sanitize_deep($data) {
+    public static function sanitize_deep($data)
+    {
         if (is_array($data)) {
             $sanitized = [];
             foreach ($data as $key => $value) {
@@ -358,7 +363,8 @@ class SecurityUtils {
      * @param int $max_size Maximum file size in bytes
      * @return bool|WP_Error True if valid, WP_Error if invalid
      */
-    public static function validate_file_upload(array $file, array $allowed_types = [], int $max_size = 0) {
+    public static function validate_file_upload(array $file, array $allowed_types = [], int $max_size = 0)
+    {
         // Check if file was uploaded
         if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
             return new \WP_Error('upload_error', 'No file was uploaded');
@@ -390,7 +396,8 @@ class SecurityUtils {
      * @param int $length Length of the string
      * @return string Random string
      */
-    public static function generate_secure_token(int $length = 32): string {
+    public static function generate_secure_token(int $length = 32): string
+    {
         return bin2hex(random_bytes($length / 2));
     }
 
@@ -400,7 +407,8 @@ class SecurityUtils {
      * @param string $event Event type
      * @param array $data Additional data
      */
-    public static function log_security_event(string $event, array $data = []) {
+    public static function log_security_event(string $event, array $data = [])
+    {
         $log_data = array_merge($data, [
             'user_id' => get_current_user_id(),
             'user_ip' => self::get_client_ip(),
@@ -416,7 +424,8 @@ class SecurityUtils {
      *
      * @return string Client IP
      */
-    public static function get_client_ip(): string {
+    public static function get_client_ip(): string
+    {
         $headers = [
             'HTTP_CF_CONNECTING_IP',
             'HTTP_CLIENT_IP',
@@ -445,7 +454,8 @@ class SecurityUtils {
      *
      * @return bool True if trusted
      */
-    public static function is_trusted_request(): bool {
+    public static function is_trusted_request(): bool
+    {
         // Check if request is from same domain
         $referer = wp_get_referer();
         if ($referer) {
@@ -460,15 +470,16 @@ class SecurityUtils {
 /**
  * Enhanced error handling for AJAX responses
  */
-class AjaxErrorHandler {
-
+class AjaxErrorHandler
+{
     /**
      * Send JSON error response with proper formatting
      *
      * @param string|WP_Error $error Error message or WP_Error object
      * @param array $additional_data Additional data to include
      */
-    public static function send_error($error, array $additional_data = []) {
+    public static function send_error($error, array $additional_data = [])
+    {
         $error_data = [
             'success' => false,
             'timestamp' => current_time('mysql')
@@ -508,7 +519,8 @@ class AjaxErrorHandler {
      * @param mixed $data Response data
      * @param array $additional_data Additional data to include
      */
-    public static function send_success($data = null, array $additional_data = []) {
+    public static function send_success($data = null, array $additional_data = [])
+    {
         $response_data = [
             'success' => true,
             'timestamp' => current_time('mysql')

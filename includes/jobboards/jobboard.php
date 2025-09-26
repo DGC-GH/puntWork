@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Job Board Integration System
  *
@@ -17,8 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * Abstract base class for job board integrations
  */
-abstract class JobBoard {
-
+abstract class JobBoard
+{
     /**
      * Job board identifier
      */
@@ -52,7 +53,8 @@ abstract class JobBoard {
      *
      * @param array $config Configuration array
      */
-    public function __construct(array $config = []) {
+    public function __construct(array $config = [])
+    {
         $this->configure($config);
     }
 
@@ -61,7 +63,8 @@ abstract class JobBoard {
      *
      * @param array $config Configuration options
      */
-    public function configure(array $config): void {
+    public function configure(array $config): void
+    {
         if (isset($config['api_url'])) {
             $this->api_url = $config['api_url'];
         }
@@ -78,21 +81,24 @@ abstract class JobBoard {
     /**
      * Get job board identifier
      */
-    public function getBoardId(): string {
+    public function getBoardId(): string
+    {
         return $this->board_id;
     }
 
     /**
      * Get job board name
      */
-    public function getBoardName(): string {
+    public function getBoardName(): string
+    {
         return $this->board_name;
     }
 
     /**
      * Check if the job board is properly configured
      */
-    public function isConfigured(): bool {
+    public function isConfigured(): bool
+    {
         return !empty($this->api_url) && !empty($this->credentials);
     }
 
@@ -123,7 +129,8 @@ abstract class JobBoard {
     /**
      * Get supported search filters
      */
-    public function getSupportedFilters(): array {
+    public function getSupportedFilters(): array
+    {
         return [
             'keywords',
             'location',
@@ -143,7 +150,8 @@ abstract class JobBoard {
      * @param array $jobData Raw job data from API
      * @return array Normalized job data
      */
-    protected function normalizeJobData(array $jobData): array {
+    protected function normalizeJobData(array $jobData): array
+    {
         return [
             'id' => $jobData['id'] ?? uniqid($this->board_id . '_'),
             'title' => $jobData['title'] ?? '',
@@ -172,7 +180,8 @@ abstract class JobBoard {
      * @param string $method HTTP method
      * @return array Response data
      */
-    protected function makeApiRequest(string $endpoint, array $params = [], string $method = 'GET'): array {
+    protected function makeApiRequest(string $endpoint, array $params = [], string $method = 'GET'): array
+    {
         // Rate limiting check
         $this->checkRateLimit();
 
@@ -212,7 +221,8 @@ abstract class JobBoard {
     /**
      * Get authentication headers
      */
-    protected function getHeaders(): array {
+    protected function getHeaders(): array
+    {
         return [
             'User-Agent' => 'PuntWork/' . PUNTWORK_VERSION . ' (WordPress Plugin)',
             'Accept' => 'application/json'
@@ -222,12 +232,13 @@ abstract class JobBoard {
     /**
      * Check rate limits
      */
-    protected function checkRateLimit(): void {
+    protected function checkRateLimit(): void
+    {
         $transient_key = 'jobboard_ratelimit_' . $this->board_id;
         $requests = get_transient($transient_key) ?: [];
 
         // Clean old requests (older than 1 minute)
-        $requests = array_filter($requests, function($timestamp) {
+        $requests = array_filter($requests, function ($timestamp) {
             return $timestamp > (time() - 60);
         });
 
@@ -248,7 +259,8 @@ abstract class JobBoard {
      *
      * @param array $response API response
      */
-    protected function handleApiError(array $response): void {
+    protected function handleApiError(array $response): void
+    {
         if (isset($response['error'])) {
             $error_msg = $response['error']['message'] ?? 'Unknown API error';
             throw new \Exception("{$this->board_name} API Error: {$error_msg}");

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * API Settings admin page
  *
@@ -10,14 +11,15 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
 /**
  * API Settings page callback
  */
-function api_settings_page() {
+function api_settings_page()
+{
     // Handle form submissions
     if (isset($_POST['regenerate_api_key']) && check_admin_referer('puntwork_api_settings')) {
         $new_key = regenerate_api_key();

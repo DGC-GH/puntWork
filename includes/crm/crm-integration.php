@@ -1,4 +1,5 @@
 <?php
+
 /**
  * CRM Integration Framework
  *
@@ -17,8 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * Abstract base class for CRM integrations
  */
-abstract class CRMIntegration {
-
+abstract class CRMIntegration
+{
     /**
      * CRM platform identifier
      */
@@ -46,7 +47,8 @@ abstract class CRMIntegration {
     /**
      * Constructor
      */
-    public function __construct(array $config = []) {
+    public function __construct(array $config = [])
+    {
         $this->config = $config;
         $this->initialize();
     }
@@ -89,35 +91,40 @@ abstract class CRMIntegration {
     /**
      * Get platform identifier
      */
-    public function getPlatformId(): string {
+    public function getPlatformId(): string
+    {
         return $this->platform_id;
     }
 
     /**
      * Get platform name
      */
-    public function getPlatformName(): string {
+    public function getPlatformName(): string
+    {
         return $this->platform_name;
     }
 
     /**
      * Get configuration
      */
-    public function getConfig(): array {
+    public function getConfig(): array
+    {
         return $this->config;
     }
 
     /**
      * Update configuration
      */
-    public function updateConfig(array $config): void {
+    public function updateConfig(array $config): void
+    {
         $this->config = array_merge($this->config, $config);
     }
 
     /**
      * Check rate limits
      */
-    protected function checkRateLimit(): bool {
+    protected function checkRateLimit(): bool
+    {
         $transient_key = 'crm_ratelimit_' . $this->platform_id;
         $requests_today = get_transient($transient_key) ?: 0;
         $requests_hour = get_transient($transient_key . '_hour_' . date('Y-m-d-H')) ?: 0;
@@ -141,7 +148,8 @@ abstract class CRMIntegration {
     /**
      * Record API request for rate limiting
      */
-    protected function recordRequest(): void {
+    protected function recordRequest(): void
+    {
         $transient_key = 'crm_ratelimit_' . $this->platform_id;
 
         // Daily counter
@@ -162,7 +170,8 @@ abstract class CRMIntegration {
     /**
      * Make API request with error handling
      */
-    protected function makeApiRequest(string $endpoint, array $params = [], string $method = 'GET', array $headers = []): array {
+    protected function makeApiRequest(string $endpoint, array $params = [], string $method = 'GET', array $headers = []): array
+    {
         $this->checkRateLimit();
 
         $url = $this->getApiBaseUrl() . $endpoint;
@@ -217,7 +226,8 @@ abstract class CRMIntegration {
     /**
      * Standardize contact data format
      */
-    protected function standardizeContactData(array $contact_data): array {
+    protected function standardizeContactData(array $contact_data): array
+    {
         return [
             'first_name' => $contact_data['first_name'] ?? '',
             'last_name' => $contact_data['last_name'] ?? '',
@@ -240,7 +250,8 @@ abstract class CRMIntegration {
     /**
      * Standardize deal data format
      */
-    protected function standardizeDealData(array $deal_data): array {
+    protected function standardizeDealData(array $deal_data): array
+    {
         return [
             'title' => $deal_data['title'] ?? '',
             'value' => $deal_data['value'] ?? 0,

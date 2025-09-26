@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Batch data processing functions
  * Handles batch data processing, duplicates, and item processing
@@ -11,7 +12,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AJAX handlers for purge operations
  *
@@ -10,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +21,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 
 add_action('wp_ajax_job_import_cleanup_duplicates', __NAMESPACE__ . '\\job_import_cleanup_duplicates_ajax');
-function job_import_cleanup_duplicates_ajax() {
+function job_import_cleanup_duplicates_ajax()
+{
     PuntWorkLogger::logAjaxRequest('job_import_cleanup_duplicates', $_POST);
 
     // Use comprehensive security validation
@@ -185,7 +187,6 @@ function job_import_cleanup_duplicates_ajax() {
             'progress_percentage' => $progress_percentage,
             'logs' => array_slice($logs, -20)
         ]);
-
     } catch (\Exception $e) {
         delete_transient('job_import_cleanup_lock');
         PuntWorkLogger::error('Cleanup failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_PURGE);
@@ -196,7 +197,8 @@ function job_import_cleanup_duplicates_ajax() {
 }
 
 add_action('wp_ajax_job_import_purge', __NAMESPACE__ . '\\job_import_purge_ajax');
-function job_import_purge_ajax() {
+function job_import_purge_ajax()
+{
     PuntWorkLogger::logAjaxRequest('job_import_purge', $_POST);
 
     // Use comprehensive security validation
@@ -396,7 +398,6 @@ function job_import_purge_ajax() {
             'progress_percentage' => $progress_percentage,
             'logs' => array_slice($logs, -20)
         ]);
-
     } catch (\Exception $e) {
         delete_transient('job_import_purge_lock');
         PuntWorkLogger::error('Purge failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_PURGE);
@@ -407,7 +408,8 @@ function job_import_purge_ajax() {
 }
 
 add_action('wp_ajax_job_import_cleanup_continue', __NAMESPACE__ . '\\job_import_cleanup_continue_ajax');
-function job_import_cleanup_continue_ajax() {
+function job_import_cleanup_continue_ajax()
+{
     PuntWorkLogger::logAjaxRequest('job_import_cleanup_continue', $_POST);
 
     // Use comprehensive security validation
@@ -439,7 +441,6 @@ function job_import_cleanup_continue_ajax() {
         $_POST['is_continue'] = true;
 
         job_import_cleanup_duplicates_ajax();
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Cleanup continue failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_PURGE);
         AjaxErrorHandler::send_error('Cleanup continue failed: ' . $e->getMessage());

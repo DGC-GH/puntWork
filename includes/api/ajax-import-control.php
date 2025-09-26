@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AJAX handlers for import control operations
  * Handles batch processing, cancellation, and status retrieval
@@ -11,7 +12,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -21,7 +22,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 
 add_action('wp_ajax_run_job_import_batch', __NAMESPACE__ . '\\run_job_import_batch_ajax');
-function run_job_import_batch_ajax() {
+function run_job_import_batch_ajax()
+{
     PuntWorkLogger::logAjaxRequest('run_job_import_batch', $_POST);
 
     // Use comprehensive security validation with field validation
@@ -60,7 +62,6 @@ function run_job_import_batch_ajax() {
 
         PuntWorkLogger::logAjaxResponse('run_job_import_batch', $log_summary, isset($result['success']) && $result['success']);
         AjaxErrorHandler::send_success($result);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Batch import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::send_error('Batch import failed: ' . $e->getMessage());
@@ -68,7 +69,8 @@ function run_job_import_batch_ajax() {
 }
 
 add_action('wp_ajax_cancel_job_import', __NAMESPACE__ . '\\cancel_job_import_ajax');
-function cancel_job_import_ajax() {
+function cancel_job_import_ajax()
+{
     PuntWorkLogger::logAjaxRequest('cancel_job_import', $_POST);
 
     // Use comprehensive security validation
@@ -87,7 +89,6 @@ function cancel_job_import_ajax() {
 
         PuntWorkLogger::logAjaxResponse('cancel_job_import', ['message' => 'Import cancelled']);
         AjaxErrorHandler::send_success(null, ['message' => 'Import cancelled']);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Cancel import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::send_error('Failed to cancel import: ' . $e->getMessage());
@@ -95,7 +96,8 @@ function cancel_job_import_ajax() {
 }
 
 add_action('wp_ajax_clear_import_cancel', __NAMESPACE__ . '\\clear_import_cancel_ajax');
-function clear_import_cancel_ajax() {
+function clear_import_cancel_ajax()
+{
     PuntWorkLogger::logAjaxRequest('clear_import_cancel', $_POST);
 
     // Use comprehensive security validation
@@ -111,7 +113,6 @@ function clear_import_cancel_ajax() {
 
         PuntWorkLogger::logAjaxResponse('clear_import_cancel', ['message' => 'Cancellation cleared']);
         AjaxErrorHandler::send_success(null, ['message' => 'Cancellation cleared']);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Clear import cancel error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::send_error('Failed to clear cancellation: ' . $e->getMessage());
@@ -119,7 +120,8 @@ function clear_import_cancel_ajax() {
 }
 
 add_action('wp_ajax_reset_job_import', __NAMESPACE__ . '\\reset_job_import_ajax');
-function reset_job_import_ajax() {
+function reset_job_import_ajax()
+{
     PuntWorkLogger::logAjaxRequest('reset_job_import', $_POST);
 
     // Use comprehensive security validation
@@ -144,7 +146,6 @@ function reset_job_import_ajax() {
 
         PuntWorkLogger::logAjaxResponse('reset_job_import', ['message' => 'Import system reset']);
         AjaxErrorHandler::send_success(null, ['message' => 'Import system reset']);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Reset import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::send_error('Failed to reset import: ' . $e->getMessage());
@@ -152,7 +153,8 @@ function reset_job_import_ajax() {
 }
 
 add_action('wp_ajax_get_job_import_status', __NAMESPACE__ . '\\get_job_import_status_ajax');
-function get_job_import_status_ajax() {
+function get_job_import_status_ajax()
+{
     PuntWorkLogger::logAjaxRequest('get_job_import_status', $_POST);
 
     // Use comprehensive security validation
@@ -163,8 +165,7 @@ function get_job_import_status_ajax() {
     }
 
     try {
-
-    $progress = get_option('job_import_status') ?: [
+        $progress = get_option('job_import_status') ?: [
         'total' => 0,
         'processed' => 0,
         'published' => 0,
@@ -183,122 +184,122 @@ function get_job_import_status_ajax() {
         'end_time' => null,
         'last_update' => time(),
         'logs' => [],
-    ];
+        ];
 
-    PuntWorkLogger::debug('Retrieved import status', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::debug('Retrieved import status', PuntWorkLogger::CONTEXT_BATCH, [
         'total' => $progress['total'],
         'processed' => $progress['processed'],
         'complete' => $progress['complete'] ?? null
-    ]);
+        ]);
 
     // Check for stuck or stale imports and clear them
-    if (isset($progress['complete']) && !$progress['complete'] && isset($progress['total']) && $progress['total'] > 0) {
-        $current_time = time();
-        $time_elapsed = 0;
-        $last_update = isset($progress['last_update']) ? $progress['last_update'] : 0;
-        $time_since_last_update = $current_time - $last_update;
+        if (isset($progress['complete']) && !$progress['complete'] && isset($progress['total']) && $progress['total'] > 0) {
+            $current_time = time();
+            $time_elapsed = 0;
+            $last_update = isset($progress['last_update']) ? $progress['last_update'] : 0;
+            $time_since_last_update = $current_time - $last_update;
 
-        if (isset($progress['start_time']) && $progress['start_time'] > 0) {
-            $time_elapsed = microtime(true) - $progress['start_time'];
-        } elseif (isset($progress['time_elapsed'])) {
-            $time_elapsed = $progress['time_elapsed'];
-        }
+            if (isset($progress['start_time']) && $progress['start_time'] > 0) {
+                $time_elapsed = microtime(true) - $progress['start_time'];
+            } elseif (isset($progress['time_elapsed'])) {
+                $time_elapsed = $progress['time_elapsed'];
+            }
 
-        // Detect stuck imports with multiple criteria:
-        // 1. No progress for 5+ minutes (300 seconds)
-        // 2. Import running for more than 2 hours without completion (7200 seconds)
-        // 3. No status update for 10+ minutes (600 seconds)
-        $is_stuck = false;
-        $stuck_reason = '';
+            // Detect stuck imports with multiple criteria:
+            // 1. No progress for 5+ minutes (300 seconds)
+            // 2. Import running for more than 2 hours without completion (7200 seconds)
+            // 3. No status update for 10+ minutes (600 seconds)
+            $is_stuck = false;
+            $stuck_reason = '';
 
-        if ($progress['processed'] == 0 && $time_elapsed > 300) {
-            $is_stuck = true;
-            $stuck_reason = 'no progress for 5+ minutes';
-        } elseif ($time_elapsed > 7200) { // 2 hours
-            $is_stuck = true;
-            $stuck_reason = 'running for more than 2 hours';
-        } elseif ($time_since_last_update > 600) { // 10 minutes since last update
-            $is_stuck = true;
-            $stuck_reason = 'no status update for 10+ minutes';
-        }
+            if ($progress['processed'] == 0 && $time_elapsed > 300) {
+                $is_stuck = true;
+                $stuck_reason = 'no progress for 5+ minutes';
+            } elseif ($time_elapsed > 7200) { // 2 hours
+                $is_stuck = true;
+                $stuck_reason = 'running for more than 2 hours';
+            } elseif ($time_since_last_update > 600) { // 10 minutes since last update
+                $is_stuck = true;
+                $stuck_reason = 'no status update for 10+ minutes';
+            }
 
-        if ($is_stuck) {
-            PuntWorkLogger::info('Detected stuck import in status check, clearing status', PuntWorkLogger::CONTEXT_BATCH, [
+            if ($is_stuck) {
+                PuntWorkLogger::info('Detected stuck import in status check, clearing status', PuntWorkLogger::CONTEXT_BATCH, [
                 'processed' => $progress['processed'],
                 'total' => $progress['total'],
                 'time_elapsed' => $time_elapsed,
                 'time_since_last_update' => $time_since_last_update,
                 'reason' => $stuck_reason
-            ]);
-            delete_option('job_import_status');
-            delete_option('job_import_progress');
-            delete_option('job_import_processed_guids');
-            delete_option('job_import_last_batch_time');
-            delete_option('job_import_last_batch_processed');
-            delete_option('job_import_batch_size');
-            delete_option('job_import_consecutive_small_batches');
-            delete_transient('import_cancel');
+                ]);
+                delete_option('job_import_status');
+                delete_option('job_import_progress');
+                delete_option('job_import_processed_guids');
+                delete_option('job_import_last_batch_time');
+                delete_option('job_import_last_batch_processed');
+                delete_option('job_import_batch_size');
+                delete_option('job_import_consecutive_small_batches');
+                delete_transient('import_cancel');
 
-            // Return fresh status
-            $progress = [
-                'total' => 0,
-                'processed' => 0,
-                'published' => 0,
-                'updated' => 0,
-                'skipped' => 0,
-                'duplicates_drafted' => 0,
-                'time_elapsed' => 0,
-                'complete' => true, // Fresh state is complete
-                'success' => false,
-                'error_message' => '',
-                'batch_size' => 100,
-                'inferred_languages' => 0,
-                'inferred_benefits' => 0,
-                'schema_generated' => 0,
-                'start_time' => microtime(true),
-                'end_time' => null,
-                'last_update' => time(),
-                'logs' => [],
-            ];
+                // Return fresh status
+                $progress = [
+                    'total' => 0,
+                    'processed' => 0,
+                    'published' => 0,
+                    'updated' => 0,
+                    'skipped' => 0,
+                    'duplicates_drafted' => 0,
+                    'time_elapsed' => 0,
+                    'complete' => true, // Fresh state is complete
+                    'success' => false,
+                    'error_message' => '',
+                    'batch_size' => 100,
+                    'inferred_languages' => 0,
+                    'inferred_benefits' => 0,
+                    'schema_generated' => 0,
+                    'start_time' => microtime(true),
+                    'end_time' => null,
+                    'last_update' => time(),
+                    'logs' => [],
+                ];
+            }
         }
-    }
 
-    if (!isset($progress['start_time'])) {
-        $progress['start_time'] = microtime(true);
-    }
+        if (!isset($progress['start_time'])) {
+            $progress['start_time'] = microtime(true);
+        }
     // Calculate elapsed time properly - if we have a start time, use it
-    if (isset($progress['start_time']) && $progress['start_time'] > 0) {
-        $current_time = microtime(true);
-        $progress['time_elapsed'] = $current_time - $progress['start_time'];
-    } else {
-        $progress['time_elapsed'] = $progress['time_elapsed'] ?? 0;
-    }
+        if (isset($progress['start_time']) && $progress['start_time'] > 0) {
+            $current_time = microtime(true);
+            $progress['time_elapsed'] = $current_time - $progress['start_time'];
+        } else {
+            $progress['time_elapsed'] = $progress['time_elapsed'] ?? 0;
+        }
     // Only recalculate complete status if it's not already marked as complete
-    if (!isset($progress['complete']) || !$progress['complete']) {
-        $progress['complete'] = ($progress['processed'] >= $progress['total'] && $progress['total'] > 0);
-    }
+        if (!isset($progress['complete']) || !$progress['complete']) {
+            $progress['complete'] = ($progress['processed'] >= $progress['total'] && $progress['total'] > 0);
+        }
 
     // Add resume_progress for JavaScript
-    $progress['resume_progress'] = (int) get_option('job_import_progress', 0);
+        $progress['resume_progress'] = (int) get_option('job_import_progress', 0);
 
     // Track job importing start time
-    if ($progress['total'] > 1 && !isset($progress['job_import_start_time'])) {
-        $progress['job_import_start_time'] = microtime(true);
-        update_option('job_import_status', $progress);
-    }
+        if ($progress['total'] > 1 && !isset($progress['job_import_start_time'])) {
+            $progress['job_import_start_time'] = microtime(true);
+            update_option('job_import_status', $progress);
+        }
 
     // Calculate job importing elapsed time
-    $progress['job_importing_time_elapsed'] = isset($progress['job_import_start_time']) ? microtime(true) - $progress['job_import_start_time'] : $progress['time_elapsed'];
+        $progress['job_importing_time_elapsed'] = isset($progress['job_import_start_time']) ? microtime(true) - $progress['job_import_start_time'] : $progress['time_elapsed'];
 
     // Add batch timing data for accurate time calculations
-    $progress['batch_time'] = (float) get_option('job_import_last_batch_time', 0);
-    $progress['batch_processed'] = (int) get_option('job_import_last_batch_processed', 0);
+        $progress['batch_time'] = (float) get_option('job_import_last_batch_time', 0);
+        $progress['batch_processed'] = (int) get_option('job_import_last_batch_processed', 0);
 
     // Add estimated time remaining calculation from PHP
-    $progress['estimated_time_remaining'] = calculate_estimated_time_remaining($progress);
+        $progress['estimated_time_remaining'] = calculate_estimated_time_remaining($progress);
 
     // Log response summary instead of full data to prevent large debug logs
-    $log_summary = [
+        $log_summary = [
         'total' => $progress['total'],
         'processed' => $progress['processed'],
         'published' => $progress['published'],
@@ -313,11 +314,10 @@ function get_job_import_status_ajax() {
         'batch_processed' => $progress['batch_processed'],
         'logs_count' => is_array($progress['logs']) ? count($progress['logs']) : 0,
         'has_error' => !empty($progress['error_message'])
-    ];
+        ];
 
-    PuntWorkLogger::logAjaxResponse('get_job_import_status', $log_summary);
-    AjaxErrorHandler::send_success($progress);
-
+        PuntWorkLogger::logAjaxResponse('get_job_import_status', $log_summary);
+        AjaxErrorHandler::send_success($progress);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Get import status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::send_error('Failed to get import status: ' . $e->getMessage());
@@ -325,7 +325,8 @@ function get_job_import_status_ajax() {
 }
 
 add_action('wp_ajax_log_manual_import_run', __NAMESPACE__ . '\\log_manual_import_run_ajax');
-function log_manual_import_run_ajax() {
+function log_manual_import_run_ajax()
+{
     PuntWorkLogger::logAjaxRequest('log_manual_import_run', $_POST);
 
     // Use comprehensive security validation with field validation
@@ -379,7 +380,6 @@ function log_manual_import_run_ajax() {
 
         PuntWorkLogger::logAjaxResponse('log_manual_import_run', ['message' => 'Manual import run logged']);
         AjaxErrorHandler::send_success(null, ['message' => 'Manual import run logged to history']);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Log manual import run error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::send_error('Failed to log manual import run: ' . $e->getMessage());
@@ -387,7 +387,8 @@ function log_manual_import_run_ajax() {
 }
 
 add_action('wp_ajax_get_api_key', __NAMESPACE__ . '\\get_api_key_ajax');
-function get_api_key_ajax() {
+function get_api_key_ajax()
+{
     PuntWorkLogger::logAjaxRequest('get_api_key', $_POST);
 
     // Use comprehensive security validation
@@ -408,7 +409,6 @@ function get_api_key_ajax() {
 
         PuntWorkLogger::logAjaxResponse('get_api_key', ['message' => 'API key retrieved']);
         AjaxErrorHandler::send_success(['api_key' => $api_key]);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Get API key error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::send_error('Failed to get API key: ' . $e->getMessage());

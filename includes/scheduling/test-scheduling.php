@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Test script for scheduling functionality
  * This file can be used to test the scheduling features

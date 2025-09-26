@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Advanced Job Deduplication Algorithms
  *
@@ -17,8 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * Advanced deduplication system with multiple algorithms
  */
-class JobDeduplicator {
-
+class JobDeduplicator
+{
     // Similarity thresholds
     const EXACT_MATCH = 1.0;
     const HIGH_SIMILARITY = 0.85;
@@ -54,7 +55,8 @@ class JobDeduplicator {
      * @param array $existing_jobs Array of existing job posts
      * @return array Array of potential duplicates with similarity scores
      */
-    public static function find_duplicates($job_item, $existing_jobs = null) {
+    public static function find_duplicates($job_item, $existing_jobs = null)
+    {
         if ($existing_jobs === null) {
             $existing_jobs = self::get_existing_jobs_for_comparison($job_item);
         }
@@ -75,7 +77,7 @@ class JobDeduplicator {
         }
 
         // Sort by similarity (highest first)
-        usort($duplicates, function($a, $b) {
+        usort($duplicates, function ($a, $b) {
             return $b['similarity'] <=> $a['similarity'];
         });
 
@@ -85,7 +87,8 @@ class JobDeduplicator {
     /**
      * Calculate overall similarity between two job items
      */
-    private static function calculate_similarity($job1, $job2) {
+    private static function calculate_similarity($job1, $job2)
+    {
         $similarity = 0;
         $weights = 0;
 
@@ -127,7 +130,8 @@ class JobDeduplicator {
     /**
      * Calculate text similarity using multiple algorithms
      */
-    private static function calculate_text_similarity($text1, $text2) {
+    private static function calculate_text_similarity($text1, $text2)
+    {
         if (empty($text1) || empty($text2)) {
             return empty($text1) && empty($text2) ? 1.0 : 0.0;
         }
@@ -151,7 +155,8 @@ class JobDeduplicator {
     /**
      * Calculate Jaccard similarity coefficient
      */
-    private static function jaccard_similarity($text1, $text2) {
+    private static function jaccard_similarity($text1, $text2)
+    {
         $words1 = self::get_word_tokens($text1);
         $words2 = self::get_word_tokens($text2);
 
@@ -168,7 +173,8 @@ class JobDeduplicator {
     /**
      * Tokenize text into words
      */
-    private static function get_word_tokens($text) {
+    private static function get_word_tokens($text)
+    {
         // Remove punctuation and normalize
         $text = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $text);
         $text = preg_replace('/\s+/', ' ', $text);
@@ -177,7 +183,7 @@ class JobDeduplicator {
         // Filter out common stop words and short words
         $stop_words = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'shall'];
 
-        return array_filter($words, function($word) use ($stop_words) {
+        return array_filter($words, function ($word) use ($stop_words) {
             return strlen($word) > 2 && !in_array($word, $stop_words);
         });
     }
@@ -185,7 +191,8 @@ class JobDeduplicator {
     /**
      * Normalize text for comparison
      */
-    private static function normalize_text($text) {
+    private static function normalize_text($text)
+    {
         // Convert to lowercase and trim
         $text = strtolower(trim($text));
 
@@ -216,7 +223,8 @@ class JobDeduplicator {
     /**
      * Get reasons why items are considered similar
      */
-    private static function get_similarity_reasons($job1, $job2) {
+    private static function get_similarity_reasons($job1, $job2)
+    {
         $reasons = [];
 
         // Check title similarity
@@ -252,7 +260,8 @@ class JobDeduplicator {
     /**
      * Determine which strategy was used for matching
      */
-    private static function determine_matching_strategy($job1, $job2) {
+    private static function determine_matching_strategy($job1, $job2)
+    {
         // Check GUID match
         if (isset($job1->guid) && !empty($job1->guid)) {
             $existing_guid = get_post_meta($job2->ID, 'guid', true);
@@ -288,7 +297,8 @@ class JobDeduplicator {
     /**
      * Generate content hash for comparison
      */
-    private static function generate_content_hash($job) {
+    private static function generate_content_hash($job)
+    {
         $content = '';
         $content .= $job->title ?? '';
         $content .= $job->company ?? $job->companyname ?? '';
@@ -301,7 +311,8 @@ class JobDeduplicator {
     /**
      * Get existing jobs for comparison (with caching)
      */
-    private static function get_existing_jobs_for_comparison($job_item) {
+    private static function get_existing_jobs_for_comparison($job_item)
+    {
         $cache_key = 'puntwork_dedup_jobs_' . md5($job_item->title ?? '' . $job_item->company ?? '');
         $cached = wp_cache_get($cache_key);
 
@@ -341,7 +352,8 @@ class JobDeduplicator {
     /**
      * Enhanced duplicate handling with advanced algorithms
      */
-    public static function handle_duplicates_advanced($batch_guids, $existing_by_guid, &$logs, &$duplicates_drafted, &$post_ids_by_guid) {
+    public static function handle_duplicates_advanced($batch_guids, $existing_by_guid, &$logs, &$duplicates_drafted, &$post_ids_by_guid)
+    {
         global $wpdb;
 
         // First, handle exact GUID matches with existing logic
@@ -356,7 +368,8 @@ class JobDeduplicator {
     /**
      * Handle exact GUID duplicates (existing logic)
      */
-    private static function handle_exact_guid_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates_drafted, &$post_ids_by_guid) {
+    private static function handle_exact_guid_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates_drafted, &$post_ids_by_guid)
+    {
         global $wpdb;
 
         foreach ($batch_guids as $guid) {
@@ -438,7 +451,8 @@ class JobDeduplicator {
     /**
      * Handle fuzzy duplicates using advanced algorithms
      */
-    private static function handle_fuzzy_duplicates($batch_guids, &$logs, &$duplicates_drafted, &$post_ids_by_guid) {
+    private static function handle_fuzzy_duplicates($batch_guids, &$logs, &$duplicates_drafted, &$post_ids_by_guid)
+    {
         // Get all jobs in current batch that don't have exact GUID matches
         $batch_jobs = [];
         foreach ($batch_guids as $guid) {
@@ -450,7 +464,9 @@ class JobDeduplicator {
 
         // Check each batch job against existing jobs
         foreach ($batch_jobs as $guid => $job_data) {
-            if (!$job_data) continue;
+            if (!$job_data) {
+                continue;
+            }
 
             $duplicates = self::find_duplicates($job_data);
 
@@ -482,7 +498,8 @@ class JobDeduplicator {
     /**
      * Handle AI-powered content similarity duplicates
      */
-    private static function handle_ai_duplicates(&$logs, &$duplicates_drafted) {
+    private static function handle_ai_duplicates(&$logs, &$duplicates_drafted)
+    {
         // Get all published jobs for AI similarity analysis
         $existing_jobs = get_posts([
             'post_type' => 'job',
@@ -510,10 +527,12 @@ class JobDeduplicator {
 
         // Process duplicate groups
         foreach ($duplicate_groups as $group_indices) {
-            if (count($group_indices) < 2) continue;
+            if (count($group_indices) < 2) {
+                continue;
+            }
 
             // Map indices back to post IDs
-            $post_ids_in_group = array_map(function($index) use ($existing_jobs) {
+            $post_ids_in_group = array_map(function ($index) use ($existing_jobs) {
                 return $existing_jobs[$index];
             }, $group_indices);
 
@@ -543,7 +562,8 @@ class JobDeduplicator {
     /**
      * Get job data by GUID from current import batch
      */
-    private static function get_job_data_by_guid($guid) {
+    private static function get_job_data_by_guid($guid)
+    {
         // This would need to be implemented to get job data from the current batch
         // For now, return null - this would be integrated with the import process
         return null;
@@ -552,14 +572,16 @@ class JobDeduplicator {
     /**
      * Update deduplication configuration
      */
-    public static function update_config($new_config) {
+    public static function update_config($new_config)
+    {
         self::$config = array_merge(self::$config, $new_config);
     }
 
     /**
      * Get current configuration
      */
-    public static function get_config() {
+    public static function get_config()
+    {
         return self::$config;
     }
 }

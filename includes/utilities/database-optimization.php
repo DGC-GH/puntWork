@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Database optimization utilities
  *
@@ -10,14 +11,15 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
 /**
  * Create database indexes for performance optimization
  */
-function create_database_indexes(): void {
+function create_database_indexes(): void
+{
     global $wpdb;
 
     // Index for GUID lookups (critical for duplicate detection)
@@ -88,7 +90,8 @@ function create_database_indexes(): void {
  * @param int $post_id Post ID
  * @param array $meta_data Array of meta_key => meta_value pairs
  */
-function bulk_update_post_meta(int $post_id, array $meta_data): void {
+function bulk_update_post_meta(int $post_id, array $meta_data): void
+{
     global $wpdb;
 
     if (empty($meta_data)) {
@@ -120,7 +123,8 @@ function bulk_update_post_meta(int $post_id, array $meta_data): void {
  * @param array $post_ids Array of post IDs
  * @return array Post ID => status mapping
  */
-function bulk_get_post_statuses(array $post_ids): array {
+function bulk_get_post_statuses(array $post_ids): array
+{
     global $wpdb;
 
     if (empty($post_ids)) {
@@ -162,7 +166,8 @@ function bulk_get_post_statuses(array $post_ids): array {
  * @param array $guids Array of GUIDs to look up
  * @return array GUID => post data mapping
  */
-function get_posts_by_guids_with_status(array $guids): array {
+function get_posts_by_guids_with_status(array $guids): array
+{
     global $wpdb;
 
     if (empty($guids)) {
@@ -213,7 +218,8 @@ function get_posts_by_guids_with_status(array $guids): array {
  *
  * @return array Status information
  */
-function get_database_optimization_status(): array {
+function get_database_optimization_status(): array
+{
     global $wpdb;
 
     $indexes = [
@@ -241,7 +247,7 @@ function get_database_optimization_status(): array {
         $indexes[$index] = true;
     }
 
-    $missing_indexes = array_filter($indexes, function($exists) {
+    $missing_indexes = array_filter($indexes, function ($exists) {
         return !$exists;
     });
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Social Media Database Setup
  *
@@ -15,8 +16,8 @@ if (!defined('ABSPATH')) {
 /**
  * Social Media Database Class
  */
-class Puntwork_Social_Media_DB {
-
+class Puntwork_Social_Media_DB
+{
     /**
      * Database version
      */
@@ -30,14 +31,16 @@ class Puntwork_Social_Media_DB {
     /**
      * Initialize database
      */
-    public static function init(): void {
+    public static function init(): void
+    {
         add_action('admin_init', [__CLASS__, 'check_db_version']);
     }
 
     /**
      * Check database version and upgrade if needed
      */
-    public static function check_db_version(): void {
+    public static function check_db_version(): void
+    {
         $current_version = get_option(self::DB_VERSION_OPTION, '0');
 
         if (version_compare($current_version, self::DB_VERSION, '<')) {
@@ -49,7 +52,8 @@ class Puntwork_Social_Media_DB {
     /**
      * Create database tables
      */
-    public static function create_tables(): void {
+    public static function create_tables(): void
+    {
         global $wpdb;
 
         $charset_collate = $wpdb->get_charset_collate();
@@ -83,7 +87,8 @@ class Puntwork_Social_Media_DB {
     /**
      * Drop database tables (for uninstall)
      */
-    public static function drop_tables(): void {
+    public static function drop_tables(): void
+    {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'puntwork_social_posts';
@@ -100,7 +105,8 @@ class Puntwork_Social_Media_DB {
     /**
      * Get table name with prefix
      */
-    public static function get_table_name(string $table): string {
+    public static function get_table_name(string $table): string
+    {
         global $wpdb;
 
         $tables = [

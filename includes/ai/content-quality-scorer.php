@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Content quality scoring using linguistic and structural analysis
  *
@@ -17,8 +18,8 @@ if (!defined('ABSPATH')) {
 /**
  * Content quality analysis and scoring
  */
-class ContentQualityScorer {
-
+class ContentQualityScorer
+{
     /**
      * Quality score ranges
      */
@@ -76,7 +77,8 @@ class ContentQualityScorer {
      * @param array $jobData Job data array with title, description, etc.
      * @return array Quality score and analysis details
      */
-    public static function scoreContent(array $jobData): array {
+    public static function scoreContent(array $jobData): array
+    {
         $scores = [];
 
         // Calculate individual factor scores
@@ -109,7 +111,8 @@ class ContentQualityScorer {
     /**
      * Score completeness of job content
      */
-    private static function scoreCompleteness(array $jobData): float {
+    private static function scoreCompleteness(array $jobData): float
+    {
         $score = 0;
         $maxScore = count(self::REQUIRED_ELEMENTS);
 
@@ -138,7 +141,8 @@ class ContentQualityScorer {
     /**
      * Score readability using basic metrics
      */
-    private static function scoreReadability(array $jobData): float {
+    private static function scoreReadability(array $jobData): float
+    {
         $description = $jobData['job_description'] ?? '';
 
         if (empty($description)) {
@@ -180,7 +184,8 @@ class ContentQualityScorer {
     /**
      * Score professionalism of content
      */
-    private static function scoreProfessionalism(array $jobData): float {
+    private static function scoreProfessionalism(array $jobData): float
+    {
         $content = strtolower(implode(' ', [
             $jobData['job_title'] ?? '',
             $jobData['job_description'] ?? ''
@@ -227,7 +232,8 @@ class ContentQualityScorer {
     /**
      * Score structural organization
      */
-    private static function scoreStructure(array $jobData): float {
+    private static function scoreStructure(array $jobData): float
+    {
         $description = $jobData['job_description'] ?? '';
 
         if (empty($description)) {
@@ -272,7 +278,8 @@ class ContentQualityScorer {
     /**
      * Score engagement and appeal
      */
-    private static function scoreEngagement(array $jobData): float {
+    private static function scoreEngagement(array $jobData): float
+    {
         $content = strtolower($jobData['job_description'] ?? '');
 
         if (empty($content)) {
@@ -316,7 +323,8 @@ class ContentQualityScorer {
     /**
      * Score uniqueness and originality
      */
-    private static function scoreUniqueness(array $jobData): float {
+    private static function scoreUniqueness(array $jobData): float
+    {
         $content = $jobData['job_description'] ?? '';
 
         if (empty($content)) {
@@ -358,7 +366,8 @@ class ContentQualityScorer {
     /**
      * Determine quality level based on score
      */
-    private static function determineQualityLevel(float $score): string {
+    private static function determineQualityLevel(float $score): string
+    {
         if ($score >= self::SCORE_EXCELLENT) {
             return 'Excellent';
         } elseif ($score >= self::SCORE_GOOD) {
@@ -375,7 +384,8 @@ class ContentQualityScorer {
     /**
      * Generate improvement recommendations
      */
-    private static function generateRecommendations(array $scores): array {
+    private static function generateRecommendations(array $scores): array
+    {
         $recommendations = [];
 
         if ($scores['completeness'] < 70) {
@@ -408,7 +418,8 @@ class ContentQualityScorer {
     /**
      * Identify content strengths
      */
-    private static function identifyStrengths(array $scores): array {
+    private static function identifyStrengths(array $scores): array
+    {
         $strengths = [];
 
         if ($scores['completeness'] >= 80) {
@@ -441,7 +452,8 @@ class ContentQualityScorer {
     /**
      * Identify content weaknesses
      */
-    private static function identifyWeaknesses(array $scores): array {
+    private static function identifyWeaknesses(array $scores): array
+    {
         $weaknesses = [];
 
         if ($scores['completeness'] < 60) {
@@ -474,7 +486,8 @@ class ContentQualityScorer {
     /**
      * Get quality metrics for a job
      */
-    public static function getQualityMetrics(array $jobData): array {
+    public static function getQualityMetrics(array $jobData): array
+    {
         return self::scoreContent($jobData);
     }
 }
