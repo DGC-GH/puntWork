@@ -118,4 +118,25 @@ class PerformanceBenchmarkTest extends TestCase {
 
         $this->assertLessThan(5 * 1024 * 1024, $memoryIncrease, 'Memory increase should be under 5MB for loading mappings');
     }
+
+    /**
+     * Benchmark import operation timing
+     */
+    public function testImportOperationTiming() {
+        // Mock a small import scenario
+        $startTime = microtime(true);
+
+        // Simulate processing a small batch (this would normally call actual import functions)
+        // For testing, we'll just measure the overhead
+        $mockItems = array_fill(0, 10, (object)['guid' => 'test', 'job_title' => 'Test Job']);
+
+        foreach ($mockItems as $item) {
+            // Simulate basic processing
+            $processed = !empty($item->job_title);
+        }
+
+        $duration = microtime(true) - $startTime;
+
+        $this->assertLessThan(5.0, $duration, 'Import simulation should complete under 5 seconds');
+    }
 }

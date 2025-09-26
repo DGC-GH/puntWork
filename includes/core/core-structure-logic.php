@@ -15,33 +15,25 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 function get_feeds() {
-    // Clear cache for debugging
-    delete_transient('puntwork_feeds');
-    
-    $feeds = get_transient('puntwork_feeds');
+    $feeds = wp_cache_get('puntwork_feeds');
     if (false === $feeds) {
         $feeds = [];
         
         // First, check if CPT is registered
         if (!post_type_exists('job-feed')) {
-            error_log('[PUNTWORK] get_feeds() - ERROR: job-feed post type is not registered!');
-        
-        // Try alternative: check if feeds are stored as options
-        $option_feeds = get_option('job_feed_url');
-        if (!empty($option_feeds)) {
-            if (WP_DEBUG) error_log('[PUNTWORK] get_feeds() - Found feeds in options: ' . print_r($option_feeds, true));
-            if (is_array($option_feeds)) {
-                $feeds = $option_feeds;
-            } elseif (is_string($option_feeds)) {
-                // Try to parse as JSON
-                $parsed = json_decode($option_feeds, true);
-                if ($parsed && is_array($parsed)) {
-                    $feeds = $parsed;
+            // Try alternative: check if feeds are stored as options
+            $option_feeds = get_option('job_feed_url');
+            if (!empty($option_feeds)) {
+                if (is_array($option_feeds)) {
+                    $feeds = $option_feeds;
+                } elseif (is_string($option_feeds)) {
+                    // Try to parse as JSON
+                    $parsed = json_decode($option_feeds, true);
+                    if ($parsed && is_array($parsed)) {
+                        $feeds = $parsed;
+                    }
                 }
             }
-        }
-        
-        return $feeds;
             
             return $feeds;
         }
@@ -53,49 +45,27 @@ function get_feeds() {
             'fields' => 'ids',
         ]);
 
-        error_log('[PUNTWORK] get_feeds() - Query found ' . $query->found_posts . ' job-feed posts');
-
         if ($query->have_posts()) {
             foreach ($query->posts as $post_id) {
                 $feed_url = get_post_meta($post_id, 'feed_url', true);
                 $post = get_post($post_id);
 
-                error_log('[PUNTWORK] get_feeds() - Post ID ' . $post_id . ': title="' . $post->post_title . '", status="' . $post->post_status . '", feed_url="' . $feed_url . '"');
-
                 // Also check for ACF field if regular meta is empty
                 if (empty($feed_url) && function_exists('get_field')) {
                     $feed_url = get_field('feed_url', $post_id);
-                    error_log('[PUNTWORK] get_feeds() - ACF feed_url for post ' . $post_id . ': ' . $feed_url);
                 }
 
                 if (!empty($feed_url)) {
+                    $feed_url = esc_url_raw($feed_url);
+                    if (!filter_var($feed_url, FILTER_VALIDATE_URL)) {
+                        continue; // skip invalid URLs
+                    }
                     $feeds[$post->post_name] = $feed_url; // Use slug as key
-                    error_log('[PUNTWORK] get_feeds() - Added feed: ' . $post->post_name . ' -> ' . $feed_url);
-                } else {
-                    error_log('[PUNTWORK] get_feeds() - Skipping post ID ' . $post_id . ' - empty feed_url');
                 }
-            }
-        } else {
-            error_log('[PUNTWORK] get_feeds() - No job-feed posts found');
-            
-            // Check if there are any job-feed posts with different status
-            $all_query = new \WP_Query([
-                'post_type' => 'job-feed',
-                'post_status' => 'any',
-                'posts_per_page' => -1,
-                'fields' => 'ids',
-            ]);
-            error_log('[PUNTWORK] get_feeds() - Found ' . $all_query->found_posts . ' job-feed posts with any status');
-            
-            if ($all_query->have_posts()) {
-                error_log('[PUNTWORK] get_feeds() - Post IDs with any status: ' . implode(', ', $all_query->posts));
             }
         }
 
-        set_transient('puntwork_feeds', $feeds, 3600); // Cache for 1 hour
-        error_log('[PUNTWORK] get_feeds() - Returning ' . count($feeds) . ' feeds: ' . implode(', ', array_keys($feeds)));
-    } else {
-        error_log('[PUNTWORK] get_feeds() - Using cached feeds: ' . count($feeds) . ' feeds');
+        wp_cache_set('puntwork_feeds', $feeds, '', 3600); // Cache for 1 hour
     }
     return $feeds;
 }
@@ -103,7 +73,7 @@ function get_feeds() {
 // Clear feeds cache when job-feed post is updated
 add_action('save_post', function($post_id, $post, $update) {
     if ($post->post_type === 'job-feed' && $post->post_status === 'publish') {
-        delete_transient('puntwork_feeds');
+        wp_cache_delete('puntwork_feeds');
     }
 }, 10, 3);
 

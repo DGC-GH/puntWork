@@ -111,6 +111,16 @@ class FeedProcessor {
     }
 
     /**
+     * Detect language from item
+     */
+    private static function detect_language($item) {
+        $lang = isset($item->languagecode) ? strtolower((string)$item->languagecode) : 'en';
+        if (strpos($lang, 'fr') !== false) return 'fr';
+        elseif (strpos($lang, 'nl') !== false) return 'nl';
+        return 'en';
+    }
+
+    /**
      * Process JSON feed
      */
     private static function process_json_feed($json_path, $handle, $output_dir, $fallback_domain, $batch_size, &$total_items, &$logs) {
@@ -157,10 +167,7 @@ class FeedProcessor {
                 clean_item_fields($item);
 
                 // Language detection
-                $lang = isset($item->languagecode) ? strtolower((string)$item->languagecode) : 'en';
-                if (strpos($lang, 'fr') !== false) $lang = 'fr';
-                elseif (strpos($lang, 'nl') !== false) $lang = 'nl';
-                else $lang = 'en';
+                $lang = self::detect_language($item);
 
                 $job_obj = json_decode(json_encode($item), true);
                 infer_item_details($item, $fallback_domain, $lang, $job_obj);
@@ -233,10 +240,7 @@ class FeedProcessor {
                 clean_item_fields($item);
 
                 // Language detection
-                $lang = isset($item->languagecode) ? strtolower((string)$item->languagecode) : 'en';
-                if (strpos($lang, 'fr') !== false) $lang = 'fr';
-                elseif (strpos($lang, 'nl') !== false) $lang = 'nl';
-                else $lang = 'en';
+                $lang = self::detect_language($item);
 
                 $job_obj = json_decode(json_encode($item), true);
                 infer_item_details($item, $fallback_domain, $lang, $job_obj);
