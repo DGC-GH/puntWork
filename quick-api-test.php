@@ -71,7 +71,7 @@ class QuickAPITest {
         return ['success' => false, 'http_code' => $result['http_code']];
     }
 
-    private function pollImportCompletion($maxWaitSeconds = 900) {
+    private function pollImportCompletion($maxWaitSeconds = 300) { // Reduced from 900 to 300 seconds (5 minutes)
         $startTime = time();
         $pollInterval = 5;
 
