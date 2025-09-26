@@ -135,6 +135,14 @@ if (!function_exists('import_all_jobs_from_json')) {
             update_option('job_import_progress', 0, false);
             update_option('job_import_processed_guids', [], false);
             delete_option('job_import_status');
+        } elseif ($preserve_status && !get_option('job_import_status')) {
+            // Fresh import with preserve_status = true, but no status exists, so reset progress options
+            update_option('job_import_progress', 0, false);
+            update_option('job_import_processed_guids', [], false);
+            delete_option('job_import_last_batch_time');
+            delete_option('job_import_last_batch_processed');
+            delete_option('job_import_batch_size');
+            delete_option('job_import_consecutive_small_batches');
         }
 
         // Initialize import status for UI tracking (only if not preserving)
