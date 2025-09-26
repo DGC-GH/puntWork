@@ -56,11 +56,11 @@ add_action('admin_menu', function() {
 
     add_submenu_page(
         'puntwork-dashboard',
-        'API Settings',
-        'API',
+        'Feed Configuration',
+        'Feed Config',
         'manage_options',
-        'puntwork-api-settings',
-        __NAMESPACE__ . '\\api_settings_page'
+        'puntwork-feed-config',
+        __NAMESPACE__ . '\\feed_config_page'
     );
 
     add_submenu_page(

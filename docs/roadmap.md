@@ -44,7 +44,7 @@
 
 ### 2.3 User Experience
 - [x] Enhance admin UI with modern design and responsive layout
-- [ ] Add drag-and-drop feed configuration interface
+- [x] Add drag-and-drop feed configuration interface
 - [ ] Implement progressive web app features for mobile access
 - [ ] Add multi-language support (i18n) for international users
 - [ ] Create interactive onboarding wizard for new installations
