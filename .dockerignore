@@ -1,0 +1,45 @@
+# Git
+.git
+.gitignore
+.github
+
+# Node modules (if any)
+node_modules
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+
+# Testing
+.phpunit.cache
+.pytest_cache
+tests/_output
+
+# Cache
+cache/*
+
+# Logs
+*.log
+
+# Environment files
+.env
+
+# Documentation build artifacts
+docs/api-docs.html
+
+# Development scripts
+debug-*.php
+test-*.php
+validate-*.php
+verify-*.php
+quick-*.php
+
+# Composer
+vendor/
+
+# Docker
+docker-compose.override.yml
