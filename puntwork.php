@@ -144,6 +144,7 @@ function setup_job_import()
         'admin/admin-ui-feed-health.php',
         'admin/admin-ui-analytics.php',
         'admin/admin-ui-performance.php',
+        'admin/admin-ui-multisite.php',
         'admin/admin-ui-monitoring.php',
         'admin/admin-ajax-monitoring.php',
         'admin/admin-feed-config.php',
@@ -277,6 +278,16 @@ function setup_job_import()
     // Initialize Feed Optimizer
     if (class_exists(__NAMESPACE__ . '\\AI\\FeedOptimizer')) {
         call_user_func([__NAMESPACE__ . '\\AI\\FeedOptimizer', 'init']);
+    }
+
+    // Initialize Multi-Site Support
+    if (is_multisite() && class_exists(__NAMESPACE__ . '\\MultiSite\\MultiSiteManager')) {
+        call_user_func([__NAMESPACE__ . '\\MultiSite\\MultiSiteManager', 'init']);
+    }
+
+    // Initialize Multi-Site Admin UI
+    if (is_multisite() && class_exists(__NAMESPACE__ . '\\MultiSiteAdminUI')) {
+        call_user_func([__NAMESPACE__ . '\\MultiSiteAdminUI', 'init']);
     }
 }
 

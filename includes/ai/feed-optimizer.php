@@ -120,7 +120,7 @@ class FeedOptimizer
     }
 
     /**
-     * Run automated feed optimization
+     * Run automated optimization with machine learning
      *
      * @return array Optimization results
      */
@@ -139,14 +139,36 @@ class FeedOptimizer
             $results['feeds_analyzed'] = count($feeds);
 
             foreach ($feeds as $feed) {
-                $feedOptimizations = self::optimizeFeed($feed);
-                if (!empty($feedOptimizations)) {
-                    $results['optimizations_applied'] += count($feedOptimizations);
+                $feedKey = get_post_meta($feed->ID, 'feed_url', true);
+
+                if (empty($feedKey)) {
+                    continue;
+                }
+
+                // Use machine learning for optimization
+                $mlOptimization = \Puntwork\AI\MachineLearningEngine::optimizeFeedAutomatically($feedKey);
+
+                if ($mlOptimization['success']) {
+                    $results['optimizations_applied'] += count($mlOptimization['applied_optimizations']);
                     $results['recommendations'][] = [
                         'feed_id' => $feed->ID,
                         'feed_name' => $feed->post_title,
-                        'optimizations' => $feedOptimizations
+                        'ml_predictions' => $mlOptimization['predictions'],
+                        'recommendations' => $mlOptimization['recommendations'],
+                        'applied_optimizations' => $mlOptimization['applied_optimizations']
                     ];
+                } else {
+                    // Fallback to rule-based optimization
+                    $feedOptimizations = self::optimizeFeed($feed);
+                    if (!empty($feedOptimizations)) {
+                        $results['optimizations_applied'] += count($feedOptimizations);
+                        $results['recommendations'][] = [
+                            'feed_id' => $feed->ID,
+                            'feed_name' => $feed->post_title,
+                            'recommendations' => $feedOptimizations,
+                            'method' => 'rule_based'
+                        ];
+                    }
                 }
             }
 
@@ -157,7 +179,7 @@ class FeedOptimizer
                 $results['recommendations'][] = [
                     'feed_id' => 'global',
                     'feed_name' => 'Global Optimization',
-                    'optimizations' => $globalOptimizations
+                    'recommendations' => $globalOptimizations
                 ];
             }
 

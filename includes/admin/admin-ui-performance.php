@@ -330,6 +330,48 @@ function performance_metrics_page()
                     </div>
                 </div>
             </div>
+
+            <!-- Machine Learning Analytics -->
+            <div class="performance-section">
+                <h2><?php _e('Machine Learning Analytics', 'puntwork'); ?></h2>
+                <div class="ml-analytics-grid">
+                    <div class="ml-stat-card">
+                        <div class="ml-stat-value"><?php echo count(\Puntwork\AI\MachineLearningEngine::getTrainedModels()); ?></div>
+                        <div class="ml-stat-label"><?php _e('Trained Models', 'puntwork'); ?></div>
+                    </div>
+
+                    <div class="ml-stat-card">
+                        <div class="ml-stat-value"><?php echo \Puntwork\AI\MachineLearningEngine::getAverageAccuracy(); ?>%</div>
+                        <div class="ml-stat-label"><?php _e('Avg Model Accuracy', 'puntwork'); ?></div>
+                    </div>
+
+                    <div class="ml-stat-card">
+                        <div class="ml-stat-value"><?php echo \Puntwork\AI\MachineLearningEngine::getPredictionsToday(); ?></div>
+                        <div class="ml-stat-label"><?php _e('Predictions Today', 'puntwork'); ?></div>
+                    </div>
+
+                    <div class="ml-stat-card">
+                        <div class="ml-stat-value"><?php echo \Puntwork\AI\MachineLearningEngine::getOptimizationsApplied(); ?></div>
+                        <div class="ml-stat-label"><?php _e('Auto Optimizations', 'puntwork'); ?></div>
+                    </div>
+                </div>
+
+                <div class="ml-controls">
+                    <button id="run-ml-optimization" class="button button-primary">
+                        <span class="dashicons dashicons-brain"></span>
+                        <?php _e('Run ML Optimization', 'puntwork'); ?>
+                    </button>
+                    <button id="train-models" class="button button-secondary">
+                        <span class="dashicons dashicons-chart-line"></span>
+                        <?php _e('Train Models', 'puntwork'); ?>
+                    </button>
+                    <button id="view-ml-insights" class="button button-secondary">
+                        <span class="dashicons dashicons-visibility"></span>
+                        <?php _e('View Insights', 'puntwork'); ?>
+                    </button>
+                    <span id="ml-status"></span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -342,6 +384,24 @@ function performance_metrics_page()
             </div>
             <div class="performance-modal-body">
                 <div id="performance-details-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ML Insights Modal -->
+    <div id="ml-insights-modal" class="puntwork-modal" style="display: none;">
+        <div class="puntwork-modal-content">
+            <div class="puntwork-modal-header">
+                <h3>Machine Learning Insights</h3>
+                <button type="button" class="puntwork-modal-close">&times;</button>
+            </div>
+            <div class="puntwork-modal-body">
+                <div id="ml-insights-content">
+                    <div class="puntwork-loading">
+                        <div class="puntwork-spinner"></div>
+                        <p>Loading ML insights...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -683,7 +743,210 @@ function performance_metrics_page()
                     });
                 });
             }
+
+            // Machine Learning functionality
+            const runMLOptimizationBtn = document.getElementById('run-ml-optimization');
+            const trainModelsBtn = document.getElementById('train-models');
+            const viewMLInsightsBtn = document.getElementById('view-ml-insights');
+            const mlStatus = document.getElementById('ml-status');
+
+            if (runMLOptimizationBtn && mlStatus) {
+                runMLOptimizationBtn.addEventListener('click', function() {
+                    runMLOptimizationBtn.disabled = true;
+                    runMLOptimizationBtn.innerHTML = '<span class="dashicons dashicons-brain dashicons-spin"></span> Running ML Optimization...';
+                    mlStatus.textContent = 'Running machine learning optimization...';
+
+                    const data = {
+                        action: 'run_ml_feed_optimization',
+                        nonce: '<?php echo wp_create_nonce("puntwork_ml_optimization"); ?>'
+                    };
+
+                    fetch(ajaxurl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: new URLSearchParams(data)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            mlStatus.style.color = 'green';
+                            mlStatus.textContent = `ML optimization completed! Applied ${data.data.optimizations_applied} optimizations to ${data.data.feeds_analyzed} feeds.`;
+                            runMLOptimizationBtn.disabled = false;
+                            runMLOptimizationBtn.innerHTML = '<span class="dashicons dashicons-brain"></span> Run ML Optimization';
+                            // Reload the page to show updated stats
+                            setTimeout(() => {
+                                location.reload();
+                            }, 3000);
+                        } else {
+                            mlStatus.style.color = 'red';
+                            mlStatus.textContent = 'Error: ' + (data.data || 'Unknown error');
+                            runMLOptimizationBtn.disabled = false;
+                            runMLOptimizationBtn.innerHTML = '<span class="dashicons dashicons-brain"></span> Run ML Optimization';
+                        }
+                    })
+                    .catch(error => {
+                        mlStatus.style.color = 'red';
+                        mlStatus.textContent = 'Error: ' + error.message;
+                        runMLOptimizationBtn.disabled = false;
+                        runMLOptimizationBtn.innerHTML = '<span class="dashicons dashicons-brain"></span> Run ML Optimization';
+                    });
+                });
+            }
+
+            if (trainModelsBtn && mlStatus) {
+                trainModelsBtn.addEventListener('click', function() {
+                    trainModelsBtn.disabled = true;
+                    trainModelsBtn.innerHTML = '<span class="dashicons dashicons-chart-line dashicons-spin"></span> Training Models...';
+                    mlStatus.textContent = 'Training machine learning models...';
+
+                    const data = {
+                        action: 'train_ml_models',
+                        nonce: '<?php echo wp_create_nonce("puntwork_train_models"); ?>'
+                    };
+
+                    fetch(ajaxurl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: new URLSearchParams(data)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            mlStatus.style.color = 'green';
+                            mlStatus.textContent = `Model training completed! Trained ${data.data.models_trained} models with avg accuracy ${data.data.avg_accuracy}%.`;
+                            trainModelsBtn.disabled = false;
+                            trainModelsBtn.innerHTML = '<span class="dashicons dashicons-chart-line"></span> Train Models';
+                            // Reload the page to show updated stats
+                            setTimeout(() => {
+                                location.reload();
+                            }, 2000);
+                        } else {
+                            mlStatus.style.color = 'red';
+                            mlStatus.textContent = 'Error: ' + (data.data || 'Unknown error');
+                            trainModelsBtn.disabled = false;
+                            trainModelsBtn.innerHTML = '<span class="dashicons dashicons-chart-line"></span> Train Models';
+                        }
+                    })
+                    .catch(error => {
+                        mlStatus.style.color = 'red';
+                        mlStatus.textContent = 'Error: ' + error.message;
+                        trainModelsBtn.disabled = false;
+                        trainModelsBtn.innerHTML = '<span class="dashicons dashicons-chart-line"></span> Train Models';
+                    });
+                });
+            }
+
+            if (viewMLInsightsBtn) {
+                viewMLInsightsBtn.addEventListener('click', function() {
+                    // Open ML insights modal
+                    const modal = document.getElementById('ml-insights-modal') || createMLInsightsModal();
+                    modal.style.display = 'block';
+
+                    // Load insights data
+                    loadMLInsights();
+                });
+            }
         });
+
+        // ML Insights Modal
+        $('#view-ml-insights').on('click', function() {
+            $('#ml-insights-modal').show();
+            loadMLInsights();
+        });
+
+        $('.puntwork-modal-close').on('click', function() {
+            $(this).closest('.puntwork-modal').hide();
+        });
+
+        $(window).on('click', function(event) {
+            if ($(event.target).hasClass('puntwork-modal')) {
+                $('.puntwork-modal').hide();
+            }
+        });
+
+        function loadMLInsights() {
+            const $content = $('#ml-insights-content');
+            $content.html('<div class="puntwork-loading"><div class="puntwork-spinner"></div><p>Loading ML insights...</p></div>');
+
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'get_ml_insights',
+                    nonce: puntwork_ml.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        displayMLInsights(response.data.insights);
+                    } else {
+                        $content.html('<div class="puntwork-error">Failed to load insights: ' + response.data + '</div>');
+                    }
+                },
+                error: function() {
+                    $content.html('<div class="puntwork-error">Failed to load ML insights. Please try again.</div>');
+                }
+            });
+        }
+
+        function displayMLInsights(insights) {
+            let html = '<div class="ml-insights-container">';
+
+            if (insights.model_performance) {
+                html += '<div class="ml-insights-section">';
+                html += '<h4>Model Performance</h4>';
+                html += '<div class="ml-insights-grid">';
+
+                Object.entries(insights.model_performance).forEach(([model, perf]) => {
+                    html += '<div class="ml-insight-card">';
+                    html += '<h5>' + model.replace('_', ' ').toUpperCase() + '</h5>';
+                    html += '<div class="ml-metric">Accuracy: <span class="ml-value">' + (perf.accuracy * 100).toFixed(1) + '%</span></div>';
+                    html += '<div class="ml-metric">Precision: <span class="ml-value">' + (perf.precision * 100).toFixed(1) + '%</span></div>';
+                    html += '<div class="ml-metric">Recall: <span class="ml-value">' + (perf.recall * 100).toFixed(1) + '%</span></div>';
+                    html += '</div>';
+                });
+
+                html += '</div></div>';
+            }
+
+            if (insights.feature_importance) {
+                html += '<div class="ml-insights-section">';
+                html += '<h4>Feature Importance</h4>';
+                html += '<div class="ml-feature-list">';
+
+                insights.feature_importance.slice(0, 10).forEach(feature => {
+                    html += '<div class="ml-feature-item">';
+                    html += '<span class="ml-feature-name">' + feature.name + '</span>';
+                    html += '<div class="ml-feature-bar"><div class="ml-feature-fill" style="width: ' + (feature.importance * 100) + '%"></div></div>';
+                    html += '<span class="ml-feature-value">' + (feature.importance * 100).toFixed(1) + '%</span>';
+                    html += '</div>';
+                });
+
+                html += '</div></div>';
+            }
+
+            if (insights.predictions) {
+                html += '<div class="ml-insights-section">';
+                html += '<h4>Recent Predictions</h4>';
+                html += '<div class="ml-predictions-list">';
+
+                insights.predictions.slice(0, 5).forEach(pred => {
+                    html += '<div class="ml-prediction-item">';
+                    html += '<div class="ml-prediction-feed">' + pred.feed_name + '</div>';
+                    html += '<div class="ml-prediction-metric">Success Rate: <span class="ml-value">' + (pred.predicted_success_rate * 100).toFixed(1) + '%</span></div>';
+                    html += '<div class="ml-prediction-confidence">Confidence: <span class="ml-value">' + (pred.confidence * 100).toFixed(1) + '%</span></div>';
+                    html += '</div>';
+                });
+
+                html += '</div></div>';
+            }
+
+            html += '</div>';
+            $('#ml-insights-content').html(html);
+        }
     </script>
     <style>
         .cache-controls, .memory-controls {
@@ -724,6 +987,333 @@ function performance_metrics_page()
             color: #666;
             font-size: 0.9em;
         }
+
+        .ml-analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .ml-stat-card {
+            text-align: center;
+            padding: 15px;
+            border: 1px solid #d1e7dd;
+            border-radius: 8px;
+            background: #f1f8e9;
+        }
+
+        .ml-stat-value {
+            font-size: 1.6em;
+            font-weight: bold;
+            color: #28a745;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .ml-stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .optimization-controls {
+            margin-top: 10px;
+        }
+
+        .optimization-results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .optimization-stat {
+            display: inline-block;
+            width: 48%;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .optimization-stat-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #007cba;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .optimization-stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .recommendation-card {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #007cba;
+            border-radius: 8px;
+            background: #e9f7fe;
+        }
+
+        .recommendation-item {
+            margin-bottom: 8px;
+            padding: 8px;
+            border-left: 4px solid transparent;
+            border-radius: 4px;
+        }
+
+        .recommendation-info {
+            color: #155724;
+            background: #d1e7dd;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+
+        .recommendation-warning {
+            color: #856404;
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+
+        .recommendation-error {
+            color: #721c24;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+
+        .dashicons-spin {
+            animation: spin 2s infinite linear;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ML Insights Modal Styles */
+        .puntwork-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .puntwork-modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 0;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 800px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .puntwork-modal-header {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .puntwork-modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .puntwork-modal-close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .puntwork-modal-close:hover {
+            color: #000;
+        }
+
+        .puntwork-modal-body {
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .ml-insights-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .ml-insights-section {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+        }
+
+        .ml-insights-section h4 {
+            margin: 0 0 15px 0;
+            color: #495057;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .ml-insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .ml-insight-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+        }
+
+        .ml-insight-card h5 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .ml-metric {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .ml-value {
+            font-weight: 600;
+            color: #28a745;
+        }
+
+        .ml-feature-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .ml-feature-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ml-feature-name {
+            flex: 1;
+            font-size: 13px;
+            color: #495057;
+        }
+
+        .ml-feature-bar {
+            flex: 2;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .ml-feature-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            border-radius: 4px;
+        }
+
+        .ml-feature-value {
+            flex: 0 0 50px;
+            text-align: right;
+            font-size: 12px;
+            font-weight: 600;
+            color: #28a745;
+        }
+
+        .ml-predictions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .ml-prediction-item {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ml-prediction-feed {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .ml-prediction-metric {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .puntwork-loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .puntwork-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007cba;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .puntwork-error {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            padding: 12px;
+            text-align: center;
+        }
     </style>
     <?php
+
+    // Localize script data for ML AJAX nonces
+    wp_localize_script('puntwork-admin-performance', 'puntwork_ml', [
+        'nonce' => wp_create_nonce('puntwork_ml_optimization'),
+        'train_nonce' => wp_create_nonce('puntwork_train_models'),
+        'insights_nonce' => wp_create_nonce('puntwork_ml_insights'),
+        'ajax_url' => admin_url('admin-ajax.php')
+    ]);
 }
