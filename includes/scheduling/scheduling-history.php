@@ -147,8 +147,8 @@ function run_scheduled_import($test_mode = false, $trigger_type = 'scheduled') {
         }
 
         // Run the import - don't reset status if it's already initialized for UI polling
-        // For API triggers, don't preserve status to allow fresh imports
-        $preserve_status = ($trigger_type !== 'api');
+        // For API triggers, preserve status since it's already initialized
+        $preserve_status = ($trigger_type === 'api');
         error_log('[PUNTWORK] Starting import_all_jobs_from_json with preserve_status=' . ($preserve_status ? 'true' : 'false'));
         $result = import_all_jobs_from_json($preserve_status);
         error_log('[PUNTWORK] import_all_jobs_from_json completed with result: ' . json_encode($result));
