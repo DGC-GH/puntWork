@@ -132,9 +132,16 @@ function handle_trigger_import($request) {
             update_option('puntwork_test_mode', true);
         }
 
+        // Get total items count for proper status initialization
+        $json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
+        $total_items = 0;
+        if (file_exists($json_path)) {
+            $total_items = get_json_item_count($json_path);
+        }
+
         // Initialize import status for immediate API response
         $initial_status = [
-            'total' => 0, // Will be updated as import progresses
+            'total' => $total_items, // Set correct total from the start
             'processed' => 0,
             'published' => 0,
             'updated' => 0,
@@ -301,10 +308,24 @@ function get_or_create_api_key() {
 }
 
 /**
- * Regenerate API key
+ * Get the total count of items in JSONL file.
+ *
+ * @param string $json_path Path to JSONL file.
+ * @return int Total item count.
  */
-function regenerate_api_key() {
-    $new_key = generate_api_key();
-    update_option('puntwork_api_key', $new_key);
-    return $new_key;
+function get_json_item_count($json_path) {
+    $count = 0;
+    if (($handle = fopen($json_path, "r")) !== false) {
+        while (($line = fgets($handle)) !== false) {
+            $line = trim($line);
+            if (!empty($line)) {
+                $item = json_decode($line, true);
+                if ($item !== null) {
+                    $count++;
+                }
+            }
+        }
+        fclose($handle);
+    }
+    return $count;
 }

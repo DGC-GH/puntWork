@@ -19,8 +19,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Run the scheduled import
  */
 function run_scheduled_import($test_mode = false, $trigger_type = 'scheduled') {
-    // Check if scheduling is still enabled (skip this check for test mode)
-    if (!$test_mode) {
+    // Check if scheduling is still enabled (skip this check for test mode or API triggers)
+    if (!$test_mode && $trigger_type !== 'api') {
         $schedule = get_option('puntwork_import_schedule', ['enabled' => false]);
         if (!$schedule['enabled']) {
             error_log('[PUNTWORK] Scheduled import skipped - scheduling is disabled');
