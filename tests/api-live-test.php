@@ -6,16 +6,48 @@
  * Run with: php tests/api-live-test.php
  */
 
-// Configuration from .env
+// Load environment variables from .env file
+function loadEnv($path) {
+    if (!file_exists($path)) {
+        return false;
+    }
+
+    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos(trim($line), '#') === 0) {
+            continue;
+        }
+
+        list($name, $value) = explode('=', $line, 2);
+        $name = trim($name);
+        $value = trim($value);
+
+        if (!array_key_exists($name, $_SERVER) && !array_key_exists($name, $_ENV)) {
+            putenv(sprintf('%s=%s', $name, $value));
+            $_ENV[$name] = $value;
+            $_SERVER[$name] = $value;
+        }
+    }
+    return true;
+}
+
+// Load .env file
+$envPath = __DIR__ . '/../.env';
+if (!loadEnv($envPath)) {
+    die("Error: Could not load .env file from: $envPath\n");
+}
+
+// Configuration from environment
 $config = [
-    'api_key' => 'etlBBlm0DdUftcafHbbkrof0EOnQSyZg',
-    'base_url' => 'https://belgiumjobs.work/wp-json/puntwork/v1',
+    'api_key' => getenv('PUNTWORK_API_KEY') ?: 'etlBBlm0DdUftcafHbbkrof0EOnQSyZg',
+    'base_url' => getenv('WP_SITEURL') ? rtrim(getenv('WP_SITEURL'), '/') . '/wp-json/puntwork/v1' : 'https://belgiumjobs.work/wp-json/puntwork/v1',
     'timeout' => 30
 ];
 
 echo "=== puntWork Live API Test ===\n";
 echo "Base URL: {$config['base_url']}\n";
-echo "API Key: " . substr($config['api_key'], 0, 10) . "...\n\n";
+echo "API Key: " . substr($config['api_key'], 0, 10) . "...\n";
+echo "Loaded from .env: " . (file_exists($envPath) ? "YES" : "NO") . "\n\n";
 
 /**
  * Make HTTP request using curl
