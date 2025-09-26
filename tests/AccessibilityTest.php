@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Accessibility Tests for puntWork
  *
@@ -10,8 +11,10 @@ namespace Puntwork;
 
 use PHPUnit\Framework\TestCase;
 
-class AccessibilityTest extends TestCase {
-    protected function setUp(): void {
+class AccessibilityTest extends TestCase
+{
+    protected function setUp(): void
+    {
         parent::setUp();
         // Mock WordPress functions
         if (!defined('ABSPATH')) {
@@ -22,7 +25,8 @@ class AccessibilityTest extends TestCase {
     /**
      * Test keyboard navigation support
      */
-    public function testKeyboardNavigationSupport() {
+    public function testKeyboardNavigationSupport()
+    {
         $keyboardEvents = [
             'keydown',
             'keyup',
@@ -53,7 +57,8 @@ class AccessibilityTest extends TestCase {
     /**
      * Test ARIA attributes
      */
-    public function testAriaAttributes() {
+    public function testAriaAttributes()
+    {
         $ariaAttributes = [
             'aria-label',
             'aria-labelledby',
@@ -78,7 +83,8 @@ class AccessibilityTest extends TestCase {
     /**
      * Test focus management
      */
-    public function testFocusManagement() {
+    public function testFocusManagement()
+    {
         $focusMethods = [
             'focus()',
             'blur()',
@@ -96,7 +102,8 @@ class AccessibilityTest extends TestCase {
     /**
      * Test color contrast ratios
      */
-    public function testColorContrastRatios() {
+    public function testColorContrastRatios()
+    {
         // WCAG AA standards
         $contrastRatios = [
             'normal_text' => 4.5,
@@ -114,7 +121,8 @@ class AccessibilityTest extends TestCase {
     /**
      * Test screen reader compatibility
      */
-    public function testScreenReaderCompatibility() {
+    public function testScreenReaderCompatibility()
+    {
         $screenReaderFeatures = [
             'semantic_html' => 'Proper heading hierarchy',
             'alt_text' => 'Image alt attributes',
@@ -133,7 +141,8 @@ class AccessibilityTest extends TestCase {
     /**
      * Test keyboard shortcuts
      */
-    public function testKeyboardShortcuts() {
+    public function testKeyboardShortcuts()
+    {
         $shortcuts = [
             'ctrl+s' => 'Save',
             'ctrl+z' => 'Undo',
@@ -152,7 +161,8 @@ class AccessibilityTest extends TestCase {
     /**
      * Test focus indicators
      */
-    public function testFocusIndicators() {
+    public function testFocusIndicators()
+    {
         $focusStyles = [
             'outline',
             'border',
@@ -169,7 +179,8 @@ class AccessibilityTest extends TestCase {
     /**
      * Test reduced motion preferences
      */
-    public function testReducedMotionPreferences() {
+    public function testReducedMotionPreferences()
+    {
         $motionQueries = [
             '(prefers-reduced-motion: reduce)',
             '(prefers-reduced-motion: no-preference)'
@@ -184,7 +195,8 @@ class AccessibilityTest extends TestCase {
     /**
      * Test high contrast mode
      */
-    public function testHighContrastMode() {
+    public function testHighContrastMode()
+    {
         $contrastSettings = [
             'forced-colors: active',
             'high-contrast: active'
@@ -199,7 +211,8 @@ class AccessibilityTest extends TestCase {
     /**
      * Test zoom and scaling
      */
-    public function testZoomAndScaling() {
+    public function testZoomAndScaling()
+    {
         $zoomLevels = [100, 125, 150, 200, 300, 400];
 
         foreach ($zoomLevels as $level) {
@@ -212,7 +225,8 @@ class AccessibilityTest extends TestCase {
     /**
      * Test touch target sizes
      */
-    public function testTouchTargetSizes() {
+    public function testTouchTargetSizes()
+    {
         $touchTargets = [
             'buttons' => '44px minimum',
             'links' => '44px minimum',
@@ -229,7 +243,8 @@ class AccessibilityTest extends TestCase {
     /**
      * Test error announcements
      */
-    public function testErrorAnnouncements() {
+    public function testErrorAnnouncements()
+    {
         $errorTypes = [
             'validation_errors',
             'form_submission_errors',
@@ -246,7 +261,8 @@ class AccessibilityTest extends TestCase {
     /**
      * Test language and text alternatives
      */
-    public function testLanguageAndTextAlternatives() {
+    public function testLanguageAndTextAlternatives()
+    {
         $textAlternatives = [
             'images' => 'alt attribute',
             'icons' => 'aria-label or aria-labelledby',

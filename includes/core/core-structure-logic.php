@@ -175,7 +175,7 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
     $total_items = 0;
 
     // Process feed using FeedProcessor
-    $count = FeedProcessor::process_feed($feed_path, $format, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+    $count = FeedProcessor::processFeed($feed_path, $format, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
 
     fclose($handle);
     @chmod($json_path, 0644);

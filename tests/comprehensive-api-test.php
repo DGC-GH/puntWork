@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Comprehensive API Test Suite for puntWork
  *
@@ -6,13 +7,15 @@
  * Run with: php tests/comprehensive-api-test.php
  */
 
-class PuntWorkAPITestSuite {
+class PuntWorkAPITestSuite
+{
     private $baseUrl;
     private $wpRootUrl;
     private $apiKey;
     private $testResults = [];
 
-    public function __construct($baseUrl = null, $apiKey = null) {
+    public function __construct($baseUrl = null, $apiKey = null)
+    {
         $this->baseUrl = $baseUrl ?: 'https://belgiumjobs.work/wp-json/puntwork/v1';
         $this->apiKey = $apiKey ?: 'REMOVED_API_KEY';
         $this->wpRootUrl = preg_replace('/\/wp-json.*$/', '', $this->baseUrl);
@@ -21,7 +24,8 @@ class PuntWorkAPITestSuite {
     /**
      * Run all API tests
      */
-    public function runAllTests() {
+    public function runAllTests()
+    {
         echo "=== puntWork REST API Comprehensive Test Suite ===\n";
         echo "Base URL: {$this->baseUrl}\n";
         echo "API Key: " . substr($this->apiKey, 0, 10) . "...\n\n";
@@ -39,7 +43,8 @@ class PuntWorkAPITestSuite {
     /**
      * Test WordPress REST API connectivity
      */
-    private function testWordPressConnectivity() {
+    private function testWordPressConnectivity()
+    {
         echo "1. Testing WordPress REST API Connectivity\n";
 
         $result = $this->makeRequest('/wp-json/', 'GET', null, [], $this->wpRootUrl);
@@ -58,7 +63,8 @@ class PuntWorkAPITestSuite {
     /**
      * Test if puntWork plugin is activated
      */
-    private function testPluginActivation() {
+    private function testPluginActivation()
+    {
         echo "2. Testing puntWork Plugin Activation\n";
 
         // Test if puntwork namespace exists
@@ -79,7 +85,8 @@ class PuntWorkAPITestSuite {
     /**
      * Test import status endpoint
      */
-    private function testImportStatusEndpoint() {
+    private function testImportStatusEndpoint()
+    {
         echo "3. Testing Import Status Endpoint\n";
 
         // Test with valid API key
@@ -111,7 +118,8 @@ class PuntWorkAPITestSuite {
     /**
      * Test trigger import endpoint
      */
-    private function testTriggerImportEndpoint() {
+    private function testTriggerImportEndpoint()
+    {
         echo "4. Testing Trigger Import Endpoint\n";
 
         // First check if an import is already running
@@ -233,7 +241,8 @@ class PuntWorkAPITestSuite {
     /**
      * Test error handling
      */
-    private function testErrorHandling() {
+    private function testErrorHandling()
+    {
         echo "5. Testing Error Handling\n";
 
         // Test malformed JSON
@@ -256,7 +265,8 @@ class PuntWorkAPITestSuite {
     /**
      * Test security features
      */
-    private function testSecurity() {
+    private function testSecurity()
+    {
         echo "6. Testing Security Features\n";
 
         // Test API key timing attack resistance (should use hash_equals)
@@ -290,7 +300,8 @@ class PuntWorkAPITestSuite {
     /**
      * Make HTTP request
      */
-    private function makeRequest($endpoint, $method = 'GET', $data = null, $headers = [], $customBaseUrl = null, $timeout = 30) {
+    private function makeRequest($endpoint, $method = 'GET', $data = null, $headers = [], $customBaseUrl = null, $timeout = 30)
+    {
         $baseUrl = $customBaseUrl ?: $this->baseUrl;
         $url = $baseUrl . $endpoint;
         $startTime = microtime(true);
@@ -337,7 +348,8 @@ class PuntWorkAPITestSuite {
     /**
      * Parse JSON response
      */
-    private function parseJsonResponse($response) {
+    private function parseJsonResponse($response)
+    {
         $data = json_decode($response, true);
         return json_last_error() === JSON_ERROR_NONE ? $data : null;
     }
@@ -345,7 +357,8 @@ class PuntWorkAPITestSuite {
     /**
      * Log test result
      */
-    private function logTest($testName, $success, $details = []) {
+    private function logTest($testName, $success, $details = [])
+    {
         $this->testResults[] = [
             'name' => $testName,
             'success' => $success,
@@ -362,7 +375,8 @@ class PuntWorkAPITestSuite {
     /**
      * Print test summary
      */
-    private function printSummary() {
+    private function printSummary()
+    {
         echo "\n=== Test Summary ===\n";
 
         $totalTests = count($this->testResults);
@@ -409,27 +423,35 @@ class PuntWorkAPITestSuite {
     }
 
     // Checklist helper methods
-    private function checkPluginUploaded() { return true; } // Assume uploaded
-    private function checkPluginActivated() {
+    private function checkPluginUploaded()
+    {
+        return true;
+    } // Assume uploaded
+    private function checkPluginActivated()
+    {
         $result = $this->makeRequest('/wp-json/puntwork/v1/import-status?api_key=invalid', 'GET', null, [], $this->wpRootUrl);
         return $result['http_code'] !== 404;
     }
-    private function checkApiKeyConfigured() {
+    private function checkApiKeyConfigured()
+    {
         $result = $this->makeRequest('/wp-json/puntwork/v1/import-status?api_key=' . $this->apiKey, 'GET', null, [], $this->wpRootUrl);
         return $result['http_code'] === 200;
     }
-    private function checkWordPressRestApi() {
+    private function checkWordPressRestApi()
+    {
         $result = $this->makeRequest('/wp-json/', 'GET', null, [], $this->wpRootUrl);
         return $result['http_code'] === 200;
     }
-    private function checkHttpsConfigured() {
+    private function checkHttpsConfigured()
+    {
         return strpos($this->baseUrl, 'https://') === 0;
     }
 
     /**
      * Poll import status until completion or timeout
      */
-    private function pollImportCompletion($maxWaitSeconds = 900) {
+    private function pollImportCompletion($maxWaitSeconds = 900)
+    {
         $startTime = time();
         $pollInterval = 5; // Check every 5 seconds
         $maxPolls = ceil($maxWaitSeconds / $pollInterval);

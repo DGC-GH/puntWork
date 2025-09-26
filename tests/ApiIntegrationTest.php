@@ -1,4 +1,5 @@
 <?php
+
 /**
  * API Integration Tests for puntWork
  *
@@ -10,8 +11,10 @@ namespace Puntwork;
 
 use PHPUnit\Framework\TestCase;
 
-class ApiIntegrationTest extends TestCase {
-    protected function setUp(): void {
+class ApiIntegrationTest extends TestCase
+{
+    protected function setUp(): void
+    {
         parent::setUp();
         // Mock WordPress functions
         if (!defined('ABSPATH')) {
@@ -22,7 +25,8 @@ class ApiIntegrationTest extends TestCase {
     /**
      * Test REST API endpoint registration
      */
-    public function testRestApiEndpointRegistration() {
+    public function testRestApiEndpointRegistration()
+    {
         $endpoints = [
             '/wp-json/puntwork/v1/import',
             '/wp-json/puntwork/v1/status',
@@ -59,7 +63,8 @@ class ApiIntegrationTest extends TestCase {
     /**
      * Test API authentication
      */
-    public function testApiAuthentication() {
+    public function testApiAuthentication()
+    {
         $authMethods = [
             'api_key' => 'header',
             'api_key' => 'query_parameter',
@@ -86,7 +91,8 @@ class ApiIntegrationTest extends TestCase {
     /**
      * Test API rate limiting
      */
-    public function testApiRateLimiting() {
+    public function testApiRateLimiting()
+    {
         $rateLimits = [
             'requests_per_minute' => 60,
             'requests_per_hour' => 1000,
@@ -119,7 +125,8 @@ class ApiIntegrationTest extends TestCase {
     /**
      * Test API response formats
      */
-    public function testApiResponseFormats() {
+    public function testApiResponseFormats()
+    {
         $formats = ['json', 'xml', 'csv'];
 
         foreach ($formats as $format) {
@@ -144,7 +151,8 @@ class ApiIntegrationTest extends TestCase {
     /**
      * Test API error handling
      */
-    public function testApiErrorHandling() {
+    public function testApiErrorHandling()
+    {
         $errorCodes = [
             400 => 'Bad Request',
             401 => 'Unauthorized',
@@ -180,7 +188,8 @@ class ApiIntegrationTest extends TestCase {
     /**
      * Test import API endpoint
      */
-    public function testImportApiEndpoint() {
+    public function testImportApiEndpoint()
+    {
         $importParams = [
             'force' => 'boolean',
             'test_mode' => 'boolean',
@@ -212,7 +221,8 @@ class ApiIntegrationTest extends TestCase {
     /**
      * Test status API endpoint
      */
-    public function testStatusApiEndpoint() {
+    public function testStatusApiEndpoint()
+    {
         $statusResponse = [
             'success' => true,
             'data' => [
@@ -238,7 +248,8 @@ class ApiIntegrationTest extends TestCase {
     /**
      * Test feeds API endpoint
      */
-    public function testFeedsApiEndpoint() {
+    public function testFeedsApiEndpoint()
+    {
         $feedsResponse = [
             'success' => true,
             'data' => [
@@ -274,7 +285,8 @@ class ApiIntegrationTest extends TestCase {
     /**
      * Test analytics API endpoint
      */
-    public function testAnalyticsApiEndpoint() {
+    public function testAnalyticsApiEndpoint()
+    {
         $analyticsResponse = [
             'success' => true,
             'data' => [
@@ -305,7 +317,8 @@ class ApiIntegrationTest extends TestCase {
     /**
      * Test health API endpoint
      */
-    public function testHealthApiEndpoint() {
+    public function testHealthApiEndpoint()
+    {
         $healthResponse = [
             'success' => true,
             'data' => [
@@ -340,7 +353,8 @@ class ApiIntegrationTest extends TestCase {
     /**
      * Test performance API endpoint
      */
-    public function testPerformanceApiEndpoint() {
+    public function testPerformanceApiEndpoint()
+    {
         $performanceResponse = [
             'success' => true,
             'data' => [
@@ -377,7 +391,8 @@ class ApiIntegrationTest extends TestCase {
     /**
      * Test jobs API endpoint
      */
-    public function testJobsApiEndpoint() {
+    public function testJobsApiEndpoint()
+    {
         $jobsResponse = [
             'success' => true,
             'data' => [
@@ -419,7 +434,8 @@ class ApiIntegrationTest extends TestCase {
     /**
      * Test API pagination
      */
-    public function testApiPagination() {
+    public function testApiPagination()
+    {
         $paginationParams = [
             'page' => 1,
             'per_page' => 50,
@@ -442,7 +458,8 @@ class ApiIntegrationTest extends TestCase {
     /**
      * Test API filtering and sorting
      */
-    public function testApiFilteringAndSorting() {
+    public function testApiFilteringAndSorting()
+    {
         $filterOptions = [
             'status' => ['active', 'inactive', 'error'],
             'type' => ['indeed', 'monster', 'dice'],
@@ -472,7 +489,8 @@ class ApiIntegrationTest extends TestCase {
     /**
      * Test API webhook notifications
      */
-    public function testApiWebhookNotifications() {
+    public function testApiWebhookNotifications()
+    {
         $webhookEvents = [
             'import_started',
             'import_completed',
@@ -505,7 +523,8 @@ class ApiIntegrationTest extends TestCase {
     /**
      * Test API bulk operations
      */
-    public function testApiBulkOperations() {
+    public function testApiBulkOperations()
+    {
         $bulkOperations = [
             'bulk_import' => 'Import multiple feeds',
             'bulk_delete' => 'Delete multiple jobs',

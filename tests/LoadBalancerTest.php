@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Load Balancer Tests for puntWork
  *
@@ -10,8 +11,10 @@ namespace Puntwork;
 
 use PHPUnit\Framework\TestCase;
 
-class LoadBalancerTest extends TestCase {
-    protected function setUp(): void {
+class LoadBalancerTest extends TestCase
+{
+    protected function setUp(): void
+    {
         parent::setUp();
         // Mock WordPress functions
         if (!defined('ABSPATH')) {
@@ -22,7 +25,8 @@ class LoadBalancerTest extends TestCase {
     /**
      * Test load balancing strategies
      */
-    public function testLoadBalancingStrategies() {
+    public function testLoadBalancingStrategies()
+    {
         $load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
         $strategies = ['round_robin', 'least_loaded', 'weighted', 'ip_hash'];
@@ -44,7 +48,8 @@ class LoadBalancerTest extends TestCase {
     /**
      * Test instance capability checking
      */
-    public function testInstanceCapabilityChecking() {
+    public function testInstanceCapabilityChecking()
+    {
         $load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
         $test_instances = [
@@ -79,7 +84,8 @@ class LoadBalancerTest extends TestCase {
     /**
      * Test round robin selection
      */
-    public function testRoundRobinSelection() {
+    public function testRoundRobinSelection()
+    {
         $load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
         $instances = [
@@ -110,7 +116,8 @@ class LoadBalancerTest extends TestCase {
     /**
      * Test weighted selection
      */
-    public function testWeightedSelection() {
+    public function testWeightedSelection()
+    {
         $load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
         $instances = [
@@ -142,8 +149,12 @@ class LoadBalancerTest extends TestCase {
         }
 
         // Heavy instance should be selected more often
-        $heavy_count = count(array_filter($selections, function($id) { return $id === 'heavy'; }));
-        $light_count = count(array_filter($selections, function($id) { return $id === 'light'; }));
+        $heavy_count = count(array_filter($selections, function ($id) {
+            return $id === 'heavy';
+        }));
+        $light_count = count(array_filter($selections, function ($id) {
+            return $id === 'light';
+        }));
 
         $this->assertGreaterThan($light_count, $heavy_count);
     }
@@ -151,7 +162,8 @@ class LoadBalancerTest extends TestCase {
     /**
      * Test IP hash selection
      */
-    public function testIpHashSelection() {
+    public function testIpHashSelection()
+    {
         $load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
         $instances = [
@@ -174,7 +186,8 @@ class LoadBalancerTest extends TestCase {
     /**
      * Test load balancer statistics
      */
-    public function testLoadBalancerStatistics() {
+    public function testLoadBalancerStatistics()
+    {
         $load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
         // Statistics should be available
@@ -194,7 +207,8 @@ class LoadBalancerTest extends TestCase {
     /**
      * Test load distribution simulation
      */
-    public function testLoadDistributionSimulation() {
+    public function testLoadDistributionSimulation()
+    {
         $load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
         $reflection = new \ReflectionClass($load_balancer);
@@ -220,7 +234,8 @@ class LoadBalancerTest extends TestCase {
     /**
      * Test load balancer admin interface
      */
-    public function testLoadBalancerAdminInterface() {
+    public function testLoadBalancerAdminInterface()
+    {
         $load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
         // In test environment, hooks are not initialized
@@ -240,7 +255,8 @@ class LoadBalancerTest extends TestCase {
     /**
      * Test load balancer initialization
      */
-    public function testLoadBalancerInitialization() {
+    public function testLoadBalancerInitialization()
+    {
         $load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
         // In test environment, hooks are not initialized
@@ -265,7 +281,8 @@ class LoadBalancerTest extends TestCase {
     /**
      * Test load balancer job processing
      */
-    public function testLoadBalancerJobProcessing() {
+    public function testLoadBalancerJobProcessing()
+    {
         $load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
         // Job processing should not throw exceptions

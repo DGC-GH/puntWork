@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Performance Benchmark Tests for puntWork plugin.
  *
@@ -10,8 +11,10 @@ namespace Puntwork;
 
 use PHPUnit\Framework\TestCase;
 
-class PerformanceBenchmarkTest extends TestCase {
-    protected function setUp(): void {
+class PerformanceBenchmarkTest extends TestCase
+{
+    protected function setUp(): void
+    {
         parent::setUp();
         // Mock WordPress functions
         if (!defined('ABSPATH')) {
@@ -22,7 +25,8 @@ class PerformanceBenchmarkTest extends TestCase {
     /**
      * Benchmark array mapping performance
      */
-    public function testArrayMappingPerformance() {
+    public function testArrayMappingPerformance()
+    {
         $startTime = microtime(true);
 
         // Test GetProvinceMap performance
@@ -52,7 +56,8 @@ class PerformanceBenchmarkTest extends TestCase {
     /**
      * Benchmark job schema building performance
      */
-    public function testJobSchemaBuildingPerformance() {
+    public function testJobSchemaBuildingPerformance()
+    {
         $item = (object) [
             'guid' => 'test-guid-' . rand(),
             'job_title' => 'Test Job Title',
@@ -79,11 +84,18 @@ class PerformanceBenchmarkTest extends TestCase {
     /**
      * Benchmark duplicate handling performance
      */
-    public function testDuplicateHandlingPerformance() {
-        $batchGuids = array_map(function($i) { return "guid-{$i}"; }, range(1, 1000));
+    public function testDuplicateHandlingPerformance()
+    {
+        $batchGuids = array_map(function ($i) {
+            return "guid-{$i}";
+        }, range(1, 1000));
         $existingByGuid = array_combine(
-            array_map(function($i) { return "guid-{$i}"; }, range(1, 500)),
-            array_map(function($i) { return [123 + $i]; }, range(1, 500))
+            array_map(function ($i) {
+                return "guid-{$i}";
+            }, range(1, 500)),
+            array_map(function ($i) {
+                return [123 + $i];
+            }, range(1, 500))
         );
 
         $startTime = microtime(true);
@@ -105,7 +117,8 @@ class PerformanceBenchmarkTest extends TestCase {
     /**
      * Memory usage benchmark
      */
-    public function testMemoryUsageBenchmark() {
+    public function testMemoryUsageBenchmark()
+    {
         $initialMemory = memory_get_usage();
 
         // Load mappings
@@ -122,7 +135,8 @@ class PerformanceBenchmarkTest extends TestCase {
     /**
      * Benchmark import operation timing
      */
-    public function testImportOperationTiming() {
+    public function testImportOperationTiming()
+    {
         // Mock a small import scenario
         $startTime = microtime(true);
 

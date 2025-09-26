@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Horizontal Scaling Tests for puntWork
  *
@@ -10,8 +11,10 @@ namespace Puntwork;
 
 use PHPUnit\Framework\TestCase;
 
-class HorizontalScalingTest extends TestCase {
-    protected function setUp(): void {
+class HorizontalScalingTest extends TestCase
+{
+    protected function setUp(): void
+    {
         parent::setUp();
         // Mock WordPress functions
         if (!defined('ABSPATH')) {
@@ -22,7 +25,8 @@ class HorizontalScalingTest extends TestCase {
     /**
      * Test instance ID generation
      */
-    public function testInstanceIdGeneration() {
+    public function testInstanceIdGeneration()
+    {
         $scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
 
         $instance_info = $scaling_manager->get_current_instance();
@@ -42,7 +46,8 @@ class HorizontalScalingTest extends TestCase {
     /**
      * Test instance role determination
      */
-    public function testInstanceRoleDetermination() {
+    public function testInstanceRoleDetermination()
+    {
         // Test heavy processing role
         $this->assertTrue($this->isRoleAssigned('heavy_processing'));
 
@@ -59,7 +64,8 @@ class HorizontalScalingTest extends TestCase {
     /**
      * Helper to check if a role is valid
      */
-    private function isRoleAssigned($expected_role) {
+    private function isRoleAssigned($expected_role)
+    {
         $scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
         $instance_info = $scaling_manager->get_current_instance();
 
@@ -71,7 +77,8 @@ class HorizontalScalingTest extends TestCase {
     /**
      * Test instance capability checking
      */
-    public function testInstanceCapabilityChecking() {
+    public function testInstanceCapabilityChecking()
+    {
         $scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
 
         $job_types = ['feed_import', 'batch_process', 'analytics_update', 'notification', 'cleanup'];
@@ -85,7 +92,8 @@ class HorizontalScalingTest extends TestCase {
     /**
      * Test instance statistics
      */
-    public function testInstanceStatistics() {
+    public function testInstanceStatistics()
+    {
         $scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
 
         $stats = $scaling_manager->get_instance_stats();
@@ -110,7 +118,8 @@ class HorizontalScalingTest extends TestCase {
     /**
      * Test optimal instance selection
      */
-    public function testOptimalInstanceSelection() {
+    public function testOptimalInstanceSelection()
+    {
         $scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
 
         $job_types = ['feed_import', 'batch_process', 'analytics_update'];
@@ -126,7 +135,8 @@ class HorizontalScalingTest extends TestCase {
     /**
      * Test health check functionality
      */
-    public function testHealthCheckFunctionality() {
+    public function testHealthCheckFunctionality()
+    {
         $scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
 
         // Health check should not throw exceptions
@@ -149,7 +159,8 @@ class HorizontalScalingTest extends TestCase {
     /**
      * Test instance cleanup
      */
-    public function testInstanceCleanup() {
+    public function testInstanceCleanup()
+    {
         $scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
 
         // Cleanup should not throw exceptions

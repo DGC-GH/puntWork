@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Performance Tests for puntWork
  *
@@ -10,8 +11,10 @@ namespace Puntwork;
 
 use PHPUnit\Framework\TestCase;
 
-class PerformanceTest extends TestCase {
-    protected function setUp(): void {
+class PerformanceTest extends TestCase
+{
+    protected function setUp(): void
+    {
         parent::setUp();
         // Mock WordPress functions
         if (!defined('ABSPATH')) {
@@ -22,7 +25,8 @@ class PerformanceTest extends TestCase {
     /**
      * Test memory usage monitoring
      */
-    public function testMemoryUsageMonitoring() {
+    public function testMemoryUsageMonitoring()
+    {
         $memoryFunctions = [
             'memory_get_usage',
             'memory_get_peak_usage',
@@ -45,7 +49,8 @@ class PerformanceTest extends TestCase {
     /**
      * Test execution time tracking
      */
-    public function testExecutionTimeTracking() {
+    public function testExecutionTimeTracking()
+    {
         $timeFunctions = [
             'microtime',
             'time',
@@ -75,7 +80,8 @@ class PerformanceTest extends TestCase {
     /**
      * Test database query performance
      */
-    public function testDatabaseQueryPerformance() {
+    public function testDatabaseQueryPerformance()
+    {
         $queryMetrics = [
             'query_count',
             'query_time',
@@ -105,7 +111,8 @@ class PerformanceTest extends TestCase {
     /**
      * Test API response times
      */
-    public function testApiResponseTimes() {
+    public function testApiResponseTimes()
+    {
         $responseTimes = [
             'fast' => '< 200ms',
             'acceptable' => '200-500ms',
@@ -123,7 +130,8 @@ class PerformanceTest extends TestCase {
     /**
      * Test file processing performance
      */
-    public function testFileProcessingPerformance() {
+    public function testFileProcessingPerformance()
+    {
         $processingMetrics = [
             'file_size',
             'processing_time',
@@ -147,7 +155,8 @@ class PerformanceTest extends TestCase {
     /**
      * Test cache performance
      */
-    public function testCachePerformance() {
+    public function testCachePerformance()
+    {
         $cacheMetrics = [
             'hit_ratio',
             'miss_ratio',
@@ -178,7 +187,8 @@ class PerformanceTest extends TestCase {
     /**
      * Test concurrent processing limits
      */
-    public function testConcurrentProcessingLimits() {
+    public function testConcurrentProcessingLimits()
+    {
         $concurrencyLimits = [
             'max_workers' => 10,
             'queue_size' => 1000,
@@ -196,7 +206,8 @@ class PerformanceTest extends TestCase {
     /**
      * Test resource utilization
      */
-    public function testResourceUtilization() {
+    public function testResourceUtilization()
+    {
         $resources = [
             'cpu' => 'percentage',
             'memory' => 'bytes',
@@ -214,7 +225,8 @@ class PerformanceTest extends TestCase {
     /**
      * Test performance benchmarks
      */
-    public function testPerformanceBenchmarks() {
+    public function testPerformanceBenchmarks()
+    {
         $benchmarks = [
             'import_1000_jobs' => '5 seconds',
             'process_feed_10mb' => '10 seconds',
@@ -232,7 +244,8 @@ class PerformanceTest extends TestCase {
     /**
      * Test scalability metrics
      */
-    public function testScalabilityMetrics() {
+    public function testScalabilityMetrics()
+    {
         $scalabilityFactors = [
             'jobs_per_hour' => 10000,
             'concurrent_users' => 100,
@@ -250,7 +263,8 @@ class PerformanceTest extends TestCase {
     /**
      * Test error rate monitoring
      */
-    public function testErrorRateMonitoring() {
+    public function testErrorRateMonitoring()
+    {
         $errorRates = [
             'acceptable' => '0.1%',
             'warning' => '1%',
@@ -268,7 +282,8 @@ class PerformanceTest extends TestCase {
     /**
      * Test throughput measurement
      */
-    public function testThroughputMeasurement() {
+    public function testThroughputMeasurement()
+    {
         $throughputMetrics = [
             'jobs_processed_per_minute',
             'api_requests_per_second',

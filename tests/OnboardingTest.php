@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Onboarding Wizard Tests for puntWork
  *
@@ -10,8 +11,10 @@ namespace Puntwork;
 
 use PHPUnit\Framework\TestCase;
 
-class OnboardingTest extends TestCase {
-    protected function setUp(): void {
+class OnboardingTest extends TestCase
+{
+    protected function setUp(): void
+    {
         parent::setUp();
         // Mock WordPress functions
         if (!defined('ABSPATH')) {
@@ -22,7 +25,8 @@ class OnboardingTest extends TestCase {
     /**
      * Test onboarding completion status
      */
-    public function testOnboardingCompletionStatus() {
+    public function testOnboardingCompletionStatus()
+    {
         // Skip this test if the class is not available in test environment
         if (!class_exists('PuntworkOnboardingWizard')) {
             $this->markTestSkipped('PuntworkOnboardingWizard class not available in test environment');
@@ -43,7 +47,8 @@ class OnboardingTest extends TestCase {
     /**
      * Test onboarding wizard initialization
      */
-    public function testOnboardingWizardInitialization() {
+    public function testOnboardingWizardInitialization()
+    {
         // Skip this test if the class is not available in test environment
         if (!class_exists('PuntworkOnboardingWizard')) {
             $this->markTestSkipped('PuntworkOnboardingWizard class not available in test environment');
@@ -58,7 +63,8 @@ class OnboardingTest extends TestCase {
     /**
      * Test onboarding steps structure
      */
-    public function testOnboardingStepsStructure() {
+    public function testOnboardingStepsStructure()
+    {
         $steps = [
             0 => 'Welcome',
             1 => 'Configure Feeds',
@@ -80,7 +86,8 @@ class OnboardingTest extends TestCase {
     /**
      * Test onboarding navigation logic
      */
-    public function testOnboardingNavigationLogic() {
+    public function testOnboardingNavigationLogic()
+    {
         $totalSteps = 5;
         $currentStep = 2;
 
@@ -102,7 +109,8 @@ class OnboardingTest extends TestCase {
     /**
      * Test onboarding progress calculation
      */
-    public function testOnboardingProgressCalculation() {
+    public function testOnboardingProgressCalculation()
+    {
         $totalSteps = 5;
 
         for ($currentStep = 0; $currentStep < $totalSteps; $currentStep++) {
@@ -121,7 +129,8 @@ class OnboardingTest extends TestCase {
     /**
      * Test onboarding data validation
      */
-    public function testOnboardingDataValidation() {
+    public function testOnboardingDataValidation()
+    {
         $validData = [
             'step' => 2,
             'completed_steps' => [0, 1],
@@ -144,7 +153,8 @@ class OnboardingTest extends TestCase {
     /**
      * Test onboarding AJAX handlers
      */
-    public function testOnboardingAjaxHandlers() {
+    public function testOnboardingAjaxHandlers()
+    {
         // Test AJAX action registration
         $actions = ['puntwork_complete_onboarding'];
 
@@ -157,7 +167,8 @@ class OnboardingTest extends TestCase {
     /**
      * Test onboarding menu integration
      */
-    public function testOnboardingMenuIntegration() {
+    public function testOnboardingMenuIntegration()
+    {
         $menuConfig = [
             'page_title' => 'puntWork Onboarding',
             'menu_title' => 'Onboarding',
@@ -177,7 +188,8 @@ class OnboardingTest extends TestCase {
     /**
      * Test onboarding completion workflow
      */
-    public function testOnboardingCompletionWorkflow() {
+    public function testOnboardingCompletionWorkflow()
+    {
         // Test workflow steps
         $workflow = [
             'initialize' => 'Show welcome screen',
@@ -199,7 +211,8 @@ class OnboardingTest extends TestCase {
     /**
      * Test onboarding error handling
      */
-    public function testOnboardingErrorHandling() {
+    public function testOnboardingErrorHandling()
+    {
         $errorScenarios = [
             'invalid_step' => 'Step number out of range',
             'missing_data' => 'Required data not provided',
@@ -217,7 +230,8 @@ class OnboardingTest extends TestCase {
     /**
      * Test onboarding accessibility features
      */
-    public function testOnboardingAccessibilityFeatures() {
+    public function testOnboardingAccessibilityFeatures()
+    {
         $accessibilityFeatures = [
             'aria_labels' => 'Screen reader labels',
             'keyboard_nav' => 'Keyboard navigation support',

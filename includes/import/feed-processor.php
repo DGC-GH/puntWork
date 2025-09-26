@@ -35,7 +35,7 @@ class FeedProcessor
     public static function detectFormat(string $url, ?string $content = null): string
     {
         // Check if it's a job board URL
-        if (self::is_job_board_url($url)) {
+        if (self::isJobBoardUrl($url)) {
             return self::FORMAT_JOB_BOARD;
         }
 
@@ -91,7 +91,7 @@ class FeedProcessor
      * @param string $url URL to check
      * @return bool True if it's a job board URL
      */
-    private static function is_job_board_url(string $url): bool
+    private static function isJobBoardUrl(string $url): bool
     {
         $job_board_patterns = [
             'job_board://',  // Custom protocol for job boards
@@ -122,17 +122,17 @@ class FeedProcessor
      * @param array &$logs Logs array
      * @return array Processed batch data
      */
-    public static function process_feed(string $feed_path, string $format, string $handle, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): array
+    public static function processFeed(string $feed_path, string $format, string $handle, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): array
     {
         switch ($format) {
             case self::FORMAT_XML:
-                return self::process_xml_feed($feed_path, $handle, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+                return self::processXmlFeed($feed_path, $handle, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
             case self::FORMAT_JSON:
-                return self::process_json_feed($feed_path, $handle, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+                return self::processJsonFeed($feed_path, $handle, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
             case self::FORMAT_CSV:
-                return self::process_csv_feed($feed_path, $handle, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+                return self::processCsvFeed($feed_path, $handle, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
             case self::FORMAT_JOB_BOARD:
-                return self::process_job_board_feed($feed_path, $handle, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+                return self::processJobBoardFeed($feed_path, $handle, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
             default:
                 throw new \Exception("Unsupported feed format: $format");
         }
@@ -141,7 +141,7 @@ class FeedProcessor
     /**
      * Process XML feed (existing functionality)
      */
-    private static function process_xml_feed($xml_path, $handle, $output_dir, $fallback_domain, $batch_size, &$total_items, &$logs)
+    private static function processXmlFeed($xml_path, $handle, $output_dir, $fallback_domain, $batch_size, &$total_items, &$logs)
     {
         return process_xml_batch($xml_path, null, $handle, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
     }
@@ -152,7 +152,7 @@ class FeedProcessor
      * @param object $item Job item object
      * @return string Detected language code (en, fr, nl)
      */
-    private static function detect_language(object $item): string
+    private static function detectLanguage(object $item): string
     {
         $lang = isset($item->languagecode) ? strtolower((string)$item->languagecode) : 'en';
         if (strpos($lang, 'fr') !== false) {
@@ -176,7 +176,7 @@ class FeedProcessor
      * @return array Processed batch data
      * @throws \Exception If JSON processing fails
      */
-    private static function process_json_feed(string $json_path, string $handle, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): array
+    private static function processJsonFeed(string $json_path, string $handle, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): array
     {
         $feed_item_count = 0;
         $batch = [];
@@ -193,7 +193,7 @@ class FeedProcessor
             }
 
             // Handle different JSON structures
-            $items = self::extract_json_items($data);
+            $items = self::extractJsonItems($data);
 
             foreach ($items as $item_data) {
                 if (!is_array($item_data) && !is_object($item_data)) {
@@ -221,7 +221,7 @@ class FeedProcessor
                 clean_item_fields($item);
 
                 // Language detection
-                $lang = self::detect_language($item);
+                $lang = self::detectLanguage($item);
 
                 $job_obj = json_decode(json_encode($item), true);
                 infer_item_details($item, $fallback_domain, $lang, $job_obj);
@@ -257,7 +257,7 @@ class FeedProcessor
      * @return array Processed batch data
      * @throws \Exception If CSV processing fails
      */
-    private static function process_csv_feed(string $csv_path, string $handle, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): array
+    private static function processCsvFeed(string $csv_path, string $handle, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): array
     {
         $feed_item_count = 0;
         $batch = [];
@@ -273,7 +273,7 @@ class FeedProcessor
             }
 
             // Detect delimiter and read headers
-            $delimiter = self::detect_csv_delimiter($csv_path);
+            $delimiter = self::detectCsvDelimiter($csv_path);
             $headers = fgetcsv($handle_resource, 0, $delimiter);
 
             if (!$headers || count($headers) < 2) {
@@ -304,7 +304,7 @@ class FeedProcessor
                 clean_item_fields($item);
 
                 // Language detection
-                $lang = self::detect_language($item);
+                $lang = self::detectLanguage($item);
 
                 $job_obj = json_decode(json_encode($item), true);
                 infer_item_details($item, $fallback_domain, $lang, $job_obj);
@@ -345,7 +345,7 @@ class FeedProcessor
      * @return array Processed batch data
      * @throws \Exception If job board processing fails
      */
-    private static function process_job_board_feed(string $feed_path, string $handle, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): array
+    private static function processJobBoardFeed(string $feed_path, string $handle, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): array
     {
         $feed_item_count = 0;
         $batch = [];
@@ -375,7 +375,7 @@ class FeedProcessor
 
             foreach ($jobs as $job_data) {
                 // Convert job board data to standard job format
-                $item = self::convert_job_board_data_to_item($job_data, $board_id);
+                $item = self::convertJobBoardDataToItem($job_data, $board_id);
 
                 // Skip empty items
                 if (empty((array)$item)) {
@@ -386,7 +386,7 @@ class FeedProcessor
                 clean_item_fields($item);
 
                 // Language detection
-                $lang = self::detect_language($item);
+                $lang = self::detectLanguage($item);
 
                 $job_obj = json_decode(json_encode($item), true);
                 infer_item_details($item, $fallback_domain, $lang, $job_obj);
@@ -416,7 +416,7 @@ class FeedProcessor
      * @param string $board_id Job board identifier
      * @return object Standardized job item
      */
-    private static function convert_job_board_data_to_item(array $job_data, string $board_id): object
+    private static function convertJobBoardDataToItem(array $job_data, string $board_id): object
     {
         $item = new \stdClass();
 
@@ -455,7 +455,7 @@ class FeedProcessor
      * @param mixed $data JSON data structure
      * @return array Extracted items array
      */
-    private static function extract_json_items($data): array
+    private static function extractJsonItems($data): array
     {
         // If it's an array of objects, return as is
         if (is_array($data) && !empty($data) && (is_array($data[0]) || is_object($data[0]))) {
@@ -487,7 +487,7 @@ class FeedProcessor
      * @param string $file_path Path to CSV file
      * @return string Detected delimiter character
      */
-    private static function detect_csv_delimiter(string $file_path): string
+    private static function detectCsvDelimiter(string $file_path): string
     {
         $handle = fopen($file_path, 'r');
         $delimiters = [',', ';', '\t', '|'];
