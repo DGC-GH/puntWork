@@ -39,17 +39,17 @@ class ImportTest extends TestCase {
     public function testGetAcfFields() {
         $fields = get_acf_fields();
         $this->assertIsArray($fields);
-        $this->assertArrayHasKey('job_title', $fields);
+        $this->assertContains('job_title', $fields);
     }
 
     public function testGetZeroEmptyFields() {
         $fields = get_zero_empty_fields();
         $this->assertIsArray($fields);
-        $this->assertContains('job_salary_min', $fields);
+        $this->assertContains('salaryfrom', $fields);
     }
 
     public function testBuildJobSchema() {
-        $item = [
+        $item = (object) [
             'guid' => 'test-guid',
             'job_title' => 'Test Job',
             'job_desc' => 'Test description',
@@ -57,7 +57,7 @@ class ImportTest extends TestCase {
             'job_salary_min' => 30000,
             'job_salary_max' => 40000
         ];
-        $schema = build_job_schema('Test Job', 'Test description', $item, 'Brussels', 'Full-time', false, 'test-org', 'IT');
+        $schema = build_job_schema('Test Job', 'Test description', $item, 'Brussels', 'Full-time', false, 'test-org', 'IT & Telecommunicatie');
         $this->assertIsArray($schema);
         $this->assertArrayHasKey('@type', $schema);
         $this->assertEquals('JobPosting', $schema['@type']);
