@@ -127,7 +127,7 @@ if (!function_exists('import_all_jobs_from_json')) {
         $batch_count = 0;
         $total_items = 0;
 
-        error_log('[PUNTWORK] Starting full import - processing all batches without time limit');
+        error_log('[PUNTWORK] import_all_jobs_from_json started with preserve_status=' . ($preserve_status ? 'true' : 'false'));
 
         // Only reset status if not preserving existing status
         if (!$preserve_status) {
