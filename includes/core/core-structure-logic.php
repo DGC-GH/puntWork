@@ -57,6 +57,7 @@ function get_feeds(): array {
         if ($query->have_posts()) {
             foreach ($query->posts as $post_id) {
                 $feed_url = get_post_meta($post_id, 'feed_url', true);
+                $feed_type = get_post_meta($post_id, 'feed_type', true) ?: 'traditional';
                 $post = get_post($post_id);
 
                 // Also check for ACF field if regular meta is empty
@@ -70,15 +71,55 @@ function get_feeds(): array {
                         continue; // skip invalid URLs
                     }
                     $feeds[$post->post_name] = $feed_url; // Use slug as key
+                } elseif ($feed_type === 'job_board') {
+                    // Handle job board feeds
+                    $board_id = get_post_meta($post_id, 'job_board_id', true);
+                    $board_params = get_post_meta($post_id, 'job_board_params', true) ?: [];
+
+                    if (!empty($board_id)) {
+                        // Create job board URL: job_board://board_id?param1=value1&...
+                        $job_board_url = 'job_board://' . $board_id;
+                        if (!empty($board_params)) {
+                            $job_board_url .= '?' . http_build_query($board_params);
+                        }
+                        $feeds[$post->post_name] = $job_board_url;
+                    }
                 }
             }
         }
+
+        // Add configured job boards as additional feeds
+        $job_board_feeds = get_job_board_feeds();
+        $feeds = array_merge($feeds, $job_board_feeds);
 
         // Cache for 1 hour
         CacheManager::set($cache_key, $feeds, CacheManager::GROUP_MAPPINGS, HOUR_IN_SECONDS);
     }
 
     return $feeds;
+}
+
+/**
+ * Get configured job board feeds
+ *
+ * @return array Array of job board feed URLs
+ */
+function get_job_board_feeds(): array {
+    $job_board_feeds = [];
+
+    // Include the JobBoardManager
+    require_once plugin_dir_path(__FILE__) . '../jobboards/jobboard-manager.php';
+
+    $board_manager = new \Puntwork\JobBoards\JobBoardManager();
+    $configured_boards = $board_manager->getConfiguredBoards();
+
+    foreach ($configured_boards as $board_id) {
+        // Create job board URL for each configured board
+        $job_board_url = 'job_board://' . $board_id;
+        $job_board_feeds['job_board_' . $board_id] = $job_board_url;
+    }
+
+    return $job_board_feeds;
 }
 
 // Clear feeds cache when job-feed post is updated
@@ -107,10 +148,16 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
     $json_path = $output_dir . $json_filename;
     $gz_json_path = $json_path . '.gz';
 
-    // Download feed and detect format
-    $detected_format = null;
-    if (!download_feed($url, $feed_path, $output_dir, $logs, $detected_format)) {
-        return 0;
+    // Handle job board feeds differently - no download needed
+    if ($extension === FeedProcessor::FORMAT_JOB_BOARD) {
+        $feed_path = $url; // Use the job board URL directly
+        $detected_format = FeedProcessor::FORMAT_JOB_BOARD;
+    } else {
+        // Download feed and detect format
+        $detected_format = null;
+        if (!download_feed($url, $feed_path, $output_dir, $logs, $detected_format)) {
+            return 0;
+        }
     }
 
     // Use detected format, fallback to URL-based detection

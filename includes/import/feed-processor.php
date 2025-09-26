@@ -22,15 +22,21 @@ class FeedProcessor {
     const FORMAT_XML = 'xml';
     const FORMAT_JSON = 'json';
     const FORMAT_CSV = 'csv';
+    const FORMAT_JOB_BOARD = 'job_board';
 
     /**
      * Detect feed format from URL or content
      *
      * @param string $url Feed URL
      * @param string|null $content Optional content to analyze
-     * @return string Detected format (xml, json, or csv)
+     * @return string Detected format (xml, json, csv, or job_board)
      */
     public static function detect_format(string $url, ?string $content = null): string {
+        // Check if it's a job board URL
+        if (self::is_job_board_url($url)) {
+            return self::FORMAT_JOB_BOARD;
+        }
+
         // Check URL extension first
         $extension = strtolower(pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION));
 
@@ -78,6 +84,29 @@ class FeedProcessor {
     }
 
     /**
+     * Check if URL is a job board URL
+     *
+     * @param string $url URL to check
+     * @return bool True if it's a job board URL
+     */
+    private static function is_job_board_url(string $url): bool {
+        $job_board_patterns = [
+            'job_board://',  // Custom protocol for job boards
+            'indeed://',
+            'linkedin://',
+            'glassdoor://'
+        ];
+
+        foreach ($job_board_patterns as $pattern) {
+            if (strpos($url, $pattern) === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Process feed based on detected format
      *
      * @param string $feed_path Path to downloaded feed file
@@ -98,6 +127,8 @@ class FeedProcessor {
                 return self::process_json_feed($feed_path, $handle, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
             case self::FORMAT_CSV:
                 return self::process_csv_feed($feed_path, $handle, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+            case self::FORMAT_JOB_BOARD:
+                return self::process_job_board_feed($feed_path, $handle, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
             default:
                 throw new \Exception("Unsupported feed format: $format");
         }
@@ -290,6 +321,122 @@ class FeedProcessor {
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$handle CSV processing error: " . $e->getMessage();
             throw $e;
         }
+    }
+
+    /**
+     * Process job board feed
+     *
+     * @param string $feed_path Job board URL (job_board://board_id?params)
+     * @param string $handle Feed handle/key
+     * @param string $output_dir Output directory
+     * @param string $fallback_domain Fallback domain
+     * @param int $batch_size Batch size
+     * @param int &$total_items Total items counter
+     * @param array &$logs Logs array
+     * @return array Processed batch data
+     * @throws \Exception If job board processing fails
+     */
+    private static function process_job_board_feed(string $feed_path, string $handle, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): array {
+        $feed_item_count = 0;
+        $batch = [];
+
+        try {
+            // Parse job board URL: job_board://board_id?param1=value1&param2=value2
+            $url_parts = parse_url($feed_path);
+            $board_id = str_replace('job_board://', '', $url_parts['scheme'] . '://' . $url_parts['host']);
+
+            // Parse query parameters
+            $params = [];
+            if (isset($url_parts['query'])) {
+                parse_str($url_parts['query'], $params);
+            }
+
+            // Include the JobBoardManager
+            require_once plugin_dir_path(dirname(__FILE__, 2)) . 'jobboards/jobboard-manager.php';
+
+            $board_manager = new \Puntwork\JobBoards\JobBoardManager();
+
+            if (!$board_manager->isBoardConfigured($board_id)) {
+                throw new \Exception("Job board '$board_id' is not configured");
+            }
+
+            // Fetch jobs from the job board
+            $jobs = $board_manager->fetchAllJobs($params, [$board_id]);
+
+            foreach ($jobs as $job_data) {
+                // Convert job board data to standard job format
+                $item = self::convert_job_board_data_to_item($job_data, $board_id);
+
+                // Skip empty items
+                if (empty((array)$item)) {
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$handle job skipped: No fields collected";
+                    continue;
+                }
+
+                clean_item_fields($item);
+
+                // Language detection
+                $lang = self::detect_language($item);
+
+                $job_obj = json_decode(json_encode($item), true);
+                infer_item_details($item, $fallback_domain, $lang, $job_obj);
+
+                $batch[] = json_encode($job_obj, JSON_UNESCAPED_UNICODE) . "\n";
+                $feed_item_count++;
+
+                // Process in batches
+                if ($feed_item_count >= $batch_size) {
+                    $total_items += $feed_item_count;
+                    return $batch;
+                }
+            }
+
+            $total_items += $feed_item_count;
+            return $batch;
+
+        } catch (\Exception $e) {
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$handle job board processing error: " . $e->getMessage();
+            throw $e;
+        }
+    }
+
+    /**
+     * Convert job board data to standard job item format
+     *
+     * @param array $job_data Job data from board API
+     * @param string $board_id Job board identifier
+     * @return object Standardized job item
+     */
+    private static function convert_job_board_data_to_item(array $job_data, string $board_id): object {
+        $item = new \stdClass();
+
+        // Map common fields
+        $item->title = $job_data['title'] ?? '';
+        $item->description = $job_data['description'] ?? '';
+        $item->company = $job_data['company'] ?? '';
+        $item->location = $job_data['location'] ?? '';
+        $item->salary = $job_data['salary'] ?? '';
+        $item->jobtype = $job_data['job_type'] ?? 'fulltime';
+        $item->category = $job_data['category'] ?? '';
+        $item->url = $job_data['url'] ?? '';
+        $item->date = $job_data['date_posted'] ?? date('Y-m-d');
+        $item->requirements = $job_data['requirements'] ?? '';
+        $item->benefits = $job_data['benefits'] ?? '';
+
+        // Add source information
+        $item->source = $board_id;
+        $item->source_type = 'job_board';
+
+        // Add any additional fields from raw data
+        if (isset($job_data['raw_data']) && is_array($job_data['raw_data'])) {
+            foreach ($job_data['raw_data'] as $key => $value) {
+                if (!isset($item->$key)) {
+                    $item->$key = $value;
+                }
+            }
+        }
+
+        return $item;
     }
 
     /**
