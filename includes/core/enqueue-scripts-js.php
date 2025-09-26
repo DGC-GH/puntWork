@@ -404,11 +404,19 @@ function enqueue_job_import_scripts() {
             true
         );
 
+        wp_enqueue_script(
+            'job-import-realtime-js',
+            PUNTWORK_URL . 'assets/js/job-import-realtime.js',
+            ['jquery', 'puntwork-logger-js', 'job-import-ui-js'],
+            PUNTWORK_VERSION,
+            true
+        );
+
         // Enqueue the main JavaScript file
         wp_enqueue_script(
             'job-import-admin-js',
             PUNTWORK_URL . 'assets/js/job-import-admin.js',
-            ['jquery', 'job-import-ui-js', 'job-import-api-js', 'job-import-logic-js', 'job-import-events-js', 'job-import-scheduling-js', 'puntwork-logger-js'],
+            ['jquery', 'job-import-ui-js', 'job-import-api-js', 'job-import-logic-js', 'job-import-events-js', 'job-import-scheduling-js', 'job-import-realtime-js', 'puntwork-logger-js'],
             PUNTWORK_VERSION,
             true
         );

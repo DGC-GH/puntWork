@@ -140,6 +140,12 @@
                 if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
                     window.JobImportEvents.stopStatusPolling();
                 }
+                
+                // Disconnect from real-time updates on error
+                if (window.JobImportRealtime && JobImportRealtime.getConnectionStatus()) {
+                    JobImportRealtime.disconnect();
+                    PuntWorkJSLogger.info('Real-time updates disconnected - import error', 'LOGIC');
+                }
             }
         },
 
@@ -191,9 +197,10 @@
             JobImportUI.resetButtons();
             this.isImporting = false; // Reset importing flag on completion
             
-            // Stop status polling on completion
-            if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
-                window.JobImportEvents.stopStatusPolling();
+            // Disconnect from real-time updates on completion
+            if (window.JobImportRealtime && JobImportRealtime.getConnectionStatus()) {
+                JobImportRealtime.disconnect();
+                PuntWorkJSLogger.info('Real-time updates disconnected - import completed', 'LOGIC');
             }
         },
 
@@ -352,9 +359,34 @@
                 JobImportUI.appendLogs(['Starting batch import processing...']);
                 await JobImportAPI.clearImportCancel();
                 
-                // Start status polling for real-time UI updates during manual import
-                if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
-                    window.JobImportEvents.startStatusPolling();
+                // Connect to real-time updates for import progress
+                if (window.JobImportRealtime && JobImportRealtime.isSupported()) {
+                    // Get API key from localized data or try to get it from server
+                    let apiKey = jobImportData.api_key;
+                    if (!apiKey) {
+                        // Try to get API key from server
+                        try {
+                            const keyResponse = await JobImportAPI.getApiKey();
+                            if (keyResponse.success && keyResponse.api_key) {
+                                apiKey = keyResponse.api_key;
+                            }
+                        } catch (e) {
+                            console.warn('[PUNTWORK] Could not get API key for real-time updates:', e);
+                        }
+                    }
+                    
+                    if (apiKey) {
+                        const connected = JobImportRealtime.connect(apiKey);
+                        if (connected) {
+                            PuntWorkJSLogger.info('Real-time updates connected for import progress', 'LOGIC');
+                        } else {
+                            PuntWorkJSLogger.warn('Failed to connect to real-time updates', 'LOGIC');
+                        }
+                    } else {
+                        PuntWorkJSLogger.warn('No API key available for real-time updates', 'LOGIC');
+                    }
+                } else {
+                    PuntWorkJSLogger.warn('Real-time updates not supported in this browser', 'LOGIC');
                 }
                 
                 await this.handleImport(0);
@@ -421,6 +453,12 @@
                     if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
                         window.JobImportEvents.stopStatusPolling();
                     }
+                    
+                    // Disconnect from real-time updates on cancel
+                    if (window.JobImportRealtime && JobImportRealtime.getConnectionStatus()) {
+                        JobImportRealtime.disconnect();
+                        PuntWorkJSLogger.info('Real-time updates disconnected - import cancelled', 'LOGIC');
+                    }
                 }
             }).catch(function(xhr, status, error) {
                 PuntWorkJSLogger.error('Cancel AJAX error', 'LOGIC', error);
@@ -440,6 +478,12 @@
             // Stop status polling
             if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
                 window.JobImportEvents.stopStatusPolling();
+            }
+            
+            // Disconnect from real-time updates
+            if (window.JobImportRealtime && JobImportRealtime.getConnectionStatus()) {
+                JobImportRealtime.disconnect();
+                PuntWorkJSLogger.info('Real-time updates disconnected - import reset', 'LOGIC');
             }
 
             // Show loading state
