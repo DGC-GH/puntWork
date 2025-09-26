@@ -425,6 +425,12 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             if (JobImportEvents.completeDetectedCount >= JobImportEvents.maxCompletePolls) {
                                 // Do one final progress update to ensure completion is displayed
                                 JobImportUI.updateProgress(statusData);
+                                
+                                // Log the manual import run to history if this was a manual import
+                                if (window.JobImportLogic && window.JobImportLogic.isImporting && window.JobImportLogic.logManualImportRun) {
+                                    window.JobImportLogic.logManualImportRun(statusData);
+                                }
+                                
                                 JobImportEvents.stopStatusPolling();
                                 JobImportUI.resetButtons();
                                 $('#status-message').text('Import Complete');
