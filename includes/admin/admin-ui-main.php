@@ -58,10 +58,15 @@ function render_jobs_dashboard_ui() {
             <div id="db-optimization-status" style="background-color: #f9f9f9; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                     <span style="font-size: 16px; font-weight: 500;">Index Status</span>
-                    <span id="db-status-badge" style="font-size: 12px; padding: 4px 8px; border-radius: 4px; background-color: #ff3b30; color: white;">Checking...</span>
+                    <span id="db-status-badge" style="font-size: 12px; padding: 4px 8px; border-radius: 4px; background-color: #8e8e93; color: white;">
+                        <i class="fas fa-spinner fa-spin" style="margin-right: 4px;"></i>Loading...
+                    </span>
                 </div>
                 <div id="db-indexes-list" style="font-size: 14px; color: #8e8e93;">
-                    Loading database optimization status...
+                    <div style="display: flex; align-items: center;">
+                        <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>
+                        Loading database optimization status...
+                    </div>
                 </div>
             </div>
 
@@ -86,10 +91,15 @@ function render_jobs_dashboard_ui() {
             <div id="async-processing-status" style="background-color: #f9f9f9; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                     <span style="font-size: 16px; font-weight: 500;">Async Status</span>
-                    <span id="async-status-badge" style="font-size: 12px; padding: 4px 8px; border-radius: 4px; background-color: #34c759; color: white;">Available</span>
+                    <span id="async-status-badge" style="font-size: 12px; padding: 4px 8px; border-radius: 4px; background-color: #8e8e93; color: white;">
+                        <i class="fas fa-spinner fa-spin" style="margin-right: 4px;"></i>Loading...
+                    </span>
                 </div>
                 <div id="async-status-details" style="font-size: 14px; color: #8e8e93;">
-                    Loading async processing status...
+                    <div style="display: flex; align-items: center;">
+                        <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>
+                        Loading async processing status...
+                    </div>
                 </div>
             </div>
 
