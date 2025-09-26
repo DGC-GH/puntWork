@@ -13,3 +13,6 @@ cache/
 .env
 .env.local
 .env.*.local
+
+# WordPress development files
+wp-content/
