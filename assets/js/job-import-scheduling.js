@@ -597,9 +597,9 @@
         /**
          * Load run history
          */
-        loadRunHistory: function() {
+        loadRunHistory: function(buttonSelector) {
             var self = this;
-            var $button = $('#refresh-history');
+            var $button = $(buttonSelector || '#refresh-history');
             var $list = $('#run-history-list');
 
             // Show loading state
