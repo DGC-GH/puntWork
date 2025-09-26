@@ -376,7 +376,7 @@ class PerformanceMonitor
      * @param int $days Number of days to look back
      * @return array Performance statistics
      */
-    public static function get_statistics(string $operation = '', int $days = 30): array
+    public static function get_statistics(?string $operation = '', int $days = 30): array
     {
         global $wpdb;
 
@@ -485,7 +485,7 @@ function get_performance_snapshot(): array
  * @param int $days Number of days to look back
  * @return array Performance statistics
  */
-function get_performance_statistics(string $operation = '', int $days = 30): array
+function get_performance_statistics(?string $operation = '', int $days = 30): array
 {
-    return PerformanceMonitor::get_statistics($operation, $days);
+    return PerformanceMonitor::get_statistics($operation ?? '', $days);
 }
