@@ -297,13 +297,16 @@ function get_job_import_status_ajax() {
 
 add_action('wp_ajax_log_manual_import_run', __NAMESPACE__ . '\\log_manual_import_run_ajax');
 function log_manual_import_run_ajax() {
+    error_log('[PUNTWORK] log_manual_import_run_ajax called');
     PuntWorkLogger::logAjaxRequest('log_manual_import_run', $_POST);
 
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
+        error_log('[PUNTWORK] log_manual_import_run_ajax: Nonce verification failed');
         PuntWorkLogger::error('Nonce verification failed for log_manual_import_run', PuntWorkLogger::CONTEXT_AJAX);
         wp_send_json_error(['message' => 'Nonce verification failed']);
     }
     if (!current_user_can('manage_options')) {
+        error_log('[PUNTWORK] log_manual_import_run_ajax: Permission denied');
         PuntWorkLogger::error('Permission denied for log_manual_import_run', PuntWorkLogger::CONTEXT_AJAX);
         wp_send_json_error(['message' => 'Permission denied']);
     }
@@ -320,11 +323,16 @@ function log_manual_import_run_ajax() {
         'error_message' => sanitize_text_field($_POST['error_message'] ?? '')
     ];
 
+    error_log('[PUNTWORK] log_manual_import_run_ajax: Received details: ' . print_r($details, true));
+    error_log('[PUNTWORK] log_manual_import_run_ajax: trigger_type from POST: ' . ($_POST['trigger_type'] ?? 'NOT SET'));
+
     // Include the scheduling history functions
     require_once __DIR__ . '/../scheduling/scheduling-history.php';
 
     // Log the manual import run
     log_manual_import_run($details);
+
+    error_log('[PUNTWORK] log_manual_import_run_ajax: Successfully logged manual import run');
 
     PuntWorkLogger::info('Manual import run logged to history', PuntWorkLogger::CONTEXT_AJAX, [
         'success' => $details['success'],
