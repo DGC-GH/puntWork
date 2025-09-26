@@ -132,37 +132,88 @@ function handle_trigger_import($request) {
             update_option('puntwork_test_mode', true);
         }
 
-        // Trigger the import
-        $result = \Puntwork\run_scheduled_import(false, 'api');
+        // Initialize import status for immediate API response
+        $initial_status = [
+            'total' => 0, // Will be updated as import progresses
+            'processed' => 0,
+            'published' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'duplicates_drafted' => 0,
+            'time_elapsed' => 0,
+            'success' => false,
+            'error_message' => '',
+            'batch_size' => get_option('job_import_batch_size') ?: 100,
+            'inferred_languages' => 0,
+            'inferred_benefits' => 0,
+            'schema_generated' => 0,
+            'start_time' => microtime(true),
+            'end_time' => null,
+            'last_update' => time(),
+            'logs' => ['API import started - preparing feeds...'],
+            'trigger_type' => 'api',
+            'test_mode' => $test_mode
+        ];
+        update_option('job_import_status', $initial_status, false);
 
-        // Clear test mode
+        // Clear any previous cancellation before starting
+        delete_transient('import_cancel');
+
+        // Schedule the import to run asynchronously
+        if (function_exists('as_schedule_single_action')) {
+            // Use Action Scheduler if available
+            as_schedule_single_action(time(), 'puntwork_scheduled_import_async');
+        } elseif (function_exists('wp_schedule_single_event')) {
+            // Fallback: Use WordPress cron for near-immediate execution
+            wp_schedule_single_event(time() + 1, 'puntwork_scheduled_import_async');
+        } else {
+            // Final fallback: Run synchronously (not ideal but maintains functionality)
+            $result = \Puntwork\run_scheduled_import($test_mode, 'api');
+
+            // Clear test mode
+            if ($test_mode) {
+                delete_option('puntwork_test_mode');
+            }
+
+            if ($result['success']) {
+                PuntWorkLogger::info('Remote import trigger completed successfully (sync)', PuntWorkLogger::CONTEXT_API, [
+                    'processed' => $result['processed'] ?? 0,
+                    'total' => $result['total'] ?? 0
+                ]);
+
+                return new \WP_REST_Response([
+                    'success' => true,
+                    'message' => 'Import completed successfully',
+                    'data' => $result,
+                    'async' => false
+                ], 200);
+            } else {
+                $error_msg = $result['message'] ?? 'Unknown error occurred';
+                PuntWorkLogger::error('Remote import trigger failed (sync)', PuntWorkLogger::CONTEXT_API, [
+                    'error' => $error_msg
+                ]);
+
+                return new \WP_REST_Response([
+                    'success' => false,
+                    'message' => $error_msg,
+                    'data' => $result,
+                    'async' => false
+                ], 500);
+            }
+        }
+
+        // Clear test mode (will be set again by async function if needed)
         if ($test_mode) {
             delete_option('puntwork_test_mode');
         }
 
-        if ($result['success']) {
-            PuntWorkLogger::info('Remote import trigger completed successfully', PuntWorkLogger::CONTEXT_API, [
-                'processed' => $result['processed'] ?? 0,
-                'total' => $result['total'] ?? 0
-            ]);
+        PuntWorkLogger::info('Remote import trigger initiated asynchronously', PuntWorkLogger::CONTEXT_API);
 
-            return new \WP_REST_Response([
-                'success' => true,
-                'message' => 'Import triggered successfully',
-                'data' => $result
-            ], 200);
-        } else {
-            $error_msg = $result['message'] ?? 'Unknown error occurred';
-            PuntWorkLogger::error('Remote import trigger failed', PuntWorkLogger::CONTEXT_API, [
-                'error' => $error_msg
-            ]);
-
-            return new \WP_REST_Response([
-                'success' => false,
-                'message' => $error_msg,
-                'data' => $result
-            ], 500);
-        }
+        return new \WP_REST_Response([
+            'success' => true,
+            'message' => 'Import triggered successfully',
+            'async' => true
+        ], 200);
 
     } catch (\Exception $e) {
         PuntWorkLogger::error('Remote import trigger exception', PuntWorkLogger::CONTEXT_API, [

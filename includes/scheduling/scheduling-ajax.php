@@ -350,7 +350,12 @@ function run_scheduled_import_async() {
     error_log('[PUNTWORK] Cleared import_cancel transient again before import');
 
     try {
-        $result = run_scheduled_import();
+        // Get test mode and trigger type from status if set
+        $current_status = get_option('job_import_status', []);
+        $test_mode_flag = $current_status['test_mode'] ?? false;
+        $trigger_type_flag = $current_status['trigger_type'] ?? 'scheduled';
+
+        $result = run_scheduled_import($test_mode_flag, $trigger_type_flag);
         error_log('[PUNTWORK] Import result: ' . print_r($result, true));
 
         // Import runs to completion without pausing
