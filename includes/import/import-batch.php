@@ -161,11 +161,8 @@ if (!function_exists('import_all_jobs_from_json')) {
             ];
             update_option('job_import_status', $initial_status, false);
         } else {
-            // Update existing status to indicate import is starting
-            $existing_status = get_option('job_import_status', []);
-            $existing_status['logs'][] = 'Scheduled import started - processing batches...';
-            $existing_status['start_time'] = $start_time;
-            update_option('job_import_status', $existing_status, false);
+            // For preserved status, we'll update the existing status as we go
+            $initial_status = get_option('job_import_status', []);
         }
 
         // Store import start time for timeout checking
