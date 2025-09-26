@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'PUNTWORK_VERSION', '1.0.12' );
+define( 'PUNTWORK_VERSION', '1.0.13' );
 define( 'PUNTWORK_PATH', plugin_dir_path( __FILE__ ) );
 define( 'PUNTWORK_URL', plugin_dir_url( __FILE__ ) );
 define( 'PUNTWORK_LOGS', PUNTWORK_PATH . 'logs/import.log' );
@@ -132,6 +132,7 @@ function setup_job_import() {
         'import/import-setup.php',
         'import/process-batch-items.php',
         'import/process-xml-batch.php',
+        'import/feed-processor.php',
         'import/reset-import.php',
         
         // Utilities
