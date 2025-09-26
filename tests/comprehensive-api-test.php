@@ -13,8 +13,8 @@ class PuntWorkAPITestSuite {
     private $testResults = [];
 
     public function __construct($baseUrl = null, $apiKey = null) {
-        $this->baseUrl = $baseUrl ?: 'http://localhost/wp-json/puntwork/v1';
-        $this->apiKey = $apiKey ?: 'test_api_key';
+        $this->baseUrl = $baseUrl ?: 'https://belgiumjobs.work/wp-json/puntwork/v1';
+        $this->apiKey = $apiKey ?: 'etlBBlm0DdUftcafHbbkrof0EOnQSyZg';
         $this->wpRootUrl = preg_replace('/\/wp-json.*$/', '', $this->baseUrl);
     }
 
