@@ -105,9 +105,15 @@ function render_javascript_init() {
                     console.log('[PUNTWORK] Main history refresh clicked');
                     if (typeof JobImportScheduling !== 'undefined' && typeof JobImportScheduling.loadRunHistory === 'function') {
                         $(this).addClass('manual-refresh');
-                        JobImportScheduling.loadRunHistory();
+                        JobImportScheduling.loadRunHistory('#refresh-history-main');
                     }
                 });
+
+                // Load import history on page load
+                if (typeof JobImportScheduling !== 'undefined' && typeof JobImportScheduling.loadRunHistory === 'function') {
+                    console.log('[PUNTWORK] Loading import history on page load');
+                    JobImportScheduling.loadRunHistory('#refresh-history-main');
+                }
 
                 // Mark as initialized to prevent double initialization
                 window.jobImportInitialized = true;
