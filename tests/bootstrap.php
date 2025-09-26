@@ -3,6 +3,9 @@
  * Bootstrap for PHPUnit tests
  */
 
+// Define test mode constant
+define('PUNTWORK_TESTING', true);
+
 // Define WordPress constants if not already defined
 if (!defined('ABSPATH')) {
     define('ABSPATH', '/tmp/wordpress/');
