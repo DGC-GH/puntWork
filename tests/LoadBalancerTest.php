@@ -37,11 +37,11 @@ class LoadBalancerTest extends TestCase
         }
 
         // Test strategy update
-        $result = $load_balancer->update_strategy('least_loaded');
+        $result = $load_balancer->updateStrategy('least_loaded');
         $this->assertTrue($result);
 
         // Test invalid strategy
-        $result = $load_balancer->update_strategy('invalid_strategy');
+        $result = $load_balancer->updateStrategy('invalid_strategy');
         $this->assertFalse($result);
     }
 
@@ -72,7 +72,7 @@ class LoadBalancerTest extends TestCase
         foreach ($test_instances as $instance) {
             foreach ($job_types as $job_type) {
                 $reflection = new \ReflectionClass($load_balancer);
-                $method = $reflection->getMethod('instance_can_handle_job');
+                $method = $reflection->getMethod('instanceCanHandleJob');
                 $method->setAccessible(true);
 
                 $can_handle = $method->invoke($load_balancer, $instance, $job_type);
@@ -95,7 +95,7 @@ class LoadBalancerTest extends TestCase
         ];
 
         $reflection = new \ReflectionClass($load_balancer);
-        $method = $reflection->getMethod('round_robin_selection');
+        $method = $reflection->getMethod('roundRobinSelection');
         $method->setAccessible(true);
 
         // Test round robin distribution
@@ -136,7 +136,7 @@ class LoadBalancerTest extends TestCase
         ];
 
         $reflection = new \ReflectionClass($load_balancer);
-        $method = $reflection->getMethod('weighted_selection');
+        $method = $reflection->getMethod('weightedSelection');
         $method->setAccessible(true);
 
         // Test weighted selection
@@ -172,7 +172,7 @@ class LoadBalancerTest extends TestCase
         ];
 
         $reflection = new \ReflectionClass($load_balancer);
-        $method = $reflection->getMethod('ip_hash_selection');
+        $method = $reflection->getMethod('ipHashSelection');
         $method->setAccessible(true);
 
         // Test IP hash consistency
@@ -192,7 +192,7 @@ class LoadBalancerTest extends TestCase
 
         // Statistics should be available
         $reflection = new \ReflectionClass($load_balancer);
-        $method = $reflection->getMethod('get_load_balancer_stats');
+        $method = $reflection->getMethod('getLoadBalancerStats');
         $method->setAccessible(true);
 
         $stats = $method->invoke($load_balancer);
@@ -212,7 +212,7 @@ class LoadBalancerTest extends TestCase
         $load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
         $reflection = new \ReflectionClass($load_balancer);
-        $method = $reflection->getMethod('estimate_processing_time');
+        $method = $reflection->getMethod('estimateProcessingTime');
         $method->setAccessible(true);
 
         $instance = [
@@ -239,17 +239,17 @@ class LoadBalancerTest extends TestCase
         $load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
         // In test environment, hooks are not initialized
-        if (!$load_balancer->is_wordpress_environment()) {
+        if (!$load_balancer->isWordpressEnvironment()) {
             $this->markTestSkipped('Skipping hook tests in test environment');
             return;
         }
 
         // Admin menu should be registered
-        $this->assertTrue(has_action('admin_menu', [$load_balancer, 'add_load_balancer_menu']));
+        $this->assertTrue(has_action('admin_menu', [$load_balancer, 'addLoadBalancerMenu']));
 
         // AJAX endpoints should be registered
-        $this->assertTrue(has_action('wp_ajax_puntwork_lb_health_check', [$load_balancer, 'ajax_health_check_all']));
-        $this->assertTrue(has_action('wp_ajax_puntwork_lb_stats', [$load_balancer, 'ajax_get_stats']));
+        $this->assertTrue(has_action('wp_ajax_puntwork_lb_health_check', [$load_balancer, 'ajaxHealthCheckAll']));
+        $this->assertTrue(has_action('wp_ajax_puntwork_lb_stats', [$load_balancer, 'ajaxGetStats']));
     }
 
     /**
@@ -260,13 +260,13 @@ class LoadBalancerTest extends TestCase
         $load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
         // In test environment, hooks are not initialized
-        if (!$load_balancer->is_wordpress_environment()) {
+        if (!$load_balancer->isWordpressEnvironment()) {
             $this->markTestSkipped('Skipping hook tests in test environment');
             return;
         }
 
         // Should have initialized hooks
-        $this->assertTrue(has_action('init', [$load_balancer, 'process_load_balanced_jobs']));
+        $this->assertTrue(has_action('init', [$load_balancer, 'processLoadBalancedJobs']));
 
         // Should have default strategy
         $reflection = new \ReflectionClass($load_balancer);
@@ -290,7 +290,7 @@ class LoadBalancerTest extends TestCase
 
         try {
             $reflection = new \ReflectionClass($load_balancer);
-            $method = $reflection->getMethod('process_load_balanced_jobs');
+            $method = $reflection->getMethod('processLoadBalancedJobs');
             $method->setAccessible(true);
             $method->invoke($load_balancer);
         } catch (\Exception $e) {
