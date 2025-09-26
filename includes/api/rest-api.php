@@ -176,10 +176,10 @@ function handle_trigger_import($request) {
 
         // Schedule the import to run asynchronously
         error_log('[PUNTWORK] API: Checking async conditions - as_schedule_single_action: ' . (function_exists('as_schedule_single_action') ? 'true' : 'false') . ', wp_schedule_single_event: ' . (function_exists('wp_schedule_single_event') ? 'true' : 'false'));
-        if (false && function_exists('as_schedule_single_action')) { // Temporarily force sync for testing
+        if (function_exists('as_schedule_single_action') && false) { // Temporarily force sync for testing
             // Use Action Scheduler if available
             as_schedule_single_action(time(), 'puntwork_scheduled_import_async');
-        } elseif (false && function_exists('wp_schedule_single_event')) { // Temporarily force sync for testing
+        } elseif (function_exists('wp_schedule_single_event') && false) { // Temporarily force sync for testing
             // Fallback: Use WordPress cron for near-immediate execution
             wp_schedule_single_event(time() + 1, 'puntwork_scheduled_import_async');
         } else {
