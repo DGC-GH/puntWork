@@ -78,7 +78,7 @@
 
 ### 4.2 Integration Capabilities
 - [x] Add support for additional job boards
-- [ ] Implement social media posting
+- [ ] Implement social media posting (X/Twitter posting & ads integration = high prio)
 - [ ] Add CRM system integrations
 - [ ] Create mobile app companion
 

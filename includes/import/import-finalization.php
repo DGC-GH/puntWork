@@ -106,6 +106,11 @@ function finalize_batch_import($result) {
             $result['processed'],
             $result['total']
         ));
+
+        // Post new jobs to social media if enabled
+        if (get_option('puntwork_social_auto_post_jobs', false)) {
+            post_new_jobs_to_social_media($result);
+        }
     }
 
     return $result;
@@ -185,4 +190,114 @@ function calculate_estimated_time_remaining($status) {
     // ]);
 
     return $estimated_seconds;
+}
+
+/**
+ * Post new jobs to configured social media platforms
+ *
+ * @param array $import_result The import result data
+ * @return void
+ */
+function post_new_jobs_to_social_media($import_result) {
+    if (!class_exists('\\Puntwork\\SocialMedia\\SocialMediaManager')) {
+        return;
+    }
+
+    try {
+        $social_manager = new \Puntwork\SocialMedia\SocialMediaManager();
+        $default_platforms = get_option('puntwork_social_default_platforms', []);
+
+        if (empty($default_platforms)) {
+            return;
+        }
+
+        // Get recently published jobs (from this import)
+        $recent_jobs = get_recent_imported_jobs($import_result);
+
+        if (empty($recent_jobs)) {
+            return;
+        }
+
+        $posted_count = 0;
+        $max_posts = apply_filters('puntwork_social_max_auto_posts', 5); // Limit to prevent spam
+
+        foreach ($recent_jobs as $job) {
+            if ($posted_count >= $max_posts) {
+                break;
+            }
+
+            $job_data = [
+                'title' => get_the_title($job->ID),
+                'company' => get_post_meta($job->ID, 'company', true),
+                'location' => get_post_meta($job->ID, 'location', true),
+                'url' => get_permalink($job->ID),
+                'company_logo' => get_post_meta($job->ID, 'company_logo', true),
+                'description' => get_post_meta($job->ID, 'description', true)
+            ];
+
+            $results = $social_manager->postJob($job_data, $default_platforms);
+
+            $success_count = 0;
+            foreach ($results as $platform => $result) {
+                if ($result['success']) {
+                    $success_count++;
+                }
+            }
+
+            if ($success_count > 0) {
+                $posted_count++;
+            }
+
+            \Puntwork\PuntWorkLogger::info('Auto-posted job to social media', \Puntwork\PuntWorkLogger::CONTEXT_SOCIAL, [
+                'job_id' => $job->ID,
+                'job_title' => $job_data['title'],
+                'platforms' => $default_platforms,
+                'success_count' => $success_count
+            ]);
+        }
+
+        if ($posted_count > 0) {
+            \Puntwork\PuntWorkLogger::info('Completed auto-posting jobs to social media', \Puntwork\PuntWorkLogger::CONTEXT_SOCIAL, [
+                'total_jobs_posted' => $posted_count,
+                'platforms' => $default_platforms
+            ]);
+        }
+
+    } catch (\Exception $e) {
+        \Puntwork\PuntWorkLogger::error('Failed to auto-post jobs to social media', \Puntwork\PuntWorkLogger::CONTEXT_SOCIAL, [
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+
+/**
+ * Get recently imported jobs from the current import session
+ *
+ * @param array $import_result The import result data
+ * @return array Array of job post objects
+ */
+function get_recent_imported_jobs($import_result) {
+    $jobs = [];
+
+    // Get jobs imported in the last hour (to be safe)
+    $args = [
+        'post_type' => 'job-feed',
+        'posts_per_page' => 20,
+        'post_status' => 'publish',
+        'orderby' => 'date',
+        'order' => 'DESC',
+        'date_query' => [
+            [
+                'after' => '1 hour ago'
+            ]
+        ]
+    ];
+
+    $query = new \WP_Query($args);
+
+    if ($query->have_posts()) {
+        $jobs = $query->posts;
+    }
+
+    return $jobs;
 }

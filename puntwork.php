@@ -36,6 +36,12 @@ function job_import_activate() {
     if ( ! wp_next_scheduled( 'job_import_cron' ) ) {
         wp_schedule_event( current_time('timestamp'), 'daily', 'job_import_cron' );
     }
+
+    // Schedule social media cron
+    if ( ! wp_next_scheduled( 'puntwork_social_cron' ) ) {
+        wp_schedule_event( current_time('timestamp'), 'puntwork_hourly', 'puntwork_social_cron' );
+    }
+
     // Create logs dir if needed
     $logs_dir = dirname( PUNTWORK_LOGS );
     if ( ! file_exists( $logs_dir ) ) {
@@ -59,6 +65,7 @@ function job_import_activate() {
 register_deactivation_hook( __FILE__, __NAMESPACE__ . '\\job_import_deactivate' );
 function job_import_deactivate() {
     wp_clear_scheduled_hook( 'job_import_cron' );
+    wp_clear_scheduled_hook( 'puntwork_social_cron' );
 }
 
 // Register custom cron schedules
@@ -95,6 +102,15 @@ function register_custom_cron_schedules($schedules) {
     }
 
     return $schedules;
+}
+
+// Add social media cron handler
+add_action('puntwork_social_cron', __NAMESPACE__ . '\\process_social_media_posts');
+function process_social_media_posts() {
+    if (class_exists(__NAMESPACE__ . '\\SocialMedia\\SocialMediaManager')) {
+        $social_manager = new \Puntwork\SocialMedia\SocialMediaManager();
+        $social_manager->processScheduledPosts();
+    }
 }
 
 // Init setup
@@ -168,6 +184,19 @@ function setup_job_import() {
         'utilities/horizontal-scaling.php',
         'utilities/load-balancer.php',
 
+        // Social Media (classes are autoloaded)
+        'socialmedia/social-media-platform.php',
+        'socialmedia/twitter-platform.php',
+        'socialmedia/twitter-ads-manager.php',
+        'socialmedia/facebook-platform.php',
+        'socialmedia/facebook-ads-manager.php',
+        'socialmedia/tiktok-platform.php',
+        'socialmedia/tiktok-ads-manager.php',
+        'socialmedia/social-media-manager.php',
+        'admin/social-media-admin.php',
+        'admin/social-media-test.php',
+        'database/social-media-db.php',
+
         // Mappings (functions)
         'mappings/mappings-constants.php',
         'mappings/mappings-fields.php',
@@ -211,6 +240,11 @@ function setup_job_import() {
     // Initialize import analytics
     if (class_exists(__NAMESPACE__ . '\\ImportAnalytics')) {
         call_user_func([__NAMESPACE__ . '\\ImportAnalytics', 'init']);
+    }
+
+    // Initialize social media functionality
+    if (class_exists(__NAMESPACE__ . '\\Puntwork_Social_Media_Admin')) {
+        // Admin interface is initialized in the class constructor
     }
 }
 
