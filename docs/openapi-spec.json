@@ -1,0 +1,501 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "puntWork Job Import Plugin API",
+    "description": "Comprehensive API documentation for the puntWork WordPress plugin that imports jobs from XML, JSON, and CSV feeds with advanced analytics, monitoring, and deduplication capabilities.",
+    "version": "1.0.15",
+    "contact": {
+      "name": "puntWork Support",
+      "url": "https://github.com/DGC-GH/puntWork"
+    },
+    "license": {
+      "name": "GPL-2.0-or-later",
+      "url": "https://www.gnu.org/licenses/gpl-2.0.html"
+    }
+  },
+  "servers": [
+    {
+      "url": "{protocol}://{domain}/wp-json/puntwork/v1",
+      "description": "WordPress REST API endpoint",
+      "variables": {
+        "protocol": {
+          "default": "https",
+          "description": "HTTP protocol"
+        },
+        "domain": {
+          "default": "example.com",
+          "description": "WordPress site domain"
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "wpRestApiAuth": []
+    }
+  ],
+  "paths": {
+    "/import/trigger": {
+      "post": {
+        "summary": "Trigger job import process",
+        "description": "Manually trigger the job import process. This will start importing jobs from all configured feeds.",
+        "tags": ["Import"],
+        "security": [
+          {
+            "wpRestApiAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "feed_key": {
+                    "type": "string",
+                    "description": "Optional: Specific feed key to import from",
+                    "example": "indeed-jobs"
+                  },
+                  "force": {
+                    "type": "boolean",
+                    "description": "Force import even if one is already running",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Import triggered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - import already running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/import/status": {
+      "get": {
+        "summary": "Get import status",
+        "description": "Retrieve the current status of the import process including progress, statistics, and any errors.",
+        "tags": ["Import"],
+        "responses": {
+          "200": {
+            "description": "Import status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/feeds": {
+      "get": {
+        "summary": "List configured feeds",
+        "description": "Get a list of all configured job feeds with their URLs and settings.",
+        "tags": ["Feeds"],
+        "security": [
+          {
+            "wpRestApiAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Feeds retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "feeds": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "Object with feed keys as properties and URLs as values",
+                      "example": {
+                        "indeed-jobs": "https://api.indeed.com/rss/jobs?q=developer",
+                        "monster-jobs": "https://www.monster.com/rss/jobs.xml"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analytics/summary": {
+      "get": {
+        "summary": "Get analytics summary",
+        "description": "Retrieve import analytics summary for a specified time period.",
+        "tags": ["Analytics"],
+        "security": [
+          {
+            "wpRestApiAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "description": "Time period for analytics",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["7days", "30days", "90days"],
+              "default": "30days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Analytics summary retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analytics/export": {
+      "get": {
+        "summary": "Export analytics data",
+        "description": "Export detailed analytics data as CSV for the specified time period.",
+        "tags": ["Analytics"],
+        "security": [
+          {
+            "wpRestApiAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "description": "Time period for export",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["7days", "30days", "90days"],
+              "default": "30days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV export generated successfully",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "description": "CSV formatted analytics data"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/feeds": {
+      "get": {
+        "summary": "Get feed health status",
+        "description": "Retrieve the health status of all configured feeds including response times, error rates, and availability.",
+        "tags": ["Health"],
+        "security": [
+          {
+            "wpRestApiAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Feed health status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedHealth"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "wpRestApiAuth": {
+        "type": "http",
+        "scheme": "basic",
+        "description": "WordPress REST API authentication using Application Passwords or basic auth"
+      }
+    },
+    "schemas": {
+      "ImportResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the import was triggered successfully"
+          },
+          "message": {
+            "type": "string",
+            "description": "Response message"
+          },
+          "import_id": {
+            "type": "string",
+            "description": "Unique import identifier"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the import was triggered"
+          }
+        }
+      },
+      "ImportStatus": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["idle", "running", "completed", "error"],
+            "description": "Current import status"
+          },
+          "progress": {
+            "type": "object",
+            "properties": {
+              "current": {
+                "type": "integer",
+                "description": "Current item being processed"
+              },
+              "total": {
+                "type": "integer",
+                "description": "Total items to process"
+              },
+              "percentage": {
+                "type": "number",
+                "description": "Progress percentage (0-100)"
+              }
+            }
+          },
+          "statistics": {
+            "type": "object",
+            "properties": {
+              "published": {
+                "type": "integer",
+                "description": "Number of jobs published"
+              },
+              "updated": {
+                "type": "integer",
+                "description": "Number of jobs updated"
+              },
+              "skipped": {
+                "type": "integer",
+                "description": "Number of jobs skipped"
+              },
+              "duplicates": {
+                "type": "integer",
+                "description": "Number of duplicates found"
+              }
+            }
+          },
+          "current_feed": {
+            "type": "string",
+            "description": "Currently processing feed key"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the import started"
+          },
+          "estimated_completion": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Estimated completion time"
+          }
+        }
+      },
+      "AnalyticsSummary": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "description": "Time period for the analytics"
+          },
+          "overview": {
+            "type": "object",
+            "properties": {
+              "total_imports": {
+                "type": "integer",
+                "description": "Total number of imports"
+              },
+              "total_processed": {
+                "type": "integer",
+                "description": "Total jobs processed"
+              },
+              "avg_success_rate": {
+                "type": "number",
+                "description": "Average success rate percentage"
+              },
+              "avg_duration": {
+                "type": "number",
+                "description": "Average import duration in seconds"
+              }
+            }
+          },
+          "performance": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "trigger_type": {
+                  "type": "string",
+                  "description": "Type of import trigger (manual, scheduled, api)"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of imports of this type"
+                },
+                "avg_duration": {
+                  "type": "number",
+                  "description": "Average duration for this type"
+                },
+                "avg_success_rate": {
+                  "type": "number",
+                  "description": "Average success rate for this type"
+                }
+              }
+            }
+          },
+          "feed_stats": {
+            "type": "object",
+            "properties": {
+              "avg_feeds_processed": {
+                "type": "number",
+                "description": "Average feeds processed per import"
+              },
+              "avg_response_time": {
+                "type": "number",
+                "description": "Average feed response time in seconds"
+              }
+            }
+          }
+        }
+      },
+      "FeedHealth": {
+        "type": "object",
+        "properties": {
+          "last_check": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When health check was last performed"
+          },
+          "feeds": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": ["healthy", "warning", "error", "unknown"],
+                  "description": "Overall health status"
+                },
+                "response_time": {
+                  "type": "number",
+                  "description": "Average response time in seconds"
+                },
+                "last_successful": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Last successful check"
+                },
+                "error_count": {
+                  "type": "integer",
+                  "description": "Number of consecutive errors"
+                },
+                "last_error": {
+                  "type": "string",
+                  "description": "Last error message"
+                },
+                "items_found": {
+                  "type": "integer",
+                  "description": "Number of items found in last check"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Error code"
+          },
+          "message": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "data": {
+            "type": "object",
+            "description": "Additional error data"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Import",
+      "description": "Job import operations and status"
+    },
+    {
+      "name": "Feeds",
+      "description": "Feed configuration and management"
+    },
+    {
+      "name": "Analytics",
+      "description": "Import analytics and reporting"
+    },
+    {
+      "name": "Health",
+      "description": "Feed health monitoring"
+    }
+  ]
+}
