@@ -565,4 +565,7 @@
         }
     };
 
+    // Expose to global scope
+    window.JobImportLogic = JobImportLogic;
+
 })(jQuery, window, document);
