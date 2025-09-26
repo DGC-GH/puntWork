@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Bootstrap for PHPUnit tests
  */
@@ -46,11 +47,15 @@ if (file_exists('/tmp/wordpress-tests-lib/includes/functions.php')) {
 
 // Mock WordPress functions if not in full WP environment
 if (!function_exists('wp_die')) {
-    function wp_die() { die(); }
+    function wp_die()
+    {
+        die();
+    }
 }
 
 if (!function_exists('plugin_dir_path')) {
-    function plugin_dir_path($file) {
+    function plugin_dir_path($file)
+    {
         // For testing, return the project root + includes/
         // Assuming $file is something like includes/utilities/import-analytics.php
         // We want to return the path to the plugin root
@@ -60,25 +65,36 @@ if (!function_exists('plugin_dir_path')) {
 }
 
 if (!function_exists('plugin_dir_url')) {
-    function plugin_dir_url($file) {
+    function plugin_dir_url($file)
+    {
         return 'http://example.com/wp-content/plugins/' . basename(dirname($file)) . '/';
     }
 }
 
 if (!function_exists('wp_next_scheduled')) {
-    function wp_next_scheduled($hook) { return false; }
+    function wp_next_scheduled($hook)
+    {
+        return false;
+    }
 }
 
 if (!function_exists('wp_schedule_event')) {
-    function wp_schedule_event($timestamp, $recurrence, $hook) { return true; }
+    function wp_schedule_event($timestamp, $recurrence, $hook)
+    {
+        return true;
+    }
 }
 
 if (!function_exists('wp_clear_scheduled_hook')) {
-    function wp_clear_scheduled_hook($hook) { return true; }
+    function wp_clear_scheduled_hook($hook)
+    {
+        return true;
+    }
 }
 
 if (!function_exists('wp_mkdir_p')) {
-    function wp_mkdir_p($dir) {
+    function wp_mkdir_p($dir)
+    {
         if (!is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
@@ -87,53 +103,87 @@ if (!function_exists('wp_mkdir_p')) {
 }
 
 if (!function_exists('flush_rewrite_rules')) {
-    function flush_rewrite_rules() { return true; }
+    function flush_rewrite_rules()
+    {
+        return true;
+    }
 }
 
 if (!function_exists('wp_cache_flush')) {
-    function wp_cache_flush() { return true; }
+    function wp_cache_flush()
+    {
+        return true;
+    }
 }
 
 if (!function_exists('current_time')) {
-    function current_time($type = 'timestamp') {
+    function current_time($type = 'timestamp')
+    {
         return time();
     }
 }
 
 if (!function_exists('register_activation_hook')) {
-    function register_activation_hook($file, $function) { return true; }
+    function register_activation_hook($file, $function)
+    {
+        return true;
+    }
 }
 
 if (!function_exists('register_deactivation_hook')) {
-    function register_deactivation_hook($file, $function) { return true; }
+    function register_deactivation_hook($file, $function)
+    {
+        return true;
+    }
 }
 
 if (!function_exists('register_uninstall_hook')) {
-    function register_uninstall_hook($file, $function) { return true; }
+    function register_uninstall_hook($file, $function)
+    {
+        return true;
+    }
 }
 
 if (!function_exists('add_filter')) {
-    function add_filter($tag, $function_to_add, $priority = 10, $accepted_args = 1) { return true; }
+    function add_filter($tag, $function_to_add, $priority = 10, $accepted_args = 1)
+    {
+        return true;
+    }
 }
 
 if (!function_exists('add_action')) {
-    function add_action($tag, $function_to_add, $priority = 10, $accepted_args = 1) { return true; }
+    function add_action($tag, $function_to_add, $priority = 10, $accepted_args = 1)
+    {
+        return true;
+    }
 }
 
 if (!function_exists('add_shortcode')) {
-    function add_shortcode($tag, $callback) { return true; }
+    function add_shortcode($tag, $callback)
+    {
+        return true;
+    }
 }
 
 if (!function_exists('wp_enqueue_script')) {
-    function wp_enqueue_script($handle, $src = '', $deps = array(), $ver = false, $in_footer = false) { return true; }
+    function wp_enqueue_script($handle, $src = '', $deps = array(), $ver = false, $in_footer = false)
+    {
+        return true;
+    }
 }
 
 if (!function_exists('wp_enqueue_style')) {
-    function wp_enqueue_style($handle, $src = '', $deps = array(), $ver = false, $media = 'all') { return true; }
+    function wp_enqueue_style($handle, $src = '', $deps = array(), $ver = false, $media = 'all')
+    {
+        return true;
+    }
 }
 
 if (!function_exists('wp_localize_script')) {
-    function wp_localize_script($handle, $object_name, $l10n) { return true; }
+    function wp_localize_script($handle, $object_name, $l10n)
+    {
+        return true;
+    }
 }
 
 // Global storage for mocked WordPress options
@@ -149,14 +199,16 @@ global $mock_transients;
 $mock_transients = [];
 
 if (!function_exists('get_option')) {
-    function get_option($key, $default = null) {
+    function get_option($key, $default = null)
+    {
         global $mock_wp_options;
         return $mock_wp_options[$key] ?? $default;
     }
 }
 
 if (!function_exists('update_option')) {
-    function update_option($key, $value) {
+    function update_option($key, $value)
+    {
         global $mock_wp_options;
         $mock_wp_options[$key] = $value;
         return true;
@@ -164,7 +216,8 @@ if (!function_exists('update_option')) {
 }
 
 if (!function_exists('delete_option')) {
-    function delete_option($key) {
+    function delete_option($key)
+    {
         global $mock_wp_options;
         unset($mock_wp_options[$key]);
         return true;
@@ -172,14 +225,16 @@ if (!function_exists('delete_option')) {
 }
 
 if (!function_exists('get_transient')) {
-    function get_transient($key) {
+    function get_transient($key)
+    {
         global $mock_transients;
         return $mock_transients[$key] ?? false;
     }
 }
 
 if (!function_exists('set_transient')) {
-    function set_transient($key, $value, $expiration = 0) {
+    function set_transient($key, $value, $expiration = 0)
+    {
         global $mock_transients;
         $mock_transients[$key] = $value;
         return true;
@@ -187,7 +242,8 @@ if (!function_exists('set_transient')) {
 }
 
 if (!function_exists('delete_transient')) {
-    function delete_transient($key) {
+    function delete_transient($key)
+    {
         global $mock_transients;
         unset($mock_transients[$key]);
         return true;
@@ -195,63 +251,87 @@ if (!function_exists('delete_transient')) {
 }
 
 if (!function_exists('gethostname')) {
-    function gethostname() { return 'test-server'; }
+    function gethostname()
+    {
+        return 'test-server';
+    }
 }
 
 if (!function_exists('getmypid')) {
-    function getmypid() { return 12345; }
+    function getmypid()
+    {
+        return 12345;
+    }
 }
 
 if (!function_exists('shell_exec')) {
-    function shell_exec($cmd) { return null; }
+    function shell_exec($cmd)
+    {
+        return null;
+    }
 }
 
 if (!function_exists('disk_free_space')) {
-    function disk_free_space($directory) { return 1000000000; } // 1GB
+    function disk_free_space($directory)
+    {
+        return 1000000000;
+    } // 1GB
 }
 
 if (!function_exists('disk_total_space')) {
-    function disk_total_space($directory) { return 2000000000; } // 2GB
+    function disk_total_space($directory)
+    {
+        return 2000000000;
+    } // 2GB
 }
 
 // Mock wpdb class for database operations
 if (!class_exists('wpdb')) {
-    class wpdb {
+    class wpdb
+    {
         public $prefix = 'wp_';
-        
-        public function get_results($query, $output = ARRAY_A) {
+
+        public function get_results($query, $output = ARRAY_A)
+        {
             return [];
         }
-        
-        public function get_row($query, $output = ARRAY_A, $y = 0) {
+
+        public function get_row($query, $output = ARRAY_A, $y = 0)
+        {
             return null;
         }
-        
-        public function query($query, $output = ARRAY_A) {
+
+        public function query($query, $output = ARRAY_A)
+        {
             return 0;
         }
-        
-        public function prepare($query, ...$args) {
+
+        public function prepare($query, ...$args)
+        {
             return $query; // Simplified for testing
         }
-        
-        public function replace($table, $data, $format = null) {
+
+        public function replace($table, $data, $format = null)
+        {
             return 1;
         }
-        
-        public function update($table, $data, $where, $format = null, $where_format = null) {
+
+        public function update($table, $data, $where, $format = null, $where_format = null)
+        {
             return 1;
         }
-        
-        public function get_charset_collate() {
+
+        public function get_charset_collate()
+        {
             return 'utf8mb4_unicode_ci';
         }
-        
-        public function check_connection() {
+
+        public function check_connection()
+        {
             return true;
         }
     }
-    
+
     // Create global wpdb instance
     $GLOBALS['wpdb'] = new wpdb();
 }
@@ -264,7 +344,7 @@ $includes = array(
     // Core functionality - testing
     'core/core-structure-logic.php',
     'core/enqueue-scripts-js.php',
-    
+
     // Admin interface - testing
     'admin/admin-menu.php',
     'admin/admin-page-html.php',
@@ -275,18 +355,18 @@ $includes = array(
     'admin/admin-ui-feed-health.php',
     'admin/admin-ui-analytics.php',
     'admin/onboarding-wizard.php',
-    
+
     // API handlers - testing one by one
     'api/ajax-feed-processing.php',
     'api/rest-api.php',
-    
+
     // Batch processing - testing individual files
     'batch/batch-core.php',
     'batch/batch-data.php',
     'batch/batch-processing.php',
     'batch/batch-size-management.php',
     'batch/batch-utils.php',
-    
+
     // Import functionality - commented out
     /*
     'import/combine-jsonl.php',
@@ -298,7 +378,7 @@ $includes = array(
     'import/process-xml-batch.php',
     'import/reset-import.php',
     */
-    
+
     // Utilities - only load essential ones
     'utilities/puntwork-logger.php',
     'utilities/handle-duplicates.php',
@@ -307,12 +387,12 @@ $includes = array(
     'utilities/load-balancer.php',
     'utilities/security-utils.php',
     'utilities/async-processing.php',
-    
+
     // Queue management - commented out
     /*
     'queue/queue-manager.php',
     */
-    
+
     // Mappings
     'mappings/mappings-constants.php',
     'mappings/mappings-fields.php',
@@ -320,7 +400,7 @@ $includes = array(
     'mappings/mappings-icons.php',
     'mappings/mappings-salary.php',
     'mappings/mappings-schema.php',
-    
+
     // Scheduling - commented out
     /*
     'scheduling/scheduling-ajax.php',
@@ -330,23 +410,25 @@ $includes = array(
     'scheduling/test-scheduling.php',
     */
 );
-foreach ( $includes as $include ) {
+foreach ($includes as $include) {
     $file = dirname(__DIR__) . '/includes/' . $include;
-    if ( file_exists( $file ) ) {
+    if (file_exists($file)) {
         require_once $file;
     }
 }
 
 // Additional mock functions for testing
 if (!function_exists('wp_kses')) {
-    function wp_kses($string, $allowed_html = []) {
+    function wp_kses($string, $allowed_html = [])
+    {
         // Simple mock - just return the string for testing
         return $string;
     }
 }
 
 if (!function_exists('wp_kses_allowed_html')) {
-    function wp_kses_allowed_html($context = 'post') {
+    function wp_kses_allowed_html($context = 'post')
+    {
         // Return basic allowed HTML tags for testing
         return [
             'a' => ['href' => [], 'title' => []],
@@ -359,18 +441,20 @@ if (!function_exists('wp_kses_allowed_html')) {
 }
 
 if (!function_exists('wp_kses_post')) {
-    function wp_kses_post($content) {
+    function wp_kses_post($content)
+    {
         return wp_kses($content, wp_kses_allowed_html('post'));
     }
 }
 
 if (!function_exists('wp_insert_post')) {
-    function wp_insert_post($postarr, $wp_error = false) {
+    function wp_insert_post($postarr, $wp_error = false)
+    {
         global $mock_wp_posts;
         // Mock implementation - return a fake post ID
         static $post_id = 1000;
         $id = $post_id++;
-        
+
         $post = (object) [
             'ID' => $id,
             'post_title' => $postarr['post_title'] ?? 'Mock Job',
@@ -382,33 +466,37 @@ if (!function_exists('wp_insert_post')) {
             'post_excerpt' => $postarr['post_excerpt'] ?? '',
             'guid' => 'mock-guid-' . $id
         ];
-        
+
         $mock_wp_posts[$id] = $post;
         return $id;
     }
 }
 
 if (!function_exists('get_post')) {
-    function get_post($post_id) {
+    function get_post($post_id)
+    {
         global $mock_wp_posts;
         return $mock_wp_posts[$post_id] ?? null;
     }
 }
 
 if (!function_exists('wp_delete_post')) {
-    function wp_delete_post($post_id, $force = false) {
+    function wp_delete_post($post_id, $force = false)
+    {
         return true;
     }
 }
 
 if (!function_exists('post_type_exists')) {
-    function post_type_exists($post_type) {
+    function post_type_exists($post_type)
+    {
         return in_array($post_type, ['job', 'post', 'page']);
     }
 }
 
 if (!function_exists('get_posts')) {
-    function get_posts($args = []) {
+    function get_posts($args = [])
+    {
         // Return mock posts
         return [
             (object) [
@@ -421,7 +509,8 @@ if (!function_exists('get_posts')) {
 }
 
 if (!function_exists('wp_update_post')) {
-    function wp_update_post($postarr) {
+    function wp_update_post($postarr)
+    {
         global $mock_wp_posts;
         $id = $postarr['ID'];
         if (isset($mock_wp_posts[$id])) {
@@ -436,7 +525,8 @@ if (!function_exists('wp_update_post')) {
 }
 
 if (!function_exists('wp_generate_password')) {
-    function wp_generate_password($length = 12, $special_chars = true, $extra_special_chars = false) {
+    function wp_generate_password($length = 12, $special_chars = true, $extra_special_chars = false)
+    {
         $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         if ($special_chars) {
             $chars .= '!@#$%^&*()';
@@ -453,7 +543,8 @@ if (!function_exists('wp_generate_password')) {
 }
 
 if (!function_exists('get_post_meta')) {
-    function get_post_meta($post_id, $key, $single = false) {
+    function get_post_meta($post_id, $key, $single = false)
+    {
         // Mock post meta
         $mock_meta = [
             'guid' => 'mock-guid-' . $post_id,
@@ -466,101 +557,121 @@ if (!function_exists('get_post_meta')) {
 }
 
 if (!function_exists('is_admin')) {
-    function is_admin() {
+    function is_admin()
+    {
         return false; // Not in admin for API tests
     }
 }
 
 // Mock WordPress REST API classes
 if (!class_exists('WP_REST_Request')) {
-    class WP_REST_Request {
+    class WP_REST_Request
+    {
         private $method;
         private $route;
         private $params = [];
-        
-        public function __construct($method = 'GET', $route = '') {
+
+        public function __construct($method = 'GET', $route = '')
+        {
             $this->method = $method;
             $this->route = $route;
         }
-        
-        public function set_param($key, $value) {
+
+        public function set_param($key, $value)
+        {
             $this->params[$key] = $value;
         }
-        
-        public function get_param($key) {
+
+        public function get_param($key)
+        {
             return $this->params[$key] ?? null;
         }
-        
-        public function get_params() {
+
+        public function get_params()
+        {
             return $this->params;
         }
-        
-        public function get_method() {
+
+        public function get_method()
+        {
             return $this->method;
         }
-        
-        public function get_route() {
+
+        public function get_route()
+        {
             return $this->route;
         }
     }
 }
 
 if (!class_exists('WP_REST_Response')) {
-    class WP_REST_Response {
+    class WP_REST_Response
+    {
         private $data;
         private $status;
-        
-        public function __construct($data = null, $status = 200) {
+
+        public function __construct($data = null, $status = 200)
+        {
             $this->data = $data;
             $this->status = $status;
         }
-        
-        public function get_data() {
+
+        public function get_data()
+        {
             return $this->data;
         }
-        
-        public function set_data($data) {
+
+        public function set_data($data)
+        {
             $this->data = $data;
         }
-        
-        public function get_status() {
+
+        public function get_status()
+        {
             return $this->status;
         }
-        
-        public function set_status($status) {
+
+        public function set_status($status)
+        {
             $this->status = $status;
         }
     }
 }
 
 if (!class_exists('WP_Error')) {
-    class WP_Error {
+    class WP_Error
+    {
         private $code;
         private $message;
-        
-        public function __construct($code, $message) {
+
+        public function __construct($code, $message)
+        {
             $this->code = $code;
             $this->message = $message;
         }
-        
-        public function get_error_code() {
+
+        public function get_error_code()
+        {
             return $this->code;
         }
-        
-        public function get_error_message() {
+
+        public function get_error_message()
+        {
             return $this->message;
         }
     }
 }
 
 if (!function_exists('get_permalink')) {
-    function get_permalink($post_id) {
+    function get_permalink($post_id)
+    {
         return 'http://example.com/?p=' . $post_id;
     }
 }
 
 if (!function_exists('wp_publish_post')) {
-    function wp_publish_post($post_id) {
+    function wp_publish_post($post_id)
+    {
         wp_update_post([
             'ID' => $post_id,
             'post_status' => 'publish'
@@ -569,7 +680,8 @@ if (!function_exists('wp_publish_post')) {
 }
 
 if (!function_exists('handle_get_import_status')) {
-    function handle_get_import_status($request) {
+    function handle_get_import_status($request)
+    {
         // Mock implementation
         return new \WP_REST_Response([
             'success' => true,
@@ -581,15 +693,17 @@ if (!function_exists('handle_get_import_status')) {
 
 // Mock WP_Query class
 if (!class_exists('WP_Query')) {
-    class WP_Query {
+    class WP_Query
+    {
         public $posts = [];
         public $found_posts = 0;
         public $max_num_pages = 0;
-        
-        public function __construct($args = []) {
+
+        public function __construct($args = [])
+        {
             global $mock_wp_posts;
             // Filter posts by args
-            $posts = array_filter($mock_wp_posts, function($post) use ($args) {
+            $posts = array_filter($mock_wp_posts, function ($post) use ($args) {
                 if (isset($args['post_type']) && $post->post_type !== $args['post_type']) {
                     return false;
                 }
@@ -606,13 +720,15 @@ if (!class_exists('WP_Query')) {
 }
 
 if (!function_exists('get_current_user_id')) {
-    function get_current_user_id() {
+    function get_current_user_id()
+    {
         return 1; // Mock admin user
     }
 }
 
 if (!function_exists('get_bloginfo')) {
-    function get_bloginfo($show = '') {
+    function get_bloginfo($show = '')
+    {
         $info = [
             'version' => '6.0',
             'name' => 'Test Site',
@@ -623,7 +739,8 @@ if (!function_exists('get_bloginfo')) {
 }
 
 if (!function_exists('run_scheduled_import')) {
-    function run_scheduled_import($test_mode = false, $trigger = 'scheduled') {
+    function run_scheduled_import($test_mode = false, $trigger = 'scheduled')
+    {
         // Mock implementation - return success array
         return [
             'success' => true,
@@ -635,14 +752,16 @@ if (!function_exists('run_scheduled_import')) {
 }
 
 if (!function_exists('get_next_scheduled_time')) {
-    function get_next_scheduled_time() {
+    function get_next_scheduled_time()
+    {
         // Mock next scheduled time
         return time() + 3600; // 1 hour from now
     }
 }
 
 if (!function_exists('size_format')) {
-    function size_format($bytes, $decimals = 0) {
+    function size_format($bytes, $decimals = 0)
+    {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
         $bytes = max($bytes, 0);
         $pow = floor(($bytes ? log($bytes) : 0) / log(1024));

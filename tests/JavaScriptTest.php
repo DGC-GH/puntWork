@@ -1,4 +1,5 @@
 <?php
+
 /**
  * JavaScript Integration Tests for puntWork
  *
@@ -10,8 +11,10 @@ namespace Puntwork;
 
 use PHPUnit\Framework\TestCase;
 
-class JavaScriptTest extends TestCase {
-    protected function setUp(): void {
+class JavaScriptTest extends TestCase
+{
+    protected function setUp(): void
+    {
         parent::setUp();
         // Mock WordPress functions
         if (!defined('ABSPATH')) {
@@ -22,7 +25,8 @@ class JavaScriptTest extends TestCase {
     /**
      * Test JavaScript file enqueuing
      */
-    public function testJavaScriptEnqueuing() {
+    public function testJavaScriptEnqueuing()
+    {
         $jsFiles = [
             'job-import-admin.js',
             'job-import-api.js',
@@ -57,7 +61,8 @@ class JavaScriptTest extends TestCase {
     /**
      * Test AJAX endpoints for JavaScript
      */
-    public function testAjaxEndpoints() {
+    public function testAjaxEndpoints()
+    {
         $ajaxActions = [
             'puntwork_import_feed',
             'puntwork_get_import_status',
@@ -76,7 +81,8 @@ class JavaScriptTest extends TestCase {
     /**
      * Test JavaScript localization
      */
-    public function testJavaScriptLocalization() {
+    public function testJavaScriptLocalization()
+    {
         $localizedStrings = [
             'importing' => 'Importing jobs...',
             'completed' => 'Import completed successfully',
@@ -95,7 +101,8 @@ class JavaScriptTest extends TestCase {
     /**
      * Test real-time updates
      */
-    public function testRealTimeUpdates() {
+    public function testRealTimeUpdates()
+    {
         $updateTypes = [
             'progress_update',
             'status_change',
@@ -125,7 +132,8 @@ class JavaScriptTest extends TestCase {
     /**
      * Test UI state management
      */
-    public function testUiStateManagement() {
+    public function testUiStateManagement()
+    {
         $uiStates = [
             'idle',
             'importing',
@@ -162,7 +170,8 @@ class JavaScriptTest extends TestCase {
     /**
      * Test form validation
      */
-    public function testFormValidation() {
+    public function testFormValidation()
+    {
         $validationRules = [
             'feed_url' => 'required|url',
             'api_key' => 'required|min:16|max:32',
@@ -180,7 +189,8 @@ class JavaScriptTest extends TestCase {
     /**
      * Test error handling
      */
-    public function testErrorHandling() {
+    public function testErrorHandling()
+    {
         $errorTypes = [
             'network_error',
             'timeout_error',
@@ -213,7 +223,8 @@ class JavaScriptTest extends TestCase {
     /**
      * Test progress tracking
      */
-    public function testProgressTracking() {
+    public function testProgressTracking()
+    {
         $progressMetrics = [
             'total_items',
             'processed_items',
@@ -232,7 +243,8 @@ class JavaScriptTest extends TestCase {
     /**
      * Test scheduling interface
      */
-    public function testSchedulingInterface() {
+    public function testSchedulingInterface()
+    {
         $scheduleOptions = [
             'manual' => 'Run manually',
             'hourly' => 'Every hour',
@@ -251,7 +263,8 @@ class JavaScriptTest extends TestCase {
     /**
      * Test logging integration
      */
-    public function testLoggingIntegration() {
+    public function testLoggingIntegration()
+    {
         $logLevels = [
             'debug',
             'info',
@@ -283,7 +296,8 @@ class JavaScriptTest extends TestCase {
     /**
      * Test API integration
      */
-    public function testApiIntegration() {
+    public function testApiIntegration()
+    {
         $apiEndpoints = [
             '/wp-json/puntwork/v1/import',
             '/wp-json/puntwork/v1/status',
@@ -301,7 +315,8 @@ class JavaScriptTest extends TestCase {
     /**
      * Test event handling
      */
-    public function testEventHandling() {
+    public function testEventHandling()
+    {
         $events = [
             'import:start',
             'import:progress',

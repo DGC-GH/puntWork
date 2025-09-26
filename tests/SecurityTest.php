@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Security Tests for puntWork plugin.
  *
@@ -12,25 +13,30 @@ use PHPUnit\Framework\TestCase;
 
 // Mock WordPress functions once at file level
 if (!function_exists('sanitize_text_field')) {
-    function sanitize_text_field($str) {
+    function sanitize_text_field($str)
+    {
         return strip_tags($str);
     }
 }
 
 if (!function_exists('esc_html')) {
-    function esc_html($str) {
+    function esc_html($str)
+    {
         return htmlspecialchars($str, ENT_QUOTES, 'UTF-8');
     }
 }
 
 if (!function_exists('wp_verify_nonce')) {
-    function wp_verify_nonce($nonce, $action) {
+    function wp_verify_nonce($nonce, $action)
+    {
         return $nonce === 'valid_nonce_' . $action;
     }
 }
 
-class SecurityTest extends TestCase {
-    protected function setUp(): void {
+class SecurityTest extends TestCase
+{
+    protected function setUp(): void
+    {
         parent::setUp();
         // Mock WordPress functions
         if (!defined('ABSPATH')) {
@@ -41,7 +47,8 @@ class SecurityTest extends TestCase {
     /**
      * Test input sanitization functions
      */
-    public function testInputSanitization() {
+    public function testInputSanitization()
+    {
         // Test basic sanitization
         $maliciousInput = '<script>alert("xss")</script><img src=x onerror=alert(1)>';
         $sanitized = sanitize_text_field($maliciousInput);
@@ -54,7 +61,8 @@ class SecurityTest extends TestCase {
     /**
      * Test SQL injection prevention
      */
-    public function testSqlInjectionPrevention() {
+    public function testSqlInjectionPrevention()
+    {
         // Test that prepared statements prevent SQL injection
         $maliciousInput = "'; DROP TABLE users; --";
         $safeInput = "test-guid-123";
@@ -70,7 +78,8 @@ class SecurityTest extends TestCase {
     /**
      * Test nonce verification simulation
      */
-    public function testNonceVerification() {
+    public function testNonceVerification()
+    {
         // Test valid nonce
         $this->assertTrue(wp_verify_nonce('valid_nonce_test_action', 'test_action'));
 
@@ -81,7 +90,8 @@ class SecurityTest extends TestCase {
     /**
      * Test SecurityUtils validation
      */
-    public function testSecurityUtilsValidation() {
+    public function testSecurityUtilsValidation()
+    {
         // Test rate limiting logic (simulated)
         $action = 'test_action';
         $maxRequests = 10;
@@ -97,7 +107,8 @@ class SecurityTest extends TestCase {
     /**
      * Test output escaping
      */
-    public function testOutputEscaping() {
+    public function testOutputEscaping()
+    {
         $maliciousContent = '<script>alert("xss")</script>';
         $escaped = esc_html($maliciousContent);
 
@@ -109,7 +120,8 @@ class SecurityTest extends TestCase {
     /**
      * Test file upload security (simulated)
      */
-    public function testFileUploadSecurity() {
+    public function testFileUploadSecurity()
+    {
         // Test allowed file extensions
         $allowedExtensions = ['xml', 'json', 'csv'];
         $testFiles = [
@@ -136,7 +148,8 @@ class SecurityTest extends TestCase {
     /**
      * Test API key validation
      */
-    public function testApiKeyValidation() {
+    public function testApiKeyValidation()
+    {
         // Test API key format (simulated)
         $validKeys = [
             'pw_1234567890abcdef',

@@ -12,15 +12,17 @@ use PHPUnit\Framework\TestCase;
  * REST API Integration Test Suite
  * Tests all REST API endpoints with comprehensive scenarios
  */
-class RestApiIntegrationTest extends TestCase {
+class RestApiIntegrationTest extends TestCase
+{
     private $api_key;
     private $test_job_id;
 
-    protected function setUp(): void {
+    protected function setUp(): void
+    {
         parent::setUp();
 
         // Skip tests if not in WordPress environment
-        if (!$this->is_wordpress_environment()) {
+        if (!$this->isWordpressEnvironment()) {
             $this->markTestSkipped('Skipping API integration tests - not in WordPress environment');
             return;
         }
@@ -50,11 +52,12 @@ class RestApiIntegrationTest extends TestCase {
         $this->assertIsInt($this->test_job_id, 'Failed to create test job post');
     }
 
-    protected function tearDown(): void {
+    protected function tearDown(): void
+    {
         parent::tearDown();
 
         // Clean up test data
-        if ($this->test_job_id && $this->is_wordpress_environment()) {
+        if ($this->test_job_id && $this->isWordpressEnvironment()) {
             wp_delete_post($this->test_job_id, true);
         }
     }
@@ -62,7 +65,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Check if we're in a proper WordPress environment
      */
-    private function is_wordpress_environment() {
+    private function isWordpressEnvironment()
+    {
         global $wpdb;
         return isset($wpdb) && $wpdb instanceof \wpdb;
     }
@@ -70,7 +74,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test API key verification with valid key
      */
-    public function testApiKeyVerificationValid() {
+    public function testApiKeyVerificationValid()
+    {
         $request = new \WP_REST_Request('GET', '/puntwork/v1/analytics');
         $request->set_param('api_key', $this->api_key);
 
@@ -85,7 +90,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test API key verification with invalid key
      */
-    public function testApiKeyVerificationInvalid() {
+    public function testApiKeyVerificationInvalid()
+    {
         $request = new \WP_REST_Request('GET', '/puntwork/v1/analytics');
         $request->set_param('api_key', 'invalid_key');
 
@@ -100,7 +106,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test API key verification with missing key
      */
-    public function testApiKeyVerificationMissing() {
+    public function testApiKeyVerificationMissing()
+    {
         $request = new \WP_REST_Request('GET', '/puntwork/v1/analytics');
 
         $result = verify_api_key($request);
@@ -112,7 +119,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test analytics endpoint
      */
-    public function testAnalyticsEndpoint() {
+    public function testAnalyticsEndpoint()
+    {
         update_option('puntwork_api_key', $this->api_key);
 
         $request = new \WP_REST_Request('GET', '/puntwork/v1/analytics');
@@ -134,7 +142,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test feeds endpoint
      */
-    public function testFeedsEndpoint() {
+    public function testFeedsEndpoint()
+    {
         update_option('puntwork_api_key', $this->api_key);
 
         $request = new \WP_REST_Request('GET', '/puntwork/v1/feeds');
@@ -155,7 +164,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test feed details endpoint with valid feed
      */
-    public function testFeedDetailsEndpointValid() {
+    public function testFeedDetailsEndpointValid()
+    {
         update_option('puntwork_api_key', $this->api_key);
 
         // Get first available feed key
@@ -185,7 +195,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test feed details endpoint with invalid feed
      */
-    public function testFeedDetailsEndpointInvalid() {
+    public function testFeedDetailsEndpointInvalid()
+    {
         update_option('puntwork_api_key', $this->api_key);
 
         $request = new \WP_REST_Request('GET', '/puntwork/v1/feeds/nonexistent_feed');
@@ -205,7 +216,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test performance endpoint
      */
-    public function testPerformanceEndpoint() {
+    public function testPerformanceEndpoint()
+    {
         update_option('puntwork_api_key', $this->api_key);
 
         $request = new \WP_REST_Request('GET', '/puntwork/v1/performance');
@@ -226,7 +238,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test jobs endpoint
      */
-    public function testJobsEndpoint() {
+    public function testJobsEndpoint()
+    {
         update_option('puntwork_api_key', $this->api_key);
 
         $request = new \WP_REST_Request('GET', '/puntwork/v1/jobs');
@@ -249,7 +262,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test jobs endpoint with search
      */
-    public function testJobsEndpointWithSearch() {
+    public function testJobsEndpointWithSearch()
+    {
         update_option('puntwork_api_key', $this->api_key);
 
         $request = new \WP_REST_Request('GET', '/puntwork/v1/jobs');
@@ -269,7 +283,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test individual job endpoint
      */
-    public function testJobEndpoint() {
+    public function testJobEndpoint()
+    {
         update_option('puntwork_api_key', $this->api_key);
 
         $request = new \WP_REST_Request('GET', '/puntwork/v1/jobs/' . $this->test_job_id);
@@ -291,7 +306,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test individual job endpoint with invalid ID
      */
-    public function testJobEndpointInvalidId() {
+    public function testJobEndpointInvalidId()
+    {
         update_option('puntwork_api_key', $this->api_key);
 
         $request = new \WP_REST_Request('GET', '/puntwork/v1/jobs/999999');
@@ -311,7 +327,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test bulk operations endpoint - publish operation
      */
-    public function testBulkOperationsPublish() {
+    public function testBulkOperationsPublish()
+    {
         update_option('puntwork_api_key', $this->api_key);
 
         // Create a draft job for testing
@@ -347,7 +364,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test bulk operations endpoint - unpublish operation
      */
-    public function testBulkOperationsUnpublish() {
+    public function testBulkOperationsUnpublish()
+    {
         update_option('puntwork_api_key', $this->api_key);
 
         $request = new \WP_REST_Request('POST', '/puntwork/v1/bulk-operations');
@@ -372,7 +390,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test bulk operations endpoint - update status operation
      */
-    public function testBulkOperationsUpdateStatus() {
+    public function testBulkOperationsUpdateStatus()
+    {
         update_option('puntwork_api_key', $this->api_key);
 
         $request = new \WP_REST_Request('POST', '/puntwork/v1/bulk-operations');
@@ -398,7 +417,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test bulk operations endpoint with invalid operation
      */
-    public function testBulkOperationsInvalidOperation() {
+    public function testBulkOperationsInvalidOperation()
+    {
         update_option('puntwork_api_key', $this->api_key);
 
         $request = new \WP_REST_Request('POST', '/puntwork/v1/bulk-operations');
@@ -420,7 +440,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test bulk operations endpoint with empty job IDs
      */
-    public function testBulkOperationsEmptyJobIds() {
+    public function testBulkOperationsEmptyJobIds()
+    {
         update_option('puntwork_api_key', $this->api_key);
 
         $request = new \WP_REST_Request('POST', '/puntwork/v1/bulk-operations');
@@ -441,7 +462,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test health status endpoint
      */
-    public function testHealthStatusEndpoint() {
+    public function testHealthStatusEndpoint()
+    {
         update_option('puntwork_api_key', $this->api_key);
 
         $request = new \WP_REST_Request('GET', '/puntwork/v1/health');
@@ -464,7 +486,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test import status endpoint
      */
-    public function testImportStatusEndpoint() {
+    public function testImportStatusEndpoint()
+    {
         update_option('puntwork_api_key', $this->api_key);
 
         $request = new \WP_REST_Request('GET', '/puntwork/v1/import-status');
@@ -484,7 +507,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test trigger import endpoint in test mode
      */
-    public function testTriggerImportTestMode() {
+    public function testTriggerImportTestMode()
+    {
         update_option('puntwork_api_key', $this->api_key);
 
         $request = new \WP_REST_Request('POST', '/puntwork/v1/trigger-import');
@@ -510,7 +534,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test rate limiting for API key attempts
      */
-    public function testApiKeyRateLimiting() {
+    public function testApiKeyRateLimiting()
+    {
         // Make multiple invalid API key attempts
         for ($i = 0; $i < 6; $i++) {
             $request = new \WP_REST_Request('GET', '/puntwork/v1/analytics');
@@ -533,7 +558,8 @@ class RestApiIntegrationTest extends TestCase {
     /**
      * Test API key generation functions
      */
-    public function testApiKeyGeneration() {
+    public function testApiKeyGeneration()
+    {
         $key1 = generate_api_key();
         $key2 = generate_api_key();
 

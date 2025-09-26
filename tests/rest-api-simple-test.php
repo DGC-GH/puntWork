@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Simple load test for REST API implementation
  */

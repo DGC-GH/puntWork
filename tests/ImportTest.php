@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHPUnit tests for puntWork plugin.
  */
@@ -7,8 +8,10 @@ namespace Puntwork;
 
 use PHPUnit\Framework\TestCase;
 
-class ImportTest extends TestCase {
-    protected function setUp(): void {
+class ImportTest extends TestCase
+{
+    protected function setUp(): void
+    {
         parent::setUp();
         // Mock WordPress functions
         if (!defined('ABSPATH')) {
@@ -16,39 +19,45 @@ class ImportTest extends TestCase {
         }
     }
 
-    public function testGetProvinceMap() {
+    public function testGetProvinceMap()
+    {
         $map = GetProvinceMap();
         $this->assertIsArray($map);
         $this->assertArrayHasKey('antwerp', $map);
         $this->assertGreaterThan(0, count($map));
     }
 
-    public function testGetSalaryEstimates() {
+    public function testGetSalaryEstimates()
+    {
         $estimates = GetSalaryEstimates();
         $this->assertIsArray($estimates);
         $this->assertArrayHasKey('Accounting', $estimates);
         $this->assertGreaterThan(0, count($estimates));
     }
 
-    public function testGetIconMap() {
+    public function testGetIconMap()
+    {
         $icons = GetIconMap();
         $this->assertIsArray($icons);
         $this->assertGreaterThan(0, count($icons));
     }
 
-    public function testGetAcfFields() {
+    public function testGetAcfFields()
+    {
         $fields = get_acf_fields();
         $this->assertIsArray($fields);
         $this->assertContains('job_title', $fields);
     }
 
-    public function testGetZeroEmptyFields() {
+    public function testGetZeroEmptyFields()
+    {
         $fields = get_zero_empty_fields();
         $this->assertIsArray($fields);
         $this->assertContains('salaryfrom', $fields);
     }
 
-    public function testBuildJobSchema() {
+    public function testBuildJobSchema()
+    {
         $item = (object) [
             'guid' => 'test-guid',
             'job_title' => 'Test Job',
@@ -63,13 +72,15 @@ class ImportTest extends TestCase {
         $this->assertEquals('JobPosting', $schema['@type']);
     }
 
-    public function testProcessXmlBatch() {
+    public function testProcessXmlBatch()
+    {
         // This test requires extensive XML structure mocking and WordPress function mocking
         // For now, we'll mark it incomplete and focus on other test coverage
         $this->markTestIncomplete('XML processing test requires extensive mocking of WordPress functions and complex XML structures');
     }
 
-    public function testHandleDuplicates() {
+    public function testHandleDuplicates()
+    {
         $batch_guids = ['guid1', 'guid2'];
         $existing_by_guid = ['guid1' => [123]];
         $logs = [];

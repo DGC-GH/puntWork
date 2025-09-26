@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Queue System Tests for puntWork
  *
@@ -10,8 +11,10 @@ namespace Puntwork;
 
 use PHPUnit\Framework\TestCase;
 
-class QueueTest extends TestCase {
-    protected function setUp(): void {
+class QueueTest extends TestCase
+{
+    protected function setUp(): void
+    {
         parent::setUp();
         // Mock WordPress functions
         if (!defined('ABSPATH')) {
@@ -22,7 +25,8 @@ class QueueTest extends TestCase {
     /**
      * Test queue job data validation
      */
-    public function testQueueJobDataValidation() {
+    public function testQueueJobDataValidation()
+    {
         // Test valid job data
         $validJobData = [
             'feed_id' => 123,
@@ -47,7 +51,8 @@ class QueueTest extends TestCase {
     /**
      * Test queue job types
      */
-    public function testQueueJobTypes() {
+    public function testQueueJobTypes()
+    {
         $expectedJobTypes = [
             'feed_import',
             'batch_process',
@@ -68,7 +73,8 @@ class QueueTest extends TestCase {
     /**
      * Test queue priority levels
      */
-    public function testQueuePriorityLevels() {
+    public function testQueuePriorityLevels()
+    {
         $priorities = [
             'low' => 10,
             'normal' => 5,
@@ -89,7 +95,8 @@ class QueueTest extends TestCase {
     /**
      * Test queue status values
      */
-    public function testQueueStatusValues() {
+    public function testQueueStatusValues()
+    {
         $validStatuses = ['pending', 'processing', 'completed', 'failed'];
 
         foreach ($validStatuses as $status) {
@@ -105,7 +112,8 @@ class QueueTest extends TestCase {
     /**
      * Test queue retry logic
      */
-    public function testQueueRetryLogic() {
+    public function testQueueRetryLogic()
+    {
         $maxRetries = 3;
         $attempts = [0, 1, 2, 3, 4];
 
@@ -121,7 +129,8 @@ class QueueTest extends TestCase {
     /**
      * Test queue batch size limits
      */
-    public function testQueueBatchSizeLimits() {
+    public function testQueueBatchSizeLimits()
+    {
         $batchSizes = [1, 5, 10, 25, 50, 100];
 
         foreach ($batchSizes as $size) {
@@ -134,7 +143,8 @@ class QueueTest extends TestCase {
     /**
      * Test queue delay functionality
      */
-    public function testQueueDelayFunctionality() {
+    public function testQueueDelayFunctionality()
+    {
         $delays = [0, 60, 300, 3600, 86400]; // seconds
 
         foreach ($delays as $delay) {
@@ -151,7 +161,8 @@ class QueueTest extends TestCase {
     /**
      * Test queue cleanup operations
      */
-    public function testQueueCleanupOperations() {
+    public function testQueueCleanupOperations()
+    {
         $cleanupTypes = [
             'old_logs',
             'temp_files',
@@ -169,7 +180,8 @@ class QueueTest extends TestCase {
     /**
      * Test queue notification system
      */
-    public function testQueueNotificationSystem() {
+    public function testQueueNotificationSystem()
+    {
         $notificationTypes = ['email', 'webhook', 'sms'];
 
         foreach ($notificationTypes as $type) {
@@ -198,7 +210,8 @@ class QueueTest extends TestCase {
     /**
      * Test queue analytics integration
      */
-    public function testQueueAnalyticsIntegration() {
+    public function testQueueAnalyticsIntegration()
+    {
         $analyticsData = [
             'job_type' => 'feed_import',
             'duration' => 45,

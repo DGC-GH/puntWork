@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Performance Regression Tests for puntWork
  *
@@ -11,13 +12,15 @@ namespace Puntwork;
 use PHPUnit\Framework\TestCase;
 use Puntwork\PerformanceMonitor;
 
-class PerformanceRegressionTest extends TestCase {
+class PerformanceRegressionTest extends TestCase
+{
     private $performanceMonitor;
     private $baselineFile;
     private $currentResults = [];
     private $baselines = [];
 
-    protected function setUp(): void {
+    protected function setUp(): void
+    {
         parent::setUp();
 
         // Suppress deprecated warnings for dynamic properties
@@ -40,7 +43,8 @@ class PerformanceRegressionTest extends TestCase {
         }
     }
 
-    protected function tearDown(): void {
+    protected function tearDown(): void
+    {
         // Save current results for baseline comparison
         if (!empty($this->currentResults)) {
             file_put_contents(
@@ -52,7 +56,8 @@ class PerformanceRegressionTest extends TestCase {
         parent::tearDown();
     }
 
-    private function getDefaultBaselines() {
+    private function getDefaultBaselines()
+    {
         return [
             'memory_usage' => [
                 'feed_import_100' => 32 * 1024 * 1024,  // 32MB
@@ -84,7 +89,8 @@ class PerformanceRegressionTest extends TestCase {
     /**
      * Test memory usage regression with actual measurement
      */
-    public function testMemoryUsageRegression() {
+    public function testMemoryUsageRegression()
+    {
         $startMemory = memory_get_usage(true);
 
         // Simulate feed import processing
@@ -114,7 +120,7 @@ class PerformanceRegressionTest extends TestCase {
         gc_collect_cycles();
         $afterGcMemory = memory_get_usage(true);
         $memoryIncrease = $afterGcMemory - $endMemory;
-        
+
         // Allow for some memory increase after GC (GC overhead, etc.)
         $this->assertLessThanOrEqual(
             2 * 1024 * 1024, // Allow up to 2MB increase
@@ -126,7 +132,8 @@ class PerformanceRegressionTest extends TestCase {
     /**
      * Test execution time regression with actual measurement
      */
-    public function testExecutionTimeRegression() {
+    public function testExecutionTimeRegression()
+    {
         // Test API response time
         $startTime = microtime(true);
         $this->simulateApiRequest();
@@ -173,7 +180,8 @@ class PerformanceRegressionTest extends TestCase {
     /**
      * Test database query performance regression
      */
-    public function testDatabaseQueryPerformanceRegression() {
+    public function testDatabaseQueryPerformanceRegression()
+    {
         // Mock database query counting
         $queryCount = 0;
         $startTime = microtime(true);
@@ -219,7 +227,8 @@ class PerformanceRegressionTest extends TestCase {
     /**
      * Test concurrent request handling
      */
-    public function testConcurrentRequestHandling() {
+    public function testConcurrentRequestHandling()
+    {
         $concurrentRequests = 10;
         $startTime = microtime(true);
 
@@ -250,7 +259,8 @@ class PerformanceRegressionTest extends TestCase {
     /**
      * Test memory leak detection
      */
-    public function testMemoryLeakDetection() {
+    public function testMemoryLeakDetection()
+    {
         $iterations = 100;
         $memoryReadings = [];
 
@@ -292,7 +302,8 @@ class PerformanceRegressionTest extends TestCase {
     /**
      * Test chaos engineering - random failures
      */
-    public function testChaosEngineeringRandomFailures() {
+    public function testChaosEngineeringRandomFailures()
+    {
         $failureScenarios = [
             'database_timeout' => 0.1,    // 10% chance
             'network_failure' => 0.05,    // 5% chance
@@ -332,7 +343,8 @@ class PerformanceRegressionTest extends TestCase {
     /**
      * Test chaos engineering - resource exhaustion
      */
-    public function testChaosEngineeringResourceExhaustion() {
+    public function testChaosEngineeringResourceExhaustion()
+    {
         $resourceLimits = [
             'memory' => 0.8,    // 80% of available memory
             'cpu' => 0.9,       // 90% CPU usage
@@ -364,7 +376,8 @@ class PerformanceRegressionTest extends TestCase {
     /**
      * Test performance under load
      */
-    public function testPerformanceUnderLoad() {
+    public function testPerformanceUnderLoad()
+    {
         $loadLevels = [1, 5, 10, 25, 50];
         $results = [];
 
@@ -412,7 +425,8 @@ class PerformanceRegressionTest extends TestCase {
     /**
      * Test error rate regression
      */
-    public function testErrorRateRegression() {
+    public function testErrorRateRegression()
+    {
         $operations = 1000;
         $errors = 0;
 
@@ -443,26 +457,30 @@ class PerformanceRegressionTest extends TestCase {
 
     // Helper methods for simulation
 
-    private function simulateFeedImport($count) {
+    private function simulateFeedImport($count)
+    {
         // Simulate processing jobs
         for ($i = 0; $i < $count; $i++) {
             usleep(1000); // 1ms per job simulation
         }
     }
 
-    private function simulateApiRequest() {
+    private function simulateApiRequest()
+    {
         // Simulate API processing
         usleep(5000); // 5ms simulation
     }
 
-    private function simulateDatabaseOperations() {
+    private function simulateDatabaseOperations()
+    {
         // Simulate database queries
         for ($i = 0; $i < 5; $i++) {
             usleep(2000); // 2ms per query simulation
         }
     }
 
-    private function simulateConcurrentRequests($count) {
+    private function simulateConcurrentRequests($count)
+    {
         $processes = [];
         for ($i = 0; $i < $count; $i++) {
             // In real implementation, this would use actual concurrent requests
@@ -470,7 +488,8 @@ class PerformanceRegressionTest extends TestCase {
         }
     }
 
-    private function simulateChaosScenario($scenarios) {
+    private function simulateChaosScenario($scenarios)
+    {
         $rand = mt_rand() / mt_getrandmax();
         $cumulative = 0;
 
@@ -485,7 +504,8 @@ class PerformanceRegressionTest extends TestCase {
         $this->simulateApiRequest();
     }
 
-    private function simulateResourceExhaustion($resource, $limit) {
+    private function simulateResourceExhaustion($resource, $limit)
+    {
         // Simulate resource exhaustion scenarios
         if ($resource === 'memory' && mt_rand() / mt_getrandmax() < 0.1) {
             throw new \Exception("Memory exhausted - handled gracefully");
@@ -493,7 +513,8 @@ class PerformanceRegressionTest extends TestCase {
         // Other resources would be simulated similarly
     }
 
-    private function simulateLoadTest($load) {
+    private function simulateLoadTest($load)
+    {
         for ($i = 0; $i < $load; $i++) {
             $this->simulateApiRequest();
         }

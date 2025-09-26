@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Live API Test Script for puntWork
  *
@@ -7,7 +8,8 @@
  */
 
 // Load environment variables from .env file
-function loadEnv($path) {
+function loadEnv($path)
+{
     if (!file_exists($path)) {
         return false;
     }
@@ -52,7 +54,8 @@ echo "Loaded from .env: " . (file_exists($envPath) ? "YES" : "NO") . "\n\n";
 /**
  * Make HTTP request using curl
  */
-function makeRequest($url, $method = 'GET', $data = null, $headers = []) {
+function makeRequest($url, $method = 'GET', $data = null, $headers = [])
+{
     $ch = curl_init();
 
     curl_setopt($ch, CURLOPT_URL, $url);
@@ -90,7 +93,8 @@ function makeRequest($url, $method = 'GET', $data = null, $headers = []) {
 /**
  * Pretty print JSON response
  */
-function printResponse($result, $test_name) {
+function printResponse($result, $test_name)
+{
     echo "Test: $test_name\n";
     echo "HTTP Code: {$result['http_code']}\n";
 

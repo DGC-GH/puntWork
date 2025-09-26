@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Simple test script for REST API functionality
  * This tests basic loading and function existence without requiring WordPress
@@ -8,7 +9,8 @@ namespace Puntwork;
 
 // Mock WordPress functions that the REST API depends on
 if (!function_exists('wp_generate_password')) {
-    function wp_generate_password($length = 12, $special_chars = true, $extra_special_chars = false) {
+    function wp_generate_password($length = 12, $special_chars = true, $extra_special_chars = false)
+    {
         $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         if ($special_chars) {
             $chars .= '!@#$%^&*()';
@@ -25,14 +27,16 @@ if (!function_exists('wp_generate_password')) {
 }
 
 if (!function_exists('get_option')) {
-    function get_option($key, $default = null) {
+    function get_option($key, $default = null)
+    {
         static $options = [];
         return $options[$key] ?? $default;
     }
 }
 
 if (!function_exists('update_option')) {
-    function update_option($key, $value) {
+    function update_option($key, $value)
+    {
         static $options = [];
         $options[$key] = $value;
         return true;
@@ -40,13 +44,15 @@ if (!function_exists('update_option')) {
 }
 
 if (!function_exists('wp_timezone')) {
-    function wp_timezone() {
+    function wp_timezone()
+    {
         return new DateTimeZone('Europe/Brussels');
     }
 }
 
 if (!function_exists('wp_date')) {
-    function wp_date($format, $timestamp = null) {
+    function wp_date($format, $timestamp = null)
+    {
         $timestamp = $timestamp ?? time();
         $dt = new DateTime('@' . $timestamp);
         $dt->setTimezone(wp_timezone());
@@ -55,163 +61,189 @@ if (!function_exists('wp_date')) {
 }
 
 if (!function_exists('get_site_url')) {
-    function get_site_url() {
+    function get_site_url()
+    {
         return 'https://example.com';
     }
 }
 
 if (!function_exists('check_admin_referer')) {
-    function check_admin_referer($action, $query_arg = '_wpnonce') {
+    function check_admin_referer($action, $query_arg = '_wpnonce')
+    {
         return true;
     }
 }
 
 if (!function_exists('current_user_can')) {
-    function current_user_can($capability) {
+    function current_user_can($capability)
+    {
         return true;
     }
 }
 
 if (!function_exists('wp_send_json_error')) {
-    function wp_send_json_error($data = null) {
+    function wp_send_json_error($data = null)
+    {
         echo json_encode(['error' => true, 'data' => $data]);
         exit;
     }
 }
 
 if (!function_exists('wp_send_json_success')) {
-    function wp_send_json_success($data = null) {
+    function wp_send_json_success($data = null)
+    {
         echo json_encode(['success' => true, 'data' => $data]);
         exit;
     }
 }
 
 if (!function_exists('wp_die')) {
-    function wp_die($message = '') {
+    function wp_die($message = '')
+    {
         echo "WordPress died: $message";
         exit;
     }
 }
 
 if (!function_exists('get_transient')) {
-    function get_transient($key) {
+    function get_transient($key)
+    {
         return false;
     }
 }
 
 if (!function_exists('set_transient')) {
-    function set_transient($key, $value, $expiration = 0) {
+    function set_transient($key, $value, $expiration = 0)
+    {
         return true;
     }
 }
 
 if (!function_exists('delete_transient')) {
-    function delete_transient($key) {
+    function delete_transient($key)
+    {
         return true;
     }
 }
 
 if (!function_exists('wp_clear_scheduled_hook')) {
-    function wp_clear_scheduled_hook($hook) {
+    function wp_clear_scheduled_hook($hook)
+    {
         return true;
     }
 }
 
 if (!function_exists('wp_next_scheduled')) {
-    function wp_next_scheduled($hook) {
+    function wp_next_scheduled($hook)
+    {
         return false;
     }
 }
 
 if (!function_exists('microtime')) {
-    function microtime($get_as_float = false) {
+    function microtime($get_as_float = false)
+    {
         return $get_as_float ? microtime(true) : '0.123456 1234567890';
     }
 }
 
 if (!function_exists('wp_schedule_single_event')) {
-    function wp_schedule_single_event($timestamp, $hook, $args = []) {
+    function wp_schedule_single_event($timestamp, $hook, $args = [])
+    {
         return true;
     }
 }
 
 if (!function_exists('add_action')) {
-    function add_action($hook, $callback, $priority = 10, $accepted_args = 1) {
+    function add_action($hook, $callback, $priority = 10, $accepted_args = 1)
+    {
         // Mock action registration
         return true;
     }
 }
 
 if (!function_exists('register_rest_route')) {
-    function register_rest_route($namespace, $route, $args = []) {
+    function register_rest_route($namespace, $route, $args = [])
+    {
         // Mock REST route registration
         return true;
     }
 }
 
 if (!function_exists('rest_api_init')) {
-    function rest_api_init() {
+    function rest_api_init()
+    {
         // Mock REST API init
         return true;
     }
 }
 
 if (!function_exists('hash_equals')) {
-    function hash_equals($known_string, $user_string) {
+    function hash_equals($known_string, $user_string)
+    {
         return $known_string === $user_string;
     }
 }
 
 if (!function_exists('wp_verify_nonce')) {
-    function wp_verify_nonce($nonce, $action = -1) {
+    function wp_verify_nonce($nonce, $action = -1)
+    {
         return true;
     }
 }
 
 if (!function_exists('wp_create_nonce')) {
-    function wp_create_nonce($action = -1) {
+    function wp_create_nonce($action = -1)
+    {
         return 'mock_nonce';
     }
 }
 
 if (!function_exists('sanitize_text_field')) {
-    function sanitize_text_field($str) {
+    function sanitize_text_field($str)
+    {
         return $str;
     }
 }
 
 if (!function_exists('wp_unslash')) {
-    function wp_unslash($str) {
+    function wp_unslash($str)
+    {
         return $str;
     }
 }
 
 if (!function_exists('is_wp_error')) {
-    function is_wp_error($thing) {
+    function is_wp_error($thing)
+    {
         return $thing instanceof WP_Error;
     }
 }
 
 if (!function_exists('wp_remote_get')) {
-    function wp_remote_get($url, $args = []) {
+    function wp_remote_get($url, $args = [])
+    {
         return ['body' => 'mock response', 'response' => ['code' => 200]];
     }
 }
 
 if (!function_exists('wp_remote_retrieve_body')) {
-    function wp_remote_retrieve_body($response) {
+    function wp_remote_retrieve_body($response)
+    {
         return $response['body'] ?? '';
     }
 }
 
 if (!function_exists('wp_remote_retrieve_response_code')) {
-    function wp_remote_retrieve_response_code($response) {
+    function wp_remote_retrieve_response_code($response)
+    {
         return $response['response']['code'] ?? 200;
     }
 }
 
 // Mock the import functions that the REST API calls
-function run_scheduled_import() {
+function run_scheduled_import()
+{
     return [
         'success' => true,
         'message' => 'Mock import completed',
@@ -220,7 +252,8 @@ function run_scheduled_import() {
     ];
 }
 
-function get_next_scheduled_time() {
+function get_next_scheduled_time()
+{
     return [
         'timestamp' => time() + 3600,
         'formatted' => '2025-09-26 15:00',
@@ -228,20 +261,25 @@ function get_next_scheduled_time() {
     ];
 }
 
-function calculate_estimated_time_remaining($progress) {
+function calculate_estimated_time_remaining($progress)
+{
     return 300; // 5 minutes
 }
 
 // Mock classes
-class WP_REST_Response {
-    public function __construct($data, $status = 200) {
+class WP_REST_Response
+{
+    public function __construct($data, $status = 200)
+    {
         $this->data = $data;
         $this->status = $status;
     }
 }
 
-class WP_Error {
-    public function __construct($code, $message, $data = []) {
+class WP_Error
+{
+    public function __construct($code, $message, $data = [])
+    {
         $this->code = $code;
         $this->message = $message;
         $this->data = $data;
