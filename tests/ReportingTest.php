@@ -10,17 +10,37 @@
  * @since      2.4.0
  */
 
-// Prevent direct access
-if (!defined('ABSPATH')) {
-    exit;
+namespace Tests;
+
+// Mock WordPress functions
+if (!function_exists('Tests\\get_option')) {
+    function get_option($key, $default = null)
+    {
+        return $default;
+    }
+}
+
+if (!function_exists('Tests\\wp_cache_get')) {
+    function wp_cache_get($key, $group = '', $force = false, &$found = null)
+    {
+        return false;
+    }
+}
+
+if (!function_exists('Tests\\wp_cache_set')) {
+    function wp_cache_set($key, $data, $group = '', $expire = 0)
+    {
+        return true;
+    }
 }
 
 /**
  * Advanced Reporting Test Class
  */
-class ReportingTest extends PHPUnit\Framework\TestCase
+class ReportingTest extends \PHPUnit\Framework\TestCase
 {
     private \Puntwork\Reporting\ReportingEngine $reportingEngine;
+
     /**
      * Set up test environment
      */
@@ -28,8 +48,10 @@ class ReportingTest extends PHPUnit\Framework\TestCase
     {
         parent::setUp();
 
-        // Mock WordPress functions for testing
-        $this->mockWordPress();
+        // Mock global wpdb
+        if (!isset($GLOBALS['wpdb'])) {
+            $GLOBALS['wpdb'] = $this->createMockWpdb();
+        }
 
         // Initialize reporting engine
         require_once dirname(__DIR__) . '/includes/reporting/reporting-engine.php';
@@ -45,76 +67,50 @@ class ReportingTest extends PHPUnit\Framework\TestCase
         $this->cleanupTestData();
         parent::tearDown();
     }
-
-    /**
-     * Mock WordPress functions for testing
-     */
-    private function mockWordPress(): void
-    {
-        // Mock global wpdb
-        if (!isset($GLOBALS['wpdb'])) {
-            $GLOBALS['wpdb'] = $this->createMockWpdb();
-        }
-
-        // Mock WordPress functions
-        if (!function_exists('get_option')) {
-            function get_option($key, $default = null) {
-                return $default;
-            }
-        }
-
-        if (!function_exists('wp_cache_get')) {
-            function wp_cache_get($key, $group = '', $force = false, &$found = null) {
-                return false;
-            }
-        }
-
-        if (!function_exists('wp_cache_set')) {
-            function wp_cache_set($key, $data, $group = '', $expire = 0) {
-                return true;
-            }
-        }
-    }
-
-    /**
-     * Create mock wpdb object
-     */
     private function createMockWpdb(): object
     {
         return new class {
             public $prefix = 'wp_';
             private $tables = [];
 
-            public function get_results($query, $output = ARRAY_A) {
+            public function getResults($query, $output = ARRAY_A)
+            {
                 return [];
             }
 
-            public function get_row($query, $output = ARRAY_A, $y = 0) {
+            public function getRow($query, $output = ARRAY_A, $y = 0)
+            {
                 return null;
             }
 
-            public function query($query, $output = ARRAY_A) {
+            public function query($query, $output = ARRAY_A)
+            {
                 return 0;
             }
 
-            public function prepare($query, ...$args) {
+            public function prepare($query, ...$args)
+            {
                 return $query;
             }
 
-            public function replace($table, $data, $format = null) {
+            public function replace($table, $data, $format = null)
+            {
                 $this->tables[$table][] = $data;
                 return 1;
             }
 
-            public function update($table, $data, $where, $format = null, $where_format = null) {
+            public function update($table, $data, $where, $format = null, $where_format = null)
+            {
                 return 1;
             }
 
-            public function get_charset_collate() {
+            public function getCharsetCollate()
+            {
                 return 'utf8mb4_unicode_ci';
             }
 
-            public function check_connection() {
+            public function checkConnection()
+            {
                 return true;
             }
         };

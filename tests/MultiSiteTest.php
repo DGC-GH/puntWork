@@ -10,12 +10,7 @@
  * @since      2.3.0
  */
 
-namespace Puntwork\MultiSite;
-
-// Prevent direct access
-if (!defined('ABSPATH')) {
-    exit;
-}
+namespace Tests;
 
 // Include the multi-site classes for testing
 require_once dirname(__DIR__) . '/includes/multisite/multi-site-manager.php';
@@ -31,7 +26,7 @@ class MultiSiteTest extends TestCase
     /**
      * Test network sites detection
      */
-    public function test_get_network_sites()
+    public function testGetNetworkSites()
     {
         // Skip if not multisite
         if (!function_exists('is_multisite') || !is_multisite()) {
@@ -56,7 +51,7 @@ class MultiSiteTest extends TestCase
     /**
      * Test job distribution strategies
      */
-    public function test_job_distribution_strategies()
+    public function testJobDistributionStrategies()
     {
         // Skip if not multisite
         if (!function_exists('is_multisite') || !is_multisite()) {
@@ -90,7 +85,7 @@ class MultiSiteTest extends TestCase
     /**
      * Test capability score calculation
      */
-    public function test_capability_score_calculation()
+    public function testCapabilityScoreCalculation()
     {
         $job = ['format' => 'json', 'complexity' => 'high'];
         $site = [
@@ -108,7 +103,7 @@ class MultiSiteTest extends TestCase
     /**
      * Test network sync data structure
      */
-    public function test_network_sync_data_structure()
+    public function testNetworkSyncDataStructure()
     {
         // Skip if not multisite
         if (!function_exists('is_multisite') || !is_multisite()) {
@@ -131,7 +126,7 @@ class MultiSiteTest extends TestCase
     /**
      * Test distribution strategy validation
      */
-    public function test_distribution_strategy_constants()
+    public function testDistributionStrategyConstants()
     {
         // Test that strategy constants are defined
         $this->assertEquals('round_robin', MultiSiteManager::STRATEGY_ROUND_ROBIN);
@@ -143,7 +138,7 @@ class MultiSiteTest extends TestCase
     /**
      * Test site capability detection
      */
-    public function test_site_capability_detection()
+    public function testSiteCapabilityDetection()
     {
         // Test with current site
         $capabilities = [
@@ -163,7 +158,7 @@ class MultiSiteTest extends TestCase
     /**
      * Test network table creation
      */
-    public function test_network_table_creation()
+    public function testNetworkTableCreation()
     {
         global $wpdb;
 
@@ -191,7 +186,7 @@ class MultiSiteTest extends TestCase
     /**
      * Test network settings registration
      */
-    public function test_network_settings_registration()
+    public function testNetworkSettingsRegistration()
     {
         // Test that settings are registered
         $this->assertTrue(true); // Settings are registered during init, hard to test directly

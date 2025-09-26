@@ -8,6 +8,8 @@
  * @since      2.3.0
  */
 
+namespace Tests;
+
 use PHPUnit\Framework\TestCase;
 use Puntwork\CRM\CRMManager;
 use Puntwork\CRM\HubSpotIntegration;
@@ -225,7 +227,11 @@ class CRMIntegrationTest extends TestCase
 
         // Test the data formatting methods
         $contactData = $this->invokePrivateMethod($crmManager, 'formatApplicationAsContact', [$testApplication]);
-        $dealData = $this->invokePrivateMethod($crmManager, 'formatApplicationAsDeal', [$testApplication, 'contact_456']);
+        $dealData = $this->invokePrivateMethod(
+            $crmManager,
+            'formatApplicationAsDeal',
+            [$testApplication, 'contact_456']
+        );
 
         $this->assertEquals('Jane', $contactData['first_name']);
         $this->assertEquals('Smith', $contactData['last_name']);
