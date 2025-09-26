@@ -10,3 +10,6 @@ logs/
 feeds/
 cache/
 *.log
+.env
+.env.local
+.env.*.local
