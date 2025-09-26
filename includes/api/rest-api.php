@@ -404,7 +404,9 @@ function handle_trigger_import($request)
 
         if ($use_async) {
             // Use new async batch processing system
-            error_log('[PUNTWORK] API: Using async batch processing');
+            if (!defined('PUNTWORK_TESTING') || !PUNTWORK_TESTING) {
+                error_log('[PUNTWORK] API: Using async batch processing');
+            }
 
             $result = trigger_async_import($test_mode, 'api');
 
@@ -419,16 +421,22 @@ function handle_trigger_import($request)
                 ], 200);
             } else {
                 // Fallback to sync if async fails
-                error_log('[PUNTWORK] API: Async failed, falling back to sync: ' . $result['message']);
+                if (!defined('PUNTWORK_TESTING') || !PUNTWORK_TESTING) {
+                    error_log('[PUNTWORK] API: Async failed, falling back to sync: ' . $result['message']);
+                }
                 $use_async = false;
             }
         }
 
         if (!$use_async) {
             // Force synchronous execution
-            error_log('[PUNTWORK] API: Using synchronous execution');
+            if (!defined('PUNTWORK_TESTING') || !PUNTWORK_TESTING) {
+                error_log('[PUNTWORK] API: Using synchronous execution');
+            }
             if (!function_exists('run_scheduled_import')) {
-                error_log('[PUNTWORK] API: run_scheduled_import function not found');
+                if (!defined('PUNTWORK_TESTING') || !PUNTWORK_TESTING) {
+                    error_log('[PUNTWORK] API: run_scheduled_import function not found');
+                }
                 return new \WP_REST_Response([
                     'success' => false,
                     'message' => 'Import function not found',
@@ -437,7 +445,9 @@ function handle_trigger_import($request)
             }
 
             $result = run_scheduled_import($test_mode, 'api');
-            error_log('[PUNTWORK] API: run_scheduled_import returned: ' . json_encode($result));
+            if (!defined('PUNTWORK_TESTING') || !PUNTWORK_TESTING) {
+                error_log('[PUNTWORK] API: run_scheduled_import returned: ' . json_encode($result));
+            }
 
             // Clear test mode
             if ($test_mode) {
@@ -455,7 +465,9 @@ function handle_trigger_import($request)
             ];
 
             if ($result['success']) {
-                error_log('[PUNTWORK] API: About to return sync success response');
+                if (!defined('PUNTWORK_TESTING') || !PUNTWORK_TESTING) {
+                    error_log('[PUNTWORK] API: About to return sync success response');
+                }
                 PuntWorkLogger::info('Remote import trigger completed successfully (sync)', PuntWorkLogger::CONTEXT_API, [
                     'processed' => $result['processed'] ?? 0,
                     'total' => $result['total'] ?? 0
@@ -470,7 +482,9 @@ function handle_trigger_import($request)
                 ], 200);
             } else {
                 $error_msg = $result['message'] ?? 'Unknown error occurred';
-                error_log('[PUNTWORK] API: About to return sync error response: ' . $error_msg);
+                if (!defined('PUNTWORK_TESTING') || !PUNTWORK_TESTING) {
+                    error_log('[PUNTWORK] API: About to return sync error response: ' . $error_msg);
+                }
                 PuntWorkLogger::error('Remote import trigger failed (sync)', PuntWorkLogger::CONTEXT_API, [
                     'error' => $error_msg
                 ]);

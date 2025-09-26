@@ -85,4 +85,12 @@ function download_feed($url, $feed_path, $output_dir, &$logs, &$format = null) {
 
             return false;
         }
+        // Close outer try block
+    } catch (\Exception $e) {
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Outer download error: " . $e->getMessage();
+        $span->recordException($e);
+        $span->setStatus(\OpenTelemetry\API\Trace\StatusCode::STATUS_ERROR, $e->getMessage());
+        $span->end();
+        return false;
     }
+}
