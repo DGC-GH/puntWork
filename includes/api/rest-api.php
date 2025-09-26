@@ -519,7 +519,7 @@ function handle_get_analytics($request)
     $period = $request->get_param('period');
 
     try {
-        $analytics_data = ImportAnalytics::get_analytics_data($period);
+        $analytics_data = ImportAnalytics::getAnalyticsData($period);
 
         PuntWorkLogger::debug('Analytics data requested via API', PuntWorkLogger::CONTEXT_API);
 
@@ -547,7 +547,7 @@ function handle_get_feeds($request)
 {
     try {
         $feeds = get_feeds();
-        $feed_health = FeedHealthMonitor::get_feed_health_status();
+        $feed_health = FeedHealthMonitor::getFeedHealthStatus();
 
         $feeds_data = [];
         foreach ($feeds as $key => $url) {
@@ -598,7 +598,7 @@ function handle_get_feed_details($request)
             ], 404);
         }
 
-        $feed_health = FeedHealthMonitor::get_feed_health_status();
+        $feed_health = FeedHealthMonitor::getFeedHealthStatus();
         $health = $feed_health[$feed_key] ?? null;
         $history = FeedHealthMonitor::get_feed_health_history($feed_key, 7);
 
@@ -944,7 +944,7 @@ function handle_bulk_operations($request)
 function handle_get_health_status($request)
 {
     try {
-        $feed_health = FeedHealthMonitor::get_feed_health_status();
+        $feed_health = FeedHealthMonitor::getFeedHealthStatus();
         $import_status = get_option('job_import_status', []);
         $system_health = get_performance_snapshot();
 

@@ -10,6 +10,8 @@
  * @since      2.4.0
  */
 
+namespace Puntwork;
+
 // Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
@@ -25,16 +27,16 @@ class ReportingAdminUI
      */
     public static function init(): void
     {
-        add_action('admin_menu', [self::class, 'add_admin_menu']);
-        add_action('admin_enqueue_scripts', [self::class, 'enqueue_scripts']);
-        add_action('wp_ajax_export_report', [self::class, 'ajax_export_report']);
-        add_action('wp_ajax_delete_report', [self::class, 'ajax_delete_report']);
+        add_action('admin_menu', [self::class, 'addAdminMenu']);
+        add_action('admin_enqueueScripts', [self::class, 'enqueueScripts']);
+        add_action('wp_ajaxExportReport', [self::class, 'ajaxExportReport']);
+        add_action('wp_ajaxDeleteReport', [self::class, 'ajaxDeleteReport']);
     }
 
     /**
      * Add admin menu
      */
-    public static function add_admin_menu(): void
+    public static function addAdminMenu(): void
     {
         add_submenu_page(
             'puntwork-admin',
@@ -42,14 +44,14 @@ class ReportingAdminUI
             __('Reports', 'puntwork'),
             'manage_options',
             'puntwork-reports',
-            [self::class, 'render_admin_page']
+            [self::class, 'renderAdminPage']
         );
     }
 
     /**
      * Enqueue admin scripts and styles
      */
-    public static function enqueue_scripts(string $hook): void
+    public static function enqueueScripts(string $hook): void
     {
         if ($hook !== 'puntwork_page_puntwork-reports') {
             return;
@@ -80,7 +82,7 @@ class ReportingAdminUI
     /**
      * Render admin page
      */
-    public static function render_admin_page(): void
+    public static function renderAdminPage(): void
     {
         if (!current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.'));
@@ -701,7 +703,7 @@ class ReportingAdminUI
     /**
      * AJAX handler for exporting reports
      */
-    public static function ajax_export_report(): void
+    public static function ajaxExportReport(): void
     {
         try {
             if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_export_report')) {
@@ -744,7 +746,6 @@ class ReportingAdminUI
 
             echo $report['report_data'];
             exit;
-
         } catch (\Exception $e) {
             wp_send_json_error('Export failed: ' . $e->getMessage());
         }
@@ -753,7 +754,7 @@ class ReportingAdminUI
     /**
      * AJAX handler for deleting reports
      */
-    public static function ajax_delete_report(): void
+    public static function ajaxDeleteReport(): void
     {
         try {
             if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_delete_report')) {
@@ -784,7 +785,6 @@ class ReportingAdminUI
             }
 
             wp_send_json_success(['message' => 'Report deleted successfully']);
-
         } catch (\Exception $e) {
             wp_send_json_error('Delete failed: ' . $e->getMessage());
         }

@@ -148,7 +148,7 @@ class ReportingTest extends PHPUnit\Framework\TestCase
     {
         // Test basic class structure
         $reflection = new \ReflectionClass('\Puntwork\Reporting\ReportingEngine');
-        $this->assertTrue($reflection->hasMethod('generate_report'));
+        $this->assertTrue($reflection->hasMethod('generateReport'));
         $this->assertTrue($reflection->hasConstant('REPORT_TYPE_FEED_HEALTH'));
     }
 

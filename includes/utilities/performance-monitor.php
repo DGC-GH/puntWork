@@ -35,7 +35,7 @@ class CacheManager
      *
      * @return bool True if Redis/Object Cache is available
      */
-    public static function is_redis_available(): bool
+    public static function isRedisAvailable(): bool
     {
         return function_exists('wp_cache_get') && wp_cache_get('test_redis_connection', 'puntwork_test') === false;
     }
@@ -50,7 +50,7 @@ class CacheManager
     public static function get(string $key, string $group = '')
     {
         // Try Redis/Object Cache first
-        if (self::is_redis_available()) {
+        if (self::isRedisAvailable()) {
             $cached = wp_cache_get($key, $group);
             if ($cached !== false) {
                 return $cached;
@@ -74,7 +74,7 @@ class CacheManager
     public static function set(string $key, $data, string $group = '', int $expiration = 3600): bool
     {
         // Try Redis/Object Cache first
-        if (self::is_redis_available()) {
+        if (self::isRedisAvailable()) {
             $result = wp_cache_set($key, $data, $group, $expiration);
             if ($result) {
                 return true;
@@ -96,7 +96,7 @@ class CacheManager
     public static function delete(string $key, string $group = ''): bool
     {
         // Try Redis/Object Cache first
-        if (self::is_redis_available()) {
+        if (self::isRedisAvailable()) {
             wp_cache_delete($key, $group);
         }
 
@@ -111,9 +111,9 @@ class CacheManager
      * @param string $group Cache group
      * @return bool True on success
      */
-    public static function clear_group(string $group): bool
+    public static function clearGroup(string $group): bool
     {
-        if (self::is_redis_available()) {
+        if (self::isRedisAvailable()) {
             // For Redis, we can't easily clear a group, so we'll flush the entire cache
             // This is a limitation of the WordPress object cache API
             wp_cache_flush();
@@ -135,10 +135,10 @@ class CacheManager
      *
      * @return array Cache statistics
      */
-    public static function get_stats(): array
+    public static function getStats(): array
     {
         return [
-            'redis_available' => self::is_redis_available(),
+            'redis_available' => self::isRedisAvailable(),
             'cache_groups' => [self::GROUP_MAPPINGS, self::GROUP_ANALYTICS],
             'wp_cache_supports_groups' => function_exists('wp_cache_supports') ? wp_cache_supports('groups') : false,
         ];
@@ -240,7 +240,7 @@ class PerformanceMonitor
         $result['total_time'] = $total_time;
         $result['total_memory_used'] = $total_memory;
         $result['peak_memory'] = memory_get_peak_usage(true);
-        $result['memory_limit'] = self::get_memory_limit_bytes();
+        $result['memory_limit'] = self::getMemoryLimitBytes();
         $result['php_version'] = PHP_VERSION;
         $result['wordpress_version'] = get_bloginfo('version');
 
@@ -253,7 +253,7 @@ class PerformanceMonitor
         }
 
         // Store in database for historical tracking
-        self::store_performance_data($result);
+        self::storePerformanceData($result);
 
         // Clean up
         unset(self::$metrics[$id]);
@@ -271,7 +271,7 @@ class PerformanceMonitor
         return [
             'memory_current' => memory_get_usage(true),
             'memory_peak' => memory_get_peak_usage(true),
-            'memory_limit' => self::get_memory_limit_bytes(),
+            'memory_limit' => self::getMemoryLimitBytes(),
             'time' => microtime(true),
             'load_average' => function_exists('sys_getloadavg') ? sys_getloadavg() : null,
             'php_version' => PHP_VERSION,
@@ -284,7 +284,7 @@ class PerformanceMonitor
      *
      * @return int Memory limit in bytes
      */
-    private static function get_memory_limit_bytes(): int
+    private static function getMemoryLimitBytes(): int
     {
         $limit = ini_get('memory_limit');
         if ($limit === '-1') {
@@ -311,14 +311,14 @@ class PerformanceMonitor
      *
      * @param array $data Performance data
      */
-    private static function store_performance_data(array $data): void
+    private static function storePerformanceData(array $data): void
     {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'puntwork_performance_logs';
 
         // Create table if it doesn't exist
-        self::create_performance_table();
+        self::createPerformanceTable();
 
         $wpdb->insert(
             $table_name,
@@ -343,7 +343,7 @@ class PerformanceMonitor
     /**
      * Create performance logs table
      */
-    private static function create_performance_table(): void
+    private static function createPerformanceTable(): void
     {
         global $wpdb;
 
@@ -376,7 +376,7 @@ class PerformanceMonitor
      * @param int $days Number of days to look back
      * @return array Performance statistics
      */
-    public static function get_statistics(?string $operation = '', int $days = 30): array
+    public static function getStatistics(?string $operation = '', int $days = 30): array
     {
         global $wpdb;
 
@@ -411,7 +411,9 @@ class PerformanceMonitor
             'max_time_seconds' => round((float) $stats->max_time, 3),
             'avg_memory_mb' => round((float) $stats->avg_memory / 1024 / 1024, 2),
             'max_peak_memory_mb' => round((float) $stats->max_peak_memory / 1024 / 1024, 2),
-            'avg_items_per_second' => $stats->avg_items_per_second ? round((float) $stats->avg_items_per_second, 2) : null,
+            'avg_items_per_second' => $stats->avg_items_per_second
+                ? round((float) $stats->avg_items_per_second, 2)
+                : null,
             'period_days' => $days
         ];
     }
@@ -421,7 +423,7 @@ class PerformanceMonitor
      *
      * @param int $days_retention Days to keep logs
      */
-    public static function cleanup_old_logs(int $days_retention = 90): void
+    public static function cleanupOldLogs(int $days_retention = 90): void
     {
         global $wpdb;
 
@@ -463,7 +465,7 @@ class DatabasePerformanceMonitor
      * @param string $query The SQL query
      * @return string The query (unchanged)
      */
-    public static function log_query(string $query): string
+    public static function logQuery(string $query): string
     {
         $query_start = microtime(true);
         $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5);
@@ -473,7 +475,7 @@ class DatabasePerformanceMonitor
             'query' => $query,
             'start_time' => $query_start,
             'backtrace' => $backtrace,
-            'query_type' => self::get_query_type($query)
+            'query_type' => self::getQueryType($query)
         ];
 
         return $query;
@@ -504,27 +506,35 @@ class DatabasePerformanceMonitor
             'avg_query_time' => $query_count > 0 ? round($total_time / $query_count, 4) : 0,
             'slow_queries_count' => count($slow_queries),
             'slow_queries' => array_slice($slow_queries, 0, 10), // Top 10 slow queries
-            'query_types' => self::analyze_query_types()
+            'query_types' => self::analyzeQueryTypes()
         ];
     }
 
     /**
      * Get query type from SQL
      */
-    private static function get_query_type(string $query): string
+    private static function getQueryType(string $query): string
     {
         $query = strtoupper(trim($query));
-        if (strpos($query, 'SELECT') === 0) return 'SELECT';
-        if (strpos($query, 'INSERT') === 0) return 'INSERT';
-        if (strpos($query, 'UPDATE') === 0) return 'UPDATE';
-        if (strpos($query, 'DELETE') === 0) return 'DELETE';
+        if (strpos($query, 'SELECT') === 0) {
+            return 'SELECT';
+        }
+        if (strpos($query, 'INSERT') === 0) {
+            return 'INSERT';
+        }
+        if (strpos($query, 'UPDATE') === 0) {
+            return 'UPDATE';
+        }
+        if (strpos($query, 'DELETE') === 0) {
+            return 'DELETE';
+        }
         return 'OTHER';
     }
 
     /**
      * Analyze query types distribution
      */
-    private static function analyze_query_types(): array
+    private static function analyzeQueryTypes(): array
     {
         $types = [];
         foreach (self::$query_log as $query) {
@@ -551,11 +561,11 @@ class MemoryManager
      * @param float $threshold Memory threshold (0-1)
      * @return array Memory management actions taken
      */
-    public static function check_memory_usage(int $current_index, float $threshold = 0.8): array
+    public static function checkMemoryUsage(int $current_index, float $threshold = 0.8): array
     {
         $actions = [];
         $memory_usage = memory_get_usage(true);
-        $memory_limit = self::get_memory_limit_bytes();
+        $memory_limit = self::getMemoryLimitBytes();
         $memory_ratio = $memory_usage / $memory_limit;
 
         self::$processed_count++;
@@ -597,7 +607,7 @@ class MemoryManager
     /**
      * Optimize memory for large batch operations
      */
-    public static function optimize_for_large_batch(): void
+    public static function optimizeForLargeBatch(): void
     {
         // Increase GC threshold to reduce collection frequency
         gc_mem_caches();
@@ -616,17 +626,21 @@ class MemoryManager
     /**
      * Get memory limit in bytes
      */
-    private static function get_memory_limit_bytes(): int
+    private static function getMemoryLimitBytes(): int
     {
         $limit = ini_get('memory_limit');
         if (preg_match('/^(\d+)(.)$/', $limit, $matches)) {
             $value = (int) $matches[1];
             $unit = strtoupper($matches[2]);
             switch ($unit) {
-                case 'G': return $value * 1024 * 1024 * 1024;
-                case 'M': return $value * 1024 * 1024;
-                case 'K': return $value * 1024;
-                default: return $value;
+                case 'G':
+                    return $value * 1024 * 1024 * 1024;
+                case 'M':
+                    return $value * 1024 * 1024;
+                case 'K':
+                    return $value * 1024;
+                default:
+                    return $value;
             }
         }
         return 128 * 1024 * 1024; // Default 128MB
@@ -658,9 +672,9 @@ class CircuitBreaker
      * @param string $circuit_name Circuit identifier
      * @return bool True if request should proceed
      */
-    public static function can_proceed(string $circuit_name): bool
+    public static function canProceed(string $circuit_name): bool
     {
-        $circuit = self::get_circuit_state($circuit_name);
+        $circuit = self::getCircuitState($circuit_name);
 
         switch ($circuit['state']) {
             case self::STATE_CLOSED:
@@ -684,10 +698,10 @@ class CircuitBreaker
      *
      * @param string $circuit_name Circuit identifier
      */
-    public static function record_success(string $circuit_name): void
+    public static function recordSuccess(string $circuit_name): void
     {
         if (!isset(self::$circuits[$circuit_name])) {
-            self::init_circuit($circuit_name);
+            self::initCircuit($circuit_name);
         }
 
         $circuit = &self::$circuits[$circuit_name];
@@ -704,10 +718,10 @@ class CircuitBreaker
      *
      * @param string $circuit_name Circuit identifier
      */
-    public static function record_failure(string $circuit_name): void
+    public static function recordFailure(string $circuit_name): void
     {
         if (!isset(self::$circuits[$circuit_name])) {
-            self::init_circuit($circuit_name);
+            self::initCircuit($circuit_name);
         }
 
         $circuit = &self::$circuits[$circuit_name];
@@ -726,10 +740,10 @@ class CircuitBreaker
      * @param string $circuit_name Circuit identifier
      * @return array Circuit state data
      */
-    private static function get_circuit_state(string $circuit_name): array
+    private static function getCircuitState(string $circuit_name): array
     {
         if (!isset(self::$circuits[$circuit_name])) {
-            self::init_circuit($circuit_name);
+            self::initCircuit($circuit_name);
         }
         return self::$circuits[$circuit_name];
     }
@@ -739,7 +753,7 @@ class CircuitBreaker
      *
      * @param string $circuit_name Circuit identifier
      */
-    private static function init_circuit(string $circuit_name): void
+    private static function initCircuit(string $circuit_name): void
     {
         self::$circuits[$circuit_name] = [
             'state' => self::STATE_CLOSED,
@@ -755,7 +769,7 @@ class CircuitBreaker
      *
      * @return array All circuit states
      */
-    public static function get_all_states(): array
+    public static function getAllStates(): array
     {
         return self::$circuits;
     }
@@ -770,7 +784,7 @@ class CircuitBreaker
 function can_process_feed(string $feed_url): bool
 {
     $circuit_name = 'feed_' . md5($feed_url);
-    return CircuitBreaker::can_proceed($circuit_name);
+    return CircuitBreaker::canProceed($circuit_name);
 }
 
 /**
@@ -781,7 +795,7 @@ function can_process_feed(string $feed_url): bool
 function record_feed_success(string $feed_url): void
 {
     $circuit_name = 'feed_' . md5($feed_url);
-    CircuitBreaker::record_success($circuit_name);
+    CircuitBreaker::recordSuccess($circuit_name);
 }
 
 /**
@@ -792,7 +806,7 @@ function record_feed_success(string $feed_url): void
 function record_feed_failure(string $feed_url): void
 {
     $circuit_name = 'feed_' . md5($feed_url);
-    CircuitBreaker::record_failure($circuit_name);
+    CircuitBreaker::recordFailure($circuit_name);
 }
 
 /**
@@ -802,7 +816,7 @@ function record_feed_failure(string $feed_url): void
  */
 function get_circuit_breaker_status(): array
 {
-    return CircuitBreaker::get_all_states();
+    return CircuitBreaker::getAllStates();
 }
 
 /**
@@ -858,7 +872,7 @@ function get_performance_snapshot(): array
  */
 function get_performance_statistics(?string $operation = '', int $days = 30): array
 {
-    return PerformanceMonitor::get_statistics($operation ?? '', $days);
+    return PerformanceMonitor::getStatistics($operation ?? '', $days);
 }
 
 /**
@@ -888,7 +902,7 @@ function end_db_performance_monitoring(): array
  */
 function check_batch_memory_usage(int $current_index, float $threshold = 0.8): array
 {
-    return MemoryManager::check_memory_usage($current_index, $threshold);
+    return MemoryManager::checkMemoryUsage($current_index, $threshold);
 }
 
 /**
@@ -896,7 +910,7 @@ function check_batch_memory_usage(int $current_index, float $threshold = 0.8): a
  */
 function optimize_memory_for_batch(): void
 {
-    MemoryManager::optimize_for_large_batch();
+    MemoryManager::optimizeForLargeBatch();
 }
 
 /**
@@ -939,7 +953,12 @@ class EnhancedCacheManager extends CacheManager
     /**
      * Get cached data with automatic cache warming
      */
-    public static function getWithWarmup(string $key, string $group = '', ?callable $fallback = null, int $warmup_threshold = 300)
+    public static function getWithWarmup(
+        string $key,
+        string $group = '',
+        ?callable $fallback = null,
+        int $warmup_threshold = 300
+    )
     {
         $cached = self::get($key, $group);
 
@@ -1013,8 +1032,8 @@ class EnhancedCacheManager extends CacheManager
         }
 
         // For Redis/Object Cache - we can't pattern match, so we clear the group
-        if (self::is_redis_available()) {
-            self::clear_group($group);
+        if (self::isRedisAvailable()) {
+            self::clearGroup($group);
         }
 
         return $invalidated;
@@ -1133,7 +1152,9 @@ class AdvancedMemoryManager extends MemoryManager
         fclose($handle);
 
         $stats['processing_time'] = microtime(true) - $startTime;
-        $stats['avg_memory_peak'] = !empty($stats['memory_peaks']) ? array_sum($stats['memory_peaks']) / count($stats['memory_peaks']) : 0;
+                $stats['avg_memory_peak'] = !empty($stats['memory_peaks'])
+            ? array_sum($stats['memory_peaks']) / count($stats['memory_peaks'])
+            : 0;
 
         return $stats;
     }
@@ -1162,9 +1183,13 @@ class AdvancedMemoryManager extends MemoryManager
     /**
      * Adaptive batch sizing based on memory usage patterns
      */
-    public static function calculateOptimalBatchSize(int $currentBatchSize, float $memoryUsage, float $targetMemoryRatio = 0.7): int
+    public static function calculateOptimalBatchSize(
+        int $currentBatchSize,
+        float $memoryUsage,
+        float $targetMemoryRatio = 0.7
+    ): int
     {
-        $memoryLimit = self::get_memory_limit_bytes();
+        $memoryLimit = self::getMemoryLimitBytes();
         $currentRatio = $memoryUsage / $memoryLimit;
 
         if ($currentRatio > $targetMemoryRatio) {
@@ -1212,7 +1237,7 @@ class AdvancedMemoryManager extends MemoryManager
     public static function checkAndCleanup(): void
     {
         $memoryUsage = memory_get_usage(true);
-        $memoryLimit = self::get_memory_limit_bytes();
+        $memoryLimit = self::getMemoryLimitBytes();
         $ratio = $memoryUsage / $memoryLimit;
 
         if ($ratio > 0.85) {
@@ -1238,7 +1263,7 @@ class AdvancedMemoryManager extends MemoryManager
         $safetyBuffer = 50 * 1024 * 1024; // 50MB safety buffer
 
         $predictedPeak = $baseMemory + $estimatedBatchMemory + $safetyBuffer;
-        $memoryLimit = self::get_memory_limit_bytes();
+        $memoryLimit = self::getMemoryLimitBytes();
 
         return [
             'predicted_peak' => $predictedPeak,
@@ -1292,7 +1317,6 @@ function ajax_warm_performance_caches(): void
             'message' => 'Performance caches warmed successfully',
             'timestamp' => current_time('timestamp')
         ]);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Cache warming failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SYSTEM);
         wp_send_json_error('Cache warming failed: ' . $e->getMessage());
@@ -1322,7 +1346,6 @@ function ajax_reset_cache_analytics(): void
             'message' => 'Cache analytics reset successfully',
             'timestamp' => current_time('timestamp')
         ]);
-
     } catch (\Exception $e) {
         wp_send_json_error('Analytics reset failed: ' . $e->getMessage());
     }
@@ -1367,7 +1390,6 @@ function ajax_run_memory_performance_test(): void
             'test_time' => round($test_time, 3),
             'predictions' => $test_results
         ]);
-
     } catch (\Exception $e) {
         wp_send_json_error('Memory test failed: ' . $e->getMessage());
     }
@@ -1396,7 +1418,6 @@ function ajax_clear_memory_pool(): void
             'message' => 'Memory pool cleared successfully',
             'timestamp' => current_time('timestamp')
         ]);
-
     } catch (\Exception $e) {
         wp_send_json_error('Memory pool clear failed: ' . $e->getMessage());
     }
@@ -1427,7 +1448,6 @@ function ajax_run_ml_feed_optimization(): void
             'feeds_analyzed' => $results['feeds_analyzed'],
             'results' => $results
         ]);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('ML feed optimization failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AI);
         wp_send_json_error('ML optimization failed: ' . $e->getMessage());
@@ -1459,7 +1479,6 @@ function ajax_train_ml_models(): void
             'avg_accuracy' => round($results['avg_accuracy'] * 100, 1),
             'results' => $results
         ]);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Model training failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AI);
         wp_send_json_error('Model training failed: ' . $e->getMessage());
@@ -1488,7 +1507,6 @@ function ajax_get_ml_insights(): void
         wp_send_json_success([
             'insights' => $insights
         ]);
-
     } catch (\Exception $e) {
         wp_send_json_error('Failed to get ML insights: ' . $e->getMessage());
     }

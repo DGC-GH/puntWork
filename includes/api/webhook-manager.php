@@ -118,13 +118,27 @@ class WebhookManager
         $table = $wpdb->prefix . self::TABLE_NAME;
 
         $data = [];
-        if (isset($config['name'])) $data['name'] = sanitize_text_field($config['name']);
-        if (isset($config['url'])) $data['url'] = esc_url_raw($config['url']);
-        if (isset($config['method'])) $data['method'] = strtoupper($config['method']);
-        if (isset($config['events'])) $data['events'] = json_encode($config['events']);
-        if (isset($config['headers'])) $data['headers'] = json_encode($config['headers']);
-        if (isset($config['secret'])) $data['secret'] = $config['secret'];
-        if (isset($config['is_active'])) $data['is_active'] = (bool) $config['is_active'];
+        if (isset($config['name'])) {
+            $data['name'] = sanitize_text_field($config['name']);
+        }
+        if (isset($config['url'])) {
+            $data['url'] = esc_url_raw($config['url']);
+        }
+        if (isset($config['method'])) {
+            $data['method'] = strtoupper($config['method']);
+        }
+        if (isset($config['events'])) {
+            $data['events'] = json_encode($config['events']);
+        }
+        if (isset($config['headers'])) {
+            $data['headers'] = json_encode($config['headers']);
+        }
+        if (isset($config['secret'])) {
+            $data['secret'] = $config['secret'];
+        }
+        if (isset($config['is_active'])) {
+            $data['is_active'] = (bool) $config['is_active'];
+        }
 
         return $wpdb->update($table, $data, ['id' => $webhookId]) !== false;
     }

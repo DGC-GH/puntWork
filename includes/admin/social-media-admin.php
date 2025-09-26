@@ -8,6 +8,8 @@
  * @since      2.2.0
  */
 
+namespace Puntwork;
+
 // Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
@@ -16,7 +18,7 @@ if (!defined('ABSPATH')) {
 /**
  * Social Media Admin Class
  */
-class Puntwork_Social_Media_Admin
+class PuntworkSocialMediaAdmin
 {
     /**
      * Social Media Manager instance
@@ -30,17 +32,17 @@ class Puntwork_Social_Media_Admin
     {
         $this->social_manager = new \Puntwork\SocialMedia\SocialMediaManager();
 
-        add_action('admin_menu', [$this, 'add_social_media_menu']);
-        add_action('admin_enqueue_scripts', [$this, 'enqueue_scripts']);
-        add_action('wp_ajax_puntwork_social_test_platform', [$this, 'ajax_test_platform']);
-        add_action('wp_ajax_puntwork_social_save_config', [$this, 'ajax_save_config']);
-        add_action('wp_ajax_puntwork_social_post_now', [$this, 'ajax_post_now']);
+        add_action('admin_menu', [$this, 'addSocialMediaMenu']);
+        add_action('admin_enqueueScripts', [$this, 'enqueueScripts']);
+        add_action('wp_ajax_puntwork_social_test_platform', [$this, 'ajaxTestPlatform']);
+        add_action('wp_ajax_puntwork_social_save_config', [$this, 'ajaxSaveConfig']);
+        add_action('wp_ajax_puntwork_social_post_now', [$this, 'ajaxPostNow']);
     }
 
     /**
      * Add social media menu to admin
      */
-    public function add_social_media_menu(): void
+    public function addSocialMediaMenu(): void
     {
         add_submenu_page(
             'puntwork-admin',
@@ -48,14 +50,14 @@ class Puntwork_Social_Media_Admin
             __('Social Media', 'puntwork'),
             'manage_options',
             'puntwork-social-media',
-            [$this, 'render_social_media_page']
+            [$this, 'renderSocialMediaPage']
         );
     }
 
     /**
      * Enqueue admin scripts and styles
      */
-    public function enqueue_scripts($hook): void
+    public function enqueueScripts($hook): void
     {
         if ($hook !== 'puntwork_page_puntwork-social-media') {
             return;
@@ -96,7 +98,7 @@ class Puntwork_Social_Media_Admin
     /**
      * Render social media admin page
      */
-    public function render_social_media_page(): void
+    public function renderSocialMediaPage(): void
     {
         $available_platforms = \Puntwork\SocialMedia\SocialMediaManager::getAvailablePlatforms();
         $platform_configs = \Puntwork\SocialMedia\SocialMediaManager::getAllPlatformConfigs();
@@ -143,11 +145,11 @@ class Puntwork_Social_Media_Admin
                             </div>
 
                             <div class="platform-config" style="display: <?php echo (isset($platform_configs[$platform_id]['enabled']) && $platform_configs[$platform_id]['enabled']) ? 'block' : 'none'; ?>;">
-                                <?php $this->render_platform_config($platform_id, $platform_configs[$platform_id] ?? []); ?>
+                                <?php $this->renderPlatformConfig($platform_id, $platform_configs[$platform_id] ?? []); ?>
 
                                 <div class="ads-config" style="display: <?php echo (isset($platform_configs[$platform_id]['ads_enabled']) && $platform_configs[$platform_id]['ads_enabled']) ? 'block' : 'none'; ?>;">
                                     <h4><?php _e('Ads Configuration', 'puntwork'); ?></h4>
-                                    <?php $this->render_ads_config($platform_id, $platform_configs[$platform_id] ?? []); ?>
+                                    <?php $this->renderAdsConfig($platform_id, $platform_configs[$platform_id] ?? []); ?>
                                 </div>
 
                                 <div class="platform-actions">
@@ -252,7 +254,7 @@ class Puntwork_Social_Media_Admin
                 <div id="logs-tab" class="tab-content">
                     <h2><?php _e('Social Media Activity Logs', 'puntwork'); ?></h2>
                     <div id="activity-logs-container">
-                        <?php $this->render_activity_logs(); ?>
+                        <?php $this->renderActivityLogs(); ?>
                     </div>
                 </div>
             </div>
@@ -359,7 +361,7 @@ class Puntwork_Social_Media_Admin
     /**
      * Render ads-specific configuration
      */
-    private function render_ads_config(string $platform_id, array $config): void
+    private function renderAdsConfig(string $platform_id, array $config): void
     {
         switch ($platform_id) {
             case 'twitter':
@@ -489,7 +491,7 @@ class Puntwork_Social_Media_Admin
         /**
      * Render platform-specific configuration
      */
-    private function render_platform_config(string $platform_id, array $config): void
+    private function renderPlatformConfig(string $platform_id, array $config): void
     {
         switch ($platform_id) {
             case 'twitter':
@@ -596,7 +598,7 @@ class Puntwork_Social_Media_Admin
     /**
      * Render activity logs
      */
-    private function render_activity_logs(): void
+    private function renderActivityLogs(): void
     {
         global $wpdb;
         $table_name = $wpdb->prefix . 'puntwork_social_posts';
@@ -645,7 +647,7 @@ class Puntwork_Social_Media_Admin
     /**
      * AJAX handler for testing platform connection
      */
-    public function ajax_test_platform(): void
+    public function ajaxTestPlatform(): void
     {
         check_ajax_referer('puntwork_social_nonce', 'nonce');
 
@@ -671,7 +673,7 @@ class Puntwork_Social_Media_Admin
     /**
      * AJAX handler for saving platform configuration
      */
-    public function ajax_save_config(): void
+    public function ajaxSaveConfig(): void
     {
         check_ajax_referer('puntwork_social_nonce', 'nonce');
 
@@ -704,7 +706,7 @@ class Puntwork_Social_Media_Admin
     /**
      * AJAX handler for manual posting
      */
-    public function ajax_post_now(): void
+    public function ajaxPostNow(): void
     {
         check_ajax_referer('puntwork_social_nonce', 'nonce');
 

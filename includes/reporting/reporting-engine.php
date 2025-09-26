@@ -54,33 +54,33 @@ class ReportingEngine
      */
     public static function init(): void
     {
-        add_action('init', [self::class, 'setup_reporting']);
-        add_action('wp_dashboard_setup', [self::class, 'register_dashboard_widgets']);
-        add_action('wp_ajax_generate_custom_report', [self::class, 'ajax_generate_custom_report']);
-        add_action('wp_ajax_schedule_report', [self::class, 'ajax_schedule_report']);
-        add_action('wp_ajax_get_report_data', [self::class, 'ajax_get_report_data']);
+        add_action('init', [self::class, 'setupReporting']);
+        add_action('wp_dashboard_setup', [self::class, 'registerDashboardWidgets']);
+        add_action('wp_ajaxGenerateCustomReport', [self::class, 'ajaxGenerateCustomReport']);
+        add_action('wp_ajaxScheduleReport', [self::class, 'ajaxScheduleReport']);
+        add_action('wp_ajaxGetReportData', [self::class, 'ajaxGetReportData']);
 
         // Schedule automated reports
-        if (!wp_next_scheduled('puntwork_generate_automated_reports')) {
-            wp_schedule_event(time(), 'daily', 'puntwork_generate_automated_reports');
+        if (!wp_next_scheduled('puntwork_generateAutomatedReports')) {
+            wp_schedule_event(time(), 'daily', 'puntwork_generateAutomatedReports');
         }
-        add_action('puntwork_generate_automated_reports', [self::class, 'generate_automated_reports']);
+        add_action('puntwork_generateAutomatedReports', [self::class, 'generateAutomatedReports']);
     }
 
     /**
      * Setup reporting functionality
      */
-    public static function setup_reporting(): void
+    public static function setupReporting(): void
     {
-        self::create_reports_table();
-        self::register_report_settings();
-        self::load_dashboard_widgets();
+        self::createReportsTable();
+        self::registerReportSettings();
+        self::loadDashboardWidgets();
     }
 
     /**
      * Create reports table
      */
-    private static function create_reports_table(): void
+    private static function createReportsTable(): void
     {
         global $wpdb;
 
@@ -111,7 +111,7 @@ class ReportingEngine
     /**
      * Register report settings
      */
-    private static function register_report_settings(): void
+    private static function registerReportSettings(): void
     {
         register_setting('puntwork_reporting', 'puntwork_automated_reports_enabled', [
             'type' => 'boolean',
@@ -132,36 +132,36 @@ class ReportingEngine
     /**
      * Load dashboard widgets
      */
-    private static function load_dashboard_widgets(): void
+    private static function loadDashboardWidgets(): void
     {
         self::$dashboardWidgets = [
             'performance_overview' => [
                 'title' => __('Performance Overview', 'puntwork'),
-                'callback' => [self::class, 'render_performance_widget'],
+                'callback' => [self::class, 'renderPerformanceWidget'],
                 'context' => 'normal',
                 'priority' => 'high'
             ],
             'feed_health_summary' => [
                 'title' => __('Feed Health Summary', 'puntwork'),
-                'callback' => [self::class, 'render_feed_health_widget'],
+                'callback' => [self::class, 'renderFeedHealthWidget'],
                 'context' => 'normal',
                 'priority' => 'high'
             ],
             'job_analytics_chart' => [
                 'title' => __('Job Analytics', 'puntwork'),
-                'callback' => [self::class, 'render_job_analytics_widget'],
+                'callback' => [self::class, 'renderJobAnalyticsWidget'],
                 'context' => 'normal',
                 'priority' => 'core'
             ],
             'ml_insights_widget' => [
                 'title' => __('ML Insights', 'puntwork'),
-                'callback' => [self::class, 'render_ml_insights_widget'],
+                'callback' => [self::class, 'renderMlInsightsWidget'],
                 'context' => 'side',
                 'priority' => 'core'
             ],
             'recent_activity' => [
                 'title' => __('Recent Activity', 'puntwork'),
-                'callback' => [self::class, 'render_recent_activity_widget'],
+                'callback' => [self::class, 'renderRecentActivityWidget'],
                 'context' => 'side',
                 'priority' => 'core'
             ]
@@ -171,7 +171,7 @@ class ReportingEngine
     /**
      * Register dashboard widgets
      */
-    public static function register_dashboard_widgets(): void
+    public static function registerDashboardWidgets(): void
     {
         foreach (self::$dashboardWidgets as $widget_id => $widget) {
             wp_add_dashboard_widget(
@@ -189,35 +189,35 @@ class ReportingEngine
     /**
      * Generate custom report
      */
-    public static function generate_report(string $type, array $params = [], string $format = self::FORMAT_HTML): array
+    public static function generateReport(string $type, array $params = [], string $format = self::FORMAT_HTML): array
     {
         $report_data = [];
 
         switch ($type) {
             case self::REPORT_TYPE_PERFORMANCE:
-                $report_data = self::generate_performance_report($params);
+                $report_data = self::generatePerformanceReport($params);
                 break;
             case self::REPORT_TYPE_FEED_HEALTH:
-                $report_data = self::generate_feed_health_report($params);
+                $report_data = self::generateFeedHealthReport($params);
                 break;
             case self::REPORT_TYPE_JOB_ANALYTICS:
-                $report_data = self::generate_job_analytics_report($params);
+                $report_data = self::generateJobAnalyticsReport($params);
                 break;
             case self::REPORT_TYPE_NETWORK:
-                $report_data = self::generate_network_report($params);
+                $report_data = self::generateNetworkReport($params);
                 break;
             case self::REPORT_TYPE_ML_INSIGHTS:
-                $report_data = self::generate_ml_insights_report($params);
+                $report_data = self::generateMlInsightsReport($params);
                 break;
             default:
                 return ['error' => 'Unknown report type: ' . $type];
         }
 
         // Format the report
-        $formatted_report = self::format_report($report_data, $format);
+        $formatted_report = self::formatReport($report_data, $format);
 
         // Save report to database
-        $report_id = self::save_report($type, $report_data['title'], $formatted_report, $format);
+        $report_id = self::saveReport($type, $report_data['title'], $formatted_report, $format);
 
         return [
             'success' => true,
@@ -230,7 +230,7 @@ class ReportingEngine
     /**
      * Generate performance report
      */
-    private static function generate_performance_report(array $params): array
+    private static function generatePerformanceReport(array $params): array
     {
         $date_range = $params['date_range'] ?? 30; // days
         $start_date = date('Y-m-d', strtotime("-{$date_range} days"));
@@ -305,7 +305,7 @@ class ReportingEngine
     /**
      * Generate feed health report
      */
-    private static function generate_feed_health_report(array $params): array
+    private static function generateFeedHealthReport(array $params): array
     {
         $feeds = get_posts([
             'post_type' => 'job-feed',
@@ -323,7 +323,7 @@ class ReportingEngine
         ];
 
         foreach ($feeds as $feed) {
-            $feed_data = self::analyze_feed_health($feed);
+            $feed_data = self::analyzeFeedHealth($feed);
             $feed_health[] = $feed_data;
 
             if ($feed_data['status'] === 'active') {
@@ -348,14 +348,14 @@ class ReportingEngine
             'generated_at' => current_time('mysql'),
             'overall_stats' => $overall_stats,
             'feeds' => $feed_health,
-            'recommendations' => self::generate_health_recommendations($feed_health)
+            'recommendations' => self::generateHealthRecommendations($feed_health)
         ];
     }
 
     /**
      * Analyze individual feed health
      */
-    private static function analyze_feed_health(\WP_Post $feed): array
+    private static function analyzeFeedHealth(\WP_Post $feed): array
     {
         $feed_id = $feed->ID;
         $feed_url = get_post_meta($feed_id, 'feed_url', true);
@@ -403,7 +403,7 @@ class ReportingEngine
     /**
      * Generate health recommendations
      */
-    private static function generate_health_recommendations(array $feed_health): array
+    private static function generateHealthRecommendations(array $feed_health): array
     {
         $recommendations = [];
 
@@ -429,7 +429,7 @@ class ReportingEngine
     /**
      * Generate job analytics report
      */
-    private static function generate_job_analytics_report(array $params): array
+    private static function generateJobAnalyticsReport(array $params): array
     {
         $date_range = $params['date_range'] ?? 30;
 
@@ -455,10 +455,10 @@ class ReportingEngine
         }
 
         // Job posting trends
-        $trends = self::get_job_posting_trends($date_range);
+        $trends = self::getJobPostingTrends($date_range);
 
         // Geographic distribution
-        $locations = self::get_job_location_distribution();
+        $locations = self::getJobLocationDistribution();
 
         return [
             'title' => sprintf(__('Job Analytics Report - Last %d Days', 'puntwork'), $date_range),
@@ -473,7 +473,7 @@ class ReportingEngine
     /**
      * Get job posting trends
      */
-    private static function get_job_posting_trends(int $days): array
+    private static function getJobPostingTrends(int $days): array
     {
         global $wpdb;
 
@@ -495,7 +495,7 @@ class ReportingEngine
     /**
      * Get job location distribution
      */
-    private static function get_job_location_distribution(): array
+    private static function getJobLocationDistribution(): array
     {
         global $wpdb;
 
@@ -517,7 +517,7 @@ class ReportingEngine
     /**
      * Generate network report (for multisite)
      */
-    private static function generate_network_report(array $params): array
+    private static function generateNetworkReport(array $params): array
     {
         if (!is_multisite()) {
             return [
@@ -545,7 +545,7 @@ class ReportingEngine
     /**
      * Generate ML insights report
      */
-    private static function generate_ml_insights_report(array $params): array
+    private static function generateMlInsightsReport(array $params): array
     {
         // This would integrate with MachineLearningEngine
         $ml_data = [
@@ -564,24 +564,24 @@ class ReportingEngine
     /**
      * Format report for output
      */
-    private static function format_report(array $data, string $format): string
+    private static function formatReport(array $data, string $format): string
     {
         switch ($format) {
             case self::FORMAT_HTML:
-                return self::format_html_report($data);
+                return self::formatHtmlReport($data);
             case self::FORMAT_JSON:
                 return json_encode($data, JSON_PRETTY_PRINT);
             case self::FORMAT_CSV:
-                return self::format_csv_report($data);
+                return self::formatCsvReport($data);
             default:
-                return self::format_html_report($data);
+                return self::formatHtmlReport($data);
         }
     }
 
     /**
      * Format HTML report
      */
-    private static function format_html_report(array $data): string
+    private static function formatHtmlReport(array $data): string
     {
         ob_start();
         ?>
@@ -608,11 +608,11 @@ class ReportingEngine
                 <p>Generated on: <?php echo esc_html($data['generated_at']); ?></p>
             </div>
 
-            <?php if (isset($data['summary'])): ?>
+            <?php if (isset($data['summary'])) : ?>
             <div class="section">
                 <h2>Summary</h2>
                 <div>
-                    <?php foreach ($data['summary'] as $key => $value): ?>
+                    <?php foreach ($data['summary'] as $key => $value) : ?>
                     <div class="metric">
                         <div class="metric-value"><?php echo esc_html($value); ?></div>
                         <div class="metric-label"><?php echo esc_html(ucwords(str_replace('_', ' ', $key))); ?></div>
@@ -622,7 +622,7 @@ class ReportingEngine
             </div>
             <?php endif; ?>
 
-            <?php if (isset($data['trends'])): ?>
+            <?php if (isset($data['trends'])) : ?>
             <div class="section">
                 <h2>Trends</h2>
                 <div class="chart-placeholder">
@@ -639,7 +639,7 @@ class ReportingEngine
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($data['trends'] as $trend): ?>
+                        <?php foreach ($data['trends'] as $trend) : ?>
                         <tr>
                             <td><?php echo esc_html($trend['date']); ?></td>
                             <td><?php echo esc_html($trend['imports_count']); ?></td>
@@ -652,7 +652,7 @@ class ReportingEngine
             </div>
             <?php endif; ?>
 
-            <?php if (isset($data['feeds'])): ?>
+            <?php if (isset($data['feeds'])) : ?>
             <div class="section">
                 <h2>Feed Health</h2>
                 <table>
@@ -666,7 +666,7 @@ class ReportingEngine
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($data['feeds'] as $feed): ?>
+                        <?php foreach ($data['feeds'] as $feed) : ?>
                         <tr>
                             <td><?php echo esc_html($feed['title']); ?></td>
                             <td><?php echo esc_html($feed['status']); ?></td>
@@ -688,7 +688,7 @@ class ReportingEngine
     /**
      * Format CSV report
      */
-    private static function format_csv_report(array $data): string
+    private static function formatCsvReport(array $data): string
     {
         $output = '';
 
@@ -724,7 +724,7 @@ class ReportingEngine
     /**
      * Save report to database
      */
-    private static function save_report(string $type, string $title, string $data, string $format): int
+    private static function saveReport(string $type, string $title, string $data, string $format): int
     {
         global $wpdb;
 
@@ -745,7 +745,7 @@ class ReportingEngine
     /**
      * Generate automated reports
      */
-    public static function generate_automated_reports(): void
+    public static function generateAutomatedReports(): void
     {
         if (!get_option('puntwork_automated_reports_enabled', true)) {
             return;
@@ -759,7 +759,7 @@ class ReportingEngine
 
         foreach ($reports_to_generate as $report_type) {
             try {
-                $result = self::generate_report($report_type, ['date_range' => 7], self::FORMAT_HTML);
+                $result = self::generateReport($report_type, ['date_range' => 7], self::FORMAT_HTML);
                 if ($result['success']) {
                     PuntWorkLogger::info("Automated report generated: {$report_type}", PuntWorkLogger::CONTEXT_REPORTING);
                 }
@@ -772,9 +772,9 @@ class ReportingEngine
     /**
      * Render dashboard widgets
      */
-    public static function render_performance_widget(): void
+    public static function renderPerformanceWidget(): void
     {
-        $performance_data = self::generate_performance_report(['date_range' => 7]);
+        $performance_data = self::generatePerformanceReport(['date_range' => 7]);
         ?>
         <div class="puntwork-performance-widget">
             <div class="widget-metrics">
@@ -800,9 +800,9 @@ class ReportingEngine
         <?php
     }
 
-    public static function render_feed_health_widget(): void
+    public static function renderFeedHealthWidget(): void
     {
-        $health_data = self::generate_feed_health_report([]);
+        $health_data = self::generateFeedHealthReport([]);
         ?>
         <div class="puntwork-health-widget">
             <div class="health-status">
@@ -823,9 +823,9 @@ class ReportingEngine
         <?php
     }
 
-    public static function render_job_analytics_widget(): void
+    public static function renderJobAnalyticsWidget(): void
     {
-        $analytics_data = self::generate_job_analytics_report(['date_range' => 30]);
+        $analytics_data = self::generateJobAnalyticsReport(['date_range' => 30]);
         ?>
         <div class="puntwork-analytics-widget">
             <canvas id="job-analytics-chart" width="400" height="200"></canvas>
@@ -838,7 +838,7 @@ class ReportingEngine
         <?php
     }
 
-    public static function render_ml_insights_widget(): void
+    public static function renderMlInsightsWidget(): void
     {
         // Placeholder for ML insights
         ?>
@@ -848,7 +848,7 @@ class ReportingEngine
         <?php
     }
 
-    public static function render_recent_activity_widget(): void
+    public static function renderRecentActivityWidget(): void
     {
         global $wpdb;
         $analytics_table = $wpdb->prefix . 'puntwork_import_analytics';
@@ -862,7 +862,7 @@ class ReportingEngine
         ?>
         <div class="puntwork-activity-widget">
             <ul class="activity-list">
-                <?php foreach ($recent_activity as $activity): ?>
+                <?php foreach ($recent_activity as $activity) : ?>
                 <li class="activity-item">
                     <div class="activity-feed"><?php echo esc_html(basename($activity['feed_url'])); ?></div>
                     <div class="activity-details">
@@ -880,10 +880,10 @@ class ReportingEngine
     /**
      * AJAX handlers
      */
-    public static function ajax_generate_custom_report(): void
+    public static function ajaxGenerateCustomReport(): void
     {
         try {
-            if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_generate_report')) {
+            if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_generateReport')) {
                 wp_send_json_error('Security check failed');
                 return;
             }
@@ -897,17 +897,16 @@ class ReportingEngine
             $date_range = intval($_POST['date_range'] ?? 30);
             $format = sanitize_text_field($_POST['format'] ?? self::FORMAT_HTML);
 
-            $result = self::generate_report($report_type, ['date_range' => $date_range], $format);
+            $result = self::generateReport($report_type, ['date_range' => $date_range], $format);
 
             wp_send_json_success($result);
-
         } catch (\Exception $e) {
             PuntWorkLogger::error('Report generation failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_REPORTING);
             wp_send_json_error('Report generation failed: ' . $e->getMessage());
         }
     }
 
-    public static function ajax_schedule_report(): void
+    public static function ajaxScheduleReport(): void
     {
         try {
             if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_schedule_report')) {
@@ -922,13 +921,12 @@ class ReportingEngine
 
             // Implementation for scheduling reports
             wp_send_json_success(['message' => 'Report scheduling not yet implemented']);
-
         } catch (\Exception $e) {
             wp_send_json_error('Report scheduling failed: ' . $e->getMessage());
         }
     }
 
-    public static function ajax_get_report_data(): void
+    public static function ajaxGetReportData(): void
     {
         try {
             if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_get_report_data')) {
@@ -964,7 +962,6 @@ class ReportingEngine
                 'report' => $report,
                 'data' => json_decode($report['report_data'], true)
             ]);
-
         } catch (\Exception $e) {
             wp_send_json_error('Failed to get report data: ' . $e->getMessage());
         }

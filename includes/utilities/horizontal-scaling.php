@@ -29,27 +29,27 @@ class PuntworkHorizontalScalingManager
 
     public function __construct()
     {
-        $this->instance_id = $this->generate_instance_id();
-        $this->instance_role = $this->determine_instance_role();
+        $this->instance_id = $this->generateInstanceId();
+        $this->instance_role = $this->determineInstanceRole();
         $this->last_health_check = time();
 
         // Only initialize database operations if WordPress is properly loaded
-        if ($this->is_wordpress_environment()) {
-            $this->init_hooks();
-            $this->create_instance_table();
-            $this->register_instance();
+        if ($this->isWordpressEnvironment()) {
+            $this->initHooks();
+            $this->createInstanceTable();
+            $this->registerInstance();
         }
     }
 
     /**
      * Initialize WordPress hooks
      */
-    private function init_hooks()
+    private function initHooks()
     {
-        add_action('init', [$this, 'health_check']);
-        add_action('wp_ajax_puntwork_scaling_health', [$this, 'ajax_health_check']);
-        add_action('wp_ajax_nopriv_puntwork_scaling_health', [$this, 'ajax_health_check']);
-        add_action('puntwork_cleanup_instances', [$this, 'cleanup_dead_instances']);
+        add_action('init', [$this, 'healthCheck']);
+        add_action('wp_ajax_puntwork_scaling_health', [$this, 'ajaxHealthCheck']);
+        add_action('wp_ajax_nopriv_puntwork_scaling_health', [$this, 'ajaxHealthCheck']);
+        add_action('puntwork_cleanup_instances', [$this, 'cleanupDeadInstances']);
 
         // Schedule cleanup
         if (!wp_next_scheduled('puntwork_cleanup_instances')) {
@@ -57,13 +57,13 @@ class PuntworkHorizontalScalingManager
         }
 
         // Register shutdown function for cleanup
-        add_action('shutdown', [$this, 'unregister_instance']);
+        add_action('shutdown', [$this, 'unregisterInstance']);
     }
 
     /**
      * Check if we're in a proper WordPress environment
      */
-    private function is_wordpress_environment()
+    private function isWordpressEnvironment()
     {
         global $wpdb;
         return isset($wpdb) && $wpdb instanceof \wpdb && defined('ABSPATH') && file_exists(ABSPATH . 'wp-admin/includes/upgrade.php');
@@ -72,7 +72,7 @@ class PuntworkHorizontalScalingManager
     /**
      * Generate unique instance ID
      */
-    private function generate_instance_id()
+    private function generateInstanceId()
     {
         $server_id = gethostname() ?: 'unknown';
         $process_id = getmypid() ?: rand(1000, 9999);
@@ -84,13 +84,13 @@ class PuntworkHorizontalScalingManager
     /**
      * Determine instance role based on server capabilities
      */
-    private function determine_instance_role()
+    private function determineInstanceRole()
     {
         // Check server capabilities to determine role
         $memory_limit = ini_get('memory_limit');
-        $memory_bytes = $this->parse_size($memory_limit);
+        $memory_bytes = $this->parseSize($memory_limit);
 
-        $cpu_count = $this->get_cpu_count();
+        $cpu_count = $this->getCpuCount();
 
         // Determine role based on resources
         if ($memory_bytes >= 512 * 1024 * 1024 && $cpu_count >= 4) {
@@ -107,7 +107,7 @@ class PuntworkHorizontalScalingManager
     /**
      * Parse size string to bytes
      */
-    private function parse_size($size)
+    private function parseSize($size)
     {
         $unit = strtolower(substr($size, -1));
         $value = (int) substr($size, 0, -1);
@@ -127,7 +127,7 @@ class PuntworkHorizontalScalingManager
     /**
      * Get CPU count
      */
-    private function get_cpu_count()
+    private function getCpuCount()
     {
         if (function_exists('shell_exec')) {
             $cpu_count = shell_exec('nproc 2>/dev/null') ?: shell_exec('sysctl -n hw.ncpu 2>/dev/null');
@@ -138,7 +138,7 @@ class PuntworkHorizontalScalingManager
 
         // Fallback: estimate based on memory
         $memory_limit = ini_get('memory_limit');
-        $memory_bytes = $this->parse_size($memory_limit);
+        $memory_bytes = $this->parseSize($memory_limit);
 
         if ($memory_bytes >= 1024 * 1024 * 1024) { // 1GB+
             return 4;
@@ -152,9 +152,9 @@ class PuntworkHorizontalScalingManager
     /**
      * Create instances table
      */
-    private function create_instance_table()
+    private function createInstanceTable()
     {
-        if (!$this->is_wordpress_environment()) {
+        if (!$this->isWordpressEnvironment()) {
             return;
         }
 
@@ -185,9 +185,9 @@ class PuntworkHorizontalScalingManager
     /**
      * Register this instance
      */
-    private function register_instance()
+    private function registerInstance()
     {
-        if (!$this->is_wordpress_environment()) {
+        if (!$this->isWordpressEnvironment()) {
             return;
         }
 
@@ -198,11 +198,11 @@ class PuntworkHorizontalScalingManager
         $data = [
             'instance_id' => $this->instance_id,
             'server_name' => gethostname() ?: 'unknown',
-            'ip_address' => $this->get_server_ip(),
+            'ip_address' => $this->getServerIp(),
             'role' => $this->instance_role,
             'status' => 'active',
-            'cpu_count' => $this->get_cpu_count(),
-            'memory_limit' => $this->parse_size(ini_get('memory_limit')),
+            'cpu_count' => $this->getCpuCount(),
+            'memory_limit' => $this->parseSize(ini_get('memory_limit')),
             'last_seen' => current_time('mysql')
         ];
 
@@ -212,7 +212,7 @@ class PuntworkHorizontalScalingManager
     /**
      * Get server IP address
      */
-    private function get_server_ip()
+    private function getServerIp()
     {
         $server_ip = $_SERVER['SERVER_ADDR'] ?? $_SERVER['LOCAL_ADDR'] ?? '127.0.0.1';
 
@@ -230,9 +230,9 @@ class PuntworkHorizontalScalingManager
     /**
      * Health check for this instance
      */
-    public function health_check()
+    public function healthCheck()
     {
-        if (!$this->is_wordpress_environment()) {
+        if (!$this->isWordpressEnvironment()) {
             return;
         }
 
@@ -258,7 +258,7 @@ class PuntworkHorizontalScalingManager
         );
 
         // Check system resources
-        $health_status = $this->check_system_health();
+        $health_status = $this->checkSystemHealth();
 
         if (!$health_status['healthy']) {
             // Mark instance as unhealthy
@@ -277,14 +277,14 @@ class PuntworkHorizontalScalingManager
     /**
      * Check system health
      */
-    private function check_system_health()
+    private function checkSystemHealth()
     {
         $issues = [];
         $healthy = true;
 
         // Check memory usage
         $memory_usage = memory_get_peak_usage(true);
-        $memory_limit = $this->parse_size(ini_get('memory_limit'));
+        $memory_limit = $this->parseSize(ini_get('memory_limit'));
 
         if ($memory_usage / $memory_limit > 0.9) { // 90% memory usage
             $issues[] = 'High memory usage';
@@ -301,7 +301,7 @@ class PuntworkHorizontalScalingManager
         }
 
         // Check database connectivity (only if WordPress environment)
-        if ($this->is_wordpress_environment()) {
+        if ($this->isWordpressEnvironment()) {
             global $wpdb;
             if (!$wpdb->check_connection()) {
                 $issues[] = 'Database connection failed';
@@ -318,9 +318,9 @@ class PuntworkHorizontalScalingManager
     /**
      * AJAX health check endpoint
      */
-    public function ajax_health_check()
+    public function ajaxHealthCheck()
     {
-        $health_status = $this->check_system_health();
+        $health_status = $this->checkSystemHealth();
 
         if ($health_status['healthy']) {
             wp_send_json_success([
@@ -342,9 +342,9 @@ class PuntworkHorizontalScalingManager
     /**
      * Cleanup dead instances
      */
-    public function cleanup_dead_instances()
+    public function cleanupDeadInstances()
     {
-        if (!$this->is_wordpress_environment()) {
+        if (!$this->isWordpressEnvironment()) {
             return;
         }
 
@@ -363,9 +363,9 @@ class PuntworkHorizontalScalingManager
     /**
      * Unregister instance on shutdown
      */
-    public function unregister_instance()
+    public function unregisterInstance()
     {
-        if (!$this->is_wordpress_environment()) {
+        if (!$this->isWordpressEnvironment()) {
             return;
         }
 
@@ -385,9 +385,9 @@ class PuntworkHorizontalScalingManager
     /**
      * Get active instances
      */
-    public function get_active_instances($role = null)
+    public function getActiveInstances($role = null)
     {
-        if (!$this->is_wordpress_environment()) {
+        if (!$this->isWordpressEnvironment()) {
             return [];
         }
 
@@ -415,9 +415,9 @@ class PuntworkHorizontalScalingManager
     /**
      * Get instance statistics
      */
-    public function get_instance_stats()
+    public function getInstanceStats()
     {
-        if (!$this->is_wordpress_environment()) {
+        if (!$this->isWordpressEnvironment()) {
             return ['active' => 0, 'inactive' => 0, 'maintenance' => 0, 'total' => 0];
         }
 
@@ -440,22 +440,22 @@ class PuntworkHorizontalScalingManager
     /**
      * Get current instance info
      */
-    public function get_current_instance()
+    public function getCurrentInstance()
     {
         return [
             'instance_id' => $this->instance_id,
             'role' => $this->instance_role,
             'server_name' => gethostname() ?: 'unknown',
-            'ip_address' => $this->get_server_ip(),
-            'cpu_count' => $this->get_cpu_count(),
-            'memory_limit' => $this->parse_size(ini_get('memory_limit'))
+            'ip_address' => $this->getServerIp(),
+            'cpu_count' => $this->getCpuCount(),
+            'memory_limit' => $this->parseSize(ini_get('memory_limit'))
         ];
     }
 
     /**
      * Check if this instance can handle a specific job type
      */
-    public function can_handle_job($job_type)
+    public function canHandleJob($job_type)
     {
         $role_capabilities = [
             'coordinator_only' => ['notification', 'analytics_update', 'cleanup'],
@@ -470,9 +470,9 @@ class PuntworkHorizontalScalingManager
     /**
      * Get optimal instance for job type
      */
-    public function get_optimal_instance($job_type)
+    public function getOptimalInstance($job_type)
     {
-        $instances = $this->get_active_instances();
+        $instances = $this->getActiveInstances();
 
         $capable_instances = array_filter($instances, function ($instance) use ($job_type) {
             $role_capabilities = [

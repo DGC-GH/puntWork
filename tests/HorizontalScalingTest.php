@@ -29,7 +29,7 @@ class HorizontalScalingTest extends TestCase
     {
         $scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
 
-        $instance_info = $scaling_manager->get_current_instance();
+        $instance_info = $scaling_manager->getCurrentInstance();
 
         $this->assertIsArray($instance_info);
         $this->assertArrayHasKey('instance_id', $instance_info);
@@ -67,7 +67,7 @@ class HorizontalScalingTest extends TestCase
     private function isRoleAssigned($expected_role)
     {
         $scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
-        $instance_info = $scaling_manager->get_current_instance();
+        $instance_info = $scaling_manager->getCurrentInstance();
 
         $valid_roles = ['heavy_processing', 'standard_processing', 'light_processing', 'coordinator_only'];
 
@@ -84,7 +84,7 @@ class HorizontalScalingTest extends TestCase
         $job_types = ['feed_import', 'batch_process', 'analytics_update', 'notification', 'cleanup'];
 
         foreach ($job_types as $job_type) {
-            $can_handle = $scaling_manager->can_handle_job($job_type);
+            $can_handle = $scaling_manager->canHandleJob($job_type);
             $this->assertIsBool($can_handle);
         }
     }
@@ -96,7 +96,7 @@ class HorizontalScalingTest extends TestCase
     {
         $scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
 
-        $stats = $scaling_manager->get_instance_stats();
+        $stats = $scaling_manager->getInstanceStats();
 
         $this->assertIsArray($stats);
         $this->assertArrayHasKey('active', $stats);
@@ -125,7 +125,7 @@ class HorizontalScalingTest extends TestCase
         $job_types = ['feed_import', 'batch_process', 'analytics_update'];
 
         foreach ($job_types as $job_type) {
-            $optimal_instance = $scaling_manager->get_optimal_instance($job_type);
+            $optimal_instance = $scaling_manager->getOptimalInstance($job_type);
 
             // In single instance setup, it should return null or current instance
             $this->assertTrue($optimal_instance === null || is_array($optimal_instance));
@@ -147,7 +147,7 @@ class HorizontalScalingTest extends TestCase
         try {
             // Simulate health check call
             $reflection = new \ReflectionClass($scaling_manager);
-            $method = $reflection->getMethod('health_check');
+            $method = $reflection->getMethod('healthCheck');
             $method->setAccessible(true);
             $method->invoke($scaling_manager);
         } catch (\Exception $e) {
@@ -168,7 +168,7 @@ class HorizontalScalingTest extends TestCase
 
         try {
             $reflection = new \ReflectionClass($scaling_manager);
-            $method = $reflection->getMethod('cleanup_dead_instances');
+            $method = $reflection->getMethod('cleanupDeadInstances');
             $method->setAccessible(true);
             $method->invoke($scaling_manager);
         } catch (\Exception $e) {

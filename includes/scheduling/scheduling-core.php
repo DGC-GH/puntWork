@@ -464,13 +464,20 @@ class AdvancedScheduler
     private static function compareValues($actual, $expected, string $operator): bool
     {
         switch ($operator) {
-            case 'equals': return $actual == $expected;
-            case 'not_equals': return $actual != $expected;
-            case 'greater': return $actual > $expected;
-            case 'less': return $actual < $expected;
-            case 'greater_equal': return $actual >= $expected;
-            case 'less_equal': return $actual <= $expected;
-            default: return true;
+            case 'equals':
+                return $actual == $expected;
+            case 'not_equals':
+                return $actual != $expected;
+            case 'greater':
+                return $actual > $expected;
+            case 'less':
+                return $actual < $expected;
+            case 'greater_equal':
+                return $actual >= $expected;
+            case 'less_equal':
+                return $actual <= $expected;
+            default:
+                return true;
         }
     }
 
@@ -483,10 +490,14 @@ class AdvancedScheduler
             $value = (int) $matches[1];
             $unit = strtoupper($matches[2]);
             switch ($unit) {
-                case 'G': return $value * 1024;
-                case 'M': return $value;
-                case 'K': return $value / 1024;
-                default: return $value;
+                case 'G':
+                    return $value * 1024;
+                case 'M':
+                    return $value;
+                case 'K':
+                    return $value / 1024;
+                default:
+                    return $value;
             }
         }
         return 128; // Default 128MB
@@ -500,12 +511,18 @@ class AdvancedScheduler
         $frequency = $schedule['frequency'] ?? 'daily';
 
         switch ($frequency) {
-            case 'hourly': return HOUR_IN_SECONDS;
-            case '3hours': return 3 * HOUR_IN_SECONDS;
-            case '6hours': return 6 * HOUR_IN_SECONDS;
-            case '12hours': return 12 * HOUR_IN_SECONDS;
-            case 'custom': return ($schedule['interval'] ?? 24) * HOUR_IN_SECONDS;
-            default: return DAY_IN_SECONDS;
+            case 'hourly':
+                return HOUR_IN_SECONDS;
+            case '3hours':
+                return 3 * HOUR_IN_SECONDS;
+            case '6hours':
+                return 6 * HOUR_IN_SECONDS;
+            case '12hours':
+                return 12 * HOUR_IN_SECONDS;
+            case 'custom':
+                return ($schedule['interval'] ?? 24) * HOUR_IN_SECONDS;
+            default:
+                return DAY_IN_SECONDS;
         }
     }
 
