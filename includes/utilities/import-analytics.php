@@ -217,7 +217,8 @@ class ImportAnalytics {
             'performance' => self::get_performance_metrics($period),
             'trends' => self::get_trends_data($period),
             'feed_stats' => self::get_feed_statistics($period),
-            'errors' => self::get_error_summary($period)
+            'errors' => self::get_error_summary($period),
+            'predictions' => self::get_predictive_analytics($period)
         ];
 
         // Cache for 1 hour
@@ -397,6 +398,88 @@ class ImportAnalytics {
             'total_errors' => (int) ($result['total_errors'] ?? 0),
             'error_messages' => $result['error_messages'] ?? ''
         ];
+    }
+
+    /**
+     * Get predictive analytics data
+     */
+    private static function get_predictive_analytics($period) {
+        // Import the PredictiveAnalytics class
+        if (!class_exists('\Puntwork\AI\PredictiveAnalytics')) {
+            require_once plugin_dir_path(dirname(__FILE__, 2)) . 'ai/predictive-analytics.php';
+        }
+
+        $predictions = [];
+
+        try {
+            // Get import volume predictions
+            $predictions['import_volume'] = \Puntwork\AI\PredictiveAnalytics::predictImportVolume(
+                \Puntwork\AI\PredictiveAnalytics::PERIOD_DAY
+            );
+
+            // Get content quality predictions
+            $predictions['content_quality'] = \Puntwork\AI\PredictiveAnalytics::predictContentQualityTrends(
+                self::get_period_days($period)
+            );
+
+            // Get duplicate pattern predictions
+            $predictions['duplicate_patterns'] = \Puntwork\AI\PredictiveAnalytics::predictDuplicatePatterns(
+                self::get_period_days($period)
+            );
+
+            // Get feed reliability predictions for top feeds
+            $predictions['feed_reliability'] = self::get_feed_reliability_predictions();
+
+        } catch (\Exception $e) {
+            PuntWorkLogger::error('Error generating predictive analytics', PuntWorkLogger::CONTEXT_ANALYTICS, [
+                'error' => $e->getMessage()
+            ]);
+
+            $predictions = [
+                'error' => 'Unable to generate predictions: ' . $e->getMessage()
+            ];
+        }
+
+        return $predictions;
+    }
+
+    /**
+     * Get feed reliability predictions for active feeds
+     */
+    private static function get_feed_reliability_predictions() {
+        $feeds = get_feeds();
+        $predictions = [];
+
+        if (!class_exists('\Puntwork\AI\PredictiveAnalytics')) {
+            require_once plugin_dir_path(dirname(__FILE__, 2)) . 'ai/predictive-analytics.php';
+        }
+
+        foreach (array_keys($feeds) as $feed_key) {
+            try {
+                $predictions[$feed_key] = \Puntwork\AI\PredictiveAnalytics::predictFeedReliability($feed_key);
+            } catch (\Exception $e) {
+                // Skip feeds with prediction errors
+                continue;
+            }
+        }
+
+        return $predictions;
+    }
+
+    /**
+     * Convert period string to days for predictive analytics
+     */
+    private static function get_period_days($period) {
+        switch ($period) {
+            case '7days':
+                return 7;
+            case '30days':
+                return 30;
+            case '90days':
+                return 90;
+            default:
+                return 30;
+        }
     }
 
     /**
