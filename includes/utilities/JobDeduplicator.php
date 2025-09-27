@@ -523,7 +523,7 @@ class JobDeduplicator
         }
 
         // Detect duplicate groups using AI algorithms
-        $duplicate_groups = \Puntwork\AI\DuplicateDetector::detectDuplicates($job_data);
+        $duplicate_groups = AI\DuplicateDetector::detectDuplicates($job_data);
 
         // Process duplicate groups
         foreach ($duplicate_groups as $group_indices) {

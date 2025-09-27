@@ -430,17 +430,17 @@ class ImportAnalytics
 
         try {
             // Get import volume predictions
-            $predictions['import_volume'] = \Puntwork\AI\PredictiveAnalytics::predictImportVolume(
-                \Puntwork\AI\PredictiveAnalytics::PERIOD_DAY
+            $predictions['import_volume'] = AI\PredictiveAnalytics::predictImportVolume(
+                AI\PredictiveAnalytics::PERIOD_DAY
             );
 
             // Get content quality predictions
-            $predictions['content_quality'] = \Puntwork\AI\PredictiveAnalytics::predictContentQualityTrends(
+            $predictions['content_quality'] = AI\PredictiveAnalytics::predictContentQualityTrends(
                 self::getPeriodDays($period)
             );
 
             // Get duplicate pattern predictions
-            $predictions['duplicate_patterns'] = \Puntwork\AI\PredictiveAnalytics::predictDuplicatePatterns(
+            $predictions['duplicate_patterns'] = AI\PredictiveAnalytics::predictDuplicatePatterns(
                 self::getPeriodDays($period)
             );
 
@@ -467,13 +467,13 @@ class ImportAnalytics
         $feeds = get_feeds();
         $predictions = [];
 
-        if (!class_exists('\Puntwork\AI\PredictiveAnalytics')) {
+        if (!class_exists('AI\PredictiveAnalytics')) {
             require_once plugin_dir_path(dirname(__FILE__, 2)) . 'includes/ai/predictive-analytics.php';
         }
 
         foreach (array_keys($feeds) as $feed_key) {
             try {
-                $predictions[$feed_key] = \Puntwork\AI\PredictiveAnalytics::predictFeedReliability($feed_key);
+                $predictions[$feed_key] = AI\PredictiveAnalytics::predictFeedReliability($feed_key);
             } catch (\Exception $e) {
                 // Skip feeds with prediction errors
                 continue;

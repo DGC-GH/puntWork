@@ -30,7 +30,7 @@ class PuntworkCrmAdmin
      */
     public function __construct()
     {
-        $this->crm_manager = new \Puntwork\CRM\CRMManager();
+        $this->crm_manager = new CRM\CRMManager();
 
         add_action('admin_menu', [$this, 'addCrmMenu']);
         add_action('admin_enqueueScripts', [$this, 'enqueueScripts']);
@@ -100,8 +100,8 @@ class PuntworkCrmAdmin
      */
     public function renderCrmPage(): void
     {
-        $available_platforms = \Puntwork\CRM\CRMManager::getAvailablePlatforms();
-        $platform_configs = \Puntwork\CRM\CRMManager::getAllPlatformConfigs();
+        $available_platforms = CRM\CRMManager::getAvailablePlatforms();
+        $platform_configs = CRM\CRMManager::getAllPlatformConfigs();
         $statistics = $this->crm_manager->getStatistics();
 
         ?>
@@ -566,7 +566,7 @@ class PuntworkCrmAdmin
             $sanitized_config[$key] = sanitize_text_field($value);
         }
 
-        $success = \Puntwork\CRM\CRMManager::configurePlatform($platform_id, $sanitized_config);
+        $success = CRM\CRMManager::configurePlatform($platform_id, $sanitized_config);
 
         if ($success) {
             wp_send_json_success(['message' => __('Configuration saved successfully', 'puntwork')]);
