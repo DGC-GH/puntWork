@@ -163,6 +163,29 @@ class PuntworkHorizontalScalingManager
         $table_name = $wpdb->prefix . self::INSTANCE_TABLE;
         $charset_collate = $wpdb->get_charset_collate();
 
+        // Check if table exists and has correct structure
+        $table_exists = $wpdb->get_var(
+            $wpdb->prepare(
+                "SHOW TABLES LIKE %s",
+                $table_name
+            )
+        );
+
+        if ($table_exists) {
+            // Check if primary key exists
+            $primary_key_exists = $wpdb->get_var(
+                "SELECT COUNT(*) FROM information_schema.KEY_COLUMN_USAGE 
+                 WHERE TABLE_SCHEMA = DATABASE() 
+                 AND TABLE_NAME = '$table_name' 
+                 AND CONSTRAINT_NAME = 'PRIMARY'"
+            );
+
+            if ($primary_key_exists > 0) {
+                error_log('[PUNTWORK] Instances table already exists with primary key, skipping creation');
+                return;
+            }
+        }
+
         $sql = "CREATE TABLE $table_name (
             instance_id varchar(100) NOT NULL,
             server_name varchar(100) NOT NULL,

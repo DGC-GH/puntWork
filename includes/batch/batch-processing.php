@@ -529,6 +529,15 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
 
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Loaded $loaded_count items from JSONL (batch size: $batch_size)";
 
+    if ($loaded_count === 0) {
+        error_log('[PUNTWORK] No items loaded from JSONL - file may be empty or corrupted');
+        return [
+            'batch_items' => $batch_items,
+            'batch_guids' => $batch_guids,
+            'cancelled' => false
+        ];
+    }
+
     for ($i = 0; $i < count($batch_json_items); $i++) {
         $current_index = $start_index + $i;
 
@@ -574,6 +583,7 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
     $valid_items_count = count($batch_guids);
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Prepared $valid_items_count valid items for processing (skipped " . ($loaded_count - $valid_items_count) . " items)";
 
+    error_log('[PUNTWORK] Prepared ' . $valid_items_count . ' valid items for processing');
     return [
         'batch_items' => $batch_items,
         'batch_guids' => $batch_guids,
@@ -760,15 +770,26 @@ function process_batch_items_with_metadata(array $batch_guids, array $batch_item
  */
 function load_json_batch($json_path, $start_index, $batch_size)
 {
+    error_log('[PUNTWORK] load_json_batch called with: path=' . basename($json_path) . ', start_index=' . $start_index . ', batch_size=' . $batch_size);
+    error_log('[PUNTWORK] load_json_batch: file exists: ' . (file_exists($json_path) ? 'yes' : 'no'));
+    
+    if (file_exists($json_path)) {
+        error_log('[PUNTWORK] load_json_batch: file size: ' . filesize($json_path) . ' bytes');
+    }
+
     $items = [];
     $count = 0;
     $current_index = 0;
 
     if (($handle = fopen($json_path, "r")) !== false) {
+        error_log('[PUNTWORK] load_json_batch: opened file successfully');
+        
         // Skip to start_index efficiently
         while ($current_index < $start_index && ($line = fgets($handle)) !== false) {
             $current_index++;
         }
+        
+        error_log('[PUNTWORK] load_json_batch: skipped to index ' . $current_index);
 
         // Read batch_size items
         while ($count < $batch_size && ($line = fgets($handle)) !== false) {
@@ -778,13 +799,20 @@ function load_json_batch($json_path, $start_index, $batch_size)
                 if ($item !== null) {
                     $items[] = $item;
                     $count++;
+                } else {
+                    error_log('[PUNTWORK] load_json_batch: failed to decode JSON at line ' . ($current_index + $count + 1) . ': ' . json_last_error_msg());
                 }
             }
             $current_index++;
         }
+        
+        error_log('[PUNTWORK] load_json_batch: read ' . $count . ' items');
         fclose($handle);
+    } else {
+        error_log('[PUNTWORK] load_json_batch: failed to open file');
     }
 
+    error_log('[PUNTWORK] load_json_batch: returning ' . count($items) . ' items');
     return $items;
 }
 

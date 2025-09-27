@@ -29,6 +29,9 @@ function get_queue_stats_ajax()
     }
 
     try {
+        // Ensure queue table exists
+        ensure_queue_table_exists();
+
         global $wpdb;
         $table_name = $wpdb->prefix . 'puntwork_queue';
 
@@ -65,6 +68,9 @@ function get_recent_jobs_ajax()
     }
 
     try {
+        // Ensure queue table exists
+        ensure_queue_table_exists();
+
         global $wpdb;
         $table_name = $wpdb->prefix . 'puntwork_queue';
 
@@ -98,6 +104,9 @@ function clear_completed_jobs_ajax()
     }
 
     try {
+        // Ensure queue table exists
+        ensure_queue_table_exists();
+
         global $wpdb;
         $table_name = $wpdb->prefix . 'puntwork_queue';
 
@@ -179,17 +188,52 @@ function manual_process_queue_ajax()
 }
 
 /**
- * Get queue configuration
+ * Ensure queue table exists before any operations
  */
-function get_queue_config()
+function ensure_queue_table_exists()
 {
-    return [
-        'max_retries' => 3,
-        'batch_size' => 10,
-        'cron_interval' => 30, // seconds
-        'max_execution_time' => 120, // seconds
-        'table_name' => 'puntwork_queue'
-    ];
+    global $wpdb;
+
+    $table_name = $wpdb->prefix . 'puntwork_queue';
+    $charset_collate = $wpdb->get_charset_collate();
+
+    // Check if table exists
+    $table_exists = $wpdb->get_var(
+        $wpdb->prepare(
+            "SHOW TABLES LIKE %s",
+            $table_name
+        )
+    );
+
+    if (!$table_exists) {
+        error_log('[PUNTWORK] Queue table does not exist, creating it via AJAX');
+
+        $sql = "CREATE TABLE $table_name (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            job_type varchar(100) NOT NULL,
+            job_data longtext NOT NULL,
+            priority int(11) DEFAULT 10,
+            status enum('pending','processing','completed','failed') DEFAULT 'pending',
+            attempts int(11) DEFAULT 0,
+            max_attempts int(11) DEFAULT 3,
+            scheduled_at datetime DEFAULT CURRENT_TIMESTAMP,
+            started_at datetime NULL,
+            completed_at datetime NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY job_type_status (job_type, status),
+            KEY priority_scheduled (priority, scheduled_at),
+            KEY status_updated (status, updated_at)
+        ) $charset_collate;";
+
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+
+        if ($wpdb->last_error) {
+            error_log('[PUNTWORK] Database error during queue table creation: ' . $wpdb->last_error);
+        }
+    }
 }
 
 /**

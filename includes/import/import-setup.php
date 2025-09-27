@@ -112,6 +112,16 @@ function prepare_import_setup($batch_start = 0)
     error_log('[PUNTWORK] JSONL path: ' . $json_path);
     error_log('[PUNTWORK] ABSPATH: ' . ABSPATH);
     error_log('[PUNTWORK] File exists: ' . (file_exists($json_path) ? 'yes' : 'no'));
+    if (file_exists($json_path)) {
+        error_log('[PUNTWORK] File size: ' . filesize($json_path) . ' bytes');
+        $first_line = '';
+        $handle = fopen($json_path, 'r');
+        if ($handle) {
+            $first_line = fgets($handle);
+            fclose($handle);
+            error_log('[PUNTWORK] First line preview: ' . substr($first_line, 0, 200));
+        }
+    }
 
     if (!file_exists($json_path)) {
         error_log('[PUNTWORK] JSONL file not found: ' . $json_path);

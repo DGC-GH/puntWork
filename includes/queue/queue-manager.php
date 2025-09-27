@@ -656,17 +656,12 @@ class PuntworkQueueManager
     }
 
     /**
-     * Get load balancer instance
+     * Ensure queue table exists (public method for external calls)
      */
-    private function getLoadBalancer()
+    public function ensureTableExists()
     {
-        if (class_exists('Puntwork\\PuntworkLoadBalancer')) {
-            global $puntwork_load_balancer;
-            return $puntwork_load_balancer ?? null;
-        }
-        return null;
+        $this->createQueueTable();
     }
-}
 
 // Initialize queue manager
 new PuntworkQueueManager();
