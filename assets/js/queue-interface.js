@@ -380,6 +380,12 @@ class PuntworkQueueInterface {
 // Initialize queue interface when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof puntworkQueue !== 'undefined') {
-        window.puntworkQueueInterface = new PuntworkQueueInterface();
+        // Only show queue management on relevant pages
+        const currentPage = new URLSearchParams(window.location.search).get('page') || '';
+        const queuePages = ['puntwork-dashboard', 'puntwork-monitoring', 'job-feed-dashboard'];
+
+        if (queuePages.includes(currentPage)) {
+            window.puntworkQueueInterface = new PuntworkQueueInterface();
+        }
     }
 });
