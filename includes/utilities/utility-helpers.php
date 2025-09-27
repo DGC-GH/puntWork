@@ -44,6 +44,7 @@ if (!function_exists('get_json_item_count')) {
      */
     function get_json_item_count($json_path)
     {
+        error_log('[PUNTWORK] get_json_item_count called with path: ' . $json_path);
         $count = 0;
         $sample_lines = [];
         $bom = "\xef\xbb\xbf";
@@ -71,7 +72,7 @@ if (!function_exists('get_json_item_count')) {
             }
             fclose($handle);
         }
-        error_log('[PUNTWORK] get_json_item_count: Total valid items: ' . $count);
+        error_log('[PUNTWORK] get_json_item_count: Total valid items: ' . $count . ' (file has ' . (file_exists($json_path) ? 'exists' : 'does not exist') . ')');
         if (!empty($sample_lines)) {
             error_log('[PUNTWORK] get_json_item_count: Sample items: ' . implode(' | ', $sample_lines));
         }

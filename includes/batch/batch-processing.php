@@ -235,6 +235,8 @@ function process_batch_items_logic(array $setup): array
             $batch_items = $batch_load_info['batch_items'];
             $batch_guids = $batch_load_info['batch_guids'];
 
+            error_log('[PUNTWORK] process_batch_items_logic: load_and_prepare_batch_items returned ' . count($batch_guids) . ' GUIDs, ' . count($batch_items) . ' items, cancelled=' . ($batch_load_info['cancelled'] ? 'true' : 'false'));
+
             // Checkpoint: Batch items loaded
             checkpoint_performance(
                 $perf_id, 'batch_loaded', [
@@ -832,10 +834,14 @@ function load_json_batch($json_path, $start_index, $batch_size)
             return [];
         }
 
+        error_log('[PUNTWORK] load_json_batch: File opened successfully, skipping to start_index=' . $start_index);
+
         // Skip to start_index
         while ($current_index < $start_index && ($line = fgets($handle)) !== false) {
             $current_index++;
         }
+
+        error_log('[PUNTWORK] load_json_batch: Skipped to index ' . $current_index . ', now reading batch_size=' . $batch_size . ' items');
 
         // Read batch_size items
         while ($count < $batch_size && ($line = fgets($handle)) !== false) {
@@ -850,14 +856,14 @@ function load_json_batch($json_path, $start_index, $batch_size)
                 if ($item !== null) {
                     $items[] = $item;
                     $count++;
-                    error_log('[PUNTWORK] load_json_batch: Successfully decoded item ' . $count . ' with GUID: ' . ($item['guid'] ?? 'MISSING') . ' at line ' . ($current_index + $lines_read));
+                    error_log('[PUNTWORK] load_json_batch: Successfully decoded item ' . $count . ' at file position ' . ($start_index + $lines_read) . ' with GUID: ' . ($item['guid'] ?? 'MISSING'));
                 } else {
                     $invalid_json++;
-                    error_log('[PUNTWORK] load_json_batch: Failed to decode JSON at line ' . ($current_index + $lines_read) . ': ' . json_last_error_msg() . ' - Line length: ' . strlen($line) . ' - Line start: ' . substr($line, 0, 100));
+                    error_log('[PUNTWORK] load_json_batch: Failed to decode JSON at line ' . ($start_index + $lines_read) . ': ' . json_last_error_msg() . ' - Line length: ' . strlen($line) . ' - Line start: ' . substr($line, 0, 100));
                 }
             } else {
                 $empty_lines++;
-                error_log('[PUNTWORK] load_json_batch: Empty line at ' . ($current_index + $lines_read));
+                error_log('[PUNTWORK] load_json_batch: Empty line at ' . ($start_index + $lines_read));
             }
             $current_index++;
         }
