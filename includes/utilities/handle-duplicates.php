@@ -39,12 +39,39 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
                     'post_status' => 'any',
                     'fields' => 'ids',
                 ]) ?: [];
+
+                if (empty($existing)) {
+                    continue; // No posts found, skip
+                }
+
+                // BATCH LOAD all required metadata and post fields to avoid N+1 queries
+                $placeholders = implode(',', array_fill(0, count($existing), '%d'));
+                $hashes_query = $wpdb->prepare(
+                    "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
+                    $existing
+                );
+                $hashes_results = $wpdb->get_results($hashes_query, OBJECT_K);
+                $hashes = [];
+                foreach ($hashes_results as $post_id => $row) {
+                    $hashes[$post_id] = $row->meta_value;
+                }
+
+                // Batch load post_modified and post_title
+                $posts_query = $wpdb->prepare(
+                    "SELECT ID, post_modified, post_title FROM $wpdb->posts WHERE ID IN ($placeholders)",
+                    $existing
+                );
+                $posts_results = $wpdb->get_results($posts_query, OBJECT_K);
+                $post_modified = [];
+                $post_titles = [];
+                foreach ($posts_results as $post_id => $post) {
+                    $post_modified[$post_id] = $post->post_modified;
+                    $post_titles[$post_id] = $post->post_title;
+                }
+
                 $post_to_keep = null;
                 $duplicates_to_draft = [];
-                $hashes = [];
-                foreach ($existing as $post_id) {
-                    $hashes[$post_id] = get_post_meta($post_id, '_import_hash', true);
-                }
+
                 foreach ($existing as $post_id) {
                     if ($post_to_keep === null) {
                         $post_to_keep = $post_id;
@@ -54,7 +81,7 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
                             $duplicates_to_draft[] = $post_id;
                         } else {
                             // If hashes differ, keep the most recently modified
-                            if (strtotime(get_post_field('post_modified', $post_id)) > strtotime(get_post_field('post_modified', $post_to_keep))) {
+                            if (strtotime($post_modified[$post_id]) > strtotime($post_modified[$post_to_keep])) {
                                 $duplicates_to_draft[] = $post_to_keep;
                                 $post_to_keep = $post_id;
                             } else {
@@ -66,8 +93,8 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
 
                 // Draft duplicates instead of deleting them, and append reason to title
                 foreach ($duplicates_to_draft as $dup_id) {
-                    // Get current title
-                    $current_title = get_post_field('post_title', $dup_id);
+                    // Get current title from batched data
+                    $current_title = $post_titles[$dup_id] ?? '';
 
                     // Determine reason for drafting
                     $reason = 'Duplicate - ';
