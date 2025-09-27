@@ -192,3 +192,80 @@ function update_batch_metrics($time_elapsed, $processed_count, $batch_size)
         update_option('job_import_consecutive_small_batches', 0, false);
     }
 }
+
+/**
+ * Validate and adjust batch size based on performance metrics.
+ *
+ * @param  array $setup Setup data.
+ * @return array Adjusted setup with batch_size and logs.
+ */
+function validate_and_adjust_batch_size(array $setup): array
+{
+    $memory_limit_bytes = get_memory_limit_bytes();
+    $threshold = 0.6 * $memory_limit_bytes;
+    $batch_size = get_option('job_import_batch_size') ?: 100; // Starting batch size set to 100 for better performance // Reduced default from 100 to 50
+    
+    // Ensure batch_size is at least 1
+    $batch_size = max(1, (int)$batch_size);
+    
+    $old_batch_size = $batch_size;
+    $prev_time_per_item = get_option('job_import_time_per_job', 0);
+    $avg_time_per_item = get_option('job_import_avg_time_per_job', $prev_time_per_item);
+    $last_peak_memory = get_option('job_import_last_peak_memory', $memory_limit_bytes);
+    $last_memory_ratio = $last_peak_memory / $memory_limit_bytes;
+
+    $current_batch_time = get_option('job_import_last_batch_time', 0);
+    $previous_batch_time = get_option('job_import_previous_batch_time', 0);
+
+    $adjustment_result = adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time);
+    $batch_size = $adjustment_result['batch_size'];
+    $batch_size = max(1, (int)$batch_size); // Ensure batch_size is at least 1
+
+    $logs = [];
+    if ($batch_size != $old_batch_size) {
+        update_option('job_import_batch_size', $batch_size, false);
+        $reason = '';
+        if ($last_memory_ratio > 0.85) {
+            $reason = 'high previous memory';
+        } elseif ($last_memory_ratio < 0.5) {
+            $reason = 'low previous memory and low avg time';
+        } elseif ($current_batch_time > $previous_batch_time) {
+            $reason = 'current batch slower than previous';
+        } elseif ($current_batch_time < $previous_batch_time) {
+            $reason = 'current batch faster than previous';
+        }
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch size adjusted to ' . $batch_size . ' due to ' . $reason;
+        if (!empty($adjustment_result['reason'])) {
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Reason: ' . $adjustment_result['reason'];
+        }
+    }
+
+    return [
+        'batch_size' => $batch_size,
+        'threshold' => $threshold,
+        'logs' => $logs
+    ];
+}
+
+/**
+ * Prepare batch processing variables.
+ *
+ * @param  array $setup      Original setup.
+ * @param  int   $batch_size Adjusted batch size.
+ * @return array Prepared variables.
+ */
+function prepare_batch_processing(array $setup, int $batch_size): array
+{
+    $end_index = min($setup['start_index'] + $batch_size, $setup['total']);
+
+    return [
+        'end_index' => $end_index,
+        'published' => 0,
+        'updated' => 0,
+        'skipped' => 0,
+        'duplicates_drafted' => 0,
+        'inferred_languages' => 0,
+        'inferred_benefits' => 0,
+        'schema_generated' => 0
+    ];
+}
