@@ -406,15 +406,17 @@ function render_onboarding_modal()
                 </div>
             </div>
 
+            <!-- Progress Bar -->
+            <div class="onboarding-progress" style="padding-top: 16px; margin-bottom: 16px;">
+                <div class="onboarding-progress-bar">
+                    <div class="onboarding-progress-fill" id="onboarding-progress-fill"></div>
+                </div>
+            </div>
+
             <!-- Navigation Buttons -->
             <div class="onboarding-footer">
-                <!-- Progress Bar -->
-                <div class="onboarding-progress" style="border-top: 1px solid #e5e5e7; padding-top: 16px; margin-bottom: 16px;">
-                    <div class="onboarding-progress-bar">
-                        <div class="onboarding-progress-fill" id="onboarding-progress-fill"></div>
-                    </div>
-                </div>
                 <div class="footer-actions">
+                    <!-- Navigation Buttons -->
                     <button type="button" id="onboarding-prev" class="onboarding-btn secondary prev-btn" style="display: none;" aria-label="<?php esc_attr_e('Previous step', 'puntwork'); ?>">
                         <i class="fas fa-arrow-left"></i> <?php _e('Previous', 'puntwork'); ?>
                     </button>
