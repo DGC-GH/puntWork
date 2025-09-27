@@ -15,6 +15,8 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
+error_log('[PUNTWORK] import-batch.php loaded - is_admin: ' . (is_admin() ? 'true' : 'false') . ', DOING_AJAX: ' . (defined('DOING_AJAX') && DOING_AJAX ? 'true' : 'false'));
+
 /**
  * Main import batch processing file
  * Includes all import-related modules and provides the main import function
@@ -91,6 +93,7 @@ function should_continue_batch_processing(): bool
 }
 
 if (!function_exists('import_jobs_from_json')) {
+    error_log('[PUNTWORK] Defining import_jobs_from_json function');
     /**
      * Import jobs from JSONL file in batches.
      *

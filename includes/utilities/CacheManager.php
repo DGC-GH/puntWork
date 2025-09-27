@@ -37,7 +37,27 @@ class CacheManager
      */
     public static function isRedisAvailable(): bool
     {
-        return function_exists('wp_cache_get') && wp_cache_get('test_redis_connection', 'puntwork_test') === false;
+        static $redis_available = null;
+
+        if ($redis_available === null) {
+            $redis_available = function_exists('wp_cache_get') && function_exists('wp_cache_set');
+            if ($redis_available) {
+                // Test if cache is actually working
+                try {
+                    $test_result = wp_cache_set('puntwork_cache_test', 'test_value', 'puntwork_test', 60);
+                    if ($test_result) {
+                        $redis_available = (wp_cache_get('puntwork_cache_test', 'puntwork_test') === 'test_value');
+                        wp_cache_delete('puntwork_cache_test', 'puntwork_test');
+                    } else {
+                        $redis_available = false;
+                    }
+                } catch (\Exception $e) {
+                    $redis_available = false;
+                }
+            }
+        }
+
+        return $redis_available;
     }
 
     /**

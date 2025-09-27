@@ -76,8 +76,23 @@ function prepare_import_setup($batch_start = 0)
     ignore_user_abort(true);
 
     global $wpdb;
-    $acf_fields = get_acf_fields();
-    $zero_empty_fields = get_zero_empty_fields();
+    error_log('[PUNTWORK] prepare_import_setup called with batch_start=' . $batch_start);
+
+    try {
+        $acf_fields = get_acf_fields();
+        error_log('[PUNTWORK] Got ACF fields: ' . count($acf_fields));
+    } catch (\Exception $e) {
+        error_log('[PUNTWORK] Error getting ACF fields: ' . $e->getMessage());
+        return new WP_Error('acf_error', 'Failed to get ACF fields: ' . $e->getMessage());
+    }
+
+    try {
+        $zero_empty_fields = get_zero_empty_fields();
+        error_log('[PUNTWORK] Got zero empty fields: ' . count($zero_empty_fields));
+    } catch (\Exception $e) {
+        error_log('[PUNTWORK] Error getting zero empty fields: ' . $e->getMessage());
+        return new WP_Error('zero_fields_error', 'Failed to get zero empty fields: ' . $e->getMessage());
+    }
 
     if (!defined('WP_IMPORTING')) {
         define('WP_IMPORTING', true);
@@ -96,20 +111,29 @@ function prepare_import_setup($batch_start = 0)
     }
 
     $json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
+    error_log('[PUNTWORK] JSONL path: ' . $json_path);
+    error_log('[PUNTWORK] ABSPATH: ' . ABSPATH);
+    error_log('[PUNTWORK] File exists: ' . (file_exists($json_path) ? 'yes' : 'no'));
 
     if (!file_exists($json_path)) {
-        error_log('JSONL file not found: ' . $json_path);
+        error_log('[PUNTWORK] JSONL file not found: ' . $json_path);
         return ['success' => false, 'message' => 'JSONL file not found', 'logs' => ['JSONL file not found']];
     }
 
     // Validate JSONL file integrity
     $validation = validate_jsonl_file($json_path);
     if (is_wp_error($validation)) {
-        error_log('JSONL validation failed: ' . $validation->get_error_message());
+        error_log('[PUNTWORK] JSONL validation failed: ' . $validation->get_error_message());
         return ['success' => false, 'message' => 'JSONL file validation failed: ' . $validation->get_error_message(), 'logs' => ['JSONL file validation failed: ' . $validation->get_error_message()]];
     }
 
-    $total = get_json_item_count($json_path);
+    try {
+        $total = get_json_item_count($json_path);
+        error_log('[PUNTWORK] Total items in JSONL: ' . $total);
+    } catch (\Exception $e) {
+        error_log('[PUNTWORK] Error counting JSONL items: ' . $e->getMessage());
+        return new WP_Error('count_error', 'Failed to count JSONL items: ' . $e->getMessage());
+    }
 
     if ($total == 0) {
         return [

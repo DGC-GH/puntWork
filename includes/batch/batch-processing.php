@@ -152,7 +152,11 @@ class JsonlIterator implements \Iterator
  */
 function process_batch_items_logic(array $setup): array
 {
-    error_log('[PUNTWORK] process_batch_items_logic called');
+    error_log('[PUNTWORK] process_batch_items_logic called with setup: ' . json_encode([
+        'start_index' => $setup['start_index'] ?? 'not set',
+        'total' => $setup['total'] ?? 'not set',
+        'json_path' => isset($setup['json_path']) ? basename($setup['json_path']) : 'not set'
+    ]));
 
     // Start tracing span for batch processing
     $span = PuntworkTracing::startActiveSpan(
@@ -498,7 +502,16 @@ function prepare_batch_processing(array $setup, int $batch_size): array
  */
 function load_and_prepare_batch_items(string $json_path, int $start_index, int $batch_size, float $threshold, array &$logs): array
 {
+    error_log('[PUNTWORK] load_and_prepare_batch_items called with: ' . json_encode([
+        'json_path' => basename($json_path),
+        'start_index' => $start_index,
+        'batch_size' => $batch_size,
+        'file_exists' => file_exists($json_path)
+    ]));
+
     $batch_json_items = load_json_batch($json_path, $start_index, $batch_size);
+    error_log('[PUNTWORK] Loaded ' . count($batch_json_items) . ' items from JSONL');
+
     $batch_items = [];
     $batch_guids = [];
     $loaded_count = count($batch_json_items);
@@ -574,9 +587,14 @@ function process_batch_data(array $batch_guids, array $batch_items, array &$logs
     error_log('[PUNTWORK] process_batch_data called with ' . count($batch_guids) . ' GUIDs');
     global $wpdb;
 
-    // Use optimized function to get posts by GUIDs with status
-    $existing_by_guid = get_posts_by_guids_with_status($batch_guids);
-    error_log('[PUNTWORK] Got existing posts by GUID');
+    try {
+        // Use optimized function to get posts by GUIDs with status
+        $existing_by_guid = get_posts_by_guids_with_status($batch_guids);
+        error_log('[PUNTWORK] Got existing posts by GUID: ' . count($existing_by_guid));
+    } catch (\Exception $e) {
+        error_log('[PUNTWORK] Error getting existing posts: ' . $e->getMessage());
+        throw $e;
+    }
 
     $post_ids_by_guid = [];
 
