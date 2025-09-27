@@ -691,3 +691,8 @@ console.info("=== Job Import Logic Script Loaded ===");
     window.JobImportLogic = JobImportLogic;
 
 })(jQuery, window, document);
+
+// Global error listener to catch unexpected errors
+window.onerror = function(message, source, lineno, colno, error) {
+    console.error("Global error caught:", message, "at", source + ':' + lineno + ':' + colno, "error object:", error);
+};
