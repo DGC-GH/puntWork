@@ -20,6 +20,9 @@ if (! defined('ABSPATH')) {
  */
 function api_settings_page()
 {
+    // Enqueue admin modern styles
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
+
     // Handle form submissions
     if (isset($_POST['regenerate_api_key']) && check_admin_referer('puntwork_api_settings')) {
         $new_key = regenerate_api_key();

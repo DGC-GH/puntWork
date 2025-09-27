@@ -20,6 +20,9 @@ if (!defined('ABSPATH')) {
  */
 function feed_health_monitor_page()
 {
+    // Enqueue admin modern styles
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
+
     // Handle AJAX actions
     if (isset($_POST['action'])) {
         switch ($_POST['action']) {

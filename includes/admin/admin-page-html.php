@@ -31,6 +31,9 @@ require_once __DIR__ . '/../queue/queue-ajax.php';
 
 function feeds_dashboard_page()
 {
+    // Enqueue admin modern styles
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
+
     // Remove debug logging for security
     wp_enqueue_script('jquery');
 
@@ -52,6 +55,9 @@ function feeds_dashboard_page()
  */
 function feed_config_page()
 {
+    // Enqueue admin modern styles
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
+
     // Enqueue Sortable library for drag-and-drop
     wp_enqueue_script('jquery-ui-sortable');
 
@@ -148,6 +154,9 @@ function render_javascript_init()
 
 function jobs_dashboard_page()
 {
+    // Enqueue admin modern styles
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
+
     error_log('[PUNTWORK] jobs_dashboard_page() called');
     wp_enqueue_script('jquery');
 
@@ -163,6 +172,9 @@ function jobs_dashboard_page()
  */
 function puntwork_dashboard_page()
 {
+    // Enqueue admin modern styles
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
+
     ?>
     <div class="wrap" style="max-width: 1200px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1d1d1f; padding: 0 20px;">
         <h1 style="font-size: 34px; font-weight: 600; text-align: center; margin: 40px 0 20px;"><?php _e('puntWork Dashboard', 'puntwork'); ?></h1>
