@@ -83,8 +83,6 @@ class CRMIntegrationTest extends TestCase
      */
     public function testSalesforceIntegrationBasic(): void
     {
-        $this->markTestSkipped('Salesforce integration requires WordPress functions not available in test environment');
-
         $config = [
             'client_id' => 'test_client_id',
             'client_secret' => 'test_client_secret',
@@ -103,8 +101,6 @@ class CRMIntegrationTest extends TestCase
      */
     public function testZohoIntegrationBasic(): void
     {
-        $this->markTestSkipped('Zoho integration requires WordPress functions not available in test environment');
-
         $config = [
             'client_id' => 'test_client_id',
             'client_secret' => 'test_client_secret',

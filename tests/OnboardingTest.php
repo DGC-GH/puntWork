@@ -28,17 +28,17 @@ class OnboardingTest extends TestCase
     public function testOnboardingCompletionStatus()
     {
         // Skip this test if the class is not available in test environment
-        if (!class_exists('PuntworkOnboardingWizard')) {
+        if (!class_exists('Puntwork\\PuntworkOnboardingWizard')) {
             $this->markTestSkipped('PuntworkOnboardingWizard class not available in test environment');
             return;
         }
 
         // Test initial state (not completed)
-        $this->assertFalse(PuntworkOnboardingWizard::isOnboardingCompleted());
+        $this->assertFalse(\Puntwork\PuntworkOnboardingWizard::isOnboardingCompleted());
 
         // Simulate completion
         update_option('puntwork_onboarding_completed', true);
-        $this->assertTrue(PuntworkOnboardingWizard::isOnboardingCompleted());
+        $this->assertTrue(\Puntwork\PuntworkOnboardingWizard::isOnboardingCompleted());
 
         // Reset for cleanup
         delete_option('puntwork_onboarding_completed');
@@ -50,14 +50,14 @@ class OnboardingTest extends TestCase
     public function testOnboardingWizardInitialization()
     {
         // Skip this test if the class is not available in test environment
-        if (!class_exists('PuntworkOnboardingWizard')) {
+        if (!class_exists('Puntwork\\PuntworkOnboardingWizard')) {
             $this->markTestSkipped('PuntworkOnboardingWizard class not available in test environment');
             return;
         }
 
         // Test that the wizard can be instantiated
-        $wizard = new PuntworkOnboardingWizard();
-        $this->assertInstanceOf(PuntworkOnboardingWizard::class, $wizard);
+        $wizard = new \Puntwork\PuntworkOnboardingWizard();
+        $this->assertInstanceOf(\Puntwork\PuntworkOnboardingWizard::class, $wizard);
     }
 
     /**

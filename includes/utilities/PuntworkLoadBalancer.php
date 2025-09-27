@@ -2,19 +2,7 @@
 
 /**
  * Load Balancer for puntWork
-     p    private function isWordpressEnvironment()
-    {
-        global $wpdb;
-        return isset($wpdb)
-            && $wpdb instanceof \wpdb
-            && defined('ABSPATH')
-            && file_exists(ABSPATH . 'wp-admin/includes/upgrade.php');
-    }e function isWordpressEnvironment()
-    {
-        global $wpdb;
-        return isset($wpdb) && $wpdb instanceof \wpdb && defined('ABSPATH')
-            && file_exists(ABSPATH . 'wp-admin/includes/upgrade.php');
-    }tributes workload across multiple server instances
+ * Distributes workload across multiple server instances
  */
 
 namespace Puntwork;
@@ -374,14 +362,14 @@ class PuntworkLoadBalancer
         $value = (int) substr($memory_limit, 0, -1);
 
         switch ($unit) {
-        case 'g': 
-            return $value * 1024 * 1024 * 1024;
-        case 'm': 
-            return $value * 1024 * 1024;
-        case 'k': 
-            return $value * 1024;
-        default: 
-            return (int) $memory_limit;
+            case 'g':
+                return $value * 1024 * 1024 * 1024;
+            case 'm':
+                return $value * 1024 * 1024;
+            case 'k':
+                return $value * 1024;
+            default:
+                return (int) $memory_limit;
         }
     }
 
@@ -421,8 +409,10 @@ class PuntworkLoadBalancer
             AND job_type IN ('feed_import', 'batch_process', 'analytics_update')
             ORDER BY priority ASC, created_at ASC
             LIMIT 10
-        ", current_time('mysql')
-            ), ARRAY_A
+        ",
+                current_time('mysql')
+            ),
+            ARRAY_A
         );
     }
 
@@ -453,20 +443,20 @@ class PuntworkLoadBalancer
         }
 
         switch ($this->balancing_strategy) {
-        case 'round_robin':
-            return $this->roundRobinSelection($active_instances, $job['job_type']);
+            case 'round_robin':
+                return $this->roundRobinSelection($active_instances, $job['job_type']);
 
-        case 'least_loaded':
-            return $this->leastLoadedSelection($active_instances, $job['job_type']);
+            case 'least_loaded':
+                return $this->leastLoadedSelection($active_instances, $job['job_type']);
 
-        case 'weighted':
-            return $this->weightedSelection($active_instances, $job['job_type']);
+            case 'weighted':
+                return $this->weightedSelection($active_instances, $job['job_type']);
 
-        case 'ip_hash':
-            return $this->ipHashSelection($active_instances, $job['job_type']);
+            case 'ip_hash':
+                return $this->ipHashSelection($active_instances, $job['job_type']);
 
-        default:
-            return $this->roundRobinSelection($active_instances, $job['job_type']);
+            default:
+                return $this->roundRobinSelection($active_instances, $job['job_type']);
         }
     }
 
@@ -482,7 +472,8 @@ class PuntworkLoadBalancer
         }
 
         $capable_instances = array_filter(
-            $instances, function ($instance) use ($job_type) {
+            $instances,
+            function ($instance) use ($job_type) {
                 return $this->instanceCanHandleJob($instance, $job_type);
             }
         );
@@ -504,7 +495,8 @@ class PuntworkLoadBalancer
     private function leastLoadedSelection($instances, $job_type)
     {
         $capable_instances = array_filter(
-            $instances, function ($instance) use ($job_type) {
+            $instances,
+            function ($instance) use ($job_type) {
                 return $this->instanceCanHandleJob($instance, $job_type);
             }
         );
@@ -524,7 +516,8 @@ class PuntworkLoadBalancer
         $least_loaded_id = key($instance_loads);
 
         return array_filter(
-            $capable_instances, function ($instance) use ($least_loaded_id) {
+            $capable_instances,
+            function ($instance) use ($least_loaded_id) {
                 return $instance['instance_id'] === $least_loaded_id;
             }
         )[$least_loaded_id] ?? null;
@@ -536,7 +529,8 @@ class PuntworkLoadBalancer
     private function weightedSelection($instances, $job_type)
     {
         $capable_instances = array_filter(
-            $instances, function ($instance) use ($job_type) {
+            $instances,
+            function ($instance) use ($job_type) {
                 return $this->instanceCanHandleJob($instance, $job_type);
             }
         );
@@ -574,7 +568,8 @@ class PuntworkLoadBalancer
     private function ipHashSelection($instances, $job_type)
     {
         $capable_instances = array_filter(
-            $instances, function ($instance) use ($job_type) {
+            $instances,
+            function ($instance) use ($job_type) {
                 return $this->instanceCanHandleJob($instance, $job_type);
             }
         );
@@ -626,7 +621,8 @@ class PuntworkLoadBalancer
             SELECT COUNT(*) FROM $lb_table
             WHERE instance_id = %s
             AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
-        ", $instance['instance_id']
+        ",
+                $instance['instance_id']
             )
         );
 
@@ -636,7 +632,8 @@ class PuntworkLoadBalancer
             SELECT AVG(response_time) FROM $lb_table
             WHERE instance_id = %s
             AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
-        ", $instance['instance_id']
+        ",
+                $instance['instance_id']
             )
         ) ?: 0;
 
@@ -846,7 +843,8 @@ class PuntworkLoadBalancer
             SELECT * FROM $instance_table
             WHERE status = 'active'
             ORDER BY last_seen DESC
-        ", ARRAY_A
+        ",
+            ARRAY_A
         ) ?: [];
     }
 
@@ -867,7 +865,8 @@ class PuntworkLoadBalancer
             "
             SELECT * FROM $instance_table
             ORDER BY last_seen DESC
-        ", ARRAY_A
+        ",
+            ARRAY_A
         ) ?: [];
     }
 
@@ -899,7 +898,8 @@ class PuntworkLoadBalancer
                 COUNT(CASE WHEN response_status IN ('failed', 'error') THEN 1 END) as failed_requests
             FROM $lb_table
             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
-        ", ARRAY_A
+        ",
+            ARRAY_A
         );
 
         return $stats ?: [
