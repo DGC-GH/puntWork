@@ -364,6 +364,28 @@ console.log('[PUNTWORK] job-import-api.js loaded');
         },
 
         /**
+         * Test single job import functionality
+         * @returns {Promise} AJAX promise
+         */
+        testSingleJob: function() {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                timeout: 30000, // 30 seconds timeout
+                data: {
+                    action: 'test_single_job_import',
+                    nonce: jobImportData.nonce
+                },
+                success: function(response) {
+                    PuntWorkJSLogger.debug('Test single job response', 'API', response);
+                },
+                error: function(xhr, status, error) {
+                    PuntWorkJSLogger.error('Test single job error: ' + error, 'API');
+                }
+            });
+        },
+
+        /**
          * Determine if an AJAX error should be retried
          * @param {object} xhr - XMLHttpRequest object
          * @param {string} status - Error status

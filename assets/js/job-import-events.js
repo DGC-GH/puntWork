@@ -63,6 +63,10 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 console.log('[PUNTWORK] Reset button clicked!');
                 JobImportEvents.handleResetImport();
             });
+            $('#test-single-job').on('click', function(e) {
+                console.log('[PUNTWORK] Test single job button clicked!');
+                JobImportEvents.handleTestSingleJob();
+            });
 
             // Database optimization events
             $('#optimize-database').on('click', function(e) {
@@ -149,6 +153,46 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
         handleResetImport: function() {
             console.log('[PUNTWORK] Reset Import clicked');
             JobImportLogic.handleResetImport();
+        },
+
+        /**
+         * Handle test single job button click
+         */
+        handleTestSingleJob: function() {
+            console.log('[PUNTWORK] Test Single Job clicked');
+
+            if (confirm('This will create a test job with title "TEST" to verify the import functionality works. Continue?')) {
+                $('#test-single-job').prop('disabled', true).text('Testing...');
+
+                // Show progress UI
+                JobImportUI.showImportUI();
+                $('#status-message').text('Testing single job import...');
+
+                // Call the test single job API
+                JobImportAPI.testSingleJob().then(function(response) {
+                    console.log('[PUNTWORK] Test single job response:', response);
+
+                    if (response.success) {
+                        $('#status-message').text('Test job created successfully!');
+                        JobImportUI.appendLogs(['✅ Test job created with ID: ' + (response.data.post_id || 'Unknown')]);
+                        JobImportUI.appendLogs(['✅ Job title: ' + (response.data.post_title || 'Unknown')]);
+                        JobImportUI.appendLogs(['✅ Job status: ' + (response.data.post_status || 'Unknown')]);
+                        if (response.data.logs && response.data.logs.length > 0) {
+                            JobImportUI.appendLogs(response.data.logs);
+                        }
+                    } else {
+                        $('#status-message').text('Test job failed: ' + (response.data.error || 'Unknown error'));
+                        JobImportUI.appendLogs(['❌ Test job failed: ' + (response.data.error || 'Unknown error')]);
+                    }
+
+                    $('#test-single-job').prop('disabled', false).text('Test Single Job');
+                }).catch(function(xhr, status, error) {
+                    console.log('[PUNTWORK] Test single job error:', error);
+                    $('#status-message').text('Test job error: ' + error);
+                    JobImportUI.appendLogs(['❌ Test job error: ' + error]);
+                    $('#test-single-job').prop('disabled', false).text('Test Single Job');
+                });
+            }
         },
 
         /**
