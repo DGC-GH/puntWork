@@ -92,6 +92,9 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
     // Ensure batch size never goes below 1 or above 500
     $batch_size = max(1, min(500, $batch_size));
 
+    // Cast to int to ensure type compatibility
+    $batch_size = (int)$batch_size;
+
     // Log batch size changes for debugging
     if ($batch_size != $old_batch_size) {
         $reason = '';
