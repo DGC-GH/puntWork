@@ -156,10 +156,16 @@ function process_batch_items_logic(array $setup): array
             [
             'start_index' => $setup['start_index'] ?? 'not set',
             'total' => $setup['total'] ?? 'not set',
-            'json_path' => isset($setup['json_path']) ? basename($setup['json_path']) : 'not set'
+            'json_path' => isset($setup['json_path']) ? basename($setup['json_path']) : 'not set',
+            'json_path_full' => $setup['json_path'] ?? 'not set'
             ]
         )
     );
+
+    // Check if json_path exists and is readable
+    if (isset($setup['json_path'])) {
+        error_log('[PUNTWORK] JSON file check: exists=' . (file_exists($setup['json_path']) ? 'yes' : 'no') . ', readable=' . (is_readable($setup['json_path']) ? 'yes' : 'no') . ', size=' . (file_exists($setup['json_path']) ? filesize($setup['json_path']) : 'N/A'));
+    }
 
     // Start tracing span for batch processing (only if available)
     $span = null;
@@ -525,13 +531,15 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
             'json_path' => basename($json_path),
             'start_index' => $start_index,
             'batch_size' => $batch_size,
-            'file_exists' => file_exists($json_path)
+            'file_exists' => file_exists($json_path),
+            'file_size' => file_exists($json_path) ? filesize($json_path) : 'N/A',
+            'is_readable' => is_readable($json_path)
             ]
         )
     );
 
     $batch_json_items = load_json_batch($json_path, $start_index, $batch_size);
-    error_log('[PUNTWORK] Loaded ' . count($batch_json_items) . ' items from JSONL');
+    error_log('[PUNTWORK] load_and_prepare_batch_items: load_json_batch returned ' . count($batch_json_items) . ' items');
 
     $batch_items = [];
     $batch_guids = [];
@@ -540,7 +548,8 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Loaded $loaded_count items from JSONL (batch size: $batch_size)";
 
     if ($loaded_count === 0) {
-        error_log('[PUNTWORK] No items loaded from JSONL - file may be empty or corrupted');
+        error_log('[PUNTWORK] load_and_prepare_batch_items: NO ITEMS LOADED FROM JSONL! This is the root cause of 0 processed items.');
+        error_log('[PUNTWORK] load_and_prepare_batch_items: json_path=' . $json_path . ', start_index=' . $start_index . ', batch_size=' . $batch_size);
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'WARNING: No items loaded from JSONL file - check file integrity';
         return [
             'batch_items' => $batch_items,
@@ -795,12 +804,16 @@ function load_json_batch($json_path, $start_index, $batch_size)
 {
     // Ensure batch_size is at least 1
     $batch_size = max(1, (int)$batch_size);
-    
+
     error_log('[PUNTWORK] load_json_batch called with: path=' . basename($json_path) . ', start_index=' . $start_index . ', batch_size=' . $batch_size);
     error_log('[PUNTWORK] load_json_batch: file exists: ' . (file_exists($json_path) ? 'yes' : 'no'));
-    
+
     if (file_exists($json_path)) {
         error_log('[PUNTWORK] load_json_batch: file size: ' . filesize($json_path) . ' bytes');
+        error_log('[PUNTWORK] load_json_batch: file readable: ' . (is_readable($json_path) ? 'yes' : 'no'));
+    } else {
+        error_log('[PUNTWORK] load_json_batch: FILE DOES NOT EXIST: ' . $json_path);
+        return [];
     }
 
     $items = [];
@@ -812,14 +825,14 @@ function load_json_batch($json_path, $start_index, $batch_size)
 
     if (($handle = fopen($json_path, "r")) !== false) {
         error_log('[PUNTWORK] load_json_batch: opened file successfully, ftell=' . ftell($handle));
-        
+
         // Skip to start_index efficiently
         error_log('[PUNTWORK] load_json_batch: starting skip loop, current_index=' . $current_index . ', start_index=' . $start_index);
         while ($current_index < $start_index && ($line = fgets($handle)) !== false) {
             $current_index++;
             error_log('[PUNTWORK] load_json_batch: skipped line ' . $current_index . ', ftell=' . ftell($handle));
         }
-        
+
         error_log('[PUNTWORK] load_json_batch: finished skip loop, current_index=' . $current_index . ', ftell=' . ftell($handle));
 
         // Read batch_size items
@@ -835,6 +848,9 @@ function load_json_batch($json_path, $start_index, $batch_size)
                     $items[] = $item;
                     $count++;
                     error_log('[PUNTWORK] load_json_batch: Successfully decoded item ' . $count . ' with GUID: ' . ($item['guid'] ?? 'MISSING'));
+                    if ($count >= 3) { // Log first 3 items in detail
+                        error_log('[PUNTWORK] load_json_batch: Item ' . $count . ' keys: ' . implode(', ', array_keys($item)));
+                    }
                 } else {
                     $invalid_json++;
                     error_log('[PUNTWORK] load_json_batch: Failed to decode JSON at line ' . ($current_index + $lines_read) . ': ' . json_last_error_msg() . ' - Line content: ' . substr($line, 0, 100));
@@ -845,7 +861,7 @@ function load_json_batch($json_path, $start_index, $batch_size)
             }
             $current_index++;
         }
-        
+
         error_log('[PUNTWORK] load_json_batch: finished read loop, lines_read=' . $lines_read . ', empty=' . $empty_lines . ', invalid JSON=' . $invalid_json . ', valid items=' . $count . ', ftell=' . ftell($handle));
         fclose($handle);
     } else {
@@ -853,6 +869,10 @@ function load_json_batch($json_path, $start_index, $batch_size)
     }
 
     error_log('[PUNTWORK] load_json_batch: returning ' . count($items) . ' items');
+    if (empty($items)) {
+        error_log('[PUNTWORK] load_json_batch: WARNING - NO ITEMS LOADED! This will cause 0 processed items.');
+        error_log('[PUNTWORK] load_json_batch: start_index=' . $start_index . ', batch_size=' . $batch_size . ', file_size=' . (file_exists($json_path) ? filesize($json_path) : 'N/A'));
+    }
     return $items;
 }
 

@@ -172,14 +172,18 @@ function prepare_import_setup($batch_start = 0)
 
     $processed_guids = get_option('job_import_processed_guids') ?: [];
     $start_index = max((int) get_option('job_import_progress'), $batch_start);
+    error_log('[PUNTWORK] prepare_import_setup: initial start_index calculation: max(' . (int) get_option('job_import_progress') . ', ' . $batch_start . ') = ' . $start_index);
 
     // For fresh starts (batch_start = 0), reset the status and create new start time
     if ($batch_start === 0) {
         $start_index = 0;
+        error_log('[PUNTWORK] prepare_import_setup: fresh start detected, setting start_index to 0');
         // Clear processed GUIDs for fresh start
         $processed_guids = [];
         // Clear existing status for fresh start
         delete_option('job_import_status');
+        // Clear progress for fresh start
+        update_option('job_import_progress', 0, false);
         $start_time = microtime(true);
         \Puntwork\PuntWorkLogger::info('Fresh import start - resetting status and progress to 0', \Puntwork\PuntWorkLogger::CONTEXT_BATCH);
 
@@ -208,6 +212,7 @@ function prepare_import_setup($batch_start = 0)
     }
 
     if ($start_index >= $total) {
+        error_log('[PUNTWORK] prepare_import_setup: EARLY RETURN - start_index (' . $start_index . ') >= total (' . $total . ')');
         return [
             'success' => true,
             'processed' => $total,
