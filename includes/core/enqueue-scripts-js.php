@@ -31,7 +31,18 @@ function enqueue_job_import_scripts()
     error_log('[PUNTWORK] Current screen: ' . ($current_screen ? $current_screen->id : 'none'));
 
     // Load scripts on puntwork admin pages
-    $puntwork_pages = ['puntwork-dashboard', 'puntwork-analytics', 'puntwork-api-settings', 'puntwork-feed-health', 'puntwork-scheduling'];
+    $puntwork_pages = [
+        'puntwork-dashboard', 
+        'job-feed-dashboard', 
+        'jobs-dashboard', 
+        'puntwork-feed-config', 
+        'puntwork-feed-health', 
+        'puntwork-analytics', 
+        'puntwork-performance', 
+        'puntwork-api-settings', 
+        'puntwork-monitoring', 
+        'puntwork-scheduling'
+    ];
     $should_load = in_array($current_page, $puntwork_pages);
 
     if ($should_load) {

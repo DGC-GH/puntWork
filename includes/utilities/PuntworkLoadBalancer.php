@@ -248,7 +248,7 @@ class PuntworkLoadBalancer
             KEY created_at (created_at)
         ) $charset_collate;";
 
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        include_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
     }
 
@@ -283,7 +283,7 @@ class PuntworkLoadBalancer
             KEY last_seen (last_seen)
         ) $charset_collate;";
 
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        include_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
 
         // Register this server instance if not already registered
@@ -305,10 +305,12 @@ class PuntworkLoadBalancer
         $instance_id = 'wp-instance-' . get_current_blog_id() . '-' . substr(md5(site_url()), 0, 8);
 
         // Check if instance already exists
-        $existing = $wpdb->get_var($wpdb->prepare(
-            "SELECT id FROM $table_name WHERE instance_id = %s",
-            $instance_id
-        ));
+        $existing = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT id FROM $table_name WHERE instance_id = %s",
+                $instance_id
+            )
+        );
 
         if (!$existing) {
             // Register this instance
@@ -372,10 +374,14 @@ class PuntworkLoadBalancer
         $value = (int) substr($memory_limit, 0, -1);
 
         switch ($unit) {
-            case 'g': return $value * 1024 * 1024 * 1024;
-            case 'm': return $value * 1024 * 1024;
-            case 'k': return $value * 1024;
-            default: return (int) $memory_limit;
+        case 'g': 
+            return $value * 1024 * 1024 * 1024;
+        case 'm': 
+            return $value * 1024 * 1024;
+        case 'k': 
+            return $value * 1024;
+        default: 
+            return (int) $memory_limit;
         }
     }
 
@@ -406,14 +412,18 @@ class PuntworkLoadBalancer
         $queue_table = $wpdb->prefix . 'puntwork_queue';
 
         // Get jobs that can be distributed across instances
-        return $wpdb->get_results($wpdb->prepare("
+        return $wpdb->get_results(
+            $wpdb->prepare(
+                "
             SELECT * FROM $queue_table
             WHERE status = 'pending'
             AND scheduled_at <= %s
             AND job_type IN ('feed_import', 'batch_process', 'analytics_update')
             ORDER BY priority ASC, created_at ASC
             LIMIT 10
-        ", current_time('mysql')), ARRAY_A);
+        ", current_time('mysql')
+            ), ARRAY_A
+        );
     }
 
     /**
@@ -443,20 +453,20 @@ class PuntworkLoadBalancer
         }
 
         switch ($this->balancing_strategy) {
-            case 'round_robin':
-                return $this->roundRobinSelection($active_instances, $job['job_type']);
+        case 'round_robin':
+            return $this->roundRobinSelection($active_instances, $job['job_type']);
 
-            case 'least_loaded':
-                return $this->leastLoadedSelection($active_instances, $job['job_type']);
+        case 'least_loaded':
+            return $this->leastLoadedSelection($active_instances, $job['job_type']);
 
-            case 'weighted':
-                return $this->weightedSelection($active_instances, $job['job_type']);
+        case 'weighted':
+            return $this->weightedSelection($active_instances, $job['job_type']);
 
-            case 'ip_hash':
-                return $this->ipHashSelection($active_instances, $job['job_type']);
+        case 'ip_hash':
+            return $this->ipHashSelection($active_instances, $job['job_type']);
 
-            default:
-                return $this->roundRobinSelection($active_instances, $job['job_type']);
+        default:
+            return $this->roundRobinSelection($active_instances, $job['job_type']);
         }
     }
 
@@ -471,9 +481,11 @@ class PuntworkLoadBalancer
             $last_index[$job_type] = 0;
         }
 
-        $capable_instances = array_filter($instances, function ($instance) use ($job_type) {
-            return $this->instanceCanHandleJob($instance, $job_type);
-        });
+        $capable_instances = array_filter(
+            $instances, function ($instance) use ($job_type) {
+                return $this->instanceCanHandleJob($instance, $job_type);
+            }
+        );
 
         if (empty($capable_instances)) {
             return null;
@@ -491,9 +503,11 @@ class PuntworkLoadBalancer
      */
     private function leastLoadedSelection($instances, $job_type)
     {
-        $capable_instances = array_filter($instances, function ($instance) use ($job_type) {
-            return $this->instanceCanHandleJob($instance, $job_type);
-        });
+        $capable_instances = array_filter(
+            $instances, function ($instance) use ($job_type) {
+                return $this->instanceCanHandleJob($instance, $job_type);
+            }
+        );
 
         if (empty($capable_instances)) {
             return null;
@@ -509,9 +523,11 @@ class PuntworkLoadBalancer
         asort($instance_loads);
         $least_loaded_id = key($instance_loads);
 
-        return array_filter($capable_instances, function ($instance) use ($least_loaded_id) {
-            return $instance['instance_id'] === $least_loaded_id;
-        })[$least_loaded_id] ?? null;
+        return array_filter(
+            $capable_instances, function ($instance) use ($least_loaded_id) {
+                return $instance['instance_id'] === $least_loaded_id;
+            }
+        )[$least_loaded_id] ?? null;
     }
 
     /**
@@ -519,9 +535,11 @@ class PuntworkLoadBalancer
      */
     private function weightedSelection($instances, $job_type)
     {
-        $capable_instances = array_filter($instances, function ($instance) use ($job_type) {
-            return $this->instanceCanHandleJob($instance, $job_type);
-        });
+        $capable_instances = array_filter(
+            $instances, function ($instance) use ($job_type) {
+                return $this->instanceCanHandleJob($instance, $job_type);
+            }
+        );
 
         if (empty($capable_instances)) {
             return null;
@@ -555,9 +573,11 @@ class PuntworkLoadBalancer
      */
     private function ipHashSelection($instances, $job_type)
     {
-        $capable_instances = array_filter($instances, function ($instance) use ($job_type) {
-            return $this->instanceCanHandleJob($instance, $job_type);
-        });
+        $capable_instances = array_filter(
+            $instances, function ($instance) use ($job_type) {
+                return $this->instanceCanHandleJob($instance, $job_type);
+            }
+        );
 
         if (empty($capable_instances)) {
             return null;
@@ -600,17 +620,25 @@ class PuntworkLoadBalancer
         $lb_table = $wpdb->prefix . self::LOAD_BALANCER_TABLE;
 
         // Get recent request count and average response time
-        $recent_requests = $wpdb->get_var($wpdb->prepare("
+        $recent_requests = $wpdb->get_var(
+            $wpdb->prepare(
+                "
             SELECT COUNT(*) FROM $lb_table
             WHERE instance_id = %s
             AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
-        ", $instance['instance_id']));
+        ", $instance['instance_id']
+            )
+        );
 
-        $avg_response_time = $wpdb->get_var($wpdb->prepare("
+        $avg_response_time = $wpdb->get_var(
+            $wpdb->prepare(
+                "
             SELECT AVG(response_time) FROM $lb_table
             WHERE instance_id = %s
             AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
-        ", $instance['instance_id'])) ?: 0;
+        ", $instance['instance_id']
+            )
+        ) ?: 0;
 
         // Calculate load score (lower is better)
         return $recent_requests * 0.7 + $avg_response_time * 0.3;
@@ -789,13 +817,15 @@ class PuntworkLoadBalancer
             );
         }
 
-        error_log(sprintf(
-            '[PUNTWORK] Job %d failed (attempt %d/%d): %s',
-            $job['id'],
-            $attempts,
-            $job['max_attempts'],
-            $error
-        ));
+        error_log(
+            sprintf(
+                '[PUNTWORK] Job %d failed (attempt %d/%d): %s',
+                $job['id'],
+                $attempts,
+                $job['max_attempts'],
+                $error
+            )
+        );
     }
 
     /**
@@ -811,11 +841,13 @@ class PuntworkLoadBalancer
 
         $instance_table = $wpdb->prefix . 'puntwork_instances';
 
-        return $wpdb->get_results("
+        return $wpdb->get_results(
+            "
             SELECT * FROM $instance_table
             WHERE status = 'active'
             ORDER BY last_seen DESC
-        ", ARRAY_A) ?: [];
+        ", ARRAY_A
+        ) ?: [];
     }
 
     /**
@@ -831,10 +863,12 @@ class PuntworkLoadBalancer
 
         $instance_table = $wpdb->prefix . 'puntwork_instances';
 
-        return $wpdb->get_results("
+        return $wpdb->get_results(
+            "
             SELECT * FROM $instance_table
             ORDER BY last_seen DESC
-        ", ARRAY_A) ?: [];
+        ", ARRAY_A
+        ) ?: [];
     }
 
     /**
@@ -856,7 +890,8 @@ class PuntworkLoadBalancer
         $lb_table = $wpdb->prefix . self::LOAD_BALANCER_TABLE;
         $instance_table = $wpdb->prefix . 'puntwork_instances';
 
-        $stats = $wpdb->get_row("
+        $stats = $wpdb->get_row(
+            "
             SELECT
                 (SELECT COUNT(*) FROM $instance_table WHERE status = 'active') as active_instances,
                 COUNT(*) as total_requests,
@@ -864,7 +899,8 @@ class PuntworkLoadBalancer
                 COUNT(CASE WHEN response_status IN ('failed', 'error') THEN 1 END) as failed_requests
             FROM $lb_table
             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
-        ", ARRAY_A);
+        ", ARRAY_A
+        );
 
         return $stats ?: [
             'active_instances' => 0,
@@ -895,10 +931,12 @@ class PuntworkLoadBalancer
             ];
         }
 
-        wp_send_json_success([
+        wp_send_json_success(
+            [
             'health_checks' => $health_results,
             'timestamp' => current_time('mysql')
-        ]);
+            ]
+        );
     }
 
     /**
@@ -926,10 +964,12 @@ class PuntworkLoadBalancer
 
         $stats = $this->getLoadBalancerStats();
 
-        wp_send_json_success([
+        wp_send_json_success(
+            [
             'stats' => $stats,
             'timestamp' => current_time('mysql')
-        ]);
+            ]
+        );
     }
 
     /**

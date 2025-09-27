@@ -34,6 +34,27 @@ function feeds_dashboard_page()
     // Enqueue admin modern styles
     wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
 
+    // Add inline styles as fallback
+    wp_add_inline_style('puntwork-admin-modern', '
+        .puntwork-admin { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif; color: #1d1d1f; background-color: #f9f9f9; min-height: 100vh; }
+        .puntwork-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+        .puntwork-header { background: #ffffff; border-bottom: 1px solid #e5e5e7; padding: 32px 0; margin-bottom: 48px; }
+        .puntwork-header__title { font-size: 36px; font-weight: 700; color: #1d1d1f; margin: 0 0 8px 0; text-align: center; }
+        .puntwork-header__subtitle { font-size: 18px; color: #8e8e93; text-align: center; margin: 0; }
+        .puntwork-card { background: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.07); border: 1px solid #e5e5e7; overflow: hidden; margin-bottom: 32px; }
+        .puntwork-card__header { padding: 24px; border-bottom: 1px solid #f2f2f7; background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%); }
+        .puntwork-card__title { font-size: 20px; font-weight: 600; color: #1d1d1f; margin: 0 0 4px 0; }
+        .puntwork-card__subtitle { font-size: 16px; color: #8e8e93; margin: 0; }
+        .puntwork-card__footer { padding: 20px 24px; border-top: 1px solid #f2f2f7; background: #f9f9f9; }
+        .puntwork-btn { display: inline-flex; align-items: center; padding: 8px 16px; font-size: 14px; font-weight: 500; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; text-decoration: none; border: none; }
+        .puntwork-btn--primary { background: linear-gradient(135deg, #007aff 0%, #0056cc 100%); color: #ffffff; }
+        .puntwork-btn--primary:hover { background: linear-gradient(135deg, #0056cc 0%, #004499 100%); transform: translateY(-1px); }
+        .puntwork-btn--danger { background: linear-gradient(135deg, #ff3b30 0%, #d63027 100%); color: #ffffff; }
+        .puntwork-btn--success { background: linear-gradient(135deg, #34c759 0%, #28a745 100%); color: #ffffff; }
+        .puntwork-btn--outline { background: transparent; color: #007aff; border: 1px solid #007aff; }
+        .puntwork-btn__icon { margin-right: 6px; }
+    ');
+
     // Remove debug logging for security
     wp_enqueue_script('jquery');
 
