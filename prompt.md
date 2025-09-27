@@ -106,7 +106,7 @@
 
 Adapt the following workflow based on context. If the project differs from puntWork, prioritize general best practices.
 
-1. **Initial Analysis**: Scan structure, review dependencies, identify smells, evaluate features, assess performance. **Always check debug.log via FTP (using credentials from .env) for recent errors and deployment issues**.
+1. **Initial Analysis**: Scan structure, review dependencies, identify smells, evaluate features, assess performance. **Always check debug.log via FTP (using credentials from .env) for recent errors and deployment issues**. **Also verify that the previously pushed commit changes are present on the server via FTP. If not, stop and investigate the automatic GIT deploy issue on Hostinger**.
 
 2. **Propose Improvements**: Suggest fixes and enhancements, grouped by category (e.g., speed, simplicity).
 
