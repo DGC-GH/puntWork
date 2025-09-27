@@ -11,7 +11,7 @@ echo "<h1>puntWork API Configuration Verification</h1>";
 echo "<style>body{font-family:Arial,sans-serif;margin:20px;} .success{color:green;} .error{color:red;} .warning{color:orange;} pre{background:#f5f5f5;padding:10px;border-radius:5px;overflow-x:auto;}</style>";
 
 // Configuration
-$api_key = 'REMOVED_API_KEY';
+$api_key = getenv('PUNTWORK_API_KEY') ?: 'your_api_key_here';
 $site_url = (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'];
 
 echo "<h2>Configuration</h2>";

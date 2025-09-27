@@ -25,7 +25,7 @@ On the API Settings page:
    - Click **"Copy"** to copy the key to clipboard
 
 2. **Set the API Key from .env**
-   - Copy the API key from your `.env` file: `REMOVED_API_KEY`
+   - Copy the API key from your `.env` file: `your_api_key_here`
    - **Important**: The plugin automatically generates its own key, but you need to ensure it matches your `.env` file
    - If they don't match, click **"Regenerate API Key"** until you get the correct key, or manually update the WordPress option
 
@@ -34,7 +34,7 @@ On the API Settings page:
    - Go to **Tools** → **WP-CLI** (if available) or use a custom plugin
    - Or add this code to your theme's `functions.php` temporarily:
    ```php
-   update_option('puntwork_api_key', 'REMOVED_API_KEY');
+   update_option('puntwork_api_key', 'your_api_key_here');
    ```
 
 ### 3. Verify WordPress REST API is Enabled
@@ -69,7 +69,7 @@ Once configured:
 
 1. **Test Import Status**
    ```bash
-   curl -X GET "https://your-site.com/wp-json/puntwork/v1/import-status?api_key=REMOVED_API_KEY" \
+   curl -X GET "https://your-site.com/wp-json/puntwork/v1/import-status?api_key=your_api_key_here" \
      -H "Content-Type: application/json"
    ```
 
@@ -77,7 +77,7 @@ Once configured:
    ```bash
    curl -X POST "https://your-site.com/wp-json/puntwork/v1/trigger-import" \
      -H "Content-Type: application/json" \
-     -d '{"api_key":"REMOVED_API_KEY","test_mode":true}'
+     -d '{"api_key":"your_api_key_here","test_mode":true}'
    ```
 
 ### 5. Troubleshooting
@@ -111,7 +111,7 @@ Create a test file to verify everything is working:
 ```php
 <?php
 // test-api.php - Upload to WordPress root temporarily
-$api_key = 'REMOVED_API_KEY';
+$api_key = 'your_api_key_here';
 $site_url = 'https://your-site.com';
 
 // Test WordPress REST API
@@ -142,7 +142,7 @@ wp plugin list | grep puntwork
 wp option get puntwork_api_key
 
 # Set API key manually
-wp option set puntwork_api_key 'REMOVED_API_KEY'
+wp option set puntwork_api_key 'your_api_key_here'
 
 # Test REST API
 wp rest list

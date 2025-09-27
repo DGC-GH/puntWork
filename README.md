@@ -149,7 +149,6 @@ puntwork/
 - **Multi-site**: Check is_multisite() for network features
 - **AI Features**: ContentQualityScorer, JobCategorizer, DuplicateDetector
 - **Scaling**: HorizontalScalingManager for distributed processing
-- **API Key**: REMOVED_API_KEY (from .env)
 
 ## Quick Reference
 - **Trigger Import**: puntwork_trigger_import(['test_mode' => false])
@@ -189,7 +188,7 @@ All REST API endpoints require WordPress authentication via Application Password
 ## Configuration
 ### API Settings
 Navigate to **WordPress Admin > puntWork > API Settings** to:
-- Generate/Configure API keys (ensure matches .env file: REMOVED_API_KEY)
+- Generate/Configure API keys (ensure matches .env file)
 - Set rate limiting parameters
 - Configure security options
 - Verify WordPress REST API is enabled (/wp-json/ returns JSON)

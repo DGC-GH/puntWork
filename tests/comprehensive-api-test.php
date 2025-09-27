@@ -17,7 +17,13 @@ class PuntWorkAPITestSuite
     public function __construct($baseUrl = null, $apiKey = null)
     {
         $this->baseUrl = $baseUrl ?: 'https://belgiumjobs.work/wp-json/puntwork/v1';
-        $this->apiKey = $apiKey ?: 'REMOVED_API_KEY';
+        $this->apiKey = $apiKey ?: '';
+        if (empty($this->apiKey)) {
+            $this->apiKey = getenv('PUNTWORK_API_KEY') ?: '';
+        }
+        if (empty($this->apiKey)) {
+            die("Error: API key not provided and PUNTWORK_API_KEY not found in environment\n");
+        }
         $this->wpRootUrl = preg_replace('/\/wp-json.*$/', '', $this->baseUrl);
     }
 
