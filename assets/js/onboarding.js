@@ -86,7 +86,8 @@ class PuntworkOnboarding {
     }
 
     showModal() {
-        this.modal.style.display = 'block';
+        this.overlay.style.display = 'block';
+        this.modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
 
         // Focus management
@@ -97,6 +98,7 @@ class PuntworkOnboarding {
     closeModal() {
         this.modal.style.animation = 'slideInUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) reverse';
         setTimeout(() => {
+            this.overlay.style.display = 'none';
             this.modal.style.display = 'none';
             document.body.style.overflow = '';
             this.modal.setAttribute('aria-hidden', 'true');

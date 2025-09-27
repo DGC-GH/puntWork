@@ -346,45 +346,51 @@ function render_onboarding_modal()
 
     <!-- Onboarding Modal -->
     <div class="puntwork-onboarding-modal" id="puntwork-onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="onboarding-title" aria-hidden="true" style="display: none;">
-        <!-- Modal Header -->
-        <div class="onboarding-header">
-            <button type="button" id="onboarding-close" class="onboarding-close-btn" aria-label="<?php esc_attr_e('Close onboarding', 'puntwork'); ?>">
-                <i class="fas fa-times"></i>
-            </button>
-            <button type="button" id="onboarding-skip" class="onboarding-skip-btn" aria-label="<?php esc_attr_e('Skip onboarding', 'puntwork'); ?>">
-                <?php _e('Skip', 'puntwork'); ?>
-            </button>
-        </div>
-
-        <!-- Progress Bar -->
-        <div class="onboarding-progress">
-            <div class="onboarding-progress-fill" id="onboarding-progress-fill"></div>
-        </div>
-
-        <!-- Step Indicators -->
-        <div class="step-indicators">
-            <div class="step-indicator active" data-step="0" aria-label="<?php esc_attr_e('Welcome step', 'puntwork'); ?>"></div>
-            <div class="step-indicator" data-step="1" aria-label="<?php esc_attr_e('Configure feeds step', 'puntwork'); ?>"></div>
-            <div class="step-indicator" data-step="2" aria-label="<?php esc_attr_e('Set up scheduling step', 'puntwork'); ?>"></div>
-            <div class="step-indicator" data-step="3" aria-label="<?php esc_attr_e('API configuration step', 'puntwork'); ?>"></div>
-            <div class="step-indicator" data-step="4" aria-label="<?php esc_attr_e('Setup complete step', 'puntwork'); ?>"></div>
-        </div>
-
-        <!-- Step Content -->
-        <div class="onboarding-content">
-            <div id="onboarding-step-content" class="step-content">
-                <!-- Content will be populated by JavaScript -->
+        <div class="onboarding-modal">
+            <!-- Modal Header -->
+            <div class="onboarding-header">
+                <button type="button" id="onboarding-close" class="onboarding-close" aria-label="<?php esc_attr_e('Close onboarding', 'puntwork'); ?>">
+                    <i class="fas fa-times"></i>
+                </button>
+                <button type="button" id="onboarding-skip" class="onboarding-skip-btn" aria-label="<?php esc_attr_e('Skip onboarding', 'puntwork'); ?>">
+                    <?php _e('Skip', 'puntwork'); ?>
+                </button>
             </div>
-        </div>
 
-        <!-- Navigation Buttons -->
-        <div class="onboarding-navigation">
-            <button type="button" id="onboarding-prev" class="onboarding-nav-btn prev-btn" style="display: none;" aria-label="<?php esc_attr_e('Previous step', 'puntwork'); ?>">
-                <i class="fas fa-arrow-left"></i> <?php _e('Previous', 'puntwork'); ?>
-            </button>
-            <button type="button" id="onboarding-next" class="onboarding-nav-btn next-btn" aria-label="<?php esc_attr_e('Next step', 'puntwork'); ?>">
-                <?php _e('Next', 'puntwork'); ?> <i class="fas fa-arrow-right"></i>
-            </button>
+            <!-- Progress Bar -->
+            <div class="onboarding-progress">
+                <div class="onboarding-progress-bar">
+                    <div class="onboarding-progress-fill" id="onboarding-progress-fill"></div>
+                </div>
+            </div>
+
+            <!-- Step Indicators -->
+            <div class="step-indicators">
+                <div class="step-indicator active" data-step="0" aria-label="<?php esc_attr_e('Welcome step', 'puntwork'); ?>"></div>
+                <div class="step-indicator" data-step="1" aria-label="<?php esc_attr_e('Configure feeds step', 'puntwork'); ?>"></div>
+                <div class="step-indicator" data-step="2" aria-label="<?php esc_attr_e('Set up scheduling step', 'puntwork'); ?>"></div>
+                <div class="step-indicator" data-step="3" aria-label="<?php esc_attr_e('API configuration step', 'puntwork'); ?>"></div>
+                <div class="step-indicator" data-step="4" aria-label="<?php esc_attr_e('Setup complete step', 'puntwork'); ?>"></div>
+            </div>
+
+            <!-- Step Content -->
+            <div class="onboarding-content">
+                <div id="onboarding-step-content" class="step-content">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <div class="onboarding-footer">
+                <div class="footer-actions">
+                    <button type="button" id="onboarding-prev" class="onboarding-btn secondary prev-btn" style="display: none;" aria-label="<?php esc_attr_e('Previous step', 'puntwork'); ?>">
+                        <i class="fas fa-arrow-left"></i> <?php _e('Previous', 'puntwork'); ?>
+                    </button>
+                    <button type="button" id="onboarding-next" class="onboarding-btn primary next-btn" aria-label="<?php esc_attr_e('Next step', 'puntwork'); ?>">
+                        <?php _e('Next', 'puntwork'); ?> <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
     <?php
