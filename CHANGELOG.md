@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Protocol update: Always check debug.log for new errors before running tests
 
 ### Fixed
+- Added missing CacheManager.php include to resolve "Class not found" error for EnhancedCacheManager
+- Reverted PuntworkCrmAdmin class back to Puntwork_CRM_Admin to resolve server-side class not found error
 - Drag-and-drop functionality in feed configuration by replacing SortableJS with jQuery UI Sortable
 - Fatal error in CRM admin class instantiation preventing plugin initialization
 - PHPCS error: Renamed Puntwork_CRM_Admin class to PuntworkCrmAdmin for PascalCase compliance
