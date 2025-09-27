@@ -22,5 +22,5 @@ wp-content/
 tests/performance-results-*.json
 tests/*-results-*.json
 
-# Production deployment files
-composer.json.development
+# Production deployment files (keep development version in git)
+composer.json.production
