@@ -15,6 +15,9 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
+// Include required files
+require_once PUNTWORK_PLUGIN_DIR . 'includes/api/rest-api.php';
+
 /**
  * Enqueue admin scripts and styles for job import dashboard.
  */
@@ -552,7 +555,8 @@ function enqueue_job_import_scripts()
             'nonce' => wp_create_nonce('job_import_nonce'),
             'feeds' => get_feeds(),
             'ajaxurl' => admin_url('admin-ajax.php', 'https'),
-            'resume_progress' => (int) get_option('job_import_progress', 0)
+            'resume_progress' => (int) get_option('job_import_progress', 0),
+            'api_key' => get_or_create_api_key()
         ]);
     }
 }
