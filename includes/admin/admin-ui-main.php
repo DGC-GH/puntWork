@@ -295,6 +295,83 @@ function render_main_import_ui(): void
         </div>
     </div>
 
+    <!-- Job Listings Section -->
+    <div id="job-listings-container" class="puntwork-card" style="margin-bottom: var(--spacing-xl);">
+        <div class="puntwork-card__header">
+            <h2 class="puntwork-card__title">Job Listings</h2>
+            <p class="puntwork-card__subtitle">Browse and manage imported job posts.</p>
+        </div>
+
+        <!-- Job Filters -->
+        <div class="puntwork-card__body">
+            <div style="display: flex; gap: var(--spacing-md); align-items: center; margin-bottom: var(--spacing-lg); flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                    <label for="job-status-filter" style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">Status:</label>
+                    <select id="job-status-filter" class="puntwork-select">
+                        <option value="any">All Status</option>
+                        <option value="publish">Published</option>
+                        <option value="draft">Draft</option>
+                        <option value="trash">Trash</option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: center; gap: var(--spacing-sm); flex: 1; min-width: 200px;">
+                    <label for="job-search" style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">Search:</label>
+                    <input type="text" id="job-search" class="puntwork-input" placeholder="Search job titles..." style="flex: 1;">
+                </div>
+                <button id="apply-job-filters" class="puntwork-btn puntwork-btn--primary">
+                    <i class="fas fa-search puntwork-btn__icon"></i>Apply Filters
+                </button>
+                <button id="clear-job-filters" class="puntwork-btn puntwork-btn--outline">
+                    <i class="fas fa-times puntwork-btn__icon"></i>Clear
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="job-listings-loading" class="puntwork-card__body" style="text-align: center; padding: var(--spacing-xl); display: none;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: var(--color-primary); margin-bottom: var(--spacing-md);"></i>
+            <div style="font-size: var(--font-size-base); color: var(--color-gray-600);">Loading job listings...</div>
+        </div>
+
+        <!-- Job Listings Table -->
+        <div id="job-listings-table" style="display: none;">
+            <div class="puntwork-table">
+                <div class="puntwork-table__header">
+                    <div class="puntwork-table__row">
+                        <div class="puntwork-table__cell puntwork-table__cell--header">Job Title</div>
+                        <div class="puntwork-table__cell puntwork-table__cell--header">Status</div>
+                        <div class="puntwork-table__cell puntwork-table__cell--header">Created</div>
+                        <div class="puntwork-table__cell puntwork-table__cell--header">Modified</div>
+                        <div class="puntwork-table__cell puntwork-table__cell--header">Actions</div>
+                    </div>
+                </div>
+                <div id="job-listings-body" class="puntwork-table__body">
+                    <!-- Job rows will be inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="job-listings-empty" class="puntwork-card__body" style="text-align: center; padding: var(--spacing-xl); display: none;">
+            <i class="fas fa-briefcase" style="font-size: 48px; color: var(--color-gray-400); margin-bottom: var(--spacing-md);"></i>
+            <div style="font-size: var(--font-size-lg); font-weight: var(--font-weight-medium); color: var(--color-gray-600); margin-bottom: var(--spacing-sm);">No jobs found</div>
+            <div style="font-size: var(--font-size-sm); color: var(--color-gray-500);">Try adjusting your filters or import some jobs first.</div>
+        </div>
+
+        <!-- Pagination -->
+        <div id="job-pagination" class="puntwork-card__footer" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <button id="job-prev-page" class="puntwork-btn puntwork-btn--outline" disabled>
+                    <i class="fas fa-chevron-left puntwork-btn__icon"></i>Previous
+                </button>
+                <span id="job-page-info" style="font-size: var(--font-size-sm); color: var(--color-gray-600);">Page 1 of 1</span>
+                <button id="job-next-page" class="puntwork-btn puntwork-btn--outline" disabled>
+                    Next<i class="fas fa-chevron-right puntwork-btn__icon"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Job Listings Lazy Loading
         let currentJobPage = 1;
