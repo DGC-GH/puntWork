@@ -168,10 +168,9 @@ class PuntworkCrmAdmin
                             <div class="platform-config" style="display: <?php
                                 echo (isset($platform_configs[$platform_id]['enabled']) &&
                                       $platform_configs[$platform_id]['enabled']) ? 'block' : 'none'; ?>;">
-                                <?php $this->renderPlatformConfig(
-                                    $platform_id,
-                                    $platform_configs[$platform_id] ?? []
-                                ); ?>
+                                <?php
+                                $this->renderPlatformConfig($platform_id, $platform_configs[$platform_id] ?? []);
+                                ?>
 
                                 <div class="platform-actions">
                                     <button class="button button-secondary test-platform">
