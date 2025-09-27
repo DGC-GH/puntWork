@@ -52,6 +52,7 @@
 
 .onboarding-progress {
     flex: 1;
+    margin-bottom: 24px;
 }
 
 .onboarding-progress-bar {
@@ -177,6 +178,7 @@
 
 .onboarding-footer {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     margin-top: 24px;
