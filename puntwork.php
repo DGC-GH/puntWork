@@ -3,7 +3,8 @@
 /**
  * Plugin Name: puntWork
  * Description: Advanced job import plugin with multi-format feed support,
- *     real-time analytics, health monitoring, and comprehensive API integration.
+ *     real-time analytics, health monitoring, AI-powered features, CRM integrations,
+ *     multi-site support, horizontal scaling, GraphQL API, webhooks, and mobile app.
  * Version: 2.0.0
  * Author: DGC-GH
  * Requires at least: 5.0

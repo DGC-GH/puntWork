@@ -5,7 +5,7 @@
  *
  * @package    Puntwork
  * @subpackage Database
- * @since      2.3.0
+ * @since      2.0.0
  */
 
 // Prevent direct access
@@ -103,9 +103,9 @@ function update_crm_schema()
     // Future schema updates can be added here
     $current_version = get_option('puntwork_crm_db_version', '1.0');
 
-    if (version_compare($current_version, '2.3.0', '<')) {
-        // Add new columns or tables for version 2.3.0
-        update_option('puntwork_crm_db_version', '2.3.0');
+    if (version_compare($current_version, '2.0.0', '<')) {
+        // Add new columns or tables for version 2.0.0
+        update_option('puntwork_crm_db_version', '2.0.0');
     }
 }
 

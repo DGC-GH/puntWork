@@ -1,11 +1,11 @@
 # puntWork - Advanced Job Import Plugin for WordPress
 
 [![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/DGC-GH/puntWork)
-[![PHP](https://img.shields.io/badge/PHP-7.4+-8892BF.svg)](https://php.net)
+[![PHP](https://img.shields.io/badge/PHP-8.1+-8892BF.svg)](https://php.net)
 [![WordPress](https://img.shields.io/badge/WordPress-5.0+-21759B.svg)](https://wordpress.org)
 [![License](https://img.shields.io/badge/license-GPL--2.0+-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 
-A comprehensive, enterprise-grade WordPress plugin for importing and managing job listings from multiple feed formats with advanced analytics, real-time monitoring, and developer-friendly APIs.
+A comprehensive, enterprise-grade WordPress plugin for importing and managing job listings from multiple feed formats with advanced analytics, real-time monitoring, AI-powered features, and developer-friendly APIs.
 
 ## ✨ Features
 
@@ -48,19 +48,71 @@ A comprehensive, enterprise-grade WordPress plugin for importing and managing jo
 - **Caching System**: WordPress object cache integration for improved performance
 - **Database Optimization**: Indexed tables and query optimization for large datasets
 
-### ⚡ **AI-Powered Features & Advanced APIs (v2.1.0)**
+### ⚡ **AI-Powered Features & Advanced APIs (v2.1.0+)**
 - **Content Quality Scoring**: AI-powered analysis of job descriptions with improvement recommendations
 - **Intelligent Categorization**: Automatic job classification using keyword-based ML algorithms
-- **Advanced Scheduling**: Dependency management and conditional execution for complex workflows
+- **Advanced Duplicate Detection**: Machine learning-powered similarity detection
+- **Feed Optimization**: Automated feed configuration optimization using predictive analytics
 - **GraphQL API**: Flexible query language for advanced data retrieval and filtering
 - **Webhook System**: Real-time notifications for import events, failures, and job changes
 - **Enhanced REST API**: Comprehensive endpoints with OpenAPI documentation
-- **Automated Feed Optimization**: Machine learning-powered feed configuration optimization using predictive analytics
+
+### 🏢 **CRM Integration (v2.0.0)**
+- **Multi-Platform Support**: HubSpot, Salesforce, Zoho CRM, and Pipedrive integration
+- **Automated Contact Sync**: Bidirectional synchronization of candidate data
+- **Lead Generation**: Automatic lead creation from job applications
+- **Pipeline Management**: Integration with CRM sales pipelines and workflows
+- **Custom Field Mapping**: Flexible field mapping between job applications and CRM records
+- **Duplicate Prevention**: Intelligent deduplication across systems
+
+### 🌐 **Multi-Site Support (v2.2.0)**
+- **Network-Wide Management**: Centralized job import across WordPress multisite networks
+- **Site-Specific Configuration**: Individual settings per subsite with global overrides
+- **Shared Resources**: Common feed sources and mappings across sites
+- **Cross-Site Synchronization**: Job data sharing and duplication prevention
+- **Admin Interface**: Network admin dashboard for multisite management
+
+### ⚖️ **Horizontal Scaling (v2.2.0)**
+- **Distributed Processing**: Load balancing across multiple server instances
+- **Instance Management**: Automatic health monitoring and failover
+- **Queue Distribution**: Intelligent job distribution across processing nodes
+- **Resource Optimization**: Dynamic scaling based on workload demands
+- **High Availability**: Redundant processing with automatic recovery
+
+### 📱 **Mobile Companion App (v2.1.0)**
+- **React Native Application**: Cross-platform mobile app for iOS and Android
+- **Job Browsing**: Mobile-optimized job listings with advanced filtering
+- **Application Management**: Track and manage job applications on-the-go
+- **Offline Support**: Local caching for offline job browsing
+- **Push Notifications**: Real-time alerts for new jobs and application updates
+- **Profile Management**: Mobile access to user profiles and preferences
+
+#### Mobile App Architecture
+- **Framework**: React Native with Expo support
+- **Navigation**: React Navigation v6 with stack navigator
+- **State Management**: React Context for authentication state
+- **API Integration**: Axios for HTTP requests with JWT authentication
+- **Data Persistence**: AsyncStorage for offline data and user sessions
+- **UI Components**: Custom styled components with responsive design
+
+#### Mobile App Features
+- **Authentication System**: AuthContext for global authentication state with JWT tokens and auto-login
+- **Screen Components**: LoginScreen, JobListScreen, JobDetailScreen, ApplicationFormScreen, ProfileScreen, DashboardScreen
+- **API Integration**: REST API endpoints for authentication, jobs, applications, and dashboard data
+- **Development Standards**: ESLint with React Native standards, feature-based component structure
+- **Build Process**: iOS Xcode build with CocoaPods, Android Gradle build with Android SDK
+
+### 📢 **Social Media Integration (v2.1.0)**
+- **Multi-Platform Posting**: Automated posting to Twitter, Facebook, TikTok, and LinkedIn
+- **Content Scheduling**: Intelligent scheduling based on audience engagement
+- **Performance Analytics**: Track social media performance and engagement metrics
+- **Ad Management**: Integrated advertising campaign management
+- **Content Optimization**: AI-powered content suggestions and optimization
 
 ## 📋 Requirements
 
 - **WordPress**: 5.0 or higher
-- **PHP**: 7.4 or higher
+- **PHP**: 8.1 or higher
 - **MySQL**: 5.7 or higher (8.0 recommended)
 - **Memory**: 256MB minimum (512MB recommended)
 - **Storage**: Sufficient space for feed processing and caching
@@ -101,18 +153,18 @@ curl "/wp-json/puntwork/v1/import-progress?api_key=YOUR_API_KEY"
 ## 📖 Documentation
 
 ### 📚 **Complete Documentation**
-- **[API Documentation](docs/API-DOCUMENTATION.md)**: Comprehensive API guide with examples
-- **[OpenAPI Specification](docs/openapi-spec.json)**: Interactive API documentation
-- **[Development Guide](docs/DEVELOPMENT.md)**: Docker setup and development workflow
-- **[Deployment Guide](docs/DEPLOYMENT.md)**: Production deployment instructions
+- **[Technical Reference](docs/technical-reference.md)**: Comprehensive technical reference for developers
+- **[Mobile App Guide](mobile/README.md)**: React Native companion app documentation
 
 ### 🔧 **Configuration**
 
 #### API Settings
 Navigate to **WordPress Admin > puntWork > API Settings** to:
-- Generate/Configure API keys
+- Generate/Configure API keys (ensure matches .env file: REMOVED_API_KEY)
 - Set rate limiting parameters
 - Configure security options
+- Verify WordPress REST API is enabled (/wp-json/ returns JSON)
+- Test endpoints: import-status and trigger-import
 
 #### Feed Management
 Create job feeds via **WordPress Admin > Job Feeds**:
@@ -128,15 +180,33 @@ Configure automated imports via **WordPress Admin > puntWork > Scheduling**:
 
 ### 🎯 **Key Endpoints**
 
+#### Authentication
+All REST API endpoints require WordPress authentication via Application Passwords or Basic Auth. Admin AJAX endpoints use WordPress nonces.
+
 #### REST API Endpoints
+- `POST /wp-json/puntwork/v1/import/trigger` - Trigger import (body: {feed_key, force})
+- `GET /wp-json/puntwork/v1/import/status` - Get import progress and statistics
+- `GET /wp-json/puntwork/v1/feeds` - List configured feed URLs
+- `GET /wp-json/puntwork/v1/analytics/summary?period=30days` - Get analytics (period: 7days/30days/90days)
+- `GET /wp-json/puntwork/v1/analytics/export?period=30days` - Export analytics as CSV
+- `GET /wp-json/puntwork/v1/health/feeds` - Get feed health status
 - `POST /wp-json/puntwork/v1/trigger-import` - Trigger manual import
 - `GET /wp-json/puntwork/v1/import-status` - Get import status
 - `GET /wp-json/puntwork/v1/import-progress` - Real-time progress (SSE)
+- `POST /wp-json/puntwork/v1/graphql` - GraphQL query endpoint
+- `GET /wp-json/puntwork/v1/webhooks` - List configured webhooks
+- `POST /wp-json/puntwork/v1/webhooks` - Register new webhook
 
 #### AJAX Endpoints
+- `puntwork_import_control` - Start/stop import, get status (commands: start/stop/status)
+- `puntwork_db_optimize` - Run database optimization
+- `puntwork_feed_health` - Get/update feed health alerts
 - `run_job_import_batch` - Process import batches
 - `get_job_import_status` - Get current status
 - `cancel_job_import` - Cancel running import
+
+#### Error Handling
+Common HTTP status codes: 200 (success), 400 (bad request), 403 (forbidden), 409 (conflict), 500 (server error). Rate limiting: 100 requests/hour per IP for REST API.
 
 ## 🏗️ Architecture
 
@@ -147,23 +217,71 @@ puntwork/
 ├── composer.json             # PHP dependencies
 ├── docker-compose.yml        # Development environment
 ├── Dockerfile               # Docker configuration
-├── assets/                  # Frontend assets
+├── assets/                  # Frontend assets (JavaScript modules)
 │   ├── js/                  # JavaScript modules
 │   └── images/              # Icons and assets
-├── includes/                # Core functionality
-│   ├── api/                 # REST and AJAX handlers
-│   ├── batch/               # Batch processing
-│   ├── core/                # Core utilities
-│   ├── import/              # Import logic
-│   ├── mappings/            # Data mappings
-│   ├── scheduling/          # Cron scheduling
-│   └── utilities/           # Helper functions
+├── includes/                # Core functionality (modular structure)
+│   ├── admin/               # Admin interface (5 files)
+│   ├── api/                 # AJAX handlers (4 files)
+│   ├── batch/               # Batch processing (5 files)
+│   ├── core/                # Core utilities (2 files)
+│   ├── crm/                 # CRM integrations
+│   ├── database/            # Database operations
+│   ├── import/              # Import operations (8 files)
+│   ├── jobboards/           # Job board integrations
+│   ├── mappings/            # Data mappings (6 files)
+│   ├── multisite/           # Multi-site support
+│   ├── queue/               # Queue management
+│   ├── reporting/           # Analytics and reporting
+│   ├── scheduling/          # Scheduling system (4 files)
+│   ├── socialmedia/         # Social media features
+│   └── utilities/           # Utility functions (9 files)
+├── mobile/                  # React Native companion app
 ├── docs/                    # Documentation
 ├── scripts/                 # Utility scripts
 └── tests/                   # Test suite
 ```
 
+#### Key Files
+- `puntwork.php` - Main plugin loader with include paths
+- `includes/batch/batch-core.php` - Main batch processing logic
+- `includes/scheduling/scheduling-core.php` - Scheduling calculations and cron management
+- `includes/api/ajax-handlers.php` - Primary AJAX endpoint handler
+- `assets/job-import-api.js` - JavaScript API communication layer
+
 ### 🏛️ **Core Components**
+
+#### Module Responsibilities
+- **`includes/admin/`**: WordPress admin interface, dashboard, settings pages
+- **`includes/api/`**: AJAX endpoints, data validation, API responses
+- **`includes/batch/`**: Batch processing logic, memory management, progress tracking
+- **`includes/core/`**: Plugin initialization, asset enqueuing, core setup
+- **`includes/import/`**: Feed processing, XML/JSON parsing, data transformation
+- **`includes/mappings/`**: Field mappings, data normalization, schema handling
+- **`includes/scheduling/`**: Cron jobs, time calculations, scheduled imports
+- **`includes/utilities/`**: Logging, file operations, helper functions
+
+#### AI-Powered Components
+- **ContentQualityScorer**: Linguistic analysis and quality assessment of job descriptions
+- **JobCategorizer**: Intelligent job classification using ML algorithms
+- **DuplicateDetector**: Advanced similarity detection and deduplication
+- **FeedOptimizer**: Predictive analytics for feed configuration optimization
+
+#### API Components
+- **GraphQLAPI**: Flexible query interface for advanced data operations
+- **WebhookManager**: Real-time event notifications and integrations
+- **RestApi**: Enhanced REST endpoints with comprehensive documentation
+
+#### CRM Integration
+- **CRMManager**: Multi-platform CRM orchestration and data synchronization
+- **HubSpotIntegration**: HubSpot CRM bidirectional sync
+- **SalesforceIntegration**: Salesforce CRM connectivity
+- **ZohoIntegration**: Zoho CRM integration
+- **PipedriveIntegration**: Pipedrive CRM pipeline management
+
+#### Multi-Site & Scaling
+- **MultiSiteManager**: Network-wide job management across WordPress multisite
+- **HorizontalScalingManager**: Distributed processing across multiple instances
 
 #### ImportAnalytics Class
 - Tracks import metrics and performance
@@ -228,17 +346,65 @@ php tests/rest-api-test.php
 ## 🔧 Development
 
 ### 🐳 **Docker Development**
-The plugin includes a complete Docker development environment:
+The plugin includes a complete Docker development environment with WordPress, MySQL, PHPMyAdmin, Redis, and MailHog services.
 
+#### Services
+- **WordPress** (Port 8080): WordPress with puntWork plugin pre-installed, XDebug configured, WP-CLI available, Composer installed.
+- **MySQL** (Port 3306): MySQL 8.0 with utf8mb4 charset. Database: `wordpress`, User: `wordpress` / Password: `wordpress`, Root password: `root`.
+- **PHPMyAdmin** (Port 8081): Web interface for MySQL database management, pre-configured to connect to the MySQL container.
+- **Redis** (Port 6379): Redis 7 with persistence enabled, used for caching by the puntWork plugin.
+- **MailHog** (Ports 1025/8025): SMTP server on port 1025, web interface on port 8025 for viewing sent emails.
+
+#### Quick Setup
 ```bash
-# Quick setup
 ./setup-dev.sh
+```
 
-# Manual control
+#### Manual Control
+```bash
 docker-compose up -d    # Start services
 docker-compose down     # Stop services
 docker-compose logs -f  # View logs
 ```
+
+#### Accessing Containers
+- **WordPress Container Shell**: `docker-compose exec wordpress bash`
+- **WP-CLI Commands**: `docker-compose exec wordpress wp --allow-root` (e.g., `wp user list --allow-root`, `wp plugin activate puntwork --allow-root`)
+- **Database Access**: `docker-compose exec db mysql -u wordpress -pwordpress wordpress` or use PHPMyAdmin at http://localhost:8081
+
+#### Running Tests
+- **PHPUnit Tests**: `docker-compose exec wordpress ./vendor/bin/phpunit` (all tests), `./vendor/bin/phpunit tests/ImportTest.php` (specific), `--coverage-html coverage` (with coverage)
+- **API Tests**: `docker-compose exec wordpress php tests/comprehensive-api-test.php`
+
+#### Debugging
+- XDebug is pre-configured for VS Code debugging (port 9003). Create `.vscode/launch.json` with path mappings to `/var/www/html/wp-content/plugins/puntwork`.
+- WordPress debug logs: `docker-compose exec wordpress tail -f /var/www/html/wp-content/debug.log`
+
+#### Code Changes
+Plugin code is mounted as a volume, so changes are reflected immediately:
+- Plugin files: `./` → `/var/www/html/wp-content/plugins/puntwork`
+- WordPress content: `./wp-content/` → `/var/www/html/wp-content`
+
+#### Database Management
+- **Backup**: `docker-compose exec db mysqldump -u wordpress -pwordpress wordpress > backup.sql`
+- **Restore**: `docker-compose exec -T db mysql -u wordpress -pwordpress wordpress < backup.sql`
+- **Reset Database**: Stop WordPress, drop/recreate database, restart WordPress, reinstall WordPress via WP-CLI.
+
+#### Environment Configuration
+- **.env File**: Contains development settings like `PUNTWORK_DEBUG=true`, `WP_DEBUG=true`.
+- **Docker Compose Overrides**: Create `docker-compose.override.yml` for local customizations (e.g., custom environment variables).
+
+#### Troubleshooting
+- **WordPress Won't Start**: Check logs with `docker-compose logs wordpress`, verify database readiness.
+- **Plugin Not Loading**: Check plugin files, WordPress error logs, plugin activation status.
+- **Database Connection Issues**: Test with `wp db check --allow-root`, restart containers.
+- **Permission Issues**: Fix with `docker-compose exec wordpress chown -R www-data:www-data /var/www/html/wp-content`
+- **Performance Issues**: Ensure Docker resources, enable Redis caching, monitor with `docker stats`.
+
+#### Advanced Configuration
+- **Custom PHP Configuration**: Add `docker/php.ini` and mount in `docker-compose.override.yml`.
+- **Additional Tools**: Install Node.js or PHP extensions in containers if needed.
+- **CI/CD Integration**: Use for automated testing with GitHub Actions.
 
 ### � **Live Server Access via SFTP**
 
@@ -401,6 +567,71 @@ Regular code quality reviews should include:
 - Performance optimizations
 - Security enhancements
 
+#### Successful Development Patterns
+
+**PHP AJAX Handler:**
+```php
+// Security-first AJAX handler
+function secure_ajax_handler() {
+    if (!wp_verify_nonce($_POST['nonce'], 'action_nonce')) {
+        wp_send_json_error(['message' => 'Security check failed']);
+        return;
+    }
+    // Process request...
+}
+```
+
+**JavaScript Module:**
+```javascript
+// IIFE Module with global export
+const ModuleName = (function($) {
+    function publicMethod() { /* ... */ }
+    return { publicMethod: publicMethod };
+})(jQuery);
+window.GlobalObject = window.GlobalObject || {};
+window.GlobalObject.Module = ModuleName;
+```
+
+**Cached Database Query:**
+```php
+// Cached database query
+function get_cached_posts($args) {
+    $cache_key = 'prefix_' . md5(serialize($args));
+    $posts = get_transient($cache_key);
+    if (false === $posts) {
+        $posts = get_posts($args);
+        set_transient($cache_key, $posts, HOUR_IN_SECONDS);
+    }
+    return $posts;
+}
+```
+
+**WordPress Asset Enqueuing:**
+```php
+// Enqueue admin assets
+wp_enqueue_script(
+    'puntwork-admin-js',
+    plugin_dir_url(__FILE__) . 'assets/job-import-admin.js',
+    ['jquery', 'wp-util'],
+    '1.0.0',
+    true
+);
+wp_localize_script('puntwork-admin-js', 'jobImportData', [
+    'ajaxurl' => admin_url('admin-ajax.php'),
+    'nonce' => wp_create_nonce('job_import_nonce')
+]);
+```
+
+**Error Handling with Logging:**
+```php
+try {
+    $result = risky_operation($data);
+} catch (Exception $e) {
+    error_log('Error in ' . __FUNCTION__ . ': ' . $e->getMessage());
+    wp_send_json_error(['message' => 'Operation failed']);
+}
+```
+
 By following these practices, we maintain high code quality and prevent the accumulation of technical debt.
 
 ## 📊 Performance
@@ -446,16 +677,6 @@ By following these practices, we maintain high code quality and prevent the accu
 
 ## 📞 Support
 
-### 🐛 **Issue Reporting**
-- **GitHub Issues**: [Report bugs and request features](https://github.com/DGC-GH/puntWork/issues)
-- **Documentation**: Check [docs/](docs/) for detailed guides
-- **API Reference**: Interactive docs at `/docs/api-docs.html`
-
-### 📖 **Resources**
-- **[API Documentation](docs/API-DOCUMENTATION.md)**
-- **[Development Guide](docs/DEVELOPMENT.md)**
-- **[Deployment Guide](docs/DEPLOYMENT.md)**
-- **[OpenAPI Spec](docs/openapi-spec.json)**
 
 ## 📄 License
 
@@ -485,4 +706,4 @@ GNU General Public License for more details.
 
 ---
 
-**Version 2.0.0** - Enterprise-grade job import solution with real-time analytics, multi-format support, and comprehensive API integration.
+**Version 2.0.0** - Enterprise-grade job import solution with AI-powered features, CRM integrations, multi-site support, horizontal scaling, GraphQL API, webhooks, mobile app, and comprehensive API integration.
