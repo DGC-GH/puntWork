@@ -167,7 +167,6 @@ function process_batch_items_logic(array $setup): array
         error_log('[PUNTWORK] Starting performance monitoring');
         // Start performance monitoring
         $perf_id = start_performance_monitoring('batch_import');
-        $span = PuntworkTracing::startActiveSpan('batch_import', ['batch_size' => $batch_size, 'start_index' => $start_index]);
 
         // Start database performance monitoring
         start_db_performance_monitoring();
@@ -434,8 +433,7 @@ function validate_and_adjust_batch_size(array $setup): array
     $current_batch_time = get_option('job_import_last_batch_time', 0);
     $previous_batch_time = get_option('job_import_previous_batch_time', 0);
 
-    $batch_size = adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time);
-    $adjustment_result = $batch_size;
+    $adjustment_result = adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time);
     $batch_size = $adjustment_result['batch_size'];
 
     $logs = [];
@@ -604,7 +602,7 @@ function handle_batch_duplicates(array $batch_guids, array $existing_by_guid, ar
 {
     // Use advanced deduplication if available and enabled
     if (class_exists(__NAMESPACE__ . '\\JobDeduplicator') && apply_filters('puntwork_use_advanced_deduplication', true)) {
-        JobDeduplicator::handle_duplicates_advanced($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
+        JobDeduplicator::handleDuplicatesAdvanced($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
     } else {
         // Fallback to original deduplication logic
         handle_duplicates($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
