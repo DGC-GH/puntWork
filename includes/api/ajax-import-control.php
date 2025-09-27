@@ -111,44 +111,50 @@ function run_job_import_batch_ajax()
     }
     error_log('[PUNTWORK] AJAX: Security validation passed');
 
-    try {
-        $start = $_POST['start'];
-        PuntWorkLogger::info("Starting batch import at index: {$start}", PuntWorkLogger::CONTEXT_BATCH);
-
-        // Add detailed logging before calling import_jobs_from_json
-        PuntWorkLogger::debug("About to call import_jobs_from_json with start={$start}", PuntWorkLogger::CONTEXT_BATCH);
-        error_log('[PUNTWORK] AJAX: About to call import_jobs_from_json with start=' . $start);
-
-        // Check if required functions exist before calling
-        if (!function_exists('prepare_import_setup')) {
-            error_log('[PUNTWORK] AJAX: prepare_import_setup function not found');
-            AjaxErrorHandler::sendError('prepare_import_setup function not available');
-            return;
-        }
-        if (!function_exists('process_batch_items_logic')) {
-            error_log('[PUNTWORK] AJAX: process_batch_items_logic function not found');
-            AjaxErrorHandler::sendError('process_batch_items_logic function not available');
-            return;
-        }
-        if (!function_exists('finalize_batch_import')) {
-            error_log('[PUNTWORK] AJAX: finalize_batch_import function not found');
-            AjaxErrorHandler::sendError('finalize_batch_import function not available');
-            return;
-        }
-
-        error_log('[PUNTWORK] AJAX: All required functions are available');
-
         try {
-            $result = import_jobs_from_json(true, $start);
-            error_log('[PUNTWORK] AJAX: import_jobs_from_json returned: ' . json_encode($result));
-        } catch (\Exception $e) {
-            error_log('[PUNTWORK] AJAX: Exception in import_jobs_from_json: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
-            error_log('[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString());
-            AjaxErrorHandler::sendError('Import failed with exception: ' . $e->getMessage());
-            return;
-        }
+            $start = $_POST['start'];
+            PuntWorkLogger::info("Starting batch import at index: {$start}", PuntWorkLogger::CONTEXT_BATCH);
 
-        // Log summary instead of full result to prevent large debug logs
+            // Add detailed logging before calling import_jobs_from_json
+            PuntWorkLogger::debug("About to call import_jobs_from_json with start={$start}", PuntWorkLogger::CONTEXT_BATCH);
+            error_log('[PUNTWORK] AJAX: About to call import_jobs_from_json with start=' . $start);
+
+            // Check if required functions exist before calling
+            if (!function_exists('prepare_import_setup')) {
+                error_log('[PUNTWORK] AJAX: prepare_import_setup function not found');
+                AjaxErrorHandler::sendError('prepare_import_setup function not available');
+                return;
+            }
+            if (!function_exists('process_batch_items_logic')) {
+                error_log('[PUNTWORK] AJAX: process_batch_items_logic function not found');
+                AjaxErrorHandler::sendError('process_batch_items_logic function not available');
+                return;
+            }
+            if (!function_exists('finalize_batch_import')) {
+                error_log('[PUNTWORK] AJAX: finalize_batch_import function not found');
+                AjaxErrorHandler::sendError('finalize_batch_import function not available');
+                return;
+            }
+
+            error_log('[PUNTWORK] AJAX: All required functions are available');
+
+            try {
+                error_log('[PUNTWORK] AJAX: Calling import_jobs_from_json...');
+                $result = import_jobs_from_json(true, $start);
+                error_log('[PUNTWORK] AJAX: import_jobs_from_json returned successfully');
+                error_log('[PUNTWORK] AJAX: import_jobs_from_json result keys: ' . implode(', ', array_keys($result)));
+                error_log('[PUNTWORK] AJAX: import_jobs_from_json result: ' . json_encode($result));
+            } catch (\Exception $e) {
+                error_log('[PUNTWORK] AJAX: Exception in import_jobs_from_json: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+                error_log('[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString());
+                AjaxErrorHandler::sendError('Import failed with exception: ' . $e->getMessage());
+                return;
+            } catch (\Throwable $e) {
+                error_log('[PUNTWORK] AJAX: Fatal error in import_jobs_from_json: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+                error_log('[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString());
+                AjaxErrorHandler::sendError('Import failed with fatal error: ' . $e->getMessage());
+                return;
+            }        // Log summary instead of full result to prevent large debug logs
         $log_summary = [
             'success' => isset($result['success']) && $result['success'],
             'processed' => $result['processed'] ?? 0,

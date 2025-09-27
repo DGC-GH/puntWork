@@ -20,6 +20,47 @@ require_once __DIR__ . '/../utilities/async-processing.php';
 require_once __DIR__ . '/../scheduling/scheduling-core.php';
 
 /**
+ * Deep sanitize data for JSON serialization
+ * Recursively removes non-serializable objects, resources, and invalid values
+ *
+ * @param mixed $data Data to sanitize
+ * @return mixed Sanitized data
+ */
+function deep_sanitize_for_json($data) {
+    if (is_object($data) || is_resource($data)) {
+        error_log('[PUNTWORK] SSE: Removed object/resource from data');
+        return null;
+    }
+    
+    if (is_float($data) && (is_infinite($data) || is_nan($data))) {
+        error_log('[PUNTWORK] SSE: Removed infinite/NaN float from data');
+        return null;
+    }
+    
+    if (is_array($data)) {
+        $sanitized = [];
+        foreach ($data as $key => $value) {
+            // Skip keys that are objects or resources
+            if (is_object($key) || is_resource($key)) {
+                error_log('[PUNTWORK] SSE: Skipped object/resource key in array');
+                continue;
+            }
+            
+            // Convert object/resource keys to strings
+            if (!is_string($key) && !is_int($key)) {
+                $key = (string) $key;
+            }
+            
+            $sanitized[$key] = deep_sanitize_for_json($value);
+        }
+        return $sanitized;
+    }
+    
+    // For scalars and other types, return as-is
+    return $data;
+}
+
+/**
  * Server-Sent Events handlers for real-time import progress
  */
 
@@ -120,55 +161,17 @@ function handle_import_progress_sse($request)
                     $current_status = [];
                 }
 
-                // Sanitize the status to ensure it's JSON serializable
-                $current_status = array_map(function ($value) {
-                    if (is_object($value) || is_resource($value)) {
-                        return null; // Replace non-serializable objects/resources with null
-                    }
-                    if (is_float($value) && (is_infinite($value) || is_nan($value))) {
-                        return null; // Replace infinite or NaN floats with null
-                    }
-                    if (is_array($value)) {
-                        // Recursively sanitize arrays
-                        return array_map(function ($subValue) {
-                            if (is_object($subValue) || is_resource($subValue)) {
-                                return null;
-                            }
-                            if (is_float($subValue) && (is_infinite($subValue) || is_nan($subValue))) {
-                                return null;
-                            }
-                            return $subValue;
-                        }, $value);
-                    }
-                    return $value;
-                }, $current_status);
+                // Deep sanitize the status to ensure it's JSON serializable
+                $current_status = deep_sanitize_for_json($current_status);
+                error_log('[PUNTWORK] SSE: After deep sanitization: ' . json_encode($current_status));
 
                 // Check for async import status if applicable
                 $async_status = check_async_import_status();
                 if ($async_status['active']) {
                     $async_progress = $async_status['progress'] ?? [];
-                    // Sanitize async progress data
-                    $async_progress = array_map(function ($value) {
-                        if (is_object($value) || is_resource($value)) {
-                            return null;
-                        }
-                        if (is_float($value) && (is_infinite($value) || is_nan($value))) {
-                            return null;
-                        }
-                        if (is_array($value)) {
-                            return array_map(function ($subValue) {
-                                if (is_object($subValue) || is_resource($subValue)) {
-                                    return null;
-                                }
-                                if (is_float($subValue) && (is_infinite($subValue) || is_nan($subValue))) {
-                                    return null;
-                                }
-                                return $subValue;
-                            }, $value);
-                        }
-                        return $value;
-                    }, $async_progress);
-
+                    // Deep sanitize async progress data
+                    $async_progress = deep_sanitize_for_json($async_progress);
+                    
                     $current_status = array_merge($current_status, $async_progress);
                     $current_status['async_active'] = true;
                     $current_status['async_status'] = $async_status['status'];
