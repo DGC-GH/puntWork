@@ -17,6 +17,11 @@ if (! defined('ABSPATH')) {
 
 function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs)
 {
+    // Ensure output directory exists
+    if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
+        throw new \Exception('Feeds directory not writable');
+    }
+
     $combined_json_path = $output_dir . 'combined-jobs.jsonl';
     $combined_gz_path = $combined_json_path . '.gz';
     $combined_handle = fopen($combined_json_path, 'w');

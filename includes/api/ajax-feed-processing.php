@@ -63,6 +63,14 @@ function process_feed_ajax()
         PuntWorkLogger::info("Processing feed: {$feed_key}", PuntWorkLogger::CONTEXT_FEED, ['url' => $url]);
 
         $output_dir = ABSPATH . 'feeds/';
+        
+        // Ensure output directory exists
+        if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
+            PuntWorkLogger::error("Feeds directory not writable: {$output_dir}", PuntWorkLogger::CONTEXT_FEED);
+            AjaxErrorHandler::sendError('Feeds directory not writable');
+            return;
+        }
+        
         $fallback_domain = 'belgiumjobs.work';
         $logs = [];
 
@@ -118,6 +126,14 @@ function combine_jsonl_ajax()
 
         $feeds = get_feeds();
         $output_dir = ABSPATH . 'feeds/';
+        
+        // Ensure output directory exists
+        if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
+            PuntWorkLogger::error("Feeds directory not writable: {$output_dir}", PuntWorkLogger::CONTEXT_FEED);
+            AjaxErrorHandler::sendError('Feeds directory not writable');
+            return;
+        }
+        
         $logs = [];
 
         combine_jsonl_files($feeds, $output_dir, $total_items, $logs);

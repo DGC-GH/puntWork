@@ -131,7 +131,7 @@ function process_batch_items_logic(array $setup): array
     try {
         // Start performance monitoring
         $perf_id = start_performance_monitoring('batch_import');
-        $span = start_tracing_span('batch_import', ['batch_size' => $batch_size, 'start_index' => $start_index]);
+        $span = PuntworkTracing::startActiveSpan('batch_import', ['batch_size' => $batch_size, 'start_index' => $start_index]);
 
         // Start database performance monitoring
         start_db_performance_monitoring();
@@ -393,7 +393,7 @@ function validate_and_adjust_batch_size(array $setup): array
     $previous_batch_time = get_option('job_import_previous_batch_time', 0);
 
     $batch_size = adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time);
-    $adjustment_result = $batch_size; // Assuming adjust_batch_size returns array
+    $adjustment_result = $batch_size;
     $batch_size = $adjustment_result['batch_size'];
 
     $logs = [];
