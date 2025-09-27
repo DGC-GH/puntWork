@@ -68,40 +68,47 @@ function performance_metrics_page()
     ");
 
     ?>
-    <div class="wrap">
-        <h1><?php _e('Performance Metrics Dashboard', 'puntwork'); ?></h1>
+    <div class="puntwork-admin">
+        <div class="puntwork-container">
+            <header class="puntwork-header">
+                <h1 class="puntwork-header__title"><?php _e('Performance Metrics Dashboard', 'puntwork'); ?></h1>
+                <p class="puntwork-header__subtitle">Monitor and analyze your job import performance</p>
+            </header>
 
-        <?php settings_errors('performance_metrics'); ?>
+            <?php settings_errors('performance_metrics'); ?>
 
-        <!-- Filters -->
-        <div class="performance-filters">
-            <form method="get" style="display: inline;">
-                <input type="hidden" name="page" value="puntwork-performance">
-                <label for="period-select"><?php _e('Time Period:', 'puntwork'); ?></label>
-                <select name="period" id="period-select" onchange="this.form.submit()">
-                    <option value="7days" <?php selected($period, '7days'); ?>><?php _e('Last 7 Days', 'puntwork'); ?></option>
-                    <option value="30days" <?php selected($period, '30days'); ?>><?php _e('Last 30 Days', 'puntwork'); ?></option>
-                    <option value="90days" <?php selected($period, '90days'); ?>><?php _e('Last 90 Days', 'puntwork'); ?></option>
-                </select>
+            <!-- Filters -->
+            <div class="puntwork-card" style="margin-bottom: var(--spacing-xl);">
+                <div class="puntwork-card__body">
+                    <form method="get" style="display: inline;">
+                        <input type="hidden" name="page" value="puntwork-performance">
+                        <label for="period-select" style="margin-right: var(--spacing-md); font-weight: var(--font-weight-medium);"><?php _e('Time Period:', 'puntwork'); ?></label>
+                        <select name="period" id="period-select" onchange="this.form.submit()" style="margin-right: var(--spacing-lg);">
+                            <option value="7days" <?php selected($period, '7days'); ?>><?php _e('Last 7 Days', 'puntwork'); ?></option>
+                            <option value="30days" <?php selected($period, '30days'); ?>><?php _e('Last 30 Days', 'puntwork'); ?></option>
+                            <option value="90days" <?php selected($period, '90days'); ?>><?php _e('Last 90 Days', 'puntwork'); ?></option>
+                        </select>
 
-                <label for="operation-select" style="margin-left: 20px;"><?php _e('Operation:', 'puntwork'); ?></label>
-                <select name="operation" id="operation-select" onchange="this.form.submit()">
-                    <option value=""><?php _e('All Operations', 'puntwork'); ?></option>
-                    <?php foreach ($operation_types as $op) : ?>
-                        <option value="<?php echo esc_attr($op); ?>" <?php selected($operation, $op); ?>><?php echo esc_html($op); ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </form>
+                        <label for="operation-select" style="margin-right: var(--spacing-md); font-weight: var(--font-weight-medium);"><?php _e('Operation:', 'puntwork'); ?></label>
+                        <select name="operation" id="operation-select" onchange="this.form.submit()" style="margin-right: var(--spacing-lg);">
+                            <option value=""><?php _e('All Operations', 'puntwork'); ?></option>
+                            <?php foreach ($operation_types as $op) : ?>
+                                <option value="<?php echo esc_attr($op); ?>" <?php selected($operation, $op); ?>><?php echo esc_html($op); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </form>
 
-            <!-- Clear Logs Button -->
-            <form method="post" style="display: inline; margin-left: 20px;">
-                <?php wp_nonce_field('performance_metrics_nonce'); ?>
-                <input type="hidden" name="action" value="clear_performance_logs">
-                <button type="submit" class="button button-secondary" onclick="return confirm('<?php _e('Are you sure you want to clear old performance logs?', 'puntwork'); ?>')">
-                    <?php _e('Clear Old Logs', 'puntwork'); ?>
-                </button>
-            </form>
-        </div>
+                    <!-- Clear Logs Button -->
+                    <form method="post" style="display: inline;">
+                        <?php wp_nonce_field('performance_metrics_nonce'); ?>
+                        <input type="hidden" name="action" value="clear_performance_logs">
+                        <button type="submit" class="puntwork-btn puntwork-btn--secondary" onclick="return confirm('<?php _e('Are you sure you want to clear old performance logs?', 'puntwork'); ?>')">
+                            <i class="fas fa-trash-alt puntwork-btn__icon"></i>
+                            <?php _e('Clear Old Logs', 'puntwork'); ?>
+                        </button>
+                    </form>
+                </div>
+            </div>
 
         <div class="performance-dashboard">
             <!-- Current System Status -->
@@ -242,7 +249,7 @@ function performance_metrics_page()
             <!-- Cache Performance -->
             <div class="performance-section">
                 <h2><?php _e('Cache Performance', 'puntwork'); ?></h2>
-                <?php $cache_stats = CacheManager::get_stats(); ?>
+                <?php $cache_stats = CacheManager::getStats(); ?>
                 <div class="cache-stats-grid">
                     <div class="cache-stat-card">
                         <div class="cache-stat-value"><?php echo $cache_stats['redis_available'] ? '✅' : '❌'; ?></div>
@@ -273,8 +280,8 @@ function performance_metrics_page()
                 }
                 ?>
                 <div class="optimization-controls">
-                    <button id="run-optimization" class="button button-primary">
-                        <span class="dashicons dashicons-update"></span>
+                    <button id="run-optimization" class="puntwork-btn puntwork-btn--primary">
+                        <i class="fas fa-rocket puntwork-btn__icon"></i>
                         <?php _e('Run Feed Optimization', 'puntwork'); ?>
                     </button>
                     <span id="optimization-status"></span>
@@ -363,16 +370,16 @@ function performance_metrics_page()
                 </div>
 
                 <div class="ml-controls">
-                    <button id="run-ml-optimization" class="button button-primary">
-                        <span class="dashicons dashicons-brain"></span>
+                    <button id="run-ml-optimization" class="puntwork-btn puntwork-btn--primary">
+                        <i class="fas fa-brain puntwork-btn__icon"></i>
                         <?php _e('Run ML Optimization', 'puntwork'); ?>
                     </button>
-                    <button id="train-models" class="button button-secondary">
-                        <span class="dashicons dashicons-chart-line"></span>
+                    <button id="train-models" class="puntwork-btn puntwork-btn--secondary">
+                        <i class="fas fa-chart-line puntwork-btn__icon"></i>
                         <?php _e('Train Models', 'puntwork'); ?>
                     </button>
-                    <button id="view-ml-insights" class="button button-secondary">
-                        <span class="dashicons dashicons-visibility"></span>
+                    <button id="view-ml-insights" class="puntwork-btn puntwork-btn--outline">
+                        <i class="fas fa-eye puntwork-btn__icon"></i>
                         <?php _e('View Insights', 'puntwork'); ?>
                     </button>
                     <span id="ml-status"></span>
@@ -380,6 +387,7 @@ function performance_metrics_page()
             </div>
         </div>
     </div>
+</div>
 
     <!-- Performance Details Modal -->
     <div id="performance-details-modal" class="performance-modal" style="display: none;">
