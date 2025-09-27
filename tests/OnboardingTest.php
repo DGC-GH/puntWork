@@ -34,11 +34,11 @@ class OnboardingTest extends TestCase
         }
 
         // Test initial state (not completed)
-        $this->assertFalse(\PuntworkOnboardingWizard::isOnboardingCompleted());
+        $this->assertFalse(PuntworkOnboardingWizard::isOnboardingCompleted());
 
         // Simulate completion
         update_option('puntwork_onboarding_completed', true);
-        $this->assertTrue(\PuntworkOnboardingWizard::isOnboardingCompleted());
+        $this->assertTrue(PuntworkOnboardingWizard::isOnboardingCompleted());
 
         // Reset for cleanup
         delete_option('puntwork_onboarding_completed');
@@ -56,8 +56,8 @@ class OnboardingTest extends TestCase
         }
 
         // Test that the wizard can be instantiated
-        $wizard = new \PuntworkOnboardingWizard();
-        $this->assertInstanceOf(\PuntworkOnboardingWizard::class, $wizard);
+        $wizard = new PuntworkOnboardingWizard();
+        $this->assertInstanceOf(PuntworkOnboardingWizard::class, $wizard);
     }
 
     /**

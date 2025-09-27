@@ -314,7 +314,7 @@ function ajax_run_ml_feed_optimization(): void
             return;
         }
 
-        $results = \Puntwork\AI\FeedOptimizer::runOptimization();
+        $results = AI\FeedOptimizer::runOptimization();
 
         wp_send_json_success([
             'message' => 'ML feed optimization completed successfully',
@@ -345,7 +345,7 @@ function ajax_train_ml_models(): void
             return;
         }
 
-        $results = \Puntwork\AI\MachineLearningEngine::trainAllModels();
+        $results = AI\MachineLearningEngine::trainAllModels();
 
         wp_send_json_success([
             'message' => 'Model training completed successfully',
@@ -376,7 +376,7 @@ function ajax_get_ml_insights(): void
             return;
         }
 
-        $insights = \Puntwork\AI\MachineLearningEngine::getInsights();
+        $insights = AI\MachineLearningEngine::getInsights();
 
         wp_send_json_success([
             'insights' => $insights

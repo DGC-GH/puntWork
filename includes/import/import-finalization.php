@@ -96,9 +96,9 @@ function finalize_batch_import($result)
 
         // Use the appropriate logging function based on trigger type
         if ($trigger_type === 'manual') {
-            \Puntwork\log_manual_import_run($details);
+            log_manual_import_run($details);
         } else {
-            \Puntwork\log_scheduled_run($details, $test_mode, $trigger_type);
+            log_scheduled_run($details, $test_mode, $trigger_type);
         }
 
         error_log(sprintf(
@@ -205,12 +205,12 @@ function calculate_estimated_time_remaining($status)
  */
 function post_new_jobs_to_social_media($import_result)
 {
-    if (!class_exists('\\Puntwork\\SocialMedia\\SocialMediaManager')) {
+    if (!class_exists('SocialMedia\\SocialMediaManager')) {
         return;
     }
 
     try {
-        $social_manager = new \Puntwork\SocialMedia\SocialMediaManager();
+        $social_manager = new SocialMedia\SocialMediaManager();
         $default_platforms = get_option('puntwork_social_default_platforms', []);
 
         if (empty($default_platforms)) {
@@ -254,7 +254,7 @@ function post_new_jobs_to_social_media($import_result)
                 $posted_count++;
             }
 
-            \Puntwork\PuntWorkLogger::info('Auto-posted job to social media', \Puntwork\PuntWorkLogger::CONTEXT_SOCIAL, [
+            PuntWorkLogger::info('Auto-posted job to social media', PuntWorkLogger::CONTEXT_SOCIAL, [
                 'job_id' => $job->ID,
                 'job_title' => $job_data['title'],
                 'platforms' => $default_platforms,
@@ -263,13 +263,13 @@ function post_new_jobs_to_social_media($import_result)
         }
 
         if ($posted_count > 0) {
-            \Puntwork\PuntWorkLogger::info('Completed auto-posting jobs to social media', \Puntwork\PuntWorkLogger::CONTEXT_SOCIAL, [
+            PuntWorkLogger::info('Completed auto-posting jobs to social media', PuntWorkLogger::CONTEXT_SOCIAL, [
                 'total_jobs_posted' => $posted_count,
                 'platforms' => $default_platforms
             ]);
         }
     } catch (\Exception $e) {
-        \Puntwork\PuntWorkLogger::error('Failed to auto-post jobs to social media', \Puntwork\PuntWorkLogger::CONTEXT_SOCIAL, [
+        PuntWorkLogger::error('Failed to auto-post jobs to social media', PuntWorkLogger::CONTEXT_SOCIAL, [
             'error' => $e->getMessage()
         ]);
     }

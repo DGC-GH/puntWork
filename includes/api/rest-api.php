@@ -460,7 +460,7 @@ function handle_trigger_import($request)
                 'jsonl_exists' => file_exists(ABSPATH . 'feeds/combined-jobs.jsonl'),
                 'jsonl_size' => file_exists(ABSPATH . 'feeds/combined-jobs.jsonl') ? filesize(ABSPATH . 'feeds/combined-jobs.jsonl') : 0,
                 'jsonl_readable' => is_readable(ABSPATH . 'feeds/combined-jobs.jsonl'),
-                'feeds_count' => count(\Puntwork\get_feeds()),
+                'feeds_count' => count(get_feeds()),
                 'wp_abspath' => ABSPATH,
             ];
 

@@ -364,7 +364,7 @@ class FeedProcessor
             // Include the JobBoardManager
             require_once plugin_dir_path(dirname(__FILE__, 2)) . 'jobboards/jobboard-manager.php';
 
-            $board_manager = new \Puntwork\JobBoards\JobBoardManager();
+            $board_manager = new JobBoards\JobBoardManager();
 
             if (!$board_manager->isBoardConfigured($board_id)) {
                 throw new \Exception("Job board '$board_id' is not configured");

@@ -144,7 +144,7 @@ class FeedOptimizer
                 }
 
                 // Use machine learning for optimization
-                $mlOptimization = \Puntwork\AI\MachineLearningEngine::optimizeFeedAutomatically($feedKey);
+                $mlOptimization = MachineLearningEngine::optimizeFeedAutomatically($feedKey);
 
                 if ($mlOptimization['success']) {
                     $results['optimizations_applied'] += count($mlOptimization['applied_optimizations']);

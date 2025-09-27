@@ -82,9 +82,9 @@ function run_scheduled_import($test_mode = false, $trigger_type = 'scheduled')
             error_log('[PUNTWORK] Refreshing feed data for import');
             try {
                 // Check if feeds are configured before refreshing
-                $feeds = \Puntwork\get_feeds();
+                $feeds = get_feeds();
                 $json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
-                $jsonl_exists = file_exists($json_path) && \Puntwork\get_json_item_count($json_path) > 0;
+                $jsonl_exists = file_exists($json_path) && get_json_item_count($json_path) > 0;
 
                 error_log('[PUNTWORK] Feed check: feeds found = ' . count($feeds) . ', jsonl_exists = ' . ($jsonl_exists ? 'true' : 'false'));
 

@@ -110,7 +110,7 @@ add_action('admin_menu', function () {
     );
 
     // Onboarding menu item (only show if onboarding not completed)
-    if (!\PuntworkOnboardingWizard::isOnboardingCompleted()) {
+    if (!PuntworkOnboardingWizard::isOnboardingCompleted()) {
         add_submenu_page(
             'puntwork-dashboard',
             __('Setup Wizard', 'puntwork'),
