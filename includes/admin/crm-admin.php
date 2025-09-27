@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
 /**
  * CRM Admin Class
  */
-class PuntworkCrmAdmin
+class Puntwork_CRM_Admin
 {
     /**
      * CRM Manager instance
@@ -619,4 +619,4 @@ class PuntworkCrmAdmin
 }
 
 // Initialize admin interface
-new PuntworkCrmAdmin();
+new Puntwork_CRM_Admin();
