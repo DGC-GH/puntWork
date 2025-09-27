@@ -7,7 +7,7 @@
  *
  * @package    Puntwork
  * @subpackage MultiSite
- * @since      2.3.0
+ * @since      2.0.0
  */
 
 namespace Puntwork;
@@ -60,8 +60,8 @@ class MultiSiteAdminUI
             return;
         }
 
-        wp_enqueue_style('puntwork-network-admin', plugins_url('assets/css/network-admin.css', dirname(__FILE__, 2)), [], '2.3.0');
-        wp_enqueue_script('puntwork-network-admin', plugins_url('assets/js/network-admin.js', dirname(__FILE__, 2)), ['jquery'], '2.3.0', true);
+        wp_enqueue_style('puntwork-network-admin', plugins_url('assets/css/network-admin.css', dirname(__FILE__, 2)), [], '2.0.0');
+        wp_enqueue_script('puntwork-network-admin', plugins_url('assets/js/network-admin.js', dirname(__FILE__, 2)), ['jquery'], '2.0.0', true);
 
         wp_localize_script('puntwork-network-admin', 'puntworkNetwork', [
             'ajax_url' => admin_url('admin-ajax.php'),

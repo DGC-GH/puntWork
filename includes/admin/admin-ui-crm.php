@@ -5,7 +5,7 @@
  *
  * @package    Puntwork
  * @subpackage Admin
- * @since      2.3.0
+ * @since      2.0.0
  */
 
 namespace Puntwork\Admin;
