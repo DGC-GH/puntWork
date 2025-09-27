@@ -662,6 +662,7 @@ class PuntworkQueueManager
     {
         $this->createQueueTable();
     }
+}
 
 // Initialize queue manager
 new PuntworkQueueManager();
