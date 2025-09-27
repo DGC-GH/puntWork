@@ -274,7 +274,13 @@ Before committing code, ensure:
 ./vendor/bin/phpunit tests/ImportTest.php
 
 # Run performance benchmarks
-./vendor/bin/phpunit tests/PerformanceBenchmarkTest.php
+./vendor/bin/phpunit tests/PerformanceRegressionTest.php
+
+# Run performance tests with result saving (creates result files)
+SAVE_PERFORMANCE_RESULTS=true ./vendor/bin/phpunit tests/PerformanceRegressionTest.php
+
+# Clean up performance result files
+php -r "require 'tests/PerformanceRegressionTest.php'; Puntwork\PerformanceRegressionTest::cleanupPerformanceResultFiles();"
 
 # Run security tests
 ./vendor/bin/phpunit tests/SecurityTest.php
