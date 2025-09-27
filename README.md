@@ -64,7 +64,7 @@ puntwork/
 - **includes/api/rest-api.php**: REST API setup
 - **includes/batch/batch-core.php**: Batch processing core logic
 - **includes/import/import-batch.php**: Import processing
-- **includes/utilities/puntwork-logger.php**: Logging class
+- **includes/utilities/PuntWorkLogger.php**: Logging class
 - **includes/ai/job-categorizer.php**: AI job categorization
 - **mobile/App.js**: React Native app entry
 - **tests/ImportTest.php**: PHPUnit import tests
