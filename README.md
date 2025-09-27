@@ -251,7 +251,7 @@ For debugging and validation purposes, you can connect directly to your live ser
 
 **Note for Grok Code Fast 1:** The path to the puntWork plugin on the server is `/public_html/wp-content/plugins/puntwork`.
 
-This is particularly useful for verifying live feed data, checking error logs, or comparing local changes against production.
+This is particularly useful for verifying live feed data, checking error logs (e.g., WordPress debug.log at `/public_html/wp-content/debug.log`), or comparing local changes against production.
 
 ### �📝 **Contributing**
 1. Fork the repository
