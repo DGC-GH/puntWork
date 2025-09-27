@@ -19,9 +19,15 @@
 - verify fixes
 - validate code
 - refactor code
-- implementat features
+- implement features
 - optimize UI and UX
 - enhance everything
+
+### Think step-by-step about your core preferences:
+- **Favor Speed:** Prioritize efficient algorithms (e.g., O(n) over O(n^2)), asynchronous/parallel processing, caching, and lightweight libraries to reduce runtime and resource usage. Example: Cache API responses with transients.
+- **Favor Simplicity:** Emphasize clean, readable code with minimal abstractions; prefer functional paradigms or straightforward imperative styles to minimize bugs and improve maintainability. Example: Prefer array_map over manual loops for readability.
+- **Favor Tools:** Leverage VS Code extensions like Copilot for real-time completions, Git for version control, ESLint/Prettier for linting/formatting, and debugging tools like breakpoints or the integrated terminal. Example: Use ESLint for JS linting.
+- **Other Biases:** Enforce robust error handling and input validation; incorporate unit/integration tests; focus on security (e.g., avoiding vulnerabilities like SQL injection); ensure scalability (e.g., modular design); and include performance benchmarks (e.g., using timeit in Python or console.time in JS). Example: Add input sanitization to prevent XSS.
 
 ## Use tools like this when needed:
 - WordPress Database API ($wpdb)
@@ -45,39 +51,26 @@
 - PuntWorkLogger Class
  
 ## Always reason step-by-step, handle edge cases like:
-- HTTP Request Timeouts
-- Memory Exhaustion
-- Network Connection Failures
-- Database Query Timeouts
-- File System Permission Errors
-- Disk Space Limitations
-- Concurrent Access Conflicts
-- Invalid Data Formats
-- API Rate Limiting
-- WordPress Cron Job Failures
-- Input Sanitization Failures
-- Output Escaping Issues
-- SQL Injection Prevention
-- XSS Attack Mitigation
-- CSRF Protection via Nonces
-- Large File Upload Handling
-- Character Encoding Issues (UTF-8)
-- Time Zone and Date Parsing Errors
-- Floating Point Precision Problems
-- Race Conditions in Queue Processing
-- Database Deadlocks
-- Session Timeouts
-- Browser Compatibility Issues
-- Mobile Responsiveness
-- Accessibility Compliance
-- GDPR Data Handling
-- Audit Logging Failures
-- Backup and Restore Errors
-- Database Migration Issues
+- **Network Issues:** HTTP Request Timeouts, Network Connection Failures, API Rate Limiting.
+- **Resource Limits:** Memory Exhaustion, Disk Space Limitations, Large File Upload Handling.
+- **Database Problems:** Database Query Timeouts, Concurrent Access Conflicts, Database Deadlocks, Migration Issues.
+- **Security Risks:** Input Sanitization Failures, Output Escaping Issues, SQL Injection Prevention, XSS Attack Mitigation, CSRF Protection via Nonces.
+- **Data Handling:** Invalid Data Formats, Character Encoding Issues (UTF-8), Time Zone and Date Parsing Errors, Floating Point Precision Problems.
+- **Concurrency:** Race Conditions in Queue Processing, Session Timeouts.
+- **Compatibility:** Browser Compatibility Issues, Mobile Responsiveness, Accessibility Compliance.
+- **Compliance & Logging:** GDPR Data Handling, Audit Logging Failures, Backup and Restore Errors.
+- **WordPress Specific:** WordPress Cron Job Failures, File System Permission Errors.
+
+## AI Limitations and Ethics
+- Avoid generating harmful, biased, or copyrighted content. If a request violates policies, respond with: "Sorry, I can't assist with that."
+- Do not assume external tool availability (e.g., SFTP); suggest alternatives if tools fail.
+- Prioritize user consent for destructive actions (e.g., file deletions).
+- Handle uncertainties by gathering context first and offering options.
     
 ## Output clean, executable code following PHPCS conventions and PSR-compliant.
 
 ## Current Codebase Overview
+- Default Context: For puntWork (WordPress plugin), see details below. For other projects, infer from provided context or scan dynamically.
 - Project structure: The project is a WordPress plugin named "puntWork" for job import and management on belgiumjobs.work. Root contains main plugin files (puntwork.php, composer.json), configuration (phpunit.xml, docker-compose.yml), and setup scripts. assets/ holds CSS, JS, and images for admin interfaces. includes/ is the core directory with subfolders for admin UI (admin/), API handlers (api/), AI features (ai/), batch processing (batch/), core logic (core/), CRM integrations (crm/), database operations (database/), import functionality (import/), job board integrations (jobboards/), mappings for data transformation (mappings/), multisite support (multisite/), queue management (queue/), reporting (reporting/), scheduling (scheduling/), social media features (socialmedia/), and utilities (utilities/). mobile/ contains a React Native companion app. tests/ includes PHPUnit tests. vendor/ holds Composer dependencies. docs/ and scripts/ provide documentation and utilities.
 - Key files: 
   - puntwork.php: Main plugin entry point, handles activation/deactivation, cron schedules, security headers, and includes loading.
@@ -87,73 +80,33 @@
   - includes/database/social-media-db.php: Handles database operations for social media posts, including table creation and data insertion.
   - includes/queue/queue-manager.php: Manages job queues with SQL queries for inserting, updating, and retrieving queue items.
 - Dependencies: PHP >=8.1, open-telemetry/opentelemetry (^1.0 for tracing), guzzlehttp/promises (^2.3 for async HTTP), php-http/httplug (^2.4 for HTTP client abstraction). Dev dependencies: phpunit/phpunit (^12.0 for testing), wp-cli/wp-cli (^2.0 for CLI tools), squizlabs/php_codesniffer (^4.0 for code standards). Mobile app (React Native): @react-navigation/native, axios, react-native, and related dev tools like jest and eslint.
+- Adapt dependencies and structure based on project type (e.g., check package.json for Node.js).
 
-
-## Cuurent VS Code Workspace:
+## Current VS Code Workspace:
 - Files for custom WordPress plugin "puntWork" for https://belgiumjobs.work/ that is hosted on Hostinger.
-- Source Control for GitHub with webhook that automatically deployes code to puntWork plugin folder on Hostinger WordPress install on push.
-- SFTP extension for VS Code conncconnected to Hostinger WordPress install via ftp.
+- Source Control for GitHub with webhook that automatically deploys code to puntWork plugin folder on Hostinger WordPress install on push.
+- SFTP extension for VS Code connected to Hostinger WordPress install via ftp.
 
 ## Read README.md
 
 ## Protocol:
 
-### Think step-by-step about your core preferences:
-- **Favor Speed:** Prioritize efficient algorithms (e.g., O(n) over O(n^2)), asynchronous/parallel processing, caching, and lightweight libraries to reduce runtime and resource usage. ...
-- **Favor Simplicity:** Emphasize clean, readable code with minimal abstractions; prefer functional paradigms or straightforward imperative styles to minimize bugs and improve maintainability. ...
-- **Favor Tools:** Leverage VS Code extensions like Copilot for real-time completions, Git for version control, ESLint/Prettier for linting/formatting, and debugging tools like breakpoints or the integrated terminal. ...
-- **Other Biases:** Enforce robust error handling and input validation; incorporate unit/integration tests; focus on security (e.g., avoiding vulnerabilities like SQL injection); ensure scalability (e.g., modular design); and include performance benchmarks (e.g., using timeit in Python or console.time in JS). ...
+Adapt the following workflow based on context. If the project differs from puntWork, prioritize general best practices.
 
-### Using these preferences, perform a detailed analysis of the full repository (or provided code snippet/context). Structure your analysis as follows:
+1. **Initial Analysis**: Scan structure, review dependencies, identify smells, evaluate features, assess performance.
 
-1. Scan the overall structure: directories, key files, entry points, and architecture patterns.
-2. Review dependencies: List packages/libraries, check for outdated or redundant ones, and suggest optimizations.
-3. Identify code smells: e.g., duplication, long functions, poor naming, or inefficient loops.
-4. Evaluate current features: Summarize functionality, potential bugs, and alignment with best practices.
-5. Assess performance and resilience: Highlight bottlenecks, error-prone areas, and scalability issues.
+2. **Propose Improvements**: Suggest fixes and enhancements, grouped by category (e.g., speed, simplicity).
 
-### Based on the analysis, suggest targeted improvements to make the code and wait for my confirmation to Implement them:
+3. **Validation Steps**: Run PHPCS to check for coding standard violations (line length >120 chars, mixing declarations and side effects), run tests, and other checks. If tools unavailable, suggest manual alternatives.
 
-- **Easier to Work With:** Better IDE integration, streamlined workflows, or automation scripts.
-- **Better Overall:** Enhanced features, improved error resilience, added tests, or security fixes.
-- **Faster:** Optimized execution, reduced latency, or resource efficiency.
+4. **Deployment Prep**: Refresh the ftp files via SFTP VS Code extension (if you can, tell me if you cant or what should i do to allow you to do so), check server files to make sure that last automatic deploy after last push was successful, clean debug.log on the server, go to the plugin admin page in the VS Code browser (or refresh the page if its already open), check for new errors in debug.log.
 
- ### run PHPCS to check for coding standard violations (line length >120 chars, mixing declarations and side effects)
+5. **User Confirmation**: Wait for approval before implementing.
 
- ### refresh the ftp files via SFTP VS Code extension (if you can, tell me if you cant or what should i do to allow you to do so)
+6. **Implementation and Testing**: Apply changes, update CHANGELOG.md and other docs/tests, update README with learnings if needd, commit.
 
- ### check server files to make sure that last automatic deploy after last push was succesfull
+7. **Post-Commit**: Validate and prepare to push.
 
- ### clean debug.log on the server
+### Update Tests if needed
 
- ### go to the plugin admin page in the VS Code browser (or refresh the page if its already open)
-
- ### check for new errors in debug.log
-
- ### take your time and analyze the issues
-
- ### prepare solutions 
-
- ### Output
- Use emojis and format the text for better readability and output in this exact format for easy adoption in VS Code:
-- **Agent Preferences:** [Bulleted list summarizing your relevent biases]
-- **Repo Analysis Summary:** [Concise yet detailed overview, including key insights from the structured analysis steps]
-- **Fixes:** [Numbered list; for each: 1. Brief explanation and rationale. 2. Code snippet or diff (use Git-style diff format if changing existing code). 3. Copilot-friendly suggestion. 4. Expected benefits tied to preferences]
-- **Improvements:** [Numbered list; for each: 1. Brief explanation and rationale. 2. Code snippet or diff (use Git-style diff format if changing existing code). 3. Copilot-friendly suggestion. 4. Expected benefits tied to preferences]
-
- ### implment solutions
-
- ### Update Tests if needed
-
- ### update README.md if needed
-
- ### update CHANGELOG.md if needed
-
- ### commit
-
- ### After commit, ask me to validate commit before pushing and prepare to push.
-
- ### After push
- Update or create README.md in the root to include a list of features used in this code; that can be used for learnings and inspiration in next "Grok Code Fast 1" or another project coded with "Grok Code Fast 1"; 
-
- ### Run Tests
+### Update README.md if needed
