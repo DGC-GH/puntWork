@@ -69,6 +69,12 @@
     
 ## Output clean, executable code following PHPCS conventions and PSR-compliant.
 
+**Naming Conventions**:
+- Classes: PascalCase (e.g., `PuntworkCrmAdmin`)
+- Methods: camelCase (e.g., `validateAjaxRequest`)
+- Constants: UPPER_SNAKE_CASE
+- Files: kebab-case.php
+
 ## Current Codebase Overview
 - Default Context: For puntWork (WordPress plugin), see details below. For other projects, infer from provided context or scan dynamically.
 - Project structure: The project is a WordPress plugin named "puntWork" for job import and management on belgiumjobs.work. Root contains main plugin files (puntwork.php, composer.json), configuration (phpunit.xml, docker-compose.yml), and setup scripts. assets/ holds CSS, JS, and images for admin interfaces. includes/ is the core directory with subfolders for admin UI (admin/), API handlers (api/), AI features (ai/), batch processing (batch/), core logic (core/), CRM integrations (crm/), database operations (database/), import functionality (import/), job board integrations (jobboards/), mappings for data transformation (mappings/), multisite support (multisite/), queue management (queue/), reporting (reporting/), scheduling (scheduling/), social media features (socialmedia/), and utilities (utilities/). mobile/ contains a React Native companion app. tests/ includes PHPUnit tests. vendor/ holds Composer dependencies. docs/ and scripts/ provide documentation and utilities.

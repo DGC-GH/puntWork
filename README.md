@@ -83,10 +83,10 @@ puntwork/
 - **Security**: Nonces, input sanitization, rate limiting
 
 ## Coding Conventions
-- **Methods**: camelCase (validateAjaxRequest)
-- **Classes**: PascalCase
-- **Constants**: UPPER_SNAKE_CASE
-- **Files**: kebab-case.php
+- **Classes**: PascalCase (e.g., `PuntworkCrmAdmin`, not `puntwork_crm_admin` or `Puntwork_CRM_Admin`)
+- **Methods**: camelCase (e.g., `validateAjaxRequest`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `PUNTWORK_VERSION`)
+- **Files**: kebab-case.php (e.g., `crm-admin.php`)
 - **Indent**: 4 spaces
 - **Line Length**: 120 chars max
 - **Standards**: PSR-12, WordPress coding standards
