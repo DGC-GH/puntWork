@@ -369,13 +369,6 @@ function render_onboarding_modal()
                 </button>
             </div>
 
-            <!-- Progress Bar -->
-            <div class="onboarding-progress">
-                <div class="onboarding-progress-bar">
-                    <div class="onboarding-progress-fill" id="onboarding-progress-fill"></div>
-                </div>
-            </div>
-
             <!-- Step Indicators -->
             <div class="step-indicators">
                 <div class="step-indicator active" data-step="0" aria-label="<?php esc_attr_e('Welcome step', 'puntwork'); ?>"></div>
@@ -385,15 +378,14 @@ function render_onboarding_modal()
                 <div class="step-indicator" data-step="4" aria-label="<?php esc_attr_e('Setup complete step', 'puntwork'); ?>"></div>
             </div>
 
-            <!-- Step Content -->
-            <div class="onboarding-content">
-                <div id="onboarding-step-content" class="step-content">
-                    <!-- Content will be populated by JavaScript -->
-                </div>
-            </div>
-
             <!-- Navigation Buttons -->
             <div class="onboarding-footer">
+                <!-- Progress Bar -->
+                <div class="onboarding-progress">
+                    <div class="onboarding-progress-bar">
+                        <div class="onboarding-progress-fill" id="onboarding-progress-fill"></div>
+                    </div>
+                </div>
                 <div class="footer-actions">
                     <button type="button" id="onboarding-prev" class="onboarding-btn secondary prev-btn" style="display: none;" aria-label="<?php esc_attr_e('Previous step', 'puntwork'); ?>">
                         <i class="fas fa-arrow-left"></i> <?php _e('Previous', 'puntwork'); ?>
