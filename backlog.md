@@ -1,5 +1,7 @@
 ✅ COMPLETED: Updated prompt.md with validation commands for future use.
 
+✅ COMPLETED: Added pre-commit git hooks for PHPCS and PHPUnit to prevent regressions.
+
 Proposed Improvements
 Speed Enhancements
 Optimize PHPCS Issues: Fix the 737 warnings to reduce code overhead and improve readability (e.g., line length violations).
