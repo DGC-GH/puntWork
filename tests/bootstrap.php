@@ -57,7 +57,7 @@ if (!function_exists('plugin_dir_path')) {
     function plugin_dir_path($file)
     {
         // For testing, return the project root + includes/
-        // Assuming $file is something like includes/Utilities/ImportAnalytics.php
+        // Assuming $file is something like includes/utilities/ImportAnalytics.php
         // We want to return the path to the plugin root
         $project_root = dirname(__DIR__); // Go up from tests/ to project root
         return $project_root . '/';
@@ -378,13 +378,13 @@ $includes = array(
     'import/process-xml-batch.php',
 
     // Utilities - only load essential ones
-    'Utilities/PuntWorkLogger.php',
-    'Utilities/handle-duplicates.php',
-    'Utilities/performance-functions.php',
-    'Utilities/PuntworkHorizontalScalingManager.php',
-    'Utilities/PuntworkLoadBalancer.php',
-    'Utilities/SecurityUtils.php',
-    'Utilities/async-processing.php',
+    'utilities/PuntWorkLogger.php',
+    'utilities/handle-duplicates.php',
+    'utilities/performance-functions.php',
+    'utilities/PuntworkHorizontalScalingManager.php',
+    'utilities/PuntworkLoadBalancer.php',
+    'utilities/SecurityUtils.php',
+    'utilities/async-processing.php',
 
     // Queue management - commented out
     /*
