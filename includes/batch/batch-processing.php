@@ -156,14 +156,17 @@ function process_batch_items_logic(array $setup): array
         'json_path' => isset($setup['json_path']) ? basename($setup['json_path']) : 'not set'
     ]));
 
-    // Start tracing span for batch processing
-    $span = PuntworkTracing::startActiveSpan(
-        'process_batch_items_logic', [
-        'batch.start_index' => $setup['start_index'] ?? 0,
-        'batch.total' => $setup['total'] ?? 0,
-        'batch.json_path' => $setup['json_path'] ?? ''
-        ]
-    );
+    // Start tracing span for batch processing (only if available)
+    $span = null;
+    if (class_exists('\Puntwork\PuntworkTracing')) {
+        $span = \Puntwork\PuntworkTracing::startActiveSpan(
+            'process_batch_items_logic', [
+            'batch.start_index' => $setup['start_index'] ?? 0,
+            'batch.total' => $setup['total'] ?? 0,
+            'batch.json_path' => $setup['json_path'] ?? ''
+            ]
+        );
+    }
 
     try {
         error_log('[PUNTWORK] Starting performance monitoring');
@@ -256,8 +259,10 @@ function process_batch_items_logic(array $setup): array
                 $current_status['logs'] = array_slice($logs, -50);
                 update_option('job_import_status', $current_status, false);
 
-                $span->setAttribute('batch.cancelled', true);
-                $span->end();
+                if ($span) {
+                    $span->setAttribute('batch.cancelled', true);
+                    $span->end();
+                }
 
                 return [
                     'success' => true,
@@ -387,9 +392,11 @@ function process_batch_items_logic(array $setup): array
             error_log($error_msg);
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
 
-            $span->recordException($e);
-            $span->setStatus(\OpenTelemetry\API\Trace\StatusCode::STATUS_ERROR, $e->getMessage());
-            $span->end();
+            if ($span) {
+                $span->recordException($e);
+                $span->setStatus(\OpenTelemetry\API\Trace\StatusCode::STATUS_ERROR, $e->getMessage());
+                $span->end();
+            }
 
             return [
             'success' => false,
@@ -400,9 +407,11 @@ function process_batch_items_logic(array $setup): array
         }
     } catch (\Exception $e) {
         // Handle outer try exceptions (setup/initialization errors)
-        $span->recordException($e);
-        $span->setStatus(\OpenTelemetry\API\Trace\StatusCode::STATUS_ERROR, $e->getMessage());
-        $span->end();
+        if ($span) {
+            $span->recordException($e);
+            $span->setStatus(\OpenTelemetry\API\Trace\StatusCode::STATUS_ERROR, $e->getMessage());
+            $span->end();
+        }
 
         return [
         'success' => false,
@@ -618,7 +627,7 @@ function handle_batch_duplicates(array $batch_guids, array $existing_by_guid, ar
 {
     // Use advanced deduplication if available and enabled
     if (class_exists('Puntwork\\JobDeduplicator') && apply_filters('puntwork_use_advanced_deduplication', true)) {
-        JobDeduplicator::handleDuplicatesAdvanced($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
+        \Puntwork\JobDeduplicator::handleDuplicatesAdvanced($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
     } else {
         // Fallback to original deduplication logic
         handle_duplicates($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);

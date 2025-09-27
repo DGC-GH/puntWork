@@ -22,12 +22,15 @@ function download_feed($url, $feed_path, $output_dir, &$logs, &$format = null)
     error_log('[PUNTWORK] Feed path: ' . $feed_path);
     error_log('[PUNTWORK] Output dir: ' . $output_dir);
 
-    // Start tracing span for feed download
-    $span = PuntworkTracing::startActiveSpan('download_feed', [
-        'feed.url' => $url,
-        'feed.path' => $feed_path,
-        'output.dir' => $output_dir
-    ]);
+    // Start tracing span for feed download (only if available)
+    $span = null;
+    if (class_exists('PuntworkTracing')) {
+        $span = PuntworkTracing::startActiveSpan('download_feed', [
+            'feed.url' => $url,
+            'feed.path' => $feed_path,
+            'output.dir' => $output_dir
+        ]);
+    }
 
     try {
         $real_output_dir = realpath($output_dir);
@@ -103,9 +106,11 @@ function download_feed($url, $feed_path, $output_dir, &$logs, &$format = null)
             error_log("Downloaded feed ($format): " . filesize($feed_path) . " bytes");
             @chmod($feed_path, 0644);
 
-            $span->setAttribute('feed.size', filesize($feed_path));
-            $span->setAttribute('feed.format', $format);
-            $span->end();
+            if ($span) {
+                $span->setAttribute('feed.size', filesize($feed_path));
+                $span->setAttribute('feed.format', $format);
+                $span->end();
+            }
 
             error_log('[PUNTWORK] ===== download_feed SUCCESS =====');
             return true;
@@ -114,9 +119,11 @@ function download_feed($url, $feed_path, $output_dir, &$logs, &$format = null)
             error_log('[PUNTWORK] Exception: ' . $e->getMessage());
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Download error: " . $e->getMessage();
 
-            $span->recordException($e);
-            $span->setStatus(\OpenTelemetry\API\Trace\StatusCode::STATUS_ERROR, $e->getMessage());
-            $span->end();
+            if ($span) {
+                $span->recordException($e);
+                $span->setStatus(\OpenTelemetry\API\Trace\StatusCode::STATUS_ERROR, $e->getMessage());
+                $span->end();
+            }
 
             return false;
         }
@@ -125,9 +132,11 @@ function download_feed($url, $feed_path, $output_dir, &$logs, &$format = null)
         error_log('[PUNTWORK] ===== download_feed OUTER ERROR =====');
         error_log('[PUNTWORK] Outer exception: ' . $e->getMessage());
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Outer download error: " . $e->getMessage();
-        $span->recordException($e);
-        $span->setStatus(\OpenTelemetry\API\Trace\StatusCode::STATUS_ERROR, $e->getMessage());
-        $span->end();
+        if ($span) {
+            $span->recordException($e);
+            $span->setStatus(\OpenTelemetry\API\Trace\StatusCode::STATUS_ERROR, $e->getMessage());
+            $span->end();
+        }
         return false;
     }
 }
