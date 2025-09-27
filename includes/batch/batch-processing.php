@@ -49,6 +49,9 @@ require_once __DIR__ . '/../utilities/JobDeduplicator.php';
 // Include advanced memory manager utilities
 require_once __DIR__ . '/../utilities/AdvancedMemoryManager.php';
 
+// Include base memory manager utilities
+require_once __DIR__ . '/../utilities/MemoryManager.php';
+
 // Include utility helpers
 require_once __DIR__ . '/../utilities/utility-helpers.php';
 class JsonlIterator implements \Iterator
