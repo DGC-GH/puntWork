@@ -123,6 +123,11 @@ function prepare_import_setup($batch_start = 0)
     error_log('[PUNTWORK] [DEBUG] prepare_import_setup: File exists: ' . (file_exists($json_path) ? 'yes' : 'no'));
     if (file_exists($json_path)) {
         error_log('[PUNTWORK] [DEBUG] prepare_import_setup: File size: ' . filesize($json_path) . ' bytes');
+        $mtime = filemtime($json_path);
+        error_log('[PUNTWORK] [DEBUG] prepare_import_setup: File mtime: ' . date('Y-m-d H:i:s', $mtime) . ', age: ' . (time() - $mtime) . ' seconds');
+        if (time() - $mtime > 3600) {
+            error_log('[PUNTWORK] [WARNING] Combined JSONL file is older than 1 hour - feeds may not be updated');
+        }
         $first_line = '';
         $handle = fopen($json_path, 'r');
         if ($handle) {
@@ -160,6 +165,9 @@ function prepare_import_setup($batch_start = 0)
     try {
         $total = get_json_item_count($json_path);
         error_log('[PUNTWORK] Total items in JSONL: ' . $total);
+        if ($total < 10) {
+            error_log('[PUNTWORK] [WARNING] Total items in JSONL is very low (' . $total . ') - feeds may not be fetched or combined properly');
+        }
     } catch (\Exception $e) {
         error_log('[PUNTWORK] Error counting JSONL items: ' . $e->getMessage());
         return new WP_Error('count_error', 'Failed to count JSONL items: ' . $e->getMessage());
@@ -200,6 +208,12 @@ function prepare_import_setup($batch_start = 0)
     if ($batch_start === 0) {
         $start_index = 0;
         error_log('[PUNTWORK] prepare_import_setup: fresh start detected, setting start_index to 0');
+        // Check if existing status total matches current total
+        $existing_status = get_option('job_import_status', []);
+        if (isset($existing_status['total']) && $existing_status['total'] != $total) {
+            error_log('[PUNTWORK] [WARNING] Existing status total (' . $existing_status['total'] . ') does not match current file total (' . $total . ') - resetting status');
+            delete_option('job_import_status');
+        }
         // Clear processed GUIDs for fresh start
         $processed_guids = [];
         // Clear existing status for fresh start

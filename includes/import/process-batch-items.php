@@ -17,6 +17,10 @@ if (!function_exists('process_batch_items')) {
     function process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count)
     {
         error_log('[PUNTWORK] process_batch_items called with ' . count($batch_guids) . ' GUIDs');
+        if (empty($batch_guids)) {
+            error_log('[PUNTWORK] process_batch_items called with empty batch_guids - no items to process');
+            return;
+        }
         $user_id = get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : get_current_user_id();
         error_log('[PUNTWORK] Got user_id: ' . $user_id);
 
