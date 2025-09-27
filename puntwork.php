@@ -5,7 +5,7 @@
  * Description: Advanced job import plugin with multi-format feed support,
  *     real-time analytics, health monitoring, AI-powered features, CRM integrations,
  *     multi-site support, horizontal scaling, GraphQL API, webhooks, and mobile app.
- * Version: 2.0.0
+ * Version: 0.0.4
  * Author: DGC-GH
  * Requires at least: 5.0
  * Tested up to: 6.8
@@ -23,7 +23,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('PUNTWORK_VERSION', '2.0.0');
+define('PUNTWORK_VERSION', '0.0.4');
 define('PUNTWORK_PATH', plugin_dir_path(__FILE__));
 define('PUNTWORK_URL', plugin_dir_url(__FILE__));
 define('PUNTWORK_LOGS', PUNTWORK_PATH . 'logs/import.log');

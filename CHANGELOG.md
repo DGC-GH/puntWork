@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.0.0] - 2025-09-26
+## [0.0.4] - 2025-09-26
 
 ### Added
 - Real-time import progress tracking with Server-Sent Events
