@@ -180,9 +180,9 @@ function setup_job_import()
         'import/reset-import.php',
 
                 // Utilities (functions - classes are autoloaded)
-        'Utilities/CacheManager.php',
-        'Utilities/JobDeduplicator.php',
-        'Utilities/EnhancedCacheManager.php',
+        'utilities/CacheManager.php',
+        'utilities/JobDeduplicator.php',
+        'utilities/EnhancedCacheManager.php',
         'utilities/database-optimization.php',
         'utilities/performance-functions.php',
         'utilities/PuntWorkLogger.php',

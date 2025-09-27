@@ -9,7 +9,7 @@ echo "=== REST API Load Test ===\n\n";
 echo "Testing file syntax and basic loading...\n\n";
 
 echo "1. Checking PuntWorkLogger syntax...\n";
-$result1 = shell_exec('php -l ' . __DIR__ . '/../includes/Utilities/PuntWorkLogger.php 2>&1');
+$result1 = shell_exec('php -l ' . __DIR__ . '/../includes/utilities/PuntWorkLogger.php 2>&1');
 if (strpos($result1, 'No syntax errors') !== false) {
     echo "✓ PuntWorkLogger syntax OK\n";
 } else {

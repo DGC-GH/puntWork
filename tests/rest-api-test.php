@@ -291,7 +291,7 @@ define('ABSPATH', '/tmp/wordpress/');
 define('WP_DEBUG', true);
 
 // Load the logger first
-require_once __DIR__ . '/../includes/Utilities/PuntWorkLogger.php';
+require_once __DIR__ . '/../includes/utilities/PuntWorkLogger.php';
 
 // Load the REST API file
 require_once __DIR__ . '/../includes/api/rest-api.php';
