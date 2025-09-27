@@ -33,7 +33,7 @@ add_action('admin_menu', function () {
         'manage_options',
         'puntwork-dashboard',
         __NAMESPACE__ . '\\puntwork_dashboard_page',
-        PUNTWORK_URL . 'assets/images/icon.svg?v=' . PUNTWORK_VERSION,
+        PUNTWORK_URL . 'assets/images/icon.svg',
         0
     );
 
