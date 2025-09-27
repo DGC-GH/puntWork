@@ -16,7 +16,7 @@ if (! defined('ABSPATH')) {
 }
 
 // Include required files
-require_once PUNTWORK_PLUGIN_DIR . 'includes/api/rest-api.php';
+require_once PUNTWORK_PATH . 'includes/api/rest-api.php';
 
 /**
  * Enqueue admin scripts and styles for job import dashboard.
