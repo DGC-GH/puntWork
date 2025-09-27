@@ -43,10 +43,27 @@ class PerformanceRegressionTest extends TestCase
         }
     }
 
+    /**
+     * Clean up old performance result files
+     * Call this method to remove accumulated test result files
+     */
+    public static function cleanupPerformanceResultFiles(): void
+    {
+        $pattern = __DIR__ . '/performance-results-*.json';
+        $files = glob($pattern);
+
+        foreach ($files as $file) {
+            if (is_file($file) && file_exists($file)) {
+                unlink($file);
+            }
+        }
+    }
+
     protected function tearDown(): void
     {
-        // Save current results for baseline comparison
-        if (!empty($this->currentResults)) {
+        // Only save performance results if explicitly requested via environment variable
+        // This prevents accumulation of temporary test files
+        if (getenv('SAVE_PERFORMANCE_RESULTS') === 'true' && !empty($this->currentResults)) {
             file_put_contents(
                 __DIR__ . '/performance-results-' . date('Y-m-d-H-i-s') . '.json',
                 json_encode($this->currentResults, JSON_PRETTY_PRINT)
