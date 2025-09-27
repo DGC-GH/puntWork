@@ -85,7 +85,8 @@
 ## Current VS Code Workspace:
 - Files for custom WordPress plugin "puntWork" for https://belgiumjobs.work/ that is hosted on Hostinger.
 - Source Control for GitHub with webhook that automatically deploys code to puntWork plugin folder on Hostinger WordPress install on push.
-- SFTP extension for VS Code connected to Hostinger WordPress install via ftp.
+- FTP files accessible via macOS mount: /Volumes/153.92.216.191/ (contains wp-content/, debug.log, etc.)
+- Can open admin URLs in VS Code Simple Browser for testing
 
 ## Read README.md
 
@@ -104,7 +105,7 @@ Adapt the following workflow based on context. If the project differs from puntW
 
 3. **Validation Steps**: Run PHPCS to check for coding standard violations (line length >120 chars, mixing declarations and side effects), run tests, and other checks. If tools unavailable, suggest manual alternatives.
 
-4. **Deployment Prep**: Refresh the ftp files via SFTP VS Code extension (if you can, tell me if you cant or what should i do to allow you to do so), check server files to make sure that last automatic deploy after last push was successful, clean debug.log on the server, go to the plugin admin page in the VS Code browser (or refresh the page if its already open), check for new errors in debug.log.
+4. **Deployment Prep**: Check FTP files at /Volumes/153.92.216.191/wp-content/debug.log for errors after deployment, clean debug.log if needed, open https://belgiumjobs.work/wp-admin/admin.php?page=job-feed-dashboard in VS Code Simple Browser to verify plugin functionality, check for new errors in debug.log.
 
 5. **User Confirmation**: Wait for approval before implementing.
 
