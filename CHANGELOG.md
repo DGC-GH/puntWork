@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PHPCS error: Renamed Puntwork_CRM_Admin class to PuntworkCrmAdmin for PascalCase compliance
 - Reverted PuntworkCrmAdmin class back to Puntwork_CRM_Admin to resolve server-side class not found error
 - Restored Puntwork_CRM_Admin class to PuntworkCrmAdmin following project PascalCase naming conventions
+- Reverted PuntworkCrmAdmin class back to Puntwork_CRM_Admin to resolve persistent server-side class not found error
+- Reverted PuntworkCrmAdmin class back to Puntwork_CRM_Admin to resolve persistent server-side class not found error
 - Line length violations in crm-admin.php for PSR-12 compliance
 
 ## [0.0.4] - 2025-09-26
