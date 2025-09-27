@@ -449,7 +449,7 @@ function validate_and_adjust_batch_size(array $setup): array
 {
     $memory_limit_bytes = get_memory_limit_bytes();
     $threshold = 0.6 * $memory_limit_bytes;
-    $batch_size = get_option('job_import_batch_size') ?: 1; // Starting batch size set to 1 for testing dynamic logic // Reduced default from 100 to 50
+    $batch_size = get_option('job_import_batch_size') ?: 100; // Starting batch size set to 100 for better performance // Reduced default from 100 to 50
     
     // Ensure batch_size is at least 1
     $batch_size = max(1, (int)$batch_size);
@@ -465,6 +465,7 @@ function validate_and_adjust_batch_size(array $setup): array
 
     $adjustment_result = adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time);
     $batch_size = $adjustment_result['batch_size'];
+    $batch_size = max(1, (int)$batch_size); // Ensure batch_size is at least 1
 
     $logs = [];
     if ($batch_size != $old_batch_size) {

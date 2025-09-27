@@ -125,9 +125,6 @@ function prepare_import_setup($batch_start = 0)
         error_log('[PUNTWORK] [DEBUG] prepare_import_setup: File size: ' . filesize($json_path) . ' bytes');
         $mtime = filemtime($json_path);
         error_log('[PUNTWORK] [DEBUG] prepare_import_setup: File mtime: ' . date('Y-m-d H:i:s', $mtime) . ', age: ' . (time() - $mtime) . ' seconds');
-        if (time() - $mtime > 3600) {
-            error_log('[PUNTWORK] [WARNING] Combined JSONL file is older than 1 hour - feeds may not be updated');
-        }
         $first_line = '';
         $handle = fopen($json_path, 'r');
         if ($handle) {
@@ -165,9 +162,6 @@ function prepare_import_setup($batch_start = 0)
     try {
         $total = get_json_item_count($json_path);
         error_log('[PUNTWORK] Total items in JSONL: ' . $total);
-        if ($total < 10) {
-            error_log('[PUNTWORK] [WARNING] Total items in JSONL is very low (' . $total . ') - feeds may not be fetched or combined properly');
-        }
     } catch (\Exception $e) {
         error_log('[PUNTWORK] Error counting JSONL items: ' . $e->getMessage());
         return new WP_Error('count_error', 'Failed to count JSONL items: ' . $e->getMessage());
