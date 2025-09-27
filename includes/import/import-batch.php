@@ -248,8 +248,12 @@ if (!function_exists('import_all_jobs_from_json')) {
             update_option('job_import_start_time', $start_time, false);
 
             while (true) {
+                error_log('[PUNTWORK] [LOOP-DEBUG] Main import loop iteration starting - batch_count=' . $batch_count);
+                
                 // Check if we should continue processing (time/memory limits)
+                error_log('[PUNTWORK] [LOOP-DEBUG] Checking if should continue batch processing...');
                 if (!should_continue_batch_processing()) {
+                    error_log('[PUNTWORK] [LOOP-DEBUG] should_continue_batch_processing returned false - pausing import');
                     // Pause processing and schedule continuation
                     $current_status = get_option('job_import_status', []);
                     $current_status['paused'] = true;
@@ -278,17 +282,20 @@ if (!function_exists('import_all_jobs_from_json')) {
                         'message' => 'Import paused due to time limits - will continue automatically in background'
                     ];
                 }
+                error_log('[PUNTWORK] [LOOP-DEBUG] should_continue_batch_processing returned true - continuing');
 
                 $batch_start = (int) get_option('job_import_progress', 0);
-                error_log('[PUNTWORK] import_all_jobs_from_json: batch_start=' . $batch_start . ', total_items=' . $total_items);
+                error_log('[PUNTWORK] [LOOP-DEBUG] import_all_jobs_from_json: batch_start=' . $batch_start . ', total_items=' . $total_items);
 
                 // Prepare setup for this batch
+                error_log('[PUNTWORK] [LOOP-DEBUG] Calling prepare_import_setup with batch_start=' . $batch_start);
                 $setup = prepare_import_setup($batch_start);
                 if (is_wp_error($setup)) {
                     $error_msg = 'Setup failed: ' . $setup->get_error_message();
-                    error_log('[PUNTWORK] ' . $error_msg);
+                    error_log('[PUNTWORK] [LOOP-DEBUG] prepare_import_setup returned WP_Error: ' . $error_msg);
                     return ['success' => false, 'message' => $error_msg, 'logs' => [$error_msg]];
                 }
+                error_log('[PUNTWORK] [LOOP-DEBUG] prepare_import_setup completed successfully');
 
                 // Capture total items from first setup
                 if ($batch_count === 0) {
@@ -296,35 +303,38 @@ if (!function_exists('import_all_jobs_from_json')) {
                     // Update status with total items
                     $initial_status['total'] = $total_items;
                     update_option('job_import_status', $initial_status, false);
-                    error_log('[PUNTWORK] Set total items for import: ' . $total_items);
+                    error_log('[PUNTWORK] [LOOP-DEBUG] Set total items for import: ' . $total_items . ' (first batch)');
                 }
 
-                error_log('[PUNTWORK] import_all_jobs_from_json: batch_count=' . $batch_count . ', batch_start=' . $batch_start . ', total_items=' . $total_items . ', setup total=' . ($setup['total'] ?? 'not set') . ', setup start_index=' . ($setup['start_index'] ?? 'not set') . ', setup complete=' . (isset($setup['complete']) ? $setup['complete'] : 'not set'));
+                error_log('[PUNTWORK] [LOOP-DEBUG] import_all_jobs_from_json: batch_count=' . $batch_count . ', batch_start=' . $batch_start . ', total_items=' . $total_items . ', setup total=' . ($setup['total'] ?? 'not set') . ', setup start_index=' . ($setup['start_index'] ?? 'not set') . ', setup complete=' . (isset($setup['complete']) ? $setup['complete'] : 'not set'));
 
                 // Check if import is complete
                 if (isset($setup['success']) && isset($setup['complete']) && $setup['complete']) {
-                    error_log('[PUNTWORK] Import complete - no more batches to process');
+                    error_log('[PUNTWORK] [LOOP-DEBUG] Import complete - setup returned complete=true');
                     break;
                 }
 
                 if ($batch_start >= $total_items) {
-                    error_log('[PUNTWORK] Import complete - reached end of data');
+                    error_log('[PUNTWORK] [LOOP-DEBUG] Import complete - batch_start (' . $batch_start . ') >= total_items (' . $total_items . ')');
                     break;
                 }
 
                 $batch_count++;
-                error_log(sprintf('[PUNTWORK] Processing batch %d starting at index %d', $batch_count, $batch_start));
+                error_log('[PUNTWORK] [LOOP-DEBUG] Processing batch ' . $batch_count . ' starting at index ' . $batch_start);
 
                 // Process this batch
+                error_log('[PUNTWORK] [LOOP-DEBUG] Calling process_batch_items_logic for batch ' . $batch_count);
                 $result = process_batch_items_logic($setup);
+                error_log('[PUNTWORK] [LOOP-DEBUG] process_batch_items_logic completed for batch ' . $batch_count . ', success=' . ($result['success'] ? 'true' : 'false'));
 
                 if (!$result['success']) {
                     $error_msg = 'Batch ' . $batch_count . ' failed: ' . ($result['message'] ?? 'Unknown error');
-                    error_log('[PUNTWORK] ' . $error_msg);
+                    error_log('[PUNTWORK] [LOOP-DEBUG] Batch ' . $batch_count . ' failed: ' . $error_msg);
                     return ['success' => false, 'message' => $error_msg, 'logs' => $result['logs'] ?? []];
                 }
 
                 // Accumulate results
+                error_log('[PUNTWORK] [LOOP-DEBUG] Accumulating results for batch ' . $batch_count);
                 $total_processed = max($total_processed, $result['processed']);
                 $total_published += $result['published'] ?? 0;
                 $total_updated += $result['updated'] ?? 0;
@@ -336,6 +346,7 @@ if (!function_exists('import_all_jobs_from_json')) {
                 }
 
                 // Update import status for UI tracking
+                error_log('[PUNTWORK] [LOOP-DEBUG] Updating import status after batch ' . $batch_count);
                 $current_status = get_option('job_import_status', $initial_status);
                 $current_status['processed'] = $total_processed;
                 $current_status['published'] = $total_published;
@@ -346,29 +357,25 @@ if (!function_exists('import_all_jobs_from_json')) {
                 $current_status['last_update'] = time();
                 $current_status['logs'] = array_slice($all_logs, -50); // Keep last 50 log entries for UI
                 update_option('job_import_status', $current_status, false);
-                error_log(sprintf(
-                    '[PUNTWORK] Updated import status after batch %d: processed=%d/%d, complete=%s',
-                    $batch_count,
-                    $total_processed,
-                    $total_items,
-                    ($total_processed >= $total_items ? 'true' : 'false')
-                ));
+                error_log('[PUNTWORK] [LOOP-DEBUG] Updated import status after batch ' . $batch_count . ': processed=' . $total_processed . '/' . $total_items . ', complete=' . ($total_processed >= $total_items ? 'true' : 'false'));
 
                 // Check if this batch completed the import
                 if (isset($result['complete']) && $result['complete']) {
-                    error_log('[PUNTWORK] Import completed in batch ' . $batch_count);
+                    error_log('[PUNTWORK] [LOOP-DEBUG] Import completed in batch ' . $batch_count . ' (result complete=true)');
                     break;
                 }
 
                 // Safety check to prevent infinite loops
                 if ($batch_count > 1000) {
                     $error_msg = 'Import aborted - too many batches processed (possible infinite loop)';
-                    error_log('[PUNTWORK] ' . $error_msg);
+                    error_log('[PUNTWORK] [LOOP-DEBUG] Safety check triggered: batch_count=' . $batch_count . ' > 1000');
                     return ['success' => false, 'message' => $error_msg, 'logs' => $all_logs];
                 }
 
                 // Small delay between batches to prevent overwhelming the server
+                error_log('[PUNTWORK] [LOOP-DEBUG] Sleeping for 0.1 seconds before next batch');
                 usleep(100000); // 0.1 seconds
+                error_log('[PUNTWORK] [LOOP-DEBUG] Main import loop iteration completed - batch_count=' . $batch_count);
             }
 
             $end_time = microtime(true);

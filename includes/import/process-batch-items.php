@@ -16,40 +16,42 @@ if (! defined('ABSPATH')) {
 if (!function_exists('process_batch_items')) {
     function process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count)
     {
-        error_log('[PUNTWORK] process_batch_items called with ' . count($batch_guids) . ' GUIDs');
+        error_log('[PUNTWORK] [ITEMS-DEBUG] process_batch_items called with ' . count($batch_guids) . ' GUIDs');
         if (empty($batch_guids)) {
-            error_log('[PUNTWORK] process_batch_items called with empty batch_guids - no items to process');
+            error_log('[PUNTWORK] [ITEMS-DEBUG] process_batch_items called with empty batch_guids - no items to process');
             return;
         }
         $user_id = get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : get_current_user_id();
-        error_log('[PUNTWORK] Got user_id: ' . $user_id);
+        error_log('[PUNTWORK] [ITEMS-DEBUG] Got user_id: ' . $user_id);
 
         // Bulk fetch post statuses to avoid N+1 queries
         $post_ids_for_status = array_values($post_ids_by_guid);
-        error_log('[PUNTWORK] Post IDs for status: ' . count($post_ids_for_status));
+        error_log('[PUNTWORK] [ITEMS-DEBUG] Post IDs for status: ' . count($post_ids_for_status));
         $post_statuses = bulk_get_post_statuses($post_ids_for_status);
-        error_log('[PUNTWORK] Got post statuses');
+        error_log('[PUNTWORK] [ITEMS-DEBUG] Got post statuses');
 
         $total_to_process = count($batch_guids);
-        error_log('[PUNTWORK] Starting to process ' . $total_to_process . ' items');
+        error_log('[PUNTWORK] [ITEMS-DEBUG] Starting to process ' . $total_to_process . ' items');
 
         $item_counter = 0;
         foreach ($batch_guids as $guid) {
             $item_counter++;
-            error_log('[PUNTWORK] Processing item ' . $item_counter . '/' . $total_to_process . ' GUID: ' . $guid);
+            error_log('[PUNTWORK] [ITEMS-DEBUG] Processing item ' . $item_counter . '/' . $total_to_process . ' GUID: ' . $guid);
             try {
                 $item = $batch_items[$guid]['item'];
                 $xml_updated = isset($item['updated']) ? $item['updated'] : '';
                 $xml_updated_ts = strtotime($xml_updated);
                 $post_id = isset($post_ids_by_guid[$guid]) ? $post_ids_by_guid[$guid] : null;
 
-                error_log('[PUNTWORK] GUID ' . $guid . ': post_id=' . ($post_id ?? 'null') . ', xml_updated=' . $xml_updated);
+                error_log('[PUNTWORK] [ITEMS-DEBUG] GUID ' . $guid . ': post_id=' . ($post_id ?? 'null') . ', xml_updated=' . $xml_updated);
 
                 // If post exists, check if it needs updating
                 if ($post_id) {
+                    error_log('[PUNTWORK] [ITEMS-DEBUG] Post exists for GUID ' . $guid . ', checking if update needed');
                     // First, ensure the job is published if it's in the feed
                     $current_post_status = $post_statuses[$post_id] ?? 'draft';
                     if ($current_post_status !== 'publish') {
+                        error_log('[PUNTWORK] [ITEMS-DEBUG] Republishing post ' . $post_id . ' for GUID ' . $guid);
                         wp_update_post([
                             'ID' => $post_id,
                             'post_status' => 'publish'
@@ -63,6 +65,7 @@ if (!function_exists('process_batch_items')) {
 
                     // Skip if no update timestamp or if current version is newer/equal
                     if ($xml_updated_ts && $current_last_ts >= $xml_updated_ts) {
+                        error_log('[PUNTWORK] [ITEMS-DEBUG] Skipping GUID ' . $guid . ' - not updated (current: ' . $current_last_ts . ', xml: ' . $xml_updated_ts . ')');
                         $skipped++;
                         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - Not updated';
                         $processed_count++;
@@ -74,12 +77,14 @@ if (!function_exists('process_batch_items')) {
 
                     // Skip if content hasn't changed
                     if ($current_hash === $item_hash) {
+                        error_log('[PUNTWORK] [ITEMS-DEBUG] Skipping GUID ' . $guid . ' - no changes (hash match)');
                         $skipped++;
                         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - No changes';
                         $processed_count++;
                         continue;
                     }
 
+                    error_log('[PUNTWORK] [ITEMS-DEBUG] Updating existing post ' . $post_id . ' for GUID ' . $guid);
                     // Update existing post
                     $xml_title = isset($item['functiontitle']) ? $item['functiontitle'] : '';
                     $xml_validfrom = isset($item['validfrom']) ? $item['validfrom'] : '';
@@ -108,6 +113,7 @@ if (!function_exists('process_batch_items')) {
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Updated ID: ' . $post_id . ' GUID: ' . $guid;
                     error_log('Updated ID: ' . $post_id . ' GUID: ' . $guid);
                 } else {
+                    error_log('[PUNTWORK] [ITEMS-DEBUG] Creating new post for GUID ' . $guid);
                     // Create new post only if it doesn't exist
                     $xml_title = isset($item['functiontitle']) ? $item['functiontitle'] : '';
                     $xml_validfrom = isset($item['validfrom']) ? $item['validfrom'] : current_time('mysql');
@@ -152,18 +158,19 @@ if (!function_exists('process_batch_items')) {
                 unset($batch_items[$guid]);
 
                 if ($processed_count % 5 === 0) {
-                    error_log("Processed $processed_count items in batch");
+                    error_log('[PUNTWORK] [ITEMS-DEBUG] Processed ' . $processed_count . ' items so far in batch');
                     ob_flush();
                     flush();
                 }
             } catch (\Exception $e) {
                 $error_msg = 'Error processing GUID ' . $guid . ': ' . $e->getMessage();
                 $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
-                error_log('[PUNTWORK] ' . $error_msg . ' at ' . $e->getFile() . ':' . $e->getLine());
-                error_log('[PUNTWORK] Stack trace: ' . $e->getTraceAsString());
+                error_log('[PUNTWORK] [ITEMS-DEBUG] ' . $error_msg . ' at ' . $e->getFile() . ':' . $e->getLine());
+                error_log('[PUNTWORK] [ITEMS-DEBUG] Stack trace: ' . $e->getTraceAsString());
                 // Continue to next item instead of failing the whole batch
                 $processed_count++;
             }
         }
+        error_log('[PUNTWORK] [ITEMS-DEBUG] process_batch_items completed processing all ' . $total_to_process . ' items');
     }
 }

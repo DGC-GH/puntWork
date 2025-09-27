@@ -130,14 +130,19 @@ function bulk_get_post_statuses(array $post_ids): array
         return [];
     }
 
+    error_log('[PUNTWORK] [DB-DEBUG] bulk_get_post_statuses called with ' . count($post_ids) . ' post IDs');
+
     // Create cache key from sorted post IDs
     sort($post_ids);
     $cache_key = 'post_statuses_' . md5(implode(',', $post_ids));
     $cached_result = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
 
     if ($cached_result !== false) {
+        error_log('[PUNTWORK] [DB-DEBUG] Returning cached result for post statuses');
         return $cached_result;
     }
+
+    error_log('[PUNTWORK] [DB-DEBUG] Cache miss, querying post statuses');
 
     $placeholders = implode(',', array_fill(0, count($post_ids), '%d'));
     $query = $wpdb->prepare("
@@ -146,12 +151,21 @@ function bulk_get_post_statuses(array $post_ids): array
         WHERE ID IN ({$placeholders})
     ", $post_ids);
 
+    error_log('[PUNTWORK] [DB-DEBUG] Executing post status query');
+
+    $start_time = microtime(true);
     $results = $wpdb->get_results($query, OBJECT_K);
+    $query_time = microtime(true) - $start_time;
+    
+    error_log('[PUNTWORK] [DB-DEBUG] Post status query returned ' . count($results) . ' results in ' . number_format($query_time, 4) . ' seconds');
+
     $statuses = [];
 
     foreach ($results as $post_id => $post) {
         $statuses[$post_id] = $post->post_status;
     }
+
+    error_log('[PUNTWORK] [DB-DEBUG] Processed ' . count($statuses) . ' post statuses');
 
     // Cache for 15 minutes - post statuses change less frequently
     CacheManager::set($cache_key, $statuses, CacheManager::GROUP_ANALYTICS, 15 * MINUTE_IN_SECONDS);
@@ -173,7 +187,7 @@ function get_posts_by_guids_with_status(array $guids): array
         return [];
     }
 
-    error_log('[PUNTWORK] get_posts_by_guids_with_status called with ' . count($guids) . ' GUIDs');
+    error_log('[PUNTWORK] [DB-DEBUG] get_posts_by_guids_with_status called with ' . count($guids) . ' GUIDs');
 
     // Create cache key from sorted GUIDs to ensure consistency
     sort($guids);
@@ -181,11 +195,11 @@ function get_posts_by_guids_with_status(array $guids): array
     $cached_result = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
 
     if ($cached_result !== false) {
-        error_log('[PUNTWORK] Returning cached result for GUID lookup');
+        error_log('[PUNTWORK] [DB-DEBUG] Returning cached result for GUID lookup');
         return $cached_result;
     }
 
-    error_log('[PUNTWORK] Cache miss, querying database');
+    error_log('[PUNTWORK] [DB-DEBUG] Cache miss, querying database');
 
     $guid_placeholders = implode(',', array_fill(0, count($guids), '%s'));
     $query = $wpdb->prepare("
@@ -197,10 +211,13 @@ function get_posts_by_guids_with_status(array $guids): array
         AND p.post_type = 'job'
     ", $guids);
 
-    error_log('[PUNTWORK] Executing query: ' . $query);
+    error_log('[PUNTWORK] [DB-DEBUG] Executing query: ' . $query);
 
+    $start_time = microtime(true);
     $results = $wpdb->get_results($query);
-    error_log('[PUNTWORK] Query returned ' . count($results) . ' results');
+    $query_time = microtime(true) - $start_time;
+    
+    error_log('[PUNTWORK] [DB-DEBUG] Query returned ' . count($results) . ' results in ' . number_format($query_time, 4) . ' seconds');
 
     $posts_by_guid = [];
 
@@ -215,7 +232,7 @@ function get_posts_by_guids_with_status(array $guids): array
         ];
     }
 
-    error_log('[PUNTWORK] Processed ' . count($posts_by_guid) . ' unique GUIDs');
+    error_log('[PUNTWORK] [DB-DEBUG] Processed ' . count($posts_by_guid) . ' unique GUIDs');
 
     // Cache for 10 minutes - GUID lookups change relatively frequently during imports
     CacheManager::set($cache_key, $posts_by_guid, CacheManager::GROUP_ANALYTICS, 10 * MINUTE_IN_SECONDS);
