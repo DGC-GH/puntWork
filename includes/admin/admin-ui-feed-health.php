@@ -25,7 +25,7 @@ function feed_health_monitor_page()
         switch ($_POST['action']) {
             case 'run_health_check':
                 check_admin_referer('feed_health_check_nonce');
-                FeedHealthMonitor::trigger_manual_check();
+                FeedHealthMonitor::triggerManualCheck();
                 add_settings_error('feed_health_monitor', 'health_check_run', __('Health check completed successfully.', 'puntwork'), 'success');
                 break;
 
@@ -37,7 +37,7 @@ function feed_health_monitor_page()
     }
 
     // Get current health status
-    $health_status = FeedHealthMonitor::get_feed_health_status();
+    $health_status = FeedHealthMonitor::getFeedHealthStatus();
     $alert_settings = get_option('puntwork_feed_alerts', [
         'email_enabled' => true,
         'email_recipients' => get_option('admin_email'),
@@ -200,7 +200,7 @@ function feed_health_monitor_page()
                 <?php foreach ($health_status as $feed_key => $current_status) : ?>
                     <div class="feed-history-content" id="history-<?php echo esc_attr($feed_key); ?>" style="<?php echo $feed_key === array_key_first($health_status) ? '' : 'display: none;'; ?>">
                         <?php
-                        $history = FeedHealthMonitor::get_feed_health_history($feed_key, 7);
+                        $history = FeedHealthMonitor::getFeedHealthHistory($feed_key, 7);
                         if (empty($history)) : ?>
                             <p><?php _e('No historical data available for this feed.', 'puntwork'); ?></p>
                         <?php else : ?>
