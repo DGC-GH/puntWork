@@ -216,8 +216,11 @@ function setup_job_import()
 
         // CRM Integration (classes are autoloaded)
         'crm/crm-integration.php',
-        'crm/crm-manager.php',
         'crm/hubspot-integration.php',
+        'crm/salesforce-integration.php',
+        'crm/zoho-integration.php',
+        'crm/pipedrive-integration.php',
+        'crm/crm-manager.php',
         'admin/crm-admin.php',
         'database/crm-db.php',
 
