@@ -36,11 +36,16 @@ function validate_jsonl_file($json_path)
         return new WP_Error('file_open_failed', 'Cannot open JSONL file for validation');
     }
 
+    $bom = "\xef\xbb\xbf";
     $checked_lines = 0;
     $max_check = min(100, filesize($json_path) / 100); // Check up to 100 lines or 1% of file
 
     while ($checked_lines < $max_check && ($line = fgets($handle)) !== false) {
         $line = trim($line);
+        // Remove BOM if present
+        if (substr($line, 0, 3) === $bom) {
+            $line = substr($line, 3);
+        }
         if (!empty($line)) {
             $item = json_decode($line, true);
             if ($item === null && json_last_error() !== JSON_ERROR_NONE) {
@@ -126,6 +131,11 @@ function prepare_import_setup($batch_start = 0)
     if (!file_exists($json_path)) {
         error_log('[PUNTWORK] JSONL file not found: ' . $json_path);
         return ['success' => false, 'message' => 'JSONL file not found', 'logs' => ['JSONL file not found']];
+    }
+
+    if (!is_readable($json_path)) {
+        error_log('[PUNTWORK] JSONL file not readable: ' . $json_path);
+        return ['success' => false, 'message' => 'JSONL file not readable', 'logs' => ['JSONL file not readable']];
     }
 
     // Validate JSONL file integrity

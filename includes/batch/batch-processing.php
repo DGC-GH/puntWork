@@ -822,11 +822,12 @@ function load_json_batch($json_path, $start_index, $batch_size)
     $lines_read = 0;
     $empty_lines = 0;
     $invalid_json = 0;
+    $bom = "\xef\xbb\xbf";
 
     try {
         $handle = fopen($json_path, 'r');
         if ($handle === false) {
-            error_log('[PUNTWORK] load_json_batch: Cannot open file: ' . $json_path);
+            error_log('[PUNTWORK] load_json_batch: Cannot open file: ' . $json_path . ', error: ' . (error_get_last()['message'] ?? 'unknown'));
             return [];
         }
 
@@ -839,6 +840,10 @@ function load_json_batch($json_path, $start_index, $batch_size)
         while ($count < $batch_size && ($line = fgets($handle)) !== false) {
             $lines_read++;
             $line = trim($line);
+            // Remove BOM if present
+            if (substr($line, 0, 3) === $bom) {
+                $line = substr($line, 3);
+            }
             if (!empty($line)) {
                 $item = json_decode($line, true);
                 if ($item !== null) {

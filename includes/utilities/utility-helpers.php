@@ -46,11 +46,16 @@ if (!function_exists('get_json_item_count')) {
     {
         $count = 0;
         $sample_lines = [];
+        $bom = "\xef\xbb\xbf";
         if (($handle = fopen($json_path, "r")) !== false) {
             $line_num = 0;
             while (($line = fgets($handle)) !== false) {
                 $line_num++;
                 $line = trim($line);
+                // Remove BOM if present
+                if (substr($line, 0, 3) === $bom) {
+                    $line = substr($line, 3);
+                }
                 if (!empty($line)) {
                     $item = json_decode($line, true);
                     if ($item !== null) {
