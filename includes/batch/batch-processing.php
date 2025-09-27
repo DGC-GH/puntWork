@@ -823,52 +823,44 @@ function load_json_batch($json_path, $start_index, $batch_size)
     $empty_lines = 0;
     $invalid_json = 0;
 
-    if (($handle = fopen($json_path, "r")) !== false) {
-        error_log('[PUNTWORK] load_json_batch: opened file successfully, ftell=' . ftell($handle));
+    try {
+        $file = new SplFileObject($json_path, 'r');
+        $file->setFlags(SplFileObject::READ_AHEAD | SplFileObject::SKIP_EMPTY);
 
-        // Skip to start_index efficiently
-        error_log('[PUNTWORK] load_json_batch: starting skip loop, current_index=' . $current_index . ', start_index=' . $start_index);
-        while ($current_index < $start_index && ($line = fgets($handle)) !== false) {
+        // Skip to start_index
+        while ($current_index < $start_index && !$file->eof()) {
+            $file->fgets();
             $current_index++;
-            error_log('[PUNTWORK] load_json_batch: skipped line ' . $current_index . ', ftell=' . ftell($handle));
         }
 
-        error_log('[PUNTWORK] load_json_batch: finished skip loop, current_index=' . $current_index . ', ftell=' . ftell($handle));
-
         // Read batch_size items
-        error_log('[PUNTWORK] load_json_batch: starting read loop, count=' . $count . ', batch_size=' . $batch_size . ', ftell=' . ftell($handle));
-        while ($count < $batch_size && ($line = fgets($handle)) !== false) {
+        while ($count < $batch_size && !$file->eof()) {
+            $line = $file->fgets();
             $lines_read++;
-            error_log('[PUNTWORK] load_json_batch: read line ' . $lines_read . ', length=' . strlen($line) . ', ftell=' . ftell($handle));
             $line = trim($line);
             if (!empty($line)) {
-                error_log('[PUNTWORK] load_json_batch: line not empty, attempting JSON decode');
                 $item = json_decode($line, true);
                 if ($item !== null) {
                     $items[] = $item;
                     $count++;
                     error_log('[PUNTWORK] load_json_batch: Successfully decoded item ' . $count . ' with GUID: ' . ($item['guid'] ?? 'MISSING'));
-                    if ($count >= 3) { // Log first 3 items in detail
-                        error_log('[PUNTWORK] load_json_batch: Item ' . $count . ' keys: ' . implode(', ', array_keys($item)));
-                    }
                 } else {
                     $invalid_json++;
-                    error_log('[PUNTWORK] load_json_batch: Failed to decode JSON at line ' . ($current_index + $lines_read) . ': ' . json_last_error_msg() . ' - Line content: ' . substr($line, 0, 100));
+                    error_log('[PUNTWORK] load_json_batch: Failed to decode JSON at line ' . ($current_index + $lines_read) . ': ' . json_last_error_msg() . ' - Line length: ' . strlen($line) . ' - Line start: ' . substr($line, 0, 100));
                 }
             } else {
                 $empty_lines++;
-                error_log('[PUNTWORK] load_json_batch: empty line skipped');
             }
             $current_index++;
         }
 
-        error_log('[PUNTWORK] load_json_batch: finished read loop, lines_read=' . $lines_read . ', empty=' . $empty_lines . ', invalid JSON=' . $invalid_json . ', valid items=' . $count . ', ftell=' . ftell($handle));
-        fclose($handle);
-    } else {
-        error_log('[PUNTWORK] load_json_batch: failed to open file');
+        $file = null; // Close file
+    } catch (\Exception $e) {
+        error_log('[PUNTWORK] load_json_batch: Exception: ' . $e->getMessage());
+        return [];
     }
 
-    error_log('[PUNTWORK] load_json_batch: returning ' . count($items) . ' items');
+    error_log('[PUNTWORK] load_json_batch: returning ' . count($items) . ' items (read ' . $lines_read . ' lines, empty: ' . $empty_lines . ', invalid JSON: ' . $invalid_json . ')');
     if (empty($items)) {
         error_log('[PUNTWORK] load_json_batch: WARNING - NO ITEMS LOADED! This will cause 0 processed items.');
         error_log('[PUNTWORK] load_json_batch: start_index=' . $start_index . ', batch_size=' . $batch_size . ', file_size=' . (file_exists($json_path) ? filesize($json_path) : 'N/A'));
