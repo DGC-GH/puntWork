@@ -10,7 +10,10 @@
 
 namespace Puntwork;
 
-// Prevent direc// Debug endpoint to manually trigger async function
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
 add_action('wp_ajax_debug_trigger_async', function () {
     if (!current_user_can('manage_options')) {
         wp_die('Permission denied');
@@ -44,30 +47,30 @@ function save_import_schedule_ajax()
     PuntWorkLogger::logAjaxRequest('save_import_schedule', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validate_ajax_request('save_import_schedule', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('save_import_schedule', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
     try {
         // Validate and sanitize input fields
-        $enabled = SecurityUtils::validate_field($_POST, 'enabled', 'boolean', ['default' => false]);
-        $frequency = SecurityUtils::validate_field($_POST, 'frequency', 'string', [
+        $enabled = SecurityUtils::validateField($_POST, 'enabled', 'boolean', ['default' => false]);
+        $frequency = SecurityUtils::validateField($_POST, 'frequency', 'string', [
             'default' => 'daily',
             'allowed_values' => ['hourly', '3hours', '6hours', '12hours', 'daily', 'custom']
         ]);
-        $interval = SecurityUtils::validate_field($_POST, 'interval', 'integer', [
+        $interval = SecurityUtils::validateField($_POST, 'interval', 'integer', [
             'min' => 1,
             'max' => 168,
             'default' => 24
         ]);
-        $hour = SecurityUtils::validate_field($_POST, 'hour', 'integer', [
+        $hour = SecurityUtils::validateField($_POST, 'hour', 'integer', [
             'min' => 0,
             'max' => 23,
             'default' => 9
         ]);
-        $minute = SecurityUtils::validate_field($_POST, 'minute', 'integer', [
+        $minute = SecurityUtils::validateField($_POST, 'minute', 'integer', [
             'min' => 0,
             'max' => 59,
             'default' => 0
@@ -108,7 +111,7 @@ function save_import_schedule_ajax()
             'last_run' => $last_run,
             'last_run_details' => $last_run_details
         ]);
-        AjaxErrorHandler::send_success([
+        AjaxErrorHandler::sendSuccess([
             'message' => 'Schedule saved successfully',
             'schedule' => $schedule_data,
             'next_run' => get_next_scheduled_time(),
@@ -117,7 +120,7 @@ function save_import_schedule_ajax()
         ]);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Save schedule failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SCHEDULING);
-        AjaxErrorHandler::send_error('Save schedule failed: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Save schedule failed: ' . $e->getMessage());
     }
 }
 
@@ -129,9 +132,9 @@ function get_import_schedule_ajax()
     PuntWorkLogger::logAjaxRequest('get_import_schedule', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validate_ajax_request('get_import_schedule', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('get_import_schedule', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -166,7 +169,7 @@ function get_import_schedule_ajax()
             'last_run' => $last_run,
             'last_run_details' => $last_run_details
         ]);
-        AjaxErrorHandler::send_success([
+        AjaxErrorHandler::sendSuccess([
             'schedule' => $schedule,
             'next_run' => get_next_scheduled_time(),
             'last_run' => $last_run,
@@ -174,7 +177,7 @@ function get_import_schedule_ajax()
         ]);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Get schedule failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SCHEDULING);
-        AjaxErrorHandler::send_error('Get schedule failed: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Get schedule failed: ' . $e->getMessage());
     }
 }
 
@@ -186,9 +189,9 @@ function get_import_run_history_ajax()
     PuntWorkLogger::logAjaxRequest('get_import_run_history', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validate_ajax_request('get_import_run_history', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('get_import_run_history', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -210,13 +213,13 @@ function get_import_run_history_ajax()
             'history' => $history,
             'count' => count($history)
         ]);
-        AjaxErrorHandler::send_success([
+        AjaxErrorHandler::sendSuccess([
             'history' => $history,
             'count' => count($history)
         ]);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Get run history failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SCHEDULING);
-        AjaxErrorHandler::send_error('Get run history failed: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Get run history failed: ' . $e->getMessage());
     }
 }
 
@@ -228,9 +231,9 @@ function test_import_schedule_ajax()
     PuntWorkLogger::logAjaxRequest('test_import_schedule', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validate_ajax_request('test_import_schedule', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('test_import_schedule', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -248,13 +251,13 @@ function test_import_schedule_ajax()
             'message' => 'Test import completed',
             'result' => $result
         ]);
-        AjaxErrorHandler::send_success([
+        AjaxErrorHandler::sendSuccess([
             'message' => 'Test import completed',
             'result' => $result
         ]);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Test import schedule failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SCHEDULING);
-        AjaxErrorHandler::send_error('Test import schedule failed: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Test import schedule failed: ' . $e->getMessage());
     }
 }
 
@@ -267,9 +270,9 @@ function run_scheduled_import_ajax()
     PuntWorkLogger::logAjaxRequest('run_scheduled_import', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validate_ajax_request('run_scheduled_import', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('run_scheduled_import', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::send_error($validation);
+        AjaxErrorHandler::sendError($validation);
         return;
     }
 
@@ -298,7 +301,7 @@ function run_scheduled_import_ajax()
                 delete_transient('import_cancel');
             } else {
                 PuntWorkLogger::error('Import already running', PuntWorkLogger::CONTEXT_SCHEDULING);
-                AjaxErrorHandler::send_error('An import is already running');
+                AjaxErrorHandler::sendError('An import is already running');
                 return;
             }
         }
@@ -351,7 +354,7 @@ function run_scheduled_import_ajax()
                     'result' => $result,
                     'async' => false
                 ]);
-                AjaxErrorHandler::send_success([
+                AjaxErrorHandler::sendSuccess([
                     'message' => 'Import completed successfully',
                     'result' => $result,
                     'async' => false
@@ -362,7 +365,7 @@ function run_scheduled_import_ajax()
                 ]);
                 // Reset import status on failure so future attempts can start
                 delete_option('job_import_status');
-                AjaxErrorHandler::send_error(['message' => 'Import failed: ' . ($result['message'] ?? 'Unknown error')]);
+                AjaxErrorHandler::sendError(['message' => 'Import failed: ' . ($result['message'] ?? 'Unknown error')]);
             }
             return;
         }
@@ -373,13 +376,13 @@ function run_scheduled_import_ajax()
             'message' => 'Import started successfully',
             'async' => true
         ]);
-        AjaxErrorHandler::send_success([
+        AjaxErrorHandler::sendSuccess([
             'message' => 'Import started successfully',
             'async' => true
         ]);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Run scheduled import failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SCHEDULING);
-        AjaxErrorHandler::send_error('Failed to start import: ' . $e->getMessage());
+        AjaxErrorHandler::sendError('Failed to start import: ' . $e->getMessage());
     }
 }
 
