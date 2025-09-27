@@ -41,6 +41,10 @@
                 PuntWorkJSLogger.debug('Import batch response', 'LOGIC', response);
 
                 if (response.success) {
+                    if ((response.data && response.data.processed === 0 && response.data.total > 0) || (response.data && response.data.total > 0 && !response.data.processed)) {
+                        console.warn('[PUNTWORK] WARNING: Import batch returned success but processed 0 items out of', response.data.total);
+                        PuntWorkJSLogger.warn('Import batch returned success but processed 0 items', 'LOGIC', response);
+                    }
                     // Status polling will handle UI updates, just log the response
                     const statusResponse = await JobImportAPI.getImportStatus();
                     if (statusResponse.success) {
@@ -304,8 +308,12 @@
                     PuntWorkJSLogger.debug(`Process feed ${feed} response`, 'LOGIC', response);
 
                     if (response.success) {
-                        JobImportUI.appendLogs(response.data.logs || []);
-                        total_items += response.data.item_count;
+                        if (!response.data || response.data.item_count === 0) {
+                            console.warn(`[PUNTWORK] WARNING: Feed ${feed} processed with success but item_count is 0!`);
+                            PuntWorkJSLogger.warn(`Feed ${feed} processed with success but item_count is 0`, 'LOGIC', response);
+                        }
+                        JobImportUI.appendLogs((response.data && response.data.logs) || []);
+                        total_items += (response.data && response.data.item_count) || 0;
 
                         // Update progress after successful feed processing
                         JobImportUI.updateProgress({
@@ -320,6 +328,8 @@
                             complete: false
                         });
                     } else {
+                        console.error(`[PUNTWORK] ERROR: Processing feed ${feed} failed:`, response);
+                        PuntWorkJSLogger.error(`Processing feed ${feed} failed`, 'LOGIC', response);
                         throw new Error(`Processing feed ${feed} failed: ` + (response.message || 'Unknown error'));
                     }
                 }
@@ -327,6 +337,8 @@
                 console.log('[PUNTWORK] Total items after feed processing:', total_items);
 
                 if (total_items === 0) {
+                    console.error('[PUNTWORK] ERROR: No items found in feeds after processing. Feeds:', feeds);
+                    PuntWorkJSLogger.error('No items found in feeds after processing', 'LOGIC', feeds);
                     throw new Error('No items found in feeds. Please check that feeds are configured and accessible.');
                 }
 

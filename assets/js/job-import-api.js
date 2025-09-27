@@ -80,6 +80,11 @@ console.log('[PUNTWORK] job-import-api.js loaded');
                 timeout: 60000, // 60 seconds for feed processing
                 success: function(response) {
                     console.log('[PUNTWORK] AJAX success for processFeed:', response);
+                    if (!response || !response.success) {
+                        console.error('[PUNTWORK] ERROR: processFeed AJAX returned unsuccessful response:', response);
+                    } else if (response.data && response.data.item_count === 0) {
+                        console.warn('[PUNTWORK] WARNING: processFeed AJAX returned success but item_count is 0:', response);
+                    }
                 },
                 error: function(xhr, status, error) {
                     console.error('[PUNTWORK] AJAX error for processFeed:', {
