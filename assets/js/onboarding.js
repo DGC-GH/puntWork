@@ -183,6 +183,7 @@ class PuntworkOnboarding {
         if (this.isAnimating || stepIndex === this.currentStep) return;
 
         this.isAnimating = true;
+        this.modal.classList.add('animating');
         const content = document.getElementById('onboarding-step-content');
         const direction = stepIndex > this.currentStep ? 'right' : 'left';
 
@@ -196,6 +197,7 @@ class PuntworkOnboarding {
 
             setTimeout(() => {
                 content.classList.remove('entering');
+                this.modal.classList.remove('animating');
                 this.isAnimating = false;
             }, 300);
         }, 150);
