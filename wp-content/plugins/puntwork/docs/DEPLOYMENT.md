@@ -6,7 +6,7 @@ This guide provides step-by-step instructions for deploying the puntWork WordPre
 ## Prerequisites
 - WordPress site with admin access
 - FTP/SFTP access to upload plugin files
-- API key from `.env` file: `REMOVED_API_KEY`
+- API key from `.env` file: `your_api_key_here`
 
 ## Deployment Steps
 
@@ -33,13 +33,13 @@ wp-content/plugins/puntwork/
 
 ### 3. Configure API Key
 1. Go to **Settings** → **puntWork API Settings** (or wherever you placed the admin menu)
-2. Set the API key to: `REMOVED_API_KEY`
+2. Set the API key to: `your_api_key_here`
 3. Save settings
 
 ### 4. Verify Plugin Activation
 Check that the plugin is properly loaded by visiting:
 ```
-https://your-site.com/wp-json/puntwork/v1/import-status?api_key=REMOVED_API_KEY
+https://your-site.com/wp-json/puntwork/v1/import-status?api_key=your_api_key_here
 ```
 
 You should receive a JSON response instead of a 404 error.
@@ -64,7 +64,7 @@ This script will automatically test:
 
 #### Test Import Status
 ```bash
-curl -X GET "https://your-site.com/wp-json/puntwork/v1/import-status?api_key=REMOVED_API_KEY" \
+curl -X GET "https://your-site.com/wp-json/puntwork/v1/import-status?api_key=your_api_key_here" \
   -H "Content-Type: application/json"
 ```
 
@@ -73,7 +73,7 @@ curl -X GET "https://your-site.com/wp-json/puntwork/v1/import-status?api_key=REM
 curl -X POST "https://your-site.com/wp-json/puntwork/v1/trigger-import" \
   -H "Content-Type: application/json" \
   -d '{
-    "api_key": "REMOVED_API_KEY",
+    "api_key": "your_api_key_here",
     "test_mode": true
   }'
 ```
@@ -83,7 +83,7 @@ curl -X POST "https://your-site.com/wp-json/puntwork/v1/trigger-import" \
 curl -X POST "https://your-site.com/wp-json/puntwork/v1/trigger-import" \
   -H "Content-Type: application/json" \
   -d '{
-    "api_key": "REMOVED_API_KEY",
+    "api_key": "your_api_key_here",
     "force": true,
     "test_mode": true
   }'

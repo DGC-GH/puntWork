@@ -7,7 +7,7 @@
 echo "=== puntWork API Verification (CLI) ===\n\n";
 
 // Configuration
-$api_key = 'REMOVED_API_KEY';
+$api_key = getenv('PUNTWORK_API_KEY') ?: 'your_api_key_here';
 $site_url = 'https://belgiumjobs.work';
 
 echo "Configuration:\n";

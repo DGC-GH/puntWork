@@ -41,10 +41,14 @@ if (!loadEnv($envPath)) {
 
 // Configuration from environment
 $config = [
-    'api_key' => getenv('PUNTWORK_API_KEY') ?: 'REMOVED_API_KEY',
+    'api_key' => getenv('PUNTWORK_API_KEY') ?: '',
     'base_url' => getenv('WP_SITEURL') ? rtrim(getenv('WP_SITEURL'), '/') . '/wp-json/puntwork/v1' : 'https://belgiumjobs.work/wp-json/puntwork/v1',
     'timeout' => 30
 ];
+
+if (empty($config['api_key'])) {
+    die("Error: PUNTWORK_API_KEY not found in environment or .env file\n");
+}
 
 echo "=== puntWork Live API Test ===\n";
 echo "Base URL: {$config['base_url']}\n";
