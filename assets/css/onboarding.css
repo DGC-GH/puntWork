@@ -75,6 +75,8 @@
 .step-indicators {
     display: flex;
     gap: 8px;
+    justify-content: center;
+    margin-bottom: 16px;
 }
 
 .step-indicator {
@@ -127,7 +129,8 @@
 .onboarding-content {
     padding: 24px;
     flex: 1;
-    overflow-y: auto;
+    overflow: hidden;
+    min-height: 200px;
 }
 
 .step-content {
@@ -137,6 +140,7 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    width: 100%;
 }
 
 .step-icon {
@@ -173,9 +177,9 @@
 }
 
 .onboarding-footer {
-    padding: 0 24px 24px;
+    padding: 16px 24px 24px;
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     border-top: 1px solid #e5e5e7;
     margin-top: 24px;
@@ -184,6 +188,7 @@
 .footer-actions {
     display: flex;
     gap: 12px;
+    justify-content: center;
 }
 
 .onboarding-btn {
@@ -278,6 +283,30 @@
     animation: slideInLeft 0.3s ease-in reverse;
 }
 
+/* Prevent scrollbars during animations */
+.onboarding-modal.animating .onboarding-content {
+    overflow: hidden;
+}
+
+.step-content.leaving,
+.step-content.entering {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    right: 24px;
+    bottom: 0;
+}
+
+/* Responsive animation positioning */
+@media (max-width: 768px) {
+    .step-content.leaving,
+    .step-content.entering {
+        top: 20px;
+        left: 20px;
+        right: 20px;
+    }
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
     .onboarding-modal {
@@ -295,14 +324,16 @@
     }
 
     .onboarding-footer {
-        padding: 0 20px 20px;
+        padding: 16px 20px 20px;
         flex-direction: column;
         gap: 16px;
     }
 
     .footer-actions {
         width: 100%;
-        justify-content: space-between;
+        justify-content: center;
+        flex-direction: column;
+        gap: 12px;
     }
 
     .onboarding-btn {
@@ -325,6 +356,10 @@
 
     .step-description {
         font-size: 15px;
+    }
+
+    .step-indicators {
+        margin-bottom: 12px;
     }
 }
 
