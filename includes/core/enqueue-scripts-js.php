@@ -542,7 +542,7 @@ function enqueue_job_import_scripts()
 
             // Localize queue script
             wp_localize_script('puntwork-queue', 'puntworkQueue', [
-                'ajaxurl' => admin_url('admin-ajax.php'),
+                'ajaxurl' => admin_url('admin-ajax.php', 'https'),
                 'nonce' => wp_create_nonce('puntwork_queue_nonce')
             ]);
         }
@@ -551,7 +551,7 @@ function enqueue_job_import_scripts()
         wp_localize_script('job-import-admin-js', 'jobImportData', [
             'nonce' => wp_create_nonce('job_import_nonce'),
             'feeds' => get_feeds(),
-            'ajaxurl' => admin_url('admin-ajax.php'),
+            'ajaxurl' => admin_url('admin-ajax.php', 'https'),
             'resume_progress' => (int) get_option('job_import_progress', 0)
         ]);
     }

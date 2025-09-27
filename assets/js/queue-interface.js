@@ -133,6 +133,7 @@ class PuntworkQueueInterface {
 
     async loadQueueStats() {
         try {
+            console.log('[QUEUE] Loading queue stats, ajaxurl:', puntworkQueue.ajaxurl);
             const response = await fetch(puntworkQueue.ajaxurl, {
                 method: 'POST',
                 headers: {
@@ -144,7 +145,9 @@ class PuntworkQueueInterface {
                 })
             });
 
+            console.log('[QUEUE] Response status:', response.status, 'ok:', response.ok);
             const data = await response.json();
+            console.log('[QUEUE] Response data:', data);
 
             if (data.success) {
                 this.updateStats(data.data);
@@ -180,6 +183,7 @@ class PuntworkQueueInterface {
 
     async loadRecentJobs() {
         try {
+            console.log('[QUEUE] Loading recent jobs, ajaxurl:', puntworkQueue.ajaxurl);
             const response = await fetch(puntworkQueue.ajaxurl, {
                 method: 'POST',
                 headers: {
@@ -191,7 +195,9 @@ class PuntworkQueueInterface {
                 })
             });
 
+            console.log('[QUEUE] Recent jobs response status:', response.status, 'ok:', response.ok);
             const data = await response.json();
+            console.log('[QUEUE] Recent jobs response data:', data);
 
             if (data.success) {
                 this.displayRecentJobs(data.data);
