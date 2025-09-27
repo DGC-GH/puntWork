@@ -15,6 +15,9 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
+// Explicitly load required utility classes for SSE context
+require_once __DIR__ . '/../utilities/async-processing.php';
+
 /**
  * Server-Sent Events handlers for real-time import progress
  */

@@ -21,10 +21,31 @@ if (! defined('ABSPATH')) {
  * Handles batch processing, cancellation, and status retrieval
  */
 
+namespace Puntwork;
+
+// Prevent direct access
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+// Explicitly load required utility classes for AJAX context
+require_once __DIR__ . '/../utilities/SecurityUtils.php';
+require_once __DIR__ . '/../utilities/AjaxErrorHandler.php';
+require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
+
+/**
+ * AJAX handlers for import control operations
+ * Handles batch processing, cancellation, and status retrieval
+ */
+
 add_action('wp_ajax_run_job_import_batch', __NAMESPACE__ . '\\run_job_import_batch_ajax');
 function run_job_import_batch_ajax()
 {
-    PuntWorkLogger::logAjaxRequest('run_job_import_batch', $_POST);
+    // Log that we entered the function
+    error_log('[PUNTWORK] AJAX: run_job_import_batch_ajax function called');
+
+    try {
+        PuntWorkLogger::logAjaxRequest('run_job_import_batch', $_POST);
 
     // Ensure required functions are loaded for AJAX calls
     if (!function_exists('import_jobs_from_json')) {
@@ -72,6 +93,7 @@ function run_job_import_batch_ajax()
     }
 
     // Use comprehensive security validation with field validation
+    error_log('[PUNTWORK] AJAX: About to validate AJAX request');
     $validation = SecurityUtils::validateAjaxRequest(
         'run_job_import_batch',
         'job_import_nonce',
@@ -80,11 +102,14 @@ function run_job_import_batch_ajax()
             'start' => ['type' => 'int', 'min' => 0, 'max' => 1000000] // validation rules
         ]
     );
+    error_log('[PUNTWORK] AJAX: Security validation completed');
 
     if (is_wp_error($validation)) {
+        error_log('[PUNTWORK] AJAX: Security validation failed: ' . $validation->get_error_message());
         AjaxErrorHandler::sendError($validation);
         return;
     }
+    error_log('[PUNTWORK] AJAX: Security validation passed');
 
     try {
         $start = $_POST['start'];
@@ -143,6 +168,11 @@ function run_job_import_batch_ajax()
         error_log('[PUNTWORK] AJAX: Batch import exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
         error_log('[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString());
         AjaxErrorHandler::sendError('Batch import failed: ' . $e->getMessage());
+    }
+    } catch (\Throwable $e) {
+        error_log('[PUNTWORK] AJAX: Fatal error in run_job_import_batch_ajax: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+        error_log('[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString());
+        wp_die('Internal server error', '500 Internal Server Error', ['response' => 500]);
     }
 }
 
