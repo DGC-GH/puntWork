@@ -103,7 +103,7 @@ Adapt the following workflow based on context. If the project differs from puntW
 
 2. **Propose Improvements**: Suggest fixes and enhancements, grouped by category (e.g., speed, simplicity).
 
-3. **Validation Steps**: Run PHPCS to check for coding standard violations (line length >120 chars, mixing declarations and side effects), run tests, and other checks. If tools unavailable, suggest manual alternatives.
+3. **Validation Steps**: **Always check debug.log (/Volumes/153.92.216.191/wp-content/debug.log) for new errors before running any other tests first.** Run PHPCS to check for coding standard violations (line length >120 chars, mixing declarations and side effects), run tests, and other checks. If tools unavailable, suggest manual alternatives.
    - `./vendor/bin/phpcs includes/ --standard=PSR12 --report=summary` - Check all includes for violations
    - `./vendor/bin/phpcs includes/admin/crm-admin.php --standard=PSR12` - Check specific file
    - `./vendor/bin/phpunit --testdox` - Run tests with verbose output
