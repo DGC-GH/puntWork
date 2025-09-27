@@ -5,9 +5,9 @@
     "license": "GPL-2.0-or-later",
     "require": {
         "php": ">=8.1",
-        "open-telemetry/api": "^1.6",
-        "open-telemetry/sdk": "^1.8",
-        "open-telemetry/context": "^1.4",
+        "open-telemetry/api": "^0.0.17",
+        "open-telemetry/sdk": "^0.0.17",
+        "open-telemetry/context": "^0.0.17",
         "guzzlehttp/promises": "^2.3",
         "php-http/httplug": "^2.4",
         "symfony/http-client": "^7.3",
