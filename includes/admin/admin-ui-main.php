@@ -146,85 +146,16 @@ function render_jobs_dashboard_ui(): void
             </div>
         </div>
     </div>
-                        <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>
-                        Loading async processing status...
-                    </div>
-                </div>
-            </div>
+    <?php
+}
 
-        <!-- Job Listings Section with Lazy Loading -->
-        <div class="puntwork-card" style="margin-bottom: var(--spacing-xl);">
-            <div class="puntwork-card__header">
-                <h2 class="puntwork-card__title">Job Listings</h2>
-                <p class="puntwork-card__subtitle">Browse and manage imported job posts with lazy loading for better performance.</p>
-            </div>
-
-            <div class="puntwork-card__body">
-                <!-- Filters -->
-                <div style="display: flex; gap: var(--spacing-md); align-items: center; margin-bottom: var(--spacing-lg); flex-wrap: wrap;">
-                    <div class="puntwork-form-group" style="margin: 0;">
-                        <label for="job-status-filter" class="puntwork-form-label" style="margin-bottom: var(--spacing-xs);">Status</label>
-                        <select id="job-status-filter" class="puntwork-form-control" style="width: auto; min-width: 120px;">
-                            <option value="any">All Status</option>
-                            <option value="publish">Published</option>
-                            <option value="draft">Draft</option>
-                            <option value="pending">Pending</option>
-                            <option value="trash">Trash</option>
-                        </select>
-                    </div>
-                    <div class="puntwork-form-group" style="margin: 0; flex: 1; min-width: 200px;">
-                        <label for="job-search" class="puntwork-form-label" style="margin-bottom: var(--spacing-xs);">Search</label>
-                        <input type="text" id="job-search" class="puntwork-form-control" placeholder="Search by title, company, or location...">
-                    </div>
-                    <div style="display: flex; gap: var(--spacing-sm); align-items: end;">
-                        <button id="apply-job-filters" class="puntwork-btn puntwork-btn--primary">
-                            <i class="fas fa-search puntwork-btn__icon"></i>Search
-                        </button>
-                        <button id="clear-job-filters" class="puntwork-btn puntwork-btn--secondary">
-                            <i class="fas fa-times puntwork-btn__icon"></i>Clear
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Loading State -->
-                <div id="job-listings-loading" class="puntwork-loading" style="display: none;">
-                    <i class="fas fa-spinner fa-spin puntwork-loading__spinner"></i>
-                    <div>Loading job listings...</div>
-                </div>
-
-                <!-- Job Listings Table -->
-                <div id="job-listings-table" style="display: none;">
-                    <div style="overflow-x: auto; border: 1px solid var(--color-gray-200); border-radius: var(--radius-md);">
-                        <div id="job-listings-body" style="min-height: 200px;">
-                            <!-- Job rows will be inserted here -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Empty State -->
-                <div id="job-listings-empty" class="puntwork-empty" style="display: none;">
-                    <i class="fas fa-inbox puntwork-empty__icon"></i>
-                    <div class="puntwork-empty__title">No jobs found</div>
-                    <div class="puntwork-empty__message">Try adjusting your search criteria or import some jobs first.</div>
-                </div>
-
-                <!-- Pagination -->
-                <div id="job-pagination" style="display: flex; justify-content: center; align-items: center; gap: var(--spacing-md); margin-top: var(--spacing-lg); display: none;">
-                    <button id="job-prev-page" class="puntwork-btn puntwork-btn--outline" disabled>
-                        <i class="fas fa-chevron-left puntwork-btn__icon"></i>Previous
-                    </button>
-                    <span id="job-page-info" style="font-size: var(--font-size-sm); color: var(--color-gray-600);">Page 1 of 1</span>
-                    <button id="job-next-page" class="puntwork-btn puntwork-btn--outline" disabled>
-                        Next<i class="fas fa-chevron-right puntwork-btn__icon puntwork-btn__icon--right"></i>
-                    </button>
-                </div>
-            </div>
 /**
  * Render main import UI section
  *
  * @return void
  */
-function render_main_import_ui(): void {
+function render_main_import_ui(): void
+{
     ?>
     <div class="puntwork-admin">
         <div class="puntwork-container">
