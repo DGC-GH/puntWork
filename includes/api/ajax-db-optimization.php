@@ -24,7 +24,7 @@ add_action('wp_ajax_get_db_optimization_status', __NAMESPACE__ . '\\ajax_get_db_
 function ajax_get_db_optimization_status()
 {
     // Use comprehensive security validation
-    $validation = SecurityUtils::validateAjaxRequest('get_db_optimization_status');
+    $validation = SecurityUtils::validateAjaxRequest('get_db_optimization_status', 'job_import_nonce');
     if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
@@ -92,7 +92,7 @@ function ajax_save_async_settings()
     // Use comprehensive security validation with field validation
     $validation = SecurityUtils::validateAjaxRequest(
         'save_async_settings',
-        'puntwork_admin_nonce',
+        'job_import_nonce',
         ['enabled'], // required fields
         [
             'enabled' => ['type' => 'bool'] // validation rules
@@ -125,7 +125,7 @@ add_action('wp_ajax_get_async_status', __NAMESPACE__ . '\\ajax_get_async_status'
 function ajax_get_async_status()
 {
     // Use comprehensive security validation
-    $validation = SecurityUtils::validateAjaxRequest('get_async_status');
+    $validation = SecurityUtils::validateAjaxRequest('get_async_status', 'job_import_nonce');
     if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
@@ -147,7 +147,7 @@ add_action('wp_ajax_get_performance_status', __NAMESPACE__ . '\\ajax_get_perform
 function ajax_get_performance_status()
 {
     // Use comprehensive security validation
-    $validation = SecurityUtils::validateAjaxRequest('get_performance_status');
+    $validation = SecurityUtils::validateAjaxRequest('get_performance_status', 'job_import_nonce');
     if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
@@ -174,7 +174,7 @@ add_action('wp_ajax_clear_performance_logs', __NAMESPACE__ . '\\ajax_clear_perfo
 function ajax_clear_performance_logs()
 {
     // Use comprehensive security validation
-    $validation = SecurityUtils::validateAjaxRequest('clear_performance_logs');
+    $validation = SecurityUtils::validateAjaxRequest('clear_performance_logs', 'job_import_nonce');
     if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
