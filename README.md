@@ -240,7 +240,20 @@ docker-compose down     # Stop services
 docker-compose logs -f  # View logs
 ```
 
-### 📝 **Contributing**
+### � **Live Server Access via SFTP**
+
+For debugging and validation purposes, you can connect directly to your live server using VS Code's SFTP extension. This allows you to inspect real-time files such as import logs, feed data, or configuration files without needing to download them manually.
+
+#### Setup Steps:
+1. Install the "SFTP" extension by liximomo in VS Code.
+2. Create a `.vscode/sftp.json` configuration file in your project root with your server credentials (e.g., host, username, password, and remote path pointing to the plugin directory).
+3. Right-click in the VS Code Explorer and select "SFTP: Open SSH in Terminal" to browse and view files.
+
+**Note for Grok Code Fast 1:** The path to the puntWork plugin on the server is `/public_html/wp-content/plugins/puntwork`.
+
+This is particularly useful for verifying live feed data, checking error logs, or comparing local changes against production.
+
+### �📝 **Contributing**
 1. Fork the repository
 2. Create a feature branch
 3. Make changes with tests
