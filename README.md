@@ -150,11 +150,42 @@ curl -X POST "/wp-json/puntwork/v1/trigger-import" \
 curl "/wp-json/puntwork/v1/import-progress?api_key=YOUR_API_KEY"
 ```
 
+#### Key Endpoints
+
+##### Authentication
+All REST API endpoints require WordPress authentication via Application Passwords or Basic Auth. Admin AJAX endpoints use WordPress nonces.
+
+##### REST API Endpoints
+- `POST /wp-json/puntwork/v1/import/trigger` - Trigger import (body: {feed_key, force})
+- `GET /wp-json/puntwork/v1/import/status` - Get import progress and statistics
+- `GET /wp-json/puntwork/v1/feeds` - List configured feed URLs
+- `GET /wp-json/puntwork/v1/analytics/summary?period=30days` - Get analytics (period: 7days/30days/90days)
+- `GET /wp-json/puntwork/v1/analytics/export?period=30days` - Export analytics as CSV
+- `GET /wp-json/puntwork/v1/health/feeds` - Get feed health status
+- `POST /wp-json/puntwork/v1/trigger-import` - Trigger manual import
+- `GET /wp-json/puntwork/v1/import-status` - Get import status
+- `GET /wp-json/puntwork/v1/import-progress` - Real-time progress (SSE)
+- `POST /wp-json/puntwork/v1/graphql` - GraphQL query endpoint
+- `GET /wp-json/puntwork/v1/webhooks` - List configured webhooks
+- `POST /wp-json/puntwork/v1/webhooks` - Register new webhook
+
+##### AJAX Endpoints
+- `puntwork_import_control` - Start/stop import, get status (commands: start/stop/status)
+- `puntwork_db_optimize` - Run database optimization
+- `puntwork_feed_health` - Get/update feed health alerts
+- `run_job_import_batch` - Process import batches
+- `get_job_import_status` - Get current status
+- `cancel_job_import` - Cancel running import
+
+##### Error Handling
+Common HTTP status codes: 200 (success), 400 (bad request), 403 (forbidden), 409 (conflict), 500 (server error). Rate limiting: 100 requests/hour per IP for REST API.
+
 ## 📖 Documentation
 
 ### 📚 **Complete Documentation**
 - **[Technical Reference](docs/technical-reference.md)**: Comprehensive technical reference for developers
 - **[Mobile App Guide](mobile/README.md)**: React Native companion app documentation
+- **[Changelog](CHANGELOG.md)**: Version history and updates
 
 ### 🔧 **Configuration**
 
@@ -177,36 +208,6 @@ Configure automated imports via **WordPress Admin > puntWork > Scheduling**:
 - Set import frequencies (hourly to monthly)
 - Configure retry policies
 - Monitor scheduled tasks
-
-### 🎯 **Key Endpoints**
-
-#### Authentication
-All REST API endpoints require WordPress authentication via Application Passwords or Basic Auth. Admin AJAX endpoints use WordPress nonces.
-
-#### REST API Endpoints
-- `POST /wp-json/puntwork/v1/import/trigger` - Trigger import (body: {feed_key, force})
-- `GET /wp-json/puntwork/v1/import/status` - Get import progress and statistics
-- `GET /wp-json/puntwork/v1/feeds` - List configured feed URLs
-- `GET /wp-json/puntwork/v1/analytics/summary?period=30days` - Get analytics (period: 7days/30days/90days)
-- `GET /wp-json/puntwork/v1/analytics/export?period=30days` - Export analytics as CSV
-- `GET /wp-json/puntwork/v1/health/feeds` - Get feed health status
-- `POST /wp-json/puntwork/v1/trigger-import` - Trigger manual import
-- `GET /wp-json/puntwork/v1/import-status` - Get import status
-- `GET /wp-json/puntwork/v1/import-progress` - Real-time progress (SSE)
-- `POST /wp-json/puntwork/v1/graphql` - GraphQL query endpoint
-- `GET /wp-json/puntwork/v1/webhooks` - List configured webhooks
-- `POST /wp-json/puntwork/v1/webhooks` - Register new webhook
-
-#### AJAX Endpoints
-- `puntwork_import_control` - Start/stop import, get status (commands: start/stop/status)
-- `puntwork_db_optimize` - Run database optimization
-- `puntwork_feed_health` - Get/update feed health alerts
-- `run_job_import_batch` - Process import batches
-- `get_job_import_status` - Get current status
-- `cancel_job_import` - Cancel running import
-
-#### Error Handling
-Common HTTP status codes: 200 (success), 400 (bad request), 403 (forbidden), 409 (conflict), 500 (server error). Rate limiting: 100 requests/hour per IP for REST API.
 
 ## 🏗️ Architecture
 
@@ -705,5 +706,7 @@ GNU General Public License for more details.
 - REST API design following WordPress standards
 
 ---
+
+**Last updated: September 27, 2025**
 
 **Version 2.0.0** - Enterprise-grade job import solution with AI-powered features, CRM integrations, multi-site support, horizontal scaling, GraphQL API, webhooks, mobile app, and comprehensive API integration.
