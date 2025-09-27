@@ -42,8 +42,9 @@
 
                 if (response.success) {
                     if ((response.data && response.data.processed === 0 && response.data.total > 0) || (response.data && response.data.total > 0 && !response.data.processed)) {
-                        console.warn('[PUNTWORK] WARNING: Import batch returned success but processed 0 items out of', response.data.total);
+                        console.warn('[PUNTWORK] WARNING: Import batch returned success but processed 0 items out of', response.data.total, response);
                         PuntWorkJSLogger.warn('Import batch returned success but processed 0 items', 'LOGIC', response);
+                        JobImportUI.appendLogs(['WARNING: Import batch returned success but processed 0 items out of ' + response.data.total]);
                     }
                     // Status polling will handle UI updates, just log the response
                     const statusResponse = await JobImportAPI.getImportStatus();
@@ -51,16 +52,19 @@
                         var batchData = JobImportUI.normalizeResponseData(statusResponse);
                         console.log('[PUNTWORK] Batch completed, status updated:', batchData);
                     } else {
-                        console.log('[PUNTWORK] Status fetch failed after batch, continuing...');
+                        console.log('[PUNTWORK] Status fetch failed after batch, continuing...', statusResponse);
+                        PuntWorkJSLogger.warn('Status fetch failed after batch', 'LOGIC', statusResponse);
+                        JobImportUI.appendLogs(['WARNING: Status fetch failed after batch']);
                     }
 
                     let total = response.data.total || 0;
                     let current = response.data.processed || 0;
                     PuntWorkJSLogger.debug('Initial current: ' + current + ', total: ' + total, 'LOGIC');
 
+                    let batchCount = 0;
                     while (current < total && this.isImporting) {
-                        PuntWorkJSLogger.debug('Continuing to next batch, current: ' + current + ', total: ' + total, 'LOGIC');
-                        
+                        batchCount++;
+                        PuntWorkJSLogger.debug('Continuing to next batch, current: ' + current + ', total: ' + total + ', batchCount: ' + batchCount, 'LOGIC');
                         try {
                             response = await JobImportAPI.runImportBatch(current);
                             PuntWorkJSLogger.debug('Next batch response', 'LOGIC', response);
@@ -68,13 +72,19 @@
                             if (response.success) {
                                 // Status polling handles UI updates, just update our local tracking
                                 current = response.data.processed || current;
-                                console.log('[PUNTWORK] Next batch completed, current processed:', current);
+                                console.log('[PUNTWORK] Next batch completed, current processed:', current, 'batchCount:', batchCount);
+                                if ((response.data && response.data.processed === 0 && response.data.total > 0) || (response.data && response.data.total > 0 && !response.data.processed)) {
+                                    console.warn('[PUNTWORK] WARNING: Batch', batchCount, 'returned success but processed 0 items out of', response.data.total, response);
+                                    PuntWorkJSLogger.warn('Batch ' + batchCount + ' returned success but processed 0 items', 'LOGIC', response);
+                                    JobImportUI.appendLogs(['WARNING: Batch ' + batchCount + ' returned success but processed 0 items out of ' + response.data.total]);
+                                }
                             } else {
+                                console.error('[PUNTWORK] ERROR: Import batch failed:', response);
                                 throw new Error('Import batch failed: ' + (response.message || 'Unknown error'));
                             }
                         } catch (batchError) {
                             PuntWorkJSLogger.error('Batch processing error', 'LOGIC', batchError);
-                            
+                            console.error('[PUNTWORK] Batch processing error:', batchError);
                             // Check if this is a retryable error
                             if (batchError.attempts && batchError.attempts > 1) {
                                 // All retries exhausted
@@ -85,15 +95,15 @@
                                 $('#reset-import').show();
                                 $('#start-import').text('Restart').show();
                                 this.isImporting = false; // Reset flag on failure
-                                
+
                                 // Log failed import to history
                                 await this.logFailedManualImportRun({ message: 'Batch failed after ' + batchError.attempts + ' attempts: ' + batchError.error });
-                                
+
                                 // Stop status polling on failure
                                 if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
                                     window.JobImportEvents.stopStatusPolling();
                                 }
-                                
+
                                 return; // Exit the import process
                             } else {
                                 // Single failure - log and continue trying
@@ -110,13 +120,15 @@
                             total: total,
                             processed: current
                         });
+                        JobImportUI.appendLogs(['Import completed successfully. Total: ' + total + ', Processed: ' + current]);
                         await this.handleImportCompletion();
                     }
                 } else {
+                    console.error('[PUNTWORK] ERROR: Initial import batch error:', response);
                     JobImportUI.appendLogs(['Initial import batch error: ' + (response.message || 'Unknown')]);
                     $('#status-message').text('Error: ' + (response.message || 'Unknown'));
                     JobImportUI.resetButtons();
-                    
+
                     // Stop status polling on error
                     if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
                         window.JobImportEvents.stopStatusPolling();
@@ -124,7 +136,8 @@
                 }
             } catch (e) {
                 PuntWorkJSLogger.error('Handle import error', 'LOGIC', e);
-                
+                console.error('[PUNTWORK] Handle import error:', e);
+
                 // Check if this is a retry exhaustion error
                 if (e.attempts && e.attempts > 1) {
                     JobImportUI.appendLogs(['Import failed after ' + e.attempts + ' attempts: ' + e.error]);
@@ -139,12 +152,12 @@
                     JobImportUI.resetButtons();
                 }
                 this.isImporting = false; // Ensure importing flag is reset on error
-                
+
                 // Stop status polling on error
                 if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
                     window.JobImportEvents.stopStatusPolling();
                 }
-                
+
                 // Disconnect from real-time updates on error
                 if (window.JobImportRealtime && JobImportRealtime.getConnectionStatus()) {
                     JobImportRealtime.disconnect();
