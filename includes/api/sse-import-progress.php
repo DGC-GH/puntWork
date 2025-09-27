@@ -121,7 +121,7 @@ function handle_import_progress_sse($request)
                 }
 
                 // Sanitize the status to ensure it's JSON serializable
-                $current_status = array_map(function($value) {
+                $current_status = array_map(function ($value) {
                     if (is_object($value) || is_resource($value)) {
                         return null; // Replace non-serializable objects/resources with null
                     }
@@ -130,7 +130,7 @@ function handle_import_progress_sse($request)
                     }
                     if (is_array($value)) {
                         // Recursively sanitize arrays
-                        return array_map(function($subValue) {
+                        return array_map(function ($subValue) {
                             if (is_object($subValue) || is_resource($subValue)) {
                                 return null;
                             }
@@ -148,7 +148,7 @@ function handle_import_progress_sse($request)
                 if ($async_status['active']) {
                     $async_progress = $async_status['progress'] ?? [];
                     // Sanitize async progress data
-                    $async_progress = array_map(function($value) {
+                    $async_progress = array_map(function ($value) {
                         if (is_object($value) || is_resource($value)) {
                             return null;
                         }
@@ -156,7 +156,7 @@ function handle_import_progress_sse($request)
                             return null;
                         }
                         if (is_array($value)) {
-                            return array_map(function($subValue) {
+                            return array_map(function ($subValue) {
                                 if (is_object($subValue) || is_resource($subValue)) {
                                     return null;
                                 }
@@ -168,7 +168,7 @@ function handle_import_progress_sse($request)
                         }
                         return $value;
                     }, $async_progress);
-                    
+
                     $current_status = array_merge($current_status, $async_progress);
                     $current_status['async_active'] = true;
                     $current_status['async_status'] = $async_status['status'];
@@ -192,10 +192,10 @@ function handle_import_progress_sse($request)
                 // Add additional status info
                 $current_status['is_running'] = !$current_status['complete'];
                 $current_status['last_run'] = get_option('puntwork_last_import_run');
-                
+
                 // Get next scheduled time and ensure it's serializable
                 $next_scheduled = get_next_scheduled_time();
-                $current_status['next_scheduled'] = is_array($next_scheduled) ? 
+                $current_status['next_scheduled'] = is_array($next_scheduled) ?
                     ($next_scheduled['formatted'] ?? null) : $next_scheduled;
 
                 // Only send update if status has changed or it's been more than 30 seconds
@@ -212,7 +212,7 @@ function handle_import_progress_sse($request)
 
                     error_log('[PUNTWORK] SSE: Sending progress update, event_data keys: ' . implode(', ', array_keys($event_data)));
                     $json_data = json_encode($event_data);
-                    
+
                     if ($json_data === false) {
                         error_log('[PUNTWORK] SSE: JSON encoding failed: ' . json_last_error_msg());
                         error_log('[PUNTWORK] SSE: Event data that failed: ' . print_r($event_data, true));
@@ -231,7 +231,7 @@ function handle_import_progress_sse($request)
                         flush();
                         continue;
                     }
-                    
+
                     error_log('[PUNTWORK] SSE: JSON encoded data length: ' . strlen($json_data));
                     error_log('[PUNTWORK] SSE: JSON data preview: ' . substr($json_data, 0, 200) . '...');
 
