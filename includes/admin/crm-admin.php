@@ -173,10 +173,10 @@ class PuntworkCrmAdmin
                                 ?>
 
                                 <div class="platform-actions">
-                                    <button class="button button-secondary test-platform">
+                                    <button class="puntwork-btn puntwork-btn--secondary test-platform">
                                         <?php _e('Test Connection', 'puntwork'); ?>
                                     </button>
-                                    <button class="button button-primary save-platform">
+                                    <button class="puntwork-btn puntwork-btn--primary save-platform">
                                         <?php _e('Save Configuration', 'puntwork'); ?>
                                     </button>
                                 </div>
@@ -246,7 +246,7 @@ class PuntworkCrmAdmin
                         </table>
 
                         <p class="submit">
-                            <button type="button" class="button button-primary" id="save-sync-settings">
+                            <button type="button" class="puntwork-btn puntwork-btn--primary" id="save-sync-settings">
                                 <?php _e('Save Settings', 'puntwork'); ?>
                             </button>
                         </p>
@@ -269,7 +269,7 @@ class PuntworkCrmAdmin
                                 <?php endforeach; ?>
                             </div>
 
-                            <button type="button" class="button button-primary" id="sync-manually">
+                            <button type="button" class="puntwork-btn puntwork-btn--primary" id="sync-manually">
                                 <?php _e('Sync Now', 'puntwork'); ?>
                             </button>
                         </div>

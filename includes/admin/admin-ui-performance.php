@@ -234,7 +234,7 @@ function performance_metrics_page()
                                         <td><?php echo size_format($log->peak_memory); ?></td>
                                         <td><?php echo $log->items_per_second ? number_format($log->items_per_second, 1) . '/s' : '—'; ?></td>
                                         <td>
-                                            <button class="button button-small view-details" data-log-id="<?php echo $log->id; ?>" data-checkpoints='<?php echo esc_attr($log->checkpoints); ?>' data-metadata='<?php echo esc_attr($log->metadata); ?>'>
+                                            <button class="puntwork-btn puntwork-btn--outline" data-log-id="<?php echo $log->id; ?>" data-checkpoints='<?php echo esc_attr($log->checkpoints); ?>' data-metadata='<?php echo esc_attr($log->metadata); ?>'>
                                                 <?php _e('View Details', 'puntwork'); ?>
                                             </button>
                                         </td>

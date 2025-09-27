@@ -109,7 +109,7 @@ function import_analytics_page()
             <form method="post" style="display: inline; margin-left: 20px;">
                 <?php wp_nonce_field('analytics_export_nonce'); ?>
                 <input type="hidden" name="export_period" value="<?php echo esc_attr($period); ?>">
-                <button type="submit" name="export_csv" class="button button-secondary">
+                <button type="submit" name="export_csv" class="puntwork-btn puntwork-btn--secondary">
                     <?php _e('Export CSV', 'puntwork'); ?>
                 </button>
             </form>
@@ -166,7 +166,7 @@ function import_analytics_page()
                         <div class="loading-spinner error">
                             <i class="fas fa-exclamation-triangle"></i>
                             <div>${puntworkAnalyticsL10n.errorLoading}</div>
-                            <button onclick="loadAnalyticsData('${period}')" class="button button-secondary" style="margin-top: 10px;">${puntworkAnalyticsL10n.retry}</button>
+                            <button onclick="loadAnalyticsData('${period}')" class="puntwork-btn puntwork-btn--secondary" style="margin-top: 10px;">${puntworkAnalyticsL10n.retry}</button>
                         </div>
                     `;
                 });

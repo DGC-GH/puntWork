@@ -44,13 +44,13 @@ function api_settings_page()
                 <h3><?php _e('API Key', 'puntwork'); ?></h3>
                 <div class="api-key-container">
                     <input type="text" id="api-key-display" value="<?php echo esc_attr($api_key); ?>" readonly class="regular-text">
-                    <button type="button" id="toggle-api-key" class="button"><?php _e('Show/Hide', 'puntwork'); ?></button>
-                    <button type="button" id="copy-api-key" class="button"><?php _e('Copy', 'puntwork'); ?></button>
+                    <button type="button" id="toggle-api-key" class="puntwork-btn puntwork-btn--outline"><?php _e('Show/Hide', 'puntwork'); ?></button>
+                    <button type="button" id="copy-api-key" class="puntwork-btn puntwork-btn--secondary"><?php _e('Copy', 'puntwork'); ?></button>
                 </div>
 
                 <form method="post" style="margin-top: 20px;">
                     <?php wp_nonce_field('puntwork_api_settings'); ?>
-                    <input type="submit" name="regenerate_api_key" value="<?php esc_attr_e('Regenerate API Key', 'puntwork'); ?>" class="button button-secondary"
+                    <input type="submit" name="regenerate_api_key" value="<?php esc_attr_e('Regenerate API Key', 'puntwork'); ?>" class="puntwork-btn puntwork-btn--danger"
                            onclick="return confirm('<?php esc_js(__('Are you sure? This will invalidate the current API key.', 'puntwork')); ?>');">
                 </form>
 

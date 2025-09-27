@@ -136,7 +136,7 @@ function render_jobs_dashboard_ui(): void
                             <input type="checkbox" id="enable-async-processing" checked>
                             Enable async processing for large imports (>500 items)
                         </label>
-                        <button id="save-async-settings" class="button button-primary" style="border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: 500;">
+                        <button id="save-async-settings" class="puntwork-btn puntwork-btn--primary" style="border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: 500;">
                             <span id="save-async-text">Save Settings</span>
                             <span id="save-async-loading" style="display: none;">Saving...</span>
                         </button>

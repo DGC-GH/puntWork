@@ -151,14 +151,14 @@ class PuntworkCrmAdmin
                                 </form>
 
                                 <div class="platform-actions">
-                                    <button type="button" class="button button-secondary test-connection" data-platform="<?php echo esc_attr($platform_id); ?>">
+                                    <button type="button" class="puntwork-btn puntwork-btn--secondary test-connection" data-platform="<?php echo esc_attr($platform_id); ?>">
                                         <?php _e('Test Connection', 'puntwork'); ?>
                                     </button>
-                                    <button type="button" class="button button-primary save-config" data-platform="<?php echo esc_attr($platform_id); ?>">
+                                    <button type="button" class="puntwork-btn puntwork-btn--primary save-config" data-platform="<?php echo esc_attr($platform_id); ?>">
                                         <?php _e('Save Configuration', 'puntwork'); ?>
                                     </button>
                                     <?php if (in_array($platform_id, $configured_platforms)) : ?>
-                                        <button type="button" class="button button-secondary sync-test" data-platform="<?php echo esc_attr($platform_id); ?>">
+                                        <button type="button" class="puntwork-btn puntwork-btn--secondary sync-test" data-platform="<?php echo esc_attr($platform_id); ?>">
                                             <?php _e('Test Sync', 'puntwork'); ?>
                                         </button>
                                     <?php endif; ?>

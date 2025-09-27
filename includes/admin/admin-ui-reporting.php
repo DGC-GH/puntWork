@@ -129,7 +129,7 @@ class ReportingAdminUI
                                 </div>
                             </div>
                             <div class="form-actions">
-                                <button type="submit" class="button button-primary" id="generate-report">
+                                <button type="submit" class="puntwork-btn puntwork-btn--primary" id="generate-report">
                                     <?php _e('Generate Report', 'puntwork'); ?>
                                 </button>
                             </div>
@@ -603,8 +603,8 @@ class ReportingAdminUI
                 html += '</div>';
                 html += '</div>';
                 html += '<div class="report-actions">';
-                html += '<button type="button" class="button button-small view-report" data-report-id="' + report.id + '">View</button>';
-                html += '<button type="button" class="button button-small delete-report" data-report-id="' + report.id + '">Delete</button>';
+                html += '<button type="button" class="puntwork-btn puntwork-btn--outline" data-report-id="' + report.id + '">View</button>';
+                html += '<button type="button" class="puntwork-btn puntwork-btn--danger" data-report-id="' + report.id + '">Delete</button>';
                 html += '</div>';
                 html += '</div>';
             });

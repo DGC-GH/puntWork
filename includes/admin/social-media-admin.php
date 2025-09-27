@@ -153,10 +153,10 @@ class PuntworkSocialMediaAdmin
                                 </div>
 
                                 <div class="platform-actions">
-                                    <button class="button button-secondary test-platform">
+                                    <button class="puntwork-btn puntwork-btn--secondary test-platform">
                                         <?php _e('Test Connection', 'puntwork'); ?>
                                     </button>
-                                    <button class="button button-primary save-platform">
+                                    <button class="puntwork-btn puntwork-btn--primary save-platform">
                                         <?php _e('Save Configuration', 'puntwork'); ?>
                                     </button>
                                 </div>
@@ -221,7 +221,7 @@ class PuntworkSocialMediaAdmin
                         </table>
 
                         <p class="submit">
-                            <button type="button" class="button button-primary" id="save-posting-settings">
+                            <button type="button" class="puntwork-btn puntwork-btn--primary" id="save-posting-settings">
                                 <?php _e('Save Settings', 'puntwork'); ?>
                             </button>
                         </p>
@@ -242,7 +242,7 @@ class PuntworkSocialMediaAdmin
                             <?php endforeach; ?>
                         </div>
 
-                        <button type="button" class="button button-primary" id="post-manually">
+                        <button type="button" class="puntwork-btn puntwork-btn--primary" id="post-manually">
                             <?php _e('Post Now', 'puntwork'); ?>
                         </button>
 

@@ -118,7 +118,7 @@ function feed_health_monitor_page()
                 <form method="post" style="display: inline;">
                     <?php wp_nonce_field('feed_health_check_nonce'); ?>
                     <input type="hidden" name="action" value="run_health_check">
-                    <button type="submit" class="button button-primary">
+                    <button type="submit" class="puntwork-btn puntwork-btn--primary">
                         <?php _e('Run Health Check Now', 'puntwork'); ?>
                     </button>
                 </form>

@@ -180,7 +180,7 @@ class MultiSiteAdminUI
                 <div class="puntwork-network-section">
                     <h2><?php _e('Site Management', 'puntwork'); ?></h2>
                     <div class="site-management-actions">
-                        <button type="button" id="sync-network" class="button button-primary">
+                        <button type="button" id="sync-network" class="puntwork-btn puntwork-btn--primary">
                             <?php _e('Sync Network Data', 'puntwork'); ?>
                         </button>
                         <button type="button" id="refresh-stats" class="button">
@@ -207,7 +207,7 @@ class MultiSiteAdminUI
                                     <option value="capability_based"><?php _e('Capability Based', 'puntwork'); ?></option>
                                     <option value="geographic"><?php _e('Geographic', 'puntwork'); ?></option>
                                 </select>
-                                <button type="button" id="distribute-jobs" class="button button-primary">
+                                <button type="button" id="distribute-jobs" class="puntwork-btn puntwork-btn--primary">
                                     <?php _e('Distribute Jobs', 'puntwork'); ?>
                                 </button>
                             </div>
