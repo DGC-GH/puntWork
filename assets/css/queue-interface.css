@@ -34,19 +34,39 @@
 }
 
 .queue-controls .button {
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.2s ease;
+    font-family: inherit;
+    background: linear-gradient(135deg, #007aff 0%, #0056cc 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.2);
 }
 
 .queue-controls .button:hover {
+    background: linear-gradient(135deg, #0056cc 0%, #004499 100%);
+    box-shadow: 0 4px 16px rgba(0, 122, 255, 0.3);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.queue-controls .button.secondary {
+    background: #f2f2f7;
+    color: #007aff;
+    border: 1px solid #d1d1d6;
+    box-shadow: none;
+}
+
+.queue-controls .button.secondary:hover {
+    background: #e5e5e7;
+    border-color: #007aff;
+    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1);
 }
 
 .queue-controls .button:disabled {
@@ -97,30 +117,35 @@
 }
 
 .stat-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
+    font-size: 32px;
     color: white;
+    box-shadow: 0 8px 24px rgba(0, 122, 255, 0.3);
 }
 
 .stat-card.pending .stat-icon {
     background: linear-gradient(135deg, #007aff, #0056cc);
+    box-shadow: 0 8px 24px rgba(0, 122, 255, 0.3);
 }
 
 .stat-card.processing .stat-icon {
     background: linear-gradient(135deg, #ff9500, #ff8c00);
+    box-shadow: 0 8px 24px rgba(255, 149, 0, 0.3);
 }
 
 .stat-card.completed .stat-icon {
     background: linear-gradient(135deg, #34c759, #28a745);
+    box-shadow: 0 8px 24px rgba(52, 199, 89, 0.3);
 }
 
 .stat-card.failed .stat-icon {
     background: linear-gradient(135deg, #ff3b30, #d63027);
+    box-shadow: 0 8px 24px rgba(255, 59, 48, 0.3);
 }
 
 .stat-content {
