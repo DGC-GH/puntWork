@@ -562,7 +562,8 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
     $skipped_items = 0;
     $missing_guids = 0;
 
-    for ($i = 0; $i < count($batch_json_items); $i++) {
+    $total_items = count($batch_json_items);
+    for ($i = 0; $i < $total_items; $i++) {
         $current_index = $start_index + $i;
 
         if (get_transient('import_cancel') === true) {
