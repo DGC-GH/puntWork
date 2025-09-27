@@ -129,6 +129,20 @@ function render_jobs_dashboard_ui(): void
                         </div>
                     </div>
                 </div>
+
+                <div class="puntwork-card__footer">
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+                            <input type="checkbox" id="enable-async-processing" checked>
+                            Enable async processing for large imports (>500 items)
+                        </label>
+                        <button id="save-async-settings" class="button button-primary" style="border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: 500;">
+                            <span id="save-async-text">Save Settings</span>
+                            <span id="save-async-loading" style="display: none;">Saving...</span>
+                        </button>
+                        <span id="async-settings-status" style="font-size: 14px; color: #8e8e93;"></span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -137,19 +151,6 @@ function render_jobs_dashboard_ui(): void
                     </div>
                 </div>
             </div>
-
-            <div style="display: flex; gap: 12px; align-items: center;">
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
-                    <input type="checkbox" id="enable-async-processing" checked>
-                    Enable async processing for large imports (>500 items)
-                </label>
-                <button id="save-async-settings" class="button button-primary" style="border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: 500;">
-                    <span id="save-async-text">Save Settings</span>
-                    <span id="save-async-loading" style="display: none;">Saving...</span>
-                </button>
-                <span id="async-settings-status" style="font-size: 14px; color: #8e8e93;"></span>
-            </div>
-        </div>
 
         <!-- Job Listings Section with Lazy Loading -->
         <div class="puntwork-card" style="margin-bottom: var(--spacing-xl);">
