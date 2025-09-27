@@ -45,7 +45,10 @@ function register_sse_import_progress_route()
 function handle_import_progress_sse($request)
 {
     try {
+        error_log('[PUNTWORK] SSE: handle_import_progress_sse called');
+
         $api_key = $request->get_param('api_key');
+        error_log('[PUNTWORK] SSE: API key from request: ' . (empty($api_key) ? 'empty' : 'provided'));
 
         // Verify API key
         if (empty($api_key)) {
@@ -54,6 +57,8 @@ function handle_import_progress_sse($request)
         }
 
         $stored_key = get_option('puntwork_api_key');
+        error_log('[PUNTWORK] SSE: Stored API key exists: ' . (!empty($stored_key) ? 'yes' : 'no'));
+
         if (empty($stored_key) || !hash_equals($stored_key, $api_key)) {
             error_log('[PUNTWORK] SSE: Invalid API key provided');
             return new \WP_Error('invalid_api_key', 'Invalid API key', ['status' => 401]);

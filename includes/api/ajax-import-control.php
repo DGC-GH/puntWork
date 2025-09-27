@@ -26,11 +26,49 @@ function run_job_import_batch_ajax()
 {
     PuntWorkLogger::logAjaxRequest('run_job_import_batch', $_POST);
 
-    // Check if required functions exist
+    // Ensure required functions are loaded for AJAX calls
     if (!function_exists('import_jobs_from_json')) {
-        error_log('[PUNTWORK] AJAX: import_jobs_from_json function not found');
-        AjaxErrorHandler::sendError('Import function not available');
-        return;
+        error_log('[PUNTWORK] AJAX: import_jobs_from_json function not found, attempting to load import files');
+
+        // Explicitly load required import files for AJAX calls
+        $import_files = [
+            __DIR__ . '/../batch/batch-size-management.php',
+            __DIR__ . '/../import/import-setup.php',
+            __DIR__ . '/../batch/batch-processing.php',
+            __DIR__ . '/../import/import-finalization.php',
+            __DIR__ . '/../import/import-batch.php'
+        ];
+
+        foreach ($import_files as $file) {
+            if (file_exists($file)) {
+                error_log('[PUNTWORK] AJAX: Attempting to load file: ' . basename($file));
+                try {
+                    $load_result = require_once $file;
+                    error_log('[PUNTWORK] AJAX: Loaded import file: ' . basename($file) . ', result: ' . ($load_result ? 'true' : 'false'));
+                } catch (\Exception $e) {
+                    error_log('[PUNTWORK] AJAX: Exception loading ' . basename($file) . ': ' . $e->getMessage());
+                } catch (\Error $e) {
+                    error_log('[PUNTWORK] AJAX: Fatal error loading ' . basename($file) . ': ' . $e->getMessage());
+                }
+            } else {
+                error_log('[PUNTWORK] AJAX: Import file not found: ' . $file);
+            }
+        }
+
+        // Check again after loading
+        if (!function_exists('import_jobs_from_json')) {
+            error_log('[PUNTWORK] AJAX: import_jobs_from_json function still not found after loading files');
+            // List all functions that start with 'import_' to see what's available
+            $all_functions = get_defined_functions();
+            $import_functions = array_filter($all_functions['user'], function($func) {
+                return strpos($func, 'import_') === 0;
+            });
+            error_log('[PUNTWORK] AJAX: Available import functions: ' . implode(', ', $import_functions));
+            AjaxErrorHandler::sendError('Import function not available - files could not be loaded');
+            return;
+        }
+
+        error_log('[PUNTWORK] AJAX: import_jobs_from_json function now available after loading files');
     }
 
     // Use comprehensive security validation with field validation

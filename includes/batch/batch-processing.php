@@ -10,8 +10,6 @@
 
 declare(strict_types=1);
 
-namespace Puntwork;
-
 // Prevent direct access
 if (! defined('ABSPATH')) {
     exit;
@@ -619,7 +617,7 @@ function process_batch_data(array $batch_guids, array $batch_items, array &$logs
 function handle_batch_duplicates(array $batch_guids, array $existing_by_guid, array &$logs, int &$duplicates_drafted, array &$post_ids_by_guid): void
 {
     // Use advanced deduplication if available and enabled
-    if (class_exists(__NAMESPACE__ . '\\JobDeduplicator') && apply_filters('puntwork_use_advanced_deduplication', true)) {
+    if (class_exists('Puntwork\\JobDeduplicator') && apply_filters('puntwork_use_advanced_deduplication', true)) {
         JobDeduplicator::handleDuplicatesAdvanced($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
     } else {
         // Fallback to original deduplication logic

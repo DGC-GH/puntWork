@@ -1,14 +1,11 @@
 <?php
-
 /**
- * Field mapping definitions
+ * Field mappings for job import
  *
  * @package    Puntwork
  * @subpackage Mappings
  * @since      1.0.0
  */
-
-namespace Puntwork;
 
 // Prevent direct access
 if (! defined('ABSPATH')) {

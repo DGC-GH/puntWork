@@ -8,8 +8,6 @@
  * @since      1.0.0
  */
 
-namespace Puntwork;
-
 // Prevent direct access
 if (! defined('ABSPATH')) {
     exit;

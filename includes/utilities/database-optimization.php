@@ -1,14 +1,11 @@
 <?php
-
 /**
  * Database optimization utilities
  *
  * @package    Puntwork
- * @subpackage Database
+ * @subpackage Utilities
  * @since      1.0.0
  */
-
-namespace Puntwork;
 
 // Prevent direct access
 if (! defined('ABSPATH')) {
