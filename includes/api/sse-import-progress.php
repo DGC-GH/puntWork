@@ -125,13 +125,51 @@ function handle_import_progress_sse($request)
                     if (is_object($value) || is_resource($value)) {
                         return null; // Replace non-serializable objects/resources with null
                     }
+                    if (is_float($value) && (is_infinite($value) || is_nan($value))) {
+                        return null; // Replace infinite or NaN floats with null
+                    }
+                    if (is_array($value)) {
+                        // Recursively sanitize arrays
+                        return array_map(function($subValue) {
+                            if (is_object($subValue) || is_resource($subValue)) {
+                                return null;
+                            }
+                            if (is_float($subValue) && (is_infinite($subValue) || is_nan($subValue))) {
+                                return null;
+                            }
+                            return $subValue;
+                        }, $value);
+                    }
                     return $value;
                 }, $current_status);
 
                 // Check for async import status if applicable
                 $async_status = check_async_import_status();
                 if ($async_status['active']) {
-                    $current_status = array_merge($current_status, $async_status['progress']);
+                    $async_progress = $async_status['progress'] ?? [];
+                    // Sanitize async progress data
+                    $async_progress = array_map(function($value) {
+                        if (is_object($value) || is_resource($value)) {
+                            return null;
+                        }
+                        if (is_float($value) && (is_infinite($value) || is_nan($value))) {
+                            return null;
+                        }
+                        if (is_array($value)) {
+                            return array_map(function($subValue) {
+                                if (is_object($subValue) || is_resource($subValue)) {
+                                    return null;
+                                }
+                                if (is_float($subValue) && (is_infinite($subValue) || is_nan($subValue))) {
+                                    return null;
+                                }
+                                return $subValue;
+                            }, $value);
+                        }
+                        return $value;
+                    }, $async_progress);
+                    
+                    $current_status = array_merge($current_status, $async_progress);
                     $current_status['async_active'] = true;
                     $current_status['async_status'] = $async_status['status'];
                 } else {
@@ -154,7 +192,11 @@ function handle_import_progress_sse($request)
                 // Add additional status info
                 $current_status['is_running'] = !$current_status['complete'];
                 $current_status['last_run'] = get_option('puntwork_last_import_run');
-                $current_status['next_scheduled'] = get_next_scheduled_time();
+                
+                // Get next scheduled time and ensure it's serializable
+                $next_scheduled = get_next_scheduled_time();
+                $current_status['next_scheduled'] = is_array($next_scheduled) ? 
+                    ($next_scheduled['formatted'] ?? null) : $next_scheduled;
 
                 // Only send update if status has changed or it's been more than 30 seconds
                 $current_time = time();
@@ -174,12 +216,18 @@ function handle_import_progress_sse($request)
                     if ($json_data === false) {
                         error_log('[PUNTWORK] SSE: JSON encoding failed: ' . json_last_error_msg());
                         error_log('[PUNTWORK] SSE: Event data that failed: ' . print_r($event_data, true));
-                        // Send error event instead
-                        echo "event: error\n";
-                        echo "data: " . json_encode([
+                        // Send error event instead with sanitized data
+                        $error_event_data = [
                             'timestamp' => $current_time,
-                            'error' => 'Failed to encode status data: ' . json_last_error_msg()
-                        ]) . "\n\n";
+                            'error' => 'Failed to encode status data: ' . json_last_error_msg(),
+                            'status_summary' => [
+                                'processed' => $current_status['processed'] ?? 0,
+                                'total' => $current_status['total'] ?? 0,
+                                'complete' => $current_status['complete'] ?? false
+                            ]
+                        ];
+                        echo "event: error\n";
+                        echo "data: " . json_encode($error_event_data) . "\n\n";
                         flush();
                         continue;
                     }
