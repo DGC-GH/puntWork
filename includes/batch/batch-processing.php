@@ -116,17 +116,19 @@ class JsonlIterator implements \Iterator
 /**
  * Process batch items and handle imports.
  *
- * @param array $setup Setup data from prepare_import_setup.
+ * @param  array $setup Setup data from prepare_import_setup.
  * @return array Processing results.
  */
 function process_batch_items_logic(array $setup): array
 {
     // Start tracing span for batch processing
-    $span = PuntworkTracing::startActiveSpan('process_batch_items_logic', [
+    $span = PuntworkTracing::startActiveSpan(
+        'process_batch_items_logic', [
         'batch.start_index' => $setup['start_index'] ?? 0,
         'batch.total' => $setup['total'] ?? 0,
         'batch.json_path' => $setup['json_path'] ?? ''
-    ]);
+        ]
+    );
 
     try {
         // Start performance monitoring
@@ -146,13 +148,13 @@ function process_batch_items_logic(array $setup): array
 
         $batch_start_time = microtime(true); // Record start time for this batch
 
-    // Validate and adjust batch size based on performance metrics
+        // Validate and adjust batch size based on performance metrics
         $batch_size_info = validate_and_adjust_batch_size($setup);
         $batch_size = $batch_size_info['batch_size'];
         $logs = $batch_size_info['logs'];
 
-    // Re-align start_index with new batch_size to avoid skips
-    // Removed to prevent stuck imports when batch_size changes
+        // Re-align start_index with new batch_size to avoid skips
+        // Removed to prevent stuck imports when batch_size changes
 
         $end_index = min($start_index + $batch_size, $total);
         $published = 0;
@@ -167,11 +169,13 @@ function process_batch_items_logic(array $setup): array
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Starting batch from $start_index to $end_index (size $batch_size)";
 
             // Checkpoint: Batch setup complete
-            checkpoint_performance($perf_id, 'batch_setup', [
-            'batch_size' => $batch_size,
-            'start_index' => $start_index,
-            'end_index' => $end_index
-            ]);
+            checkpoint_performance(
+                $perf_id, 'batch_setup', [
+                'batch_size' => $batch_size,
+                'start_index' => $start_index,
+                'end_index' => $end_index
+                ]
+            );
 
             // Load and prepare batch items from JSONL
             $batch_load_info = load_and_prepare_batch_items($json_path, $start_index, $batch_size, $batch_size_info['threshold'], $logs);
@@ -179,10 +183,12 @@ function process_batch_items_logic(array $setup): array
             $batch_guids = $batch_load_info['batch_guids'];
 
             // Checkpoint: Batch items loaded
-            checkpoint_performance($perf_id, 'batch_loaded', [
+            checkpoint_performance(
+                $perf_id, 'batch_loaded', [
                 'items_loaded' => count($batch_guids),
                 'memory_usage' => memory_get_usage(true)
-            ]);
+                ]
+            );
 
             if ($batch_load_info['cancelled']) {
                 update_option('job_import_progress', $end_index, false);
@@ -244,13 +250,15 @@ function process_batch_items_logic(array $setup): array
             $result = process_batch_data($batch_guids, $batch_items, $logs, $published, $updated, $skipped, $duplicates_drafted);
 
             // Checkpoint: Batch processing complete
-            checkpoint_performance($perf_id, 'batch_processed', [
-            'items_processed' => $result['processed_count'],
-            'published' => $published,
-            'updated' => $updated,
-            'skipped' => $skipped,
-            'duplicates_drafted' => $duplicates_drafted
-            ]);
+            checkpoint_performance(
+                $perf_id, 'batch_processed', [
+                'items_processed' => $result['processed_count'],
+                'published' => $published,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'duplicates_drafted' => $duplicates_drafted
+                ]
+            );
 
             unset($batch_items, $batch_guids);
 
@@ -373,7 +381,7 @@ function process_batch_items_logic(array $setup): array
 /**
  * Validate and adjust batch size based on performance metrics.
  *
- * @param array $setup Setup data.
+ * @param  array $setup Setup data.
  * @return array Adjusted setup with batch_size and logs.
  */
 function validate_and_adjust_batch_size(array $setup): array
@@ -425,8 +433,8 @@ function validate_and_adjust_batch_size(array $setup): array
 /**
  * Prepare batch processing variables.
  *
- * @param array $setup Original setup.
- * @param int $batch_size Adjusted batch size.
+ * @param  array $setup      Original setup.
+ * @param  int   $batch_size Adjusted batch size.
  * @return array Prepared variables.
  */
 function prepare_batch_processing(array $setup, int $batch_size): array
@@ -449,11 +457,11 @@ function prepare_batch_processing(array $setup, int $batch_size): array
 /**
  * Load and prepare batch items from JSONL.
  *
- * @param string $json_path Path to JSONL file.
- * @param int $start_index Start index.
- * @param int $batch_size Batch size.
- * @param int $threshold Memory threshold.
- * @param array &$logs Logs array.
+ * @param  string $json_path   Path to JSONL file.
+ * @param  int    $start_index Start index.
+ * @param  int    $batch_size  Batch size.
+ * @param  int    $threshold   Memory threshold.
+ * @param  array  &$logs       Logs array.
  * @return array Prepared batch data.
  */
 function load_and_prepare_batch_items(string $json_path, int $start_index, int $batch_size, float $threshold, array &$logs): array
@@ -520,13 +528,13 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
 /**
  * Process batch data including duplicates and item processing.
  *
- * @param array $batch_guids Array of GUIDs in batch.
- * @param array $batch_items Array of batch items.
- * @param array &$logs Reference to logs array.
- * @param int &$published Reference to published count.
- * @param int &$updated Reference to updated count.
- * @param int &$skipped Reference to skipped count.
- * @param int &$duplicates_drafted Reference to duplicates drafted count.
+ * @param  array $batch_guids         Array of GUIDs in batch.
+ * @param  array $batch_items         Array of batch items.
+ * @param  array &$logs               Reference to logs array.
+ * @param  int   &$published          Reference to published count.
+ * @param  int   &$updated            Reference to updated count.
+ * @param  int   &$skipped            Reference to skipped count.
+ * @param  int   &$duplicates_drafted Reference to duplicates drafted count.
  * @return array Processing result.
  */
 function process_batch_data(array $batch_guids, array $batch_items, array &$logs, int &$published, int &$updated, int &$skipped, int &$duplicates_drafted): array
@@ -612,10 +620,12 @@ function get_cached_last_updates(array $post_ids, array $post_id_chunks): array
             continue;
         }
         $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
-        $chunk_last = $wpdb->get_results($wpdb->prepare(
-            "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_last_import_update' AND post_id IN ($placeholders)",
-            $chunk
-        ), OBJECT_K);
+        $chunk_last = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_last_import_update' AND post_id IN ($placeholders)",
+                $chunk
+            ), OBJECT_K
+        );
         $last_updates += (array)$chunk_last;
     }
 
@@ -644,10 +654,12 @@ function get_cached_import_hashes(array $post_ids, array $post_id_chunks): array
             continue;
         }
         $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
-        $chunk_hashes = $wpdb->get_results($wpdb->prepare(
-            "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
-            $chunk
-        ), OBJECT_K);
+        $chunk_hashes = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
+                $chunk
+            ), OBJECT_K
+        );
         foreach ($chunk_hashes as $id => $obj) {
             $hashes_by_post[$id] = $obj->meta_value;
         }
@@ -675,9 +687,9 @@ function process_batch_items_with_metadata(array $batch_guids, array $batch_item
 /**
  * Load a batch of items from JSONL file with improved performance.
  *
- * @param string $json_path Path to JSONL file.
- * @param int $start_index Starting index.
- * @param int $batch_size Batch size.
+ * @param  string $json_path   Path to JSONL file.
+ * @param  int    $start_index Starting index.
+ * @param  int    $batch_size  Batch size.
  * @return array Array of JSON items.
  */
 function load_json_batch($json_path, $start_index, $batch_size)
@@ -740,11 +752,13 @@ function process_batch_enhanced(array $batch_guids, array $batch_items, array &$
 
         $processing_time = microtime(true) - $start_time;
 
-        checkpoint_performance($monitor_id, 'batch_completed', [
+        checkpoint_performance(
+            $monitor_id, 'batch_completed', [
             'processed_count' => $processed_count,
             'processing_time' => $processing_time,
             'memory_peak' => memory_get_peak_usage(true)
-        ]);
+            ]
+        );
 
         end_performance_monitoring($monitor_id);
 
@@ -851,10 +865,12 @@ function get_cached_last_updates_enhanced(array $post_ids, array $post_id_chunks
             continue;
         }
         $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
-        $chunk_last = $wpdb->get_results($wpdb->prepare(
-            "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_last_import_update' AND post_id IN ($placeholders)",
-            $chunk
-        ), OBJECT_K);
+        $chunk_last = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_last_import_update' AND post_id IN ($placeholders)",
+                $chunk
+            ), OBJECT_K
+        );
         $last_updates += (array)$chunk_last;
     }
 
@@ -886,10 +902,12 @@ function get_cached_import_hashes_enhanced(array $post_ids, array $post_id_chunk
             continue;
         }
         $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
-        $chunk_hashes = $wpdb->get_results($wpdb->prepare(
-            "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
-            $chunk
-        ), OBJECT_K);
+        $chunk_hashes = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
+                $chunk
+            ), OBJECT_K
+        );
         foreach ($chunk_hashes as $id => $obj) {
             $hashes_by_post[$id] = $obj->meta_value;
         }
