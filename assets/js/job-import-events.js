@@ -64,9 +64,16 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 JobImportEvents.handleResetImport();
             });
             $('#test-single-job').on('click', function(e) {
-                console.log('[PUNTWORK] Test single job button clicked!');
+                console.log('[PUNTWORK] Test single job button clicked via event binding!');
                 JobImportEvents.handleTestSingleJob();
             });
+
+            console.log('[PUNTWORK] Test single job button binding check:', $('#test-single-job').length);
+            if ($('#test-single-job').length > 0) {
+                console.log('[PUNTWORK] Test single job button found and bound');
+            } else {
+                console.log('[PUNTWORK] Test single job button NOT found!');
+            }
 
             // Database optimization events
             $('#optimize-database').on('click', function(e) {
@@ -159,20 +166,27 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
          * Handle test single job button click
          */
         handleTestSingleJob: function() {
-            console.log('[PUNTWORK] Test Single Job clicked');
+            console.log('[PUNTWORK] Test Single Job clicked - starting handler');
+            console.log('[PUNTWORK] Current button state:', $('#test-single-job').prop('disabled'));
 
             if (confirm('This will create a test job with title "TEST" to verify the import functionality works. Continue?')) {
+                console.log('[PUNTWORK] User confirmed test single job');
                 $('#test-single-job').prop('disabled', true).text('Testing...');
 
                 // Show progress UI
                 JobImportUI.showImportUI();
                 $('#status-message').text('Testing single job import...');
 
+                console.log('[PUNTWORK] About to call JobImportAPI.testSingleJob()');
+                console.log('[PUNTWORK] JobImportAPI available:', typeof JobImportAPI);
+                console.log('[PUNTWORK] testSingleJob method exists:', typeof JobImportAPI.testSingleJob);
+
                 // Call the test single job API
                 JobImportAPI.testSingleJob().then(function(response) {
-                    console.log('[PUNTWORK] Test single job response:', response);
+                    console.log('[PUNTWORK] Test single job response received:', response);
 
                     if (response.success) {
+                        console.log('[PUNTWORK] Test successful, updating UI');
                         $('#status-message').text('Test job created successfully!');
                         JobImportUI.appendLogs(['✅ Test job created with ID: ' + (response.data.post_id || 'Unknown')]);
                         JobImportUI.appendLogs(['✅ Job title: ' + (response.data.post_title || 'Unknown')]);
@@ -181,17 +195,23 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             JobImportUI.appendLogs(response.data.logs);
                         }
                     } else {
+                        console.log('[PUNTWORK] Test failed:', response.data);
                         $('#status-message').text('Test job failed: ' + (response.data.error || 'Unknown error'));
                         JobImportUI.appendLogs(['❌ Test job failed: ' + (response.data.error || 'Unknown error')]);
                     }
 
                     $('#test-single-job').prop('disabled', false).text('Test Single Job');
+                    console.log('[PUNTWORK] Test single job completed, button re-enabled');
                 }).catch(function(xhr, status, error) {
-                    console.log('[PUNTWORK] Test single job error:', error);
+                    console.log('[PUNTWORK] Test single job error caught:', error);
+                    console.log('[PUNTWORK] XHR object:', xhr);
+                    console.log('[PUNTWORK] Status:', status);
                     $('#status-message').text('Test job error: ' + error);
                     JobImportUI.appendLogs(['❌ Test job error: ' + error]);
                     $('#test-single-job').prop('disabled', false).text('Test Single Job');
                 });
+            } else {
+                console.log('[PUNTWORK] User cancelled test single job');
             }
         },
 

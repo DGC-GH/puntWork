@@ -103,18 +103,24 @@ function render_javascript_init()
 
             // Check if buttons exist
             console.log('[PUNTWORK] Inline script: cleanup-duplicates button exists:', $('#cleanup-duplicates').length);
+            console.log('[PUNTWORK] Inline script: test-single-job button exists:', $('#test-single-job').length);
 
             // Add a simple test function to global scope
             window.testButtons = function() {
                 console.log('[PUNTWORK] Testing buttons...');
                 console.log('Cleanup button found:', $('#cleanup-duplicates').length);
+                console.log('Test single job button found:', $('#test-single-job').length);
 
                 if ($('#cleanup-duplicates').length > 0) {
                     console.log('Cleanup button HTML:', $('#cleanup-duplicates')[0].outerHTML);
                 }
+                if ($('#test-single-job').length > 0) {
+                    console.log('Test single job button HTML:', $('#test-single-job')[0].outerHTML);
+                }
 
                 // Test click events
                 $('#cleanup-duplicates').trigger('click');
+                $('#test-single-job').trigger('click');
             };
 
             console.log('[PUNTWORK] Run testButtons() in console to test button functionality');
