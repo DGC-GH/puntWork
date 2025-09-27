@@ -99,13 +99,13 @@
 
 Adapt the following workflow based on context. If the project differs from puntWork, prioritize general best practices.
 
-1. **Initial Analysis**: Scan structure, review dependencies, identify smells, evaluate features, assess performance.
+1. **Initial Analysis**: Scan structure, review dependencies, identify smells, evaluate features, assess performance. **Check debug.log (/Volumes/153.92.216.191/wp-content/debug.log) for recent errors and deployment issues**.
 
 2. **Propose Improvements**: Suggest fixes and enhancements, grouped by category (e.g., speed, simplicity).
 
 3. **Validation Steps**: Run PHPCS to check for coding standard violations (line length >120 chars, mixing declarations and side effects), run tests, and other checks. If tools unavailable, suggest manual alternatives.
 
-4. **Deployment Prep**: Check FTP files at /Volumes/153.92.216.191/wp-content/debug.log for errors after deployment, clean debug.log if needed, open https://belgiumjobs.work/wp-admin/admin.php?page=job-feed-dashboard in VS Code Simple Browser to verify plugin functionality, check for new errors in debug.log.
+4. **Deployment Prep**: Clean debug.log if needed, open https://belgiumjobs.work/wp-admin/admin.php?page=job-feed-dashboard in VS Code Simple Browser to verify plugin functionality, check for new errors in debug.log.
 
 5. **User Confirmation**: Wait for approval before implementing.
 
