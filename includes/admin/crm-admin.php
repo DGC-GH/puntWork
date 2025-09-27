@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
 /**
  * CRM Admin Class
  */
-class Puntwork_CRM_Admin
+class PuntworkCrmAdmin
 {
     /**
      * CRM Manager instance
@@ -125,7 +125,9 @@ class Puntwork_CRM_Admin
                         <p><?php _e('Failed Syncs', 'puntwork'); ?></p>
                     </div>
                     <div class="stat-card">
-                        <h3><?php echo $statistics['last_sync'] ? esc_html(human_time_diff(strtotime($statistics['last_sync']))) . ' ago' : __('Never', 'puntwork'); ?></h3>
+                        <h3><?php echo $statistics['last_sync'] ?
+                            esc_html(human_time_diff(strtotime($statistics['last_sync']))) . ' ago' :
+                            __('Never', 'puntwork'); ?></h3>
                         <p><?php _e('Last Sync', 'puntwork'); ?></p>
                     </div>
                 </div>
@@ -156,14 +158,20 @@ class Puntwork_CRM_Admin
                                     <label class="platform-toggle">
                                         <input type="checkbox"
                                                class="platform-enabled"
-                                               <?php checked(isset($platform_configs[$platform_id]['enabled']) && $platform_configs[$platform_id]['enabled']); ?>>
+                                               <?php checked(isset($platform_configs[$platform_id]['enabled']) &&
+                                                             $platform_configs[$platform_id]['enabled']); ?>>
                                         <?php _e('Enable', 'puntwork'); ?>
                                     </label>
                                 </div>
                             </div>
 
-                            <div class="platform-config" style="display: <?php echo (isset($platform_configs[$platform_id]['enabled']) && $platform_configs[$platform_id]['enabled']) ? 'block' : 'none'; ?>;">
-                                <?php $this->renderPlatformConfig($platform_id, $platform_configs[$platform_id] ?? []); ?>
+                            <div class="platform-config" style="display: <?php
+                                echo (isset($platform_configs[$platform_id]['enabled']) &&
+                                      $platform_configs[$platform_id]['enabled']) ? 'block' : 'none'; ?>;">
+                                <?php $this->renderPlatformConfig(
+                                    $platform_id,
+                                    $platform_configs[$platform_id] ?? []
+                                ); ?>
 
                                 <div class="platform-actions">
                                     <button class="button button-secondary test-platform">
@@ -194,7 +202,8 @@ class Puntwork_CRM_Admin
                                     <label>
                                         <input type="checkbox" name="auto_sync_applications" value="1"
                                                <?php checked(get_option('puntwork_crm_auto_sync_applications', false)); ?>>
-                                        <?php _e('Automatically sync new job applications to configured CRM platforms', 'puntwork'); ?>
+                                        <?php _e('Automatically sync new job applications to configured CRM ' .
+                                                  'platforms', 'puntwork'); ?>
                                     </label>
                                 </td>
                             </tr>
@@ -619,4 +628,4 @@ class Puntwork_CRM_Admin
 }
 
 // Initialize admin interface
-new Puntwork_CRM_Admin();
+new PuntworkCrmAdmin();
