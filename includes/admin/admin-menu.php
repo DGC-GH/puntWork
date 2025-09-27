@@ -114,11 +114,13 @@ add_action('admin_menu', function () {
         add_submenu_page(
             'puntwork-dashboard',
             __('Setup Wizard', 'puntwork'),
-            __('🚀 Setup Wizard', 'puntwork'),
+            __('Setup Wizard', 'puntwork'),
             'manage_options',
             'puntwork-onboarding',
             function () {
-                wp_redirect(admin_url('admin.php?page=puntwork-onboarding'));
+                // Reset onboarding and redirect to dashboard with onboarding modal
+                delete_option('puntwork_onboarding_completed');
+                wp_redirect(admin_url('admin.php?page=puntwork-dashboard&show_onboarding=1'));
                 exit;
             }
         );
