@@ -399,6 +399,13 @@ function render_onboarding_modal()
                 <div class="step-indicator" data-step="4" aria-label="<?php esc_attr_e('Setup complete step', 'puntwork'); ?>"></div>
             </div>
 
+            <!-- Step Content -->
+            <div class="onboarding-content">
+                <div id="onboarding-step-content" class="step-content">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+            </div>
+
             <!-- Navigation Buttons -->
             <div class="onboarding-footer">
                 <!-- Progress Bar -->
