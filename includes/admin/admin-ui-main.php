@@ -187,6 +187,9 @@ function render_main_import_ui(): void
                         <button id="reset-import" class="puntwork-btn puntwork-btn--outline">
                             <i class="fas fa-undo puntwork-btn__icon"></i>Reset Import
                         </button>
+                        <button id="test-single-job" class="puntwork-btn puntwork-btn--outline" style="background: linear-gradient(135deg, #ff9500, #ff9f0a); color: white; border: 1px solid #ff9500;">
+                            <i class="fas fa-flask puntwork-btn__icon"></i>Test Single Job
+                        </button>
                         <span id="import-status" style="font-size: var(--font-size-sm); color: var(--color-gray-600);"></span>
                     </div>
                 </div>
