@@ -104,6 +104,9 @@ Adapt the following workflow based on context. If the project differs from puntW
 2. **Propose Improvements**: Suggest fixes and enhancements, grouped by category (e.g., speed, simplicity).
 
 3. **Validation Steps**: Run PHPCS to check for coding standard violations (line length >120 chars, mixing declarations and side effects), run tests, and other checks. If tools unavailable, suggest manual alternatives.
+   - `./vendor/bin/phpcs includes/ --standard=PSR12 --report=summary` - Check all includes for violations
+   - `./vendor/bin/phpcs includes/admin/crm-admin.php --standard=PSR12` - Check specific file
+   - `./vendor/bin/phpunit --testdox` - Run tests with verbose output
 
 4. **Deployment Prep**: Clean debug.log if needed, open https://belgiumjobs.work/wp-admin/admin.php?page=job-feed-dashboard in VS Code Simple Browser to verify plugin functionality, check for new errors in debug.log.
 
