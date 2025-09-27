@@ -101,6 +101,7 @@ if (!function_exists('import_jobs_from_json')) {
      */
     function import_jobs_from_json(bool $is_batch = false, int $batch_start = 0): array
     {
+        error_log('=== PUNTWORK IMPORT DEBUG: import_jobs_from_json STARTED ===');
         error_log('[PUNTWORK] import_jobs_from_json called with is_batch=' . ($is_batch ? 'true' : 'false') . ', batch_start=' . $batch_start);
         try {
             error_log('[PUNTWORK] import_jobs_from_json: Starting import process');
@@ -127,6 +128,7 @@ if (!function_exists('import_jobs_from_json')) {
             error_log('[PUNTWORK] import_jobs_from_json: finalize_batch_import completed');
 
             error_log('[PUNTWORK] import_jobs_from_json: Import process completed successfully');
+            error_log('=== PUNTWORK IMPORT DEBUG: import_jobs_from_json COMPLETED ===');
             return $final_result;
         } catch (\Exception $e) {
             error_log('[PUNTWORK] import_jobs_from_json: Exception caught: ' . $e->getMessage());

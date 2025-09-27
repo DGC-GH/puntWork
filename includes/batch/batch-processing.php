@@ -150,6 +150,7 @@ class JsonlIterator implements \Iterator
  */
 function process_batch_items_logic(array $setup): array
 {
+    error_log('=== PUNTWORK BATCH DEBUG: process_batch_items_logic STARTED ===');
     error_log('[PUNTWORK] process_batch_items_logic called with setup: ' . json_encode([
         'start_index' => $setup['start_index'] ?? 'not set',
         'total' => $setup['total'] ?? 'not set',
