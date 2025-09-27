@@ -35,8 +35,8 @@ function job_import_cleanup_duplicates_ajax()
     global $wpdb;
 
     try {
-        // Get batch parameters with validation
-        $batch_size = SecurityUtils::validateField($_POST, 'batch_size', 'integer', ['min' => 1, 'max' => 500, 'default' => 50]);
+        // Get batch parameters with validation - start with smaller batch size for dynamic adjustment
+        $batch_size = SecurityUtils::validateField($_POST, 'batch_size', 'integer', ['min' => 1, 'max' => 500, 'default' => 10]);
         $offset = SecurityUtils::validateField($_POST, 'offset', 'integer', ['min' => 0, 'default' => 0]);
         $is_continue = SecurityUtils::validateField($_POST, 'is_continue', 'boolean', ['default' => false]);
 
@@ -54,6 +54,8 @@ function job_import_cleanup_duplicates_ajax()
                 'current_offset' => 0,
                 'complete' => false,
                 'start_time' => microtime(true),
+                'batch_size' => 10, // Start with 10
+                'last_batch_time' => 0,
                 'logs' => []
             ], false);
         }
@@ -64,8 +66,15 @@ function job_import_cleanup_duplicates_ajax()
             'current_offset' => 0,
             'complete' => false,
             'start_time' => microtime(true),
+            'batch_size' => 10,
+            'last_batch_time' => 0,
             'logs' => []
         ]);
+
+        // Use dynamic batch size from progress if continuing
+        if ($is_continue && isset($progress['batch_size'])) {
+            $batch_size = $progress['batch_size'];
+        }
 
         // Set lock for this batch
         $lock_start = microtime(true);
@@ -81,6 +90,18 @@ function job_import_cleanup_duplicates_ajax()
 
         $logs = $progress['logs'];
         $deleted_count = 0;
+        $batch_start_time = microtime(true);
+
+        // Get total count for progress calculation (only on first batch)
+        if (!$is_continue) {
+            $total_jobs = $wpdb->get_var("
+                SELECT COUNT(*) FROM {$wpdb->posts} p
+                WHERE p.post_type = 'job'
+                AND p.post_status IN ('draft', 'trash')
+            ");
+            $progress['total_jobs'] = $total_jobs;
+            update_option('job_import_cleanup_progress', $progress, false);
+        }
 
         // Get total count for progress calculation (only on first batch)
         if (!$is_continue) {
@@ -157,6 +178,24 @@ function job_import_cleanup_duplicates_ajax()
         $progress['total_deleted'] += $deleted_count;
         $progress['current_offset'] = $offset + $batch_size;
         $progress['logs'] = $logs;
+
+        // Calculate batch processing time and adjust batch size dynamically
+        $batch_end_time = microtime(true);
+        $batch_processing_time = $batch_end_time - $batch_start_time;
+        $progress['last_batch_time'] = $batch_processing_time;
+
+        // Dynamic batch size adjustment (only for continuation batches)
+        if ($is_continue) {
+            $new_batch_size = job_import_adjust_cleanup_batch_size($batch_size, $batch_processing_time, count($batch_jobs));
+            $progress['batch_size'] = $new_batch_size;
+            PuntWorkLogger::info('Batch size adjusted', PuntWorkLogger::CONTEXT_PURGE, [
+                'old_batch_size' => $batch_size,
+                'new_batch_size' => $new_batch_size,
+                'processing_time' => $batch_processing_time,
+                'items_processed' => count($batch_jobs)
+            ]);
+        }
+
         update_option('job_import_cleanup_progress', $progress, false);
 
         delete_transient('job_import_cleanup_lock');
@@ -171,7 +210,7 @@ function job_import_cleanup_duplicates_ajax()
             'message' => $message,
             'complete' => false,
             'next_offset' => $progress['current_offset'],
-            'batch_size' => $batch_size,
+            'batch_size' => $progress['batch_size'] ?? $batch_size, // Use adjusted batch size for next batch
             'total_processed' => $progress['total_processed'],
             'total_deleted' => $progress['total_deleted'],
             'progress_percentage' => $progress_percentage,
@@ -181,7 +220,7 @@ function job_import_cleanup_duplicates_ajax()
             'message' => $message,
             'complete' => false,
             'next_offset' => $progress['current_offset'],
-            'batch_size' => $batch_size,
+            'batch_size' => $progress['batch_size'] ?? $batch_size, // Use adjusted batch size for next batch
             'total_processed' => $progress['total_processed'],
             'total_deleted' => $progress['total_deleted'],
             'progress_percentage' => $progress_percentage,
@@ -445,4 +484,52 @@ function job_import_cleanup_continue_ajax()
         PuntWorkLogger::error('Cleanup continue failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_PURGE);
         AjaxErrorHandler::sendError('Cleanup continue failed: ' . $e->getMessage());
     }
+}
+
+/**
+ * Adjust batch size dynamically based on processing performance
+ * @param int $current_batch_size Current batch size
+ * @param float $processing_time Time taken to process the batch
+ * @param int $items_processed Number of items processed in this batch
+ * @return int New batch size
+ */
+function job_import_adjust_cleanup_batch_size($current_batch_size, $processing_time, $items_processed) {
+    $target_time = 8.0; // Target processing time per batch (seconds)
+    $min_batch_size = 5;  // Minimum batch size
+    $max_batch_size = 100; // Maximum batch size
+
+    // If no items were processed, keep current batch size
+    if ($items_processed == 0) {
+        return $current_batch_size;
+    }
+
+    // Calculate processing time per item
+    $time_per_item = $processing_time / $items_processed;
+
+    // If processing time is too long, reduce batch size
+    if ($processing_time > $target_time * 1.2) { // 20% over target
+        $new_batch_size = max($min_batch_size, (int)($current_batch_size * 0.8)); // Reduce by 20%
+        PuntWorkLogger::debug('Reducing batch size due to slow processing', PuntWorkLogger::CONTEXT_PURGE, [
+            'old_size' => $current_batch_size,
+            'new_size' => $new_batch_size,
+            'processing_time' => $processing_time,
+            'target_time' => $target_time
+        ]);
+        return $new_batch_size;
+    }
+
+    // If processing time is comfortably under target, increase batch size
+    if ($processing_time < $target_time * 0.6) { // Less than 60% of target
+        $new_batch_size = min($max_batch_size, (int)($current_batch_size * 1.2)); // Increase by 20%
+        PuntWorkLogger::debug('Increasing batch size due to fast processing', PuntWorkLogger::CONTEXT_PURGE, [
+            'old_size' => $current_batch_size,
+            'new_size' => $new_batch_size,
+            'processing_time' => $processing_time,
+            'target_time' => $target_time
+        ]);
+        return $new_batch_size;
+    }
+
+    // Keep current batch size if processing time is within acceptable range
+    return $current_batch_size;
 }

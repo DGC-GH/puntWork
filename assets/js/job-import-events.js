@@ -236,7 +236,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 JobImportUI.clearCleanupProgress();
 
                 console.log('[PUNTWORK] Calling cleanup API');
-                JobImportEvents.processCleanupBatch(0, 50); // Start with first batch
+                JobImportEvents.processCleanupBatch(0, 10); // Start with first batch at size 10
             } else {
                 console.log('[PUNTWORK] User cancelled cleanup');
             }
@@ -270,7 +270,10 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         JobImportUI.updateCleanupProgress(response.data);
                         $('#cleanup-status').text('Progress: ' + response.data.progress_percentage + '% (' +
                             response.data.total_processed + '/' + response.data.total_jobs + ' jobs processed)');
-                        JobImportEvents.processCleanupBatch(response.data.next_offset, batchSize);
+                        
+                        // Use the batch size returned by the server (which may be adjusted dynamically)
+                        var nextBatchSize = response.data.batch_size || batchSize;
+                        JobImportEvents.processCleanupBatch(response.data.next_offset, nextBatchSize);
                     }
                 } else {
                     console.log('[PUNTWORK] Cleanup response failed:', response.data);
