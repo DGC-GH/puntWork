@@ -522,27 +522,30 @@ function enqueue_job_import_scripts()
             'nonce' => wp_create_nonce('puntwork_accessibility_nonce')
         ]);
 
-        // Enqueue queue management styles and scripts
-        wp_enqueue_style(
-            'puntwork-queue',
-            PUNTWORK_URL . 'assets/css/queue-interface.css',
-            [],
-            PUNTWORK_VERSION
-        );
+        // Enqueue queue management styles and scripts only on relevant pages
+        $queue_pages = ['puntwork-dashboard', 'puntwork-monitoring', 'job-feed-dashboard'];
+        if (in_array($current_page, $queue_pages)) {
+            wp_enqueue_style(
+                'puntwork-queue',
+                PUNTWORK_URL . 'assets/css/queue-interface.css',
+                [],
+                PUNTWORK_VERSION
+            );
 
-        wp_enqueue_script(
-            'puntwork-queue',
-            PUNTWORK_URL . 'assets/js/queue-interface.js',
-            ['jquery'],
-            PUNTWORK_VERSION,
-            true
-        );
+            wp_enqueue_script(
+                'puntwork-queue',
+                PUNTWORK_URL . 'assets/js/queue-interface.js',
+                ['jquery'],
+                PUNTWORK_VERSION,
+                true
+            );
 
-        // Localize queue script
-        wp_localize_script('puntwork-queue', 'puntworkQueue', [
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('puntwork_queue_nonce')
-        ]);
+            // Localize queue script
+            wp_localize_script('puntwork-queue', 'puntworkQueue', [
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('puntwork_queue_nonce')
+            ]);
+        }
 
         // Localize script with data
         wp_localize_script('job-import-admin-js', 'jobImportData', [
