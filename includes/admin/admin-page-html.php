@@ -182,8 +182,8 @@ function puntwork_dashboard_page()
             <!-- Feeds Card -->
             <div style="background-color: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer;" onclick="window.location.href='admin.php?page=job-feed-dashboard'">
                 <div style="display: flex; align-items: center; margin-bottom: 16px;">
-                    <div style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #007aff, #5856d6); display: flex; align-items: center; justify-content: center; margin-right: 16px;">
-                        <span style="font-size: 24px; color: white;">📡</span>
+                    <div style="width: 80px; height: 80px; border-radius: 20px; background: linear-gradient(135deg, #007aff 0%, #5856d6 100%); display: flex; align-items: center; justify-content: center; margin-right: 16px; box-shadow: 0 8px 24px rgba(0, 122, 255, 0.3);">
+                        <span style="font-size: 32px; color: white;">📡</span>
                     </div>
                     <div>
                         <h3 style="font-size: 20px; font-weight: 600; margin: 0;"><?php _e('Job Feeds', 'puntwork'); ?></h3>
@@ -199,8 +199,8 @@ function puntwork_dashboard_page()
             <!-- Jobs Card -->
             <div style="background-color: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer;" onclick="window.location.href='admin.php?page=jobs-dashboard'">
                 <div style="display: flex; align-items: center; margin-bottom: 16px;">
-                    <div style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #34c759, #30d158); display: flex; align-items: center; justify-content: center; margin-right: 16px;">
-                        <span style="font-size: 24px; color: white;">💼</span>
+                    <div style="width: 80px; height: 80px; border-radius: 20px; background: linear-gradient(135deg, #34c759, #30d158); display: flex; align-items: center; justify-content: center; margin-right: 16px; box-shadow: 0 8px 24px rgba(52, 199, 89, 0.3);">
+                        <span style="font-size: 32px; color: white;">💼</span>
                     </div>
                     <div>
                         <h3 style="font-size: 20px; font-weight: 600; margin: 0;"><?php _e('Jobs', 'puntwork'); ?></h3>
@@ -216,8 +216,8 @@ function puntwork_dashboard_page()
             <!-- Feed Config Card -->
             <div style="background-color: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer;" onclick="window.location.href='admin.php?page=puntwork-feed-config'">
                 <div style="display: flex; align-items: center; margin-bottom: 16px;">
-                    <div style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #ff9500, #ff9f0a); display: flex; align-items: center; justify-content: center; margin-right: 16px;">
-                        <span style="font-size: 24px; color: white;">⚙️</span>
+                    <div style="width: 80px; height: 80px; border-radius: 20px; background: linear-gradient(135deg, #ff9500, #ff9f0a); display: flex; align-items: center; justify-content: center; margin-right: 16px; box-shadow: 0 8px 24px rgba(255, 149, 0, 0.3);">
+                        <span style="font-size: 32px; color: white;">⚙️</span>
                     </div>
                     <div>
                         <h3 style="font-size: 20px; font-weight: 600; margin: 0;"><?php _e('Feed Config', 'puntwork'); ?></h3>
@@ -233,8 +233,8 @@ function puntwork_dashboard_page()
             <!-- Scheduling Card -->
             <div style="background-color: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer;" onclick="window.location.href='admin.php?page=job-feed-dashboard'">
                 <div style="display: flex; align-items: center; margin-bottom: 16px;">
-                    <div style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #af52de, #c25ae7); display: flex; align-items: center; justify-content: center; margin-right: 16px;">
-                        <span style="font-size: 24px; color: white;">⏰</span>
+                    <div style="width: 80px; height: 80px; border-radius: 20px; background: linear-gradient(135deg, #af52de, #c25ae7); display: flex; align-items: center; justify-content: center; margin-right: 16px; box-shadow: 0 8px 24px rgba(175, 82, 222, 0.3);">
+                        <span style="font-size: 32px; color: white;">⏰</span>
                     </div>
                     <div>
                         <h3 style="font-size: 20px; font-weight: 600; margin: 0;"><?php _e('Scheduling', 'puntwork'); ?></h3>
