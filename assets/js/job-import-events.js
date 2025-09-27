@@ -147,12 +147,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
          * Handle reset import button click
          */
         handleResetImport: function() {
-            if (confirm('This will completely reset the import system and clear all progress. Any ongoing import will be stopped. Continue?')) {
-                console.log('[PUNTWORK] User confirmed reset');
-                JobImportLogic.handleResetImport();
-            } else {
-                console.log('[PUNTWORK] User cancelled reset');
-            }
+            console.log('[PUNTWORK] Reset Import clicked');
+            JobImportLogic.handleResetImport();
         },
 
         /**
