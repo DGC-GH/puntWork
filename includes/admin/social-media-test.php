@@ -66,7 +66,7 @@ function test_social_media_integration()
         echo "<p>Manual posting test:</p>";
         echo "<form method='post'>";
         echo "<textarea name='test_content' rows='3' cols='50' placeholder='Enter test content...'>🚀 Testing puntWork social media integration!</textarea><br><br>";
-        echo "<input type='submit' name='test_post' value='Test Post' class='button button-primary'>";
+        echo "<input type='submit' name='test_post' value='Test Post' class='puntwork-btn puntwork-btn--primary'>";
         echo "</form>";
 
         if (isset($_POST['test_post']) && !empty($_POST['test_content'])) {

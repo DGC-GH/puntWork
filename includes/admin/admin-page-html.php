@@ -387,10 +387,10 @@ function render_onboarding_modal()
                     </div>
                 </div>
                 <div class="footer-actions">
-                    <button type="button" id="onboarding-prev" class="onboarding-btn secondary prev-btn" style="display: none;" aria-label="<?php esc_attr_e('Previous step', 'puntwork'); ?>">
+                    <button type="button" id="onboarding-prev" class="puntwork-btn puntwork-btn--secondary puntwork-btn--large prev-btn" style="display: none;" aria-label="<?php esc_attr_e('Previous step', 'puntwork'); ?>">
                         <i class="fas fa-arrow-left"></i> <?php _e('Previous', 'puntwork'); ?>
                     </button>
-                    <button type="button" id="onboarding-next" class="onboarding-btn primary next-btn" aria-label="<?php esc_attr_e('Next step', 'puntwork'); ?>">
+                    <button type="button" id="onboarding-next" class="puntwork-btn puntwork-btn--primary puntwork-btn--large next-btn" aria-label="<?php esc_attr_e('Next step', 'puntwork'); ?>">
                         <?php _e('Next', 'puntwork'); ?> <i class="fas fa-arrow-right"></i>
                     </button>
                 </div>
@@ -416,7 +416,7 @@ function render_import_history_ui()
                     <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 4px 0; color: #1d1d1f; letter-spacing: -0.02em;"><?php _e('Import History', 'puntwork'); ?></h2>
                     <p style="font-size: 15px; color: #86868b; margin: 0; font-weight: 400;"><?php _e('View all import runs including manual, scheduled, and API-triggered imports', 'puntwork'); ?></p>
                 </div>
-                <button id="refresh-history-main" class="secondary-button" style="border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: 500; background-color: #f2f2f7; border: 1px solid #d1d1d6; color: #424245; transition: all 0.2s ease; cursor: pointer;" aria-label="<?php esc_attr_e('Refresh import history', 'puntwork'); ?>">
+                <button id="refresh-history-main" class="puntwork-btn puntwork-btn--secondary" aria-label="<?php esc_attr_e('Refresh import history', 'puntwork'); ?>">
                     <i class="fas fa-sync-alt" style="margin-right: 6px;"></i><?php _e('Refresh', 'puntwork'); ?>
                 </button>
             </div>

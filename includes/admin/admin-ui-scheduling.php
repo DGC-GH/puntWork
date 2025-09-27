@@ -131,13 +131,13 @@ function render_scheduling_ui()
 
             <!-- Action Buttons -->
             <div style="display: flex; gap: 16px; justify-content: flex-end; padding-top: 24px; border-top: 1px solid #e5e5e7;">
-                <button id="save-schedule" class="primary-button" style="border-radius: 12px; padding: 14px 28px; font-size: 16px; font-weight: 600; background-color: #007aff; border: none; color: #ffffff; transition: all 0.2s ease; cursor: pointer; box-shadow: 0 2px 4px rgba(0,122,255,0.2);" aria-label="<?php esc_attr_e('Save schedule settings', 'puntwork'); ?>">
+                <button id="save-schedule" class="puntwork-btn puntwork-btn--primary" aria-label="<?php esc_attr_e('Save schedule settings', 'puntwork'); ?>">
                     <?php _e('Save Settings', 'puntwork'); ?>
                 </button>
-                <button id="test-schedule" class="secondary-button" style="border-radius: 12px; padding: 14px 28px; font-size: 16px; font-weight: 600; background-color: #f2f2f7; border: 1px solid #d1d1d6; color: #007aff; transition: all 0.2s ease; cursor: pointer;" aria-label="<?php esc_attr_e('Test schedule configuration', 'puntwork'); ?>">
+                <button id="test-schedule" class="puntwork-btn puntwork-btn--secondary" aria-label="<?php esc_attr_e('Test schedule configuration', 'puntwork'); ?>">
                     <?php _e('Test Schedule', 'puntwork'); ?>
                 </button>
-                <button id="run-now" class="success-button" style="border-radius: 12px; padding: 14px 28px; font-size: 16px; font-weight: 600; background-color: #34c759; border: none; color: #ffffff; transition: all 0.2s ease; cursor: pointer; box-shadow: 0 2px 4px rgba(52,199,89,0.2);" aria-label="<?php esc_attr_e('Run import immediately', 'puntwork'); ?>">
+                <button id="run-now" class="puntwork-btn puntwork-btn--success" aria-label="<?php esc_attr_e('Run import immediately', 'puntwork'); ?>">
                     <?php _e('Run Now', 'puntwork'); ?>
                 </button>
             </div>

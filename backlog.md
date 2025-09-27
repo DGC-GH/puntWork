@@ -66,3 +66,12 @@ Admin URL opened in Simple Browser for verification.
 Deployment Prep
 Admin dashboard opened: https://belgiumjobs.work/wp-admin/admin.php?page=job-feed-dashboard
 Debug.log will need re-check after fixes.
+
+
+
+
+
+
+
+
+

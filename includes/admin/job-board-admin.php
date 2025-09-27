@@ -118,7 +118,7 @@ class JobBoardAdmin
                                         <button type="button" class="button puntwork-test-connection">
                                             <?php _e('Test Connection', 'puntwork'); ?>
                                         </button>
-                                        <button type="button" class="button button-primary puntwork-save-config">
+                                        <button type="button" class="puntwork-btn puntwork-btn--primary puntwork-save-config">
                                             <?php _e('Save Settings', 'puntwork'); ?>
                                         </button>
                                     </div>
