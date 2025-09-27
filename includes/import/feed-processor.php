@@ -57,6 +57,7 @@ class FeedProcessor
 
             // Check for XML
             if (strpos($content, '<?xml') === 0 || strpos($content, '<') === 0) {
+                error_log('[PUNTWORK] detectFormat: Detected XML from content starting with: ' . substr($content, 0, 50));
                 return self::FORMAT_XML;
             }
 
@@ -64,7 +65,10 @@ class FeedProcessor
             if ((strpos($content, '{') === 0 || strpos($content, '[') === 0)) {
                 json_decode($content);
                 if (json_last_error() === JSON_ERROR_NONE) {
+                    error_log('[PUNTWORK] detectFormat: Detected JSON from content starting with: ' . substr($content, 0, 50));
                     return self::FORMAT_JSON;
+                } else {
+                    error_log('[PUNTWORK] detectFormat: Content starts with { or [, but invalid JSON: ' . json_last_error_msg());
                 }
             }
 
@@ -76,12 +80,14 @@ class FeedProcessor
 
                 // Simple heuristic: if first line has commas and second line exists
                 if (strpos($first_line, ',') !== false && !empty($second_line)) {
+                    error_log('[PUNTWORK] detectFormat: Detected CSV from content');
                     return self::FORMAT_CSV;
                 }
             }
         }
 
         // Default to XML for backward compatibility
+        error_log('[PUNTWORK] detectFormat: Defaulting to XML for URL: ' . $url);
         return self::FORMAT_XML;
     }
 

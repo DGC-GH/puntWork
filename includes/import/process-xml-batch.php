@@ -24,11 +24,16 @@ function process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback
         if (!$reader->open($xml_path)) {
             throw new \Exception('Invalid XML');
         }
+        
+        // Possible job element names in feeds
+        $job_element_names = ['item', 'job', 'vacancy', 'position', 'entry', 'listing'];
+        
         while ($reader->read()) {
-            if ($reader->nodeType == \XMLReader::ELEMENT && $reader->name == 'item') {
+            if ($reader->nodeType == \XMLReader::ELEMENT && in_array(strtolower($reader->name), $job_element_names)) {
                 $item = new \stdClass();
-                // Traverse child elements of <item>
-                while ($reader->read() && !($reader->nodeType == \XMLReader::END_ELEMENT && $reader->name == 'item')) {
+                $element_name = strtolower($reader->name);
+                // Traverse child elements of the job element
+                while ($reader->read() && !($reader->nodeType == \XMLReader::END_ELEMENT && strtolower($reader->name) == $element_name)) {
                     if ($reader->nodeType == \XMLReader::ELEMENT) {
                         $name = strtolower(preg_replace('/^.*:/', '', $reader->name));
                         if ($reader->isEmptyElement) {

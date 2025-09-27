@@ -850,13 +850,14 @@ function load_json_batch($json_path, $start_index, $batch_size)
                 if ($item !== null) {
                     $items[] = $item;
                     $count++;
-                    error_log('[PUNTWORK] load_json_batch: Successfully decoded item ' . $count . ' with GUID: ' . ($item['guid'] ?? 'MISSING'));
+                    error_log('[PUNTWORK] load_json_batch: Successfully decoded item ' . $count . ' with GUID: ' . ($item['guid'] ?? 'MISSING') . ' at line ' . ($current_index + $lines_read));
                 } else {
                     $invalid_json++;
                     error_log('[PUNTWORK] load_json_batch: Failed to decode JSON at line ' . ($current_index + $lines_read) . ': ' . json_last_error_msg() . ' - Line length: ' . strlen($line) . ' - Line start: ' . substr($line, 0, 100));
                 }
             } else {
                 $empty_lines++;
+                error_log('[PUNTWORK] load_json_batch: Empty line at ' . ($current_index + $lines_read));
             }
             $current_index++;
         }
@@ -870,10 +871,20 @@ function load_json_batch($json_path, $start_index, $batch_size)
         return [];
     }
 
-    error_log('[PUNTWORK] load_json_batch: returning ' . count($items) . ' items (read ' . $lines_read . ' lines, empty: ' . $empty_lines . ', invalid JSON: ' . $invalid_json . ')');
+    error_log('[PUNTWORK] load_json_batch: returning ' . count($items) . ' items (read ' . $lines_read . ' lines, empty: ' . $empty_lines . ', invalid JSON: ' . $invalid_json . ', start_index: ' . $start_index . ', batch_size: ' . $batch_size . ')');
     if (empty($items)) {
         error_log('[PUNTWORK] load_json_batch: WARNING - NO ITEMS LOADED! This will cause 0 processed items.');
         error_log('[PUNTWORK] load_json_batch: start_index=' . $start_index . ', batch_size=' . $batch_size . ', file_size=' . (file_exists($json_path) ? filesize($json_path) : 'N/A'));
+        // Try to read first few lines for debugging
+        if (file_exists($json_path)) {
+            $debug_handle = fopen($json_path, 'r');
+            if ($debug_handle) {
+                for ($i = 0; $i < 5 && ($debug_line = fgets($debug_handle)); $i++) {
+                    error_log('[PUNTWORK] load_json_batch: DEBUG line ' . ($i+1) . ': ' . substr(trim($debug_line), 0, 200));
+                }
+                fclose($debug_handle);
+            }
+        }
     }
     return $items;
 }
