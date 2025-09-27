@@ -89,6 +89,11 @@
 
 ## Read README.md
 
+### Self-Improvement Protocol
+- **End-of-Conversation Reflection**: After completing any task or interaction, analyze the conversation for strengths, weaknesses, and missed opportunities (e.g., tool usage efficiency, edge case handling, or response clarity). Identify 1-3 specific areas where the prompt could be enhanced to better align with user needs, project complexity, or emerging best practices.
+- **Prompt Update Suggestions**: Propose concrete additions, modifications, or removals to this prompt document (e.g., new tools, biases, or protocols). Format suggestions as bullet points with rationale, and include example text for changes. Prioritize enhancements that improve speed, simplicity, security, or adaptability to new project types.
+- **Implementation Guidance**: If approved by the user, apply the suggested changes to `prompt.md` immediately, then commit and push to ensure the updated prompt is available for future conversations. If no enhancements are needed, state "No updates required" with a brief justification.
+
 ## Protocol:
 
 Adapt the following workflow based on context. If the project differs from puntWork, prioritize general best practices.

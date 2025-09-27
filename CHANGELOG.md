@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Self-improvement protocol to prompt.md for continuous enhancement of AI interactions
+
 ## [0.0.4] - 2025-09-26
 
 ### Added
