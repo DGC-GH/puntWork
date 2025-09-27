@@ -527,9 +527,9 @@ function render_main_import_ui(): void
 
                 const jobId = target.dataset.id;
                 if (target.classList.contains('edit-job')) {
-                    window.open(`<?php echo admin_url('post.php?action=edit&post='); ?>${jobId}`, '_blank');
+                    window.open(`<?php echo admin_url('post.php?action=edit&post='); ?>\${jobId}`, '_blank');
                 } else if (target.classList.contains('view-job')) {
-                    window.open(`<?php echo get_permalink(); ?>?p=${jobId}`, '_blank');
+                    window.open(`<?php echo get_permalink(); ?>?p=\${jobId}`, '_blank');
                 }
             });
         });

@@ -69,29 +69,54 @@ class PuntworkQueueManager
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
-        $charset_collate = $wpdb->get_charset_collate();
+        error_log('[PUNTWORK] Checking/creating queue table: ' . $table_name);
 
-        $sql = "CREATE TABLE $table_name (
-            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-            job_type varchar(100) NOT NULL,
-            job_data longtext NOT NULL,
-            priority int(11) DEFAULT 10,
-            status enum('pending','processing','completed','failed') DEFAULT 'pending',
-            attempts int(11) DEFAULT 0,
-            max_attempts int(11) DEFAULT " . self::MAX_RETRIES . ",
-            scheduled_at datetime DEFAULT CURRENT_TIMESTAMP,
-            started_at datetime NULL,
-            completed_at datetime NULL,
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            KEY job_type_status (job_type, status),
-            KEY priority_scheduled (priority, scheduled_at),
-            KEY status_updated (status, updated_at)
-        ) $charset_collate;";
+        // Check if table exists
+        $table_exists = $wpdb->get_var(
+            $wpdb->prepare(
+                "SHOW TABLES LIKE %s",
+                $table_name
+            )
+        );
 
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        if (!$table_exists) {
+            error_log('[PUNTWORK] Queue table does not exist, creating it');
+            $charset_collate = $wpdb->get_charset_collate();
+
+            $sql = "CREATE TABLE $table_name (
+                id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+                job_type varchar(100) NOT NULL,
+                job_data longtext NOT NULL,
+                priority int(11) DEFAULT 10,
+                status enum('pending','processing','completed','failed') DEFAULT 'pending',
+                attempts int(11) DEFAULT 0,
+                max_attempts int(11) DEFAULT " . self::MAX_RETRIES . ",
+                scheduled_at datetime DEFAULT CURRENT_TIMESTAMP,
+                started_at datetime NULL,
+                completed_at datetime NULL,
+                created_at datetime DEFAULT CURRENT_TIMESTAMP,
+                updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY job_type_status (job_type, status),
+                KEY priority_scheduled (priority, scheduled_at),
+                KEY status_updated (status, updated_at)
+            ) $charset_collate;";
+
+            require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+            $result = dbDelta($sql);
+
+            if (!empty($result)) {
+                error_log('[PUNTWORK] Queue table created successfully: ' . json_encode($result));
+            } else {
+                error_log('[PUNTWORK] dbDelta returned empty result for queue table creation');
+            }
+
+            if ($wpdb->last_error) {
+                error_log('[PUNTWORK] Database error during queue table creation: ' . $wpdb->last_error);
+            }
+        } else {
+            error_log('[PUNTWORK] Queue table already exists');
+        }
     }
 
     /**

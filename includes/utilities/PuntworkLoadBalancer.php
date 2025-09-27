@@ -246,14 +246,16 @@ class PuntworkLoadBalancer
     private function createInstancesTable()
     {
         if (!$this->isWordpressEnvironment()) {
+            error_log('[PUNTWORK] Skipping instances table creation - not in WordPress environment');
             return;
         }
 
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'puntwork_instances';
+        error_log('[PUNTWORK] Checking/creating instances table: ' . $table_name);
 
-        // Check if table exists and has the correct structure
+        // Check if table exists
         $table_exists = $wpdb->get_var(
             $wpdb->prepare(
                 "SHOW TABLES LIKE %s",
@@ -262,24 +264,57 @@ class PuntworkLoadBalancer
         );
 
         if ($table_exists) {
-            // Check if 'id' column exists
-            $columns = $wpdb->get_results("DESCRIBE $table_name");
+            error_log('[PUNTWORK] Instances table already exists, checking structure');
+            // Check if table has the correct structure
+            $columns = $wpdb->get_results("DESCRIBE $table_name", ARRAY_A);
             $has_id_column = false;
+            $id_column_details = null;
+
             foreach ($columns as $column) {
-                if ($column->Field === 'id') {
+                if ($column['Field'] === 'id') {
                     $has_id_column = true;
+                    $id_column_details = $column;
                     break;
                 }
             }
 
             if (!$has_id_column) {
+                error_log('[PUNTWORK] Table missing id column, recreating table');
                 // Drop and recreate table if it doesn't have the id column
                 $wpdb->query("DROP TABLE IF EXISTS $table_name");
                 $table_exists = false;
+            } else {
+                // Check if id column is AUTO_INCREMENT and PRIMARY KEY
+                if (strpos($id_column_details['Extra'], 'auto_increment') === false) {
+                    error_log('[PUNTWORK] id column exists but is not AUTO_INCREMENT, attempting to fix');
+                    // Try to alter the column to be AUTO_INCREMENT
+                    $wpdb->query("ALTER TABLE $table_name MODIFY COLUMN id bigint(20) unsigned NOT NULL AUTO_INCREMENT");
+                    if ($wpdb->last_error) {
+                        error_log('[PUNTWORK] Failed to modify id column: ' . $wpdb->last_error);
+                        // If we can't modify, drop and recreate
+                        $wpdb->query("DROP TABLE IF EXISTS $table_name");
+                        $table_exists = false;
+                    } else {
+                        error_log('[PUNTWORK] Successfully modified id column to AUTO_INCREMENT');
+                    }
+                }
+
+                // Check for PRIMARY KEY
+                $indexes = $wpdb->get_results("SHOW INDEX FROM $table_name WHERE Key_name = 'PRIMARY'", ARRAY_A);
+                if (empty($indexes)) {
+                    error_log('[PUNTWORK] Missing PRIMARY KEY on id column, adding it');
+                    $wpdb->query("ALTER TABLE $table_name ADD PRIMARY KEY (id)");
+                    if ($wpdb->last_error) {
+                        error_log('[PUNTWORK] Failed to add PRIMARY KEY: ' . $wpdb->last_error);
+                    } else {
+                        error_log('[PUNTWORK] Successfully added PRIMARY KEY');
+                    }
+                }
             }
         }
 
         if (!$table_exists) {
+            error_log('[PUNTWORK] Creating instances table from scratch');
             $charset_collate = $wpdb->get_charset_collate();
 
             $sql = "CREATE TABLE $table_name (
@@ -300,7 +335,17 @@ class PuntworkLoadBalancer
             ) $charset_collate;";
 
             require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-            dbDelta($sql);
+            $result = dbDelta($sql);
+
+            if (!empty($result)) {
+                error_log('[PUNTWORK] Instances table created successfully: ' . json_encode($result));
+            } else {
+                error_log('[PUNTWORK] dbDelta returned empty result for instances table creation');
+            }
+
+            if ($wpdb->last_error) {
+                error_log('[PUNTWORK] Database error during table creation: ' . $wpdb->last_error);
+            }
         }
 
         // Register this server instance if not already registered
@@ -313,6 +358,7 @@ class PuntworkLoadBalancer
     private function registerCurrentInstance()
     {
         if (!$this->isWordpressEnvironment()) {
+            error_log('[PUNTWORK] Skipping instance registration - not in WordPress environment');
             return;
         }
 
@@ -320,6 +366,8 @@ class PuntworkLoadBalancer
 
         $table_name = $wpdb->prefix . 'puntwork_instances';
         $instance_id = 'wp-instance-' . get_current_blog_id() . '-' . substr(md5(site_url()), 0, 8);
+
+        error_log('[PUNTWORK] Attempting to register instance: ' . $instance_id);
 
         // Check if instance already exists
         $existing = $wpdb->get_var(
@@ -329,7 +377,24 @@ class PuntworkLoadBalancer
             )
         );
 
-        if (!$existing) {
+        if ($existing) {
+            error_log('[PUNTWORK] Instance already exists, updating last_seen');
+            // Update last seen
+            $result = $wpdb->update(
+                $table_name,
+                ['last_seen' => current_time('mysql')],
+                ['instance_id' => $instance_id],
+                ['%s'],
+                ['%s']
+            );
+
+            if ($result === false) {
+                error_log('[PUNTWORK] Failed to update instance last_seen: ' . $wpdb->last_error);
+            } else {
+                error_log('[PUNTWORK] Successfully updated instance last_seen');
+            }
+        } else {
+            error_log('[PUNTWORK] Registering new instance');
             // Register this instance
             $server_name = get_bloginfo('name') ?: 'WordPress Instance';
             $ip_address = $_SERVER['SERVER_ADDR'] ?? $_SERVER['LOCAL_ADDR'] ?? '127.0.0.1';
@@ -338,7 +403,7 @@ class PuntworkLoadBalancer
             $cpu_count = $this->getCpuCount();
             $memory_limit = $this->getMemoryLimit();
 
-            $wpdb->insert(
+            $result = $wpdb->insert(
                 $table_name,
                 [
                     'instance_id' => $instance_id,
@@ -352,15 +417,29 @@ class PuntworkLoadBalancer
                 ],
                 ['%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s']
             );
-        } else {
-            // Update last seen
-            $wpdb->update(
-                $table_name,
-                ['last_seen' => current_time('mysql')],
-                ['instance_id' => $instance_id],
-                ['%s'],
-                ['%s']
-            );
+
+            if ($result === false) {
+                error_log('[PUNTWORK] Failed to register instance: ' . $wpdb->last_error);
+                // Try to handle duplicate key error by updating instead
+                if (strpos($wpdb->last_error, 'Duplicate entry') !== false) {
+                    error_log('[PUNTWORK] Duplicate entry detected, attempting update instead');
+                    $wpdb->update(
+                        $table_name,
+                        [
+                            'server_name' => $server_name,
+                            'ip_address' => $ip_address,
+                            'cpu_count' => $cpu_count,
+                            'memory_limit' => $memory_limit,
+                            'last_seen' => current_time('mysql')
+                        ],
+                        ['instance_id' => $instance_id],
+                        ['%s', '%s', '%d', '%d', '%s'],
+                        ['%s']
+                    );
+                }
+            } else {
+                error_log('[PUNTWORK] Successfully registered new instance with ID: ' . $wpdb->insert_id);
+            }
         }
     }
 

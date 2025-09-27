@@ -89,6 +89,8 @@ function enhance_admin_menu_accessibility($menu)
                 $item[4] = ($item[4] ?? '') . ' aria-label="' . esc_attr($item[0]) . '"';
             }
         }
+    } elseif (is_admin() && !is_array($menu)) {
+        error_log('[PUNTWORK] enhance_admin_menu_accessibility received non-array menu parameter: ' . gettype($menu));
     }
     return $menu;
 }
