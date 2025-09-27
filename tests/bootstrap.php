@@ -6,6 +6,7 @@
 
 // Define test mode constant
 define('PUNTWORK_TESTING', true);
+define('PHPUNIT_RUNNING', true);
 
 // Define WordPress constants if not already defined
 if (!defined('ABSPATH')) {
@@ -194,9 +195,9 @@ $mock_wp_options = [];
 global $mock_wp_posts;
 $mock_wp_posts = [];
 
-// Global storage for mocked transients
-global $mock_transients;
-$mock_transients = [];
+// Global storage for mocked network options
+global $mock_network_options;
+$mock_network_options = [];
 
 if (!function_exists('get_option')) {
     function get_option($key, $default = null)
@@ -290,9 +291,25 @@ if (!class_exists('wpdb')) {
     class wpdb
     {
         public $prefix = 'wp_';
+        public $base_prefix = 'wp_';
 
         public function get_results($query, $output = ARRAY_A)
         {
+            if (strpos($query, 'DESCRIBE') !== false) {
+                // Mock table structure for DESCRIBE queries
+                if (strpos($query, 'puntwork_network_jobs') !== false) {
+                    return [
+                        (object)['Field' => 'id', 'Type' => 'bigint(20)', 'Null' => 'NO', 'Key' => 'PRI'],
+                        (object)['Field' => 'job_id', 'Type' => 'varchar(100)', 'Null' => 'NO', 'Key' => ''],
+                        (object)['Field' => 'site_id', 'Type' => 'bigint(20)', 'Null' => 'NO', 'Key' => ''],
+                        (object)['Field' => 'status', 'Type' => 'varchar(20)', 'Null' => 'NO', 'Key' => ''],
+                        (object)['Field' => 'priority', 'Type' => 'int(11)', 'Null' => 'NO', 'Key' => ''],
+                        (object)['Field' => 'data', 'Type' => 'longtext', 'Null' => 'YES', 'Key' => ''],
+                        (object)['Field' => 'created_at', 'Type' => 'datetime', 'Null' => 'NO', 'Key' => ''],
+                        (object)['Field' => 'updated_at', 'Type' => 'datetime', 'Null' => 'NO', 'Key' => '']
+                    ];
+                }
+            }
             return [];
         }
 
@@ -326,14 +343,34 @@ if (!class_exists('wpdb')) {
             return 'utf8mb4_unicode_ci';
         }
 
-        public function check_connection()
+        public function get_var($query, $x = 0, $y = 0)
         {
-            return true;
+            // Mock implementation - return a simple value for testing
+            if (strpos($query, 'SHOW TABLES LIKE') !== false) {
+                // For table existence checks, return the table name
+                if (strpos($query, 'wp_puntwork_network_jobs') !== false) {
+                    return 'wp_puntwork_network_jobs';
+                }
+                if (strpos($query, 'wp_puntwork_load_balancer') !== false) {
+                    return 'wp_puntwork_load_balancer';
+                }
+                if (strpos($query, 'wp_puntwork_instances') !== false) {
+                    return 'wp_puntwork_instances';
+                }
+            }
+            return 1;
+        }
+
+        public function get_col($query, $x = 0)
+        {
+            return [1, 2, 3];
         }
     }
 
     // Create global wpdb instance
     $GLOBALS['wpdb'] = new wpdb();
+    global $wpdb;
+    $wpdb = $GLOBALS['wpdb'];
 }
 
 // Load the plugin
@@ -377,6 +414,14 @@ $includes = array(
     'import/reset-import.php',
     'import/process-xml-batch.php',
 
+    // CRM functionality - testing
+    'crm/crm-integration.php',
+    'crm/crm-manager.php',
+    'crm/hubspot-integration.php',
+    'crm/pipedrive-integration.php',
+    'crm/salesforce-integration.php',
+    'crm/zoho-integration.php',
+
     // Utilities - only load essential ones
     'utilities/PuntWorkLogger.php',
     'utilities/handle-duplicates.php',
@@ -412,6 +457,54 @@ foreach ($includes as $include) {
     $file = dirname(__DIR__) . '/includes/' . $include;
     if (file_exists($file)) {
         require_once $file;
+    }
+}
+
+// Define additional functions that may be needed by namespaced includes
+if (!function_exists('get_next_scheduled_time')) {
+    function get_next_scheduled_time()
+    {
+        // Mock next scheduled time
+        return time() + 3600; // 1 hour from now
+    }
+}
+
+if (!function_exists('get_current_user_id')) {
+    function get_current_user_id()
+    {
+        return 1; // Mock admin user
+    }
+}
+
+if (!function_exists('size_format')) {
+    function size_format($bytes, $decimals = 0)
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+        $bytes /= (1 << (10 * $pow));
+        return round($bytes, $decimals) . ' ' . $units[$pow];
+    }
+}
+
+if (!function_exists('wp_count_posts')) {
+    function wp_count_posts($type = 'post', $perm = '')
+    {
+        return (object) [
+            'publish' => 10,
+            'draft' => 2,
+            'pending' => 1,
+            'private' => 0,
+            'future' => 0
+        ];
+    }
+}
+
+if (!function_exists('current_user_can')) {
+    function current_user_can($capability)
+    {
+        return true; // Mock admin permissions for testing
     }
 }
 
@@ -717,10 +810,37 @@ if (!class_exists('WP_Query')) {
     }
 }
 
-if (!function_exists('get_current_user_id')) {
-    function get_current_user_id()
+if (!function_exists('current_user_can')) {
+    function current_user_can($capability)
     {
-        return 1; // Mock admin user
+        return true; // Mock admin permissions for testing
+    }
+}
+
+if (!function_exists('wp_count_posts')) {
+    function wp_count_posts($type = 'post', $perm = '')
+    {
+        return (object) [
+            'publish' => 10,
+            'draft' => 2,
+            'pending' => 1,
+            'private' => 0,
+            'future' => 0
+        ];
+    }
+}
+
+if (!function_exists('has_action')) {
+    function has_action($tag, $function_to_check = false)
+    {
+        return false; // Mock - no actions registered in test environment
+    }
+}
+
+if (!function_exists('has_filter')) {
+    function has_filter($tag, $function_to_check = false)
+    {
+        return false; // Mock - no filters registered in test environment
     }
 }
 
@@ -749,14 +869,6 @@ if (!function_exists('run_scheduled_import')) {
     }
 }
 
-if (!function_exists('get_next_scheduled_time')) {
-    function get_next_scheduled_time()
-    {
-        // Mock next scheduled time
-        return time() + 3600; // 1 hour from now
-    }
-}
-
 if (!function_exists('size_format')) {
     function size_format($bytes, $decimals = 0)
     {
@@ -766,5 +878,78 @@ if (!function_exists('size_format')) {
         $pow = min($pow, count($units) - 1);
         $bytes /= (1 << (10 * $pow));
         return round($bytes, $decimals) . ' ' . $units[$pow];
+    }
+}
+
+if (!function_exists('is_multisite')) {
+    function is_multisite()
+    {
+        return true; // Enable multisite for testing
+    }
+}
+
+if (!function_exists('get_sites')) {
+    function get_sites($args = [])
+    {
+        // Mock sites for multisite testing
+        return [
+            (object) [
+                'blog_id' => 1,
+                'site_id' => 1,
+                'domain' => 'example.com',
+                'path' => '/',
+                'public' => 1,
+                'archived' => 0,
+                'mature' => 0,
+                'spam' => 0,
+                'deleted' => 0,
+                'lang_id' => 0
+            ]
+        ];
+    }
+}
+
+if (!function_exists('switch_to_blog')) {
+    function switch_to_blog($blog_id)
+    {
+        return true;
+    }
+}
+
+if (!function_exists('restore_current_blog')) {
+    function restore_current_blog()
+    {
+        return true;
+    }
+}
+
+if (!function_exists('is_plugin_active_for_network')) {
+    function is_plugin_active_for_network($plugin)
+    {
+        return true; // Assume plugin is active for network testing
+    }
+}
+
+if (!function_exists('network_admin_url')) {
+    function network_admin_url($path = '')
+    {
+        return 'http://example.com/wp-admin/network/' . ltrim($path, '/');
+    }
+}
+
+if (!function_exists('get_network_option')) {
+    function get_network_option($network_id, $option, $default = null)
+    {
+        global $mock_network_options;
+        return $mock_network_options[$network_id][$option] ?? $default;
+    }
+}
+
+if (!function_exists('update_network_option')) {
+    function update_network_option($network_id, $option, $value)
+    {
+        global $mock_network_options;
+        $mock_network_options[$network_id][$option] = $value;
+        return true;
     }
 }
