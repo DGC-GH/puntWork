@@ -65,7 +65,7 @@ class PuntworkTracing
         }
         if (self::$tracer === null) {
             // Return a no-op tracer if initialization failed
-            return new NoopTracer();
+            return NoopTracer::getInstance();
         }
         return self::$tracer;
     }
