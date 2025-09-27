@@ -126,13 +126,13 @@ class FeedProcessor
     {
         switch ($format) {
             case self::FORMAT_XML:
-                return self::processXmlFeed($feed_path, $handle, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+                return self::processXmlFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
             case self::FORMAT_JSON:
-                return self::processJsonFeed($feed_path, $handle, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+                return self::processJsonFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
             case self::FORMAT_CSV:
-                return self::processCsvFeed($feed_path, $handle, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+                return self::processCsvFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
             case self::FORMAT_JOB_BOARD:
-                return self::processJobBoardFeed($feed_path, $handle, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+                return self::processJobBoardFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
             default:
                 throw new \Exception("Unsupported feed format: $format");
         }
