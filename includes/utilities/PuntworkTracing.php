@@ -19,9 +19,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Load OpenTelemetry registry
-require_once PUNTWORK_PATH . 'vendor/open-telemetry/sdk/Trace/SpanExporter/_register.php';
-
 class PuntworkTracing
 {
     private static ?TracerProviderInterface $tracerProvider = null;
