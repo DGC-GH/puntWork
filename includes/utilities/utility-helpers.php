@@ -45,17 +45,30 @@ if (!function_exists('get_json_item_count')) {
     function get_json_item_count($json_path)
     {
         $count = 0;
+        $sample_lines = [];
         if (($handle = fopen($json_path, "r")) !== false) {
+            $line_num = 0;
             while (($line = fgets($handle)) !== false) {
+                $line_num++;
                 $line = trim($line);
                 if (!empty($line)) {
                     $item = json_decode($line, true);
                     if ($item !== null) {
                         $count++;
+                        // Collect first 5 valid items for debugging
+                        if ($count <= 5) {
+                            $sample_lines[] = 'Line ' . $line_num . ': GUID=' . ($item['guid'] ?? 'MISSING') . ', keys=' . implode(',', array_keys($item));
+                        }
+                    } else {
+                        error_log('[PUNTWORK] get_json_item_count: Invalid JSON at line ' . $line_num . ': ' . json_last_error_msg());
                     }
                 }
             }
             fclose($handle);
+        }
+        error_log('[PUNTWORK] get_json_item_count: Total valid items: ' . $count);
+        if (!empty($sample_lines)) {
+            error_log('[PUNTWORK] get_json_item_count: Sample items: ' . implode(' | ', $sample_lines));
         }
         return $count;
     }

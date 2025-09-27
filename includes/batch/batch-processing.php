@@ -551,7 +551,7 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
         $guid = $item['guid'] ?? '';
 
         if (empty($guid)) {
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped #' . ($current_index + 1) . ': Empty GUID';
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped #' . ($current_index + 1) . ': Empty GUID - Item keys: ' . implode(', ', array_keys($item));
             continue;
         }
 
@@ -799,9 +799,12 @@ function load_json_batch($json_path, $start_index, $batch_size)
                 if ($item !== null) {
                     $items[] = $item;
                     $count++;
+                    error_log('[PUNTWORK] load_json_batch: Successfully decoded item ' . $count . ' with GUID: ' . ($item['guid'] ?? 'MISSING'));
                 } else {
-                    error_log('[PUNTWORK] load_json_batch: failed to decode JSON at line ' . ($current_index + $count + 1) . ': ' . json_last_error_msg());
+                    error_log('[PUNTWORK] load_json_batch: Failed to decode JSON at line ' . ($current_index + $count + 1) . ': ' . json_last_error_msg() . ' - Line content: ' . substr($line, 0, 100));
                 }
+            } else {
+                error_log('[PUNTWORK] load_json_batch: Empty line at index ' . ($current_index + $count + 1));
             }
             $current_index++;
         }

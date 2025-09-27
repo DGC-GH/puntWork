@@ -213,11 +213,33 @@ class FeedProcessor
                 }
                 $item = $normalized_item;
 
+                // Generate GUID if missing
+                if (!isset($item->guid) || empty($item->guid)) {
+                    // Generate GUID from title, company, and location if available
+                    $guid_source = '';
+                    if (isset($item->functiontitle)) $guid_source .= (string)$item->functiontitle;
+                    if (isset($item->company)) $guid_source .= (string)$item->company;
+                    if (isset($item->location)) $guid_source .= (string)$item->location;
+                    if (isset($item->url)) $guid_source .= (string)$item->url;
+                    
+                    if (!empty($guid_source)) {
+                        $item->guid = md5($guid_source);
+                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key: Generated GUID for item: " . $item->guid;
+                    } else {
+                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key: Skipping item - no unique fields for GUID generation";
+                        continue;
+                    }
+                }
+
                 // Skip empty items
                 if (empty((array)$item)) {
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key item skipped: No fields collected";
                     continue;
                 }
+
+                // Log item fields for debugging
+                $item_fields = array_keys((array)$item);
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key: Processing item with GUID {$item->guid}, fields: " . implode(', ', $item_fields);
 
                 clean_item_fields($item);
 
