@@ -740,4 +740,4 @@ class PuntworkSocialMediaAdmin
 }
 
 // Initialize admin interface
-new Puntwork_Social_Media_Admin();
+new PuntworkSocialMediaAdmin();
