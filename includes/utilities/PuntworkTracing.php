@@ -9,10 +9,11 @@ namespace Puntwork;
 
 use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\SDK\Trace\TracerProvider;
-use OpenTelemetry\SDK\Trace\SpanExporter\ConsoleSpanExporterFactory;
+use OpenTelemetry\SDK\Trace\SpanExporter\ConsoleSpanExporter;
 use OpenTelemetry\SDK\Trace\SpanProcessor\SimpleSpanProcessor;
 use OpenTelemetry\API\Trace\TracerProviderInterface;
 use OpenTelemetry\Context\Context;
+use OpenTelemetry\SDK\Common\Export\Stream\StreamTransportFactory;
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
@@ -34,8 +35,9 @@ class PuntworkTracing
         }
 
         // Create console exporter for development
-        $exporterFactory = new ConsoleSpanExporterFactory();
-        $exporter = $exporterFactory->create();
+        $transportFactory = new StreamTransportFactory();
+        $transport = $transportFactory->create('php://stdout', 'application/json');
+        $exporter = new ConsoleSpanExporter($transport);
 
         // Create span processor
         $spanProcessor = new SimpleSpanProcessor($exporter);
