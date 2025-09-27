@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fatal error in CRM admin class instantiation preventing plugin initialization
 - PHPCS error: Renamed Puntwork_CRM_Admin class to PuntworkCrmAdmin for PascalCase compliance
 - Reverted PuntworkCrmAdmin class back to Puntwork_CRM_Admin to resolve server-side class not found error
+- Restored Puntwork_CRM_Admin class to PuntworkCrmAdmin following project PascalCase naming conventions
 - Line length violations in crm-admin.php for PSR-12 compliance
 
 ## [0.0.4] - 2025-09-26
