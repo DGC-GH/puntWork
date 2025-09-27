@@ -52,7 +52,6 @@
 
 .onboarding-progress {
     flex: 1;
-    margin-right: 16px;
 }
 
 .onboarding-progress-bar {
@@ -115,7 +114,6 @@
     font-size: 18px;
     color: #86868b;
     cursor: pointer;
-    padding: 8px;
     border-radius: 6px;
     transition: all 0.2s ease;
     flex-shrink: 0;
@@ -130,12 +128,13 @@
     padding: 24px;
     flex: 1;
     overflow: hidden;
-    min-height: 200px;
+    min-height: 250px;
+    max-height: 350px;
 }
 
 .step-content {
     text-align: center;
-    min-height: 200px;
+    min-height: 250px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -177,11 +176,9 @@
 }
 
 .onboarding-footer {
-    padding: 16px 24px 24px;
     display: flex;
     justify-content: center;
     align-items: center;
-    border-top: 1px solid #e5e5e7;
     margin-top: 24px;
 }
 
