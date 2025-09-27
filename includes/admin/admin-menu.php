@@ -108,8 +108,11 @@ add_action('admin_menu', function () {
         'puntwork-monitoring',
         __NAMESPACE__ . '\\system_monitoring_page'
     );
+});
 
-    // Onboarding menu item (only show if onboarding not completed)
+// Add setup wizard as the last menu item with high priority
+add_action('admin_menu', function () {
+    // Onboarding menu item (only show if onboarding not completed) - always last
     if (!PuntworkOnboardingWizard::isOnboardingCompleted()) {
         add_submenu_page(
             'puntwork-dashboard',
@@ -125,4 +128,4 @@ add_action('admin_menu', function () {
             }
         );
     }
-});
+}, 99);
