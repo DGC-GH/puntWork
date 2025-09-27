@@ -9,7 +9,7 @@ namespace Puntwork;
 
 use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\SDK\Trace\TracerProvider;
-use OpenTelemetry\SDK\Trace\SpanExporter\ConsoleSpanExporter;
+use OpenTelemetry\SDK\Trace\SpanExporter\ConsoleSpanExporterFactory;
 use OpenTelemetry\SDK\Trace\SpanProcessor\SimpleSpanProcessor;
 use OpenTelemetry\API\Trace\TracerProviderInterface;
 use OpenTelemetry\Context\Context;
@@ -18,6 +18,9 @@ use OpenTelemetry\Context\Context;
 if (!defined('ABSPATH')) {
     exit;
 }
+
+// Load OpenTelemetry registry
+require_once PUNTWORK_PATH . 'vendor/open-telemetry/sdk/Trace/SpanExporter/_register.php';
 
 class PuntworkTracing
 {
@@ -34,7 +37,8 @@ class PuntworkTracing
         }
 
         // Create console exporter for development
-        $exporter = new ConsoleSpanExporter();
+        $exporterFactory = new ConsoleSpanExporterFactory();
+        $exporter = $exporterFactory->create();
 
         // Create span processor
         $spanProcessor = new SimpleSpanProcessor($exporter);
