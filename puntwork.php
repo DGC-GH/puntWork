@@ -261,7 +261,7 @@ function setup_job_import()
     }
 
     // Initialize social media functionality
-    if (class_exists(__NAMESPACE__ . '\\Puntwork_Social_Media_Admin')) {
+    if (class_exists(__NAMESPACE__ . '\\PuntworkSocialMediaAdmin')) {
         // Admin interface is initialized in the class constructor
     }
 
