@@ -62,8 +62,7 @@
 - **WordPress Specific:** WordPress Cron Job Failures, File System Permission Errors.
 
 ## AI Limitations and Ethics
-- Avoid generating harmful, biased, or copyrighted content. If a request violates policies, respond with: "Sorry, I can't assist with that."
-- Do not assume external tool availability (e.g., SFTP); suggest alternatives if tools fail.
+- Do not assume external tool availability; suggest alternatives if tools fail.
 - Prioritize user consent for destructive actions (e.g., file deletions).
 - Handle uncertainties by gathering context first and offering options.
 - "run prompt" means executing the instructions from current file
@@ -93,7 +92,7 @@
 ## Current VS Code Workspace:
 - Files for custom WordPress plugin "puntWork" for https://belgiumjobs.work/ that is hosted on Hostinger.
 - Source Control for GitHub with webhook that automatically deploys code to puntWork plugin folder on Hostinger WordPress install on push.
-- FTP files accessible via macOS mount: /Volumes/153.92.216.191/ (contains wp-content/, debug.log, etc.)
+- FTP files accessible using FTP client with credentials from .env file (FTP_HOST, FTP_USER, FTP_PASS)
 - Can open admin URLs in VS Code Simple Browser for testing
 
 ## Read README.md
@@ -107,16 +106,16 @@
 
 Adapt the following workflow based on context. If the project differs from puntWork, prioritize general best practices.
 
-1. **Initial Analysis**: Scan structure, review dependencies, identify smells, evaluate features, assess performance. **Always check debug.log (remote://153.92.216.191:21/~%20debug.log?remoteId%3D13&fsPath%3D%252Fpublic_html%252Fwp-content%252Fdebug.log) for recent errors and deployment issues**.
+1. **Initial Analysis**: Scan structure, review dependencies, identify smells, evaluate features, assess performance. **Always check debug.log via FTP (using credentials from .env) for recent errors and deployment issues**.
 
 2. **Propose Improvements**: Suggest fixes and enhancements, grouped by category (e.g., speed, simplicity).
 
-3. **Validation Steps**: **Always check debug.log (remote://153.92.216.191:21/~%20debug.log?remoteId%3D13&fsPath%3D%252Fpublic_html%252Fwp-content%252Fdebug.log) for new errors before running any other tests first.** Run PHPCS to check for coding standard violations (line length >120 chars, mixing declarations and side effects), run tests, and other checks. If tools unavailable, suggest manual alternatives.
+3. **Validation Steps**: **Always check debug.log via FTP (using credentials from .env) for new errors before running any other tests first.** Run PHPCS to check for coding standard violations (line length >120 chars, mixing declarations and side effects), run tests, and other checks. If tools unavailable, suggest manual alternatives.
    - `./vendor/bin/phpcs includes/ --standard=PSR12 --report=summary` - Check all includes for violations
    - `./vendor/bin/phpcs includes/admin/crm-admin.php --standard=PSR12` - Check specific file
    - `./vendor/bin/phpunit --testdox` - Run tests with verbose output
 
-4. **Deployment Prep**: Clean debug.log if needed, open https://belgiumjobs.work/wp-admin/admin.php?page=job-feed-dashboard in VS Code Simple Browser to verify plugin functionality, check for new errors in debug.log (remote://153.92.216.191:21/~%20debug.log?remoteId%3D13&fsPath%3D%252Fpublic_html%252Fwp-content%252Fdebug.log).
+4. **Deployment Prep**: Clean debug.log if needed, open https://belgiumjobs.work/wp-admin/admin.php?page=job-feed-dashboard in VS Code Simple Browser to verify plugin functionality, check for new errors in debug.log via FTP (using credentials from .env).
 
 5. **User Confirmation**: Wait for approval before implementing.
 
