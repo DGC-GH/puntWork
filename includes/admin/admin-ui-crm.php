@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
 /**
  * CRM Admin Interface Class
  */
-class CRMAdmin
+class PuntworkCrmAdmin
 {
     /**
      * CRM Manager instance
@@ -69,7 +69,7 @@ class CRMAdmin
 
         wp_localize_script('puntwork-crm-admin', 'puntwork_crm_ajax', [
             'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('puntwork_crm_admin'),
+            'nonce' => wp_create_nonce('puntwork_crm_nonce'),
             'strings' => [
                 'testing_connection' => __('Testing connection...', 'puntwork'),
                 'connection_successful' => __('Connection successful!', 'puntwork'),
@@ -283,7 +283,7 @@ class CRMAdmin
      */
     public function ajaxTestConnection(): void
     {
-        check_ajax_referer('puntwork_crm_admin', 'nonce');
+        check_ajax_referer('puntwork_crm_nonce', 'nonce');
 
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => __('Insufficient permissions', 'puntwork')]);
@@ -316,7 +316,7 @@ class CRMAdmin
      */
     public function ajaxSaveConfig(): void
     {
-        check_ajax_referer('puntwork_crm_admin', 'nonce');
+        check_ajax_referer('puntwork_crm_nonce', 'nonce');
 
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => __('Insufficient permissions', 'puntwork')]);
@@ -349,7 +349,7 @@ class CRMAdmin
      */
     public function ajaxSyncTest(): void
     {
-        check_ajax_referer('puntwork_crm_admin', 'nonce');
+        check_ajax_referer('puntwork_crm_nonce', 'nonce');
 
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => __('Insufficient permissions', 'puntwork')]);
@@ -392,4 +392,4 @@ class CRMAdmin
 }
 
 // Initialize CRM Admin
-new CRMAdmin();
+new PuntworkCrmAdmin();

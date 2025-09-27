@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reverted PuntworkCrmAdmin class back to Puntwork_CRM_Admin to resolve persistent server-side class not found error
 - Line length violations in crm-admin.php for PSR-12 compliance
 - Fixed CRM integration loading order to resolve class dependency issues
+- Renamed Puntwork_CRM_Admin class back to PuntworkCrmAdmin for final PascalCase compliance
 
 ## [0.0.4] - 2025-09-26
 
