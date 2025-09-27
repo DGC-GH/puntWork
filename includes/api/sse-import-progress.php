@@ -108,6 +108,7 @@ function handle_import_progress_sse($request)
             try {
                 // Get current import status
                 $current_status = get_option('job_import_status', []);
+                error_log('[PUNTWORK] SSE: Raw current_status from get_option: ' . json_encode($current_status));
 
                 // Check for async import status if applicable
                 $async_status = check_async_import_status();
@@ -118,6 +119,8 @@ function handle_import_progress_sse($request)
                 } else {
                     $current_status['async_active'] = false;
                 }
+
+                error_log('[PUNTWORK] SSE: Final current_status: ' . json_encode($current_status));
 
                 // Calculate elapsed time
                 if (isset($current_status['start_time']) && $current_status['start_time'] > 0) {
@@ -146,6 +149,8 @@ function handle_import_progress_sse($request)
                         'timestamp' => $current_time,
                         'status' => $current_status
                     ];
+
+                    error_log('[PUNTWORK] SSE: Sending progress update, event_data: ' . json_encode($event_data));
 
                     echo "event: progress\n";
                     echo "data: " . json_encode($event_data) . "\n\n";

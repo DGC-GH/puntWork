@@ -94,6 +94,25 @@ function run_job_import_batch_ajax()
         PuntWorkLogger::debug("About to call import_jobs_from_json with start={$start}", PuntWorkLogger::CONTEXT_BATCH);
         error_log('[PUNTWORK] AJAX: About to call import_jobs_from_json with start=' . $start);
 
+        // Check if required functions exist before calling
+        if (!function_exists('prepare_import_setup')) {
+            error_log('[PUNTWORK] AJAX: prepare_import_setup function not found');
+            AjaxErrorHandler::sendError('prepare_import_setup function not available');
+            return;
+        }
+        if (!function_exists('process_batch_items_logic')) {
+            error_log('[PUNTWORK] AJAX: process_batch_items_logic function not found');
+            AjaxErrorHandler::sendError('process_batch_items_logic function not available');
+            return;
+        }
+        if (!function_exists('finalize_batch_import')) {
+            error_log('[PUNTWORK] AJAX: finalize_batch_import function not found');
+            AjaxErrorHandler::sendError('finalize_batch_import function not available');
+            return;
+        }
+
+        error_log('[PUNTWORK] AJAX: All required functions are available');
+
         try {
             $result = import_jobs_from_json(true, $start);
             error_log('[PUNTWORK] AJAX: import_jobs_from_json returned: ' . json_encode($result));

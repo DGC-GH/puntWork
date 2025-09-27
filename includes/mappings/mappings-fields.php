@@ -12,7 +12,8 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-use Puntwork\Utilities\CacheManager;
+// Temporarily commented out CacheManager usage
+// use Puntwork\Utilities\CacheManager;
 
 /**
  * ACF field definitions and field mappings
@@ -22,10 +23,13 @@ use Puntwork\Utilities\CacheManager;
 if (!function_exists('get_acf_fields')) {
     function get_acf_fields()
     {
+        // Temporarily disable caching to test if CacheManager is causing issues
+        /*
         $cache_key = 'acf_fields';
         $fields = CacheManager::get($cache_key, CacheManager::GROUP_MAPPINGS);
 
         if ($fields === false) {
+        */
             $fields = [
                 'guid', 'category', 'title', 'description', 'pubdate', 'updated', 'link', 'applylink', 'magiclink',
                 'branche', 'postalcode', 'city', 'province', 'provincecode', 'country', 'validfrom', 'validtill',
@@ -48,8 +52,10 @@ if (!function_exists('get_acf_fields')) {
             ];
 
             // Cache for 24 hours since these rarely change
-            CacheManager::set($cache_key, $fields, CacheManager::GROUP_MAPPINGS, DAY_IN_SECONDS);
+            // CacheManager::set($cache_key, $fields, CacheManager::GROUP_MAPPINGS, DAY_IN_SECONDS);
+        /*
         }
+        */
 
         return $fields;
     }
@@ -58,10 +64,13 @@ if (!function_exists('get_acf_fields')) {
 if (!function_exists('get_zero_empty_fields')) {
     function get_zero_empty_fields()
     {
+        // Temporarily disable caching to test if CacheManager is causing issues
+        /*
         $cache_key = 'zero_empty_fields';
         $fields = CacheManager::get($cache_key, CacheManager::GROUP_MAPPINGS);
 
         if ($fields === false) {
+        */
             $fields = [
                 'functiongroup2', 'functiongroup3', 'functiongroupid2', 'functiongroupid3', 'function2', 'function3',
                 'functionid2', 'functionid3', 'education2', 'education3', 'educationid2', 'educationid3',
@@ -72,8 +81,10 @@ if (!function_exists('get_zero_empty_fields')) {
             ];
 
             // Cache for 24 hours since these rarely change
-            CacheManager::set($cache_key, $fields, CacheManager::GROUP_MAPPINGS, DAY_IN_SECONDS);
+            // CacheManager::set($cache_key, $fields, CacheManager::GROUP_MAPPINGS, DAY_IN_SECONDS);
+        /*
         }
+        */
 
         return $fields;
     }
