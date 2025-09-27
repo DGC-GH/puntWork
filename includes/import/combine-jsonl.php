@@ -28,17 +28,58 @@ function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs)
     if (!$combined_handle) {
         throw new \Exception('Cant open combined JSONL');
     }
+
+    $seen_guids = [];
+    $duplicate_count = 0;
+    $unique_count = 0;
+
     foreach ($feeds as $feed_key => $url) {
         $feed_json_path = $output_dir . $feed_key . '.jsonl';
         if (file_exists($feed_json_path)) {
             $feed_handle = fopen($feed_json_path, 'r');
-            stream_copy_to_stream($feed_handle, $combined_handle); // Efficient copy
-            fclose($feed_handle);
+            if ($feed_handle) {
+                while (($line = fgets($feed_handle)) !== false) {
+                    $line = trim($line);
+                    if (empty($line)) {
+                        continue;
+                    }
+
+                    // Parse JSON to check GUID
+                    $job_data = json_decode($line, true);
+                    if ($job_data === null) {
+                        // Invalid JSON, skip
+                        continue;
+                    }
+
+                    $guid = isset($job_data['guid']) ? trim($job_data['guid']) : '';
+                    if (empty($guid)) {
+                        // No GUID, include but log
+                        fwrite($combined_handle, $line . "\n");
+                        $unique_count++;
+                        continue;
+                    }
+
+                    // Check for duplicates
+                    if (isset($seen_guids[$guid])) {
+                        $duplicate_count++;
+                        continue; // Skip duplicate
+                    }
+
+                    // New unique job
+                    $seen_guids[$guid] = true;
+                    fwrite($combined_handle, $line . "\n");
+                    $unique_count++;
+                }
+                fclose($feed_handle);
+            }
         }
     }
+
     fclose($combined_handle);
     @chmod($combined_json_path, 0644);
-    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Combined JSONL ($total_items items)";
-    error_log("Combined JSONL ($total_items items)");
+
+    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Combined JSONL ($unique_count unique items, $duplicate_count duplicates removed)";
+    error_log("Combined JSONL ($unique_count unique items, $duplicate_count duplicates removed)");
+
     gzip_file($combined_json_path, $combined_gz_path);
 }

@@ -50,6 +50,25 @@ function process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback
                     continue;
                 }
                 clean_item_fields($item);
+
+                // Generate GUID if missing
+                if (!isset($item->guid) || empty($item->guid)) {
+                    // Generate GUID from title, company, and location if available
+                    $guid_source = '';
+                    if (isset($item->functiontitle)) $guid_source .= (string)$item->functiontitle;
+                    if (isset($item->companydescription)) $guid_source .= (string)$item->companydescription;
+                    if (isset($item->city)) $guid_source .= (string)$item->city;
+                    if (isset($item->applylink)) $guid_source .= (string)$item->applylink;
+
+                    if (!empty($guid_source)) {
+                        $item->guid = md5($guid_source);
+                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key: Generated GUID for item: " . $item->guid;
+                    } else {
+                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key: Skipping item - no unique fields for GUID generation";
+                        continue;
+                    }
+                }
+
                 $lang = isset($item->languagecode) ? strtolower((string)$item->languagecode) : 'en';
                 if (strpos($lang, 'fr') !== false) {
                     $lang = 'fr';
