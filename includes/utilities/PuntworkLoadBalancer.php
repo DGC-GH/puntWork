@@ -46,6 +46,7 @@ class PuntworkLoadBalancer
         if ($this->isWordpressEnvironment()) {
             $this->initHooks();
             $this->createLoadBalancerTable();
+            $this->createInstancesTable();
         }
     }
 
@@ -249,6 +250,133 @@ class PuntworkLoadBalancer
 
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
+    }
+
+    /**
+     * Create instances table for load balancer
+     */
+    private function createInstancesTable()
+    {
+        if (!$this->isWordpressEnvironment()) {
+            return;
+        }
+
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'puntwork_instances';
+        $charset_collate = $wpdb->get_charset_collate();
+
+        $sql = "CREATE TABLE $table_name (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            instance_id varchar(100) NOT NULL,
+            server_name varchar(255) NOT NULL,
+            ip_address varchar(45) NOT NULL,
+            role varchar(50) NOT NULL DEFAULT 'standard_processing',
+            status varchar(20) NOT NULL DEFAULT 'active',
+            cpu_count int(11) NOT NULL DEFAULT 1,
+            memory_limit bigint(20) NOT NULL DEFAULT 1073741824,
+            last_seen datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY instance_id (instance_id),
+            KEY status (status),
+            KEY last_seen (last_seen)
+        ) $charset_collate;";
+
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+
+        // Register this server instance if not already registered
+        $this->registerCurrentInstance();
+    }
+
+    /**
+     * Register the current WordPress instance
+     */
+    private function registerCurrentInstance()
+    {
+        if (!$this->isWordpressEnvironment()) {
+            return;
+        }
+
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'puntwork_instances';
+        $instance_id = 'wp-instance-' . get_current_blog_id() . '-' . substr(md5(site_url()), 0, 8);
+
+        // Check if instance already exists
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM $table_name WHERE instance_id = %s",
+            $instance_id
+        ));
+
+        if (!$existing) {
+            // Register this instance
+            $server_name = get_bloginfo('name') ?: 'WordPress Instance';
+            $ip_address = $_SERVER['SERVER_ADDR'] ?? $_SERVER['LOCAL_ADDR'] ?? '127.0.0.1';
+
+            // Get system info
+            $cpu_count = $this->getCpuCount();
+            $memory_limit = $this->getMemoryLimit();
+
+            $wpdb->insert(
+                $table_name,
+                [
+                    'instance_id' => $instance_id,
+                    'server_name' => $server_name,
+                    'ip_address' => $ip_address,
+                    'role' => 'standard_processing',
+                    'status' => 'active',
+                    'cpu_count' => $cpu_count,
+                    'memory_limit' => $memory_limit,
+                    'last_seen' => current_time('mysql')
+                ],
+                ['%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s']
+            );
+        } else {
+            // Update last seen
+            $wpdb->update(
+                $table_name,
+                ['last_seen' => current_time('mysql')],
+                ['instance_id' => $instance_id],
+                ['%s'],
+                ['%s']
+            );
+        }
+    }
+
+    /**
+     * Get CPU count
+     */
+    private function getCpuCount()
+    {
+        if (function_exists('shell_exec') && !ini_get('disable_functions')) {
+            $cpu_info = shell_exec('nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 1');
+            $cpu_count = (int) trim($cpu_info);
+            return max(1, $cpu_count);
+        }
+        return 1;
+    }
+
+    /**
+     * Get memory limit in bytes
+     */
+    private function getMemoryLimit()
+    {
+        $memory_limit = ini_get('memory_limit');
+        if ($memory_limit === '-1') {
+            return 1073741824; // 1GB default
+        }
+
+        $unit = strtolower(substr($memory_limit, -1));
+        $value = (int) substr($memory_limit, 0, -1);
+
+        switch ($unit) {
+            case 'g': return $value * 1024 * 1024 * 1024;
+            case 'm': return $value * 1024 * 1024;
+            case 'k': return $value * 1024;
+            default: return (int) $memory_limit;
+        }
     }
 
     /**
