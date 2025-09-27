@@ -258,7 +258,7 @@ class MultiSiteManager
             // Calculate current load (simplified)
             $stats['current_load'] = self::calculateSiteLoad($site_id);
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Failed to get site stats for site ' . $site_id . ': ' . $e->getMessage());
+            \Puntwork\PuntWorkLogger::error('Failed to get site stats for site ' . $site_id . ': ' . $e->getMessage());
         }
 
         return $stats;
@@ -493,7 +493,7 @@ class MultiSiteManager
                 restore_current_blog();
             } catch (\Exception $e) {
                 restore_current_blog();
-                PuntWorkLogger::error('Network sync failed for site ' . $site['id'] . ': ' . $e->getMessage());
+                \Puntwork\PuntWorkLogger::error('Network sync failed for site ' . $site['id'] . ': ' . $e->getMessage());
             }
         }
 
@@ -501,7 +501,7 @@ class MultiSiteManager
         update_option('puntwork_network_sync_data', $sync_data);
         update_option('puntwork_last_network_sync', current_time('timestamp'));
 
-        PuntWorkLogger::info('Network sync completed for ' . count($sync_data) . ' sites');
+        \Puntwork\PuntWorkLogger::info('Network sync completed for ' . count($sync_data) . ' sites');
     }
 
     /**
@@ -599,7 +599,7 @@ class MultiSiteManager
                 'last_sync' => current_time('timestamp')
             ]);
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Network sync failed: ' . $e->getMessage());
+            \Puntwork\PuntWorkLogger::error('Network sync failed: ' . $e->getMessage());
             wp_send_json_error('Network sync failed: ' . $e->getMessage());
         }
     }
@@ -666,7 +666,7 @@ class MultiSiteManager
                 'distribution' => $result
             ]);
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Network job distribution failed: ' . $e->getMessage());
+            \Puntwork\PuntWorkLogger::error('Network job distribution failed: ' . $e->getMessage());
             wp_send_json_error('Network distribution failed: ' . $e->getMessage());
         }
     }

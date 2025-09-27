@@ -67,55 +67,87 @@
 
                 // Handle connected event
                 this.eventSource.addEventListener('connected', function(event) {
-                    var data = JSON.parse(event.data);
-                    console.log('[PUNTWORK] SSE connected event:', data);
-                    PuntWorkJSLogger.info('Real-time updates connected', 'REALTIME');
+                    try {
+                        if (!event.data || event.data.trim() === '') {
+                            console.log('[PUNTWORK] SSE connected event: empty data');
+                            return;
+                        }
+                        var data = JSON.parse(event.data);
+                        console.log('[PUNTWORK] SSE connected event:', data);
+                        PuntWorkJSLogger.info('Real-time updates connected', 'REALTIME');
+                    } catch (e) {
+                        console.error('[PUNTWORK] Failed to parse connected event data:', event.data, e);
+                    }
                 });
 
                 // Handle progress updates
                 this.eventSource.addEventListener('progress', function(event) {
-                    var data = JSON.parse(event.data);
-                    console.log('[PUNTWORK] SSE progress update:', data);
+                    try {
+                        if (!event.data || event.data.trim() === '') {
+                            console.log('[PUNTWORK] SSE progress event: empty data');
+                            return;
+                        }
+                        var data = JSON.parse(event.data);
+                        console.log('[PUNTWORK] SSE progress update:', data);
 
-                    // Update UI with real-time data
-                    if (data.status) {
-                        JobImportUI.updateProgress(data.status);
-                        JobImportRealtime.lastEventId = event.lastEventId;
+                        // Update UI with real-time data
+                        if (data.status) {
+                            JobImportUI.updateProgress(data.status);
+                            JobImportRealtime.lastEventId = event.lastEventId;
+                        }
+                    } catch (e) {
+                        console.error('[PUNTWORK] Failed to parse progress event data:', event.data, e);
                     }
                 });
 
                 // Handle completion
                 this.eventSource.addEventListener('complete', function(event) {
-                    var data = JSON.parse(event.data);
-                    console.log('[PUNTWORK] SSE import completed:', data);
+                    try {
+                        if (!event.data || event.data.trim() === '') {
+                            console.log('[PUNTWORK] SSE complete event: empty data');
+                            return;
+                        }
+                        var data = JSON.parse(event.data);
+                        console.log('[PUNTWORK] SSE import completed:', data);
 
-                    // Update UI with final status
-                    if (data.status) {
-                        JobImportUI.updateProgress(data.status);
+                        // Update UI with final status
+                        if (data.status) {
+                            JobImportUI.updateProgress(data.status);
+                        }
+
+                        // Show completion message
+                        if (data.message) {
+                            $('#status-message').text(data.message);
+                        }
+
+                        // Reset buttons and stop real-time updates
+                        JobImportUI.resetButtons();
+                        JobImportRealtime.disconnect();
+
+                        PuntWorkJSLogger.info('Import completed via real-time updates', 'REALTIME');
+                    } catch (e) {
+                        console.error('[PUNTWORK] Failed to parse complete event data:', event.data, e);
                     }
-
-                    // Show completion message
-                    if (data.message) {
-                        $('#status-message').text(data.message);
-                    }
-
-                    // Reset buttons and stop real-time updates
-                    JobImportUI.resetButtons();
-                    JobImportRealtime.disconnect();
-
-                    PuntWorkJSLogger.info('Import completed via real-time updates', 'REALTIME');
                 });
 
                 // Handle errors
                 this.eventSource.addEventListener('error', function(event) {
-                    var data = JSON.parse(event.data);
-                    console.error('[PUNTWORK] SSE error event:', data);
+                    try {
+                        if (!event.data || event.data.trim() === '') {
+                            console.error('[PUNTWORK] SSE error event: empty or undefined data');
+                            return;
+                        }
+                        var data = JSON.parse(event.data);
+                        console.error('[PUNTWORK] SSE error event:', data);
 
-                    // Show error in UI
-                    if (data.error) {
-                        $('#status-message').text('Error: ' + data.error);
-                        JobImportUI.resetButtons();
-                        JobImportRealtime.disconnect();
+                        // Show error in UI
+                        if (data.error) {
+                            $('#status-message').text('Error: ' + data.error);
+                            JobImportUI.resetButtons();
+                            JobImportRealtime.disconnect();
+                        }
+                    } catch (e) {
+                        console.error('[PUNTWORK] Failed to parse error event data:', event.data, e);
                     }
                 });
 

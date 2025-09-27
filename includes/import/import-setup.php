@@ -102,10 +102,10 @@ function prepare_import_setup($batch_start = 0)
     $existing_status = get_option('job_import_status');
     if ($existing_status && isset($existing_status['start_time']) && $existing_status['start_time'] > 0) {
         $start_time = $existing_status['start_time'];
-        PuntWorkLogger::info('Using existing import start time: ' . $start_time, PuntWorkLogger::CONTEXT_BATCH);
+        \Puntwork\PuntWorkLogger::info('Using existing import start time: ' . $start_time, \Puntwork\PuntWorkLogger::CONTEXT_BATCH);
     } else {
         $start_time = microtime(true);
-        PuntWorkLogger::info('Starting new import with start time: ' . $start_time, PuntWorkLogger::CONTEXT_BATCH);
+        \Puntwork\PuntWorkLogger::info('Starting new import with start time: ' . $start_time, \Puntwork\PuntWorkLogger::CONTEXT_BATCH);
     }
 
     $json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
@@ -171,7 +171,7 @@ function prepare_import_setup($batch_start = 0)
         // Clear existing status for fresh start
         delete_option('job_import_status');
         $start_time = microtime(true);
-        PuntWorkLogger::info('Fresh import start - resetting status and progress to 0', PuntWorkLogger::CONTEXT_BATCH);
+        \Puntwork\PuntWorkLogger::info('Fresh import start - resetting status and progress to 0', \Puntwork\PuntWorkLogger::CONTEXT_BATCH);
 
         // Initialize status for manual import
         $initial_status = [

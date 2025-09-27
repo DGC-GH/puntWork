@@ -252,7 +252,7 @@ function post_new_jobs_to_social_media($import_result)
                 $posted_count++;
             }
 
-            PuntWorkLogger::info('Auto-posted job to social media', PuntWorkLogger::CONTEXT_SOCIAL, [
+            \Puntwork\PuntWorkLogger::info('Auto-posted job to social media', \Puntwork\PuntWorkLogger::CONTEXT_SOCIAL, [
                 'job_id' => $job->ID,
                 'job_title' => $job_data['title'],
                 'platforms' => $default_platforms,
@@ -261,13 +261,13 @@ function post_new_jobs_to_social_media($import_result)
         }
 
         if ($posted_count > 0) {
-            PuntWorkLogger::info('Completed auto-posting jobs to social media', PuntWorkLogger::CONTEXT_SOCIAL, [
+            \Puntwork\PuntWorkLogger::info('Completed auto-posting jobs to social media', \Puntwork\PuntWorkLogger::CONTEXT_SOCIAL, [
                 'total_jobs_posted' => $posted_count,
                 'platforms' => $default_platforms
             ]);
         }
     } catch (\Exception $e) {
-        PuntWorkLogger::error('Failed to auto-post jobs to social media', PuntWorkLogger::CONTEXT_SOCIAL, [
+        \Puntwork\PuntWorkLogger::error('Failed to auto-post jobs to social media', \Puntwork\PuntWorkLogger::CONTEXT_SOCIAL, [
             'error' => $e->getMessage()
         ]);
     }
