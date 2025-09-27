@@ -66,6 +66,7 @@
 - Do not assume external tool availability (e.g., SFTP); suggest alternatives if tools fail.
 - Prioritize user consent for destructive actions (e.g., file deletions).
 - Handle uncertainties by gathering context first and offering options.
+- "run prompt" means executing the instructions from current file
 - Clarify ambiguous user requests before executing potentially unintended actions (e.g., confirm what "run prompt" means).
     
 ## Output clean, executable code following PHPCS conventions and PSR-compliant.
