@@ -40,10 +40,10 @@ if (!defined('OBJECT')) {
 
 // Load WordPress test functions
 if (file_exists('/tmp/wordpress-tests-lib/includes/functions.php')) {
-    require_once '/tmp/wordpress-tests-lib/includes/functions.php';
+    include_once '/tmp/wordpress-tests-lib/includes/functions.php';
 } else {
     // Fallback for local testing
-    require_once dirname(__DIR__) . '/vendor/autoload.php';
+    include_once dirname(__DIR__) . '/vendor/autoload.php';
 }
 
 // Mock WordPress functions if not in full WP environment
@@ -456,7 +456,7 @@ $includes = array(
 foreach ($includes as $include) {
     $file = dirname(__DIR__) . '/includes/' . $include;
     if (file_exists($file)) {
-        require_once $file;
+        include_once $file;
     }
 }
 
@@ -763,10 +763,12 @@ if (!function_exists('get_permalink')) {
 if (!function_exists('wp_publish_post')) {
     function wp_publish_post($post_id)
     {
-        wp_update_post([
+        wp_update_post(
+            [
             'ID' => $post_id,
             'post_status' => 'publish'
-        ]);
+            ]
+        );
     }
 }
 
@@ -774,11 +776,13 @@ if (!function_exists('handle_get_import_status')) {
     function handle_get_import_status($request)
     {
         // Mock implementation
-        return new \WP_REST_Response([
+        return new \WP_REST_Response(
+            [
             'success' => true,
             'status' => 'idle',
             'data' => []
-        ], 200);
+            ], 200
+        );
     }
 }
 
@@ -794,15 +798,17 @@ if (!class_exists('WP_Query')) {
         {
             global $mock_wp_posts;
             // Filter posts by args
-            $posts = array_filter($mock_wp_posts, function ($post) use ($args) {
-                if (isset($args['post_type']) && $post->post_type !== $args['post_type']) {
-                    return false;
+            $posts = array_filter(
+                $mock_wp_posts, function ($post) use ($args) {
+                    if (isset($args['post_type']) && $post->post_type !== $args['post_type']) {
+                        return false;
+                    }
+                    if (isset($args['post_status']) && $args['post_status'] !== 'any' && $post->post_status !== $args['post_status']) {
+                        return false;
+                    }
+                    return true;
                 }
-                if (isset($args['post_status']) && $args['post_status'] !== 'any' && $post->post_status !== $args['post_status']) {
-                    return false;
-                }
-                return true;
-            });
+            );
             $this->posts = array_values($posts);
             $this->found_posts = count($this->posts);
             $this->max_num_pages = 1;
