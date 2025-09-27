@@ -1,0 +1,47 @@
+{
+    "name": "dgc-gh/puntwork",
+    "description": "WordPress plugin for importing jobs from XML feeds",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "require-dev": {
+        "squizlabs/php_codesniffer": "^3.7",
+        "phpunit/phpunit": "^10.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Puntwork\\": "includes/"
+        },
+        "classmap": [
+            "includes/utilities/ImportAnalytics.php",
+            "includes/utilities/JobDeduplicator.php",
+            "includes/utilities/FeedHealthMonitor.php",
+            "includes/utilities/PerformanceMonitor.php",
+            "includes/utilities/CacheManager.php",
+            "includes/utilities/EnhancedCacheManager.php",
+            "includes/utilities/MemoryManager.php",
+            "includes/utilities/DatabasePerformanceMonitor.php",
+            "includes/utilities/CircuitBreaker.php",
+            "includes/utilities/AdvancedMemoryManager.php",
+            "includes/import/feed-processor.php",
+            "includes/ai/job-categorizer.php",
+            "includes/ai/duplicate-detector.php",
+            "includes/ai/content-quality-scorer.php",
+            "includes/crm/crm-integration.php",
+            "includes/crm/crm-manager.php",
+            "includes/crm/hubspot-integration.php",
+            "includes/crm/salesforce-integration.php",
+            "includes/crm/zoho-integration.php",
+            "includes/crm/pipedrive-integration.php"
+        ]
+    },
+    "config": {
+        "platform": {
+            "php": "8.2"
+        },
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "php-http/discovery": true,
+            "tbachert/spi": true
+        }
+    }
+}

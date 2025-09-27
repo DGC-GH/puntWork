@@ -2,22 +2,16 @@
 
 # Production deployment preparation script for puntWork
 # This script prepares the codebase for production deployment by:
-# 1. Using production composer.json (without dev dependencies)
+# 1. Switching composer.json symlink to production version (no dev dependencies)
 # 2. Installing only production dependencies
 # 3. Optimizing autoloader
 
 echo "🚀 Preparing puntWork for production deployment..."
 
-# Backup original composer.json
-if [ -f composer.json ]; then
-    cp composer.json composer.json.development
-    echo "✅ Backed up development composer.json"
-fi
-
-# Use production composer.json
+# Switch composer.json symlink to production version
 if [ -f composer.json.production ]; then
-    cp composer.json.production composer.json
-    echo "✅ Switched to production composer.json (no dev dependencies)"
+    ln -sf composer.json.production composer.json
+    echo "✅ Switched composer.json to production version (no dev dependencies)"
 else
     echo "❌ composer.json.production not found!"
     exit 1
@@ -37,7 +31,7 @@ rm -rf .github/
 echo "✅ Production deployment preparation complete!"
 echo ""
 echo "Ready for deployment. The following files are now production-ready:"
-echo "- composer.json (production version)"
+echo "- composer.json (production version - no dev dependencies)"
 echo "- vendor/ (production dependencies only)"
 echo "- All development files removed"
 echo ""

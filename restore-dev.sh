@@ -5,13 +5,13 @@
 
 echo "🔄 Restoring puntWork development environment..."
 
-# Restore original composer.json
+# Switch composer.json symlink back to development version
 if [ -f composer.json.development ]; then
-    cp composer.json.development composer.json
-    rm composer.json.development
-    echo "✅ Restored development composer.json"
+    ln -sf composer.json.development composer.json
+    echo "✅ Switched composer.json to development version"
 else
-    echo "⚠️  composer.json.development not found, composer.json may already be correct"
+    echo "⚠️  composer.json.development not found, creating symlink to production version"
+    ln -sf composer.json.production composer.json
 fi
 
 # Install all dependencies (including dev)
