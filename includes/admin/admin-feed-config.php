@@ -536,13 +536,18 @@ function render_feed_config_ui(): void
         }
 
         /* Drag and Drop States */
-        .feed-item.sortable-ghost {
-            opacity: 0.4;
-        }
-
-        .feed-item.sortable-chosen {
+        .feed-item.ui-sortable-helper {
             opacity: 0.8;
             transform: rotate(5deg);
+        }
+
+        .ui-sortable-placeholder {
+            visibility: visible !important;
+            background: var(--color-gray-100);
+            border: 2px dashed var(--color-primary);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-md);
+            height: 80px;
         }
 
         /* Responsive Design */
@@ -573,21 +578,17 @@ function render_feed_config_ui(): void
         jQuery(document).ready(function($) {
             let isOrderChanged = false;
 
-            // Initialize Sortable
-            const feedList = document.getElementById('feed-list');
-            if (feedList && typeof Sortable !== 'undefined') {
-                Sortable.create(feedList, {
-                    handle: '.feed-item__handle',
-                    animation: 150,
-                    ghostClass: 'sortable-ghost',
-                    chosenClass: 'sortable-chosen',
-                    onEnd: function(evt) {
-                        isOrderChanged = true;
-                        $('#save-feed-order').show();
-                        updateOrderStatus('Order changed - click Save Order to apply changes');
-                    }
-                });
-            }
+            // Initialize jQuery UI Sortable
+            $('#feed-list').sortable({
+                handle: '.feed-item__handle',
+                placeholder: 'sortable-placeholder',
+                tolerance: 'pointer',
+                update: function(event, ui) {
+                    isOrderChanged = true;
+                    $('#save-feed-order').show();
+                    updateOrderStatus('Order changed - click Save Order to apply changes');
+                }
+            });
 
             // Feed toggle handlers
             $(document).on('change', '.feed-enabled', function() {
