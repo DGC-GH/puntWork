@@ -237,6 +237,20 @@ function ensure_queue_table_exists()
 }
 
 /**
+ * Get queue configuration
+ */
+function get_queue_config()
+{
+    return [
+        'max_retries' => 3,
+        'batch_size' => 10,
+        'cron_interval' => 30, // seconds
+        'max_execution_time' => 120, // seconds
+        'table_name' => 'puntwork_queue'
+    ];
+}
+
+/**
  * Clean up old queue entries
  */
 function cleanup_old_queue_entries()
