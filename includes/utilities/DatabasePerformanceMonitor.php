@@ -31,11 +31,15 @@ class DatabasePerformanceMonitor
         self::$query_log = [];
         self::$start_time = microtime(true);
 
+        error_log('[PUNTWORK] DatabasePerformanceMonitor: Starting database query monitoring');
+
         // Hook into WordPress database queries
-        add_filter('query', [__CLASS__, 'log_query']);
-        add_filter('get_col', [__CLASS__, 'log_query']);
-        add_filter('get_row', [__CLASS__, 'log_query']);
-        add_filter('get_results', [__CLASS__, 'log_query']);
+        add_filter('query', [__CLASS__, 'logQuery']);
+        add_filter('get_col', [__CLASS__, 'logQuery']);
+        add_filter('get_row', [__CLASS__, 'logQuery']);
+        add_filter('get_results', [__CLASS__, 'logQuery']);
+
+        error_log('[PUNTWORK] DatabasePerformanceMonitor: Filters added successfully');
     }
 
     /**
@@ -57,6 +61,7 @@ class DatabasePerformanceMonitor
             'query_type' => self::getQueryType($query)
         ];
 
+        error_log('[PUNTWORK] DatabasePerformanceMonitor: Logged query - ' . substr($query, 0, 100) . '...');
         return $query;
     }
 
@@ -70,11 +75,15 @@ class DatabasePerformanceMonitor
         $end_time = microtime(true);
         $total_time = $end_time - self::$start_time;
 
+        error_log('[PUNTWORK] DatabasePerformanceMonitor: Ending database query monitoring, total queries: ' . count(self::$query_log));
+
         // Remove hooks
-        remove_filter('query', [__CLASS__, 'log_query']);
-        remove_filter('get_col', [__CLASS__, 'log_query']);
-        remove_filter('get_row', [__CLASS__, 'log_query']);
-        remove_filter('get_results', [__CLASS__, 'log_query']);
+        remove_filter('query', [__CLASS__, 'logQuery']);
+        remove_filter('get_col', [__CLASS__, 'logQuery']);
+        remove_filter('get_row', [__CLASS__, 'logQuery']);
+        remove_filter('get_results', [__CLASS__, 'logQuery']);
+
+        error_log('[PUNTWORK] DatabasePerformanceMonitor: Filters removed successfully');
 
         $query_count = count(self::$query_log);
         $slow_queries = array_filter(self::$query_log, fn($q) => ($q['start_time'] ?? 0) > 0.1); // Queries > 100ms

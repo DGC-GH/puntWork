@@ -68,7 +68,7 @@
                 // Handle connected event
                 this.eventSource.addEventListener('connected', function(event) {
                     try {
-                        if (!event.data || event.data.trim() === '') {
+                        if (!event.data || typeof event.data === 'undefined' || event.data.trim() === '') {
                             console.log('[PUNTWORK] SSE connected event: empty data');
                             return;
                         }
@@ -83,7 +83,7 @@
                 // Handle progress updates
                 this.eventSource.addEventListener('progress', function(event) {
                     try {
-                        if (!event.data || event.data.trim() === '') {
+                        if (!event.data || typeof event.data === 'undefined' || event.data.trim() === '') {
                             console.log('[PUNTWORK] SSE progress event: empty data');
                             return;
                         }
@@ -103,7 +103,7 @@
                 // Handle completion
                 this.eventSource.addEventListener('complete', function(event) {
                     try {
-                        if (!event.data || event.data.trim() === '') {
+                        if (!event.data || typeof event.data === 'undefined' || event.data.trim() === '') {
                             console.log('[PUNTWORK] SSE complete event: empty data');
                             return;
                         }
@@ -133,7 +133,7 @@
                 // Handle errors
                 this.eventSource.addEventListener('error', function(event) {
                     try {
-                        if (!event.data || event.data.trim() === '') {
+                        if (!event.data || typeof event.data === 'undefined' || event.data.trim() === '') {
                             console.error('[PUNTWORK] SSE error event: empty or undefined data');
                             return;
                         }
