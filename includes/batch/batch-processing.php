@@ -447,7 +447,7 @@ function validate_and_adjust_batch_size(array $setup): array
 {
     $memory_limit_bytes = get_memory_limit_bytes();
     $threshold = 0.6 * $memory_limit_bytes;
-    $batch_size = get_option('job_import_batch_size') ?: 50; // Reduced default from 100 to 50
+    $batch_size = get_option('job_import_batch_size') ?: 10; // Starting batch size set to 10 for testing dynamic logic // Reduced default from 100 to 50
     
     // Ensure batch_size is at least 1
     $batch_size = max(1, (int)$batch_size);
