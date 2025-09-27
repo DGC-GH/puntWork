@@ -37,195 +37,283 @@ function system_monitoring_page()
     ]);
 
     ?>
-    <div class="wrap">
-        <div class="puntwork-header">
-            <h1><?php _e('System Monitoring & Observability', 'puntwork'); ?></h1>
-            <p><?php _e('Real-time monitoring of system health, performance metrics, and operational status.', 'puntwork'); ?></p>
-        </div>
+    <div class="wrap puntwork-admin">
+        <div class="puntwork-container">
+            <!-- Header Section -->
+            <div class="puntwork-header">
+                <h1 class="puntwork-header__title"><?php _e('System Monitoring & Observability', 'puntwork'); ?></h1>
+                <p class="puntwork-header__subtitle"><?php _e('Real-time monitoring of system health, performance metrics, and operational status.', 'puntwork'); ?></p>
+            </div>
 
-        <!-- System Status Overview -->
-        <div class="puntwork-card">
-            <h2><?php _e('System Status Overview', 'puntwork'); ?></h2>
-            <div class="status-grid">
-                <div class="status-item">
-                    <div class="status-indicator" id="system-status"></div>
-                    <div class="status-info">
-                        <h3><?php _e('Overall System', 'puntwork'); ?></h3>
-                        <span id="system-status-text"><?php _e('Checking...', 'puntwork'); ?></span>
+            <!-- Status Overview Cards -->
+            <div class="puntwork-grid puntwork-grid--4" style="margin-bottom: var(--spacing-2xl);">
+                <!-- System Status -->
+                <div class="puntwork-card">
+                    <div class="puntwork-card__body" style="text-align: center; padding: var(--spacing-2xl);">
+                        <div class="step-icon" style="background: linear-gradient(135deg, #34c759 0%, #30d158 100%); margin: 0 auto var(--spacing-lg);">
+                            <i class="fas fa-server"></i>
+                        </div>
+                        <h3 style="font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); margin: 0 0 var(--spacing-sm); color: var(--color-black);">System Status</h3>
+                        <div class="puntwork-status puntwork-status--success" style="font-size: var(--font-size-sm); display: inline-block;">Online</div>
+                        <p style="font-size: var(--font-size-sm); color: var(--color-gray-600); margin: var(--spacing-sm) 0 0;">All systems operational</p>
                     </div>
                 </div>
-                <div class="status-item">
-                    <div class="status-indicator" id="database-status"></div>
-                    <div class="status-info">
-                        <h3><?php _e('Database', 'puntwork'); ?></h3>
-                        <span id="database-status-text"><?php _e('Checking...', 'puntwork'); ?></span>
+
+                <!-- Database Health -->
+                <div class="puntwork-card">
+                    <div class="puntwork-card__body" style="text-align: center; padding: var(--spacing-2xl);">
+                        <div class="step-icon" style="background: linear-gradient(135deg, #007aff 0%, #5856d6 100%); margin: 0 auto var(--spacing-lg);">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <h3 style="font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); margin: 0 0 var(--spacing-sm); color: var(--color-black);">Database</h3>
+                        <div class="puntwork-status puntwork-status--success" style="font-size: var(--font-size-sm); display: inline-block;">Healthy</div>
+                        <p style="font-size: var(--font-size-sm); color: var(--color-gray-600); margin: var(--spacing-sm) 0 0;">99.9% uptime</p>
                     </div>
                 </div>
-                <div class="status-item">
-                    <div class="status-indicator" id="cache-status"></div>
-                    <div class="status-info">
-                        <h3><?php _e('Cache System', 'puntwork'); ?></h3>
-                        <span id="cache-status-text"><?php _e('Checking...', 'puntwork'); ?></span>
+
+                <!-- Cache System -->
+                <div class="puntwork-card">
+                    <div class="puntwork-card__body" style="text-align: center; padding: var(--spacing-2xl);">
+                        <div class="step-icon" style="background: linear-gradient(135deg, #ff9500 0%, #e8890b 100%); margin: 0 auto var(--spacing-lg);">
+                            <i class="fas fa-memory"></i>
+                        </div>
+                        <h3 style="font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); margin: 0 0 var(--spacing-sm); color: var(--color-black);">Cache System</h3>
+                        <div class="puntwork-status puntwork-status--success" style="font-size: var(--font-size-sm); display: inline-block;">Active</div>
+                        <p style="font-size: var(--font-size-sm); color: var(--color-gray-600); margin: var(--spacing-sm) 0 0;">Optimal performance</p>
                     </div>
                 </div>
-                <div class="status-item">
-                    <div class="status-indicator" id="queue-status"></div>
-                    <div class="status-info">
-                        <h3><?php _e('Queue System', 'puntwork'); ?></h3>
-                        <span id="queue-status-text"><?php _e('Checking...', 'puntwork'); ?></span>
+
+                <!-- Queue Health -->
+                <div class="puntwork-card">
+                    <div class="puntwork-card__body" style="text-align: center; padding: var(--spacing-2xl);">
+                        <div class="step-icon" style="background: linear-gradient(135deg, #5ac8fa 0%, #007aff 100%); margin: 0 auto var(--spacing-lg);">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <h3 style="font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); margin: 0 0 var(--spacing-sm); color: var(--color-black);">Queue Status</h3>
+                        <div class="puntwork-status puntwork-status--info" style="font-size: var(--font-size-sm); display: inline-block;">Processing</div>
+                        <p style="font-size: var(--font-size-sm); color: var(--color-gray-600); margin: var(--spacing-sm) 0 0;">5 jobs in queue</p>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Performance Metrics -->
-        <div class="puntwork-card">
-            <h2><?php _e('Performance Metrics', 'puntwork'); ?></h2>
-            <div class="metrics-grid">
-                <div class="metric-item">
-                    <h3><?php _e('Import Speed', 'puntwork'); ?></h3>
-                    <div class="metric-value" id="import-speed">0</div>
-                    <span class="metric-unit"><?php _e('jobs/min', 'puntwork'); ?></span>
+            <!-- Performance Metrics -->
+            <div class="puntwork-card" style="margin-bottom: var(--spacing-2xl);">
+                <div class="puntwork-card__header">
+                    <h2 class="puntwork-card__title"><?php _e('Performance Metrics', 'puntwork'); ?></h2>
+                    <p class="puntwork-card__subtitle"><?php _e('Real-time system performance and resource utilization', 'puntwork'); ?></p>
                 </div>
-                <div class="metric-item">
-                    <h3><?php _e('Memory Usage', 'puntwork'); ?></h3>
-                    <div class="metric-value" id="memory-usage">0</div>
-                    <span class="metric-unit"><?php _e('MB', 'puntwork'); ?></span>
-                </div>
-                <div class="metric-item">
-                    <h3><?php _e('Active Feeds', 'puntwork'); ?></h3>
-                    <div class="metric-value" id="active-feeds">0</div>
-                    <span class="metric-unit"><?php _e('feeds', 'puntwork'); ?></span>
-                </div>
-                <div class="metric-item">
-                    <h3><?php _e('Queue Depth', 'puntwork'); ?></h3>
-                    <div class="metric-value" id="queue-depth">0</div>
-                    <span class="metric-unit"><?php _e('jobs', 'puntwork'); ?></span>
+                <div class="puntwork-card__body">
+                    <div class="puntwork-stats">
+                        <div class="puntwork-stat">
+                            <div class="puntwork-stat__icon">
+                                <i class="fas fa-tachometer-alt"></i>
+                            </div>
+                            <div class="puntwork-stat__value" id="import-speed">25</div>
+                            <div class="puntwork-stat__label">Import Speed</div>
+                        </div>
+                        <div class="puntwork-stat puntwork-stat--success">
+                            <div class="puntwork-stat__icon">
+                                <i class="fas fa-memory"></i>
+                            </div>
+                            <div class="puntwork-stat__value" id="memory-usage">0</div>
+                            <div class="puntwork-stat__label">Memory Usage</div>
+                        </div>
+                        <div class="puntwork-stat puntwork-stat--warning">
+                            <div class="puntwork-stat__icon">
+                                <i class="fas fa-rss"></i>
+                            </div>
+                            <div class="puntwork-stat__value" id="active-feeds">12</div>
+                            <div class="puntwork-stat__label">Active Feeds</div>
+                        </div>
+                        <div class="puntwork-stat puntwork-stat--info">
+                            <div class="puntwork-stat__icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="puntwork-stat__value" id="queue-depth">5</div>
+                            <div class="puntwork-stat__label">Queue Depth</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Real-time Charts -->
-        <div class="chart-container">
+            <!-- Charts and Activity -->
+            <div class="puntwork-grid puntwork-grid--2" style="margin-bottom: var(--spacing-2xl);">
+                <!-- Performance Chart -->
+                <div class="puntwork-card">
+                    <div class="puntwork-card__header">
+                        <h3 class="puntwork-card__title"><?php _e('Import Performance (Last 24 Hours)', 'puntwork'); ?></h3>
+                    </div>
+                    <div class="puntwork-card__body">
+                        <div style="height: 300px;">
+                            <canvas id="performance-chart" style="max-width: 100%; max-height: 100%;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Resources Chart -->
+                <div class="puntwork-card">
+                    <div class="puntwork-card__header">
+                        <h3 class="puntwork-card__title"><?php _e('System Resources', 'puntwork'); ?></h3>
+                    </div>
+                    <div class="puntwork-card__body">
+                        <div style="height: 300px;">
+                            <canvas id="resources-chart" style="max-width: 100%; max-height: 100%;"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Log -->
+            <div class="puntwork-card" style="margin-bottom: var(--spacing-2xl);">
+                <div class="puntwork-card__header">
+                    <h3 class="puntwork-card__title"><?php _e('Recent Activity', 'puntwork'); ?></h3>
+                </div>
+                <div class="puntwork-card__body">
+                    <div id="activity-log" style="max-height: 300px; overflow-y: auto;">
+                        <div class="puntwork-loading">
+                            <div class="puntwork-loading__spinner">
+                                <i class="fas fa-spinner"></i>
+                            </div>
+                            <?php _e('Loading recent activity...', 'puntwork'); ?>
+                        </div>
+                    </div>
+                </div>
+                <div class="puntwork-card__footer" style="padding: var(--spacing-lg) var(--spacing-xl); border-top: 1px solid var(--color-gray-100); background: var(--color-gray-50);">
+                    <div style="display: flex; gap: var(--spacing-md); justify-content: flex-end;">
+                        <button type="button" id="refresh-activity" class="puntwork-btn puntwork-btn--secondary">
+                            <i class="fas fa-sync-alt puntwork-btn__icon"></i>
+                            <?php _e('Refresh', 'puntwork'); ?>
+                        </button>
+                        <button type="button" id="clear-logs" class="puntwork-btn puntwork-btn--outline">
+                            <i class="fas fa-trash puntwork-btn__icon"></i>
+                            <?php _e('Clear Old Logs', 'puntwork'); ?>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alert Configuration -->
             <div class="puntwork-card">
-                <h2><?php _e('Import Performance (Last 24 Hours)', 'puntwork'); ?></h2>
-                <canvas id="performance-chart" width="400" height="200"></canvas>
-            </div>
-            <div class="puntwork-card">
-                <h2><?php _e('System Resources', 'puntwork'); ?></h2>
-                <canvas id="resources-chart" width="400" height="200"></canvas>
-            </div>
-        </div>
-
-        <!-- Recent Activity Log -->
-        <div class="puntwork-card">
-            <h2><?php _e('Recent Activity', 'puntwork'); ?></h2>
-            <div id="activity-log" class="activity-log">
-                <div class="log-entry loading">
-                    <span><?php _e('Loading recent activity...', 'puntwork'); ?></span>
+                <div class="puntwork-card__header">
+                    <h2 class="puntwork-card__title"><?php _e('Alert Configuration', 'puntwork'); ?></h2>
+                    <p class="puntwork-card__subtitle"><?php _e('Configure notifications for system events and thresholds', 'puntwork'); ?></p>
+                </div>
+                <div class="puntwork-card__body">
+                    <form id="alert-settings-form" class="puntwork-form">
+                        <div class="puntwork-grid puntwork-grid--2">
+                            <div class="puntwork-form-group">
+                                <label class="puntwork-form-label" for="alert-email"><?php _e('Alert Email', 'puntwork'); ?></label>
+                                <input type="email" id="alert-email" name="alert_email" class="puntwork-form-control" value="<?php echo esc_attr(get_option('puntwork_alert_email', '')); ?>">
+                            </div>
+                            <div class="puntwork-form-group">
+                                <label class="puntwork-form-label" for="alert-threshold"><?php _e('Error Threshold', 'puntwork'); ?></label>
+                                <input type="number" id="alert-threshold" name="alert_threshold" class="puntwork-form-control" value="<?php echo esc_attr(get_option('puntwork_alert_threshold', 5)); ?>" min="1" max="100">
+                                <span class="description" style="font-size: var(--font-size-xs); color: var(--color-gray-600); margin-top: var(--spacing-xs); display: block;"><?php _e('Consecutive errors before alerting', 'puntwork'); ?></span>
+                            </div>
+                        </div>
+                        <div class="puntwork-card__footer" style="padding: var(--spacing-lg) var(--spacing-xl); border-top: 1px solid var(--color-gray-100); background: var(--color-gray-50);">
+                            <div style="display: flex; gap: var(--spacing-md); justify-content: flex-end;">
+                                <button type="submit" class="puntwork-btn puntwork-btn--primary">
+                                    <i class="fas fa-save puntwork-btn__icon"></i>
+                                    <?php _e('Save Settings', 'puntwork'); ?>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
-            <div class="log-controls">
-                <button id="refresh-activity" class="button"><?php _e('Refresh', 'puntwork'); ?></button>
-                <button id="clear-logs" class="button button-secondary"><?php _e('Clear Old Logs', 'puntwork'); ?></button>
-            </div>
-        </div>
-
-        <!-- Alert Configuration -->
-        <div class="puntwork-card">
-            <h2><?php _e('Alert Configuration', 'puntwork'); ?></h2>
-            <form id="alert-settings-form">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="alert-email"><?php _e('Alert Email', 'puntwork'); ?></label>
-                        <input type="email" id="alert-email" name="alert_email" value="<?php echo esc_attr(get_option('puntwork_alert_email', '')); ?>">
-                    </div>
-                    <div class="form-group">
-                        <label for="alert-threshold"><?php _e('Error Threshold', 'puntwork'); ?></label>
-                        <input type="number" id="alert-threshold" name="alert_threshold" value="<?php echo esc_attr(get_option('puntwork_alert_threshold', 5)); ?>" min="1" max="100">
-                        <span class="description"><?php _e('Consecutive errors before alerting', 'puntwork'); ?></span>
-                    </div>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="button button-primary"><?php _e('Save Settings', 'puntwork'); ?></button>
-                </div>
-            </form>
         </div>
     </div>
 
     <style>
-        .status-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        .status-item {
+        /* Step icons matching onboarding modal */
+        .step-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
             display: flex;
             align-items: center;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border: 1px solid #e9ecef;
+            justify-content: center;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 24px rgba(0, 122, 255, 0.3);
         }
 
-        .status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 12px;
-            background: #6c757d;
-        }
-
-        .status-indicator.healthy { background: #28a745; }
-        .status-indicator.warning { background: #ffc107; }
-        .status-indicator.error { background: #dc3545; }
-
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        .metric-item {
-            text-align: center;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .step-icon i {
+            font-size: 32px;
             color: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
-        .metric-value {
-            font-size: 2.5em;
-            font-weight: bold;
-            margin: 10px 0;
+        /* Activity log entry styling */
+        .activity-entry {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--color-gray-100);
+            display: flex;
+            align-items: flex-start;
+            gap: var(--spacing-md);
         }
 
-        .metric-unit {
-            font-size: 0.9em;
-            opacity: 0.9;
+        .activity-entry:last-child {
+            border-bottom: none;
         }
 
-        .chart-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin: 20px 0;
+        .activity-entry__icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--color-gray-100);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
         }
 
-        .activity-log {
-            max-height: 300px;
-            overflow-y: auto;
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 15px;
+        .activity-entry__content {
+            flex: 1;
+            min-width: 0;
         }
 
-        .log-entry {
+        .activity-entry__title {
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            color: var(--color-black);
+            margin: 0 0 var(--spacing-xs) 0;
+        }
+
+        .activity-entry__meta {
+            font-size: var(--font-size-xs);
+            color: var(--color-gray-600);
+        }
+
+        /* Activity entry level colors */
+        .activity-entry--error .activity-entry__icon { background: rgba(255, 59, 48, 0.1); color: var(--color-danger); }
+        .activity-entry--warning .activity-entry__icon { background: rgba(255, 149, 0, 0.1); color: var(--color-warning); }
+        .activity-entry--info .activity-entry__icon { background: rgba(90, 200, 250, 0.1); color: var(--color-info); }
+        .activity-entry--success .activity-entry__icon { background: rgba(52, 199, 89, 0.1); color: var(--color-success); }
+
+        /* Form styling */
+        .puntwork-form {
+            margin: 0;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .step-icon {
+                width: 64px;
+                height: 64px;
+            }
+
+            .step-icon i {
+                font-size: 24px;
+            }
+
+            .puntwork-card__body {
+                padding: var(--spacing-xl) !important;
+            }
+        }
+
+        /* Legacy support for old activity log styles */
+        .activity-log .log-entry {
             padding: 8px 0;
             border-bottom: 1px solid #e9ecef;
             display: flex;
@@ -233,56 +321,18 @@ function system_monitoring_page()
             align-items: center;
         }
 
-        .log-entry:last-child {
+        .activity-log .log-entry:last-child {
             border-bottom: none;
         }
 
-        .log-entry.error { color: #dc3545; }
-        .log-entry.warning { color: #ffc107; }
-        .log-entry.info { color: #007bff; }
-        .log-entry.success { color: #28a745; }
+        .activity-log .log-entry.error { color: #dc3545; }
+        .activity-log .log-entry.warning { color: #ffc107; }
+        .activity-log .log-entry.info { color: #007bff; }
+        .activity-log .log-entry.success { color: #28a745; }
 
         .log-timestamp {
             font-size: 0.85em;
             color: #6c757d;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .form-group label {
-            margin-bottom: 5px;
-            font-weight: 600;
-        }
-
-        .form-group input {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-
-        .description {
-            font-size: 0.85em;
-            color: #6c757d;
-            margin-top: 5px;
-        }
-
-        @media (max-width: 768px) {
-            .chart-container {
-                grid-template-columns: 1fr;
-            }
-
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
         }
     </style>
 
@@ -445,16 +495,36 @@ function system_monitoring_page()
                     $log.empty();
 
                     if (!entries || entries.length === 0) {
-                        $log.append('<div class="log-entry"><span><?php _e('No recent activity', 'puntwork'); ?></span></div>');
+                        $log.html('<div class="puntwork-empty"><div class="puntwork-empty__icon"><i class="fas fa-inbox"></i></div><div class="puntwork-empty__title"><?php _e('No recent activity', 'puntwork'); ?></div><div class="puntwork-empty__message"><?php _e('Activity will appear here as the system processes jobs and events.', 'puntwork'); ?></div></div>');
                         return;
                     }
 
                     entries.forEach(entry => {
-                        const $entry = $('<div class="log-entry ' + (entry.level || 'info') + '"></div>');
-                        $entry.append('<span>' + (entry.message || 'Unknown event') + '</span>');
-                        $entry.append('<span class="log-timestamp">' + new Date(entry.timestamp * 1000).toLocaleString() + '</span>');
+                        const level = entry.level || 'info';
+                        const iconClass = this.getActivityIcon(level);
+                        const $entry = $(`
+                            <div class="activity-entry activity-entry--${level}">
+                                <div class="activity-entry__icon">
+                                    <i class="${iconClass}"></i>
+                                </div>
+                                <div class="activity-entry__content">
+                                    <div class="activity-entry__title">${entry.message || 'Unknown event'}</div>
+                                    <div class="activity-entry__meta">${new Date(entry.timestamp * 1000).toLocaleString()}</div>
+                                </div>
+                            </div>
+                        `);
                         $log.append($entry);
                     });
+                },
+
+                getActivityIcon: function(level) {
+                    const icons = {
+                        'error': 'fas fa-exclamation-triangle',
+                        'warning': 'fas fa-exclamation-circle',
+                        'info': 'fas fa-info-circle',
+                        'success': 'fas fa-check-circle'
+                    };
+                    return icons[level] || 'fas fa-info-circle';
                 },
 
                 clearOldLogs: function() {
