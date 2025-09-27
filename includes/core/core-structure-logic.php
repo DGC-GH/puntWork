@@ -28,29 +28,40 @@ function get_feeds(): array
     $feeds = CacheManager::get($cache_key, CacheManager::GROUP_MAPPINGS);
 
     if ($feeds === false) {
+        error_log('[PUNTWORK] [DEBUG] get_feeds: Cache miss, building feeds array');
         $feeds = [];
 
         // First, check if CPT is registered
         if (!post_type_exists('job-feed')) {
+            error_log('[PUNTWORK] [DEBUG] get_feeds: job-feed post type not registered, checking options');
             // Try alternative: check if feeds are stored as options
             $option_feeds = get_option('job_feed_url');
+            error_log('[PUNTWORK] [DEBUG] get_feeds: job_feed_url option value: ' . print_r($option_feeds, true));
             if (!empty($option_feeds)) {
                 if (is_array($option_feeds)) {
                     $feeds = $option_feeds;
+                    error_log('[PUNTWORK] [DEBUG] get_feeds: Using array from option: ' . json_encode($feeds));
                 } elseif (is_string($option_feeds)) {
                     // Try to parse as JSON
                     $parsed = json_decode($option_feeds, true);
                     if ($parsed && is_array($parsed)) {
                         $feeds = $parsed;
+                        error_log('[PUNTWORK] [DEBUG] get_feeds: Parsed JSON from option: ' . json_encode($feeds));
+                    } else {
+                        error_log('[PUNTWORK] [DEBUG] get_feeds: Failed to parse option as JSON');
                     }
                 }
+            } else {
+                error_log('[PUNTWORK] [DEBUG] get_feeds: No feeds in options');
             }
 
             // Cache for 1 hour
             CacheManager::set($cache_key, $feeds, CacheManager::GROUP_MAPPINGS, HOUR_IN_SECONDS);
+            error_log('[PUNTWORK] [DEBUG] get_feeds: Returning feeds (no CPT): ' . json_encode($feeds));
             return $feeds;
         }
 
+        error_log('[PUNTWORK] [DEBUG] get_feeds: job-feed post type exists, querying posts');
         $query = new \WP_Query([
             'post_type' => 'job-feed',
             'post_status' => 'publish',
@@ -58,8 +69,10 @@ function get_feeds(): array
             'fields' => 'ids',
         ]);
 
+        error_log('[PUNTWORK] [DEBUG] get_feeds: Query found ' . $query->found_posts . ' job-feed posts');
         if ($query->have_posts()) {
             foreach ($query->posts as $post_id) {
+                error_log('[PUNTWORK] [DEBUG] get_feeds: Processing post ID ' . $post_id);
                 $feed_url = get_post_meta($post_id, 'feed_url', true);
                 $feed_type = get_post_meta($post_id, 'feed_type', true) ?: 'traditional';
                 $post = get_post($post_id);
@@ -67,15 +80,19 @@ function get_feeds(): array
                 // Also check for ACF field if regular meta is empty
                 if (empty($feed_url) && function_exists('get_field')) {
                     $feed_url = get_field('feed_url', $post_id);
+                    error_log('[PUNTWORK] [DEBUG] get_feeds: Got feed_url from ACF: ' . $feed_url);
                 }
 
                 if (!empty($feed_url)) {
                     $feed_url = esc_url_raw($feed_url);
                     if (!filter_var($feed_url, FILTER_VALIDATE_URL)) {
+                        error_log('[PUNTWORK] [DEBUG] get_feeds: Invalid URL for post ' . $post_id . ': ' . $feed_url);
                         continue; // skip invalid URLs
                     }
                     $feeds[$post->post_name] = $feed_url; // Use slug as key
+                    error_log('[PUNTWORK] [DEBUG] get_feeds: Added feed ' . $post->post_name . ' -> ' . $feed_url);
                 } elseif ($feed_type === 'job_board') {
+                    error_log('[PUNTWORK] [DEBUG] get_feeds: Handling job board feed for post ' . $post_id);
                     // Handle job board feeds
                     $board_id = get_post_meta($post_id, 'job_board_id', true);
                     $board_params = get_post_meta($post_id, 'job_board_params', true) ?: [];
@@ -87,19 +104,31 @@ function get_feeds(): array
                             $job_board_url .= '?' . http_build_query($board_params);
                         }
                         $feeds[$post->post_name] = $job_board_url;
+                        error_log('[PUNTWORK] [DEBUG] get_feeds: Added job board feed ' . $post->post_name . ' -> ' . $job_board_url);
+                    } else {
+                        error_log('[PUNTWORK] [DEBUG] get_feeds: No board_id for job board post ' . $post_id);
                     }
+                } else {
+                    error_log('[PUNTWORK] [DEBUG] get_feeds: No feed_url for post ' . $post_id . ', feed_type: ' . $feed_type);
                 }
             }
+        } else {
+            error_log('[PUNTWORK] [DEBUG] get_feeds: No published job-feed posts found');
         }
 
         // Add configured job boards as additional feeds
+        error_log('[PUNTWORK] [DEBUG] get_feeds: Adding job board feeds');
         $job_board_feeds = get_job_board_feeds();
+        error_log('[PUNTWORK] [DEBUG] get_feeds: Job board feeds: ' . json_encode($job_board_feeds));
         $feeds = array_merge($feeds, $job_board_feeds);
 
         // Cache for 1 hour
         CacheManager::set($cache_key, $feeds, CacheManager::GROUP_MAPPINGS, HOUR_IN_SECONDS);
+    } else {
+        error_log('[PUNTWORK] [DEBUG] get_feeds: Using cached feeds: ' . json_encode($feeds));
     }
 
+    error_log('[PUNTWORK] [DEBUG] get_feeds: Final feeds array: ' . json_encode($feeds));
     return $feeds;
 }
 

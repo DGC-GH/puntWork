@@ -46,17 +46,23 @@ function process_feed_ajax()
         $url = $feeds[$feed_key] ?? '';
 
         // DETAILED SERVER-SIDE DEBUGGING
-        error_log('[PUNTWORK] ===== SERVER process_feed DEBUG =====');
-        error_log('[PUNTWORK] Feed key received: ' . $feed_key);
-        error_log('[PUNTWORK] Available feeds: ' . print_r($feeds, true));
-        error_log('[PUNTWORK] Feed URL for key: ' . $url);
-        error_log('[PUNTWORK] ABSPATH: ' . ABSPATH);
-        error_log('[PUNTWORK] Output directory: ' . ABSPATH . 'feeds/');
+        error_log('[PUNTWORK] [DEBUG] process_feed_ajax: ===== SERVER process_feed DEBUG =====');
+        error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Feed key received: ' . $feed_key);
+        error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Available feeds: ' . print_r($feeds, true));
+        error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Feed URL for key: ' . $url);
+        error_log('[PUNTWORK] [DEBUG] process_feed_ajax: ABSPATH: ' . ABSPATH);
+        error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Output directory: ' . ABSPATH . 'feeds/');
+        error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Output directory exists: ' . (is_dir(ABSPATH . 'feeds/') ? 'yes' : 'no'));
+        error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Output directory writable: ' . (is_writable(ABSPATH . 'feeds/') ? 'yes' : 'no'));
 
         if (empty($url)) {
-            error_log('[PUNTWORK] Feed URL is empty for key: ' . $feed_key);
+            error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Feed URL is empty for key: ' . $feed_key . ' - checking if feed exists in array');
+            error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Feed key exists in feeds array: ' . (array_key_exists($feed_key, $feeds) ? 'yes' : 'no'));
+            if (array_key_exists($feed_key, $feeds)) {
+                error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Feed value is: ' . var_export($feeds[$feed_key], true));
+            }
             PuntWorkLogger::error("Invalid feed key: {$feed_key}", PuntWorkLogger::CONTEXT_FEED);
-            AjaxErrorHandler::sendError('Invalid feed key');
+            AjaxErrorHandler::sendError('Invalid feed key: ' . $feed_key . ' - check feed configuration');
             return;
         }
 

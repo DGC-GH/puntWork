@@ -114,23 +114,35 @@ function prepare_import_setup($batch_start = 0)
     }
 
     $json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
-    error_log('[PUNTWORK] JSONL path: ' . $json_path);
-    error_log('[PUNTWORK] ABSPATH: ' . ABSPATH);
-    error_log('[PUNTWORK] File exists: ' . (file_exists($json_path) ? 'yes' : 'no'));
+    error_log('[PUNTWORK] [DEBUG] prepare_import_setup: JSONL path: ' . $json_path);
+    error_log('[PUNTWORK] [DEBUG] prepare_import_setup: ABSPATH: ' . ABSPATH);
+    error_log('[PUNTWORK] [DEBUG] prepare_import_setup: feeds/ directory exists: ' . (is_dir(ABSPATH . 'feeds/') ? 'yes' : 'no'));
+    error_log('[PUNTWORK] [DEBUG] prepare_import_setup: feeds/ directory writable: ' . (is_writable(ABSPATH . 'feeds/') ? 'yes' : 'no'));
+    $files_in_feeds = glob(ABSPATH . 'feeds/*');
+    error_log('[PUNTWORK] [DEBUG] prepare_import_setup: Files in feeds/ directory: ' . print_r($files_in_feeds, true));
+    error_log('[PUNTWORK] [DEBUG] prepare_import_setup: File exists: ' . (file_exists($json_path) ? 'yes' : 'no'));
     if (file_exists($json_path)) {
-        error_log('[PUNTWORK] File size: ' . filesize($json_path) . ' bytes');
+        error_log('[PUNTWORK] [DEBUG] prepare_import_setup: File size: ' . filesize($json_path) . ' bytes');
         $first_line = '';
         $handle = fopen($json_path, 'r');
         if ($handle) {
             $first_line = fgets($handle);
             fclose($handle);
-            error_log('[PUNTWORK] First line preview: ' . substr($first_line, 0, 200));
+            error_log('[PUNTWORK] [DEBUG] prepare_import_setup: First line preview: ' . substr($first_line, 0, 200));
         }
     }
 
     if (!file_exists($json_path)) {
-        error_log('[PUNTWORK] JSONL file not found: ' . $json_path);
-        return ['success' => false, 'message' => 'JSONL file not found', 'logs' => ['JSONL file not found']];
+        error_log('[PUNTWORK] [DEBUG] prepare_import_setup: JSONL file not found: ' . $json_path . ' - checking if feeds need to be processed first');
+        // Check if there are any individual feed files
+        $feed_files = glob(ABSPATH . 'feeds/*.jsonl');
+        error_log('[PUNTWORK] [DEBUG] prepare_import_setup: Individual feed files found: ' . print_r($feed_files, true));
+        if (empty($feed_files)) {
+            error_log('[PUNTWORK] [DEBUG] prepare_import_setup: No individual feed files found - feeds may not be configured or processed');
+        } else {
+            error_log('[PUNTWORK] [DEBUG] prepare_import_setup: Individual feeds exist but combined file missing - need to run combine_jsonl_files');
+        }
+        return ['success' => false, 'message' => 'JSONL file not found - feeds may need to be processed first', 'logs' => ['JSONL file not found - run feed processing first']];
     }
 
     if (!is_readable($json_path)) {

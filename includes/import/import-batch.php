@@ -132,7 +132,8 @@ if (!function_exists('import_jobs_from_json')) {
             }
 
             if (isset($setup['success'])) {
-                error_log('[PUNTWORK] prepare_import_setup returned early success/complete');
+                error_log('[PUNTWORK] [DEBUG] import_jobs_from_json: prepare_import_setup returned early success/complete');
+                error_log('[PUNTWORK] [DEBUG] import_jobs_from_json: Early return details: ' . json_encode($setup));
                 return $setup; // Early return for empty or completed cases
             }
 
