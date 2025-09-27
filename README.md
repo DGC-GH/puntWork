@@ -7,7 +7,33 @@
 - **Author**: DGC-GH
 - **License**: GPL v2+
 - **Requirements**: WordPress 5.0+, PHP 8.1+, MySQL 5.7+
-- **Features**: Multi-format feeds, real-time analytics, AI-powered categorization, CRM integrations (HubSpot, Salesforce, etc.), multi-site support, horizontal scaling, GraphQL API, webhooks, mobile app (React Native)
+- **Features**: M### Production Deployment (Hostinger)
+Hostinger automatically runs `composer install` during deployment. To prevent dev dependencies from being installed in production:
+
+**The repository is configured so that:**
+- `composer.json` is a symlink pointing to `composer.json.development` (with dev dependencies)
+- `composer.json.production` contains only production dependencies (no dev section)
+- Deployment scripts switch the symlink for clean production builds
+
+**For Production Deployment:**
+```bash
+# This switches composer.json to production version and installs only prod deps
+./prepare-production.sh
+
+# Deploy to Hostinger - it will now install only production dependencies
+# (Hostinger runs: composer install --no-dev --optimize-autoloader)
+```
+
+**After Deployment (restore dev environment):**
+```bash
+./restore-dev.sh
+```
+
+**What This Solves:**
+- ✅ **Hostinger deployments are clean** - no dev dependencies (PHPCS, PHPUnit) in production
+- ✅ **Faster deployments** - smaller vendor directory, better performance
+- ✅ **Local development intact** - full dev tools available via symlink
+- ✅ **Zero configuration** - works out-of-the-box with Hostinger's deployment processds, real-time analytics, AI-powered categorization, CRM integrations (HubSpot, Salesforce, etc.), multi-site support, horizontal scaling, GraphQL API, webhooks, mobile app (React Native)
 
 ## Technologies
 - **Backend**: PHP 8.1+, WordPress API, MySQL
