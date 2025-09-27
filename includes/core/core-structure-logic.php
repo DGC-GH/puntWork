@@ -198,7 +198,7 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
 
     error_log('[PUNTWORK] About to call FeedProcessor::processFeed');
     // Process feed using FeedProcessor
-    $count = FeedProcessor::processFeed($feed_path, $format, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+    $count = FeedProcessor::processFeed($feed_path, $format, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
     error_log('[PUNTWORK] FeedProcessor::processFeed returned count: ' . $count);
     error_log('[PUNTWORK] Total items processed: ' . $total_items);
 

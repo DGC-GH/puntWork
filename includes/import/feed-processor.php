@@ -122,7 +122,7 @@ class FeedProcessor
      * @param array &$logs Logs array
      * @return array Processed batch data
      */
-    public static function processFeed(string $feed_path, string $format, string $handle, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): array
+    public static function processFeed(string $feed_path, string $format, $handle, string $feed_key, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): int
     {
         switch ($format) {
             case self::FORMAT_XML:
@@ -141,9 +141,9 @@ class FeedProcessor
     /**
      * Process XML feed (existing functionality)
      */
-    private static function processXmlFeed($xml_path, $handle, $output_dir, $fallback_domain, $batch_size, &$total_items, &$logs)
+    private static function processXmlFeed($xml_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, &$total_items, &$logs)
     {
-        return process_xml_batch($xml_path, null, $handle, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+        return process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
     }
 
     /**
@@ -167,16 +167,17 @@ class FeedProcessor
      * Process JSON feed
      *
      * @param string $json_path Path to JSON file
-     * @param string $handle Feed handle/key
+     * @param resource $handle File handle for writing
+     * @param string $feed_key Feed handle/key
      * @param string $output_dir Output directory
      * @param string $fallback_domain Fallback domain
      * @param int $batch_size Batch size
      * @param int &$total_items Total items counter
      * @param array &$logs Logs array
-     * @return array Processed batch data
+     * @return int Number of items processed
      * @throws \Exception If JSON processing fails
      */
-    private static function processJsonFeed(string $json_path, string $handle, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): array
+    private static function processJsonFeed(string $json_path, $handle, string $feed_key, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): int
     {
         $feed_item_count = 0;
         $batch = [];
@@ -197,7 +198,7 @@ class FeedProcessor
 
             foreach ($items as $item_data) {
                 if (!is_array($item_data) && !is_object($item_data)) {
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$handle item skipped: Invalid item structure";
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key item skipped: Invalid item structure";
                     continue;
                 }
 
@@ -214,7 +215,7 @@ class FeedProcessor
 
                 // Skip empty items
                 if (empty((array)$item)) {
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$handle item skipped: No fields collected";
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key item skipped: No fields collected";
                     continue;
                 }
 
@@ -230,16 +231,22 @@ class FeedProcessor
                 $feed_item_count++;
 
                 // Process in batches
-                if ($feed_item_count >= $batch_size) {
-                    $total_items += $feed_item_count;
-                    return $batch;
+                if (count($batch) >= $batch_size) {
+                    fwrite($handle, implode('', $batch));
+                    $batch = [];
+                    $total_items += $batch_size;
                 }
             }
 
-            $total_items += $feed_item_count;
-            return $batch;
+            // Write remaining items
+            if (!empty($batch)) {
+                fwrite($handle, implode('', $batch));
+                $total_items += count($batch);
+            }
+
+            return $feed_item_count;
         } catch (\Exception $e) {
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$handle JSON processing error: " . $e->getMessage();
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key JSON processing error: " . $e->getMessage();
             throw $e;
         }
     }
@@ -248,16 +255,17 @@ class FeedProcessor
      * Process CSV feed
      *
      * @param string $csv_path Path to CSV file
-     * @param string $handle Feed handle/key
+     * @param resource $handle File handle for writing
+     * @param string $feed_key Feed handle/key
      * @param string $output_dir Output directory
      * @param string $fallback_domain Fallback domain
      * @param int $batch_size Batch size
      * @param int &$total_items Total items counter
      * @param array &$logs Logs array
-     * @return array Processed batch data
+     * @return int Number of items processed
      * @throws \Exception If CSV processing fails
      */
-    private static function processCsvFeed(string $csv_path, string $handle, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): array
+    private static function processCsvFeed(string $csv_path, $handle, string $feed_key, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): int
     {
         $feed_item_count = 0;
         $batch = [];
@@ -285,7 +293,7 @@ class FeedProcessor
 
             while (($row = fgetcsv($handle_resource, 0, $delimiter)) !== false) {
                 if (count($row) !== count($headers)) {
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$handle row skipped: Column count mismatch";
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key row skipped: Column count mismatch";
                     continue;
                 }
 
@@ -297,7 +305,7 @@ class FeedProcessor
 
                 // Skip empty items
                 if (empty((array)$item)) {
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$handle item skipped: No fields collected";
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key item skipped: No fields collected";
                     continue;
                 }
 
@@ -313,21 +321,26 @@ class FeedProcessor
                 $feed_item_count++;
 
                 // Process in batches
-                if ($feed_item_count >= $batch_size) {
-                    $total_items += $feed_item_count;
-                    fclose($handle_resource);
-                    return $batch;
+                if (count($batch) >= $batch_size) {
+                    fwrite($handle, implode('', $batch));
+                    $batch = [];
+                    $total_items += $batch_size;
                 }
             }
 
+            // Write remaining items
+            if (!empty($batch)) {
+                fwrite($handle, implode('', $batch));
+                $total_items += count($batch);
+            }
+
             fclose($handle_resource);
-            $total_items += $feed_item_count;
-            return $batch;
+            return $feed_item_count;
         } catch (\Exception $e) {
             if (isset($handle_resource) && is_resource($handle_resource)) {
                 fclose($handle_resource);
             }
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$handle CSV processing error: " . $e->getMessage();
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key CSV processing error: " . $e->getMessage();
             throw $e;
         }
     }
@@ -336,16 +349,17 @@ class FeedProcessor
      * Process job board feed
      *
      * @param string $feed_path Job board URL (job_board://board_id?params)
-     * @param string $handle Feed handle/key
+     * @param resource $handle File handle for writing
+     * @param string $feed_key Feed handle/key
      * @param string $output_dir Output directory
      * @param string $fallback_domain Fallback domain
      * @param int $batch_size Batch size
      * @param int &$total_items Total items counter
      * @param array &$logs Logs array
-     * @return array Processed batch data
+     * @return int Number of items processed
      * @throws \Exception If job board processing fails
      */
-    private static function processJobBoardFeed(string $feed_path, string $handle, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): array
+    private static function processJobBoardFeed(string $feed_path, $handle, string $feed_key, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): int
     {
         $feed_item_count = 0;
         $batch = [];
@@ -379,7 +393,7 @@ class FeedProcessor
 
                 // Skip empty items
                 if (empty((array)$item)) {
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$handle job skipped: No fields collected";
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key job skipped: No fields collected";
                     continue;
                 }
 
@@ -395,16 +409,22 @@ class FeedProcessor
                 $feed_item_count++;
 
                 // Process in batches
-                if ($feed_item_count >= $batch_size) {
-                    $total_items += $feed_item_count;
-                    return $batch;
+                if (count($batch) >= $batch_size) {
+                    fwrite($handle, implode('', $batch));
+                    $batch = [];
+                    $total_items += $batch_size;
                 }
             }
 
-            $total_items += $feed_item_count;
-            return $batch;
+            // Write remaining items
+            if (!empty($batch)) {
+                fwrite($handle, implode('', $batch));
+                $total_items += count($batch);
+            }
+
+            return $feed_item_count;
         } catch (\Exception $e) {
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$handle job board processing error: " . $e->getMessage();
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key job board processing error: " . $e->getMessage();
             throw $e;
         }
     }
