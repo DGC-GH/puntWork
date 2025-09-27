@@ -14,6 +14,7 @@ use OpenTelemetry\SDK\Trace\SpanProcessor\SimpleSpanProcessor;
 use OpenTelemetry\API\Trace\TracerProviderInterface;
 use OpenTelemetry\Context\Context;
 use OpenTelemetry\SDK\Common\Export\Stream\StreamTransportFactory;
+use OpenTelemetry\API\Trace\NoopTracer;
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
@@ -34,28 +35,37 @@ class PuntworkTracing
             return; // Already initialized
         }
 
-        // Create console exporter for development
-        $transportFactory = new StreamTransportFactory();
-        $transport = $transportFactory->create('php://stdout', 'application/json');
-        $exporter = new ConsoleSpanExporter($transport);
+        try {
+            // Create console exporter for development
+            $transportFactory = new StreamTransportFactory();
+            $transport = $transportFactory->create('php://stdout', 'application/json');
+            $exporter = new ConsoleSpanExporter($transport);
 
-        // Create span processor
-        $spanProcessor = new SimpleSpanProcessor($exporter);
+            // Create span processor
+            $spanProcessor = new SimpleSpanProcessor($exporter);
 
-        // Create tracer provider
-        self::$tracerProvider = new TracerProvider($spanProcessor);
+            // Create tracer provider
+            self::$tracerProvider = new TracerProvider($spanProcessor);
 
-        // Get tracer
-        self::$tracer = self::$tracerProvider->getTracer('puntwork', '1.0.0');
-    }
-
-    /**
+            // Get tracer
+            self::$tracer = self::$tracerProvider->getTracer('puntwork', '1.0.0');
+        } catch (\Throwable $e) {
+            // Disable tracing if initialization fails
+            self::$tracerProvider = null;
+            self::$tracer = null;
+            error_log('PuntworkTracing initialization failed: ' . $e->getMessage());
+        }
+    }    /**
      * Get the tracer instance
      */
     public static function getTracer(): TracerInterface
     {
         if (self::$tracer === null) {
             self::init();
+        }
+        if (self::$tracer === null) {
+            // Return a no-op tracer if initialization failed
+            return new NoopTracer();
         }
         return self::$tracer;
     }
