@@ -78,7 +78,7 @@ function ajax_get_db_optimization_status()
 
         AjaxErrorHandler::sendSuccess($response);
     } catch (\Exception $e) {
-        PuntWorkLogger::error('Database optimization status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        \Puntwork\PuntWorkLogger::error('Database optimization status error: ' . $e->getMessage(), \Puntwork\PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to get database optimization status: ' . $e->getMessage());
     }
 }
@@ -182,8 +182,8 @@ function ajax_clear_performance_logs()
 
     try {
         // Import the cleanup function
-        if (class_exists('Utilities\\PerformanceMonitor')) {
-            Utilities\PerformanceMonitor::cleanupOldLogs(30); // Keep 30 days
+        if (class_exists('\Puntwork\Utilities\PerformanceMonitor')) {
+            \Puntwork\Utilities\PerformanceMonitor::cleanupOldLogs(30); // Keep 30 days
             $message = 'Performance logs older than 30 days have been cleared.';
         } else {
             $message = 'Performance monitoring not available.';

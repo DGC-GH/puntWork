@@ -98,7 +98,23 @@ function handle_import_progress_sse($request)
         // Verify API key
         if (empty($api_key)) {
             error_log('[PUNTWORK] SSE: Missing API key');
-            return new \WP_Error('missing_api_key', 'API key is required', ['status' => 401]);
+            // Send error event instead of returning WP_Error
+            header('Content-Type: text/event-stream');
+            header('Cache-Control: no-cache');
+            header('Connection: keep-alive');
+            header('Access-Control-Allow-Origin: *');
+            header('Access-Control-Allow-Headers: Cache-Control');
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+            echo "event: error\n";
+            echo "data: " . json_encode([
+                'timestamp' => time(),
+                'error' => 'API key is required',
+                'code' => 'missing_api_key'
+            ]) . "\n\n";
+            flush();
+            exit();
         }
 
         $stored_key = get_option('puntwork_api_key');
@@ -106,7 +122,23 @@ function handle_import_progress_sse($request)
 
         if (empty($stored_key) || !hash_equals($stored_key, $api_key)) {
             error_log('[PUNTWORK] SSE: Invalid API key provided');
-            return new \WP_Error('invalid_api_key', 'Invalid API key', ['status' => 401]);
+            // Send error event instead of returning WP_Error
+            header('Content-Type: text/event-stream');
+            header('Cache-Control: no-cache');
+            header('Connection: keep-alive');
+            header('Access-Control-Allow-Origin: *');
+            header('Access-Control-Allow-Headers: Cache-Control');
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+            echo "event: error\n";
+            echo "data: " . json_encode([
+                'timestamp' => time(),
+                'error' => 'Invalid API key',
+                'code' => 'invalid_api_key'
+            ]) . "\n\n";
+            flush();
+            exit();
         }
 
         error_log('[PUNTWORK] SSE: API key verified, starting SSE connection');

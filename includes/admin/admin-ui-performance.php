@@ -31,7 +31,7 @@ function performance_metrics_page()
         switch ($_POST['action']) {
             case 'clear_performance_logs':
                 check_admin_referer('performance_metrics_nonce');
-                PerformanceMonitor::cleanupOldLogs(7); // Keep only 7 days
+                                \Puntwork\Utilities\PerformanceMonitor::cleanupOldLogs(7); // Keep only 7 days
                 add_settings_error('performance_metrics', 'logs_cleared', 'Performance logs cleared successfully.', 'success');
                 break;
         }

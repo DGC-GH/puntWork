@@ -8,8 +8,6 @@
  * @since      1.0.9
  */
 
-namespace Puntwork;
-
 // Prevent direct access
 if (! defined('ABSPATH')) {
     exit;
@@ -75,7 +73,7 @@ function get_circuit_breaker_status(): array
  */
 function start_performance_monitoring(string $operation): string
 {
-    return PerformanceMonitor::start($operation);
+    return \Puntwork\Utilities\PerformanceMonitor::start($operation);
 }
 
 /**
@@ -87,7 +85,7 @@ function start_performance_monitoring(string $operation): string
  */
 function checkpoint_performance(string $id, string $checkpoint, array $data = []): void
 {
-    PerformanceMonitor::checkpoint($id, $checkpoint, $data);
+    \Puntwork\Utilities\PerformanceMonitor::checkpoint($id, $checkpoint, $data);
 }
 
 /**
@@ -98,7 +96,7 @@ function checkpoint_performance(string $id, string $checkpoint, array $data = []
  */
 function end_performance_monitoring(string $id): array
 {
-    return PerformanceMonitor::end($id);
+    return \Puntwork\Utilities\PerformanceMonitor::end($id);
 }
 
 /**
@@ -108,7 +106,7 @@ function end_performance_monitoring(string $id): array
  */
 function get_performance_snapshot(): array
 {
-    return PerformanceMonitor::snapshot();
+    return \Puntwork\Utilities\PerformanceMonitor::snapshot();
 }
 
 /**
@@ -120,7 +118,7 @@ function get_performance_snapshot(): array
  */
 function get_performance_statistics(?string $operation = '', int $days = 30): array
 {
-    return PerformanceMonitor::getStatistics($operation ?? '', $days);
+    return \Puntwork\Utilities\PerformanceMonitor::getStatistics($operation ?? '', $days);
 }
 
 /**
@@ -128,7 +126,7 @@ function get_performance_statistics(?string $operation = '', int $days = 30): ar
  */
 function start_db_performance_monitoring(): void
 {
-    DatabasePerformanceMonitor::start();
+    \Puntwork\Utilities\DatabasePerformanceMonitor::start();
 }
 
 /**
@@ -138,7 +136,7 @@ function start_db_performance_monitoring(): void
  */
 function end_db_performance_monitoring(): array
 {
-    return DatabasePerformanceMonitor::end();
+    return \Puntwork\Utilities\DatabasePerformanceMonitor::end();
 }
 
 /**
@@ -150,7 +148,7 @@ function end_db_performance_monitoring(): array
  */
 function check_batch_memory_usage(int $current_index, float $threshold = 0.8): array
 {
-    return MemoryManager::checkMemoryUsage($current_index, $threshold);
+    return \Puntwork\Utilities\MemoryManager::checkMemoryUsage($current_index, $threshold);
 }
 
 /**
@@ -158,7 +156,7 @@ function check_batch_memory_usage(int $current_index, float $threshold = 0.8): a
  */
 function optimize_memory_for_batch(): void
 {
-    MemoryManager::optimizeForLargeBatch();
+    \Puntwork\Utilities\MemoryManager::optimizeForLargeBatch();
 }
 
 /**
@@ -166,7 +164,7 @@ function optimize_memory_for_batch(): void
  */
 function reset_memory_manager(): void
 {
-    MemoryManager::reset();
+    \Puntwork\Utilities\MemoryManager::reset();
 }
 
 /**
@@ -185,18 +183,22 @@ function ajax_warm_performance_caches(): void
             return;
         }
 
-        EnhancedCacheManager::warmCommonCaches();
+        \Puntwork\Utilities\EnhancedCacheManager::warmCommonCaches();
 
         wp_send_json_success([
             'message' => 'Performance caches warmed successfully',
             'timestamp' => current_time('timestamp')
         ]);
     } catch (\Exception $e) {
-        PuntWorkLogger::error('Cache warming failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SYSTEM);
+        \Puntwork\PuntWorkLogger::error('Cache warming failed: ' . $e->getMessage(), \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM);
         wp_send_json_error('Cache warming failed: ' . $e->getMessage());
     }
 }
-add_action('wp_ajax_warm_performance_caches', 'ajax_warm_performance_caches');
+
+// Only register WordPress hooks if WordPress functions are available
+if (function_exists('add_action')) {
+    add_action('wp_ajax_warm_performance_caches', 'ajax_warm_performance_caches');
+}
 
 /**
  * AJAX handler for resetting cache analytics
@@ -214,7 +216,7 @@ function ajax_reset_cache_analytics(): void
             return;
         }
 
-        EnhancedCacheManager::resetAnalytics();
+        \Puntwork\Utilities\EnhancedCacheManager::resetAnalytics();
 
         wp_send_json_success([
             'message' => 'Cache analytics reset successfully',
@@ -224,7 +226,11 @@ function ajax_reset_cache_analytics(): void
         wp_send_json_error('Analytics reset failed: ' . $e->getMessage());
     }
 }
-add_action('wp_ajax_reset_cache_analytics', 'ajax_reset_cache_analytics');
+
+// Only register WordPress hooks if WordPress functions are available
+if (function_exists('add_action')) {
+    add_action('wp_ajax_reset_cache_analytics', 'ajax_reset_cache_analytics');
+}
 
 /**
  * AJAX handler for running memory performance test
@@ -248,7 +254,7 @@ function ajax_run_memory_performance_test(): void
         // Simulate processing different batch sizes
         $test_results = [];
         for ($batch_size = 100; $batch_size <= 1000; $batch_size += 200) {
-            $prediction = AdvancedMemoryManager::predictMemoryUsage($batch_size);
+            $prediction = \Puntwork\Utilities\AdvancedMemoryManager::predictMemoryUsage($batch_size);
             $test_results[] = [
                 'batch_size' => $batch_size,
                 'prediction' => $prediction
@@ -268,7 +274,11 @@ function ajax_run_memory_performance_test(): void
         wp_send_json_error('Memory test failed: ' . $e->getMessage());
     }
 }
-add_action('wp_ajax_run_memory_performance_test', 'ajax_run_memory_performance_test');
+
+// Only register WordPress hooks if WordPress functions are available
+if (function_exists('add_action')) {
+    add_action('wp_ajax_run_memory_performance_test', 'ajax_run_memory_performance_test');
+}
 
 /**
  * AJAX handler for clearing memory pool
@@ -286,7 +296,7 @@ function ajax_clear_memory_pool(): void
             return;
         }
 
-        AdvancedMemoryManager::clearPool();
+        \Puntwork\Utilities\AdvancedMemoryManager::clearPool();
 
         wp_send_json_success([
             'message' => 'Memory pool cleared successfully',
@@ -296,7 +306,11 @@ function ajax_clear_memory_pool(): void
         wp_send_json_error('Memory pool clear failed: ' . $e->getMessage());
     }
 }
-add_action('wp_ajax_clear_memory_pool', 'ajax_clear_memory_pool');
+
+// Only register WordPress hooks if WordPress functions are available
+if (function_exists('add_action')) {
+    add_action('wp_ajax_clear_memory_pool', 'ajax_clear_memory_pool');
+}
 
 /**
  * AJAX handler for running ML feed optimization
@@ -323,11 +337,15 @@ function ajax_run_ml_feed_optimization(): void
             'results' => $results
         ]);
     } catch (\Exception $e) {
-        PuntWorkLogger::error('ML feed optimization failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AI);
+        \Puntwork\PuntWorkLogger::error('ML feed optimization failed: ' . $e->getMessage(), \Puntwork\PuntWorkLogger::CONTEXT_AI);
         wp_send_json_error('ML optimization failed: ' . $e->getMessage());
     }
 }
-add_action('wp_ajax_run_ml_feed_optimization', 'ajax_run_ml_feed_optimization');
+
+// Only register WordPress hooks if WordPress functions are available
+if (function_exists('add_action')) {
+    add_action('wp_ajax_run_ml_feed_optimization', 'ajax_run_ml_feed_optimization');
+}
 
 /**
  * AJAX handler for training ML models
@@ -354,11 +372,15 @@ function ajax_train_ml_models(): void
             'results' => $results
         ]);
     } catch (\Exception $e) {
-        PuntWorkLogger::error('Model training failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AI);
+        \Puntwork\PuntWorkLogger::error('Model training failed: ' . $e->getMessage(), \Puntwork\PuntWorkLogger::CONTEXT_AI);
         wp_send_json_error('Model training failed: ' . $e->getMessage());
     }
 }
-add_action('wp_ajax_train_ml_models', 'ajax_train_ml_models');
+
+// Only register WordPress hooks if WordPress functions are available
+if (function_exists('add_action')) {
+    add_action('wp_ajax_train_ml_models', 'ajax_train_ml_models');
+}
 
 /**
  * AJAX handler for getting ML insights
@@ -385,4 +407,8 @@ function ajax_get_ml_insights(): void
         wp_send_json_error('Failed to get ML insights: ' . $e->getMessage());
     }
 }
-add_action('wp_ajax_get_ml_insights', 'ajax_get_ml_insights');
+
+// Only register WordPress hooks if WordPress functions are available
+if (function_exists('add_action')) {
+    add_action('wp_ajax_get_ml_insights', 'ajax_get_ml_insights');
+}

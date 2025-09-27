@@ -24,8 +24,8 @@ function download_feed($url, $feed_path, $output_dir, &$logs, &$format = null)
 
     // Start tracing span for feed download (only if available)
     $span = null;
-    if (class_exists('PuntworkTracing')) {
-        $span = PuntworkTracing::startActiveSpan('download_feed', [
+    if (class_exists('\Puntwork\PuntworkTracing')) {
+        $span = \Puntwork\PuntworkTracing::startActiveSpan('download_feed', [
             'feed.url' => $url,
             'feed.path' => $feed_path,
             'output.dir' => $output_dir
@@ -96,7 +96,7 @@ function download_feed($url, $feed_path, $output_dir, &$logs, &$format = null)
 
             // Detect format from downloaded content
             $content = file_get_contents($feed_path);
-            $format = FeedProcessor::detectFormat($url, $content);
+            $format = \Puntwork\FeedProcessor::detectFormat($url, $content);
 
             error_log('[PUNTWORK] Detected format: ' . $format);
             error_log('[PUNTWORK] Content preview: ' . substr($content, 0, 200));

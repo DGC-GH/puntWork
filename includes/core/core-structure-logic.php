@@ -154,7 +154,7 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
     error_log('[PUNTWORK] Fallback domain: ' . $fallback_domain);
 
     // Determine file extension based on URL
-    $extension = FeedProcessor::detectFormat($url);
+    $extension = \Puntwork\FeedProcessor::detectFormat($url);
     error_log('[PUNTWORK] Detected extension: ' . $extension);
 
     $feed_path = $output_dir . $feed_key . '.' . $extension;
@@ -167,10 +167,10 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
     error_log('[PUNTWORK] GZ JSON path: ' . $gz_json_path);
 
     // Handle job board feeds differently - no download needed
-    if ($extension === FeedProcessor::FORMAT_JOB_BOARD) {
+    if ($extension === \Puntwork\FeedProcessor::FORMAT_JOB_BOARD) {
         error_log('[PUNTWORK] Handling as job board feed');
         $feed_path = $url; // Use the job board URL directly
-        $detected_format = FeedProcessor::FORMAT_JOB_BOARD;
+        $detected_format = \Puntwork\FeedProcessor::FORMAT_JOB_BOARD;
     } else {
         error_log('[PUNTWORK] Handling as regular feed, downloading...');
         // Download feed and detect format
@@ -183,7 +183,7 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
     }
 
     // Use detected format, fallback to URL-based detection
-    $format = $detected_format ?: FeedProcessor::detectFormat($url);
+    $format = $detected_format ?: \Puntwork\FeedProcessor::detectFormat($url);
     error_log('[PUNTWORK] Final format: ' . $format);
 
     $handle = fopen($json_path, 'w');
@@ -198,7 +198,7 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
 
     error_log('[PUNTWORK] About to call FeedProcessor::processFeed');
     // Process feed using FeedProcessor
-    $count = FeedProcessor::processFeed($feed_path, $format, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+    $count = \Puntwork\FeedProcessor::processFeed($feed_path, $format, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
     error_log('[PUNTWORK] FeedProcessor::processFeed returned count: ' . $count);
     error_log('[PUNTWORK] Total items processed: ' . $total_items);
 

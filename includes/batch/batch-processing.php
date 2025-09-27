@@ -172,15 +172,19 @@ function process_batch_items_logic(array $setup): array
         error_log('[PUNTWORK] Starting performance monitoring');
         // Start performance monitoring
         $perf_id = start_performance_monitoring('batch_import');
+        error_log('[PUNTWORK] Performance monitoring started with ID: ' . $perf_id);
 
         // Start database performance monitoring
         start_db_performance_monitoring();
+        error_log('[PUNTWORK] Database performance monitoring started');
 
         // Optimize memory for large batch
         optimize_memory_for_batch();
+        error_log('[PUNTWORK] Memory optimization completed');
 
         // Reset memory manager
         reset_memory_manager();
+        error_log('[PUNTWORK] Memory manager reset completed');
 
         extract($setup);
 
@@ -670,7 +674,7 @@ function get_cached_last_updates(array $post_ids, array $post_id_chunks): array
 
     sort($post_ids);
     $cache_key = 'batch_last_updates_' . md5(implode(',', $post_ids));
-    $cached = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
+    $cached = \Puntwork\Utilities\CacheManager::get($cache_key, \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS);
 
     if ($cached !== false) {
         return $cached;
@@ -692,7 +696,7 @@ function get_cached_last_updates(array $post_ids, array $post_id_chunks): array
     }
 
     // Cache for 5 minutes during import processing
-    CacheManager::set($cache_key, $last_updates, CacheManager::GROUP_ANALYTICS, 5 * MINUTE_IN_SECONDS);
+    \Puntwork\Utilities\CacheManager::set($cache_key, $last_updates, \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS, 5 * MINUTE_IN_SECONDS);
     return $last_updates;
 }
 
@@ -704,7 +708,7 @@ function get_cached_import_hashes(array $post_ids, array $post_id_chunks): array
     global $wpdb;
 
     $cache_key = 'batch_import_hashes_' . md5(implode(',', $post_ids));
-    $cached = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
+    $cached = \Puntwork\Utilities\CacheManager::get($cache_key, \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS);
 
     if ($cached !== false) {
         return $cached;
@@ -728,7 +732,7 @@ function get_cached_import_hashes(array $post_ids, array $post_id_chunks): array
     }
 
     // Cache for 5 minutes during import processing
-    CacheManager::set($cache_key, $hashes_by_post, CacheManager::GROUP_ANALYTICS, 5 * MINUTE_IN_SECONDS);
+    \Puntwork\Utilities\CacheManager::set($cache_key, $hashes_by_post, \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS, 5 * MINUTE_IN_SECONDS);
     return $hashes_by_post;
 }
 
@@ -796,7 +800,7 @@ function process_batch_enhanced(array $batch_guids, array $batch_items, array &$
 
     try {
         // Warm up caches for better performance
-        EnhancedCacheManager::warmCommonCaches();
+        \Puntwork\Utilities\EnhancedCacheManager::warmCommonCaches();
 
         // Get existing posts with enhanced caching
         $existing_by_guid = get_posts_by_guids_with_status_enhanced($batch_guids);
@@ -846,9 +850,9 @@ function get_posts_by_guids_with_status_enhanced(array $guids): array
 
     // Use enhanced caching with batch operations
     $cache_key = 'posts_by_guid_' . md5(implode(',', $guids));
-    $cached = EnhancedCacheManager::getWithWarmup(
+    $cached = \Puntwork\Utilities\EnhancedCacheManager::getWithWarmup(
         $cache_key,
-        CacheManager::GROUP_ANALYTICS,
+        \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS,
         function () use ($guids) {
             return get_posts_by_guids_with_status($guids);
         },
@@ -916,7 +920,7 @@ function get_cached_last_updates_enhanced(array $post_ids, array $post_id_chunks
     sort($post_ids);
     $cache_key = 'batch_last_updates_enhanced_' . md5(implode(',', $post_ids));
 
-    $cached = EnhancedCacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
+    $cached = \Puntwork\Utilities\EnhancedCacheManager::get($cache_key, \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS);
     if ($cached !== false) {
         return $cached;
     }
@@ -938,9 +942,9 @@ function get_cached_last_updates_enhanced(array $post_ids, array $post_id_chunks
 
     // Cache for longer period with compression for large datasets
     if (count($last_updates) > 1000) {
-        EnhancedCacheManager::setCompressed($cache_key, $last_updates, CacheManager::GROUP_ANALYTICS, 10 * MINUTE_IN_SECONDS);
+        \Puntwork\Utilities\EnhancedCacheManager::setCompressed($cache_key, $last_updates, \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS, 10 * MINUTE_IN_SECONDS);
     } else {
-        EnhancedCacheManager::set($cache_key, $last_updates, CacheManager::GROUP_ANALYTICS, 10 * MINUTE_IN_SECONDS);
+        \Puntwork\Utilities\EnhancedCacheManager::set($cache_key, $last_updates, \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS, 10 * MINUTE_IN_SECONDS);
     }
 
     return $last_updates;
@@ -953,7 +957,7 @@ function get_cached_import_hashes_enhanced(array $post_ids, array $post_id_chunk
 {
     $cache_key = 'batch_import_hashes_enhanced_' . md5(implode(',', $post_ids));
 
-    $cached = EnhancedCacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
+    $cached = \Puntwork\Utilities\EnhancedCacheManager::get($cache_key, \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS);
     if ($cached !== false) {
         return $cached;
     }
@@ -977,9 +981,9 @@ function get_cached_import_hashes_enhanced(array $post_ids, array $post_id_chunk
 
     // Cache for longer period with compression for large datasets
     if (count($hashes_by_post) > 1000) {
-        EnhancedCacheManager::setCompressed($cache_key, $hashes_by_post, CacheManager::GROUP_ANALYTICS, 10 * MINUTE_IN_SECONDS);
+        \Puntwork\Utilities\EnhancedCacheManager::setCompressed($cache_key, $hashes_by_post, \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS, 10 * MINUTE_IN_SECONDS);
     } else {
-        EnhancedCacheManager::set($cache_key, $hashes_by_post, CacheManager::GROUP_ANALYTICS, 10 * MINUTE_IN_SECONDS);
+        \Puntwork\Utilities\EnhancedCacheManager::set($cache_key, $hashes_by_post, \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS, 10 * MINUTE_IN_SECONDS);
     }
 
     return $hashes_by_post;
@@ -994,7 +998,7 @@ function process_batch_items_with_memory_management(array $batch_guids, array $b
     $batch_size = count($batch_guids);
 
     // Predict memory usage and adjust batch size if needed
-    $memory_prediction = AdvancedMemoryManager::predictMemoryUsage($batch_size);
+    $memory_prediction = \Puntwork\Utilities\AdvancedMemoryManager::predictMemoryUsage($batch_size);
 
     if ($memory_prediction['will_exceed_limit']) {
         $recommended_size = $memory_prediction['recommended_batch_size'];
@@ -1012,7 +1016,7 @@ function process_batch_items_with_memory_management(array $batch_guids, array $b
             $total_processed += $chunk_processed;
 
             // Memory cleanup between chunks
-            AdvancedMemoryManager::checkAndCleanup();
+            \Puntwork\Utilities\AdvancedMemoryManager::checkAndCleanup();
         }
 
         return $total_processed;
