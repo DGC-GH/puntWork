@@ -16,3 +16,7 @@ cache/
 
 # WordPress development files
 wp-content/
+
+# Temporary test result files
+tests/performance-results-*.json
+tests/*-results-*.json
