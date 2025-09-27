@@ -310,6 +310,48 @@ php tests/rest-api-test.php
 ```
 
 ## Deployment and Server Access
+### Production Deployment
+For production deployment (especially Hostinger), use the deployment scripts to ensure dev dependencies are not installed:
+
+```bash
+# Prepare for production deployment
+./prepare-production.sh
+
+# This will:
+# - Switch to production composer.json (no dev dependencies)
+# - Install only production dependencies
+# - Remove development files (tests, CI configs, etc.)
+
+# After deployment, restore development environment
+./restore-dev.sh
+```
+
+### Manual Production Setup
+If you need to manually prepare for production:
+
+1. **Remove dev dependencies** from `composer.json`:
+   ```json
+   {
+       "require-dev": {
+           "squizlabs/php_codesniffer": "^3.7",
+           "phpunit/phpunit": "^10.5"
+       }
+   }
+   ```
+   Remove the entire `"require-dev"` section.
+
+2. **Run production install**:
+   ```bash
+   composer install --no-dev --optimize-autoloader
+   ```
+
+3. **Remove dev files**:
+   ```bash
+   rm -f phpunit.xml
+   rm -rf tests/
+   rm -rf .github/
+   ```
+
 ### FTP File Access
 Server files are accessible via FTP using credentials from .env file:
 - **Debug Log**: ftp://$FTP_USER:$FTP_PASS@$FTP_HOST/wp-content/debug.log
