@@ -21,3 +21,6 @@ wp-content/
 # Temporary test result files
 tests/performance-results-*.json
 tests/*-results-*.json
+
+# Production deployment files
+composer.json.development
