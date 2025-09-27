@@ -303,4 +303,22 @@ php tests/rest-api-test.php
 # MailHog: http://localhost:8025
 ```
 
+## Deployment and Server Access
+### FTP File Access
+Server files are accessible via mounted FTP volume at `/Volumes/153.92.216.191/` on macOS:
+- **Debug Log**: `/Volumes/153.92.216.191/wp-content/debug.log`
+- **Plugin Files**: `/Volumes/153.92.216.191/wp-content/plugins/puntWork/`
+
+### Admin Page URLs
+- **Main Dashboard**: https://belgiumjobs.work/wp-admin/admin.php?page=puntwork-dashboard
+- **Job Feed Dashboard**: https://belgiumjobs.work/wp-admin/admin.php?page=job-feed-dashboard
+- **Feed Configuration**: https://belgiumjobs.work/wp-admin/admin.php?page=puntwork-feed-config
+
+### Deployment Process
+1. Commit changes to main branch
+2. GitHub webhook automatically deploys to Hostinger
+3. Check `/Volumes/153.92.216.191/wp-content/debug.log` for errors
+4. Open admin URLs in VS Code Simple Browser to verify functionality
+5. Clean debug.log if it becomes too large
+
 This file provides optimal context for rapid codebase understanding and efficient task execution for Grok Code Fast.
