@@ -20,6 +20,12 @@ if (! defined('ABSPATH')) {
  * Handles preparation and prerequisite validation for job imports
  */
 
+// Include field mappings
+require_once __DIR__ . '/../mappings/mappings-fields.php';
+
+// Include utility helpers
+require_once __DIR__ . '/../utilities/utility-helpers.php';
+
 /**
  * Validate JSONL file integrity by checking a sample of lines.
  *
