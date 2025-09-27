@@ -129,13 +129,13 @@
     padding: 24px;
     flex: 1;
     overflow: hidden;
-    min-height: 250px;
-    max-height: 350px;
+    height: 320px;
+    position: relative;
 }
 
 .step-content {
     text-align: center;
-    min-height: 250px;
+    height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -303,6 +303,7 @@
         top: 20px;
         left: 20px;
         right: 20px;
+        bottom: 0;
     }
 }
 
@@ -320,6 +321,7 @@
 
     .onboarding-content {
         padding: 20px;
+        height: 280px;
     }
 
     .onboarding-footer {
