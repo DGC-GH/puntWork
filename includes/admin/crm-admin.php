@@ -619,4 +619,4 @@ class PuntworkCrmAdmin
 }
 
 // Initialize admin interface
-new Puntwork_CRM_Admin();
+new PuntworkCrmAdmin();
