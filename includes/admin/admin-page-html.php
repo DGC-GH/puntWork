@@ -409,16 +409,16 @@ function render_onboarding_modal()
             <!-- Navigation Buttons -->
             <div class="onboarding-footer">
                 <!-- Progress Bar -->
-                <div class="onboarding-progress">
+                <div class="onboarding-progress" style="border-top: 1px solid #e5e5e7; padding-top: 16px; margin-bottom: 16px;">
                     <div class="onboarding-progress-bar">
                         <div class="onboarding-progress-fill" id="onboarding-progress-fill"></div>
                     </div>
                 </div>
                 <div class="footer-actions">
-                    <button type="button" id="onboarding-prev" class="puntwork-btn puntwork-btn--secondary puntwork-btn--large prev-btn" style="display: none;" aria-label="<?php esc_attr_e('Previous step', 'puntwork'); ?>">
+                    <button type="button" id="onboarding-prev" class="onboarding-btn secondary prev-btn" style="display: none;" aria-label="<?php esc_attr_e('Previous step', 'puntwork'); ?>">
                         <i class="fas fa-arrow-left"></i> <?php _e('Previous', 'puntwork'); ?>
                     </button>
-                    <button type="button" id="onboarding-next" class="puntwork-btn puntwork-btn--primary puntwork-btn--large next-btn" aria-label="<?php esc_attr_e('Next step', 'puntwork'); ?>">
+                    <button type="button" id="onboarding-next" class="onboarding-btn primary next-btn" aria-label="<?php esc_attr_e('Next step', 'puntwork'); ?>">
                         <?php _e('Next', 'puntwork'); ?> <i class="fas fa-arrow-right"></i>
                     </button>
                 </div>
