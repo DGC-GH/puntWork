@@ -151,11 +151,15 @@ class JsonlIterator implements \Iterator
 function process_batch_items_logic(array $setup): array
 {
     error_log('=== PUNTWORK BATCH DEBUG: process_batch_items_logic STARTED ===');
-    error_log('[PUNTWORK] process_batch_items_logic called with setup: ' . json_encode([
-        'start_index' => $setup['start_index'] ?? 'not set',
-        'total' => $setup['total'] ?? 'not set',
-        'json_path' => isset($setup['json_path']) ? basename($setup['json_path']) : 'not set'
-    ]));
+    error_log(
+        '[PUNTWORK] process_batch_items_logic called with setup: ' . json_encode(
+            [
+            'start_index' => $setup['start_index'] ?? 'not set',
+            'total' => $setup['total'] ?? 'not set',
+            'json_path' => isset($setup['json_path']) ? basename($setup['json_path']) : 'not set'
+            ]
+        )
+    );
 
     // Start tracing span for batch processing (only if available)
     $span = null;
@@ -518,12 +522,16 @@ function prepare_batch_processing(array $setup, int $batch_size): array
  */
 function load_and_prepare_batch_items(string $json_path, int $start_index, int $batch_size, float $threshold, array &$logs): array
 {
-    error_log('[PUNTWORK] load_and_prepare_batch_items called with: ' . json_encode([
-        'json_path' => basename($json_path),
-        'start_index' => $start_index,
-        'batch_size' => $batch_size,
-        'file_exists' => file_exists($json_path)
-    ]));
+    error_log(
+        '[PUNTWORK] load_and_prepare_batch_items called with: ' . json_encode(
+            [
+            'json_path' => basename($json_path),
+            'start_index' => $start_index,
+            'batch_size' => $batch_size,
+            'file_exists' => file_exists($json_path)
+            ]
+        )
+    );
 
     $batch_json_items = load_json_batch($json_path, $start_index, $batch_size);
     error_log('[PUNTWORK] Loaded ' . count($batch_json_items) . ' items from JSONL');
