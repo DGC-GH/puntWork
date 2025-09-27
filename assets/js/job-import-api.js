@@ -61,10 +61,35 @@ console.log('[PUNTWORK] job-import-api.js loaded');
          * @returns {Promise} AJAX promise
          */
         processFeed: function(feedKey) {
+            console.log('[PUNTWORK] ===== API.processFeed DEBUG =====');
+            console.log('[PUNTWORK] Processing feed key:', feedKey);
+            console.log('[PUNTWORK] AJAX URL:', jobImportData.ajaxurl);
+            console.log('[PUNTWORK] Nonce:', jobImportData.nonce);
+
+            const ajaxData = {
+                action: 'process_feed',
+                feed_key: feedKey,
+                nonce: jobImportData.nonce
+            };
+            console.log('[PUNTWORK] AJAX data being sent:', ajaxData);
+
             return $.ajax({
                 url: jobImportData.ajaxurl,
                 type: 'POST',
-                data: { action: 'process_feed', feed_key: feedKey, nonce: jobImportData.nonce }
+                data: ajaxData,
+                timeout: 60000, // 60 seconds for feed processing
+                success: function(response) {
+                    console.log('[PUNTWORK] AJAX success for processFeed:', response);
+                },
+                error: function(xhr, status, error) {
+                    console.error('[PUNTWORK] AJAX error for processFeed:', {
+                        xhr: xhr,
+                        status: status,
+                        error: error,
+                        statusCode: xhr.status,
+                        responseText: xhr.responseText
+                    });
+                }
             });
         },
 

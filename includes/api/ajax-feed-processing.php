@@ -45,7 +45,16 @@ function process_feed_ajax()
         $feeds = get_feeds();
         $url = $feeds[$feed_key] ?? '';
 
+        // DETAILED SERVER-SIDE DEBUGGING
+        error_log('[PUNTWORK] ===== SERVER process_feed DEBUG =====');
+        error_log('[PUNTWORK] Feed key received: ' . $feed_key);
+        error_log('[PUNTWORK] Available feeds: ' . print_r($feeds, true));
+        error_log('[PUNTWORK] Feed URL for key: ' . $url);
+        error_log('[PUNTWORK] ABSPATH: ' . ABSPATH);
+        error_log('[PUNTWORK] Output directory: ' . ABSPATH . 'feeds/');
+
         if (empty($url)) {
+            error_log('[PUNTWORK] Feed URL is empty for key: ' . $feed_key);
             PuntWorkLogger::error("Invalid feed key: {$feed_key}", PuntWorkLogger::CONTEXT_FEED);
             AjaxErrorHandler::sendError('Invalid feed key');
             return;
@@ -57,12 +66,24 @@ function process_feed_ajax()
         $fallback_domain = 'belgiumjobs.work';
         $logs = [];
 
+        error_log('[PUNTWORK] About to call process_one_feed with:');
+        error_log('[PUNTWORK] - feed_key: ' . $feed_key);
+        error_log('[PUNTWORK] - url: ' . $url);
+        error_log('[PUNTWORK] - output_dir: ' . $output_dir);
+        error_log('[PUNTWORK] - fallback_domain: ' . $fallback_domain);
+
         $count = process_one_feed($feed_key, $url, $output_dir, $fallback_domain, $logs);
+
+        error_log('[PUNTWORK] process_one_feed returned count: ' . $count);
+        error_log('[PUNTWORK] Logs from process_one_feed: ' . print_r($logs, true));
+
         PuntWorkLogger::logFeedProcessing($feed_key, $url, $count, true);
 
         PuntWorkLogger::logAjaxResponse('process_feed', ['item_count' => $count, 'logs_count' => count($logs)]);
         AjaxErrorHandler::sendSuccess(['item_count' => $count, 'logs' => $logs]);
     } catch (\Exception $e) {
+        error_log('[PUNTWORK] Exception in process_feed_ajax: ' . $e->getMessage());
+        error_log('[PUNTWORK] Exception trace: ' . $e->getTraceAsString());
         PuntWorkLogger::logFeedProcessing($feed_key ?? 'unknown', $url ?? '', 0, false);
         PuntWorkLogger::error("Feed processing failed: {$feed_key} - " . $e->getMessage(), PuntWorkLogger::CONTEXT_FEED);
 

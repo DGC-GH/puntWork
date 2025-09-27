@@ -285,7 +285,22 @@
                         complete: false
                     });
 
+                    // DETAILED DEBUGGING LOGS
+                    console.log('[PUNTWORK] ===== FEED PROCESSING DEBUG =====');
+                    console.log('[PUNTWORK] Feed being processed:', feed);
+                    console.log('[PUNTWORK] Feed URL:', feeds[feed]);
+                    console.log('[PUNTWORK] Current feed number:', current_feed_num, '/', total_feeds);
+                    console.log('[PUNTWORK] JobImportData nonce:', jobImportData.nonce);
+                    console.log('[PUNTWORK] JobImportData ajaxurl:', jobImportData.ajaxurl);
+                    console.log('[PUNTWORK] About to call JobImportAPI.processFeed...');
+
                     const response = await JobImportAPI.processFeed(feed);
+                    console.log('[PUNTWORK] JobImportAPI.processFeed response received');
+                    console.log('[PUNTWORK] Response success:', response.success);
+                    console.log('[PUNTWORK] Response data:', response.data);
+                    console.log('[PUNTWORK] Response message:', response.message);
+                    console.log('[PUNTWORK] Response full object:', response);
+
                     PuntWorkJSLogger.debug(`Process feed ${feed} response`, 'LOGIC', response);
 
                     if (response.success) {

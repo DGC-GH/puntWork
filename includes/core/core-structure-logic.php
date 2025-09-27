@@ -147,42 +147,69 @@ add_action('save_post', function ($post_id, $post, $update) {
  */
 function process_one_feed(string $feed_key, string $url, string $output_dir, string $fallback_domain, array &$logs): int
 {
+    error_log('[PUNTWORK] ===== process_one_feed START =====');
+    error_log('[PUNTWORK] Feed key: ' . $feed_key);
+    error_log('[PUNTWORK] URL: ' . $url);
+    error_log('[PUNTWORK] Output dir: ' . $output_dir);
+    error_log('[PUNTWORK] Fallback domain: ' . $fallback_domain);
+
     // Determine file extension based on URL
     $extension = FeedProcessor::detectFormat($url);
+    error_log('[PUNTWORK] Detected extension: ' . $extension);
+
     $feed_path = $output_dir . $feed_key . '.' . $extension;
     $json_filename = $feed_key . '.jsonl';
     $json_path = $output_dir . $json_filename;
     $gz_json_path = $json_path . '.gz';
 
+    error_log('[PUNTWORK] Feed path: ' . $feed_path);
+    error_log('[PUNTWORK] JSON path: ' . $json_path);
+    error_log('[PUNTWORK] GZ JSON path: ' . $gz_json_path);
+
     // Handle job board feeds differently - no download needed
     if ($extension === FeedProcessor::FORMAT_JOB_BOARD) {
+        error_log('[PUNTWORK] Handling as job board feed');
         $feed_path = $url; // Use the job board URL directly
         $detected_format = FeedProcessor::FORMAT_JOB_BOARD;
     } else {
+        error_log('[PUNTWORK] Handling as regular feed, downloading...');
         // Download feed and detect format
         $detected_format = null;
         if (!download_feed($url, $feed_path, $output_dir, $logs, $detected_format)) {
+            error_log('[PUNTWORK] download_feed failed');
             return 0;
         }
+        error_log('[PUNTWORK] download_feed succeeded, detected format: ' . $detected_format);
     }
 
     // Use detected format, fallback to URL-based detection
     $format = $detected_format ?: FeedProcessor::detectFormat($url);
+    error_log('[PUNTWORK] Final format: ' . $format);
 
     $handle = fopen($json_path, 'w');
     if (!$handle) {
+        error_log('[PUNTWORK] Failed to open JSON file: ' . $json_path);
         throw new \Exception("Can't open $json_path");
     }
+    error_log('[PUNTWORK] JSON file opened successfully');
+
     $batch_size = 100;
     $total_items = 0;
 
+    error_log('[PUNTWORK] About to call FeedProcessor::processFeed');
     // Process feed using FeedProcessor
     $count = FeedProcessor::processFeed($feed_path, $format, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+    error_log('[PUNTWORK] FeedProcessor::processFeed returned count: ' . $count);
+    error_log('[PUNTWORK] Total items processed: ' . $total_items);
 
     fclose($handle);
     @chmod($json_path, 0644);
 
+    error_log('[PUNTWORK] About to gzip file');
     gzip_file($json_path, $gz_json_path);
+    error_log('[PUNTWORK] Gzip completed');
+
+    error_log('[PUNTWORK] ===== process_one_feed END =====');
     return $count;
 }
 
