@@ -8,10 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Self-improvement protocol to prompt.md for continuous enhancement of AI interactions
-- Documentation for FTP file access and admin page URLs in prompt.md and README.md
-- .gitignore patterns to exclude temporary test result files
-- Performance test file cleanup mechanism
+- Pre-commit git hooks for automated PHPCS and PHPUnit validation to prevent regressions
+- Validation commands added to prompt.md for consistent development workflow
 
 ### Fixed
 - Drag-and-drop functionality in feed configuration by replacing SortableJS with jQuery UI Sortable
