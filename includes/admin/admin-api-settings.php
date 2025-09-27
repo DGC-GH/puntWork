@@ -119,7 +119,8 @@ function api_settings_page()
             color: #23282d;
         }
         .endpoint-info code {
-            background: #e1e1e1;
+            background: #2d3748;
+            color: #e2e8f0;
             padding: 2px 6px;
             border-radius: 3px;
             font-family: monospace;
