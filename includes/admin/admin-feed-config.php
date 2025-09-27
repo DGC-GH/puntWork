@@ -275,6 +275,7 @@ function render_feed_config_ui(): void
             margin-bottom: var(--spacing-md);
             transition: var(--transition-fast);
             cursor: move;
+            min-width: 0;
         }
 
         .feed-item:hover {
@@ -295,6 +296,8 @@ function render_feed_config_ui(): void
 
         .feed-item__content {
             flex: 1;
+            min-width: 0;
+            overflow: hidden;
         }
 
         .feed-item__header {
@@ -302,6 +305,7 @@ function render_feed_config_ui(): void
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: var(--spacing-sm);
+            min-width: 0;
         }
 
         .feed-item__title strong {
@@ -316,6 +320,7 @@ function render_feed_config_ui(): void
             font-size: var(--font-size-sm);
             color: var(--color-gray-600);
             word-break: break-all;
+            overflow-wrap: break-word;
         }
 
         .feed-item__actions {
