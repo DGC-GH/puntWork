@@ -117,7 +117,7 @@ function import_analytics_page()
             <!-- Loading State -->
             <div id="analytics-loading" class="analytics-loading">
                 <div class="loading-spinner">
-                    <i class="fas fa-chart-line fa-spin"></i>
+                    <i class="fas fa-chart-line"></i>
                     <div><?php _e('Loading analytics data...', 'puntwork'); ?></div>
                 </div>
             </div>
