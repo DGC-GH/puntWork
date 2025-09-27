@@ -20,6 +20,9 @@ if (!defined('ABSPATH')) {
  */
 function import_analytics_page()
 {
+    // Enqueue admin modern styles
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
+
     // Handle CSV export
     if (isset($_POST['export_csv']) && check_admin_referer('analytics_export_nonce')) {
         $period = sanitize_text_field($_POST['export_period'] ?? '30days');

@@ -23,6 +23,9 @@ use Puntwork\Utilities\CacheManager;
  */
 function performance_metrics_page()
 {
+    // Enqueue admin modern styles
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
+
     // Handle AJAX actions
     if (isset($_POST['action'])) {
         switch ($_POST['action']) {
