@@ -26,12 +26,20 @@ if (!function_exists('process_batch_items')) {
         $post_statuses = bulk_get_post_statuses($post_ids_for_status);
         error_log('[PUNTWORK] Got post statuses');
 
+        $total_to_process = count($batch_guids);
+        error_log('[PUNTWORK] Starting to process ' . $total_to_process . ' items');
+
+        $item_counter = 0;
         foreach ($batch_guids as $guid) {
+            $item_counter++;
+            error_log('[PUNTWORK] Processing item ' . $item_counter . '/' . $total_to_process . ' GUID: ' . $guid);
             try {
                 $item = $batch_items[$guid]['item'];
                 $xml_updated = isset($item['updated']) ? $item['updated'] : '';
                 $xml_updated_ts = strtotime($xml_updated);
                 $post_id = isset($post_ids_by_guid[$guid]) ? $post_ids_by_guid[$guid] : null;
+
+                error_log('[PUNTWORK] GUID ' . $guid . ': post_id=' . ($post_id ?? 'null') . ', xml_updated=' . $xml_updated);
 
                 // If post exists, check if it needs updating
                 if ($post_id) {

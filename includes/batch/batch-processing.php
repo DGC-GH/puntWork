@@ -447,7 +447,7 @@ function validate_and_adjust_batch_size(array $setup): array
 {
     $memory_limit_bytes = get_memory_limit_bytes();
     $threshold = 0.6 * $memory_limit_bytes;
-    $batch_size = get_option('job_import_batch_size') ?: 100;
+    $batch_size = get_option('job_import_batch_size') ?: 50; // Reduced default from 100 to 50
     
     // Ensure batch_size is at least 1
     $batch_size = max(1, (int)$batch_size);
@@ -824,18 +824,19 @@ function load_json_batch($json_path, $start_index, $batch_size)
     $invalid_json = 0;
 
     try {
-        $file = new SplFileObject($json_path, 'r');
-        $file->setFlags(SplFileObject::READ_AHEAD | SplFileObject::SKIP_EMPTY);
+        $handle = fopen($json_path, 'r');
+        if ($handle === false) {
+            error_log('[PUNTWORK] load_json_batch: Cannot open file: ' . $json_path);
+            return [];
+        }
 
         // Skip to start_index
-        while ($current_index < $start_index && !$file->eof()) {
-            $file->fgets();
+        while ($current_index < $start_index && ($line = fgets($handle)) !== false) {
             $current_index++;
         }
 
         // Read batch_size items
-        while ($count < $batch_size && !$file->eof()) {
-            $line = $file->fgets();
+        while ($count < $batch_size && ($line = fgets($handle)) !== false) {
             $lines_read++;
             $line = trim($line);
             if (!empty($line)) {
@@ -854,9 +855,12 @@ function load_json_batch($json_path, $start_index, $batch_size)
             $current_index++;
         }
 
-        $file = null; // Close file
+        fclose($handle);
     } catch (\Exception $e) {
         error_log('[PUNTWORK] load_json_batch: Exception: ' . $e->getMessage());
+        if (isset($handle) && $handle) {
+            fclose($handle);
+        }
         return [];
     }
 
