@@ -17,6 +17,7 @@ if (! defined('ABSPATH')) {
 
 // Explicitly load required utility classes for SSE context
 require_once __DIR__ . '/../utilities/async-processing.php';
+require_once __DIR__ . '/../scheduling/scheduling-core.php';
 
 /**
  * Server-Sent Events handlers for real-time import progress
@@ -113,6 +114,20 @@ function handle_import_progress_sse($request)
                 $current_status = get_option('job_import_status', []);
                 error_log('[PUNTWORK] SSE: Raw current_status from get_option: ' . json_encode($current_status));
 
+                // Ensure current_status is an array and sanitize it
+                if (!is_array($current_status)) {
+                    error_log('[PUNTWORK] SSE: current_status is not an array, resetting to empty array');
+                    $current_status = [];
+                }
+
+                // Sanitize the status to ensure it's JSON serializable
+                $current_status = array_map(function($value) {
+                    if (is_object($value) || is_resource($value)) {
+                        return null; // Replace non-serializable objects/resources with null
+                    }
+                    return $value;
+                }, $current_status);
+
                 // Check for async import status if applicable
                 $async_status = check_async_import_status();
                 if ($async_status['active']) {
@@ -153,10 +168,27 @@ function handle_import_progress_sse($request)
                         'status' => $current_status
                     ];
 
-                    error_log('[PUNTWORK] SSE: Sending progress update, event_data: ' . json_encode($event_data));
+                    error_log('[PUNTWORK] SSE: Sending progress update, event_data keys: ' . implode(', ', array_keys($event_data)));
+                    $json_data = json_encode($event_data);
+                    
+                    if ($json_data === false) {
+                        error_log('[PUNTWORK] SSE: JSON encoding failed: ' . json_last_error_msg());
+                        error_log('[PUNTWORK] SSE: Event data that failed: ' . print_r($event_data, true));
+                        // Send error event instead
+                        echo "event: error\n";
+                        echo "data: " . json_encode([
+                            'timestamp' => $current_time,
+                            'error' => 'Failed to encode status data: ' . json_last_error_msg()
+                        ]) . "\n\n";
+                        flush();
+                        continue;
+                    }
+                    
+                    error_log('[PUNTWORK] SSE: JSON encoded data length: ' . strlen($json_data));
+                    error_log('[PUNTWORK] SSE: JSON data preview: ' . substr($json_data, 0, 200) . '...');
 
                     echo "event: progress\n";
-                    echo "data: " . json_encode($event_data) . "\n\n";
+                    echo "data: " . $json_data . "\n\n";
                     flush();
 
                     $last_status = $current_status;
@@ -194,8 +226,9 @@ function handle_import_progress_sse($request)
         }
 
         error_log('[PUNTWORK] SSE: Connection closed');
-    } catch (\Exception $e) {
-        error_log('[PUNTWORK] SSE: Fatal error: ' . $e->getMessage());
+    } catch (\Throwable $e) {
+        error_log('[PUNTWORK] SSE: Fatal error: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+        error_log('[PUNTWORK] SSE: Stack trace: ' . $e->getTraceAsString());
         echo "event: error\n";
         echo "data: " . json_encode([
             'timestamp' => time(),
