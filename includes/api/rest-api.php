@@ -512,6 +512,50 @@ function handle_trigger_import($request)
 }
 
 /**
+ * Handle get import status request
+ */
+function handle_get_import_status($request)
+{
+    try {
+        $import_status = get_option('job_import_status', []);
+        $import_progress = get_option('job_import_progress', 0);
+        $last_run = get_option('puntwork_last_import_run');
+        $next_scheduled = get_next_scheduled_time();
+
+        // Calculate time elapsed if import is running
+        if (isset($import_status['start_time']) && !$import_status['complete']) {
+            $import_status['time_elapsed'] = microtime(true) - $import_status['start_time'];
+        }
+
+        // Add additional status information
+        $status_data = [
+            'current_status' => $import_status,
+            'progress' => $import_progress,
+            'last_run' => $last_run,
+            'next_scheduled' => $next_scheduled,
+            'is_running' => isset($import_status['complete']) && !$import_status['complete'] && !isset($import_status['paused']),
+            'timestamp' => current_time('timestamp')
+        ];
+
+        PuntWorkLogger::debug('Import status requested via API', PuntWorkLogger::CONTEXT_API);
+
+        return new \WP_REST_Response([
+            'success' => true,
+            'data' => $status_data
+        ], 200);
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Import status API error', PuntWorkLogger::CONTEXT_API, [
+            'error' => $e->getMessage()
+        ]);
+
+        return new \WP_REST_Response([
+            'success' => false,
+            'message' => 'Failed to retrieve import status: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
  * Handle get analytics request
  */
 function handle_get_analytics($request)
