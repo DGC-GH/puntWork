@@ -121,6 +121,8 @@ class JsonlIterator implements \Iterator
  */
 function process_batch_items_logic(array $setup): array
 {
+    error_log('[PUNTWORK] process_batch_items_logic called');
+
     // Start tracing span for batch processing
     $span = PuntworkTracing::startActiveSpan(
         'process_batch_items_logic', [
@@ -131,6 +133,7 @@ function process_batch_items_logic(array $setup): array
     );
 
     try {
+        error_log('[PUNTWORK] Starting performance monitoring');
         // Start performance monitoring
         $perf_id = start_performance_monitoring('batch_import');
         $span = PuntworkTracing::startActiveSpan('batch_import', ['batch_size' => $batch_size, 'start_index' => $start_index]);
@@ -539,21 +542,26 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
  */
 function process_batch_data(array $batch_guids, array $batch_items, array &$logs, int &$published, int &$updated, int &$skipped, int &$duplicates_drafted): array
 {
+    error_log('[PUNTWORK] process_batch_data called with ' . count($batch_guids) . ' GUIDs');
     global $wpdb;
 
     // Use optimized function to get posts by GUIDs with status
     $existing_by_guid = get_posts_by_guids_with_status($batch_guids);
+    error_log('[PUNTWORK] Got existing posts by GUID');
 
     $post_ids_by_guid = [];
 
     // Handle duplicates
     handle_batch_duplicates($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
+    error_log('[PUNTWORK] Handled duplicates');
 
     // Prepare batch metadata
     $batch_metadata = prepare_batch_metadata($post_ids_by_guid);
+    error_log('[PUNTWORK] Prepared batch metadata');
 
     // Process items
     $processed_count = process_batch_items_with_metadata($batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid, $logs, $updated, $published, $skipped);
+    error_log('[PUNTWORK] Processed batch items, count=' . $processed_count);
 
     return ['processed_count' => $processed_count];
 }

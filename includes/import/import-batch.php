@@ -100,15 +100,20 @@ if (!function_exists('import_jobs_from_json')) {
      */
     function import_jobs_from_json(bool $is_batch = false, int $batch_start = 0): array
     {
+        error_log('[PUNTWORK] import_jobs_from_json called with is_batch=' . ($is_batch ? 'true' : 'false') . ', batch_start=' . $batch_start);
         $setup = prepare_import_setup($batch_start);
         if (is_wp_error($setup)) {
+            error_log('[PUNTWORK] prepare_import_setup returned WP_Error: ' . $setup->get_error_message());
             return ['success' => false, 'message' => $setup->get_error_message(), 'logs' => ['Setup failed: ' . $setup->get_error_message()]];
         }
         if (isset($setup['success'])) {
+            error_log('[PUNTWORK] prepare_import_setup returned early success/complete');
             return $setup; // Early return for empty or completed cases
         }
 
+        error_log('[PUNTWORK] Calling process_batch_items_logic');
         $result = process_batch_items_logic($setup);
+        error_log('[PUNTWORK] process_batch_items_logic returned, success=' . (isset($result['success']) ? $result['success'] : 'not set'));
         return finalize_batch_import($result);
     }
 }

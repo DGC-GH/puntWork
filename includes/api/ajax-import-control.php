@@ -45,6 +45,10 @@ function run_job_import_batch_ajax()
         $start = $_POST['start'];
         PuntWorkLogger::info("Starting batch import at index: {$start}", PuntWorkLogger::CONTEXT_BATCH);
 
+        // Add detailed logging before calling import_jobs_from_json
+        PuntWorkLogger::debug("About to call import_jobs_from_json with start={$start}", PuntWorkLogger::CONTEXT_BATCH);
+        error_log('[PUNTWORK] AJAX: About to call import_jobs_from_json with start=' . $start);
+
         $result = import_jobs_from_json(true, $start);
 
         // Log summary instead of full result to prevent large debug logs
@@ -64,6 +68,8 @@ function run_job_import_batch_ajax()
         AjaxErrorHandler::sendSuccess($result);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Batch import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        error_log('[PUNTWORK] AJAX: Batch import exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+        error_log('[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString());
         AjaxErrorHandler::sendError('Batch import failed: ' . $e->getMessage());
     }
 }

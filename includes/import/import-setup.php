@@ -21,6 +21,42 @@ if (! defined('ABSPATH')) {
  */
 
 /**
+ * Validate JSONL file integrity by checking a sample of lines.
+ *
+ * @param string $json_path Path to JSONL file.
+ * @return true|WP_Error True if valid, WP_Error if invalid.
+ */
+function validate_jsonl_file($json_path)
+{
+    if (($handle = fopen($json_path, "r")) === false) {
+        return new WP_Error('file_open_failed', 'Cannot open JSONL file for validation');
+    }
+
+    $checked_lines = 0;
+    $max_check = min(100, filesize($json_path) / 100); // Check up to 100 lines or 1% of file
+
+    while ($checked_lines < $max_check && ($line = fgets($handle)) !== false) {
+        $line = trim($line);
+        if (!empty($line)) {
+            $item = json_decode($line, true);
+            if ($item === null && json_last_error() !== JSON_ERROR_NONE) {
+                fclose($handle);
+                return new WP_Error('invalid_json', 'Invalid JSON at line ' . ($checked_lines + 1) . ': ' . json_last_error_msg());
+            }
+            // Check for required fields
+            if (!isset($item['guid']) || empty($item['guid'])) {
+                fclose($handle);
+                return new WP_Error('missing_guid', 'Missing or empty GUID at line ' . ($checked_lines + 1));
+            }
+            $checked_lines++;
+        }
+    }
+
+    fclose($handle);
+    return true;
+}
+
+/**
  * Prepare import setup and validate prerequisites.
  *
  * @param int $batch_start Starting index for batch.
@@ -58,6 +94,13 @@ function prepare_import_setup($batch_start = 0)
     if (!file_exists($json_path)) {
         error_log('JSONL file not found: ' . $json_path);
         return ['success' => false, 'message' => 'JSONL file not found', 'logs' => ['JSONL file not found']];
+    }
+
+    // Validate JSONL file integrity
+    $validation = validate_jsonl_file($json_path);
+    if (is_wp_error($validation)) {
+        error_log('JSONL validation failed: ' . $validation->get_error_message());
+        return ['success' => false, 'message' => 'JSONL file validation failed: ' . $validation->get_error_message(), 'logs' => ['JSONL file validation failed: ' . $validation->get_error_message()]];
     }
 
     $total = get_json_item_count($json_path);
