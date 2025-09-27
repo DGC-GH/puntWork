@@ -440,6 +440,10 @@ function validate_and_adjust_batch_size(array $setup): array
     $memory_limit_bytes = get_memory_limit_bytes();
     $threshold = 0.6 * $memory_limit_bytes;
     $batch_size = get_option('job_import_batch_size') ?: 100;
+    
+    // Ensure batch_size is at least 1
+    $batch_size = max(1, (int)$batch_size);
+    
     $old_batch_size = $batch_size;
     $prev_time_per_item = get_option('job_import_time_per_job', 0);
     $avg_time_per_item = get_option('job_import_avg_time_per_job', $prev_time_per_item);
@@ -532,12 +536,17 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
 
     if ($loaded_count === 0) {
         error_log('[PUNTWORK] No items loaded from JSONL - file may be empty or corrupted');
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'WARNING: No items loaded from JSONL file - check file integrity';
         return [
             'batch_items' => $batch_items,
             'batch_guids' => $batch_guids,
             'cancelled' => false
         ];
     }
+
+    $valid_items = 0;
+    $skipped_items = 0;
+    $missing_guids = 0;
 
     for ($i = 0; $i < count($batch_json_items); $i++) {
         $current_index = $start_index + $i;
@@ -552,6 +561,7 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
         $guid = $item['guid'] ?? '';
 
         if (empty($guid)) {
+            $missing_guids++;
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped #' . ($current_index + 1) . ': Empty GUID - Item keys: ' . implode(', ', array_keys($item));
             continue;
         }
@@ -559,6 +569,7 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
         $batch_guids[] = $guid;
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Processing #' . ($current_index + 1) . ' GUID: ' . $guid;
         $batch_items[$guid] = ['item' => $item, 'index' => $current_index];
+        $valid_items++;
 
         // Enhanced memory management
         $memory_status = check_batch_memory_usage($current_index, $threshold * 0.8); // More aggressive threshold
@@ -581,10 +592,9 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
     }
     unset($batch_json_items);
 
-    $valid_items_count = count($batch_guids);
-    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Prepared $valid_items_count valid items for processing (skipped " . ($loaded_count - $valid_items_count) . " items)";
+    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Prepared $valid_items valid items for processing (skipped $skipped_items items, $missing_guids missing GUIDs)";
 
-    error_log('[PUNTWORK] Prepared ' . $valid_items_count . ' valid items for processing');
+    error_log('[PUNTWORK] Prepared ' . $valid_items . ' valid items for processing (skipped: ' . $skipped_items . ', missing GUIDs: ' . $missing_guids . ')');
     return [
         'batch_items' => $batch_items,
         'batch_guids' => $batch_guids,
@@ -607,6 +617,13 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
 function process_batch_data(array $batch_guids, array $batch_items, array &$logs, int &$published, int &$updated, int &$skipped, int &$duplicates_drafted): array
 {
     error_log('[PUNTWORK] process_batch_data called with ' . count($batch_guids) . ' GUIDs');
+    
+    if (empty($batch_guids)) {
+        error_log('[PUNTWORK] ERROR: process_batch_data called with empty batch_guids!');
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'ERROR: No GUIDs to process in this batch';
+        return ['processed_count' => 0];
+    }
+
     global $wpdb;
 
     try {
@@ -771,6 +788,9 @@ function process_batch_items_with_metadata(array $batch_guids, array $batch_item
  */
 function load_json_batch($json_path, $start_index, $batch_size)
 {
+    // Ensure batch_size is at least 1
+    $batch_size = max(1, (int)$batch_size);
+    
     error_log('[PUNTWORK] load_json_batch called with: path=' . basename($json_path) . ', start_index=' . $start_index . ', batch_size=' . $batch_size);
     error_log('[PUNTWORK] load_json_batch: file exists: ' . (file_exists($json_path) ? 'yes' : 'no'));
     
@@ -781,36 +801,47 @@ function load_json_batch($json_path, $start_index, $batch_size)
     $items = [];
     $count = 0;
     $current_index = 0;
+    $lines_read = 0;
+    $empty_lines = 0;
+    $invalid_json = 0;
 
     if (($handle = fopen($json_path, "r")) !== false) {
-        error_log('[PUNTWORK] load_json_batch: opened file successfully');
+        error_log('[PUNTWORK] load_json_batch: opened file successfully, ftell=' . ftell($handle));
         
         // Skip to start_index efficiently
+        error_log('[PUNTWORK] load_json_batch: starting skip loop, current_index=' . $current_index . ', start_index=' . $start_index);
         while ($current_index < $start_index && ($line = fgets($handle)) !== false) {
             $current_index++;
+            error_log('[PUNTWORK] load_json_batch: skipped line ' . $current_index . ', ftell=' . ftell($handle));
         }
         
-        error_log('[PUNTWORK] load_json_batch: skipped to index ' . $current_index);
+        error_log('[PUNTWORK] load_json_batch: finished skip loop, current_index=' . $current_index . ', ftell=' . ftell($handle));
 
         // Read batch_size items
+        error_log('[PUNTWORK] load_json_batch: starting read loop, count=' . $count . ', batch_size=' . $batch_size . ', ftell=' . ftell($handle));
         while ($count < $batch_size && ($line = fgets($handle)) !== false) {
+            $lines_read++;
+            error_log('[PUNTWORK] load_json_batch: read line ' . $lines_read . ', length=' . strlen($line) . ', ftell=' . ftell($handle));
             $line = trim($line);
             if (!empty($line)) {
+                error_log('[PUNTWORK] load_json_batch: line not empty, attempting JSON decode');
                 $item = json_decode($line, true);
                 if ($item !== null) {
                     $items[] = $item;
                     $count++;
                     error_log('[PUNTWORK] load_json_batch: Successfully decoded item ' . $count . ' with GUID: ' . ($item['guid'] ?? 'MISSING'));
                 } else {
-                    error_log('[PUNTWORK] load_json_batch: Failed to decode JSON at line ' . ($current_index + $count + 1) . ': ' . json_last_error_msg() . ' - Line content: ' . substr($line, 0, 100));
+                    $invalid_json++;
+                    error_log('[PUNTWORK] load_json_batch: Failed to decode JSON at line ' . ($current_index + $lines_read) . ': ' . json_last_error_msg() . ' - Line content: ' . substr($line, 0, 100));
                 }
             } else {
-                error_log('[PUNTWORK] load_json_batch: Empty line at index ' . ($current_index + $count + 1));
+                $empty_lines++;
+                error_log('[PUNTWORK] load_json_batch: empty line skipped');
             }
             $current_index++;
         }
         
-        error_log('[PUNTWORK] load_json_batch: read ' . $count . ' items');
+        error_log('[PUNTWORK] load_json_batch: finished read loop, lines_read=' . $lines_read . ', empty=' . $empty_lines . ', invalid JSON=' . $invalid_json . ', valid items=' . $count . ', ftell=' . ftell($handle));
         fclose($handle);
     } else {
         error_log('[PUNTWORK] load_json_batch: failed to open file');
