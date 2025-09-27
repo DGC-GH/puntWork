@@ -48,7 +48,7 @@ puntwork/
 │   ├── reporting/            # Analytics, reporting
 │   ├── scheduling/           # Cron jobs, scheduling
 │   ├── socialmedia/          # Social media posting (classes)
-│   └── utilities/            # Helpers, logging, security, async
+│   └── Utilities/            # Helpers, logging, security, async
 ├── languages/                # Translation files
 │   └── puntwork.pot          # POT file
 ├── mobile/                   # React Native app (App.js, src/, package.json)
@@ -64,7 +64,7 @@ puntwork/
 - **includes/api/rest-api.php**: REST API setup
 - **includes/batch/batch-core.php**: Batch processing core logic
 - **includes/import/import-batch.php**: Import processing
-- **includes/utilities/PuntWorkLogger.php**: Logging class
+- **includes/Utilities/PuntWorkLogger.php**: Logging class
 - **includes/ai/job-categorizer.php**: AI job categorization
 - **mobile/App.js**: React Native app entry
 - **tests/ImportTest.php**: PHPUnit import tests
