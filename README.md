@@ -231,6 +231,11 @@ Before committing code, ensure:
 - [ ] Security implications reviewed
 - [ ] Performance impact assessed
 
+## Git and Version Control Best Practices
+- **Branch and Tag Naming**: Avoid creating branches or tags with spaces in their names, as Git refs should not contain spaces. Use hyphens or underscores instead (e.g., `feature/new-import` instead of `feature/new import`).
+- **Handling Corrupted Refs**: If you encounter errors like "bad object" or "ignoring ref with broken name", check for and delete corrupted local refs using `git update-ref -d 'refs/remotes/origin/broken-ref'`. Then, run `git fetch --prune` to clean up.
+- **Regular Maintenance**: Periodically run `git remote prune origin` to remove stale remote-tracking branches and `git gc` to optimize the repository.
+
 ## Performance & Security
 ### Performance Optimizations
 - **Memory Management**: Streaming JSONL processing
