@@ -82,7 +82,7 @@ add_action('admin_init', __NAMESPACE__ . '\\add_accessibility_headers');
  */
 function enhance_admin_menu_accessibility($menu)
 {
-    if (is_admin()) {
+    if (is_admin() && is_array($menu)) {
         foreach ($menu as &$item) {
             if (isset($item[2]) && strpos($item[2], 'puntwork') === 0) {
                 // Add aria-label for better screen reader support

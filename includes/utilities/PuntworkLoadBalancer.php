@@ -252,27 +252,56 @@ class PuntworkLoadBalancer
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'puntwork_instances';
-        $charset_collate = $wpdb->get_charset_collate();
 
-        $sql = "CREATE TABLE $table_name (
-            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-            instance_id varchar(100) NOT NULL,
-            server_name varchar(255) NOT NULL,
-            ip_address varchar(45) NOT NULL,
-            role varchar(50) NOT NULL DEFAULT 'standard_processing',
-            status varchar(20) NOT NULL DEFAULT 'active',
-            cpu_count int(11) NOT NULL DEFAULT 1,
-            memory_limit bigint(20) NOT NULL DEFAULT 1073741824,
-            last_seen datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            UNIQUE KEY instance_id (instance_id),
-            KEY status (status),
-            KEY last_seen (last_seen)
-        ) $charset_collate;";
+        // Check if table exists and has the correct structure
+        $table_exists = $wpdb->get_var(
+            $wpdb->prepare(
+                "SHOW TABLES LIKE %s",
+                $table_name
+            )
+        );
 
-        include_once ABSPATH . 'wp-admin/includes/upgrade.php';
-        dbDelta($sql);
+        if ($table_exists) {
+            // Check if 'id' column exists
+            $columns = $wpdb->get_results("DESCRIBE $table_name");
+            $has_id_column = false;
+            foreach ($columns as $column) {
+                if ($column->Field === 'id') {
+                    $has_id_column = true;
+                    break;
+                }
+            }
+
+            if (!$has_id_column) {
+                // Drop and recreate table if it doesn't have the id column
+                $wpdb->query("DROP TABLE IF EXISTS $table_name");
+                $table_exists = false;
+            }
+        }
+
+        if (!$table_exists) {
+            $charset_collate = $wpdb->get_charset_collate();
+
+            $sql = "CREATE TABLE $table_name (
+                id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+                instance_id varchar(100) NOT NULL,
+                server_name varchar(255) NOT NULL,
+                ip_address varchar(45) NOT NULL,
+                role varchar(50) NOT NULL DEFAULT 'standard_processing',
+                status varchar(20) NOT NULL DEFAULT 'active',
+                cpu_count int(11) NOT NULL DEFAULT 1,
+                memory_limit bigint(20) NOT NULL DEFAULT 1073741824,
+                last_seen datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                created_at datetime DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY instance_id (instance_id),
+                KEY status (status),
+                KEY last_seen (last_seen)
+            ) $charset_collate;";
+
+            require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+            dbDelta($sql);
+        }
 
         // Register this server instance if not already registered
         $this->registerCurrentInstance();

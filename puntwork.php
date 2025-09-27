@@ -162,12 +162,9 @@ function setup_job_import()
         'api/rest-api.php',
         'api/sse-import-progress.php',
 
-        // Batch processing (functions)
-        'batch/batch-core.php',
-        'batch/batch-data.php',
-        'batch/batch-processing.php',
-        'batch/batch-size-management.php',
-        'batch/batch-utils.php',
+        // Queue management (functions)
+        'queue/queue-manager.php',
+        'queue/queue-ajax.php',
 
         // Import functionality (functions)
         'import/combine-jsonl.php',
