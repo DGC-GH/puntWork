@@ -77,7 +77,19 @@ console.info("=== Job Import Logic Script Loaded ===");
             let response;
 
             try {
-                response = await JobImportAPI.runImportBatch(initialStart);
+                console.log('[PUNTWORK] ===== PHASE: INITIAL BATCH API CALL =====');
+                console.log('[PUNTWORK] Calling JobImportAPI.runImportBatch with start:', initialStart);
+                const batchStartTime = Date.now();
+                const initialBatchTimeout = 600000; // 10 minutes for initial batch
+                const initialBatchPromise = JobImportAPI.runImportBatch(initialStart);
+                const initialTimeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Initial batch processing timeout after ' + (initialBatchTimeout/1000) + ' seconds')), initialBatchTimeout);
+                });
+                
+                response = await Promise.race([initialBatchPromise, initialTimeoutPromise]);
+                const batchEndTime = Date.now();
+                const initialBatchDuration = (batchEndTime - batchStartTime) / 1000;
+                console.log('[PUNTWORK] Initial batch API call completed in', initialBatchDuration.toFixed(2), 'seconds');
                 console.log('[PUNTWORK] Batch API response received:', response);
                 PuntWorkJSLogger.debug('Import batch response', 'LOGIC', response);
                 console.log('[PUNTWORK] Import batch response:', response);
@@ -110,13 +122,23 @@ console.info("=== Job Import Logic Script Loaded ===");
                         batchCount++;
                         console.log('[PUNTWORK] ===== STARTING BATCH', batchCount, '=====');
                         console.log('[PUNTWORK] Batch timing - previous batch time will be compared for dynamic sizing');
+                        console.log('[PUNTWORK] Current progress: processed', current, 'of', total, '(' + ((current/total)*100).toFixed(1) + '%)');
                         PuntWorkJSLogger.debug('Continuing to next batch, current: ' + current + ', total: ' + total + ', batchCount: ' + batchCount, 'LOGIC');
                         try {
                             const batchStartTime = Date.now();
-                            response = await JobImportAPI.runImportBatch(current);
+                            console.log('[PUNTWORK] Batch', batchCount, 'starting at', new Date().toISOString());
+
+                            // Set a timeout for the batch processing
+                            const batchTimeout = 600000; // 10 minutes timeout (increased from 5 minutes)
+                            const batchPromise = JobImportAPI.runImportBatch(current);
+                            const timeoutPromise = new Promise((_, reject) => {
+                                setTimeout(() => reject(new Error('Batch processing timeout after ' + (batchTimeout/1000) + ' seconds')), batchTimeout);
+                            });
+
+                            response = await Promise.race([batchPromise, timeoutPromise]);
                             const batchEndTime = Date.now();
                             const batchDuration = (batchEndTime - batchStartTime) / 1000;
-                            console.log('[PUNTWORK] Batch', batchCount, 'completed in', batchDuration.toFixed(2), 'seconds');
+                            console.log('[PUNTWORK] Batch', batchCount, 'API call completed in', batchDuration.toFixed(2), 'seconds');
                             console.log('[PUNTWORK] Batch', batchCount, 'response:', response);
                             PuntWorkJSLogger.debug('Next batch response', 'LOGIC', response);
                             console.log('[PUNTWORK] Next batch response:', response);
@@ -124,7 +146,21 @@ console.info("=== Job Import Logic Script Loaded ===");
                             if (response.success) {
                                 // Status polling handles UI updates, just update our local tracking
                                 current = response.data.processed || current;
-                                console.log('[PUNTWORK] Batch', batchCount, 'completed - current processed:', current, 'batchCount:', batchCount);
+                                console.log('[PUNTWORK] Batch', batchCount, 'completed - current processed:', current, 'batchCount:', batchCount, 'duration:', batchDuration.toFixed(2) + 's');
+
+                                // Force a status update to ensure UI is current
+                                try {
+                                    const statusResponse = await JobImportAPI.getImportStatus();
+                                    if (statusResponse.success) {
+                                        var batchData = JobImportUI.normalizeResponseData(statusResponse);
+                                        console.log('[PUNTWORK] Status after batch', batchCount, '- published:', batchData.published, 'updated:', batchData.updated, 'total:', batchData.total);
+                                        JobImportUI.updateProgress(batchData);
+                                        JobImportUI.appendLogs(batchData.logs || []);
+                                    }
+                                } catch (statusError) {
+                                    console.warn('[PUNTWORK] Could not get status after batch', batchCount, ':', statusError);
+                                }
+
                                 if ((response.data && response.data.processed === 0 && response.data.total > 0) || (response.data && response.data.total > 0 && !response.data.processed)) {
                                     console.warn('[PUNTWORK] WARNING: Batch', batchCount, 'returned success but processed 0 items out of', response.data.total, response);
                                     PuntWorkJSLogger.warn('Batch ' + batchCount + ' returned success but processed 0 items', 'LOGIC', response);
@@ -717,47 +753,59 @@ console.info("=== Job Import Logic Script Loaded ===");
         },
 
         /**
-         * Log a manual import run to history
-         * @param {Object} statusData - The final import status data
+         * Debug function to get detailed import status - call from browser console
+         * Usage: JobImportLogic.debugImportStatus()
          */
-        logManualImportRun: async function(statusData) {
+        debugImportStatus: async function() {
+            console.log('[PUNTWORK] ===== IMPORT DEBUG STATUS =====');
+            console.log('Is importing:', this.isImporting);
+            console.log('Start time:', this.startTime ? new Date(this.startTime * 1000).toISOString() : 'Not set');
+            console.log('Elapsed time:', this.getElapsedTime(), 'seconds');
+
             try {
-                const logData = {
-                    action: 'log_manual_import_run',
-                    nonce: jobImportData.nonce,
-                    timestamp: Math.floor(Date.now() / 1000), // Current timestamp in seconds
-                    duration: statusData.time_elapsed || 0,
-                    success: statusData.success || false,
-                    processed: statusData.processed || 0,
-                    total: statusData.total || 0,
-                    published: statusData.published || 0,
-                    updated: statusData.updated || 0,
-                    skipped: statusData.skipped || 0,
-                    error_message: statusData.error_message || '',
-                    trigger_type: 'manual'
-                };
+                const statusResponse = await JobImportAPI.getImportStatus();
+                console.log('Current status from server:', statusResponse);
 
-                const response = await $.ajax({
-                    url: ajaxurl,
-                    type: 'POST',
-                    data: logData,
-                    timeout: 10000
-                });
+                if (statusResponse.success && statusResponse.data) {
+                    const data = statusResponse.data;
+                    console.log('Status details:');
+                    console.log('  - Total:', data.total);
+                    console.log('  - Processed:', data.processed);
+                    console.log('  - Published:', data.published);
+                    console.log('  - Updated:', data.updated);
+                    console.log('  - Skipped:', data.skipped);
+                    console.log('  - Complete:', data.complete);
+                    console.log('  - Success:', data.success);
+                    console.log('  - Time elapsed:', data.time_elapsed);
+                    console.log('  - Last update:', data.last_update ? new Date(data.last_update * 1000).toISOString() : 'Never');
 
-                if (response.success) {
-                    PuntWorkJSLogger.info('Manual import run logged to history', 'LOGIC', {
-                        success: logData.success,
-                        processed: logData.processed,
-                        total: logData.total,
-                        duration: logData.duration
-                    });
-                } else {
-                    PuntWorkJSLogger.error('Failed to log manual import run', 'LOGIC', response);
+                    if (data.logs && data.logs.length > 0) {
+                        console.log('Recent logs:');
+                        data.logs.slice(-10).forEach((log, i) => {
+                            console.log('  ' + (i+1) + ':', log);
+                        });
+                    }
                 }
             } catch (error) {
-                PuntWorkJSLogger.error('Error logging manual import run', 'LOGIC', error);
+                console.error('Error getting status:', error);
             }
-        }
+
+            // Check status polling
+            if (window.JobImportEvents && window.JobImportEvents.statusPollingInterval) {
+                console.log('Status polling is active (interval ID:', window.JobImportEvents.statusPollingInterval, ')');
+            } else {
+                console.log('Status polling is NOT active');
+            }
+
+            // Check real-time updates
+            if (window.JobImportRealtime && window.JobImportRealtime.getConnectionStatus) {
+                console.log('Real-time connection status:', window.JobImportRealtime.getConnectionStatus());
+            } else {
+                console.log('Real-time updates not available');
+            }
+
+            console.log('===== END DEBUG STATUS =====');
+        },
     };
 
     // Expose to global scope

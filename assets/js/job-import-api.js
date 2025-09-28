@@ -20,7 +20,7 @@ console.log('[PUNTWORK] job-import-api.js loaded');
             return this._retryAjax({
                 url: jobImportData.ajaxurl,
                 type: 'POST',
-                timeout: 600000, // 10 minutes timeout
+                timeout: 300000, // Increased to 5 minutes for large batches
                 data: { action: 'run_job_import_batch', start: start, nonce: jobImportData.nonce }
             }, 3, 2000); // 3 retries, 2 second delay
         },

@@ -43,7 +43,17 @@ if (! function_exists('process_batch_items') ) {
         error_log('[PUNTWORK] [BATCH-TIMING] Previous batch time: ' . $previous_batch_time . 's, Last batch time: ' . $last_batch_time . 's');
 
         $item_counter = 0;
+        $intermediate_update_interval = 10; // Update status every 10 items
+        $last_intermediate_update = 0;
+        
         foreach ( $batch_guids as $guid ) {
+            // Check for cancellation at the start of each item
+            if (get_transient('import_cancel')) {
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch processing cancelled by user';
+                error_log('[PUNTWORK] [ITEMS-DEBUG] Batch processing cancelled by user at item ' . $item_counter);
+                break;
+            }
+            
             ++$item_counter;
             error_log('[PUNTWORK] [ITEMS-DEBUG] ===== STARTING ITEM ' . $item_counter . '/' . $total_to_process . ' =====');
             error_log('[PUNTWORK] [ITEMS-DEBUG] Processing GUID: ' . $guid);
@@ -223,6 +233,16 @@ if (! function_exists('process_batch_items') ) {
 
                 ++$processed_count;
                 unset($batch_items[ $guid ]);
+
+                // Update intermediate status every N items to keep UI responsive
+                if ($processed_count % $intermediate_update_interval === 0 || $processed_count >= $total_to_process) {
+                    $current_time = microtime(true);
+                    if ($current_time - $last_intermediate_update >= 1 || $processed_count >= $total_to_process) { // At least 1 second between updates
+                        update_intermediate_batch_status($processed_count, $total_to_process, $published, $updated, $skipped, $logs);
+                        $last_intermediate_update = $current_time;
+                        error_log('[PUNTWORK] [ITEMS-DEBUG] Intermediate status update at ' . $processed_count . '/' . $total_to_process . ' items');
+                    }
+                }
 
                 if ($processed_count % 5 === 0 ) {
                     error_log('[PUNTWORK] [ITEMS-DEBUG] Processed ' . $processed_count . ' items so far in batch');

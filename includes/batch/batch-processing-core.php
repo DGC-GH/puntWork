@@ -113,6 +113,12 @@ function process_batch_items_logic( array $setup ): array
             error_log('[PUNTWORK] [BATCH-DEBUG] validate_and_adjust_batch_size completed, batch_size=' . $batch_size);
         }
 
+        // Add batch size logging to UI logs
+        if (!empty($batch_size_info['logs'])) {
+            $logs = array_merge($logs, $batch_size_info['logs']);
+        }
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Batch size set to {$batch_size} for this import batch";
+
         // Initialize variables
         $end_index = $setup['start_index'];
         $lines_read = 0;
@@ -234,6 +240,16 @@ function process_batch_items_logic( array $setup ): array
             if ($debug_mode) {
                 error_log('[PUNTWORK] [BATCH-DEBUG] Calling process_batch_data');
             }
+            
+            // Update status to show batch processing has started
+            $current_status = get_option('job_import_status', array());
+            $current_status['last_update'] = time();
+            $current_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Starting batch processing...';
+            update_option('job_import_status', $current_status, false);
+            if (function_exists('wp_cache_flush')) {
+                wp_cache_flush();
+            }
+            
             // Process batch items
             $result = process_batch_data($batch_guids, $batch_items, $logs, $published, $updated, $skipped, $duplicates_drafted);
             if ($debug_mode) {
@@ -397,17 +413,46 @@ function process_batch_items_logic( array $setup ): array
 }
 
 /**
- * Process batch data including duplicates and item processing.
+ * Update intermediate batch status during processing to keep UI responsive
  *
- * @param  array $batch_guids         Array of GUIDs in batch.
- * @param  array $batch_items         Array of batch items.
- * @param  array &$logs               Reference to logs array.
- * @param  int   &$published          Reference to published count.
- * @param  int   &$updated            Reference to updated count.
- * @param  int   &$skipped            Reference to skipped count.
- * @param  int   &$duplicates_drafted Reference to duplicates drafted count.
- * @return array Processing result.
+ * @param int   $processed_count Current processed count in this batch
+ * @param int   $total_in_batch  Total items in this batch
+ * @param int   $published       Published count so far
+ * @param int   $updated         Updated count so far
+ * @param int   $skipped         Skipped count so far
+ * @param array $logs            Current logs
  */
+function update_intermediate_batch_status(int $processed_count, int $total_in_batch, int $published, int $updated, int $skipped, array $logs): void
+{
+    // Get current status
+    $current_status = get_option('job_import_status', array());
+    
+    // Calculate total processed so far (previous batches + current batch progress)
+    $previous_processed = $current_status['processed'] ?? 0;
+    $total_processed = $previous_processed + $processed_count;
+    
+    // Update status with intermediate values
+    $intermediate_status = $current_status;
+    $intermediate_status['processed'] = $total_processed;
+    $intermediate_status['published'] = ($current_status['published'] ?? 0) + $published;
+    $intermediate_status['updated'] = ($current_status['updated'] ?? 0) + $updated;
+    $intermediate_status['skipped'] = ($current_status['skipped'] ?? 0) + $skipped;
+    $intermediate_status['time_elapsed'] = microtime(true) - ($current_status['start_time'] ?? microtime(true));
+    $intermediate_status['complete'] = false; // Not complete until batch finishes
+    $intermediate_status['success'] = true; // Still successful so far
+    $intermediate_status['last_update'] = time();
+    $intermediate_status['logs'] = array_slice($logs, -50); // Keep last 50 log entries
+    
+    // Add intermediate progress message
+    $intermediate_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Processing batch: {$processed_count}/{$total_in_batch} items completed";
+    
+    update_option('job_import_status', $intermediate_status, false);
+    
+    // Flush cache for real-time status updates
+    if (function_exists('wp_cache_flush')) {
+        wp_cache_flush();
+    }
+}
 function process_batch_data( array $batch_guids, array $batch_items, array &$logs, int &$published, int &$updated, int &$skipped, int &$duplicates_drafted ): array
 {
     $debug_mode = defined('WP_DEBUG') && WP_DEBUG;

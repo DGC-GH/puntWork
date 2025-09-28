@@ -20,6 +20,7 @@ if (! defined('ABSPATH') ) {
 
 /**
  * Adjust batch size based on memory and consecutive batch time metrics.
+ * Implements incremental batch size increases with fallback to previous size when processing becomes too slow.
  *
  * @param  int   $batch_size          Current batch size.
  * @param  float $memory_limit_bytes  Memory limit.
@@ -35,63 +36,105 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
     // Ensure batch size is within reasonable bounds
     $batch_size = max(5, min(500, $batch_size));
 
-    // Memory-based adjustment (most critical)
+    // Memory-based adjustment (most critical - always override other adjustments)
     if ($last_memory_ratio > 0.85 ) {
         // High memory usage - reduce batch size significantly
         $batch_size = max(1, floor($batch_size * 0.6));
+        $reason = 'high memory usage detected';
     } elseif ($last_memory_ratio > 0.75 ) {
         // Moderate high memory - reduce slightly
         $batch_size = max(1, floor($batch_size * 0.8));
+        $reason = 'moderate memory usage detected';
     } elseif ($last_memory_ratio < 0.4 ) {
-        // Low memory usage - gradually increase batch size
-        $new_size = floor($batch_size * 1.2);
-        if ($new_size == $batch_size ) {
-            $new_size = $batch_size + 1; // Ensure at least +1 if multiplier doesn't change
-        }
-        $batch_size = min(500, $new_size);
+        // Low memory usage - allow larger batches
+        $reason = 'low memory usage allows larger batches';
+    } else {
+        $reason = '';
     }
 
-    // Dynamic batch size adjustment based on consecutive batch completion times
-    if ($previous_batch_time > 0 && $current_batch_time > 0 ) {
-        if ($current_batch_time > $previous_batch_time ) {
-            // Current batch took longer than previous - decrease batch size moderately
-            $batch_size = max(1, floor($batch_size * 0.9));
-        } elseif ($current_batch_time < $previous_batch_time ) {
-            // Current batch took less time than previous - gradually increase batch size
-            $new_size = floor($batch_size * 1.1);
-            if ($new_size == $batch_size ) {
-                $new_size = $batch_size + 1; // Ensure at least +1 if multiplier doesn't change
+    // Get adaptive batch sizing state
+    $adaptive_state = get_option('job_import_adaptive_batch_state', array(
+        'previous_good_batch_size' => 10,
+        'current_increment_step' => 1,
+        'last_performance_check' => 0,
+        'consecutive_slow_batches' => 0,
+        'max_consecutive_slow' => 2, // Allow 2 slow batches before reverting
+        'slow_threshold_seconds' => 30.0, // Consider batch slow if > 30 seconds
+        'loop_prevention_counter' => 0,
+        'max_loop_prevention' => 10, // Prevent more than 10 adjustments in a row
+    ));
+
+    // Reset loop prevention if we've had successful batches
+    if ($current_batch_time > 0 && $current_batch_time <= $adaptive_state['slow_threshold_seconds']) {
+        $adaptive_state['loop_prevention_counter'] = 0;
+    }
+
+    // Dynamic batch size adjustment based on processing time
+    if ($current_batch_time > 0) {
+        $is_slow_batch = $current_batch_time > $adaptive_state['slow_threshold_seconds'];
+
+        if ($is_slow_batch) {
+            $adaptive_state['consecutive_slow_batches']++;
+
+            // If we've had too many slow batches, revert to previous good size
+            if ($adaptive_state['consecutive_slow_batches'] >= $adaptive_state['max_consecutive_slow']) {
+                $batch_size = $adaptive_state['previous_good_batch_size'];
+                $adaptive_state['consecutive_slow_batches'] = 0;
+                $adaptive_state['current_increment_step'] = 1; // Reset increment step
+                $reason = 'batch processing too slow (' . number_format($current_batch_time, 2) . 's > ' . $adaptive_state['slow_threshold_seconds'] . 's threshold), reverting to previous good batch size: ' . $batch_size;
+                $adaptive_state['loop_prevention_counter']++;
+            } else {
+                // First slow batch - reduce batch size moderately
+                $batch_size = max(5, floor($batch_size * 0.8));
+                $reason = 'batch processing slow (' . number_format($current_batch_time, 2) . 's), reducing batch size temporarily';
+                $adaptive_state['loop_prevention_counter']++;
             }
-            $batch_size = min(500, $new_size);
         } else {
-            // Times are equal - add small random adjustment to prevent stagnation
-            $random_factor = (mt_rand(-5, 5) / 100); // -0.05 to +0.05
-            $new_size = floor($batch_size * (1 + $random_factor));
-            $new_size = max(1, min(500, $new_size));
-            if ($new_size == $batch_size) {
-                // If still the same, force a small change
-                $new_size = $batch_size + (mt_rand(0, 1) ? 1 : -1);
-                $new_size = max(1, min(500, $new_size));
+            // Batch was fast enough - remember this as a good size and try to increase incrementally
+            $adaptive_state['previous_good_batch_size'] = $batch_size;
+            $adaptive_state['consecutive_slow_batches'] = 0;
+
+            // Incrementally increase batch size
+            $increment = $adaptive_state['current_increment_step'];
+            $new_size = $batch_size + $increment;
+
+            // Don't exceed reasonable bounds
+            if ($new_size <= 500) {
+                $batch_size = $new_size;
+                $reason = 'batch processing fast (' . number_format($current_batch_time, 2) . 's), incrementally increasing batch size to ' . $batch_size;
+
+                // Gradually increase increment step for faster adaptation
+                if ($adaptive_state['current_increment_step'] < 10) {
+                    $adaptive_state['current_increment_step']++;
+                }
+            } else {
+                $reason = 'batch processing fast but at maximum batch size limit';
             }
-            $batch_size = $new_size;
         }
-        // If times are equal, keep batch size the same
+
+        $adaptive_state['last_performance_check'] = time();
+    }
+
+    // Loop prevention: if we've adjusted too many times in a row, stabilize
+    if ($adaptive_state['loop_prevention_counter'] >= $adaptive_state['max_loop_prevention']) {
+        $batch_size = $adaptive_state['previous_good_batch_size'];
+        $reason = 'loop prevention triggered, stabilizing at previous good batch size: ' . $batch_size;
+        $adaptive_state['loop_prevention_counter'] = 0;
     }
 
     // Minimum batch size recovery mechanism
-    // If batch size is stuck at 5 or below, try to gradually recover
     if ($batch_size <= 5 ) {
-        // Check if we can safely increase from low batch sizes
         $consecutive_small_batches = get_option('job_import_consecutive_small_batches', 0);
 
         // If we've had several small batches but memory is OK, try increasing
         if ($consecutive_small_batches >= 3 && $last_memory_ratio < 0.7 ) {
             if ($batch_size === 5 ) {
-                $batch_size = 6; // Start with 6 instead of 5
+                $batch_size = 6;
             } elseif ($batch_size === 6 ) {
-                $batch_size = 7; // Increase from 6 to 7
+                $batch_size = 7;
             }
             update_option('job_import_consecutive_small_batches', 0, false);
+            $reason = 'recovery from minimum batch size, memory OK';
         } else {
             update_option('job_import_consecutive_small_batches', $consecutive_small_batches + 1, false);
         }
@@ -100,77 +143,40 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
         update_option('job_import_consecutive_small_batches', 0, false);
     }
 
-    // Ensure batch size never goes below 1 or above 500
-    $batch_size = max(1, min(500, $batch_size));
+    // Ensure batch size never goes below 5 or above 500
+    $batch_size = max(5, min(500, $batch_size));
 
     // Cast to int to ensure type compatibility
     $batch_size = (int) $batch_size;
 
+    // Save adaptive state
+    update_option('job_import_adaptive_batch_state', $adaptive_state);
+
     // Log batch size changes for debugging
-    if ($batch_size != $old_batch_size ) {
-        $reason = '';
-        if ($last_memory_ratio > 0.85 ) {
-            $reason = 'high memory usage';
-        } elseif ($last_memory_ratio > 0.75 ) {
-            $reason = 'moderate high memory usage';
-        } elseif ($last_memory_ratio < 0.4 ) {
-            $reason = 'low memory usage';
-        } elseif ($previous_batch_time > 0 && $current_batch_time > 0 ) {
-            if ($current_batch_time > $previous_batch_time ) {
-                $reason = 'current batch slower than previous';
-            } elseif ($current_batch_time < $previous_batch_time ) {
-                $reason = 'current batch faster than previous';
-            }
-        }
-
-        if (empty($reason) && $batch_size === 1 ) {
-            $reason = 'minimum batch size recovery attempt';
-        }
-
-        // Add detailed log message for user-visible logs
-        $detailed_reason = '';
-        if ($last_memory_ratio > 0.85 ) {
-            $detailed_reason = 'high memory usage detected';
-        } elseif ($last_memory_ratio > 0.75 ) {
-            $detailed_reason = 'moderate memory usage detected';
-        } elseif ($last_memory_ratio < 0.4 ) {
-            $detailed_reason = 'low memory usage allows larger batches';
-        } elseif ($previous_batch_time > 0 && $current_batch_time > 0 ) {
-            if ($current_batch_time > $previous_batch_time ) {
-                $detailed_reason = 'current batch took longer than previous - decreasing batch size';
-            } elseif ($current_batch_time < $previous_batch_time ) {
-                $detailed_reason = 'current batch took less time than previous - increasing batch size';
-            }
-        }
-
-        if (empty($detailed_reason) && $batch_size === 1 ) {
-            $detailed_reason = 'attempting recovery from minimum batch size';
-        } elseif (empty($detailed_reason) && $batch_size === 2 ) {
-            $detailed_reason = 'attempting recovery from small batch size';
-        }
-
+    if ($batch_size != $old_batch_size || !empty($reason)) {
         error_log(
             sprintf(
-                '[PUNTWORK] Batch size adjusted from %d to %d due to %s (memory: %.2f, current_batch: %.3f, prev_batch: %.3f)',
+                '[PUNTWORK] Batch size adjusted from %d to %d (reason: %s) [memory: %.2f, current_batch: %.3f, prev_batch: %.3f, adaptive_state: %s]',
                 $old_batch_size,
                 $batch_size,
                 $reason,
                 $last_memory_ratio,
                 $current_batch_time,
-                $previous_batch_time
+                $previous_batch_time,
+                json_encode($adaptive_state)
             )
         );
 
         // Return detailed reason for user logs
         return array(
-        'batch_size' => $batch_size,
-        'reason'     => $detailed_reason,
+            'batch_size' => $batch_size,
+            'reason'     => $reason,
         );
     }
 
     return array(
-    'batch_size' => $batch_size,
-    'reason'     => '',
+        'batch_size' => $batch_size,
+        'reason'     => '',
     );
 }
 
