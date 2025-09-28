@@ -18,6 +18,11 @@ if (!defined('ABSPATH')) {
  * Handles feed downloading, JSONL combination, and JSON generation
  */
 
+// Explicitly load required utility classes for AJAX context
+require_once __DIR__ . '/../utilities/SecurityUtils.php';
+require_once __DIR__ . '/../utilities/AjaxErrorHandler.php';
+require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
+
 add_action('wp_ajax_process_feed', __NAMESPACE__ . '\\process_feed_ajax');
 function process_feed_ajax()
 {

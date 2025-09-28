@@ -14,6 +14,16 @@ if (!defined('ABSPATH')) {
 }
 
 /*
+ * AJAX handlers for database optimization
+ * Handles optimization status, async settings, and performance monitoring
+ */
+
+// Explicitly load required utility classes for AJAX context
+require_once __DIR__ . '/../utilities/SecurityUtils.php';
+require_once __DIR__ . '/../utilities/AjaxErrorHandler.php';
+require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
+
+/*
  * Get database optimization status
  */
 add_action('wp_ajax_get_db_optimization_status', __NAMESPACE__ . '\\ajax_get_db_optimization_status');
@@ -81,65 +91,6 @@ function ajax_get_db_optimization_status()
 }
 
 /*
- * Save async processing settings
- */
-add_action('wp_ajax_save_async_settings', __NAMESPACE__ . '\\ajax_save_async_settings');
-function ajax_save_async_settings()
-{
-    // Use comprehensive security validation with field validation
-    $validation = SecurityUtils::validateAjaxRequest(
-        'save_async_settings',
-        'job_import_nonce',
-        ['enabled'], // required fields
-        [
-            'enabled' => ['type' => 'bool'], // validation rules
-        ]
-    );
-
-    if (is_wp_error($validation)) {
-        AjaxErrorHandler::sendError($validation);
-
-        return;
-    }
-
-    try {
-        $enabled = $_POST['enabled'];
-
-        update_option('puntwork_async_enabled', $enabled);
-
-        $status = get_async_processing_status();
-
-        AjaxErrorHandler::sendSuccess($status, ['message' => 'Async settings saved successfully']);
-    } catch (\Exception $e) {
-        PuntWorkLogger::error('Save async settings error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::sendError('Failed to save async settings: ' . $e->getMessage());
-    }
-}
-
-/*
- * Get async processing status
- */
-add_action('wp_ajax_get_async_status', __NAMESPACE__ . '\\ajax_get_async_status');
-function ajax_get_async_status()
-{
-    // Use comprehensive security validation
-    $validation = SecurityUtils::validateAjaxRequest('get_async_status', 'job_import_nonce');
-    if (is_wp_error($validation)) {
-        AjaxErrorHandler::sendError($validation);
-
-        return;
-    }
-
-    try {
-        $status = get_async_processing_status();
-        AjaxErrorHandler::sendSuccess($status);
-    } catch (\Exception $e) {
-        PuntWorkLogger::error('Get async status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::sendError('Failed to get async status: ' . $e->getMessage());
-    }
-}
-
-/*
  * Get performance monitoring status
  */
 add_action('wp_ajax_get_performance_status', __NAMESPACE__ . '\\ajax_get_performance_status');
@@ -170,13 +121,13 @@ function ajax_get_performance_status()
 }
 
 /*
- * Clear old performance logs
+ * Create database indexes
  */
-add_action('wp_ajax_clear_performance_logs', __NAMESPACE__ . '\\ajax_clear_performance_logs');
-function ajax_clear_performance_logs()
+add_action('wp_ajax_create_database_indexes', __NAMESPACE__ . '\\ajax_create_database_indexes');
+function ajax_create_database_indexes()
 {
     // Use comprehensive security validation
-    $validation = SecurityUtils::validateAjaxRequest('clear_performance_logs', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('create_database_indexes', 'job_import_nonce');
     if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
 
@@ -184,17 +135,29 @@ function ajax_clear_performance_logs()
     }
 
     try {
-        // Import the cleanup function
-        if (class_exists('\Puntwork\Utilities\PerformanceMonitor')) {
-            \Puntwork\Utilities\PerformanceMonitor::cleanupOldLogs(30); // Keep 30 days
-            $message = 'Performance logs older than 30 days have been cleared.';
-        } else {
-            $message = 'Performance monitoring not available.';
-        }
+        PuntWorkLogger::info('Creating database indexes', PuntWorkLogger::CONTEXT_AJAX);
 
-        AjaxErrorHandler::sendSuccess(null, ['message' => $message]);
+        // Include the database optimization functions
+        require_once __DIR__ . '/../utilities/database-optimization.php';
+
+        $start_time = microtime(true);
+        create_database_indexes();
+        $duration = microtime(true) - $start_time;
+
+        PuntWorkLogger::info(
+            'Database indexes created successfully',
+            PuntWorkLogger::CONTEXT_AJAX,
+            ['duration' => $duration]
+        );
+
+        AjaxErrorHandler::sendSuccess(
+            [
+                'message' => 'Database indexes created successfully',
+                'duration' => round($duration, 2),
+            ]
+        );
     } catch (\Exception $e) {
-        PuntWorkLogger::error('Clear performance logs error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::sendError('Failed to clear performance logs: ' . $e->getMessage());
+        PuntWorkLogger::error('Create database indexes error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        AjaxErrorHandler::sendError('Failed to create database indexes: ' . $e->getMessage());
     }
 }

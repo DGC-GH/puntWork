@@ -12,6 +12,16 @@ namespace Puntwork;
 if (!defined('ABSPATH')) {
     exit;
 }
+
+/*
+ * AJAX handlers for scheduling operations
+ * Handles schedule management, history, and execution
+ */
+
+// Explicitly load required utility classes for AJAX context
+require_once __DIR__ . '/../utilities/SecurityUtils.php';
+require_once __DIR__ . '/../utilities/AjaxErrorHandler.php';
+require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
 add_action(
     'wp_ajax_debug_trigger_async',
     function () {

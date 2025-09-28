@@ -13,10 +13,15 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
+/*
  * Main AJAX handlers file
- * Includes all AJAX handler modules for better organization.
+ * Includes all AJAX handler modules for better organization
  */
+
+// Explicitly load required utility classes for AJAX context
+require_once __DIR__ . '/../utilities/SecurityUtils.php';
+require_once __DIR__ . '/../utilities/AjaxErrorHandler.php';
+require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
 
 // Include import control handlers
 require_once __DIR__ . '/ajax-import-control.php';

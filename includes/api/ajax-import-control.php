@@ -906,6 +906,7 @@ function test_single_job_import_ajax()
 }
 
 add_action('wp_ajax_clear_rate_limits', __NAMESPACE__ . '\\clear_rate_limits_ajax');
+add_action('wp_ajax_clear_rate_limits_ajax', __NAMESPACE__ . '\\clear_rate_limits_ajax'); // Alias for compatibility
 function clear_rate_limits_ajax()
 {
     PuntWorkLogger::logAjaxRequest('clear_rate_limits', $_POST);
@@ -1031,19 +1032,90 @@ function get_api_key_ajax()
     }
 
     try {
-        $api_key = get_option('puntwork_api_key');
-
+        // Generate or retrieve API key for real-time updates
+        $api_key = get_option('puntwork_api_key', '');
         if (empty($api_key)) {
-            PuntWorkLogger::warn('API key requested but not configured', PuntWorkLogger::CONTEXT_AJAX);
-            AjaxErrorHandler::sendError('API key not configured');
-
-            return;
+            $api_key = wp_generate_password(32, false);
+            update_option('puntwork_api_key', $api_key);
         }
 
-        PuntWorkLogger::logAjaxResponse('get_api_key', ['message' => 'API key retrieved']);
+        PuntWorkLogger::logAjaxResponse('get_api_key', ['key_generated' => empty(get_option('puntwork_api_key', ''))]);
         AjaxErrorHandler::sendSuccess(['api_key' => $api_key]);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Get API key error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to get API key: ' . $e->getMessage());
+    }
+}
+
+add_action('wp_ajax_get_async_status', __NAMESPACE__ . '\\get_async_status_ajax');
+function get_async_status_ajax()
+{
+    PuntWorkLogger::logAjaxRequest('get_async_status', $_POST);
+
+    // Use comprehensive security validation
+    $validation = SecurityUtils::validateAjaxRequest('get_async_status', 'job_import_nonce');
+    if (is_wp_error($validation)) {
+        AjaxErrorHandler::sendError($validation);
+
+        return;
+    }
+
+    try {
+        // Include async processing utilities
+        require_once __DIR__ . '/../utilities/async-processing.php';
+
+        $status = get_async_processing_status();
+
+        PuntWorkLogger::logAjaxResponse('get_async_status', [
+            'enabled' => $status['enabled'],
+            'available' => $status['available']
+        ]);
+        AjaxErrorHandler::sendSuccess($status);
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Get async status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        AjaxErrorHandler::sendError('Failed to get async status: ' . $e->getMessage());
+    }
+}
+
+add_action('wp_ajax_save_async_settings', __NAMESPACE__ . '\\save_async_settings_ajax');
+function save_async_settings_ajax()
+{
+    PuntWorkLogger::logAjaxRequest('save_async_settings', $_POST);
+
+    // Use comprehensive security validation with field validation
+    $validation = SecurityUtils::validateAjaxRequest(
+        'save_async_settings',
+        'job_import_nonce',
+        ['enabled'], // required fields
+        [
+            'enabled' => [
+                'type' => 'boolean',
+            ],
+        ]
+    );
+
+    if (is_wp_error($validation)) {
+        AjaxErrorHandler::sendError($validation);
+
+        return;
+    }
+
+    try {
+        $enabled = filter_var($_POST['enabled'], FILTER_VALIDATE_BOOLEAN);
+
+        // Save async processing setting
+        update_option('puntwork_async_enabled', $enabled);
+
+        PuntWorkLogger::info(
+            'Async processing settings updated',
+            PuntWorkLogger::CONTEXT_AJAX,
+            ['enabled' => $enabled]
+        );
+
+        PuntWorkLogger::logAjaxResponse('save_async_settings', ['enabled' => $enabled]);
+        AjaxErrorHandler::sendSuccess(null, ['message' => 'Async settings saved successfully']);
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Save async settings error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        AjaxErrorHandler::sendError('Failed to save async settings: ' . $e->getMessage());
     }
 }

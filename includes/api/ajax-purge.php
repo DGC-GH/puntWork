@@ -18,6 +18,11 @@ if (!defined('ABSPATH')) {
  * Handles cleanup of old/unprocessed job posts
  */
 
+// Explicitly load required utility classes for AJAX context
+require_once __DIR__ . '/../utilities/SecurityUtils.php';
+require_once __DIR__ . '/../utilities/AjaxErrorHandler.php';
+require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
+
 add_action('wp_ajax_job_import_cleanup_duplicates', __NAMESPACE__ . '\\job_import_cleanup_duplicates_ajax');
 function job_import_cleanup_duplicates_ajax()
 {
