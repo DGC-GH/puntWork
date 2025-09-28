@@ -98,9 +98,9 @@ class IterativeLearner
             ));
 
             return true;
-
         } catch (\Exception $e) {
             error_log('[PUNTWORK] [LEARNING] Failed to record session performance: ' . $e->getMessage());
+
             return false;
         }
     }
@@ -288,12 +288,14 @@ class IterativeLearner
                 case 'sort_by_complexity':
                 case 'cluster_by_location':
                     $success = self::adjustJsonlOptimizerWeight($strategy, $adjustment);
+
                     break;
 
                 case 'priority_new':
                 case 'priority_updated':
                 case 'priority_unchanged':
                     $success = self::adjustBatchPrioritizerWeight($strategy, $adjustment);
+
                     break;
 
                 case 'resource_small':
@@ -301,6 +303,7 @@ class IterativeLearner
                 case 'resource_large':
                 case 'resource_xlarge':
                     $success = self::adjustResourceManagerWeight($strategy, $adjustment);
+
                     break;
             }
 
@@ -523,6 +526,7 @@ class IterativeLearner
         delete_option(self::WEIGHT_ADJUSTMENTS_KEY);
 
         error_log('[PUNTWORK] [LEARNING] Learning data reset');
+
         return true;
     }
 
@@ -533,6 +537,7 @@ class IterativeLearner
     {
         $adjustments = [$strategy => $adjustment];
         $applied = self::applyWeightAdjustments($adjustments);
+
         return isset($applied[$strategy]);
     }
 
@@ -542,6 +547,7 @@ class IterativeLearner
     public static function updateLearningConfig(array $new_config): bool
     {
         self::$learning_config = array_merge(self::$learning_config, $new_config);
+
         return true;
     }
 }

@@ -616,6 +616,7 @@ class JsonlOptimizer
     public static function updateOptimizationConfig(array $new_config): bool
     {
         self::$optimization_config = array_merge(self::$optimization_config, $new_config);
+
         return true;
     }
 

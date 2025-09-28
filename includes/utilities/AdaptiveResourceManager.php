@@ -471,6 +471,7 @@ class AdaptiveResourceManager
     public static function updateResourceProfiles(array $new_profiles): bool
     {
         self::$resource_profiles = array_merge(self::$resource_profiles, $new_profiles);
+
         return true;
     }
 
