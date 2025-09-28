@@ -32,25 +32,23 @@ class DynamicRateLimiter
     public const ADJUSTMENTS_KEY = 'puntwork_dynamic_rate_adjustments';
 
     /**
-     * Default configuration for dynamic rate limiting.
+     * Memory monitoring cache.
      */
-    private static $default_config = [
-        'enabled' => true,
-        'monitoring_interval' => 60, // seconds
-        'adjustment_interval' => 300, // 5 minutes
-        'max_adjustment_percentage' => 200, // Maximum 200% increase
-        'min_adjustment_percentage' => 25, // Minimum 25% of base limit
-        'cpu_threshold_high' => 80, // CPU usage percentage
-        'cpu_threshold_low' => 30,
-        'memory_threshold_high' => 85, // Memory usage percentage
-        'memory_threshold_low' => 50,
-        'response_time_threshold' => 2.0, // seconds
-        'error_rate_threshold' => 10, // percentage
-        'import_boost_factor' => 1.5, // Boost during imports
-        'peak_hours_boost' => 1.2, // Boost during peak hours
-        'off_peak_reduction' => 0.8, // Reduce during off-peak
-        'peak_hours_start' => 9, // 9 AM
-        'peak_hours_end' => 17, // 5 PM
+    private static $memory_cache = [
+        'limit_bytes' => null,
+        'limit_cached_at' => 0,
+        'usage_history' => [],
+        'pressure_threshold' => 75, // Memory pressure threshold (%)
+        'critical_threshold' => 90, // Critical memory threshold (%)
+    ];
+
+    /**
+     * Memory cleanup thresholds.
+     */
+    private static $cleanup_thresholds = [
+        'metrics_cleanup' => 80, // Clean metrics when memory > 80%
+        'cache_cleanup' => 85,   // Clean caches when memory > 85%
+        'emergency_cleanup' => 90, // Emergency cleanup when memory > 90%
     ];
 
     /**
@@ -80,7 +78,7 @@ class DynamicRateLimiter
     }
 
     /**
-     * Record performance metrics.
+     * Record performance metrics with memory pressure monitoring.
      *
      * @param string $action    Action name
      * @param array  $metrics   Performance metrics
@@ -92,6 +90,9 @@ class DynamicRateLimiter
             return;
         }
 
+        // Check memory pressure before recording metrics
+        self::checkMemoryPressure();
+
         $timestamp = time();
         $metric_key = self::METRICS_KEY . '_' . $action;
         $stored_metrics = get_option($metric_key, []);
@@ -102,20 +103,33 @@ class DynamicRateLimiter
             return $metric['timestamp'] >= $cutoff_time;
         });
 
+        // Get detailed memory information
+        $memory_info = self::getDetailedMemoryUsage();
+
         // Add new metrics
         $metric_data = array_merge($metrics, [
             'action' => $action,
             'timestamp' => $timestamp,
             'server_load' => self::getServerLoad(),
-            'memory_usage' => self::getMemoryUsage(),
+            'memory_usage' => $memory_info['current_percent'],
+            'memory_pressure' => $memory_info['pressure_level'],
+            'memory_trend' => $memory_info['trend']['direction'],
             'cpu_usage' => self::getCpuUsage(),
         ]);
 
         $stored_metrics[] = $metric_data;
 
-        // Keep only last 100 metrics per action to prevent bloat
-        if (count($stored_metrics) > 100) {
-            $stored_metrics = array_slice($stored_metrics, -100);
+        // Adaptive metrics limit based on memory pressure
+        $max_metrics = 100; // Default
+        if ($memory_info['pressure_level'] === 'high') {
+            $max_metrics = 50; // Reduce during high memory pressure
+        } elseif ($memory_info['pressure_level'] === 'critical') {
+            $max_metrics = 25; // Further reduce during critical pressure
+        }
+
+        // Keep only recent metrics to prevent bloat
+        if (count($stored_metrics) > $max_metrics) {
+            $stored_metrics = array_slice($stored_metrics, -$max_metrics);
         }
 
         update_option($metric_key, $stored_metrics);
@@ -142,54 +156,285 @@ class DynamicRateLimiter
     }
 
     /**
-     * Get current memory usage percentage.
+     * Get current memory usage with advanced monitoring.
+     *
+     * @return array Memory usage information
+     */
+    public static function getDetailedMemoryUsage(): array
+    {
+        $current_usage = memory_get_usage(true);
+        $peak_usage = memory_get_peak_usage(true);
+        $limit_bytes = self::getMemoryLimitBytes();
+
+        $current_percent = $limit_bytes > 0 ? ($current_usage / $limit_bytes) * 100 : 0;
+        $peak_percent = $limit_bytes > 0 ? ($peak_usage / $limit_bytes) * 100 : 0;
+
+        // Track memory usage history for trend analysis
+        $timestamp = microtime(true);
+        self::$memory_cache['usage_history'][] = [
+            'timestamp' => $timestamp,
+            'current' => $current_usage,
+            'peak' => $peak_usage,
+            'percent' => $current_percent,
+        ];
+
+        // Keep only last 10 measurements (last ~5 minutes at normal monitoring intervals)
+        if (count(self::$memory_cache['usage_history']) > 10) {
+            self::$memory_cache['usage_history'] = array_slice(self::$memory_cache['usage_history'], -10);
+        }
+
+        // Calculate memory pressure trend
+        $trend = self::calculateMemoryTrend();
+
+        // Determine memory pressure level
+        $pressure_level = 'normal';
+        if ($current_percent >= self::$memory_cache['critical_threshold']) {
+            $pressure_level = 'critical';
+        } elseif ($current_percent >= self::$memory_cache['pressure_threshold']) {
+            $pressure_level = 'high';
+        }
+
+        return [
+            'current_bytes' => $current_usage,
+            'peak_bytes' => $peak_usage,
+            'limit_bytes' => $limit_bytes,
+            'current_percent' => round($current_percent, 2),
+            'peak_percent' => round($peak_percent, 2),
+            'available_bytes' => $limit_bytes - $current_usage,
+            'available_percent' => round(100 - $current_percent, 2),
+            'pressure_level' => $pressure_level,
+            'trend' => $trend,
+            'history_count' => count(self::$memory_cache['usage_history']),
+        ];
+    }
+
+    /**
+     * Get current memory usage percentage (backward compatibility).
      *
      * @return float Memory usage percentage
      */
     private static function getMemoryUsage(): float
     {
-        $memory_limit = self::getMemoryLimitBytes();
-        $current_usage = memory_get_peak_usage(true);
-
-        if ($memory_limit > 0) {
-            return ($current_usage / $memory_limit) * 100;
-        }
-
-        return 0.0;
+        $details = self::getDetailedMemoryUsage();
+        return $details['current_percent'];
     }
 
     /**
-     * Get memory limit in bytes.
+     * Calculate memory usage trend.
+     *
+     * @return array Trend information
+     */
+    private static function calculateMemoryTrend(): array
+    {
+        $history = self::$memory_cache['usage_history'];
+
+        if (count($history) < 3) {
+            return ['direction' => 'unknown', 'rate' => 0, 'confidence' => 0];
+        }
+
+        // Calculate trend using linear regression on recent measurements
+        $n = count($history);
+        $sum_x = $sum_y = $sum_xy = $sum_x2 = 0;
+
+        foreach ($history as $i => $point) {
+            $x = $i; // Time index
+            $y = $point['current']; // Memory usage
+            $sum_x += $x;
+            $sum_y += $y;
+            $sum_xy += $x * $y;
+            $sum_x2 += $x * $x;
+        }
+
+        $slope = ($n * $sum_xy - $sum_x * $sum_y) / ($n * $sum_x2 - $sum_x * $sum_x);
+
+        // Determine trend direction and rate
+        $direction = 'stable';
+        $rate = 0;
+
+        if (abs($slope) > 1000) { // Significant change threshold
+            $direction = $slope > 0 ? 'increasing' : 'decreasing';
+            $rate = $slope / 1024 / 1024; // Convert to MB per measurement
+        }
+
+        return [
+            'direction' => $direction,
+            'rate' => round($rate, 2),
+            'confidence' => min(100, $n * 10), // Simple confidence based on sample size
+        ];
+    }
+
+    /**
+     * Get memory limit in bytes with caching.
      *
      * @return int Memory limit in bytes
      */
     private static function getMemoryLimitBytes(): int
     {
-        $memory_limit = ini_get('memory_limit');
+        $cache_time = 300; // Cache for 5 minutes
 
-        if (preg_match('/^(\d+)(.)$/', $memory_limit, $matches)) {
-            $value = (int)$matches[1];
-            $unit = strtolower($matches[2]);
+        if (self::$memory_cache['limit_bytes'] === null ||
+            (time() - self::$memory_cache['limit_cached_at']) > $cache_time) {
 
-            switch ($unit) {
-                case 'g':
-                    $value *= 1024 * 1024 * 1024;
+            $memory_limit = ini_get('memory_limit');
 
-                    break;
-                case 'm':
-                    $value *= 1024 * 1024;
+            if (preg_match('/^(\d+)(.)$/', $memory_limit, $matches)) {
+                $value = (int)$matches[1];
+                $unit = strtolower($matches[2]);
 
-                    break;
-                case 'k':
-                    $value *= 1024;
+                switch ($unit) {
+                    case 'g':
+                        $value *= 1024 * 1024 * 1024;
+                        break;
+                    case 'm':
+                        $value *= 1024 * 1024;
+                        break;
+                    case 'k':
+                        $value *= 1024;
+                        break;
+                }
 
-                    break;
+                self::$memory_cache['limit_bytes'] = $value;
+            } else {
+                self::$memory_cache['limit_bytes'] = 128 * 1024 * 1024; // Default 128MB
             }
 
-            return $value;
+            self::$memory_cache['limit_cached_at'] = time();
         }
 
-        return 128 * 1024 * 1024; // Default 128MB
+        return self::$memory_cache['limit_bytes'];
+    }
+
+    /**
+     * Check if memory usage is approaching critical levels and trigger cleanup.
+     *
+     * @return bool True if cleanup was triggered
+     */
+    public static function checkMemoryPressure(): bool
+    {
+        $memory_info = self::getDetailedMemoryUsage();
+        $current_percent = $memory_info['current_percent'];
+
+        // Emergency cleanup at critical threshold
+        if ($current_percent >= self::$cleanup_thresholds['emergency_cleanup']) {
+            self::performEmergencyCleanup();
+            return true;
+        }
+
+        // Cache cleanup at high threshold
+        if ($current_percent >= self::$cleanup_thresholds['cache_cleanup']) {
+            self::performCacheCleanup();
+            return true;
+        }
+
+        // Metrics cleanup at medium threshold
+        if ($current_percent >= self::$cleanup_thresholds['metrics_cleanup']) {
+            self::performMetricsCleanup();
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Perform emergency memory cleanup.
+     */
+    private static function performEmergencyCleanup(): void
+    {
+        PuntWorkLogger::warning(
+            'Emergency memory cleanup triggered',
+            PuntWorkLogger::CONTEXT_SECURITY,
+            ['memory_usage' => self::getDetailedMemoryUsage()]
+        );
+
+        // Clear all caches
+        wp_cache_flush();
+
+        // Clear transients
+        global $wpdb;
+        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_%' OR option_name LIKE '_site_transient_%'");
+
+        // Force garbage collection if available
+        if (function_exists('gc_collect_cycles')) {
+            gc_collect_cycles();
+        }
+
+        // Reset internal caches
+        self::$memory_cache['usage_history'] = [];
+    }
+
+    /**
+     * Perform cache cleanup.
+     */
+    private static function performCacheCleanup(): void
+    {
+        PuntWorkLogger::info(
+            'Cache cleanup triggered due to memory pressure',
+            PuntWorkLogger::CONTEXT_SECURITY,
+            ['memory_usage' => self::getDetailedMemoryUsage()]
+        );
+
+        // Clear expired transients
+        global $wpdb;
+        $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s AND option_value < %s",
+            '_transient_%',
+            time()
+        ));
+
+        // Clear puntWork specific caches
+        delete_option('puntwork_feed_cache');
+        delete_option('puntwork_analytics_cache');
+        delete_option('puntwork_performance_cache');
+
+        // Clear any cached feed data
+        $feed_cache_keys = get_option('puntwork_feed_cache_keys', []);
+        foreach ($feed_cache_keys as $key) {
+            delete_transient($key);
+        }
+        delete_option('puntwork_feed_cache_keys');
+    }
+
+    /**
+     * Perform metrics cleanup.
+     */
+    private static function performMetricsCleanup(): void
+    {
+        PuntWorkLogger::info(
+            'Metrics cleanup triggered due to memory pressure',
+            PuntWorkLogger::CONTEXT_SECURITY,
+            ['memory_usage' => self::getDetailedMemoryUsage()]
+        );
+
+        global $wpdb;
+
+        // Get all metric keys
+        $metric_keys = $wpdb->get_col($wpdb->prepare(
+            "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s",
+            self::METRICS_KEY . '_%'
+        ));
+
+        $cutoff_time = time() - 3600; // Keep only last hour during cleanup
+        $total_removed = 0;
+
+        foreach ($metric_keys as $key) {
+            $metrics = get_option($key, []);
+            $original_count = count($metrics);
+
+            $cleaned_metrics = array_filter($metrics, function ($metric) use ($cutoff_time) {
+                return $metric['timestamp'] >= $cutoff_time;
+            });
+
+            if (count($cleaned_metrics) !== $original_count) {
+                update_option($key, $cleaned_metrics);
+                $total_removed += ($original_count - count($cleaned_metrics));
+            }
+        }
+
+        PuntWorkLogger::info(
+            'Metrics cleanup completed',
+            PuntWorkLogger::CONTEXT_SECURITY,
+            ['removed' => $total_removed]
+        );
     }
 
     /**
@@ -266,7 +511,7 @@ class DynamicRateLimiter
     }
 
     /**
-     * Calculate dynamic rate limit adjustments.
+     * Calculate dynamic rate limit adjustments with enhanced memory monitoring.
      *
      * @param string $action Action name
      * @return array Adjustment factors
@@ -286,10 +531,47 @@ class DynamicRateLimiter
         $multiplier = 1.0;
         $reasons = [];
 
+        // Get detailed memory information
+        $memory_info = self::getDetailedMemoryUsage();
+
         // Server performance factors
         $avg_cpu = array_sum(array_column($metrics, 'cpu_usage')) / count($metrics);
         $avg_memory = array_sum(array_column($metrics, 'memory_usage')) / count($metrics);
         $avg_load = array_sum(array_column($metrics, 'server_load')) / count($metrics);
+
+        // Enhanced memory-based adjustment with pressure levels
+        $memory_pressure_multiplier = 1.0;
+
+        if ($memory_info['pressure_level'] === 'critical') {
+            // Critical memory pressure - aggressive reduction
+            $memory_pressure_multiplier = 0.3;
+            $reasons[] = 'critical_memory_pressure';
+        } elseif ($memory_info['pressure_level'] === 'high') {
+            // High memory pressure - moderate reduction
+            $memory_pressure_multiplier = 0.6;
+            $reasons[] = 'high_memory_pressure';
+        } elseif ($avg_memory > $config['memory_threshold_high']) {
+            // Standard high memory threshold
+            $memory_factor = max(0.4, 1.0 - (($avg_memory - $config['memory_threshold_high']) / 35));
+            $memory_pressure_multiplier = $memory_factor;
+            $reasons[] = "high_memory_{$avg_memory}%";
+        } elseif ($avg_memory < $config['memory_threshold_low']) {
+            // Low memory usage - can increase limits
+            $memory_factor = min(1.8, 1.0 + (($config['memory_threshold_low'] - $avg_memory) / 40));
+            $memory_pressure_multiplier = $memory_factor;
+            $reasons[] = "low_memory_{$avg_memory}%";
+        }
+
+        // Apply memory pressure multiplier
+        $multiplier *= $memory_pressure_multiplier;
+
+        // Memory trend-based adjustment
+        if ($memory_info['trend']['direction'] === 'increasing' &&
+            $memory_info['trend']['rate'] > 5) { // More than 5MB increase per measurement
+            $trend_factor = max(0.7, 1.0 - ($memory_info['trend']['rate'] / 20));
+            $multiplier *= $trend_factor;
+            $reasons[] = 'memory_trend_increasing';
+        }
 
         // CPU-based adjustment
         if ($avg_cpu > $config['cpu_threshold_high']) {
@@ -300,17 +582,6 @@ class DynamicRateLimiter
             $cpu_factor = min(2.0, 1.0 + (($config['cpu_threshold_low'] - $avg_cpu) / 50));
             $multiplier *= $cpu_factor;
             $reasons[] = "low_cpu_{$avg_cpu}%";
-        }
-
-        // Memory-based adjustment
-        if ($avg_memory > $config['memory_threshold_high']) {
-            $memory_factor = max(0.5, 1.0 - (($avg_memory - $config['memory_threshold_high']) / 35));
-            $multiplier *= $memory_factor;
-            $reasons[] = "high_memory_{$avg_memory}%";
-        } elseif ($avg_memory < $config['memory_threshold_low']) {
-            $memory_factor = min(2.0, 1.0 + (($config['memory_threshold_low'] - $avg_memory) / 40));
-            $multiplier *= $memory_factor;
-            $reasons[] = "low_memory_{$avg_memory}%";
         }
 
         // Load-based adjustment
@@ -356,15 +627,26 @@ class DynamicRateLimiter
             $reasons[] = 'off_peak';
         }
 
-        // Import operation boost
+        // Import operation boost (but reduce if memory pressure is high)
         if (self::isImportOperation($action)) {
-            $multiplier *= $config['import_boost_factor'];
+            $import_multiplier = $config['import_boost_factor'];
+            if ($memory_info['pressure_level'] === 'high') {
+                $import_multiplier *= 0.8; // Reduce import boost during high memory pressure
+            } elseif ($memory_info['pressure_level'] === 'critical') {
+                $import_multiplier *= 0.5; // Further reduce during critical pressure
+            }
+            $multiplier *= $import_multiplier;
             $reasons[] = 'import_operation';
         }
 
-        // Apply bounds
+        // Apply bounds with memory-aware minimums
+        $min_multiplier = $config['min_adjustment_percentage'] / 100;
+        if ($memory_info['pressure_level'] === 'critical') {
+            $min_multiplier = max(0.1, $min_multiplier * 0.5); // Allow more aggressive reduction
+        }
+
         $multiplier = max(
-            $config['min_adjustment_percentage'] / 100,
+            $min_multiplier,
             min($config['max_adjustment_percentage'] / 100, $multiplier)
         );
 
@@ -377,6 +659,9 @@ class DynamicRateLimiter
                 'avg_load' => round($avg_load, 2),
                 'error_rate' => round($error_rate, 1),
                 'sample_count' => count($metrics),
+                'memory_pressure' => $memory_info['pressure_level'],
+                'memory_trend' => $memory_info['trend']['direction'],
+                'available_memory_percent' => $memory_info['available_percent'],
             ],
         ];
     }
@@ -478,13 +763,14 @@ class DynamicRateLimiter
     }
 
     /**
-     * Get dynamic rate limiting status.
+     * Get dynamic rate limiting status with enhanced memory information.
      *
      * @return array Status information
      */
     public static function getStatus(): array
     {
         $config = self::getConfig();
+        $memory_info = self::getDetailedMemoryUsage();
 
         // Get all metric keys (per-action) and count metrics efficiently
         global $wpdb;
@@ -519,8 +805,11 @@ class DynamicRateLimiter
             'total_metrics' => $total_metrics,
             'recent_metrics' => $recent_metrics,
             'current_load' => self::getServerLoad(),
-            'current_memory' => self::getMemoryUsage(),
+            'current_memory' => $memory_info,
             'current_cpu' => self::getCpuUsage(),
+            'memory_pressure_level' => $memory_info['pressure_level'],
+            'memory_trend' => $memory_info['trend'],
+            'cleanup_thresholds' => self::$cleanup_thresholds,
             'last_updated' => time(),
         ];
     }
