@@ -142,9 +142,31 @@ function process_social_media_posts()
 add_action('init', __NAMESPACE__ . '\\setup_job_import');
 function setup_job_import()
 {
-    // Use WordPress transient for cross-request persistence (fixed key, short expiration)
+    // Use WordPress option for robust cross-request locking (prevents race conditions)
+    $lock_key = 'puntwork_setup_lock';
+    $lock_timeout = 10; // 10 seconds lock timeout
+
+    $current_time = time();
+    $lock_value = get_option($lock_key, 0);
+
+    // Check if another process has the lock (within timeout window)
+    if ($lock_value > 0 && ($current_time - $lock_value) < $lock_timeout) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [INIT-SKIP] Setup locked by another process, skipping...');
+        }
+
+        return;
+    }
+
+    // Acquire lock
+    update_option($lock_key, $current_time);
+
+    // Check if setup was already completed recently using transient
     $transient_key = 'puntwork_setup_done';
     if (get_transient($transient_key)) {
+        // Release lock
+        delete_option($lock_key);
+
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('[PUNTWORK] [INIT-SKIP] Setup already completed recently, skipping...');
         }
@@ -466,6 +488,9 @@ function setup_job_import()
     if ($debug_mode) {
         error_log('[PUNTWORK] [INIT-END] ===== SETUP_JOB_IMPORT COMPLETED =====');
     }
+
+    // Release lock
+    delete_option($lock_key);
 }
 
 // Add custom favicon
