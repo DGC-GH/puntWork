@@ -212,6 +212,14 @@ function bulk_update_acf_fields(array $post_ids, array $acf_data): void
     $total_time = microtime(true) - $start_time;
     error_log('[PUNTWORK] [ACF-DEBUG] bulk_update_acf_fields completed in ' . number_format($total_time, 4) . ' seconds total (' . number_format($total_time / count($post_ids), 4) . ' seconds per post)');
 }
+
+/**
+ * Bulk get post statuses for multiple posts.
+ *
+ * @param  array $post_ids Array of post IDs
+ * @return array Post ID => status mapping
+ */
+function bulk_get_post_statuses(array $post_ids): array
 {
     global $wpdb;
 

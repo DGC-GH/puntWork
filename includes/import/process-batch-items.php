@@ -27,8 +27,14 @@ if (!function_exists('process_batch_items')) {
         // Bulk fetch post statuses to avoid N+1 queries
         $post_ids_for_status = array_values($post_ids_by_guid);
         error_log('[PUNTWORK] [ITEMS-DEBUG] Post IDs for status: ' . count($post_ids_for_status));
+        error_log('[PUNTWORK] [ITEMS-DEBUG] About to call bulk_get_post_statuses');
+        if (!function_exists('bulk_get_post_statuses')) {
+            error_log('[PUNTWORK] [ERROR] bulk_get_post_statuses function not found');
+
+            throw new Exception('bulk_get_post_statuses function not available');
+        }
         $post_statuses = bulk_get_post_statuses($post_ids_for_status);
-        error_log('[PUNTWORK] [ITEMS-DEBUG] Got post statuses');
+        error_log('[PUNTWORK] [ITEMS-DEBUG] bulk_get_post_statuses returned ' . count($post_statuses) . ' statuses');
 
         // Preload post meta to avoid N+1 queries during ACF updates
         if (!empty($post_ids_for_status)) {

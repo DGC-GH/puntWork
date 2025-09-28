@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reduced verbose logging in instance registration to only log errors and new registrations
 - Added nonce verification to AJAX import control handlers for improved security
 - Fixed excessive logging in DatabasePerformanceMonitor by making per-query logging conditional on PUNTWORK_DB_DEBUG constant
+- Fixed undefined function bulk_get_post_statuses by adding proper function declaration and debug logs
 
 ### Performance
 - Optimized load balancer initialization by caching table existence checks
