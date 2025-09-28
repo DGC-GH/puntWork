@@ -13,7 +13,8 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-error_log('[PUNTWORK] import-batch.php loaded - is_admin: ' . (is_admin() ? 'true' : 'false') . ', DOING_AJAX: ' . (defined('DOING_AJAX') && DOING_AJAX ? 'true' : 'false'));
+error_log('[PUNTWORK] import-batch.php loaded - is_admin: ' . (is_admin() ? 'true' : 'false') .
+    ', DOING_AJAX: ' . (defined('DOING_AJAX') && DOING_AJAX ? 'true' : 'false'));
 
 /**
  * Main import batch processing file
@@ -41,11 +42,40 @@ require_once __DIR__ . '/import-finalization.php';
 function import_time_exceeded(): bool
 {
     $start_time = get_option('job_import_start_time', microtime(true));
-    $time_limit = apply_filters('puntwork_import_time_limit', 120); // 120 seconds default (increased from 20 for better performance)
+    $time_limit = apply_filters('puntwork_import_time_limit', 240); // 240 seconds (4 minutes) default
+    // (increased from 120 for better performance)
     $current_time = microtime(true);
+    $elapsed_time = $current_time - $start_time;
 
-    if (($current_time - $start_time) >= $time_limit) {
+    // Debug logging
+    error_log(sprintf(
+        '[PUNTWORK] [TIME-DEBUG] import_time_exceeded check: start_time=%.6f, current_time=%.6f, ' .
+        'elapsed=%.2fs, limit=%ds, exceeded=%s',
+        $start_time,
+        $current_time,
+        $elapsed_time,
+        $time_limit,
+        ($elapsed_time >= $time_limit ? 'YES' : 'NO')
+    ));
+
+    if ($elapsed_time >= $time_limit) {
+        error_log(sprintf(
+            '[PUNTWORK] [TIME-LIMIT] Import time limit exceeded: %.2fs elapsed, limit was %ds',
+            $elapsed_time,
+            $time_limit
+        ));
         return true;
+    }
+
+    // Log remaining time for debugging
+    $remaining_time = $time_limit - $elapsed_time;
+    if ($remaining_time <= 30) { // Log when less than 30 seconds remaining
+        error_log(sprintf(
+            '[PUNTWORK] [TIME-WARNING] Import time limit approaching: %.1fs remaining (elapsed: %.2fs, limit: %ds)',
+            $remaining_time,
+            $elapsed_time,
+            $time_limit
+        ));
     }
 
     return apply_filters('puntwork_import_time_exceeded', false);
@@ -106,7 +136,8 @@ if (!function_exists('import_jobs_from_json')) {
             $import_lock_key = 'puntwork_import_lock';
             if (get_transient($import_lock_key)) {
                 error_log('[PUNTWORK] Import already running - skipping concurrent import');
-                return ['success' => false, 'message' => 'Import already running', 'logs' => ['Import already running - concurrent imports not allowed']];
+                return ['success' => false, 'message' => 'Import already running',
+                    'logs' => ['Import already running - concurrent imports not allowed']];
             }
 
             // Set import lock
@@ -114,7 +145,8 @@ if (!function_exists('import_jobs_from_json')) {
             error_log('[PUNTWORK] Import lock set');
 
             error_log('=== PUNTWORK IMPORT DEBUG: import_jobs_from_json STARTED ===');
-            error_log('[PUNTWORK] import_jobs_from_json called with is_batch=' . ($is_batch ? 'true' : 'false') . ', batch_start=' . $batch_start);
+            error_log('[PUNTWORK] import_jobs_from_json called with is_batch=' . ($is_batch ? 'true' : 'false') .
+                ', batch_start=' . $batch_start);
             error_log('[PUNTWORK] import_jobs_from_json: Calling prepare_import_setup...');
             $setup = prepare_import_setup($batch_start);
             error_log('[PUNTWORK] import_jobs_from_json: prepare_import_setup returned: ' . json_encode([
@@ -128,18 +160,21 @@ if (!function_exists('import_jobs_from_json')) {
 
             if (is_wp_error($setup)) {
                 error_log('[PUNTWORK] prepare_import_setup returned WP_Error: ' . $setup->get_error_message());
-                return ['success' => false, 'message' => $setup->get_error_message(), 'logs' => ['Setup failed: ' . $setup->get_error_message()]];
+                return ['success' => false, 'message' => $setup->get_error_message(),
+                    'logs' => ['Setup failed: ' . $setup->get_error_message()]];
             }
 
             if (isset($setup['success'])) {
-                error_log('[PUNTWORK] [DEBUG] import_jobs_from_json: prepare_import_setup returned early success/complete');
+                error_log('[PUNTWORK] [DEBUG] import_jobs_from_json: prepare_import_setup returned early ' .
+                    'success/complete');
                 error_log('[PUNTWORK] [DEBUG] import_jobs_from_json: Early return details: ' . json_encode($setup));
                 return $setup; // Early return for empty or completed cases
             }
 
             error_log('[PUNTWORK] import_jobs_from_json: Setup successful, calling process_batch_items_logic...');
             $result = process_batch_items_logic($setup);
-            error_log('[PUNTWORK] import_jobs_from_json: process_batch_items_logic completed, success=' . (isset($result['success']) ? $result['success'] : 'not set'));
+            error_log('[PUNTWORK] import_jobs_from_json: process_batch_items_logic completed, success=' .
+                (isset($result['success']) ? $result['success'] : 'not set'));
 
             error_log('[PUNTWORK] import_jobs_from_json: Calling finalize_batch_import...');
             $final_result = finalize_batch_import($result);
@@ -152,12 +187,14 @@ if (!function_exists('import_jobs_from_json')) {
             error_log('[PUNTWORK] import_jobs_from_json: Exception caught: ' . $e->getMessage());
             error_log('[PUNTWORK] import_jobs_from_json: Exception file: ' . $e->getFile() . ':' . $e->getLine());
             error_log('[PUNTWORK] import_jobs_from_json: Stack trace: ' . $e->getTraceAsString());
-            return ['success' => false, 'message' => 'Import failed: ' . $e->getMessage(), 'logs' => ['Exception: ' . $e->getMessage()]];
+            return ['success' => false, 'message' => 'Import failed: ' . $e->getMessage(),
+                'logs' => ['Exception: ' . $e->getMessage()]];
         } catch (\Throwable $e) {
             error_log('[PUNTWORK] import_jobs_from_json: Fatal error caught: ' . $e->getMessage());
             error_log('[PUNTWORK] import_jobs_from_json: Fatal error file: ' . $e->getFile() . ':' . $e->getLine());
             error_log('[PUNTWORK] import_jobs_from_json: Stack trace: ' . $e->getTraceAsString());
-            return ['success' => false, 'message' => 'Import failed with fatal error: ' . $e->getMessage(), 'logs' => ['Fatal error: ' . $e->getMessage()]];
+            return ['success' => false, 'message' => 'Import failed with fatal error: ' . $e->getMessage(),
+                'logs' => ['Fatal error: ' . $e->getMessage()]];
         } finally {
             // Release import lock
             delete_transient('puntwork_import_lock');
@@ -190,14 +227,16 @@ if (!function_exists('import_all_jobs_from_json')) {
         $import_lock_key = 'puntwork_import_lock';
         if (get_transient($import_lock_key)) {
             error_log('[PUNTWORK] Import already running - skipping concurrent import');
-            return ['success' => false, 'message' => 'Import already running', 'logs' => ['Import already running - concurrent imports not allowed']];
+            return ['success' => false, 'message' => 'Import already running',
+                'logs' => ['Import already running - concurrent imports not allowed']];
         }
 
         // Set import lock
         set_transient($import_lock_key, true, 600); // 10 minutes timeout
         error_log('[PUNTWORK] Import lock set for import_all_jobs_from_json');
 
-        error_log('[PUNTWORK] import_all_jobs_from_json started with preserve_status=' . ($preserve_status ? 'true' : 'false'));
+        error_log('[PUNTWORK] import_all_jobs_from_json started with preserve_status=' .
+            ($preserve_status ? 'true' : 'false'));
 
         try {
             // Only reset status if not preserving existing status
@@ -253,13 +292,15 @@ if (!function_exists('import_all_jobs_from_json')) {
                 // Check if we should continue processing (time/memory limits)
                 error_log('[PUNTWORK] [LOOP-DEBUG] Checking if should continue batch processing...');
                 if (!should_continue_batch_processing()) {
-                    error_log('[PUNTWORK] [LOOP-DEBUG] should_continue_batch_processing returned false - pausing import');
+                    error_log('[PUNTWORK] [LOOP-DEBUG] should_continue_batch_processing returned false - ' .
+                        'pausing import');
                     // Pause processing and schedule continuation
                     $current_status = get_option('job_import_status', []);
                     $current_status['paused'] = true;
                     $current_status['pause_reason'] = 'time_limit_exceeded';
                     $current_status['last_update'] = time();
-                    $current_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Import paused due to time/memory limits - will continue automatically';
+                    $current_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Import paused due to ' .
+                        'time/memory limits - will continue automatically';
                     update_option('job_import_status', $current_status, false);
 
                     // Schedule continuation via WordPress cron (runs in background)
@@ -285,7 +326,8 @@ if (!function_exists('import_all_jobs_from_json')) {
                 error_log('[PUNTWORK] [LOOP-DEBUG] should_continue_batch_processing returned true - continuing');
 
                 $batch_start = (int) get_option('job_import_progress', 0);
-                error_log('[PUNTWORK] [LOOP-DEBUG] import_all_jobs_from_json: batch_start=' . $batch_start . ', total_items=' . $total_items);
+                error_log('[PUNTWORK] [LOOP-DEBUG] import_all_jobs_from_json: batch_start=' . $batch_start .
+                    ', total_items=' . $total_items);
 
                 // Prepare setup for this batch
                 error_log('[PUNTWORK] [LOOP-DEBUG] Calling prepare_import_setup with batch_start=' . $batch_start);
@@ -306,7 +348,11 @@ if (!function_exists('import_all_jobs_from_json')) {
                     error_log('[PUNTWORK] [LOOP-DEBUG] Set total items for import: ' . $total_items . ' (first batch)');
                 }
 
-                error_log('[PUNTWORK] [LOOP-DEBUG] import_all_jobs_from_json: batch_count=' . $batch_count . ', batch_start=' . $batch_start . ', total_items=' . $total_items . ', setup total=' . ($setup['total'] ?? 'not set') . ', setup start_index=' . ($setup['start_index'] ?? 'not set') . ', setup complete=' . (isset($setup['complete']) ? $setup['complete'] : 'not set'));
+                error_log('[PUNTWORK] [LOOP-DEBUG] import_all_jobs_from_json: batch_count=' . $batch_count .
+                    ', batch_start=' . $batch_start . ', total_items=' . $total_items .
+                    ', setup total=' . ($setup['total'] ?? 'not set') .
+                    ', setup start_index=' . ($setup['start_index'] ?? 'not set') .
+                    ', setup complete=' . (isset($setup['complete']) ? $setup['complete'] : 'not set'));
 
                 // Check if import is complete
                 if (isset($setup['success']) && isset($setup['complete']) && $setup['complete']) {
@@ -315,17 +361,20 @@ if (!function_exists('import_all_jobs_from_json')) {
                 }
 
                 if ($batch_start >= $total_items) {
-                    error_log('[PUNTWORK] [LOOP-DEBUG] Import complete - batch_start (' . $batch_start . ') >= total_items (' . $total_items . ')');
+                    error_log('[PUNTWORK] [LOOP-DEBUG] Import complete - batch_start (' . $batch_start .
+                        ') >= total_items (' . $total_items . ')');
                     break;
                 }
 
                 $batch_count++;
-                error_log('[PUNTWORK] [LOOP-DEBUG] Processing batch ' . $batch_count . ' starting at index ' . $batch_start);
+                error_log('[PUNTWORK] [LOOP-DEBUG] Processing batch ' . $batch_count .
+                    ' starting at index ' . $batch_start);
 
                 // Process this batch
                 error_log('[PUNTWORK] [LOOP-DEBUG] Calling process_batch_items_logic for batch ' . $batch_count);
                 $result = process_batch_items_logic($setup);
-                error_log('[PUNTWORK] [LOOP-DEBUG] process_batch_items_logic completed for batch ' . $batch_count . ', success=' . ($result['success'] ? 'true' : 'false'));
+                error_log('[PUNTWORK] [LOOP-DEBUG] process_batch_items_logic completed for batch ' .
+                    $batch_count . ', success=' . ($result['success'] ? 'true' : 'false'));
 
                 if (!$result['success']) {
                     $error_msg = 'Batch ' . $batch_count . ' failed: ' . ($result['message'] ?? 'Unknown error');
@@ -357,18 +406,22 @@ if (!function_exists('import_all_jobs_from_json')) {
                 $current_status['last_update'] = time();
                 $current_status['logs'] = array_slice($all_logs, -50); // Keep last 50 log entries for UI
                 update_option('job_import_status', $current_status, false);
-                error_log('[PUNTWORK] [LOOP-DEBUG] Updated import status after batch ' . $batch_count . ': processed=' . $total_processed . '/' . $total_items . ', complete=' . ($total_processed >= $total_items ? 'true' : 'false'));
+                error_log('[PUNTWORK] [LOOP-DEBUG] Updated import status after batch ' . $batch_count .
+                    ': processed=' . $total_processed . '/' . $total_items .
+                    ', complete=' . ($total_processed >= $total_items ? 'true' : 'false'));
 
                 // Check if this batch completed the import
                 if (isset($result['complete']) && $result['complete']) {
-                    error_log('[PUNTWORK] [LOOP-DEBUG] Import completed in batch ' . $batch_count . ' (result complete=true)');
+                    error_log('[PUNTWORK] [LOOP-DEBUG] Import completed in batch ' . $batch_count .
+                        ' (result complete=true)');
                     break;
                 }
 
                 // Safety check to prevent infinite loops
                 if ($batch_count > 1000) {
                     $error_msg = 'Import aborted - too many batches processed (possible infinite loop)';
-                    error_log('[PUNTWORK] [LOOP-DEBUG] Safety check triggered: batch_count=' . $batch_count . ' > 1000');
+                    error_log('[PUNTWORK] [LOOP-DEBUG] Safety check triggered: batch_count=' . $batch_count .
+                        ' > 1000');
                     return ['success' => false, 'message' => $error_msg, 'logs' => $all_logs];
                 }
 
@@ -394,7 +447,8 @@ if (!function_exists('import_all_jobs_from_json')) {
                 'logs' => $all_logs,
                 'batches_processed' => $batch_count,
                 'message' => sprintf(
-                    'Full import completed successfully - Processed: %d/%d items (Published: %d, Updated: %d, Skipped: %d) in %.1f seconds',
+                    'Full import completed successfully - Processed: %d/%d items ' .
+                    '(Published: %d, Updated: %d, Skipped: %d) in %.1f seconds',
                     $total_processed,
                     $total_items,
                     $total_published,
@@ -405,7 +459,8 @@ if (!function_exists('import_all_jobs_from_json')) {
             ];
 
             error_log(sprintf(
-                '[PUNTWORK] Full import completed - Duration: %.2fs, Batches: %d, Total: %d, Processed: %d, Published: %d, Updated: %d, Skipped: %d',
+                '[PUNTWORK] Full import completed - Duration: %.2fs, Batches: %d, Total: %d, ' .
+                'Processed: %d, Published: %d, Updated: %d, Skipped: %d',
                 $total_duration,
                 $batch_count,
                 $total_items,

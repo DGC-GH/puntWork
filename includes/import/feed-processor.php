@@ -57,7 +57,8 @@ class FeedProcessor
 
             // Check for XML
             if (strpos($content, '<?xml') === 0 || strpos($content, '<') === 0) {
-                error_log('[PUNTWORK] detectFormat: Detected XML from content starting with: ' . substr($content, 0, 50));
+                error_log('[PUNTWORK] detectFormat: Detected XML from content starting with: ' .
+                substr($content, 0, 50));
                 return self::FORMAT_XML;
             }
 
@@ -65,10 +66,12 @@ class FeedProcessor
             if ((strpos($content, '{') === 0 || strpos($content, '[') === 0)) {
                 json_decode($content);
                 if (json_last_error() === JSON_ERROR_NONE) {
-                    error_log('[PUNTWORK] detectFormat: Detected JSON from content starting with: ' . substr($content, 0, 50));
+                    error_log('[PUNTWORK] detectFormat: Detected JSON from content starting with: ' .
+                    substr($content, 0, 50));
                     return self::FORMAT_JSON;
                 } else {
-                    error_log('[PUNTWORK] detectFormat: Content starts with { or [, but invalid JSON: ' . json_last_error_msg());
+                    error_log('[PUNTWORK] detectFormat: Content starts with { or [, but invalid JSON: ' .
+                    json_last_error_msg());
                 }
             }
 
@@ -100,10 +103,10 @@ class FeedProcessor
     private static function isJobBoardUrl(string $url): bool
     {
         $job_board_patterns = [
-            'job_board://',  // Custom protocol for job boards
-            'indeed://',
-            'linkedin://',
-            'glassdoor://'
+        'job_board://',  // Custom protocol for job boards
+        'indeed://',
+        'linkedin://',
+        'glassdoor://'
         ];
 
         foreach ($job_board_patterns as $pattern) {
@@ -128,8 +131,17 @@ class FeedProcessor
      * @param array &$logs Logs array
      * @return array Processed batch data
      */
-    public static function processFeed(string $feed_path, string $format, $handle, string $feed_key, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): int
-    {
+    public static function processFeed(
+        string $feed_path,
+        string $format,
+        $handle,
+        string $feed_key,
+        string $output_dir,
+        string $fallback_domain,
+        int $batch_size,
+        int &$total_items,
+        array &$logs
+    ): int {
         switch ($format) {
             case self::FORMAT_XML:
                 return self::processXmlFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
@@ -147,8 +159,16 @@ class FeedProcessor
     /**
      * Process XML feed (existing functionality)
      */
-    private static function processXmlFeed($xml_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, &$total_items, &$logs)
-    {
+    private static function processXmlFeed(
+        $xml_path,
+        $handle,
+        $feed_key,
+        $output_dir,
+        $fallback_domain,
+        $batch_size,
+        &$total_items,
+        &$logs
+    ) {
         return process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
     }
 
@@ -183,8 +203,16 @@ class FeedProcessor
      * @return int Number of items processed
      * @throws \Exception If JSON processing fails
      */
-    private static function processJsonFeed(string $json_path, $handle, string $feed_key, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): int
-    {
+    private static function processJsonFeed(
+        string $json_path,
+        $handle,
+        string $feed_key,
+        string $output_dir,
+        string $fallback_domain,
+        int $batch_size,
+        int &$total_items,
+        array &$logs
+    ): int {
         $feed_item_count = 0;
         $batch = [];
 
@@ -301,8 +329,16 @@ class FeedProcessor
      * @return int Number of items processed
      * @throws \Exception If CSV processing fails
      */
-    private static function processCsvFeed(string $csv_path, $handle, string $feed_key, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): int
-    {
+    private static function processCsvFeed(
+        string $csv_path,
+        $handle,
+        string $feed_key,
+        string $output_dir,
+        string $fallback_domain,
+        int $batch_size,
+        int &$total_items,
+        array &$logs
+    ): int {
         $feed_item_count = 0;
         $batch = [];
 
@@ -421,8 +457,16 @@ class FeedProcessor
      * @return int Number of items processed
      * @throws \Exception If job board processing fails
      */
-    private static function processJobBoardFeed(string $feed_path, $handle, string $feed_key, string $output_dir, string $fallback_domain, int $batch_size, int &$total_items, array &$logs): int
-    {
+    private static function processJobBoardFeed(
+        string $feed_path,
+        $handle,
+        string $feed_key,
+        string $output_dir,
+        string $fallback_domain,
+        int $batch_size,
+        int &$total_items,
+        array &$logs
+    ): int {
         $feed_item_count = 0;
         $batch = [];
 
