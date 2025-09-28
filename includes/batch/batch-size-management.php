@@ -247,7 +247,7 @@ function validate_and_adjust_batch_size(array $setup): array
 {
     $memory_limit_bytes = get_memory_limit_bytes();
     $threshold = 0.6 * $memory_limit_bytes;
-    $batch_size = get_option('job_import_batch_size') ?: 10; // Force smaller starting batch size for real-time progress
+    $batch_size = get_option('job_import_batch_size') ?: 25; // Starting batch size for real-time progress
 
     // Ensure batch_size is at least 10 for incremental updates
     $batch_size = max(10, (int)$batch_size);
