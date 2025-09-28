@@ -181,7 +181,12 @@ class PuntworkHorizontalScalingManager
             );
 
             if ($primary_key_exists > 0) {
-                    error_log('[PUNTWORK] Instances table already exists with primary key, skipping creation');
+                    // Only log once per hour to reduce spam
+                    $last_log = get_transient('puntwork_instances_table_log');
+                    if (! $last_log) {
+                        error_log('[PUNTWORK] Instances table already exists with primary key, skipping creation');
+                        set_transient('puntwork_instances_table_log', time(), 3600); // 1 hour
+                    }
                     return;
             }
         }
