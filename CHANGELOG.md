@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed namespace declaration in JsonlIterator class (batch-loading.php) for PSR-12 compliance
 - Reduced verbose logging in instance registration to only log errors and new registrations
 - Added nonce verification to AJAX import control handlers for improved security
+- Fixed excessive logging in DatabasePerformanceMonitor by making per-query logging conditional on PUNTWORK_DB_DEBUG constant
 
 ### Performance
 - Optimized load balancer initialization by caching table existence checks
