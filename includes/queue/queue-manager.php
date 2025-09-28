@@ -285,6 +285,9 @@ class PuntworkQueueManager
         case 'feed_import':
             return $this->processFeedImport($job_data);
 
+        case 'job_import':
+            return $this->processJobImport($job_data);
+
         case 'batch_process':
             return $this->processBatch($job_data);
 
@@ -322,6 +325,112 @@ class PuntworkQueueManager
         $result = processFeedImport($feed_id, $force);
 
         return $result;
+    }
+
+    /**
+     * Process individual job import
+     */
+    private function processJobImport( $job_data )
+    {
+        $guid = $job_data['guid'] ?? null;
+        $item = $job_data['job_data'] ?? null;
+        $existing_post_id = $job_data['post_id'] ?? null;
+
+        if (! $guid || ! $item ) {
+            throw new \Exception('GUID and job data required for job import');
+        }
+
+        // Get required data
+        $acf_fields = get_acf_fields();
+        $zero_empty_fields = get_zero_empty_fields();
+        $user_id = get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : get_current_user_id();
+
+        $xml_updated = isset($item['updated']) ? $item['updated'] : '';
+        $xml_updated_ts = strtotime($xml_updated);
+
+        // Check if post exists
+        if ($existing_post_id ) {
+            // Update existing post
+            $current_last_update = get_post_meta($existing_post_id, '_last_import_update', true);
+            $current_last_ts = $current_last_update ? strtotime($current_last_update) : 0;
+
+            // Skip if no update needed
+            if ($xml_updated_ts && $current_last_ts >= $xml_updated_ts ) {
+                return array( 'status' => 'skipped', 'reason' => 'not_updated' );
+            }
+
+            $current_hash = get_post_meta($existing_post_id, '_import_hash', true);
+            $item_hash = md5(json_encode($item));
+
+            // Skip if content hasn't changed
+            if ($current_hash === $item_hash ) {
+                return array( 'status' => 'skipped', 'reason' => 'no_changes' );
+            }
+
+            // Update post
+            $xml_title = isset($item['functiontitle']) ? $item['functiontitle'] : '';
+            $xml_validfrom = isset($item['validfrom']) ? $item['validfrom'] : '';
+            $post_modified = $xml_updated ?: current_time('mysql');
+
+            wp_update_post(
+                array(
+                'ID' => $existing_post_id,
+                'post_title' => $xml_title,
+                'post_name' => sanitize_title($xml_title . '-' . $guid),
+                'post_status' => 'publish',
+                'post_date' => $xml_validfrom,
+                'post_modified' => $post_modified,
+                )
+            );
+
+            update_post_meta($existing_post_id, '_last_import_update', $xml_updated);
+            update_post_meta($existing_post_id, '_import_hash', $item_hash);
+
+            // Update ACF fields
+            foreach ( $acf_fields as $field ) {
+                $value = $item[ $field ] ?? '';
+                $is_special = in_array($field, $zero_empty_fields);
+                $set_value = $is_special && $value === '0' ? '' : $value;
+                update_field($field, $set_value, $existing_post_id);
+            }
+
+            return array( 'status' => 'updated', 'post_id' => $existing_post_id );
+        } else {
+            // Create new post
+            $xml_title = isset($item['functiontitle']) ? $item['functiontitle'] : '';
+            $xml_validfrom = isset($item['validfrom']) ? $item['validfrom'] : current_time('mysql');
+            $post_modified = $xml_updated ?: current_time('mysql');
+
+            $post_data = array(
+            'post_type' => 'job',
+            'post_title' => $xml_title,
+            'post_name' => sanitize_title($xml_title . '-' . $guid),
+            'post_status' => 'publish',
+            'post_date' => $xml_validfrom,
+            'post_modified' => $post_modified,
+            'comment_status' => 'closed',
+            'post_author' => $user_id,
+            );
+
+            $post_id = wp_insert_post($post_data);
+            if (is_wp_error($post_id) ) {
+                throw new \Exception('Failed to create post: ' . $post_id->get_error_message());
+            }
+
+            update_post_meta($post_id, '_last_import_update', $xml_updated);
+            $item_hash = md5(json_encode($item));
+            update_post_meta($post_id, '_import_hash', $item_hash);
+
+            // Update ACF fields
+            foreach ( $acf_fields as $field ) {
+                $value = $item[ $field ] ?? '';
+                $is_special = in_array($field, $zero_empty_fields);
+                $set_value = $is_special && $value === '0' ? '' : $value;
+                update_field($field, $set_value, $post_id);
+            }
+
+            return array( 'status' => 'published', 'post_id' => $post_id );
+        }
     }
 
     /**
@@ -691,4 +800,5 @@ class PuntworkQueueManager
 }
 
 // Initialize queue manager
-new PuntworkQueueManager();
+global $puntwork_queue_manager;
+$puntwork_queue_manager = new PuntworkQueueManager();

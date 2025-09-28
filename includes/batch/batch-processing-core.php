@@ -91,6 +91,11 @@ function process_batch_items_logic( array $setup ): array
         $logs            = $batch_size_info['logs'];
         error_log('[PUNTWORK] [BATCH-DEBUG] validate_and_adjust_batch_size completed, batch_size=' . $batch_size);
 
+        // Initialize variables
+        $end_index = $setup['start_index'];
+        $lines_read = 0;
+        $processed_guids = array();
+
         // Re-align start_index with new batch_size to avoid skips
         // Removed to prevent stuck imports when batch_size changes
 
@@ -412,8 +417,14 @@ function process_batch_data( array $batch_guids, array $batch_items, array &$log
     error_log('[PUNTWORK] [BATCH-DEBUG] Cache cleared after metadata');
 
     error_log('[PUNTWORK] [BATCH-DEBUG] About to call process_batch_items_with_metadata');
-    // Process items
-    $processed_count = process_batch_items_with_metadata($batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid, $logs, $updated, $published, $skipped);
+    // Process items - either directly or via queue
+    if (class_exists('Puntwork\\PuntworkQueueManager') && isset($GLOBALS['puntwork_queue_manager'])) {
+        // Use queue for processing
+        $processed_count = queue_batch_items($batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid, $logs, $updated, $published, $skipped);
+    } else {
+        // Direct processing
+        $processed_count = process_batch_items_with_metadata($batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid, $logs, $updated, $published, $skipped);
+    }
     error_log('[PUNTWORK] [BATCH-DEBUG] process_batch_items_with_metadata completed, processed_count=' . $processed_count);
 
     return array( 'processed_count' => $processed_count );
@@ -431,4 +442,62 @@ function process_batch_items_with_metadata( array $batch_guids, array $batch_ite
     process_batch_items($batch_guids, $batch_items, $batch_metadata['last_updates'], $batch_metadata['hashes_by_post'], $acf_fields, $zero_empty_fields, $post_ids_by_guid, $logs, $updated, $published, $skipped, $processed_count);
 
     return $processed_count;
+}
+
+/**
+ * Queue batch items for processing instead of processing directly.
+ */
+function queue_batch_items( array $batch_guids, array $batch_items, array $batch_metadata, array $post_ids_by_guid, array &$logs, int &$updated, int &$published, int &$skipped ): int
+{
+    global $puntwork_queue_manager;
+
+    if (! $puntwork_queue_manager ) {
+        // Fallback to direct processing
+        return process_batch_items_with_metadata($batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid, $logs, $updated, $published, $skipped);
+    }
+
+    $queued_count = 0;
+
+    foreach ( $batch_guids as $index => $guid ) {
+        $job_data = isset($batch_items[$index]) ? $batch_items[$index] : null;
+
+        if (! $job_data ) {
+            continue;
+        }
+
+        // Check if job needs updating (same logic as direct processing)
+        $post_id = $post_ids_by_guid[$guid] ?? null;
+        if ($post_id ) {
+            $last_update = $batch_metadata['last_updates'][$post_id] ?? null;
+            $xml_updated = $job_data['updated'] ?? $job_data['pubdate'] ?? null;
+
+            if ($last_update && $xml_updated ) {
+                $last_update_ts = strtotime($last_update);
+                $xml_updated_ts = strtotime($xml_updated);
+
+                if ($last_update_ts >= $xml_updated_ts ) {
+                    ++$skipped;
+                    continue;
+                }
+            }
+        }
+
+        // Add to queue
+        $queue_data = array(
+            'guid' => $guid,
+            'job_data' => $job_data,
+            'post_id' => $post_id,
+        );
+
+        $job_id = $puntwork_queue_manager->addJob('job_import', $queue_data, 10);
+
+        if ($job_id ) {
+            ++$queued_count;
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Queued job import for GUID: $guid";
+        } else {
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Failed to queue job import for GUID: $guid";
+        }
+    }
+
+    return $queued_count;
 }
