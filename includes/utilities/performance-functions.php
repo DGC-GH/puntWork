@@ -168,6 +168,26 @@ function reset_memory_manager(): void
 }
 
 /**
+ * Disable expensive plugin operations during batch processing for performance
+ */
+function disable_expensive_plugins(): void
+{
+    // Temporarily disable expensive plugins or operations
+    // This is a placeholder - implement specific plugin disabling logic as needed
+    // For example, deactivate plugins that hook into post saves
+    // or disable search indexing during batch processing
+}
+
+/**
+ * Re-enable expensive plugin operations after batch processing
+ */
+function enable_expensive_plugins(): void
+{
+    // Re-enable expensive plugins or operations
+    // This is a placeholder - implement specific plugin re-enabling logic as needed
+}
+
+/**
  * AJAX handler for warming performance caches
  */
 function ajax_warm_performance_caches(): void
