@@ -567,6 +567,11 @@ console.info("=== Job Import Logic Script Loaded ===");
                     window.JobImportEvents.startStatusPolling();
                 }
                 
+                // Add a small delay to ensure status polling is ready
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                console.log('[PUNTWORK] ===== CALLING handleImport(0) =====');
+                PuntWorkJSLogger.info('About to call handleImport(0)', 'LOGIC');
                 await this.handleImport(0);
 
             } catch (error) {

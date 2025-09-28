@@ -219,6 +219,7 @@ function prepare_import_setup( $batch_start = 0 )
     }
 
     if ($total == 0 ) {
+        error_log('[PUNTWORK] prepare_import_setup: EARLY RETURN - total is 0, no items to import');
         return array(
         'success'            => true,
         'processed'          => 0,
@@ -314,6 +315,7 @@ function prepare_import_setup( $batch_start = 0 )
         );
     }
 
+    error_log('[PUNTWORK] prepare_import_setup: NORMAL RETURN - start_index=' . $start_index . ', total=' . $total . ', json_path=' . $json_path);
     return array(
     'acf_fields'        => $acf_fields,
     'zero_empty_fields' => $zero_empty_fields,
