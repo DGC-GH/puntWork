@@ -142,18 +142,18 @@ function process_social_media_posts()
 add_action('init', __NAMESPACE__ . '\\setup_job_import');
 function setup_job_import()
 {
-    // Use WordPress transient for cross-request persistence
-    $transient_key = 'puntwork_setup_done_' . session_id();
+    // Use WordPress transient for cross-request persistence (fixed key, short expiration)
+    $transient_key = 'puntwork_setup_done';
     if (get_transient($transient_key)) {
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[PUNTWORK] [INIT-SKIP] Setup already completed for this session, skipping...');
+            error_log('[PUNTWORK] [INIT-SKIP] Setup already completed recently, skipping...');
         }
 
         return;
     }
 
-    // Set transient to expire in 1 hour (cross-request persistence)
-    set_transient($transient_key, true, HOUR_IN_SECONDS);
+    // Set transient to expire in 5 minutes (cross-request persistence)
+    set_transient($transient_key, true, 5 * MINUTE_IN_SECONDS);
 
     // Increase memory limit to prevent exhaustion
     ini_set('memory_limit', '1024M');
