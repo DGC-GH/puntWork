@@ -2,6 +2,7 @@
 
 /**
  * Sanitize status data to prevent "undefined" values from breaking JSON serialization
+ * and limit log size to prevent memory issues
  *
  * @param array $status The status array to sanitize
  * @return array Sanitized status array
@@ -29,7 +30,12 @@ function sanitize_import_status($status)
             error_log('[PUNTWORK] [SANITIZE] Removing "undefined" from string value for key: ' . $key);
             $value = str_replace('undefined', '', $value);
         } elseif (is_array($value)) {
-            $value = sanitize_import_status($value); // Recursive sanitization
+            // Special handling for logs array - limit to last 50 entries
+            if ($key === 'logs' && is_array($value)) {
+                $value = array_slice($value, -50); // Keep only the last 50 log entries
+            } else {
+                $value = sanitize_import_status($value); // Recursive sanitization
+            }
         } elseif (! is_scalar($value) && ! is_array($value)) {
             error_log('[PUNTWORK] [SANITIZE] Converting non-scalar value to string for key: ' . $key);
             $value = (string) $value;

@@ -955,6 +955,16 @@ function get_rate_limit_status_ajax()
     }
 
     try {
+        // Use transient caching to reduce database load (cache for 15 seconds)
+        $cache_key = 'puntwork_rate_limit_status_cache_' . get_current_user_id();
+        $cached_status = get_transient($cache_key);
+
+        if ($cached_status !== false) {
+            PuntWorkLogger::logAjaxResponse('get_rate_limit_status', ['status_count' => count($cached_status), 'cached' => true]);
+            AjaxErrorHandler::sendSuccess($cached_status);
+            return;
+        }
+
         $user_id = get_current_user_id();
         $configs = SecurityUtils::getAllRateLimitConfigs();
         $status = [];
@@ -983,6 +993,9 @@ function get_rate_limit_status_ajax()
             ];
         }
 
+        // Cache the result for 15 seconds
+        set_transient($cache_key, $status, 15);
+
         PuntWorkLogger::logAjaxResponse('get_rate_limit_status', ['status_count' => count($status)]);
         AjaxErrorHandler::sendSuccess($status);
     } catch (\Exception $e) {
@@ -1005,7 +1018,24 @@ function get_dynamic_rate_status_ajax()
     }
 
     try {
+        // Use transient caching to reduce database load (cache for 30 seconds)
+        $cache_key = 'puntwork_dynamic_rate_status_cache';
+        $cached_status = get_transient($cache_key);
+
+        if ($cached_status !== false) {
+            PuntWorkLogger::logAjaxResponse('get_dynamic_rate_status', [
+                'enabled' => $cached_status['enabled'],
+                'total_metrics' => $cached_status['total_metrics'],
+                'cached' => true,
+            ]);
+            AjaxErrorHandler::sendSuccess($cached_status);
+            return;
+        }
+
         $status = \Puntwork\DynamicRateLimiter::getStatus();
+
+        // Cache the result for 30 seconds
+        set_transient($cache_key, $status, 30);
 
         PuntWorkLogger::logAjaxResponse('get_dynamic_rate_status', [
             'enabled' => $status['enabled'],

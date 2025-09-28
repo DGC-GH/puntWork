@@ -93,6 +93,12 @@ add_action('admin_init', __NAMESPACE__ . '\\add_accessibility_headers');
  */
 function enhance_admin_menu_accessibility($menu)
 {
+    // Ensure menu is an array before processing
+    if (!is_array($menu)) {
+        error_log('[PUNTWORK] enhance_admin_menu_accessibility received non-array menu parameter: ' . gettype($menu) . ' - returning as array');
+        return is_array($menu) ? $menu : [];
+    }
+
     if (is_admin() && is_array($menu)) {
         foreach ($menu as &$item) {
             if (isset($item[2]) && strpos($item[2], 'puntwork') === 0) {
@@ -100,8 +106,6 @@ function enhance_admin_menu_accessibility($menu)
                 $item[4] = ($item[4] ?? '') . ' aria-label="' . esc_attr($item[0]) . '"';
             }
         }
-    } elseif (is_admin() && !is_array($menu)) {
-        error_log('[PUNTWORK] enhance_admin_menu_accessibility received non-array menu parameter: ' . gettype($menu) . ' - returning unchanged');
     }
 
     return $menu;

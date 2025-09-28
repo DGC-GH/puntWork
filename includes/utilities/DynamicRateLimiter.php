@@ -93,10 +93,11 @@ class DynamicRateLimiter
         }
 
         $timestamp = time();
-        $stored_metrics = get_option(self::METRICS_KEY, []);
+        $metric_key = self::METRICS_KEY . '_' . $action;
+        $stored_metrics = get_option($metric_key, []);
 
-        // Clean old metrics (keep last 24 hours)
-        $cutoff_time = $timestamp - 86400;
+        // Clean old metrics (keep last 2 hours only)
+        $cutoff_time = $timestamp - 7200; // 2 hours
         $stored_metrics = array_filter($stored_metrics, function ($metric) use ($cutoff_time) {
             return $metric['timestamp'] >= $cutoff_time;
         });
@@ -112,12 +113,12 @@ class DynamicRateLimiter
 
         $stored_metrics[] = $metric_data;
 
-        // Keep only last 1000 metrics to prevent bloat
-        if (count($stored_metrics) > 1000) {
-            $stored_metrics = array_slice($stored_metrics, -1000);
+        // Keep only last 100 metrics per action to prevent bloat
+        if (count($stored_metrics) > 100) {
+            $stored_metrics = array_slice($stored_metrics, -100);
         }
 
-        update_option(self::METRICS_KEY, $stored_metrics);
+        update_option($metric_key, $stored_metrics);
     }
 
     /**
@@ -409,11 +410,12 @@ class DynamicRateLimiter
      */
     private static function getRecentMetrics(string $action, int $time_range = 300): array
     {
-        $stored_metrics = get_option(self::METRICS_KEY, []);
+        $metric_key = self::METRICS_KEY . '_' . $action;
+        $stored_metrics = get_option($metric_key, []);
         $cutoff_time = time() - $time_range;
 
-        return array_filter($stored_metrics, function ($metric) use ($action, $cutoff_time) {
-            return $metric['action'] === $action && $metric['timestamp'] >= $cutoff_time;
+        return array_filter($stored_metrics, function ($metric) use ($cutoff_time) {
+            return $metric['timestamp'] >= $cutoff_time;
         });
     }
 
@@ -483,18 +485,39 @@ class DynamicRateLimiter
     public static function getStatus(): array
     {
         $config = self::getConfig();
-        $metrics = get_option(self::METRICS_KEY, []);
-        $adjustments = get_option(self::ADJUSTMENTS_KEY, []);
 
-        $recent_metrics = array_filter($metrics, function ($m) {
-            return $m['timestamp'] >= (time() - 3600); // Last hour
-        });
+        // Get all metric keys (per-action) and count metrics efficiently
+        global $wpdb;
+        $metric_keys = $wpdb->get_col($wpdb->prepare(
+            "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s",
+            self::METRICS_KEY . '_%'
+        ));
+
+        $total_metrics = 0;
+        $recent_metrics = 0;
+        $cutoff_time = time() - 3600; // Last hour
+
+        foreach ($metric_keys as $key) {
+            $metrics = get_option($key, []);
+            $total_metrics += count($metrics);
+            // Count recent metrics without filtering all
+            $recent_count = 0;
+            foreach ($metrics as $metric) {
+                if ($metric['timestamp'] >= $cutoff_time) {
+                    $recent_count++;
+                } else {
+                    // Since metrics are stored in chronological order, we can break early
+                    break;
+                }
+            }
+            $recent_metrics += $recent_count;
+        }
 
         return [
             'enabled' => $config['enabled'],
             'config' => $config,
-            'total_metrics' => count($metrics),
-            'recent_metrics' => count($recent_metrics),
+            'total_metrics' => $total_metrics,
+            'recent_metrics' => $recent_metrics,
             'current_load' => self::getServerLoad(),
             'current_memory' => self::getMemoryUsage(),
             'current_cpu' => self::getCpuUsage(),
@@ -509,7 +532,14 @@ class DynamicRateLimiter
      */
     public static function reset(): bool
     {
-        delete_option(self::METRICS_KEY);
+        global $wpdb;
+
+        // Delete all metric options
+        $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+            self::METRICS_KEY . '_%'
+        ));
+
         delete_option(self::ADJUSTMENTS_KEY);
 
         return true;
@@ -533,19 +563,34 @@ class DynamicRateLimiter
      */
     public static function cleanupOldMetrics(): void
     {
-        $metrics = get_option(self::METRICS_KEY, []);
+        global $wpdb;
         $cutoff_time = time() - (7 * 24 * 3600); // Keep 7 days
 
-        $cleaned_metrics = array_filter($metrics, function ($metric) use ($cutoff_time) {
-            return $metric['timestamp'] >= $cutoff_time;
-        });
+        // Get all metric keys
+        $metric_keys = $wpdb->get_col($wpdb->prepare(
+            "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s",
+            self::METRICS_KEY . '_%'
+        ));
 
-        update_option(self::METRICS_KEY, $cleaned_metrics);
+        $total_removed = 0;
+        foreach ($metric_keys as $key) {
+            $metrics = get_option($key, []);
+            $original_count = count($metrics);
+
+            $cleaned_metrics = array_filter($metrics, function ($metric) use ($cutoff_time) {
+                return $metric['timestamp'] >= $cutoff_time;
+            });
+
+            if (count($cleaned_metrics) !== $original_count) {
+                update_option($key, $cleaned_metrics);
+                $total_removed += ($original_count - count($cleaned_metrics));
+            }
+        }
 
         PuntWorkLogger::info(
             'Cleaned up dynamic rate limiting metrics',
             PuntWorkLogger::CONTEXT_SECURITY,
-            ['removed' => count($metrics) - count($cleaned_metrics)]
+            ['removed' => $total_removed]
         );
     }
 }
