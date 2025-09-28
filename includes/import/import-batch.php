@@ -43,8 +43,7 @@ require_once __DIR__ . '/import-finalization.php';
 function import_time_exceeded(): bool
 {
     $start_time = get_option('job_import_start_time', microtime(true));
-    $time_limit = apply_filters('puntwork_import_time_limit', 240); // 240 seconds (4 minutes) default
-    // (increased from 120 for better performance)
+    $time_limit = apply_filters('puntwork_import_time_limit', 600); // 600 seconds (10 minutes) default
     $current_time = microtime(true);
     $elapsed_time = $current_time - $start_time;
 

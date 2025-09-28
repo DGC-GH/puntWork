@@ -169,8 +169,8 @@ function bulk_update_post_meta($post_id, array $meta_data): void
 }
 
 /**
- * Bulk update ACF fields for multiple posts using ACF's update_field function.
- * This ensures proper ACF field processing and relationships.
+ * Bulk update ACF fields for multiple posts using direct postmeta updates for performance.
+ * This bypasses ACF processing for speed.
  *
  * @param  array $post_ids Array of post IDs
  * @param  array $acf_data Array of ACF field data keyed by post index
@@ -186,10 +186,6 @@ function bulk_update_acf_fields(array $post_ids, array $acf_data): void
 
     $start_time = microtime(true);
 
-    // Temporarily disable ACF post data sync for performance
-    $original_sync = acf_get_setting('enable_post_data_sync');
-    acf_update_setting('enable_post_data_sync', false);
-
     foreach ($post_ids as $index => $post_id) {
         if (!isset($acf_data[$index])) {
             continue;
@@ -202,33 +198,25 @@ function bulk_update_acf_fields(array $post_ids, array $acf_data): void
 
         foreach ($fields as $field_name => $value) {
             $field_start = microtime(true);
-            if (function_exists('update_field')) {
-                update_field($field_name, $value, $post_id);
-            } else {
-                // Fallback to postmeta if ACF not available
-                update_post_meta($post_id, $field_name, $value);
-            }
+            update_post_meta($post_id, $field_name, $value);
             $field_time = microtime(true) - $field_start;
             if ($field_time > 1.0) { // Log slow field updates
-                error_log('[PUNTWORK] [ACF-DEBUG] SLOW ACF field update: ' . $field_name . ' took ' . number_format($field_time, 4) . ' seconds for post ' . $post_id . ' (value length: ' . strlen(is_array($value) ? json_encode($value) : $value) . ')');
+                error_log('[PUNTWORK] [ACF-DEBUG] SLOW field update: ' . $field_name . ' took ' . number_format($field_time, 4) . ' seconds for post ' . $post_id . ' (value length: ' . strlen(is_array($value) ? json_encode($value) : $value) . ')');
             }
         }
 
-        // Check for database errors after ACF updates
+        // Check for database errors after updates
         global $wpdb;
         if (!empty($wpdb->last_error)) {
-            error_log('[PUNTWORK] [DB-ERROR] Database error after ACF updates for post ' . $post_id . ': ' . $wpdb->last_error);
+            error_log('[PUNTWORK] [DB-ERROR] Database error after updates for post ' . $post_id . ': ' . $wpdb->last_error);
         }
 
         $post_acf_time = microtime(true) - $post_acf_start;
-        error_log('[PUNTWORK] [ACF-DEBUG] ACF update for post ' . $post_id . ' completed in ' . number_format($post_acf_time, 4) . ' seconds');
+        error_log('[PUNTWORK] [ACF-DEBUG] Update for post ' . $post_id . ' completed in ' . number_format($post_acf_time, 4) . ' seconds');
     }
 
     $total_time = microtime(true) - $start_time;
     error_log('[PUNTWORK] [ACF-DEBUG] bulk_update_acf_fields completed in ' . number_format($total_time, 4) . ' seconds total (' . number_format($total_time / count($post_ids), 4) . ' seconds per post)');
-
-    // Restore ACF post data sync setting
-    acf_update_setting('enable_post_data_sync', $original_sync);
 }
 
 /**
@@ -286,8 +274,8 @@ function bulk_get_post_statuses(array $post_ids): array
 
     error_log('[PUNTWORK] [DB-DEBUG] Processed ' . count($statuses) . ' post statuses');
 
-    // Cache for 15 minutes - post statuses change less frequently
-    CacheManager::set($cache_key, $statuses, CacheManager::GROUP_ANALYTICS, 15 * MINUTE_IN_SECONDS);
+    // Cache for 6 hours - post statuses change less frequently
+    CacheManager::set($cache_key, $statuses, CacheManager::GROUP_ANALYTICS, 6 * HOUR_IN_SECONDS);
 
     return $statuses;
 }
@@ -358,8 +346,8 @@ function get_posts_by_guids_with_status(array $guids): array
     error_log('[PUNTWORK] [DB-DEBUG] Processed ' . count($posts_by_guid) . ' unique GUIDs');
     error_log('[PUNTWORK] [DB-DEBUG] Sample GUIDs found: ' . implode(', ', array_slice(array_keys($posts_by_guid), 0, 5)));
 
-    // Cache for 10 minutes - GUID lookups change relatively frequently during imports
-    CacheManager::set($cache_key, $posts_by_guid, CacheManager::GROUP_ANALYTICS, 10 * MINUTE_IN_SECONDS);
+    // Cache for 6 hours - GUID lookups change relatively frequently during imports
+    CacheManager::set($cache_key, $posts_by_guid, CacheManager::GROUP_ANALYTICS, 6 * HOUR_IN_SECONDS);
 
     return $posts_by_guid;
 }

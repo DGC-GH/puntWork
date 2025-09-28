@@ -46,7 +46,7 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
     } elseif ($last_memory_ratio < 0.4) {
         // Low memory usage - allow larger batches
         // Increase batch size when memory is low
-        $new_size = min(500, floor($batch_size * 1.3));
+        $new_size = min(500, floor($batch_size * 1.5));
         if ($new_size > $batch_size) {
             $batch_size = $new_size;
             $reason = 'low memory usage allows larger batches, increasing batch size';

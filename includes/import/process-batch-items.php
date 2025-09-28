@@ -139,14 +139,14 @@ if (!function_exists('process_batch_items')) {
                     error_log('[PUNTWORK] [ITEMS-DEBUG]   - hash_match: ' . ($current_hash === $item_hash ? 'true' : 'false'));
 
                     // Skip if content hasn't changed
-                    // if ($current_hash === $item_hash ) {
-                    // error_log('[PUNTWORK] [ITEMS-DEBUG] SKIPPING: GUID ' . $guid . ' - No changes (content hash identical)');
-                    // ++$skipped;
-                    // $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - No changes';
-                    // ++$processed_count;
-                    // error_log('[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - SKIPPED (NO CHANGES) ===');
-                    // continue;
-                    // }
+                    if ($current_hash === $item_hash ) {
+                        error_log('[PUNTWORK] [ITEMS-DEBUG] SKIPPING: GUID ' . $guid . ' - No changes (content hash identical)');
+                        ++$skipped;
+                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - No changes';
+                        ++$processed_count;
+                        error_log('[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - SKIPPED (NO CHANGES) ===');
+                        continue;
+                    }
 
                     error_log('[PUNTWORK] [ITEMS-DEBUG] UPDATING existing post ' . $post_id . ' for GUID ' . $guid);
                     // Update existing post
