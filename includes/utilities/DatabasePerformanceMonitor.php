@@ -59,7 +59,10 @@ class DatabasePerformanceMonitor {
 			'query_type' => self::getQueryType( $query ),
 		);
 
-		error_log( '[PUNTWORK] DatabasePerformanceMonitor: Logged query - ' . substr( $query, 0, 100 ) . '...' );
+		// Only log if debug mode and specific constant is set to avoid excessive logging
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'PUNTWORK_DB_DEBUG' ) && PUNTWORK_DB_DEBUG ) {
+			error_log( '[PUNTWORK] DatabasePerformanceMonitor: Logged query - ' . substr( $query, 0, 100 ) . '...' );
+		}
 		return $query;
 	}
 
