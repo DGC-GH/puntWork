@@ -27,7 +27,7 @@
 - **Favor Speed:** Prioritize efficient algorithms (e.g., O(n) over O(n^2)), asynchronous/parallel processing, caching, and lightweight libraries to reduce runtime and resource usage. Example: Cache API responses with transients.
 - **Favor Simplicity:** Emphasize clean, readable code with minimal abstractions; prefer functional paradigms or straightforward imperative styles to minimize bugs and improve maintainability. Example: Prefer array_map over manual loops for readability.
 - **Favor Tools:** Leverage VS Code extensions like Copilot for real-time completions, Git for version control, ESLint/Prettier for linting/formatting, and debugging tools like breakpoints or the integrated terminal. Example: Use ESLint for JS linting.
-- **Other Biases:** Enforce robust error handling and input validation; incorporate unit/integration tests; focus on security (e.g., avoiding vulnerabilities like SQL injection); ensure scalability (e.g., modular design); and include performance benchmarks (e.g., using timeit in Python or console.time in JS). Example: Add input sanitization to prevent XSS.
+- **Other Biases:** Enforce robust error handling and input validation; incorporate unit/integration tests; focus on security (e.g., avoiding vulnerabilities like SQL injection); ensure scalability (e.g., modular design); and include performance benchmarks (e.g., using timeit in Python or console.time in JS). Incorporate static analysis tools for security audits and code optimization. Example: Add input sanitization to prevent XSS.
 
 ## Use tools like this when needed:
 - WordPress Database API ($wpdb)
@@ -49,6 +49,7 @@
 - Transients API (set_transient, get_transient)
 - Advanced Custom Fields (ACF)
 - PuntWorkLogger Class
+- PHPStan or Psalm: Static analysis for security and code quality
  
 ## Always reason step-by-step, handle edge cases like:
 - **Network Issues:** HTTP Request Timeouts, Network Connection Failures, API Rate Limiting.
@@ -111,12 +112,12 @@ Adapt the following workflow based on context. If the project differs from puntW
 
 2. **Propose Improvements**: Suggest errors and issues fixes and enhancements, grouped by category (e.g., speed, simplicity). Add or modify the debug logs to prevent the issues in the future.
 
-3. **Validation Steps**: **Always check debug.log via FTP (using credentials from .env) for new errors before running any other tests first.** Run PHPCS to check for coding standard violations (line length >120 chars, mixing declarations and side effects), run tests, and other checks. If tools unavailable, suggest manual alternatives.
+3. **Validation Steps**: **Always check debug.log via FTP (using credentials from .env) for new errors before running any other tests first.** Run PHPCS to check for coding standard violations (line length >120 chars, mixing declarations and side effects), run tests, and other checks. Run static analysis (PHPStan/Psalm) if available to detect security issues, unused code, and potential bugs. If tools unavailable, suggest manual alternatives.
    - `./vendor/bin/phpcs includes/ --standard=PSR12 --report=summary` - Check all includes for violations
    - `./vendor/bin/phpcs includes/admin/crm-admin.php --standard=PSR12` - Check specific file
    - `./vendor/bin/phpunit --testdox` - Run tests with verbose output
 
-4. **Deployment Prep**: Clean debug.log if needed, open https://belgiumjobs.work/ in VS Code Simple Browser to verify plugin functionality, check for new errors in debug.log via FTP (using credentials from .env).
+4. **Deployment Prep**: Clean debug.log if needed, open https://belgiumjobs.work/ in VS Code Simple Browser to verify plugin functionality, check for new errors in debug.log via FTP (using credentials from .env). If static analysis tools are configured, run them to verify no new issues introduced.
 
 5. **User Confirmation**: Wait for approval before implementing.
 
