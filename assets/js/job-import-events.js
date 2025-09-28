@@ -370,7 +370,15 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
         loadProgressiveStatus: function() {
             console.log('[PUNTWORK] Loading status information progressively');
 
-            // Load database optimization status first
+            // Show Start Import button immediately to prevent delay
+            $('#start-import').show().text('Start Import');
+            $('#resume-import').hide();
+            $('#cancel-import').hide();
+            $('#reset-import').hide();
+            JobImportUI.hideImportUI();
+            $('#status-message').text('Ready to start.');
+
+            // Load database optimization status first (non-blocking)
             JobImportAPI.getDbOptimizationStatus().then(function(dbResponse) {
                 console.log('[PUNTWORK] DB status response:', dbResponse);
                 if (dbResponse.success) {
@@ -386,7 +394,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 $('#db-indexes-list').html('<div style="color: #ff3b30;">Failed to load database status</div>');
             });
 
-            // Load async processing status
+            // Load async processing status (non-blocking)
             JobImportAPI.getAsyncStatus().then(function(asyncResponse) {
                 console.log('[PUNTWORK] Async status response:', asyncResponse);
                 if (asyncResponse.success) {
@@ -452,23 +460,14 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         console.log('[PUNTWORK] Import was interrupted, showing resume and reset options');
                     }
                 } else {
-                    // Clean state - hide all import controls except start (already shown)
-                    $('#resume-import').hide();
-                    $('#cancel-import').hide();
-                    $('#reset-import').hide();
-                    JobImportUI.hideImportUI();
-                    console.log('[PUNTWORK] Clean state detected - start button already visible');
+                    // Clean state - Start Import button already shown above
+                    console.log('[PUNTWORK] Clean state detected - Start Import button already visible');
                 }
             }).catch(function(xhr, status, error) {
                 PuntWorkJSLogger.error('Initial status AJAX error', 'EVENTS', error);
                 JobImportUI.appendLogs(['Initial status AJAX error: ' + error]);
-                // Ensure UI is in clean state even on error - show start button
-                JobImportUI.clearProgress();
-                JobImportUI.hideImportUI();
-                $('#start-import').show().text('Start Import');
-                $('#resume-import').hide();
-                $('#cancel-import').hide();
-                $('#reset-import').hide();
+                // Start Import button already shown above, so no change needed on error
+                console.log('[PUNTWORK] Initial status load failed, but Start Import button remains visible');
             });
         },
 

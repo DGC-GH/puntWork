@@ -29,11 +29,16 @@ require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
 add_action('wp_ajax_get_db_optimization_status', __NAMESPACE__ . '\\ajax_get_db_optimization_status');
 function ajax_get_db_optimization_status()
 {
-    // Use comprehensive security validation
-    $validation = SecurityUtils::validateAjaxRequest('get_db_optimization_status', 'job_import_nonce');
-    if (is_wp_error($validation)) {
-        AjaxErrorHandler::sendError($validation);
+    // Simple validation for debugging
+    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'job_import_nonce')) {
+        error_log('[PUNTWORK] [DEBUG-AJAX] Nonce verification failed for get_db_optimization_status');
+        wp_send_json_error(['message' => 'Security check failed']);
+        return;
+    }
 
+    if (!current_user_can('manage_options')) {
+        error_log('[PUNTWORK] [DEBUG-AJAX] Insufficient permissions for get_db_optimization_status');
+        wp_send_json_error(['message' => 'Insufficient permissions']);
         return;
     }
 
