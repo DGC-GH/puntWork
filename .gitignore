@@ -40,3 +40,6 @@ ftp-*.txt
 
 # Production deployment files (keep development version in git)
 composer.json.production
+
+# PHP CS Fixer cache
+.php-cs-fixer.cache
