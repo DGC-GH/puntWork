@@ -130,6 +130,11 @@ function run_job_import_batch_ajax()
 
         // Check for concurrent import lock
         if (get_transient('puntwork_import_lock')) {
+            \Puntwork\PuntWorkLogger::warn('Import already running - concurrent request blocked', \Puntwork\PuntWorkLogger::CONTEXT_AJAX, [
+                'user_id' => get_current_user_id(),
+                'timestamp' => time(),
+                'request_uri' => $_SERVER['REQUEST_URI'] ?? 'unknown',
+            ]);
             error_log('[PUNTWORK] [AJAX-LOCK] Import already running, rejecting request');
             AjaxErrorHandler::sendError('Import already running');
 
@@ -1251,8 +1256,25 @@ function process_feed_ajax()
 
         $logs = [];
         error_log('[PUNTWORK] [AJAX-CALL] Calling process_one_feed...');
-        $item_count = process_one_feed($feed_key, $feed_url, $output_dir, $fallback_domain, $logs);
-        error_log('[PUNTWORK] [AJAX-RESULT] process_one_feed returned item_count: ' . $item_count);
+
+        try {
+            $item_count = process_one_feed($feed_key, $feed_url, $output_dir, $fallback_domain, $logs);
+            error_log('[PUNTWORK] [AJAX-RESULT] process_one_feed returned item_count: ' . $item_count);
+        } catch (\Exception $e) {
+            \Puntwork\PuntWorkLogger::error('Feed processing failed with exception', \Puntwork\PuntWorkLogger::CONTEXT_AJAX, [
+                'feed_key' => $feed_key,
+                'feed_url' => $feed_url,
+                'error' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+            ]);
+            error_log('[PUNTWORK] [AJAX-EXCEPTION] process_one_feed threw exception: ' . $e->getMessage());
+            error_log('[PUNTWORK] [AJAX-EXCEPTION] Exception file: ' . $e->getFile() . ':' . $e->getLine());
+            error_log('[PUNTWORK] [AJAX-EXCEPTION] Exception trace: ' . $e->getTraceAsString());
+            wp_send_json_error(['message' => 'Feed processing failed: ' . $e->getMessage()]);
+
+            return;
+        }
         error_log('[PUNTWORK] [AJAX-RESULT] Logs from processing: ' . json_encode($logs));
 
         PuntWorkLogger::info(
