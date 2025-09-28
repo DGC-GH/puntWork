@@ -247,18 +247,18 @@ function api_settings_page()
                     }
                 }
 
-                if (isset($_POST['reset_dynamic_rate_metrics']) && check_admin_referer('puntwork_dynamic_rate_limits')) {
-                    if (\Puntwork\DynamicRateLimiter::reset()) {
-                        echo '<div class="notice notice-success"><p>' . __('Dynamic rate limiting metrics reset successfully!', 'puntwork') . '</p></div>';
-                    } else {
-                        echo '<div class="notice notice-error"><p>' . __('Failed to reset dynamic rate limiting metrics.', 'puntwork') . '</p></div>';
-                    }
-                }
+    if (isset($_POST['reset_dynamic_rate_metrics']) && check_admin_referer('puntwork_dynamic_rate_limits')) {
+        if (\Puntwork\DynamicRateLimiter::reset()) {
+            echo '<div class="notice notice-success"><p>' . __('Dynamic rate limiting metrics reset successfully!', 'puntwork') . '</p></div>';
+        } else {
+            echo '<div class="notice notice-error"><p>' . __('Failed to reset dynamic rate limiting metrics.', 'puntwork') . '</p></div>';
+        }
+    }
 
-                // Get current dynamic configuration
-                $dynamic_config = \Puntwork\DynamicRateLimiter::getConfig();
-                $dynamic_status = \Puntwork\DynamicRateLimiter::getStatus();
-                ?>
+    // Get current dynamic configuration
+    $dynamic_config = \Puntwork\DynamicRateLimiter::getConfig();
+    $dynamic_status = \Puntwork\DynamicRateLimiter::getStatus();
+    ?>
 
 				<form method="post">
 					<?php wp_nonce_field('puntwork_dynamic_rate_limits'); ?>

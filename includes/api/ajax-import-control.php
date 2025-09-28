@@ -998,6 +998,7 @@ function get_dynamic_rate_status_ajax()
     $validation = SecurityUtils::validateAjaxRequest('get_dynamic_rate_status', 'puntwork_dynamic_rate_limits');
     if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
+
         return;
     }
 
@@ -1006,7 +1007,7 @@ function get_dynamic_rate_status_ajax()
 
         PuntWorkLogger::logAjaxResponse('get_dynamic_rate_status', [
             'enabled' => $status['enabled'],
-            'total_metrics' => $status['total_metrics']
+            'total_metrics' => $status['total_metrics'],
         ]);
         AjaxErrorHandler::sendSuccess($status);
     } catch (\Exception $e) {

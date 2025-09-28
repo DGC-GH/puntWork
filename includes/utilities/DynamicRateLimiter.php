@@ -2,7 +2,7 @@
 
 namespace Puntwork;
 
-/**
+/*
  * Dynamic Rate Limiting System
  *
  * Monitors system performance and automatically adjusts rate limits
@@ -22,17 +22,17 @@ if (!defined('ABSPATH')) {
 class DynamicRateLimiter
 {
     /**
-     * Performance metrics storage key
+     * Performance metrics storage key.
      */
-    const METRICS_KEY = 'puntwork_dynamic_rate_metrics';
+    public const METRICS_KEY = 'puntwork_dynamic_rate_metrics';
 
     /**
-     * Rate limit adjustments storage key
+     * Rate limit adjustments storage key.
      */
-    const ADJUSTMENTS_KEY = 'puntwork_dynamic_rate_adjustments';
+    public const ADJUSTMENTS_KEY = 'puntwork_dynamic_rate_adjustments';
 
     /**
-     * Default configuration for dynamic rate limiting
+     * Default configuration for dynamic rate limiting.
      */
     private static $default_config = [
         'enabled' => true,
@@ -54,18 +54,19 @@ class DynamicRateLimiter
     ];
 
     /**
-     * Get dynamic rate limiting configuration
+     * Get dynamic rate limiting configuration.
      *
      * @return array Configuration array
      */
     public static function getConfig(): array
     {
         $stored_config = get_option('puntwork_dynamic_rate_config', []);
+
         return array_merge(self::$default_config, $stored_config);
     }
 
     /**
-     * Update dynamic rate limiting configuration
+     * Update dynamic rate limiting configuration.
      *
      * @param array $config New configuration
      * @return bool Success
@@ -74,11 +75,12 @@ class DynamicRateLimiter
     {
         $current_config = self::getConfig();
         $updated_config = array_merge($current_config, $config);
+
         return update_option('puntwork_dynamic_rate_config', $updated_config);
     }
 
     /**
-     * Record performance metrics
+     * Record performance metrics.
      *
      * @param string $action    Action name
      * @param array  $metrics   Performance metrics
@@ -95,7 +97,7 @@ class DynamicRateLimiter
 
         // Clean old metrics (keep last 24 hours)
         $cutoff_time = $timestamp - 86400;
-        $stored_metrics = array_filter($stored_metrics, function($metric) use ($cutoff_time) {
+        $stored_metrics = array_filter($stored_metrics, function ($metric) use ($cutoff_time) {
             return $metric['timestamp'] >= $cutoff_time;
         });
 
@@ -119,7 +121,7 @@ class DynamicRateLimiter
     }
 
     /**
-     * Get current server load average
+     * Get current server load average.
      *
      * @return float Load average (1-minute)
      */
@@ -127,17 +129,19 @@ class DynamicRateLimiter
     {
         if (function_exists('sys_getloadavg')) {
             $load = sys_getloadavg();
+
             return $load[0] ?? 0.0;
         }
 
         // Fallback: estimate based on active processes
         $active_processes = shell_exec('ps aux | wc -l');
         $active_processes = intval(trim($active_processes));
+
         return min($active_processes / 100, 10.0); // Rough estimation
     }
 
     /**
-     * Get current memory usage percentage
+     * Get current memory usage percentage.
      *
      * @return float Memory usage percentage
      */
@@ -154,7 +158,7 @@ class DynamicRateLimiter
     }
 
     /**
-     * Get memory limit in bytes
+     * Get memory limit in bytes.
      *
      * @return int Memory limit in bytes
      */
@@ -169,12 +173,15 @@ class DynamicRateLimiter
             switch ($unit) {
                 case 'g':
                     $value *= 1024 * 1024 * 1024;
+
                     break;
                 case 'm':
                     $value *= 1024 * 1024;
+
                     break;
                 case 'k':
                     $value *= 1024;
+
                     break;
             }
 
@@ -185,7 +192,7 @@ class DynamicRateLimiter
     }
 
     /**
-     * Get current CPU usage percentage
+     * Get current CPU usage percentage.
      *
      * @return float CPU usage percentage
      */
@@ -207,6 +214,7 @@ class DynamicRateLimiter
 
                     if ($cpu_diff > 0) {
                         $cpu_usage = 100 * ($cpu_diff - $idle_diff) / $cpu_diff;
+
                         return max(0, min(100, $cpu_usage));
                     }
                 }
@@ -221,7 +229,7 @@ class DynamicRateLimiter
     }
 
     /**
-     * Get Linux CPU information from /proc/stat
+     * Get Linux CPU information from /proc/stat.
      *
      * @return array CPU statistics
      */
@@ -257,7 +265,7 @@ class DynamicRateLimiter
     }
 
     /**
-     * Calculate dynamic rate limit adjustments
+     * Calculate dynamic rate limit adjustments.
      *
      * @param string $action Action name
      * @return array Adjustment factors
@@ -326,7 +334,7 @@ class DynamicRateLimiter
         }
 
         // Error rate factors
-        $error_count = count(array_filter($metrics, function($m) { return isset($m['is_error']) && $m['is_error']; }));
+        $error_count = count(array_filter($metrics, function ($m) { return isset($m['is_error']) && $m['is_error']; }));
         $error_rate = (count($metrics) > 0) ? ($error_count / count($metrics)) * 100 : 0;
 
         if ($error_rate > $config['error_rate_threshold']) {
@@ -368,12 +376,12 @@ class DynamicRateLimiter
                 'avg_load' => round($avg_load, 2),
                 'error_rate' => round($error_rate, 1),
                 'sample_count' => count($metrics),
-            ]
+            ],
         ];
     }
 
     /**
-     * Check if action is related to import operations
+     * Check if action is related to import operations.
      *
      * @param string $action Action name
      * @return bool True if import operation
@@ -393,7 +401,7 @@ class DynamicRateLimiter
     }
 
     /**
-     * Get recent metrics for an action
+     * Get recent metrics for an action.
      *
      * @param string $action     Action name
      * @param int    $time_range Time range in seconds
@@ -404,13 +412,13 @@ class DynamicRateLimiter
         $stored_metrics = get_option(self::METRICS_KEY, []);
         $cutoff_time = time() - $time_range;
 
-        return array_filter($stored_metrics, function($metric) use ($action, $cutoff_time) {
+        return array_filter($stored_metrics, function ($metric) use ($action, $cutoff_time) {
             return $metric['action'] === $action && $metric['timestamp'] >= $cutoff_time;
         });
     }
 
     /**
-     * Apply dynamic rate limiting to a request
+     * Apply dynamic rate limiting to a request.
      *
      * @param string $action Action name
      * @return array|WP_Error Rate limit result or error
@@ -468,7 +476,7 @@ class DynamicRateLimiter
     }
 
     /**
-     * Get dynamic rate limiting status
+     * Get dynamic rate limiting status.
      *
      * @return array Status information
      */
@@ -478,7 +486,7 @@ class DynamicRateLimiter
         $metrics = get_option(self::METRICS_KEY, []);
         $adjustments = get_option(self::ADJUSTMENTS_KEY, []);
 
-        $recent_metrics = array_filter($metrics, function($m) {
+        $recent_metrics = array_filter($metrics, function ($m) {
             return $m['timestamp'] >= (time() - 3600); // Last hour
         });
 
@@ -495,7 +503,7 @@ class DynamicRateLimiter
     }
 
     /**
-     * Reset dynamic rate limiting data
+     * Reset dynamic rate limiting data.
      *
      * @return bool Success
      */
@@ -508,7 +516,7 @@ class DynamicRateLimiter
     }
 
     /**
-     * Initialize dynamic rate limiting system
+     * Initialize dynamic rate limiting system.
      */
     public static function init(): void
     {
@@ -521,14 +529,14 @@ class DynamicRateLimiter
     }
 
     /**
-     * Clean up old metrics data
+     * Clean up old metrics data.
      */
     public static function cleanupOldMetrics(): void
     {
         $metrics = get_option(self::METRICS_KEY, []);
         $cutoff_time = time() - (7 * 24 * 3600); // Keep 7 days
 
-        $cleaned_metrics = array_filter($metrics, function($metric) use ($cutoff_time) {
+        $cleaned_metrics = array_filter($metrics, function ($metric) use ($cutoff_time) {
             return $metric['timestamp'] >= $cutoff_time;
         });
 
