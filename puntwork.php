@@ -316,15 +316,15 @@ if (!function_exists(__NAMESPACE__ . '\\setup_job_import')) {
             $GLOBALS['puntwork_includes_loaded'] = true;
         }
 
-        // Prevent multiple initialization with a global flag (happens only once per request)
-        if (isset($GLOBALS['puntwork_setup_done']) && $GLOBALS['puntwork_setup_done']) {
+        // Prevent multiple initialization with a static flag (persists across function calls in same request)
+        static $setup_done = false;
+        if ($setup_done) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('[PUNTWORK] [INIT-SKIP] Setup already completed for this request, skipping...');
             }
-
             return;
         }
-        $GLOBALS['puntwork_setup_done'] = true;
+        $setup_done = true;
 
         if ($debug_mode) {
             error_log('[PUNTWORK] [INIT-START] ===== SETUP_JOB_IMPORT START =====');
