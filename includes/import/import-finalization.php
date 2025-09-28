@@ -25,7 +25,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return array Final result.
  */
 function finalize_batch_import( $result ) {
+	error_log( '[PUNTWORK] [FINALIZE-START] finalize_batch_import called with result success=' . ( isset( $result['success'] ) ? $result['success'] : 'not set' ) . ', complete=' . ( isset( $result['complete'] ) ? $result['complete'] : 'not set' ) );
+
 	if ( is_wp_error( $result ) || ! $result['success'] ) {
+		error_log( '[PUNTWORK] [FINALIZE-ERROR] finalize_batch_import returning early due to error or failure' );
 		return $result;
 	}
 
@@ -73,9 +76,11 @@ function finalize_batch_import( $result ) {
 	$status['last_update']         = time();
 
 	update_option( 'job_import_status', $status, false );
+	error_log( '[PUNTWORK] [FINALIZE-STATUS] Updated import status: processed=' . $status['processed'] . '/' . $status['total'] . ', complete=' . ( $status['complete'] ? 'true' : 'false' ) . ', elapsed=' . round( $total_elapsed, 2 ) . 's' );
 
 	// Log completed import to history
 	if ( $result['complete'] && $result['success'] ) {
+		error_log( '[PUNTWORK] [FINALIZE-COMPLETE] Import completed successfully, logging to history' );
 		$trigger_type = $status['trigger_type'] ?? 'scheduled';
 		$test_mode    = $status['test_mode'] ?? false;
 
@@ -110,10 +115,16 @@ function finalize_batch_import( $result ) {
 
 		// Post new jobs to social media if enabled
 		if ( get_option( 'puntwork_social_auto_post_jobs', false ) ) {
+			error_log( '[PUNTWORK] [FINALIZE-SOCIAL] Auto-posting new jobs to social media' );
 			post_new_jobs_to_social_media( $result );
+		} else {
+			error_log( '[PUNTWORK] [FINALIZE-SOCIAL] Social media auto-post disabled' );
 		}
+	} else {
+		error_log( '[PUNTWORK] [FINALIZE-INCOMPLETE] Import not complete or failed, skipping history logging and social media posting' );
 	}
 
+	error_log( '[PUNTWORK] [FINALIZE-END] finalize_batch_import completed' );
 	return $result;
 }
 

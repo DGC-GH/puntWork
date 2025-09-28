@@ -559,6 +559,7 @@ function process_batch_data( array $batch_guids, array $batch_items, array &$log
 		error_log( '[PUNTWORK] [BATCH-DEBUG] process_batch_items_with_metadata completed, processed_count=' . $processed_count );
 	}
 
+	error_log( '[PUNTWORK] [BATCH-DATA] Batch processing completed: processed=' . $processed_count . ', published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', duplicates_drafted=' . $duplicates_drafted );
 	return array( 'processed_count' => $processed_count );
 }
 

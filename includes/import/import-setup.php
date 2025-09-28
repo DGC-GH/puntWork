@@ -207,6 +207,7 @@ function prepare_import_setup( $batch_start = 0 ) {
 			'logs'    => array( 'JSONL file validation failed: ' . $validation->get_error_message() ),
 		);
 	}
+	error_log( '[PUNTWORK] [SETUP-VALIDATION] JSONL file validation passed' );
 
 	try {
 		$total = get_json_item_count( $json_path );

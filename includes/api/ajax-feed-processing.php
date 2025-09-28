@@ -159,10 +159,12 @@ function combine_jsonl_ajax() {
 			return;
 		}
 
+		error_log( '[PUNTWORK] [JSONL-COMBINE] Starting JSONL combination for ' . $total_items . ' items' );
 		$logs = array();
 
 		combine_jsonl_files( $feeds, $output_dir, $total_items, $logs );
 		PuntWorkLogger::info( 'JSONL files combined successfully', PuntWorkLogger::CONTEXT_FEED, array( 'total_items' => $total_items ) );
+		error_log( '[PUNTWORK] [JSONL-COMBINE] JSONL files combined successfully, total_items=' . $total_items );
 
 		// Automatically start the import after successful JSONL combination
 		PuntWorkLogger::info( 'Automatically starting import after JSONL combination', PuntWorkLogger::CONTEXT_FEED );
