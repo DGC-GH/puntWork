@@ -61,9 +61,29 @@ Admin dashboard opened: https://belgiumjobs.work/wp-admin/admin.php?page=job-fee
 Debug.log will need re-check after fixes.
 
 
-rename current prompt.md Protocol to "Project Improvment Protocol"
-infer and explicetly note "Self Imporvment Protocol" (specifically ment for iteretive prompt improvment for Grok Fast Code 1) in prompt.md
 
-✅ RESOLVED: Conflicting formatting standards eliminated. Standardized on WordPress coding standard for pre-commit hooks and documentation. PSR12 references removed from prompt.md and pre-commit hook.
 
-Long-term: Establish pre-commit hooks to prevent line length regressions
+
+
+
+
+- 
+     Error                                                                                                                                   
+ -- ---------------------------------------------------------------------------------------------------------------------------------------- 
+     Child process error: PHPStan process crashed because it reached configured PHP memory limit: 128M                                       
+     Increase your memory limit in php.ini or run PHPStan with --memory-limit CLI option.                                                    
+      while running parallel worker                                                                                                          
+     Child process error (exit code 255): PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate              
+     262144 bytes) in                                                                                                                        
+     phar:///Users/dg/Documents/GitHub/puntWork/vendor/phpstan/phpstan/phpstan.phar/vendor/nikic/php-parser/lib/PhpParser/NodeTraverser.php  
+     on line 113                                                                                                                             
+     Fatal error: Allowed memory size of 134217728 bytes exhausted (tried to allocate 262144 bytes) in                                       
+     phar:///Users/dg/Documents/GitHub/puntWork/vendor/phpstan/phpstan/phpstan.phar/vendor/nikic/php-parser/lib/PhpParser/NodeTraverser.php  
+     on line 113                                                                                                                             
+     PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 262144 bytes) in                                  
+     phar:///Users/dg/Documents/GitHub/puntWork/vendor/phpstan/phpstan/phpstan.phar/vendor/symfony/console/Formatter/OutputFormatter.php     
+     on line 118                                                                                                                             
+     Fatal error: Allowed memory size of 134217728 bytes exhausted (tried to allocate 262144 bytes) in                                       
+     phar:///Users/dg/Documents/GitHub/puntWork/vendor/phpstan/phpstan/phpstan.phar/vendor/symfony/console/Formatter/OutputFormatter.php     
+     on line 118                                                                                                                             
+      while running parallel worker   
