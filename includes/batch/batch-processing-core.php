@@ -59,6 +59,11 @@ function process_batch_items_logic( array $setup ): array
         $perf_id = start_performance_monitoring('batch_import');
         error_log('[PUNTWORK] [BATCH-DEBUG] Performance monitoring started with ID: ' . $perf_id);
 
+        // Increase memory limit for batch processing
+        $original_memory_limit = ini_get('memory_limit');
+        ini_set('memory_limit', '1024M');
+        error_log('[PUNTWORK] [BATCH-DEBUG] Memory limit increased to 1024M');
+
         // Clear analytics cache to prevent memory accumulation during import
         \Puntwork\Utilities\CacheManager::clearGroup(\Puntwork\Utilities\CacheManager::GROUP_ANALYTICS);
         error_log('[PUNTWORK] [BATCH-DEBUG] Analytics cache cleared');
@@ -164,6 +169,9 @@ function process_batch_items_logic( array $setup ): array
                     $span->end();
                 }
 
+                // Restore memory limit
+                ini_set('memory_limit', $original_memory_limit);
+
                   return array(
                    'success'            => true,
                    'processed'          => $end_index,
@@ -268,6 +276,11 @@ function process_batch_items_logic( array $setup ): array
             schedule_async_analytics_update($analytics_data);
 
             error_log('[PUNTWORK] [BATCH-DEBUG] process_batch_items_logic completed successfully');
+
+            // Restore original memory limit
+            ini_set('memory_limit', $original_memory_limit);
+            error_log('[PUNTWORK] [BATCH-DEBUG] Memory limit restored to ' . $original_memory_limit);
+
             return array(
             'success'            => true,
             'processed'          => $end_index,
@@ -303,6 +316,9 @@ function process_batch_items_logic( array $setup ): array
                 $span->end();
             }
 
+            // Restore memory limit
+            ini_set('memory_limit', $original_memory_limit);
+
             return array(
             'success'     => false,
             'message'     => 'Batch failed: ' . $e->getMessage(),
@@ -317,6 +333,9 @@ function process_batch_items_logic( array $setup ): array
             $span->setStatus(\OpenTelemetry\API\Trace\StatusCode::STATUS_ERROR, $e->getMessage());
             $span->end();
         }
+
+        // Restore memory limit
+        ini_set('memory_limit', $original_memory_limit ?? '512M');
 
         return array(
         'success'     => false,
@@ -366,9 +385,23 @@ function process_batch_data( array $batch_guids, array $batch_items, array &$log
     handle_batch_duplicates($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
     error_log('[PUNTWORK] Handled duplicates');
 
+    // Clear cache to prevent memory accumulation
+    if (function_exists('wp_cache_flush')) {
+        wp_cache_flush();
+    }
+    \Puntwork\Utilities\CacheManager::clearGroup(\Puntwork\Utilities\CacheManager::GROUP_ANALYTICS);
+    error_log('[PUNTWORK] Cache cleared after duplicates');
+
     // Prepare batch metadata
     $batch_metadata = prepare_batch_metadata($post_ids_by_guid);
     error_log('[PUNTWORK] Prepared batch metadata');
+
+    // Clear cache again after metadata preparation
+    if (function_exists('wp_cache_flush')) {
+        wp_cache_flush();
+    }
+    \Puntwork\Utilities\CacheManager::clearGroup(\Puntwork\Utilities\CacheManager::GROUP_ANALYTICS);
+    error_log('[PUNTWORK] Cache cleared after metadata');
 
     // Process items
     $processed_count = process_batch_items_with_metadata($batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid, $logs, $updated, $published, $skipped);
