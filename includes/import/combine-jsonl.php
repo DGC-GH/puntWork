@@ -53,7 +53,9 @@ function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs)
 
     if (empty($existing_feeds)) {
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'No feed files found to combine';
-        error_log('[PUNTWORK] [JSONL-COMBINE-ERROR] No feed files found to combine');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [JSONL-COMBINE-ERROR] No feed files found to combine');
+        }
         if ($debug_mode) {
             error_log('[PUNTWORK] [JSONL-COMBINE-END] ===== COMBINE_JSONL_FILES END (NO FILES) =====');
         }
@@ -115,7 +117,9 @@ function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs)
     }
 
     if (!$success) {
-        error_log('[PUNTWORK] [JSONL-COMBINE-ERROR] Advanced processing failed, falling back to original method');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [JSONL-COMBINE-ERROR] Advanced processing failed, falling back to original method');
+        }
         // Fallback to original method if advanced processing fails
         return combine_jsonl_files_fallback($feeds, $output_dir, $total_items, $logs);
     }
@@ -150,7 +154,9 @@ function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs)
             error_log('[PUNTWORK] [JSONL-COMBINE-DEBUG] Combined file created: ' . $combined_size . ' bytes');
         }
     } else {
-        error_log('[PUNTWORK] [JSONL-COMBINE-ERROR] Combined file was not created');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [JSONL-COMBINE-ERROR] Combined file was not created');
+        }
     }
 
     // Compress the final file
@@ -233,7 +239,9 @@ function combine_jsonl_files_fallback($feeds, $output_dir, $total_items, &$logs)
         'output_dir' => $output_dir,
         'total_items' => $total_items,
     ]);
-    error_log('[PUNTWORK] [JSONL-COMBINE] Fallback: Starting JSONL file combination, feeds count: ' . count($feeds) . ', output_dir: ' . $output_dir);
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [JSONL-COMBINE] Fallback: Starting JSONL file combination, feeds count: ' . count($feeds) . ', output_dir: ' . $output_dir);
+    }
 
     foreach ($feeds as $feed_key => $url) {
         $feed_json_path = $output_dir . $feed_key . '.jsonl';
@@ -241,7 +249,9 @@ function combine_jsonl_files_fallback($feeds, $output_dir, $total_items, &$logs)
             'feed_file' => $feed_json_path,
             'exists' => file_exists($feed_json_path),
         ]);
-        error_log('[PUNTWORK] [JSONL-COMBINE] Fallback: Processing feed: ' . $feed_key . ', file: ' . $feed_json_path . ', exists: ' . (file_exists($feed_json_path) ? 'yes' : 'no'));
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [JSONL-COMBINE] Fallback: Processing feed: ' . $feed_key . ', file: ' . $feed_json_path . ', exists: ' . (file_exists($feed_json_path) ? 'yes' : 'no'));
+        }
         if (file_exists($feed_json_path)) {
             $feed_handle = fopen($feed_json_path, 'r');
             if ($feed_handle) {
@@ -287,14 +297,20 @@ function combine_jsonl_files_fallback($feeds, $output_dir, $total_items, &$logs)
                 PuntWorkLogger::debug("Feed processed: {$feed_key}", PuntWorkLogger::CONTEXT_FEED, [
                     'lines_added' => $feed_line_count,
                 ]);
-                error_log('[PUNTWORK] [JSONL-COMBINE] Fallback: Feed ' . $feed_key . ' processed, lines added: ' . $feed_line_count);
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[PUNTWORK] [JSONL-COMBINE] Fallback: Feed ' . $feed_key . ' processed, lines added: ' . $feed_line_count);
+                }
             } else {
                 PuntWorkLogger::error("Could not open feed file: {$feed_json_path}", PuntWorkLogger::CONTEXT_FEED);
-                error_log('[PUNTWORK] [JSONL-COMBINE] Fallback: Could not open feed file: ' . $feed_json_path);
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[PUNTWORK] [JSONL-COMBINE] Fallback: Could not open feed file: ' . $feed_json_path);
+                }
             }
         } else {
             PuntWorkLogger::warn("Feed file not found: {$feed_json_path}", PuntWorkLogger::CONTEXT_FEED);
-            error_log('[PUNTWORK] [JSONL-COMBINE] Fallback: Feed file not found: ' . $feed_json_path);
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[PUNTWORK] [JSONL-COMBINE] Fallback: Feed file not found: ' . $feed_json_path);
+            }
         }
     }
 
@@ -307,12 +323,18 @@ function combine_jsonl_files_fallback($feeds, $output_dir, $total_items, &$logs)
         'duplicate_count' => $duplicate_count,
         'total_processed' => $unique_count + $duplicate_count,
     ]);
-    error_log("Combined JSONL ($unique_count unique items, $duplicate_count duplicates removed)");
-    error_log('[PUNTWORK] [JSONL-COMBINE] Fallback: JSONL combination completed, unique_count=' . $unique_count . ', duplicate_count=' . $duplicate_count);
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log("Combined JSONL ($unique_count unique items, $duplicate_count duplicates removed)");
+    }
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [JSONL-COMBINE] Fallback: JSONL combination completed, unique_count=' . $unique_count . ', duplicate_count=' . $duplicate_count);
+    }
 
     gzip_file($combined_json_path, $combined_gz_path);
     PuntWorkLogger::info('GZIP compression completed', PuntWorkLogger::CONTEXT_FEED, [
         'gz_file' => $combined_gz_path,
     ]);
-    error_log('[PUNTWORK] [JSONL-COMBINE] Fallback: GZIP compression completed for ' . $combined_gz_path);
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [JSONL-COMBINE] Fallback: GZIP compression completed for ' . $combined_gz_path);
+    }
 }

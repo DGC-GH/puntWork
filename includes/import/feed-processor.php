@@ -55,10 +55,12 @@ class FeedProcessor
 
             // Check for XML
             if (strpos($content, '<?xml') === 0 || strpos($content, '<') === 0) {
-                error_log(
-                    '[PUNTWORK] detectFormat: Detected XML from content starting with: ' .
-                    substr($content, 0, 50)
-                );
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log(
+                        '[PUNTWORK] detectFormat: Detected XML from content starting with: ' .
+                        substr($content, 0, 50)
+                    );
+                }
 
                 return self::FORMAT_XML;
             }
@@ -67,17 +69,21 @@ class FeedProcessor
             if ((strpos($content, '{') === 0 || strpos($content, '[') === 0)) {
                 json_decode($content);
                 if (json_last_error() === JSON_ERROR_NONE) {
-                    error_log(
-                        '[PUNTWORK] detectFormat: Detected JSON from content starting with: ' .
-                        substr($content, 0, 50)
-                    );
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log(
+                            '[PUNTWORK] detectFormat: Detected JSON from content starting with: ' .
+                            substr($content, 0, 50)
+                        );
+                    }
 
                     return self::FORMAT_JSON;
                 } else {
-                    error_log(
-                        '[PUNTWORK] detectFormat: Content starts with { or [, but invalid JSON: ' .
-                        json_last_error_msg()
-                    );
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log(
+                            '[PUNTWORK] detectFormat: Content starts with { or [, but invalid JSON: ' .
+                            json_last_error_msg()
+                        );
+                    }
                 }
             }
 
@@ -89,7 +95,9 @@ class FeedProcessor
 
                 // Simple heuristic: if first line has commas and second line exists
                 if (strpos($first_line, ',') !== false && !empty($second_line)) {
-                    error_log('[PUNTWORK] detectFormat: Detected CSV from content');
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('[PUNTWORK] detectFormat: Detected CSV from content');
+                    }
 
                     return self::FORMAT_CSV;
                 }
@@ -97,7 +105,9 @@ class FeedProcessor
         }
 
         // Default to JSON for modern feeds
-        error_log('[PUNTWORK] detectFormat: Defaulting to JSON for URL: ' . $url);
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] detectFormat: Defaulting to JSON for URL: ' . $url);
+        }
 
         return self::FORMAT_JSON;
     }
@@ -183,11 +193,15 @@ class FeedProcessor
                     }
                     return self::processJobBoardFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
                 default:
-                    error_log('[PUNTWORK] [FEED-PROCESS-ERROR] Unsupported feed format: ' . $format);
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('[PUNTWORK] [FEED-PROCESS-ERROR] Unsupported feed format: ' . $format);
+                    }
                     throw new \Exception("Unsupported feed format: $format");
             }
         } catch (\Exception $e) {
-            error_log('[PUNTWORK] [FEED-PROCESS-ERROR] processFeed exception: ' . $e->getMessage());
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[PUNTWORK] [FEED-PROCESS-ERROR] processFeed exception: ' . $e->getMessage());
+            }
             if ($debug_mode) {
                 error_log('[PUNTWORK] [FEED-PROCESS-END] ===== PROCESS_FEED END (ERROR) =====');
             }
@@ -346,7 +360,9 @@ class FeedProcessor
                     }
                 } catch (\Exception $e) {
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key: Error processing JSON item: " . $e->getMessage();
-                    error_log("$feed_key: Error processing JSON item: " . $e->getMessage());
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log("$feed_key: Error processing JSON item: " . $e->getMessage());
+                    }
                     // Continue with next item
                 }
             }
@@ -480,7 +496,9 @@ class FeedProcessor
                     }
                 } catch (\Exception $e) {
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key: Error processing CSV row: " . $e->getMessage();
-                    error_log("$feed_key: Error processing CSV row: " . $e->getMessage());
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log("$feed_key: Error processing CSV row: " . $e->getMessage());
+                    }
                     // Continue with next row
                 }
             }
@@ -612,7 +630,9 @@ class FeedProcessor
                     }
                 } catch (\Exception $e) {
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key: Error processing job board item: " . $e->getMessage();
-                    error_log("$feed_key: Error processing job board item: " . $e->getMessage());
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log("$feed_key: Error processing job board item: " . $e->getMessage());
+                    }
                     // Continue with next job
                 }
             }

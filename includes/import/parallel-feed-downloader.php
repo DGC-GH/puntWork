@@ -31,7 +31,9 @@ function download_feeds_parallel(array $feeds, string $output_dir, array &$logs,
         return [];
     }
 
-    error_log('[PUNTWORK] Starting parallel feed downloads for ' . count($feeds) . ' feeds');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] Starting parallel feed downloads for ' . count($feeds) . ' feeds');
+    }
 
     $client = HttpClient::create([
         'timeout' => 300, // 5 minutes timeout
@@ -51,12 +53,16 @@ function download_feeds_parallel(array $feeds, string $output_dir, array &$logs,
         $feed_path = $output_dir . $feed_key . '.' . $extension;
         $feed_paths[$feed_key] = $feed_path;
 
-        error_log("[PUNTWORK] Starting download for {$feed_key}: {$url}");
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("[PUNTWORK] Starting download for {$feed_key}: {$url}");
+        }
 
         try {
             $responses[$feed_key] = $client->request('GET', $url);
         } catch (\Exception $e) {
-            error_log("[PUNTWORK] Failed to start request for {$feed_key}: " . $e->getMessage());
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("[PUNTWORK] Failed to start request for {$feed_key}: " . $e->getMessage());
+            }
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Failed to start download for ' . $feed_key . ': ' . $e->getMessage();
 
             continue;
@@ -105,10 +111,14 @@ function download_feeds_parallel(array $feeds, string $output_dir, array &$logs,
             ];
 
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Downloaded feed (' . $format . '): ' . number_format($bytes_written) . ' bytes';
-            error_log("[PUNTWORK] Successfully downloaded {$feed_key}: " . number_format($bytes_written) . ' bytes');
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("[PUNTWORK] Successfully downloaded {$feed_key}: " . number_format($bytes_written) . ' bytes');
+            }
         } catch (TransportExceptionInterface $e) {
             $error_msg = "Transport error for {$feed_key}: " . $e->getMessage();
-            error_log('[PUNTWORK] ' . $error_msg);
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[PUNTWORK] ' . $error_msg);
+            }
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
 
             $results[$feed_key] = [
@@ -118,7 +128,9 @@ function download_feeds_parallel(array $feeds, string $output_dir, array &$logs,
             ];
         } catch (\Exception $e) {
             $error_msg = "Download failed for {$feed_key}: " . $e->getMessage();
-            error_log('[PUNTWORK] ' . $error_msg);
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[PUNTWORK] ' . $error_msg);
+            }
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
 
             $results[$feed_key] = [
@@ -130,7 +142,9 @@ function download_feeds_parallel(array $feeds, string $output_dir, array &$logs,
     }
 
     $successful = count(array_filter($results, fn ($r) => $r['success']));
-    error_log("[PUNTWORK] Parallel downloads completed: {$successful}/" . count($feeds) . ' successful');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log("[PUNTWORK] Parallel downloads completed: {$successful}/" . count($feeds) . ' successful');
+    }
 
     return $results;
 }
@@ -148,9 +162,11 @@ function download_feeds_parallel(array $feeds, string $output_dir, array &$logs,
  */
 function download_feed_cached($url, $feed_path, $output_dir, &$logs, &$format = null, $use_cache = true): bool
 {
-    error_log('[PUNTWORK] ==== download_feed_cached START ===');
-    error_log('[PUNTWORK] URL: ' . $url);
-    error_log('[PUNTWORK] Feed path: ' . $feed_path);
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] ==== download_feed_cached START ===');
+        error_log('[PUNTWORK] URL: ' . $url);
+        error_log('[PUNTWORK] Feed path: ' . $feed_path);
+    }
 
     // Check cache headers if enabled
     if ($use_cache && file_exists($feed_path)) {
@@ -170,7 +186,9 @@ function download_feed_cached($url, $feed_path, $output_dir, &$logs, &$format = 
 
                 if ($status_code === 304) {
                     // Not modified, use cached version
-                    error_log('[PUNTWORK] Using cached feed (304 Not Modified)');
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('[PUNTWORK] Using cached feed (304 Not Modified)');
+                    }
                     $content = file_get_contents($feed_path);
                     $format = \Puntwork\FeedProcessor::detectFormat($url, $content);
 
@@ -179,7 +197,9 @@ function download_feed_cached($url, $feed_path, $output_dir, &$logs, &$format = 
                     return true;
                 }
             } catch (\Exception $e) {
-                error_log('[PUNTWORK] Cache check failed, proceeding with full download: ' . $e->getMessage());
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[PUNTWORK] Cache check failed, proceeding with full download: ' . $e->getMessage());
+                }
             }
         }
     }
@@ -223,18 +243,24 @@ function download_feed_cached($url, $feed_path, $output_dir, &$logs, &$format = 
         $format = \Puntwork\FeedProcessor::detectFormat($url, $content);
 
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Downloaded feed (' . $format . '): ' . number_format($bytes_written) . ' bytes';
-        error_log('[PUNTWORK] Downloaded feed (' . $format . '): ' . number_format($bytes_written) . ' bytes');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] Downloaded feed (' . $format . '): ' . number_format($bytes_written) . ' bytes');
+        }
 
         return true;
     } catch (TransportExceptionInterface $e) {
         $error_msg = 'Transport error: ' . $e->getMessage();
-        error_log('[PUNTWORK] ' . $error_msg);
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] ' . $error_msg);
+        }
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
 
         return false;
     } catch (\Exception $e) {
         $error_msg = 'Download error: ' . $e->getMessage();
-        error_log('[PUNTWORK] ' . $error_msg);
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] ' . $error_msg);
+        }
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
 
         return false;
