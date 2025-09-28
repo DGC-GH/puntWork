@@ -20,74 +20,103 @@
          * Initialize the reporting admin interface
          */
         init: function() {
+            console.log('[PUNTWORK] [REPORTS-INIT] init() called');
+            console.log('[PUNTWORK] [REPORTS-INIT] Browser info:', navigator.userAgent);
+            console.log('[PUNTWORK] [REPORTS-INIT] Current URL:', window.location.href);
+            console.log('[PUNTWORK] [REPORTS-INIT] Timestamp:', new Date().toISOString());
+
             this.bindEvents();
             this.loadInitialData();
+
+            console.log('[PUNTWORK] [REPORTS-INIT] Initialization completed');
         },
 
         /**
          * Bind event handlers
          */
         bindEvents: function() {
+            console.log('[PUNTWORK] [REPORTS-EVENTS] bindEvents() called');
             var self = this;
 
             // Report generation form
             $('#report-generator-form').on('submit', function(e) {
+                console.log('[PUNTWORK] [REPORTS-EVENTS] Report generation form submitted');
                 e.preventDefault();
                 self.generateReport();
             });
+            console.log('[PUNTWORK] [REPORTS-EVENTS] Report generation form event bound');
 
             // Export report
             $('#export-report').on('click', function() {
+                console.log('[PUNTWORK] [REPORTS-EVENTS] Export report button clicked');
                 self.exportReport();
             });
+            console.log('[PUNTWORK] [REPORTS-EVENTS] Export report button event bound');
 
             // Schedule report
             $('#schedule-report').on('click', function() {
+                console.log('[PUNTWORK] [REPORTS-EVENTS] Schedule report button clicked');
                 self.scheduleReport();
             });
+            console.log('[PUNTWORK] [REPORTS-EVENTS] Schedule report button event bound');
 
             // Modal interactions
             $('.puntwork-modal-close').on('click', function() {
+                console.log('[PUNTWORK] [REPORTS-EVENTS] Modal close button clicked');
                 self.closeModal();
             });
+            console.log('[PUNTWORK] [REPORTS-EVENTS] Modal close button event bound');
 
             $(window).on('click', function(e) {
                 if ($(e.target).is('#report-modal')) {
+                    console.log('[PUNTWORK] [REPORTS-EVENTS] Window clicked outside modal');
                     self.closeModal();
                 }
             });
+            console.log('[PUNTWORK] [REPORTS-EVENTS] Window click event bound for modal close');
 
             // Keyboard navigation
             $(document).on('keydown', function(e) {
                 if (e.keyCode === 27 && $('#report-modal').is(':visible')) {
+                    console.log('[PUNTWORK] [REPORTS-EVENTS] Escape key pressed, modal visible');
                     self.closeModal();
                 }
             });
+            console.log('[PUNTWORK] [REPORTS-EVENTS] Keyboard navigation event bound');
 
             // Filters
             $('#filter-type, #search-reports').on('input change', this.debounce(function() {
+                console.log('[PUNTWORK] [REPORTS-EVENTS] Filter input changed, debounced call to loadReportsList');
                 self.loadReportsList();
             }, 300));
+            console.log('[PUNTWORK] [REPORTS-EVENTS] Filter events bound with debounce');
 
             // Settings form
             $('#puntwork-reporting-settings').on('submit', function(e) {
+                console.log('[PUNTWORK] [REPORTS-EVENTS] Settings form submitted');
                 e.preventDefault();
                 self.saveSettings();
             });
+            console.log('[PUNTWORK] [REPORTS-EVENTS] Settings form event bound');
+
+            console.log('[PUNTWORK] [REPORTS-EVENTS] All event bindings completed');
         },
 
         /**
          * Load initial data
          */
         loadInitialData: function() {
+            console.log('[PUNTWORK] [REPORTS-DATA] loadInitialData() called');
             this.loadReportsList();
             this.loadDashboardStats();
+            console.log('[PUNTWORK] [REPORTS-DATA] Initial data loading initiated');
         },
 
         /**
          * Generate a custom report
          */
         generateReport: function() {
+            console.log('[PUNTWORK] [REPORTS-GENERATE] generateReport() called');
             var self = this;
             var formData = new FormData(document.getElementById('report-generator-form'));
 
@@ -99,6 +128,8 @@
                 format: formData.get('format')
             };
 
+            console.log('[PUNTWORK] [REPORTS-GENERATE] Report generation data:', data);
+
             this.showLoading('#generate-report', puntworkReports.strings.generating);
 
             $.ajax({
@@ -106,19 +137,24 @@
                 type: 'POST',
                 data: data,
                 success: function(response) {
+                    console.log('[PUNTWORK] [REPORTS-GENERATE] AJAX success response:', response);
                     if (response.success) {
                         self.showReportPreview(response.data);
                         self.loadReportsList();
                         self.showMessage(puntworkReports.strings.report_generated, 'success');
+                        console.log('[PUNTWORK] [REPORTS-GENERATE] Report generated successfully');
                     } else {
+                        console.error('[PUNTWORK] [REPORTS-GENERATE] Report generation failed:', response.data);
                         self.showMessage(response.data || puntworkReports.strings.error, 'error');
                     }
                 },
                 error: function(xhr, status, error) {
+                    console.error('[PUNTWORK] [REPORTS-GENERATE] AJAX error:', {xhr: xhr, status: status, error: error});
                     self.showMessage(puntworkReports.strings.error + ': ' + error, 'error');
                 },
                 complete: function() {
                     self.hideLoading('#generate-report', 'Generate Report');
+                    console.log('[PUNTWORK] [REPORTS-GENERATE] Report generation AJAX completed');
                 }
             });
         },
@@ -127,6 +163,7 @@
          * Show report preview
          */
         showReportPreview: function(reportData) {
+            console.log('[PUNTWORK] [REPORTS-PREVIEW] showReportPreview() called with data:', reportData);
             if (reportData.formatted) {
                 $('#report-content').html(reportData.formatted);
                 $('#report-preview').show();
@@ -134,6 +171,9 @@
 
                 // Initialize any charts in the preview
                 this.initializeCharts();
+                console.log('[PUNTWORK] [REPORTS-PREVIEW] Report preview displayed and charts initialized');
+            } else {
+                console.warn('[PUNTWORK] [REPORTS-PREVIEW] No formatted data in reportData');
             }
         },
 
@@ -141,13 +181,17 @@
          * Export current report
          */
         exportReport: function() {
+            console.log('[PUNTWORK] [REPORTS-EXPORT] exportReport() called');
             var self = this;
             var reportData = $('#report-content').html();
 
             if (!reportData) {
+                console.error('[PUNTWORK] [REPORTS-EXPORT] No report data to export');
                 this.showMessage('No report to export', 'error');
                 return;
             }
+
+            console.log('[PUNTWORK] [REPORTS-EXPORT] Report data length:', reportData.length);
 
             var data = {
                 action: 'export_current_report',
@@ -156,6 +200,8 @@
                 format: $('#report-format').val()
             };
 
+            console.log('[PUNTWORK] [REPORTS-EXPORT] Export data:', {action: data.action, format: data.format});
+
             this.showLoading('#export-report', puntworkReports.strings.exporting);
 
             $.ajax({
@@ -163,6 +209,7 @@
                 type: 'POST',
                 data: data,
                 success: function(response) {
+                    console.log('[PUNTWORK] [REPORTS-EXPORT] AJAX success response:', response);
                     if (response.success) {
                         // Trigger download
                         var link = document.createElement('a');
@@ -173,15 +220,19 @@
                         document.body.removeChild(link);
 
                         self.showMessage(puntworkReports.strings.report_exported, 'success');
+                        console.log('[PUNTWORK] [REPORTS-EXPORT] Report export download triggered');
                     } else {
+                        console.error('[PUNTWORK] [REPORTS-EXPORT] Export failed:', response.data);
                         self.showMessage(response.data || puntworkReports.strings.error, 'error');
                     }
                 },
                 error: function(xhr, status, error) {
+                    console.error('[PUNTWORK] [REPORTS-EXPORT] AJAX error:', {xhr: xhr, status: status, error: error});
                     self.showMessage(puntworkReports.strings.error + ': ' + error, 'error');
                 },
                 complete: function() {
                     self.hideLoading('#export-report', 'Export Report');
+                    console.log('[PUNTWORK] [REPORTS-EXPORT] Export AJAX completed');
                 }
             });
         },
