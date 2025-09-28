@@ -24,6 +24,32 @@ function process_batch_enhanced(array $batch_guids, array $batch_items, array &$
     $monitor_id = start_performance_monitoring('enhanced_batch_processing');
 
     try {
+        // Adaptive resource allocation based on batch characteristics
+        $batch_analysis = [
+            'batch_size' => count($batch_guids),
+            'batch_items' => $batch_items,
+            'acf_fields' => get_acf_fields(),
+            'taxonomy_terms' => ['category', 'post_tag', 'job_type'], // Common taxonomies
+        ];
+
+        $resource_allocation = \Puntwork\Utilities\AdaptiveResourceManager::analyzeAndAllocate($batch_analysis);
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . sprintf(
+            'Adaptive resource allocation applied - Profile: %s, Memory: %s, Time: %ds',
+            $resource_allocation['profile'],
+            $resource_allocation['memory_limit'],
+            $resource_allocation['max_execution_time']
+        );
+
+        // Intelligent data prefetching for performance optimization
+        $prefetch_stats = \Puntwork\Utilities\DataPrefetcher::prefetchForBatch($batch_guids, $batch_items);
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . sprintf(
+            'Prefetched %d items in %.3f seconds (hits: %d, misses: %d)',
+            $prefetch_stats['prefetched_items'],
+            $prefetch_stats['prefetch_time'],
+            $prefetch_stats['cache_hits'],
+            $prefetch_stats['cache_misses']
+        );
+
         // Warm up caches for better performance
         \Puntwork\Utilities\EnhancedCacheManager::warmCommonCaches();
 
@@ -37,6 +63,43 @@ function process_batch_enhanced(array $batch_guids, array $batch_items, array &$
 
         // Prepare batch metadata with advanced caching
         $batch_metadata = prepare_batch_metadata_enhanced($post_ids_by_guid);
+
+        // Apply content-based batch prioritization
+        $prioritized_batch = \Puntwork\Utilities\BatchPrioritizer::prioritizeBatch(
+            $batch_guids,
+            $batch_items,
+            $batch_metadata,
+            $post_ids_by_guid
+        );
+
+        $batch_guids = $prioritized_batch['prioritized_guids'];
+        $batch_items = $prioritized_batch['prioritized_items'];
+
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . sprintf(
+            'Batch prioritized - New: %d, Updated: %d, Unchanged: %d (%.3f seconds)',
+            $prioritized_batch['priority_stats']['new_count'],
+            $prioritized_batch['priority_stats']['updated_count'],
+            $prioritized_batch['priority_stats']['unchanged_count'],
+            $prioritized_batch['priority_stats']['prioritization_time']
+        );
+
+        // Leverage JSONL optimization index for enhanced processing
+        $jsonl_file = ABSPATH . 'feeds/combined-jobs.jsonl';
+        $batch_recommendations = \Puntwork\Utilities\JsonlOptimizer::getBatchRecommendations($jsonl_file, count($batch_guids));
+
+        if (!isset($batch_recommendations['use_standard_batching'])) {
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . sprintf(
+                'JSONL optimization index loaded - %d complexity zones, %d content type clusters',
+                count($batch_recommendations['complexity_zones'] ?? []),
+                count($batch_recommendations['content_type_clusters'] ?? [])
+            );
+
+            // Adjust processing based on recommendations
+            $complexity_zone = determine_batch_complexity_zone($batch_items);
+            if (isset($batch_recommendations['complexity_zones'][$complexity_zone])) {
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Processing complexity zone: $complexity_zone";
+            }
+        }
 
         // Process items with memory management
         $processed_count = process_batch_items_with_memory_management($batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid, $logs, $updated, $published, $skipped);
@@ -52,6 +115,14 @@ function process_batch_enhanced(array $batch_guids, array $batch_items, array &$
                 'memory_peak' => memory_get_peak_usage(true),
             ]
         );
+
+        // Record performance metrics for adaptive learning
+        \Puntwork\Utilities\AdaptiveResourceManager::recordPerformanceMetrics([
+            'batch_size' => count($batch_guids),
+            'memory_mb' => memory_get_peak_usage(true) / 1024 / 1024,
+            'time_seconds' => $processing_time,
+            'success' => true,
+        ]);
 
         end_performance_monitoring($monitor_id);
 
@@ -272,4 +343,52 @@ function process_batch_chunk(array $batch_guids, array $batch_items, array $batc
     process_batch_items($batch_guids, $batch_items, $batch_metadata['last_updates'], $batch_metadata['hashes_by_post'], $acf_fields, $zero_empty_fields, $post_ids_by_guid, $logs, $updated, $published, $skipped, $processed_count);
 
     return $processed_count;
+}
+
+/**
+ * Determine the complexity zone for a batch of items.
+ */
+function determine_batch_complexity_zone(array $batch_items): string
+{
+    if (empty($batch_items)) {
+        return 'low';
+    }
+
+    $total_complexity = 0;
+    $item_count = 0;
+
+    foreach ($batch_items as $item) {
+        if (is_array($item)) {
+            // Calculate complexity based on field count and content
+            $field_count = count($item);
+            $complexity = min($field_count / 20, 1.0); // Normalize to 0-1
+
+            // Add ACF complexity
+            if (isset($item['acf']) && is_array($item['acf'])) {
+                $complexity += min(count($item['acf']) / 10, 0.5);
+            }
+
+            // Add text content complexity
+            $text_fields = ['description', 'content', 'excerpt', 'job_description'];
+            foreach ($text_fields as $field) {
+                if (isset($item[$field])) {
+                    $length = strlen($item[$field]);
+                    $complexity += min($length / 5000, 0.3);
+                }
+            }
+
+            $total_complexity += min($complexity, 1.0);
+            $item_count++;
+        }
+    }
+
+    if ($item_count === 0) {
+        return 'low';
+    }
+
+    $avg_complexity = $total_complexity / $item_count;
+
+    if ($avg_complexity < 0.3) return 'low';
+    if ($avg_complexity < 0.7) return 'medium';
+    return 'high';
 }
