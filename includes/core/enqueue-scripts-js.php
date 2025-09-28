@@ -11,8 +11,8 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 // Include required files
@@ -21,49 +21,48 @@ require_once PUNTWORK_PATH . 'includes/api/rest-api.php';
 /**
  * Enqueue admin scripts and styles for job import dashboard.
  */
-function enqueue_job_import_scripts()
-{
-    // Check if we're on the job import dashboard page
-    $current_page   = isset($_GET['page']) ? $_GET['page'] : '';
-    $post_type      = isset($_GET['post_type']) ? $_GET['post_type'] : '';
-    $current_screen = get_current_screen();
+function enqueue_job_import_scripts() {
+	// Check if we're on the job import dashboard page
+	$current_page   = isset( $_GET['page'] ) ? $_GET['page'] : '';
+	$post_type      = isset( $_GET['post_type'] ) ? $_GET['post_type'] : '';
+	$current_screen = get_current_screen();
 
-    error_log('[PUNTWORK] Current URL: ' . $_SERVER['REQUEST_URI']);
-    error_log('[PUNTWORK] Current page: ' . $current_page);
-    error_log('[PUNTWORK] Post type: ' . $post_type);
-    error_log('[PUNTWORK] Current screen: ' . ( $current_screen ? $current_screen->id : 'none' ));
+	error_log( '[PUNTWORK] Current URL: ' . $_SERVER['REQUEST_URI'] );
+	error_log( '[PUNTWORK] Current page: ' . $current_page );
+	error_log( '[PUNTWORK] Post type: ' . $post_type );
+	error_log( '[PUNTWORK] Current screen: ' . ( $current_screen ? $current_screen->id : 'none' ) );
 
-    // Load scripts on puntwork admin pages
-    $puntwork_pages = array(
-        'puntwork-dashboard',
-        'job-feed-dashboard',
-        'jobs-dashboard',
-        'puntwork-feed-config',
-        'puntwork-feed-health',
-        'puntwork-analytics',
-        'puntwork-performance',
-        'puntwork-api-settings',
-        'puntwork-monitoring',
-        'puntwork-scheduling',
-    );
-    $should_load    = in_array($current_page, $puntwork_pages);
+	// Load scripts on puntwork admin pages
+	$puntwork_pages = array(
+		'puntwork-dashboard',
+		'job-feed-dashboard',
+		'jobs-dashboard',
+		'puntwork-feed-config',
+		'puntwork-feed-health',
+		'puntwork-analytics',
+		'puntwork-performance',
+		'puntwork-api-settings',
+		'puntwork-monitoring',
+		'puntwork-scheduling',
+	);
+	$should_load    = in_array( $current_page, $puntwork_pages );
 
-    if ($should_load) {
-        // Modern admin styles
-        wp_enqueue_style(
-            'puntwork-admin-modern',
-            PUNTWORK_URL . 'assets/css/admin-modern.css',
-            array( 'font-awesome' ),
-            PUNTWORK_VERSION
-        );
+	if ( $should_load ) {
+		// Modern admin styles
+		wp_enqueue_style(
+			'puntwork-admin-modern',
+			PUNTWORK_URL . 'assets/css/admin-modern.css',
+			array( 'font-awesome' ),
+			PUNTWORK_VERSION
+		);
 
-        // Font Awesome for icons
-        wp_enqueue_style('font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css', array(), '5.15.4');
+		// Font Awesome for icons
+		wp_enqueue_style( 'font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css', array(), '5.15.4' );
 
-        // Add custom styles for scheduling UI
-        wp_add_inline_style(
-            'font-awesome',
-            '
+		// Add custom styles for scheduling UI
+		wp_add_inline_style(
+			'font-awesome',
+			'
             /* Apple-style Toggle Switch */
             #import-scheduling .schedule-toggle {
                 position: relative;
@@ -375,227 +374,226 @@ function enqueue_job_import_scripts()
                 color: white !important;
             }
         '
-        );
+		);
 
-        // Enqueue JavaScript modules
-        wp_enqueue_script(
-            'puntwork-logger-js',
-            PUNTWORK_URL . 'assets/js/puntwork-logger.js',
-            array( 'jquery' ),
-            PUNTWORK_VERSION,
-            true
-        );
+		// Enqueue JavaScript modules
+		wp_enqueue_script(
+			'puntwork-logger-js',
+			PUNTWORK_URL . 'assets/js/puntwork-logger.js',
+			array( 'jquery' ),
+			PUNTWORK_VERSION,
+			true
+		);
 
-        wp_enqueue_script(
-            'job-import-ui-js',
-            PUNTWORK_URL . 'assets/js/job-import-ui.js',
-            array( 'jquery', 'puntwork-logger-js' ),
-            PUNTWORK_VERSION,
-            true
-        );
+		wp_enqueue_script(
+			'job-import-ui-js',
+			PUNTWORK_URL . 'assets/js/job-import-ui.js',
+			array( 'jquery', 'puntwork-logger-js' ),
+			PUNTWORK_VERSION,
+			true
+		);
 
-        wp_enqueue_script(
-            'job-import-api-js',
-            PUNTWORK_URL . 'assets/js/job-import-api.js',
-            array( 'jquery', 'puntwork-logger-js' ),
-            PUNTWORK_VERSION,
-            true
-        );
+		wp_enqueue_script(
+			'job-import-api-js',
+			PUNTWORK_URL . 'assets/js/job-import-api.js',
+			array( 'jquery', 'puntwork-logger-js' ),
+			PUNTWORK_VERSION,
+			true
+		);
 
-        wp_enqueue_script(
-            'job-import-logic-js',
-            PUNTWORK_URL . 'assets/js/job-import-logic.js',
-            array( 'jquery', 'job-import-api-js', 'puntwork-logger-js' ),
-            PUNTWORK_VERSION,
-            true
-        );
+		wp_enqueue_script(
+			'job-import-logic-js',
+			PUNTWORK_URL . 'assets/js/job-import-logic.js',
+			array( 'jquery', 'job-import-api-js', 'puntwork-logger-js' ),
+			PUNTWORK_VERSION,
+			true
+		);
 
-        wp_enqueue_script(
-            'job-import-events-js',
-            PUNTWORK_URL . 'assets/js/job-import-events.js',
-            array( 'jquery', 'puntwork-logger-js', 'job-import-ui-js', 'job-import-api-js', 'job-import-logic-js' ),
-            PUNTWORK_VERSION,
-            true
-        );
+		wp_enqueue_script(
+			'job-import-events-js',
+			PUNTWORK_URL . 'assets/js/job-import-events.js',
+			array( 'jquery', 'puntwork-logger-js', 'job-import-ui-js', 'job-import-api-js', 'job-import-logic-js' ),
+			PUNTWORK_VERSION,
+			true
+		);
 
-        wp_enqueue_script(
-            'job-import-scheduling-js',
-            PUNTWORK_URL . 'assets/js/job-import-scheduling.js',
-            array( 'jquery', 'puntwork-logger-js', 'job-import-api-js' ),
-            PUNTWORK_VERSION,
-            true
-        );
+		wp_enqueue_script(
+			'job-import-scheduling-js',
+			PUNTWORK_URL . 'assets/js/job-import-scheduling.js',
+			array( 'jquery', 'puntwork-logger-js', 'job-import-api-js' ),
+			PUNTWORK_VERSION,
+			true
+		);
 
-        wp_enqueue_script(
-            'job-import-realtime-js',
-            PUNTWORK_URL . 'assets/js/job-import-realtime.js',
-            array( 'jquery', 'puntwork-logger-js', 'job-import-ui-js' ),
-            PUNTWORK_VERSION,
-            true
-        );
+		wp_enqueue_script(
+			'job-import-realtime-js',
+			PUNTWORK_URL . 'assets/js/job-import-realtime.js',
+			array( 'jquery', 'puntwork-logger-js', 'job-import-ui-js' ),
+			PUNTWORK_VERSION,
+			true
+		);
 
-        // Enqueue the main JavaScript file
-        wp_enqueue_script(
-            'job-import-admin-js',
-            PUNTWORK_URL . 'assets/js/job-import-admin.js',
-            array( 'jquery', 'job-import-ui-js', 'job-import-api-js', 'job-import-logic-js', 'job-import-events-js', 'job-import-scheduling-js', 'job-import-realtime-js', 'puntwork-logger-js' ),
-            PUNTWORK_VERSION,
-            true
-        );
+		// Enqueue the main JavaScript file
+		wp_enqueue_script(
+			'job-import-admin-js',
+			PUNTWORK_URL . 'assets/js/job-import-admin.js',
+			array( 'jquery', 'job-import-ui-js', 'job-import-api-js', 'job-import-logic-js', 'job-import-events-js', 'job-import-scheduling-js', 'job-import-realtime-js', 'puntwork-logger-js' ),
+			PUNTWORK_VERSION,
+			true
+		);
 
-        // Enqueue PWA manager script
-        wp_enqueue_script(
-            'puntwork-pwa-manager',
-            PUNTWORK_URL . 'assets/js/puntwork-pwa-manager.js',
-            array(),
-            PUNTWORK_VERSION,
-            true
-        );
+		// Enqueue PWA manager script
+		wp_enqueue_script(
+			'puntwork-pwa-manager',
+			PUNTWORK_URL . 'assets/js/puntwork-pwa-manager.js',
+			array(),
+			PUNTWORK_VERSION,
+			true
+		);
 
-        // Enqueue onboarding styles and scripts
-        wp_enqueue_style(
-            'puntwork-onboarding',
-            PUNTWORK_URL . 'assets/css/onboarding.css',
-            array( 'font-awesome' ),
-            PUNTWORK_VERSION
-        );
+		// Enqueue onboarding styles and scripts
+		wp_enqueue_style(
+			'puntwork-onboarding',
+			PUNTWORK_URL . 'assets/css/onboarding.css',
+			array( 'font-awesome' ),
+			PUNTWORK_VERSION
+		);
 
-        wp_enqueue_script(
-            'puntwork-onboarding',
-            PUNTWORK_URL . 'assets/js/onboarding.js',
-            array( 'jquery' ),
-            PUNTWORK_VERSION,
-            true
-        );
+		wp_enqueue_script(
+			'puntwork-onboarding',
+			PUNTWORK_URL . 'assets/js/onboarding.js',
+			array( 'jquery' ),
+			PUNTWORK_VERSION,
+			true
+		);
 
-        // Localize onboarding script
-        wp_localize_script(
-            'puntwork-onboarding',
-            'puntworkOnboarding',
-            array(
-                'ajaxurl' => admin_url('admin-ajax.php'),
-                'nonce'   => wp_create_nonce('puntwork_onboarding_nonce'),
-                'steps'   => array(
-                    array(
-                        'title'   => __('Welcome to puntWork', 'puntwork'),
-                        'content' => __('Let\'s get you set up with puntWork, the powerful job feed import system for WordPress. This wizard will guide you through the initial configuration.', 'puntwork'),
-                        'icon'    => 'fas fa-rocket',
-                        'action'  => __('Get Started', 'puntwork'),
-                    ),
-                    array(
-                        'title'   => __('Configure Job Feeds', 'puntwork'),
-                        'content' => __('Add your job feed sources to start importing job listings. You can add multiple feeds from different providers and configure them individually.', 'puntwork'),
-                        'icon'    => 'fas fa-rss',
-                        'action'  => __('Configure Feeds', 'puntwork'),
-                    ),
-                    array(
-                        'title'   => __('Set Up Scheduling', 'puntwork'),
-                        'content' => __('Configure automatic import schedules to keep your job listings fresh. Choose how often to check for new jobs and when to run imports.', 'puntwork'),
-                        'icon'    => 'fas fa-clock',
-                        'action'  => __('Set Schedule', 'puntwork'),
-                    ),
-                    array(
-                        'title'   => __('API Configuration', 'puntwork'),
-                        'content' => __('Set up your API credentials and configure advanced options. This enables real-time updates and enhanced functionality.', 'puntwork'),
-                        'icon'    => 'fas fa-cog',
-                        'action'  => __('Configure API', 'puntwork'),
-                    ),
-                    array(
-                        'title'   => __('You\'re All Set!', 'puntwork'),
-                        'content' => __('puntWork is now configured and ready to start importing job feeds. You can always access these settings later from the admin menu.', 'puntwork'),
-                        'icon'    => 'fas fa-check-circle',
-                        'action'  => __('Finish Setup', 'puntwork'),
-                    ),
-                ),
-            )
-        );
+		// Localize onboarding script
+		wp_localize_script(
+			'puntwork-onboarding',
+			'puntworkOnboarding',
+			array(
+				'ajaxurl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'puntwork_onboarding_nonce' ),
+				'steps'   => array(
+					array(
+						'title'   => __( 'Welcome to puntWork', 'puntwork' ),
+						'content' => __( 'Let\'s get you set up with puntWork, the powerful job feed import system for WordPress. This wizard will guide you through the initial configuration.', 'puntwork' ),
+						'icon'    => 'fas fa-rocket',
+						'action'  => __( 'Get Started', 'puntwork' ),
+					),
+					array(
+						'title'   => __( 'Configure Job Feeds', 'puntwork' ),
+						'content' => __( 'Add your job feed sources to start importing job listings. You can add multiple feeds from different providers and configure them individually.', 'puntwork' ),
+						'icon'    => 'fas fa-rss',
+						'action'  => __( 'Configure Feeds', 'puntwork' ),
+					),
+					array(
+						'title'   => __( 'Set Up Scheduling', 'puntwork' ),
+						'content' => __( 'Configure automatic import schedules to keep your job listings fresh. Choose how often to check for new jobs and when to run imports.', 'puntwork' ),
+						'icon'    => 'fas fa-clock',
+						'action'  => __( 'Set Schedule', 'puntwork' ),
+					),
+					array(
+						'title'   => __( 'API Configuration', 'puntwork' ),
+						'content' => __( 'Set up your API credentials and configure advanced options. This enables real-time updates and enhanced functionality.', 'puntwork' ),
+						'icon'    => 'fas fa-cog',
+						'action'  => __( 'Configure API', 'puntwork' ),
+					),
+					array(
+						'title'   => __( 'You\'re All Set!', 'puntwork' ),
+						'content' => __( 'puntWork is now configured and ready to start importing job feeds. You can always access these settings later from the admin menu.', 'puntwork' ),
+						'icon'    => 'fas fa-check-circle',
+						'action'  => __( 'Finish Setup', 'puntwork' ),
+					),
+				),
+			)
+		);
 
-        // Enqueue accessibility styles and scripts
-        wp_enqueue_style(
-            'puntwork-accessibility',
-            PUNTWORK_URL . 'assets/css/accessibility.css',
-            array(),
-            PUNTWORK_VERSION
-        );
+		// Enqueue accessibility styles and scripts
+		wp_enqueue_style(
+			'puntwork-accessibility',
+			PUNTWORK_URL . 'assets/css/accessibility.css',
+			array(),
+			PUNTWORK_VERSION
+		);
 
-        wp_enqueue_script(
-            'puntwork-accessibility',
-            PUNTWORK_URL . 'assets/js/accessibility.js',
-            array( 'jquery' ),
-            PUNTWORK_VERSION,
-            true
-        );
+		wp_enqueue_script(
+			'puntwork-accessibility',
+			PUNTWORK_URL . 'assets/js/accessibility.js',
+			array( 'jquery' ),
+			PUNTWORK_VERSION,
+			true
+		);
 
-        // Localize accessibility script
-        wp_localize_script(
-            'puntwork-accessibility',
-            'puntworkAjax',
-            array(
-                'ajaxurl' => admin_url('admin-ajax.php'),
-                'nonce'   => wp_create_nonce('puntwork_accessibility_nonce'),
-            )
-        );
+		// Localize accessibility script
+		wp_localize_script(
+			'puntwork-accessibility',
+			'puntworkAjax',
+			array(
+				'ajaxurl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'puntwork_accessibility_nonce' ),
+			)
+		);
 
-        // Enqueue queue management styles and scripts only on relevant pages
-        $queue_pages = array( 'puntwork-dashboard', 'puntwork-monitoring', 'job-feed-dashboard' );
-        if (in_array($current_page, $queue_pages)) {
-            wp_enqueue_style(
-                'puntwork-queue',
-                PUNTWORK_URL . 'assets/css/queue-interface.css',
-                array(),
-                PUNTWORK_VERSION
-            );
+		// Enqueue queue management styles and scripts only on relevant pages
+		$queue_pages = array( 'puntwork-dashboard', 'puntwork-monitoring', 'job-feed-dashboard' );
+		if ( in_array( $current_page, $queue_pages ) ) {
+			wp_enqueue_style(
+				'puntwork-queue',
+				PUNTWORK_URL . 'assets/css/queue-interface.css',
+				array(),
+				PUNTWORK_VERSION
+			);
 
-            wp_enqueue_script(
-                'puntwork-queue',
-                PUNTWORK_URL . 'assets/js/queue-interface.js',
-                array( 'jquery' ),
-                PUNTWORK_VERSION,
-                true
-            );
+			wp_enqueue_script(
+				'puntwork-queue',
+				PUNTWORK_URL . 'assets/js/queue-interface.js',
+				array( 'jquery' ),
+				PUNTWORK_VERSION,
+				true
+			);
 
-            // Localize queue script
-            wp_localize_script(
-                'puntwork-queue',
-                'puntworkQueue',
-                array(
-                    'ajaxurl' => admin_url('admin-ajax.php', 'https'),
-                    'nonce'   => wp_create_nonce('puntwork_queue_nonce'),
-                )
-            );
-        }
+			// Localize queue script
+			wp_localize_script(
+				'puntwork-queue',
+				'puntworkQueue',
+				array(
+					'ajaxurl' => admin_url( 'admin-ajax.php', 'https' ),
+					'nonce'   => wp_create_nonce( 'puntwork_queue_nonce' ),
+				)
+			);
+		}
 
-        // Localize script with data
-        wp_localize_script(
-            'job-import-admin-js',
-            'jobImportData',
-            array(
-                'nonce'           => wp_create_nonce('job_import_nonce'),
-                'feeds'           => get_feeds(),
-                'ajaxurl'         => admin_url('admin-ajax.php', 'https'),
-                'resume_progress' => (int) get_option('job_import_progress', 0),
-                'api_key'         => get_or_create_api_key(),
-            )
-        );
-    }
+		// Localize script with data
+		wp_localize_script(
+			'job-import-admin-js',
+			'jobImportData',
+			array(
+				'nonce'           => wp_create_nonce( 'job_import_nonce' ),
+				'feeds'           => get_feeds(),
+				'ajaxurl'         => admin_url( 'admin-ajax.php', 'https' ),
+				'resume_progress' => (int) get_option( 'job_import_progress', 0 ),
+				'api_key'         => get_or_create_api_key(),
+			)
+		);
+	}
 }
-add_action('admin_enqueue_scripts', __NAMESPACE__ . '\\enqueue_job_import_scripts');
+add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\\enqueue_job_import_scripts' );
 
 /**
  * Add PWA manifest link to admin head for puntwork pages
  */
-function add_pwa_manifest_link()
-{
-    $current_page   = isset($_GET['page']) ? $_GET['page'] : '';
-    $puntwork_pages = array( 'puntwork-dashboard', 'puntwork-analytics', 'puntwork-api-settings', 'puntwork-feed-health', 'puntwork-scheduling' );
+function add_pwa_manifest_link() {
+	$current_page   = isset( $_GET['page'] ) ? $_GET['page'] : '';
+	$puntwork_pages = array( 'puntwork-dashboard', 'puntwork-analytics', 'puntwork-api-settings', 'puntwork-feed-health', 'puntwork-scheduling' );
 
-    if (in_array($current_page, $puntwork_pages)) {
-        echo '<link rel="manifest" href="' . esc_url(PUNTWORK_URL . 'puntwork-admin.webmanifest') . '">' . "\n";
-        echo '<meta name="theme-color" content="#007aff">' . "\n";
-        echo '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n";
-        echo '<meta name="apple-mobile-web-app-status-bar-style" content="default">' . "\n";
-        echo '<meta name="apple-mobile-web-app-title" content="puntWork Admin">' . "\n";
-        echo '<link rel="apple-touch-icon" href="' . esc_url(PUNTWORK_URL . 'assets/images/icon.svg') . '">' . "\n";
-    }
+	if ( in_array( $current_page, $puntwork_pages ) ) {
+		echo '<link rel="manifest" href="' . esc_url( PUNTWORK_URL . 'puntwork-admin.webmanifest' ) . '">' . "\n";
+		echo '<meta name="theme-color" content="#007aff">' . "\n";
+		echo '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n";
+		echo '<meta name="apple-mobile-web-app-status-bar-style" content="default">' . "\n";
+		echo '<meta name="apple-mobile-web-app-title" content="puntWork Admin">' . "\n";
+		echo '<link rel="apple-touch-icon" href="' . esc_url( PUNTWORK_URL . 'assets/images/icon.svg' ) . '">' . "\n";
+	}
 }
-add_action('admin_head', __NAMESPACE__ . '\\add_pwa_manifest_link');
+add_action( 'admin_head', __NAMESPACE__ . '\\add_pwa_manifest_link' );

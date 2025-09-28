@@ -11,401 +11,389 @@
 namespace Puntwork\SocialMedia;
 
 // Prevent direct access
-if (! defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
  * Facebook Ads Manager
  */
-class FacebookAdsManager
-{
-    /**
-     * Facebook Platform instance
-     */
-    private FacebookPlatform $facebook_platform;
+class FacebookAdsManager {
 
-    /**
-     * Ads API base URL
-     */
-    private string $ads_api_base = 'https://graph.facebook.com/v18.0';
+	/**
+	 * Facebook Platform instance
+	 */
+	private FacebookPlatform $facebook_platform;
 
-    /**
-     * Constructor
-     */
-    public function __construct(FacebookPlatform $facebook_platform)
-    {
-        $this->facebook_platform = $facebook_platform;
-    }
+	/**
+	 * Ads API base URL
+	 */
+	private string $ads_api_base = 'https://graph.facebook.com/v18.0';
 
-    /**
-     * Create a Facebook Ads campaign
-     */
-    public function createCampaign(array $campaign_data): array
-    {
-        $required_fields = array( 'name', 'account_id', 'objective', 'budget', 'start_time', 'end_time' );
-        foreach ($required_fields as $field) {
-            if (! isset($campaign_data[ $field ])) {
-                throw new \Exception("Missing required field: {$field}");
-            }
-        }
+	/**
+	 * Constructor
+	 */
+	public function __construct( FacebookPlatform $facebook_platform ) {
+		$this->facebook_platform = $facebook_platform;
+	}
 
-        $params = array(
-            'name'                  => $campaign_data['name'],
-            'account_id'            => $campaign_data['account_id'],
-            'objective'             => $campaign_data['objective'], // CONVERSIONS, TRAFFIC, ENGAGEMENT, etc.
-            'daily_budget'          => $this->convertToCents($campaign_data['budget']),
-            'start_time'            => $campaign_data['start_time'],
-            'end_time'              => $campaign_data['end_time'],
-            'status'                => $campaign_data['status'] ?? 'PAUSED',
-            'special_ad_categories' => array( 'EMPLOYMENT' ), // Important for job ads
-        );
+	/**
+	 * Create a Facebook Ads campaign
+	 */
+	public function createCampaign( array $campaign_data ): array {
+		$required_fields = array( 'name', 'account_id', 'objective', 'budget', 'start_time', 'end_time' );
+		foreach ( $required_fields as $field ) {
+			if ( ! isset( $campaign_data[ $field ] ) ) {
+				throw new \Exception( "Missing required field: {$field}" );
+			}
+		}
 
-        $response = $this->makeAdsApiRequest('act_' . $campaign_data['account_id'] . '/campaigns', $params, 'POST');
+		$params = array(
+			'name'                  => $campaign_data['name'],
+			'account_id'            => $campaign_data['account_id'],
+			'objective'             => $campaign_data['objective'], // CONVERSIONS, TRAFFIC, ENGAGEMENT, etc.
+			'daily_budget'          => $this->convertToCents( $campaign_data['budget'] ),
+			'start_time'            => $campaign_data['start_time'],
+			'end_time'              => $campaign_data['end_time'],
+			'status'                => $campaign_data['status'] ?? 'PAUSED',
+			'special_ad_categories' => array( 'EMPLOYMENT' ), // Important for job ads
+		);
 
-        return array(
-            'success'     => true,
-            'campaign_id' => $response['id'] ?? null,
-            'data'        => $response,
-        );
-    }
+		$response = $this->makeAdsApiRequest( 'act_' . $campaign_data['account_id'] . '/campaigns', $params, 'POST' );
 
-    /**
-     * Create an ad set
-     */
-    public function createAdSet(array $adset_data): array
-    {
-        $required_fields = array( 'name', 'campaign_id', 'account_id', 'budget', 'targeting' );
-        foreach ($required_fields as $field) {
-            if (! isset($adset_data[ $field ])) {
-                throw new \Exception("Missing required field: {$field}");
-            }
-        }
+		return array(
+			'success'     => true,
+			'campaign_id' => $response['id'] ?? null,
+			'data'        => $response,
+		);
+	}
 
-        $params = array(
-            'name'              => $adset_data['name'],
-            'campaign_id'       => $adset_data['campaign_id'],
-            'daily_budget'      => $this->convertToCents($adset_data['budget']),
-            'start_time'        => $adset_data['start_time'] ?? date('c', strtotime('+1 hour')),
-            'end_time'          => $adset_data['end_time'] ?? date('c', strtotime('+7 days')),
-            'targeting'         => $this->formatTargeting($adset_data['targeting']),
-            'status'            => $adset_data['status'] ?? 'PAUSED',
-            'billing_event'     => 'IMPRESSIONS',
-            'optimization_goal' => $adset_data['optimization_goal'] ?? 'REACH',
-        );
+	/**
+	 * Create an ad set
+	 */
+	public function createAdSet( array $adset_data ): array {
+		$required_fields = array( 'name', 'campaign_id', 'account_id', 'budget', 'targeting' );
+		foreach ( $required_fields as $field ) {
+			if ( ! isset( $adset_data[ $field ] ) ) {
+				throw new \Exception( "Missing required field: {$field}" );
+			}
+		}
 
-        $response = $this->makeAdsApiRequest('act_' . $adset_data['account_id'] . '/adsets', $params, 'POST');
+		$params = array(
+			'name'              => $adset_data['name'],
+			'campaign_id'       => $adset_data['campaign_id'],
+			'daily_budget'      => $this->convertToCents( $adset_data['budget'] ),
+			'start_time'        => $adset_data['start_time'] ?? date( 'c', strtotime( '+1 hour' ) ),
+			'end_time'          => $adset_data['end_time'] ?? date( 'c', strtotime( '+7 days' ) ),
+			'targeting'         => $this->formatTargeting( $adset_data['targeting'] ),
+			'status'            => $adset_data['status'] ?? 'PAUSED',
+			'billing_event'     => 'IMPRESSIONS',
+			'optimization_goal' => $adset_data['optimization_goal'] ?? 'REACH',
+		);
 
-        return array(
-            'success'  => true,
-            'adset_id' => $response['id'] ?? null,
-            'data'     => $response,
-        );
-    }
+		$response = $this->makeAdsApiRequest( 'act_' . $adset_data['account_id'] . '/adsets', $params, 'POST' );
 
-    /**
-     * Create an ad creative
-     */
-    public function createAdCreative(array $creative_data): array
-    {
-        $required_fields = array( 'account_id', 'page_id' );
-        foreach ($required_fields as $field) {
-            if (! isset($creative_data[ $field ])) {
-                throw new \Exception("Missing required field: {$field}");
-            }
-        }
+		return array(
+			'success'  => true,
+			'adset_id' => $response['id'] ?? null,
+			'data'     => $response,
+		);
+	}
 
-        $params = array(
-            'name'       => $creative_data['name'] ?? 'Job Post Creative',
-            'account_id' => $creative_data['account_id'],
-            'page_id'    => $creative_data['page_id'],
-            'title'      => $creative_data['title'] ?? '',
-            'body'       => $creative_data['body'] ?? '',
-            'link_url'   => $creative_data['link_url'] ?? '',
-            'image_url'  => $creative_data['image_url'] ?? '',
-        );
+	/**
+	 * Create an ad creative
+	 */
+	public function createAdCreative( array $creative_data ): array {
+		$required_fields = array( 'account_id', 'page_id' );
+		foreach ( $required_fields as $field ) {
+			if ( ! isset( $creative_data[ $field ] ) ) {
+				throw new \Exception( "Missing required field: {$field}" );
+			}
+		}
 
-        // Remove empty fields
-        $params = array_filter(
-            $params,
-            function ($value) {
-                return ! empty($value);
-            }
-        );
+		$params = array(
+			'name'       => $creative_data['name'] ?? 'Job Post Creative',
+			'account_id' => $creative_data['account_id'],
+			'page_id'    => $creative_data['page_id'],
+			'title'      => $creative_data['title'] ?? '',
+			'body'       => $creative_data['body'] ?? '',
+			'link_url'   => $creative_data['link_url'] ?? '',
+			'image_url'  => $creative_data['image_url'] ?? '',
+		);
 
-        $response = $this->makeAdsApiRequest('act_' . $creative_data['account_id'] . '/adcreatives', $params, 'POST');
+		// Remove empty fields
+		$params = array_filter(
+			$params,
+			function ( $value ) {
+				return ! empty( $value );
+			}
+		);
 
-        return array(
-            'success'     => true,
-            'creative_id' => $response['id'] ?? null,
-            'data'        => $response,
-        );
-    }
+		$response = $this->makeAdsApiRequest( 'act_' . $creative_data['account_id'] . '/adcreatives', $params, 'POST' );
 
-    /**
-     * Create an ad
-     */
-    public function createAd(array $ad_data): array
-    {
-        $required_fields = array( 'name', 'adset_id', 'creative_id', 'account_id' );
-        foreach ($required_fields as $field) {
-            if (! isset($ad_data[ $field ])) {
-                throw new \Exception("Missing required field: {$field}");
-            }
-        }
+		return array(
+			'success'     => true,
+			'creative_id' => $response['id'] ?? null,
+			'data'        => $response,
+		);
+	}
 
-        $params = array(
-            'name'     => $ad_data['name'],
-            'adset_id' => $ad_data['adset_id'],
-            'creative' => array( 'creative_id' => $ad_data['creative_id'] ),
-            'status'   => $ad_data['status'] ?? 'PAUSED',
-        );
+	/**
+	 * Create an ad
+	 */
+	public function createAd( array $ad_data ): array {
+		$required_fields = array( 'name', 'adset_id', 'creative_id', 'account_id' );
+		foreach ( $required_fields as $field ) {
+			if ( ! isset( $ad_data[ $field ] ) ) {
+				throw new \Exception( "Missing required field: {$field}" );
+			}
+		}
 
-        $response = $this->makeAdsApiRequest('act_' . $ad_data['account_id'] . '/ads', $params, 'POST');
+		$params = array(
+			'name'     => $ad_data['name'],
+			'adset_id' => $ad_data['adset_id'],
+			'creative' => array( 'creative_id' => $ad_data['creative_id'] ),
+			'status'   => $ad_data['status'] ?? 'PAUSED',
+		);
 
-        return array(
-            'success' => true,
-            'ad_id'   => $response['id'] ?? null,
-            'data'    => $response,
-        );
-    }
+		$response = $this->makeAdsApiRequest( 'act_' . $ad_data['account_id'] . '/ads', $params, 'POST' );
 
-    /**
-     * Post job with ads campaign
-     */
-    public function postJobWithAds(array $job_data, array $ads_config): array
-    {
-        // First create the campaign
-        $campaign_result = $this->createCampaign($ads_config['campaign']);
+		return array(
+			'success' => true,
+			'ad_id'   => $response['id'] ?? null,
+			'data'    => $response,
+		);
+	}
 
-        if (! $campaign_result['success']) {
-            throw new \Exception('Failed to create campaign: ' . ( $campaign_result['error'] ?? 'Unknown error' ));
-        }
+	/**
+	 * Post job with ads campaign
+	 */
+	public function postJobWithAds( array $job_data, array $ads_config ): array {
+		// First create the campaign
+		$campaign_result = $this->createCampaign( $ads_config['campaign'] );
 
-        // Create ad set
-        $adset_config = array_merge(
-            $ads_config['adset'] ?? array(),
-            array(
-                'campaign_id' => $campaign_result['campaign_id'],
-                'account_id'  => $ads_config['account_id'],
-                'budget'      => $ads_config['campaign']['budget'],
-                'targeting'   => $ads_config['targeting'] ?? array(),
-            )
-        );
+		if ( ! $campaign_result['success'] ) {
+			throw new \Exception( 'Failed to create campaign: ' . ( $campaign_result['error'] ?? 'Unknown error' ) );
+		}
 
-        $adset_result = $this->createAdSet($adset_config);
+		// Create ad set
+		$adset_config = array_merge(
+			$ads_config['adset'] ?? array(),
+			array(
+				'campaign_id' => $campaign_result['campaign_id'],
+				'account_id'  => $ads_config['account_id'],
+				'budget'      => $ads_config['campaign']['budget'],
+				'targeting'   => $ads_config['targeting'] ?? array(),
+			)
+		);
 
-        if (! $adset_result['success']) {
-            throw new \Exception('Failed to create ad set: ' . ( $adset_result['error'] ?? 'Unknown error' ));
-        }
+		$adset_result = $this->createAdSet( $adset_config );
 
-        // Create ad creative
-        $creative_config = array_merge(
-            $ads_config['creative'] ?? array(),
-            array(
-                'account_id' => $ads_config['account_id'],
-                'page_id'    => $this->facebook_platform->getCredentials()['page_id'],
-                'title'      => $this->createJobAdTitle($job_data),
-                'body'       => $this->createJobAdText($job_data),
-                'link_url'   => $job_data['url'] ?? '',
-                'image_url'  => $job_data['company_logo'] ?? '',
-            )
-        );
+		if ( ! $adset_result['success'] ) {
+			throw new \Exception( 'Failed to create ad set: ' . ( $adset_result['error'] ?? 'Unknown error' ) );
+		}
 
-        $creative_result = $this->createAdCreative($creative_config);
+		// Create ad creative
+		$creative_config = array_merge(
+			$ads_config['creative'] ?? array(),
+			array(
+				'account_id' => $ads_config['account_id'],
+				'page_id'    => $this->facebook_platform->getCredentials()['page_id'],
+				'title'      => $this->createJobAdTitle( $job_data ),
+				'body'       => $this->createJobAdText( $job_data ),
+				'link_url'   => $job_data['url'] ?? '',
+				'image_url'  => $job_data['company_logo'] ?? '',
+			)
+		);
 
-        if (! $creative_result['success']) {
-            throw new \Exception('Failed to create ad creative: ' . ( $creative_result['error'] ?? 'Unknown error' ));
-        }
+		$creative_result = $this->createAdCreative( $creative_config );
 
-        // Create the ad
-        $ad_config = array(
-            'name'        => 'Job: ' . ( $job_data['title'] ?? 'Position Available' ),
-            'adset_id'    => $adset_result['adset_id'],
-            'creative_id' => $creative_result['creative_id'],
-            'account_id'  => $ads_config['account_id'],
-        );
+		if ( ! $creative_result['success'] ) {
+			throw new \Exception( 'Failed to create ad creative: ' . ( $creative_result['error'] ?? 'Unknown error' ) );
+		}
 
-        $ad_result = $this->createAd($ad_config);
+		// Create the ad
+		$ad_config = array(
+			'name'        => 'Job: ' . ( $job_data['title'] ?? 'Position Available' ),
+			'adset_id'    => $adset_result['adset_id'],
+			'creative_id' => $creative_result['creative_id'],
+			'account_id'  => $ads_config['account_id'],
+		);
 
-        if (! $ad_result['success']) {
-            throw new \Exception('Failed to create ad: ' . ( $ad_result['error'] ?? 'Unknown error' ));
-        }
+		$ad_result = $this->createAd( $ad_config );
 
-        return array(
-            'success'     => true,
-            'campaign_id' => $campaign_result['campaign_id'],
-            'adset_id'    => $adset_result['adset_id'],
-            'creative_id' => $creative_result['creative_id'],
-            'ad_id'       => $ad_result['ad_id'],
-            'total_cost'  => $ads_config['campaign']['budget'],
-        );
-    }
+		if ( ! $ad_result['success'] ) {
+			throw new \Exception( 'Failed to create ad: ' . ( $ad_result['error'] ?? 'Unknown error' ) );
+		}
 
-    /**
-     * Create compelling ad title for job posting
-     */
-    private function createJobAdTitle(array $job_data): string
-    {
-        $title   = $job_data['title'] ?? '';
-        $company = $job_data['company'] ?? '';
+		return array(
+			'success'     => true,
+			'campaign_id' => $campaign_result['campaign_id'],
+			'adset_id'    => $adset_result['adset_id'],
+			'creative_id' => $creative_result['creative_id'],
+			'ad_id'       => $ad_result['ad_id'],
+			'total_cost'  => $ads_config['campaign']['budget'],
+		);
+	}
 
-        if (strlen($title) > 40) {
-            $title = substr($title, 0, 37) . '...';
-        }
+	/**
+	 * Create compelling ad title for job posting
+	 */
+	private function createJobAdTitle( array $job_data ): string {
+		$title   = $job_data['title'] ?? '';
+		$company = $job_data['company'] ?? '';
 
-        return "Job Opening: {$title} at {$company}";
-    }
+		if ( strlen( $title ) > 40 ) {
+			$title = substr( $title, 0, 37 ) . '...';
+		}
 
-    /**
-     * Create compelling ad text for job posting
-     */
-    private function createJobAdText(array $job_data): string
-    {
-        $title    = $job_data['title'] ?? '';
-        $company  = $job_data['company'] ?? '';
-        $location = $job_data['location'] ?? '';
-        $salary   = $job_data['salary'] ?? '';
+		return "Job Opening: {$title} at {$company}";
+	}
 
-        $text  = "🚀 HOT JOB OPPORTUNITY! 🚀\n\n";
-        $text .= "Position: {$title}\n";
-        $text .= "Company: {$company}\n";
+	/**
+	 * Create compelling ad text for job posting
+	 */
+	private function createJobAdText( array $job_data ): string {
+		$title    = $job_data['title'] ?? '';
+		$company  = $job_data['company'] ?? '';
+		$location = $job_data['location'] ?? '';
+		$salary   = $job_data['salary'] ?? '';
 
-        if ($location) {
-            $text .= "Location: {$location}\n";
-        }
+		$text  = "🚀 HOT JOB OPPORTUNITY! 🚀\n\n";
+		$text .= "Position: {$title}\n";
+		$text .= "Company: {$company}\n";
 
-        if ($salary) {
-            $text .= "Salary: {$salary}\n";
-        }
+		if ( $location ) {
+			$text .= "Location: {$location}\n";
+		}
 
-        $text .= "\nApply now and take the next step in your career!\n\n";
-        $text .= '#JobOpening #Hiring #CareerOpportunity';
+		if ( $salary ) {
+			$text .= "Salary: {$salary}\n";
+		}
 
-        return $text;
-    }
+		$text .= "\nApply now and take the next step in your career!\n\n";
+		$text .= '#JobOpening #Hiring #CareerOpportunity';
 
-    /**
-     * Format targeting for Facebook API
-     */
-    private function formatTargeting(array $targeting): array
-    {
-        $formatted = array();
+		return $text;
+	}
 
-        // Age targeting
-        if (! empty($targeting['age_min']) || ! empty($targeting['age_max'])) {
-            $formatted['age_min'] = $targeting['age_min'] ?? 18;
-            $formatted['age_max'] = $targeting['age_max'] ?? 65;
-        }
+	/**
+	 * Format targeting for Facebook API
+	 */
+	private function formatTargeting( array $targeting ): array {
+		$formatted = array();
 
-        // Gender targeting
-        if (! empty($targeting['genders'])) {
-            $formatted['genders'] = $targeting['genders']; // [1=male, 2=female]
-        }
+		// Age targeting
+		if ( ! empty( $targeting['age_min'] ) || ! empty( $targeting['age_max'] ) ) {
+			$formatted['age_min'] = $targeting['age_min'] ?? 18;
+			$formatted['age_max'] = $targeting['age_max'] ?? 65;
+		}
 
-        // Location targeting
-        if (! empty($targeting['geo_locations'])) {
-            $formatted['geo_locations'] = $targeting['geo_locations'];
-        }
+		// Gender targeting
+		if ( ! empty( $targeting['genders'] ) ) {
+			$formatted['genders'] = $targeting['genders']; // [1=male, 2=female]
+		}
 
-        // Interest targeting
-        if (! empty($targeting['interests'])) {
-            $formatted['interests'] = array_map(
-                function ($interest) {
-                    return array(
-                        'id'   => $interest,
-                        'name' => $interest,
-                    );
-                },
-                $targeting['interests']
-            );
-        }
+		// Location targeting
+		if ( ! empty( $targeting['geo_locations'] ) ) {
+			$formatted['geo_locations'] = $targeting['geo_locations'];
+		}
 
-        // Job title targeting
-        if (! empty($targeting['job_titles'])) {
-            $formatted['job_titles'] = $targeting['job_titles'];
-        }
+		// Interest targeting
+		if ( ! empty( $targeting['interests'] ) ) {
+			$formatted['interests'] = array_map(
+				function ( $interest ) {
+					return array(
+						'id'   => $interest,
+						'name' => $interest,
+					);
+				},
+				$targeting['interests']
+			);
+		}
 
-        return $formatted;
-    }
+		// Job title targeting
+		if ( ! empty( $targeting['job_titles'] ) ) {
+			$formatted['job_titles'] = $targeting['job_titles'];
+		}
 
-    /**
-     * Get campaign performance metrics
-     */
-    public function getCampaignMetrics(string $campaign_id, string $account_id): array
-    {
-        $response = $this->makeAdsApiRequest(
-            'act_' . $account_id . '/campaigns',
-            array(
-                'fields'    => 'id,name,status,insights{impressions,clicks,spend,reach,actions}',
-                'filtering' => array(
-                    array(
-                        'field'    => 'campaign.id',
-                        'operator' => 'EQUAL',
-                        'value'    => $campaign_id,
-                    ),
-                ),
-            ),
-            'GET'
-        );
+		return $formatted;
+	}
 
-        $campaign = $response['data'][0] ?? array();
+	/**
+	 * Get campaign performance metrics
+	 */
+	public function getCampaignMetrics( string $campaign_id, string $account_id ): array {
+		$response = $this->makeAdsApiRequest(
+			'act_' . $account_id . '/campaigns',
+			array(
+				'fields'    => 'id,name,status,insights{impressions,clicks,spend,reach,actions}',
+				'filtering' => array(
+					array(
+						'field'    => 'campaign.id',
+						'operator' => 'EQUAL',
+						'value'    => $campaign_id,
+					),
+				),
+			),
+			'GET'
+		);
 
-        return array(
-            'success'     => true,
-            'campaign_id' => $campaign_id,
-            'name'        => $campaign['name'] ?? '',
-            'status'      => $campaign['status'] ?? '',
-            'insights'    => $campaign['insights'] ?? array(),
-            'impressions' => $campaign['insights']['data'][0]['impressions'] ?? 0,
-            'clicks'      => $campaign['insights']['data'][0]['clicks'] ?? 0,
-            'spend'       => $campaign['insights']['data'][0]['spend'] ?? 0,
-            'reach'       => $campaign['insights']['data'][0]['reach'] ?? 0,
-        );
-    }
+		$campaign = $response['data'][0] ?? array();
 
-    /**
-     * Convert currency to cents
-     */
-    private function convertToCents(float $amount): int
-    {
-        return (int) ( $amount * 100 );
-    }
+		return array(
+			'success'     => true,
+			'campaign_id' => $campaign_id,
+			'name'        => $campaign['name'] ?? '',
+			'status'      => $campaign['status'] ?? '',
+			'insights'    => $campaign['insights'] ?? array(),
+			'impressions' => $campaign['insights']['data'][0]['impressions'] ?? 0,
+			'clicks'      => $campaign['insights']['data'][0]['clicks'] ?? 0,
+			'spend'       => $campaign['insights']['data'][0]['spend'] ?? 0,
+			'reach'       => $campaign['insights']['data'][0]['reach'] ?? 0,
+		);
+	}
 
-    /**
-     * Make Ads API request
-     */
-    private function makeAdsApiRequest(string $endpoint, array $params, string $method)
-    {
-        $url = $this->ads_api_base . '/' . $endpoint;
+	/**
+	 * Convert currency to cents
+	 */
+	private function convertToCents( float $amount ): int {
+		return (int) ( $amount * 100 );
+	}
 
-        $args = array(
-            'method'  => $method,
-            'headers' => array(
-                'Authorization' => 'Bearer ' . ( $this->facebook_platform->getCredentials()['access_token'] ?? '' ),
-                'Content-Type'  => 'application/json',
-            ),
-            'timeout' => 30,
-        );
+	/**
+	 * Make Ads API request
+	 */
+	private function makeAdsApiRequest( string $endpoint, array $params, string $method ) {
+		$url = $this->ads_api_base . '/' . $endpoint;
 
-        if ($method === 'GET') {
-            $url .= '?' . http_build_query($params);
-        } else {
-            $args['body'] = json_encode($params);
-        }
+		$args = array(
+			'method'  => $method,
+			'headers' => array(
+				'Authorization' => 'Bearer ' . ( $this->facebook_platform->getCredentials()['access_token'] ?? '' ),
+				'Content-Type'  => 'application/json',
+			),
+			'timeout' => 30,
+		);
 
-        $response = wp_remote_request($url, $args);
+		if ( $method == 'GET' ) {
+			$url .= '?' . http_build_query( $params );
+		} else {
+			$args['body'] = json_encode( $params );
+		}
 
-        if (is_wp_error($response)) {
-            throw new \Exception('Ads API request failed: ' . $response->get_error_message());
-        }
+		$response = wp_remote_request( $url, $args );
 
-        $body = json_decode(wp_remote_retrieve_body($response), true);
+		if ( is_wp_error( $response ) ) {
+			throw new \Exception( 'Ads API request failed: ' . $response->get_error_message() );
+		}
 
-        if (isset($body['error'])) {
-            throw new \Exception('Facebook Ads API error: ' . $body['error']['message']);
-        }
+		$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
-        return $body;
-    }
+		if ( isset( $body['error'] ) ) {
+			throw new \Exception( 'Facebook Ads API error: ' . $body['error']['message'] );
+		}
+
+		return $body;
+	}
 }

@@ -113,8 +113,8 @@ Adapt the following workflow based on context. If the project differs from puntW
 2. **Propose Improvements**: Suggest errors and issues fixes and enhancements, grouped by category (e.g., speed, simplicity). Add or modify the debug logs to prevent the issues in the future.
 
 3. **Validation Steps**: **Always check debug.log via FTP (using credentials from .env) for new errors before running any other tests first.** Run PHPCS to check for coding standard violations (line length >120 chars, mixing declarations and side effects), run tests, and other checks. Run static analysis (PHPStan/Psalm) if available to detect security issues, unused code, and potential bugs. If tools unavailable, suggest manual alternatives.
-   - `./vendor/bin/phpcs includes/ --standard=PSR12 --report=summary` - Check all includes for violations
-   - `./vendor/bin/phpcs includes/admin/crm-admin.php --standard=PSR12` - Check specific file
+   - `./vendor/bin/phpcs includes/ --standard=WordPress --report=summary` - Check all includes for violations
+   - `./vendor/bin/phpcs includes/admin/crm-admin.php --standard=WordPress` - Check specific file
    - `./vendor/bin/phpunit --testdox` - Run tests with verbose output
 
 4. **Deployment Prep**: Clean debug.log if needed, open https://belgiumjobs.work/ in VS Code Simple Browser to verify plugin functionality, check for new errors in debug.log via FTP (using credentials from .env). If static analysis tools are configured, run them to verify no new issues introduced.

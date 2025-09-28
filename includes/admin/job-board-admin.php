@@ -11,310 +11,302 @@
 namespace Puntwork\Admin;
 
 // Prevent direct access
-if (! defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
  * Job Board configuration admin page
  */
-class JobBoardAdmin
-{
-    /**
-     * Initialize the admin page
-     */
-    public static function init(): void
-    {
-        add_action('admin_menu', array( self::class, 'addAdminMenu' ));
-        add_action('admin_enqueueScripts', array( self::class, 'enqueueScripts' ));
-        add_action('wp_ajax_puntwork_test_job_board', array( self::class, 'ajaxTestJobBoard' ));
-        add_action('wp_ajax_puntwork_save_job_board', array( self::class, 'ajaxSaveJobBoard' ));
-    }
+class JobBoardAdmin {
 
-    /**
-     * Add admin menu
-     */
-    public static function addAdminMenu(): void
-    {
-        add_submenu_page(
-            'puntwork-admin',
-            __('Job Boards', 'puntwork'),
-            __('Job Boards', 'puntwork'),
-            'manage_options',
-            'puntwork-job-boards',
-            array( self::class, 'renderAdminPage' )
-        );
-    }
+	/**
+	 * Initialize the admin page
+	 */
+	public static function init(): void {
+		add_action( 'admin_menu', array( self::class, 'addAdminMenu' ) );
+		add_action( 'admin_enqueueScripts', array( self::class, 'enqueueScripts' ) );
+		add_action( 'wp_ajax_puntwork_test_job_board', array( self::class, 'ajaxTestJobBoard' ) );
+		add_action( 'wp_ajax_puntwork_save_job_board', array( self::class, 'ajaxSaveJobBoard' ) );
+	}
 
-    /**
-     * Enqueue admin scripts and styles
-     */
-    public static function enqueueScripts($hook): void
-    {
-        if ($hook !== 'puntwork_page_puntwork-job-boards') {
-            return;
-        }
+	/**
+	 * Add admin menu
+	 */
+	public static function addAdminMenu(): void {
+		add_submenu_page(
+			'puntwork-admin',
+			__( 'Job Boards', 'puntwork' ),
+			__( 'Job Boards', 'puntwork' ),
+			'manage_options',
+			'puntwork-job-boards',
+			array( self::class, 'renderAdminPage' )
+		);
+	}
 
-        wp_enqueue_style('puntwork-job-boards', plugin_dir_url(__FILE__) . '../../assets/css/job-boards-admin.css', array(), PUNTWORK_VERSION);
-        wp_enqueue_script('puntwork-job-boards', plugin_dir_url(__FILE__) . '../../assets/js/job-boards-admin.js', array( 'jquery' ), PUNTWORK_VERSION, true);
+	/**
+	 * Enqueue admin scripts and styles
+	 */
+	public static function enqueueScripts( $hook ): void {
+		if ( $hook !== 'puntwork_page_puntwork-job-boards' ) {
+			return;
+		}
 
-        wp_localize_script(
-            'puntwork-job-boards',
-            'puntworkJobBoards',
-            array(
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce'    => wp_create_nonce('puntwork_job_boards'),
-                'strings'  => array(
-                    'testing'      => __('Testing connection...', 'puntwork'),
-                    'test_success' => __('Connection successful!', 'puntwork'),
-                    'test_failed'  => __('Connection failed!', 'puntwork'),
-                    'saving'       => __('Saving...', 'puntwork'),
-                    'save_success' => __('Settings saved!', 'puntwork'),
-                    'save_failed'  => __('Save failed!', 'puntwork'),
-                ),
-            )
-        );
-    }
+		wp_enqueue_style( 'puntwork-job-boards', plugin_dir_url( __FILE__ ) . '../../assets/css/job-boards-admin.css', array(), PUNTWORK_VERSION );
+		wp_enqueue_script( 'puntwork-job-boards', plugin_dir_url( __FILE__ ) . '../../assets/js/job-boards-admin.js', array( 'jquery' ), PUNTWORK_VERSION, true );
 
-    /**
-     * Render the admin page
-     */
-    public static function renderAdminPage(): void
-    {
-        if (! current_user_can('manage_options')) {
-            wp_die(__('You do not have sufficient permissions to access this page.'));
-        }
+		wp_localize_script(
+			'puntwork-job-boards',
+			'puntworkJobBoards',
+			array(
+				'ajax_url' => admin_url( 'admin-ajax.php' ),
+				'nonce'    => wp_create_nonce( 'puntwork_job_boards' ),
+				'strings'  => array(
+					'testing'      => __( 'Testing connection...', 'puntwork' ),
+					'test_success' => __( 'Connection successful!', 'puntwork' ),
+					'test_failed'  => __( 'Connection failed!', 'puntwork' ),
+					'saving'       => __( 'Saving...', 'puntwork' ),
+					'save_success' => __( 'Settings saved!', 'puntwork' ),
+					'save_failed'  => __( 'Save failed!', 'puntwork' ),
+				),
+			)
+		);
+	}
 
-        // Include the JobBoardManager
-        include_once plugin_dir_path(dirname(__DIR__, 1)) . 'jobboards/jobboard-manager.php';
+	/**
+	 * Render the admin page
+	 */
+	public static function renderAdminPage(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
+		}
 
-        $available_boards = \Puntwork\JobBoards\JobBoardManager::getAvailableBoards();
-        $board_configs    = \Puntwork\JobBoards\JobBoardManager::getAllBoardConfigs();
+		// Include the JobBoardManager
+		include_once plugin_dir_path( dirname( __DIR__, 1 ) ) . 'jobboards/jobboard-manager.php';
 
-        ?>
-        <div class="wrap">
-            <h1><?php _e('Job Board Integrations', 'puntwork'); ?></h1>
+		$available_boards = \Puntwork\JobBoards\JobBoardManager::getAvailableBoards();
+		$board_configs    = \Puntwork\JobBoards\JobBoardManager::getAllBoardConfigs();
 
-            <div class="puntwork-job-boards-container">
-                <div class="puntwork-job-boards-intro">
-                    <p><?php _e('Configure integrations with popular job boards to expand your job import sources. Each job board requires API credentials which you can obtain from their developer portals.', 'puntwork'); ?></p>
-                </div>
+		?>
+		<div class="wrap">
+			<h1><?php _e( 'Job Board Integrations', 'puntwork' ); ?></h1>
 
-                <div class="puntwork-job-boards-grid">
-        <?php foreach ($available_boards as $board_id => $board_info) : ?>
-            <?php
-            $config     = $board_configs[ $board_id ] ?? array();
-            $is_enabled = isset($config['enabled']) && $config['enabled'];
-            ?>
-                        <div class="puntwork-job-board-card <?php echo $is_enabled ? 'enabled' : 'disabled'; ?>" data-board-id="<?php echo esc_attr($board_id); ?>">
-                            <div class="puntwork-job-board-header">
-                                <h3><?php echo esc_html($board_info['name']); ?></h3>
-                                <label class="puntwork-toggle">
-                                    <input type="checkbox" class="puntwork-board-enabled" <?php checked($is_enabled); ?>>
-                                    <span class="puntwork-toggle-slider"></span>
-                                </label>
-                            </div>
+			<div class="puntwork-job-boards-container">
+				<div class="puntwork-job-boards-intro">
+					<p><?php _e( 'Configure integrations with popular job boards to expand your job import sources. Each job board requires API credentials which you can obtain from their developer portals.', 'puntwork' ); ?></p>
+				</div>
 
-                            <div class="puntwork-job-board-content">
-                                <form class="puntwork-board-config-form" style="<?php echo $is_enabled ? '' : 'display: none;'; ?>">
-            <?php self::renderBoardConfigFields($board_id, $config); ?>
-                                    <div class="puntwork-form-actions">
-                                        <button type="button" class="button puntwork-test-connection">
-            <?php _e('Test Connection', 'puntwork'); ?>
-                                        </button>
-                                        <button type="button" class="puntwork-btn puntwork-btn--primary puntwork-save-config">
-            <?php _e('Save Settings', 'puntwork'); ?>
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-        <?php endforeach; ?>
-                </div>
+				<div class="puntwork-job-boards-grid">
+		<?php foreach ( $available_boards as $board_id => $board_info ) : ?>
+			<?php
+			$config     = $board_configs[ $board_id ] ?? array();
+			$is_enabled = isset( $config['enabled'] ) && $config['enabled'];
+			?>
+						<div class="puntwork-job-board-card <?php echo $is_enabled ? 'enabled' : 'disabled'; ?>" data-board-id="<?php echo esc_attr( $board_id ); ?>">
+							<div class="puntwork-job-board-header">
+								<h3><?php echo esc_html( $board_info['name'] ); ?></h3>
+								<label class="puntwork-toggle">
+									<input type="checkbox" class="puntwork-board-enabled" <?php checked( $is_enabled ); ?>>
+									<span class="puntwork-toggle-slider"></span>
+								</label>
+							</div>
 
-                <div class="puntwork-job-boards-help">
-                    <h3><?php _e('Getting API Credentials', 'puntwork'); ?></h3>
-                    <ul>
-                        <li><strong>Indeed:</strong> <?php _e('Sign up for a publisher account at indeed.com/publisher', 'puntwork'); ?></li>
-                        <li><strong>LinkedIn:</strong> <?php _e('Create an app at developers.linkedin.com and get OAuth 2.0 credentials', 'puntwork'); ?></li>
-                        <li><strong>Glassdoor:</strong> <?php _e('Apply for API access at glassdoor.com/developer/index.htm', 'puntwork'); ?></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <?php
-    }
+							<div class="puntwork-job-board-content">
+								<form class="puntwork-board-config-form" style="<?php echo $is_enabled ? '' : 'display: none;'; ?>">
+			<?php self::renderBoardConfigFields( $board_id, $config ); ?>
+									<div class="puntwork-form-actions">
+										<button type="button" class="button puntwork-test-connection">
+			<?php _e( 'Test Connection', 'puntwork' ); ?>
+										</button>
+										<button type="button" class="puntwork-btn puntwork-btn--primary puntwork-save-config">
+			<?php _e( 'Save Settings', 'puntwork' ); ?>
+										</button>
+									</div>
+								</form>
+							</div>
+						</div>
+		<?php endforeach; ?>
+				</div>
 
-    /**
-     * Render configuration fields for a specific job board
-     */
-    private static function renderBoardConfigFields(string $board_id, array $config): void
-    {
-        switch ($board_id) {
-            case 'indeed':
-                ?>
-                <div class="puntwork-form-field">
-                    <label for="indeed_publisher_id"><?php _e('Publisher ID', 'puntwork'); ?></label>
-                    <input type="text" id="indeed_publisher_id" name="publisher_id" value="<?php echo esc_attr($config['publisher_id'] ?? ''); ?>" required>
-                    <p class="description"><?php _e('Your Indeed Publisher ID', 'puntwork'); ?></p>
-                </div>
-                <?php
-                break;
+				<div class="puntwork-job-boards-help">
+					<h3><?php _e( 'Getting API Credentials', 'puntwork' ); ?></h3>
+					<ul>
+						<li><strong>Indeed:</strong> <?php _e( 'Sign up for a publisher account at indeed.com/publisher', 'puntwork' ); ?></li>
+						<li><strong>LinkedIn:</strong> <?php _e( 'Create an app at developers.linkedin.com and get OAuth 2.0 credentials', 'puntwork' ); ?></li>
+						<li><strong>Glassdoor:</strong> <?php _e( 'Apply for API access at glassdoor.com/developer/index.htm', 'puntwork' ); ?></li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		<?php
+	}
 
-            case 'linkedin':
-                ?>
-                <div class="puntwork-form-field">
-                    <label for="linkedin_access_token"><?php _e('Access Token', 'puntwork'); ?></label>
-                    <input type="password" id="linkedin_access_token" name="access_token" value="<?php echo esc_attr($config['access_token'] ?? ''); ?>" required>
-                    <p class="description"><?php _e('LinkedIn OAuth 2.0 access token', 'puntwork'); ?></p>
-                </div>
-                <?php
-                break;
+	/**
+	 * Render configuration fields for a specific job board
+	 */
+	private static function renderBoardConfigFields( string $board_id, array $config ): void {
+		switch ( $board_id ) {
+			case 'indeed':
+				?>
+				<div class="puntwork-form-field">
+					<label for="indeed_publisher_id"><?php _e( 'Publisher ID', 'puntwork' ); ?></label>
+					<input type="text" id="indeed_publisher_id" name="publisher_id" value="<?php echo esc_attr( $config['publisher_id'] ?? '' ); ?>" required>
+					<p class="description"><?php _e( 'Your Indeed Publisher ID', 'puntwork' ); ?></p>
+				</div>
+				<?php
+				break;
 
-            case 'glassdoor':
-                ?>
-                <div class="puntwork-form-field">
-                    <label for="glassdoor_partner_id"><?php _e('Partner ID', 'puntwork'); ?></label>
-                    <input type="text" id="glassdoor_partner_id" name="partner_id" value="<?php echo esc_attr($config['partner_id'] ?? ''); ?>" required>
-                </div>
-                <div class="puntwork-form-field">
-                    <label for="glassdoor_partner_key"><?php _e('Partner Key', 'puntwork'); ?></label>
-                    <input type="password" id="glassdoor_partner_key" name="partner_key" value="<?php echo esc_attr($config['partner_key'] ?? ''); ?>" required>
-                    <p class="description"><?php _e('Your Glassdoor API credentials', 'puntwork'); ?></p>
-                </div>
-                <?php
-                break;
-        }
-    }
+			case 'linkedin':
+				?>
+				<div class="puntwork-form-field">
+					<label for="linkedin_access_token"><?php _e( 'Access Token', 'puntwork' ); ?></label>
+					<input type="password" id="linkedin_access_token" name="access_token" value="<?php echo esc_attr( $config['access_token'] ?? '' ); ?>" required>
+					<p class="description"><?php _e( 'LinkedIn OAuth 2.0 access token', 'puntwork' ); ?></p>
+				</div>
+				<?php
+				break;
 
-    /**
-     * AJAX handler for testing job board connections
-     */
-    public static function ajaxTestJobBoard(): void
-    {
-        check_ajax_referer('puntwork_job_boards', 'nonce');
+			case 'glassdoor':
+				?>
+				<div class="puntwork-form-field">
+					<label for="glassdoor_partner_id"><?php _e( 'Partner ID', 'puntwork' ); ?></label>
+					<input type="text" id="glassdoor_partner_id" name="partner_id" value="<?php echo esc_attr( $config['partner_id'] ?? '' ); ?>" required>
+				</div>
+				<div class="puntwork-form-field">
+					<label for="glassdoor_partner_key"><?php _e( 'Partner Key', 'puntwork' ); ?></label>
+					<input type="password" id="glassdoor_partner_key" name="partner_key" value="<?php echo esc_attr( $config['partner_key'] ?? '' ); ?>" required>
+					<p class="description"><?php _e( 'Your Glassdoor API credentials', 'puntwork' ); ?></p>
+				</div>
+				<?php
+				break;
+		}
+	}
 
-        if (! current_user_can('manage_options')) {
-            wp_die(__('Insufficient permissions'));
-        }
+	/**
+	 * AJAX handler for testing job board connections
+	 */
+	public static function ajaxTestJobBoard(): void {
+		check_ajax_referer( 'puntwork_job_boards', 'nonce' );
 
-        $board_id = sanitize_text_field($_POST['board_id'] ?? '');
-        $config   = $_POST['config'] ?? array();
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( __( 'Insufficient permissions' ) );
+		}
 
-        if (empty($board_id)) {
-            wp_send_json_error(array( 'message' => 'Board ID is required' ));
-        }
+		$board_id = sanitize_text_field( $_POST['board_id'] ?? '' );
+		$config   = $_POST['config'] ?? array();
 
-        // Sanitize config
-        $config = self::sanitizeBoardConfig($board_id, $config);
+		if ( empty( $board_id ) ) {
+			wp_send_json_error( array( 'message' => 'Board ID is required' ) );
+		}
 
-        try {
-            include_once plugin_dir_path(dirname(__DIR__, 1)) . 'jobboards/jobboard-manager.php';
+		// Sanitize config
+		$config = self::sanitizeBoardConfig( $board_id, $config );
 
-            // Create a temporary board instance for testing
-            $available_boards = \Puntwork\JobBoards\JobBoardManager::getAvailableBoards();
+		try {
+			include_once plugin_dir_path( dirname( __DIR__, 1 ) ) . 'jobboards/jobboard-manager.php';
 
-            if (! isset($available_boards[ $board_id ])) {
-                wp_send_json_error(array( 'message' => 'Invalid board ID' ));
-            }
+			// Create a temporary board instance for testing
+			$available_boards = \Puntwork\JobBoards\JobBoardManager::getAvailableBoards();
 
-            $board_class = $available_boards[ $board_id ]['class'];
-            $board       = new $board_class($config);
+			if ( ! isset( $available_boards[ $board_id ] ) ) {
+				wp_send_json_error( array( 'message' => 'Invalid board ID' ) );
+			}
 
-            $test_result = array(
-                'board_id'   => $board_id,
-                'configured' => $board->isConfigured(),
-            );
+			$board_class = $available_boards[ $board_id ]['class'];
+			$board       = new $board_class( $config );
 
-            if ($board->isConfigured()) {
-                // Try a test request
-                $test_jobs                = $board->fetchJobs(array( 'limit' => 1 ));
-                $test_result['success']   = true;
-                $test_result['job_count'] = count($test_jobs);
-                $test_result['message']   = sprintf(__('Connection successful! Found %d test jobs.', 'puntwork'), count($test_jobs));
-            } else {
-                $test_result['success'] = false;
-                $test_result['message'] = __('Board is not properly configured.', 'puntwork');
-            }
+			$test_result = array(
+				'board_id'   => $board_id,
+				'configured' => $board->isConfigured(),
+			);
 
-            wp_send_json_success($test_result);
-        } catch (\Exception $e) {
-            wp_send_json_error(
-                array(
-                    'message'  => $e->getMessage(),
-                    'board_id' => $board_id,
-                )
-            );
-        }
-    }
+			if ( $board->isConfigured() ) {
+				// Try a test request
+				$test_jobs                = $board->fetchJobs( array( 'limit' => 1 ) );
+				$test_result['success']   = true;
+				$test_result['job_count'] = count( $test_jobs );
+				$test_result['message']   = sprintf( __( 'Connection successful! Found %d test jobs.', 'puntwork' ), count( $test_jobs ) );
+			} else {
+				$test_result['success'] = false;
+				$test_result['message'] = __( 'Board is not properly configured.', 'puntwork' );
+			}
 
-    /**
-     * AJAX handler for saving job board configurations
-     */
-    public static function ajaxSaveJobBoard(): void
-    {
-        check_ajax_referer('puntwork_job_boards', 'nonce');
+			wp_send_json_success( $test_result );
+		} catch ( \Exception $e ) {
+			wp_send_json_error(
+				array(
+					'message'  => $e->getMessage(),
+					'board_id' => $board_id,
+				)
+			);
+		}
+	}
 
-        if (! current_user_can('manage_options')) {
-            wp_die(__('Insufficient permissions'));
-        }
+	/**
+	 * AJAX handler for saving job board configurations
+	 */
+	public static function ajaxSaveJobBoard(): void {
+		check_ajax_referer( 'puntwork_job_boards', 'nonce' );
 
-        $board_id = sanitize_text_field($_POST['board_id'] ?? '');
-        $config   = $_POST['config'] ?? array();
-        $enabled  = isset($_POST['enabled']) && $_POST['enabled'] === 'true';
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( __( 'Insufficient permissions' ) );
+		}
 
-        if (empty($board_id)) {
-            wp_send_json_error(array( 'message' => 'Board ID is required' ));
-        }
+		$board_id = sanitize_text_field( $_POST['board_id'] ?? '' );
+		$config   = $_POST['config'] ?? array();
+		$enabled  = isset( $_POST['enabled'] ) && $_POST['enabled'] == 'true';
 
-        // Sanitize config
-        $config            = self::sanitizeBoardConfig($board_id, $config);
-        $config['enabled'] = $enabled;
+		if ( empty( $board_id ) ) {
+			wp_send_json_error( array( 'message' => 'Board ID is required' ) );
+		}
 
-        try {
-            include_once plugin_dir_path(dirname(__DIR__, 1)) . 'jobboards/jobboard-manager.php';
+		// Sanitize config
+		$config            = self::sanitizeBoardConfig( $board_id, $config );
+		$config['enabled'] = $enabled;
 
-            $success = \Puntwork\JobBoards\JobBoardManager::configureBoard($board_id, $config);
+		try {
+			include_once plugin_dir_path( dirname( __DIR__, 1 ) ) . 'jobboards/jobboard-manager.php';
 
-            if ($success) {
-                wp_send_json_success(
-                    array(
-                        'message'  => __('Settings saved successfully!', 'puntwork'),
-                        'board_id' => $board_id,
-                    )
-                );
-            } else {
-                wp_send_json_error(array( 'message' => __('Failed to save settings.', 'puntwork') ));
-            }
-        } catch (\Exception $e) {
-            wp_send_json_error(
-                array(
-                    'message'  => $e->getMessage(),
-                    'board_id' => $board_id,
-                )
-            );
-        }
-    }
+			$success = \Puntwork\JobBoards\JobBoardManager::configureBoard( $board_id, $config );
 
-    /**
-     * Sanitize board configuration data
-     */
-    private static function sanitizeBoardConfig(string $board_id, array $config): array
-    {
-        $sanitized = array();
+			if ( $success ) {
+				wp_send_json_success(
+					array(
+						'message'  => __( 'Settings saved successfully!', 'puntwork' ),
+						'board_id' => $board_id,
+					)
+				);
+			} else {
+				wp_send_json_error( array( 'message' => __( 'Failed to save settings.', 'puntwork' ) ) );
+			}
+		} catch ( \Exception $e ) {
+			wp_send_json_error(
+				array(
+					'message'  => $e->getMessage(),
+					'board_id' => $board_id,
+				)
+			);
+		}
+	}
 
-        foreach ($config as $key => $value) {
-            if (is_string($value)) {
-                $sanitized[ $key ] = sanitize_text_field($value);
-            } elseif (is_array($value)) {
-                $sanitized[ $key ] = array_map('sanitize_text_field', $value);
-            } else {
-                $sanitized[ $key ] = $value;
-            }
-        }
+	/**
+	 * Sanitize board configuration data
+	 */
+	private static function sanitizeBoardConfig( string $board_id, array $config ): array {
+		$sanitized = array();
 
-        return $sanitized;
-    }
+		foreach ( $config as $key => $value ) {
+			if ( is_string( $value ) ) {
+				$sanitized[ $key ] = sanitize_text_field( $value );
+			} elseif ( is_array( $value ) ) {
+				$sanitized[ $key ] = array_map( 'sanitize_text_field', $value );
+			} else {
+				$sanitized[ $key ] = $value;
+			}
+		}
+
+		return $sanitized;
+	}
 }
 
 // Initialize the admin page

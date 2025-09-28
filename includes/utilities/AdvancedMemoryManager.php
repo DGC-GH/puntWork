@@ -11,215 +11,207 @@
 namespace Puntwork\Utilities;
 
 // Prevent direct access
-if (! defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
  * Advanced Memory Manager for large-scale imports
  */
-class AdvancedMemoryManager extends MemoryManager
-{
-    /**
-     * Streaming JSONL processor for memory-efficient large file handling
-     */
-    public static function processJsonlStreaming(string $filePath, callable $processor, int $chunkSize = 1000): array
-    {
-        $stats = array(
-            'total_processed' => 0,
-            'memory_peaks'    => array(),
-            'processing_time' => 0,
-        );
+class AdvancedMemoryManager extends MemoryManager {
 
-        $startTime = microtime(true);
+	/**
+	 * Streaming JSONL processor for memory-efficient large file handling
+	 */
+	public static function processJsonlStreaming( string $filePath, callable $processor, int $chunkSize = 1000 ): array {
+		$stats = array(
+			'total_processed' => 0,
+			'memory_peaks'    => array(),
+			'processing_time' => 0,
+		);
 
-        if (! file_exists($filePath)) {
-            throw new \Exception("File not found: $filePath");
-        }
+		$startTime = microtime( true );
 
-        $handle = fopen($filePath, 'r');
-        if (! $handle) {
-            throw new \Exception("Cannot open file: $filePath");
-        }
+		if ( ! file_exists( $filePath ) ) {
+			throw new \Exception( "File not found: $filePath" );
+		}
 
-        $buffer     = array();
-        $lineNumber = 0;
+		$handle = fopen( $filePath, 'r' );
+		if ( ! $handle ) {
+			throw new \Exception( "Cannot open file: $filePath" );
+		}
 
-        while (( $line = fgets($handle) ) !== false) {
-            ++$lineNumber;
-            $line = trim($line);
+		$buffer     = array();
+		$lineNumber = 0;
 
-            if (empty($line)) {
-                continue;
-            }
+		while ( ( $line = fgets( $handle ) ) !== false ) {
+			++$lineNumber;
+			$line = trim( $line );
 
-            $item = json_decode($line, true);
-            if ($item === null) {
-                continue; // Skip invalid JSON
-            }
+			if ( empty( $line ) ) {
+				continue;
+			}
 
-            $buffer[] = $item;
+			$item = json_decode( $line, true );
+			if ( $item == null ) {
+				continue; // Skip invalid JSON
+			}
 
-            // Process in chunks
-            if (count($buffer) >= $chunkSize) {
-                $processed                 = $processor($buffer);
-                $stats['total_processed'] += $processed;
-                $stats['memory_peaks'][]   = memory_get_peak_usage(true);
-                $buffer                    = array();
+			$buffer[] = $item;
 
-                // Memory check and cleanup
-                self::checkAndCleanup();
-            }
-        }
+			// Process in chunks
+			if ( count( $buffer ) >= $chunkSize ) {
+				$processed                 = $processor( $buffer );
+				$stats['total_processed'] += $processed;
+				$stats['memory_peaks'][]   = memory_get_peak_usage( true );
+				$buffer                    = array();
 
-        // Process remaining items
-        if (! empty($buffer)) {
-            $processed                 = $processor($buffer);
-            $stats['total_processed'] += $processed;
-            $stats['memory_peaks'][]   = memory_get_peak_usage(true);
-        }
+				// Memory check and cleanup
+				self::checkAndCleanup();
+			}
+		}
 
-        fclose($handle);
+		// Process remaining items
+		if ( ! empty( $buffer ) ) {
+			$processed                 = $processor( $buffer );
+			$stats['total_processed'] += $processed;
+			$stats['memory_peaks'][]   = memory_get_peak_usage( true );
+		}
 
-        $stats['processing_time'] = microtime(true) - $startTime;
-        $stats['avg_memory_peak'] = ! empty($stats['memory_peaks'])
-        ? array_sum($stats['memory_peaks']) / count($stats['memory_peaks'])
-        : 0;
+		fclose( $handle );
 
-        return $stats;
-    }
+		$stats['processing_time'] = microtime( true ) - $startTime;
+		$stats['avg_memory_peak'] = ! empty( $stats['memory_peaks'] )
+		? array_sum( $stats['memory_peaks'] ) / count( $stats['memory_peaks'] )
+		: 0;
 
-    /**
-     * Memory-mapped file reader for extremely large files
-     */
-    public static function readLargeFileChunk(string $filePath, int $offset, int $length): string
-    {
-        if (! function_exists('fopen')) {
-            throw new \Exception('File functions not available');
-        }
+		return $stats;
+	}
 
-        $handle = fopen($filePath, 'r');
-        if (! $handle) {
-            throw new \Exception("Cannot open file: $filePath");
-        }
+	/**
+	 * Memory-mapped file reader for extremely large files
+	 */
+	public static function readLargeFileChunk( string $filePath, int $offset, int $length ): string {
+		if ( ! function_exists( 'fopen' ) ) {
+			throw new \Exception( 'File functions not available' );
+		}
 
-        fseek($handle, $offset);
-        $data = fread($handle, $length);
-        fclose($handle);
+		$handle = fopen( $filePath, 'r' );
+		if ( ! $handle ) {
+			throw new \Exception( "Cannot open file: $filePath" );
+		}
 
-        return $data;
-    }
+		fseek( $handle, $offset );
+		$data = fread( $handle, $length );
+		fclose( $handle );
 
-    /**
-     * Adaptive batch sizing based on memory usage patterns
-     */
-    public static function calculateOptimalBatchSize(
-        int $currentBatchSize,
-        float $memoryUsage,
-        float $targetMemoryRatio = 0.7
-    ): int {
-        $memoryLimit  = self::getMemoryLimitBytes();
-        $currentRatio = $memoryUsage / $memoryLimit;
+		return $data;
+	}
 
-        if ($currentRatio > $targetMemoryRatio) {
-            // Reduce batch size
-            $newSize = max(1, (int) ( $currentBatchSize * 0.8 ));
-        } elseif ($currentRatio < $targetMemoryRatio * 0.5) {
-            // Can increase batch size
-            $newSize = min($currentBatchSize * 2, 10000); // Cap at 10k
-        } else {
-            // Keep current size
-            $newSize = $currentBatchSize;
-        }
+	/**
+	 * Adaptive batch sizing based on memory usage patterns
+	 */
+	public static function calculateOptimalBatchSize(
+		int $currentBatchSize,
+		float $memoryUsage,
+		float $targetMemoryRatio = 0.7
+	): int {
+		$memoryLimit  = self::getMemoryLimitBytes();
+		$currentRatio = $memoryUsage / $memoryLimit;
 
-        return $newSize;
-    }
+		if ( $currentRatio > $targetMemoryRatio ) {
+			// Reduce batch size
+			$newSize = max( 1, (int) ( $currentBatchSize * 0.8 ) );
+		} elseif ( $currentRatio < $targetMemoryRatio * 0.5 ) {
+			// Can increase batch size
+			$newSize = min( $currentBatchSize * 2, 10000 ); // Cap at 10k
+		} else {
+			// Keep current size
+			$newSize = $currentBatchSize;
+		}
 
-    /**
-     * Memory pool for reusable objects
-     */
-    private static $objectPool = array();
+		return $newSize;
+	}
 
-    public static function getFromPool(string $className, ...$args)
-    {
-        $key = $className . '_' . md5(serialize($args));
+	/**
+	 * Memory pool for reusable objects
+	 */
+	private static $objectPool = array();
 
-        if (isset(self::$objectPool[ $key ])) {
-            return self::$objectPool[ $key ];
-        }
+	public static function getFromPool( string $className, ...$args ) {
+		$key = $className . '_' . md5( serialize( $args ) );
 
-        // Create new instance
-        $instance                 = new $className(...$args);
-        self::$objectPool[ $key ] = $instance;
+		if ( isset( self::$objectPool[ $key ] ) ) {
+			return self::$objectPool[ $key ];
+		}
 
-        return $instance;
-    }
+		// Create new instance
+		$instance                 = new $className( ...$args );
+		self::$objectPool[ $key ] = $instance;
 
-    public static function clearPool(): void
-    {
-        self::$objectPool = array();
-    }
+		return $instance;
+	}
 
-    /**
-     * Progressive memory cleanup
-     */
-    public static function checkAndCleanup(): void
-    {
-        $memoryUsage = memory_get_usage(true);
-        $memoryLimit = self::getMemoryLimitBytes();
-        $ratio       = $memoryUsage / $memoryLimit;
+	public static function clearPool(): void {
+		self::$objectPool = array();
+	}
 
-        if ($ratio > 0.85) {
-            // Aggressive cleanup
-            self::clearPool();
-            if (function_exists('wp_cache_flush')) {
-                wp_cache_flush();
-            }
-            gc_collect_cycles();
-        } elseif ($ratio > 0.75) {
-            // Moderate cleanup
-            gc_collect_cycles();
-        }
-    }
+	/**
+	 * Progressive memory cleanup
+	 */
+	public static function checkAndCleanup(): void {
+		$memoryUsage = memory_get_usage( true );
+		$memoryLimit = self::getMemoryLimitBytes();
+		$ratio       = $memoryUsage / $memoryLimit;
 
-    /**
-     * Memory usage prediction for batch operations
-     */
-    public static function predictMemoryUsage(int $batchSize, int $itemSizeEstimate = 1024): array
-    {
-        $baseMemory           = memory_get_usage(true);
-        $estimatedBatchMemory = $batchSize * $itemSizeEstimate;
-        $safetyBuffer         = 50 * 1024 * 1024; // 50MB safety buffer
+		if ( $ratio > 0.85 ) {
+			// Aggressive cleanup
+			self::clearPool();
+			if ( function_exists( 'wp_cache_flush' ) ) {
+				wp_cache_flush();
+			}
+			gc_collect_cycles();
+		} elseif ( $ratio > 0.75 ) {
+			// Moderate cleanup
+			gc_collect_cycles();
+		}
+	}
 
-        $predictedPeak = $baseMemory + $estimatedBatchMemory + $safetyBuffer;
-        $memoryLimit   = self::getMemoryLimitBytes();
+	/**
+	 * Memory usage prediction for batch operations
+	 */
+	public static function predictMemoryUsage( int $batchSize, int $itemSizeEstimate = 1024 ): array {
+		$baseMemory           = memory_get_usage( true );
+		$estimatedBatchMemory = $batchSize * $itemSizeEstimate;
+		$safetyBuffer         = 50 * 1024 * 1024; // 50MB safety buffer
 
-        return array(
-            'predicted_peak'         => $predictedPeak,
-            'memory_limit'           => $memoryLimit,
-            'will_exceed_limit'      => $predictedPeak > $memoryLimit,
-            'recommended_batch_size' => $predictedPeak > $memoryLimit ?
-            max(1, (int) ( $batchSize * ( $memoryLimit - $baseMemory - $safetyBuffer ) / $estimatedBatchMemory )) :
-            $batchSize,
-        );
-    }
+		$predictedPeak = $baseMemory + $estimatedBatchMemory + $safetyBuffer;
+		$memoryLimit   = self::getMemoryLimitBytes();
 
-    /**
-     * Compressed caching for large datasets
-     */
-    public static function setCompressed(string $key, $data, string $group = '', int $expiration = 3600): bool
-    {
-        $compressed = gzcompress(serialize($data), 6);
-        return self::set($key . '_compressed', $compressed, $group, $expiration);
-    }
+		return array(
+			'predicted_peak'         => $predictedPeak,
+			'memory_limit'           => $memoryLimit,
+			'will_exceed_limit'      => $predictedPeak > $memoryLimit,
+			'recommended_batch_size' => $predictedPeak > $memoryLimit ?
+			max( 1, (int) ( $batchSize * ( $memoryLimit - $baseMemory - $safetyBuffer ) / $estimatedBatchMemory ) ) :
+			$batchSize,
+		);
+	}
 
-    public static function getCompressed(string $key, string $group = '')
-    {
-        $compressed = self::get($key . '_compressed', $group);
-        if ($compressed === false) {
-            return false;
-        }
+	/**
+	 * Compressed caching for large datasets
+	 */
+	public static function setCompressed( string $key, $data, string $group = '', int $expiration = 3600 ): bool {
+		$compressed = gzcompress( serialize( $data ), 6 );
+		return self::set( $key . '_compressed', $compressed, $group, $expiration );
+	}
 
-        return unserialize(gzuncompress($compressed));
-    }
+	public static function getCompressed( string $key, string $group = '' ) {
+		$compressed = self::get( $key . '_compressed', $group );
+		if ( $compressed == false ) {
+			return false;
+		}
+
+		return unserialize( gzuncompress( $compressed ) );
+	}
 }
