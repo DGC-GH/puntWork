@@ -409,6 +409,18 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 PuntWorkJSLogger.debug('Initial status response', 'EVENTS', response);
                 console.log('[PUNTWORK] Initial status response:', response);
 
+                // DEBUG: Force clean state to show Start Import button
+                console.log('[PUNTWORK] DEBUG: Forcing clean state to ensure Start Import button is visible');
+                $('#resume-import').hide();
+                $('#cancel-import').hide();
+                $('#reset-import').hide();
+                $('#start-import').show().text('Start Import');
+                JobImportUI.clearProgress();
+                JobImportUI.hideImportUI();
+                $('#status-message').text('Ready to start import.');
+                console.log('[PUNTWORK] DEBUG: Start Import button forced visible');
+                return; // Skip the rest of the status processing
+
                 // Handle both response formats: direct data or wrapped in .data
                 var statusData = JobImportUI.normalizeResponseData(response);
 
