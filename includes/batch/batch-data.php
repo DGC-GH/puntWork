@@ -12,8 +12,8 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+if (! defined('ABSPATH') ) {
+    exit;
 }
 
 /**

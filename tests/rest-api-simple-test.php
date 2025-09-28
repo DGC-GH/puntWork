@@ -9,27 +9,27 @@ echo "=== REST API Load Test ===\n\n";
 echo "Testing file syntax and basic loading...\n\n";
 
 echo "1. Checking PuntWorkLogger syntax...\n";
-$result1 = shell_exec( 'php -l ' . __DIR__ . '/../includes/utilities/PuntWorkLogger.php 2>&1' );
-if ( strpos( $result1, 'No syntax errors' ) !== false ) {
-	echo "✓ PuntWorkLogger syntax OK\n";
+$result1 = shell_exec('php -l ' . __DIR__ . '/../includes/utilities/PuntWorkLogger.php 2>&1');
+if (strpos($result1, 'No syntax errors') !== false ) {
+    echo "✓ PuntWorkLogger syntax OK\n";
 } else {
-	echo "✗ PuntWorkLogger syntax error: $result1\n";
+    echo "✗ PuntWorkLogger syntax error: $result1\n";
 }
 
 echo "\n2. Checking REST API syntax...\n";
-$result2 = shell_exec( 'php -l ' . __DIR__ . '/../includes/api/rest-api.php 2>&1' );
-if ( strpos( $result2, 'No syntax errors' ) !== false ) {
-	echo "✓ REST API syntax OK\n";
+$result2 = shell_exec('php -l ' . __DIR__ . '/../includes/api/rest-api.php 2>&1');
+if (strpos($result2, 'No syntax errors') !== false ) {
+    echo "✓ REST API syntax OK\n";
 } else {
-	echo "✗ REST API syntax error: $result2\n";
+    echo "✗ REST API syntax error: $result2\n";
 }
 
 echo "\n3. Checking admin API settings syntax...\n";
-$result3 = shell_exec( 'php -l ' . __DIR__ . '/../includes/admin/admin-api-settings.php 2>&1' );
-if ( strpos( $result3, 'No syntax errors' ) !== false ) {
-	echo "✓ Admin API settings syntax OK\n";
+$result3 = shell_exec('php -l ' . __DIR__ . '/../includes/admin/admin-api-settings.php 2>&1');
+if (strpos($result3, 'No syntax errors') !== false ) {
+    echo "✓ Admin API settings syntax OK\n";
 } else {
-	echo "✗ Admin API settings syntax error: $result3\n";
+    echo "✗ Admin API settings syntax error: $result3\n";
 }
 
 echo "\n=== Load Test Results ===\n";

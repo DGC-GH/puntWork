@@ -8,8 +8,8 @@
 namespace Puntwork;
 
 // Define constants for testing
-define( 'ABSPATH', '/fake/path/' );
-define( 'WP_DEBUG', true );
+define('ABSPATH', '/fake/path/');
+define('WP_DEBUG', true);
 
 // Include the necessary files
 require_once __DIR__ . '/includes/import/import-batch.php';
@@ -17,9 +17,9 @@ require_once __DIR__ . '/includes/import/import-batch.php';
 // Test if function exists
 echo "Testing import_jobs_from_json function...\n";
 
-if ( ! function_exists( 'import_jobs_from_json' ) ) {
-	echo "ERROR: import_jobs_from_json function not found!\n";
-	exit( 1 );
+if (! function_exists('import_jobs_from_json') ) {
+    echo "ERROR: import_jobs_from_json function not found!\n";
+    exit(1);
 }
 
 echo "SUCCESS: import_jobs_from_json function exists\n";
@@ -28,15 +28,15 @@ echo "SUCCESS: import_jobs_from_json function exists\n";
 echo "Testing function call with is_batch=true, batch_start=0...\n";
 
 try {
-	$result = import_jobs_from_json( true, 0 );
-	echo "Function call completed. Result:\n";
-	print_r( $result );
+    $result = import_jobs_from_json(true, 0);
+    echo "Function call completed. Result:\n";
+    print_r($result);
 } catch ( Exception $e ) {
-	echo 'ERROR: Exception thrown: ' . $e->getMessage() . "\n";
-	echo "Stack trace:\n" . $e->getTraceAsString() . "\n";
+    echo 'ERROR: Exception thrown: ' . $e->getMessage() . "\n";
+    echo "Stack trace:\n" . $e->getTraceAsString() . "\n";
 } catch ( Error $e ) {
-	echo 'ERROR: Fatal error: ' . $e->getMessage() . "\n";
-	echo "Stack trace:\n" . $e->getTraceAsString() . "\n";
+    echo 'ERROR: Fatal error: ' . $e->getMessage() . "\n";
+    echo "Stack trace:\n" . $e->getTraceAsString() . "\n";
 }
 
 echo "Test completed.\n";

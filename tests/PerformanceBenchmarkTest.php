@@ -11,156 +11,163 @@ namespace Puntwork;
 
 use PHPUnit\Framework\TestCase;
 
-class PerformanceBenchmarkTest extends TestCase {
+class PerformanceBenchmarkTest extends TestCase
+{
 
-	protected function setUp(): void {
-		parent::setUp();
-		// Mock WordPress functions
-		if ( ! defined( 'ABSPATH' ) ) {
-			define( 'ABSPATH', '/tmp/wordpress/' );
-		}
-	}
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Mock WordPress functions
+        if (! defined('ABSPATH') ) {
+            define('ABSPATH', '/tmp/wordpress/');
+        }
+    }
 
-	/**
-	 * Benchmark array mapping performance
-	 */
-	public function testArrayMappingPerformance() {
-		$startTime = microtime( true );
+    /**
+     * Benchmark array mapping performance
+     */
+    public function testArrayMappingPerformance()
+    {
+        $startTime = microtime(true);
 
-		// Test GetProvinceMap performance
-		$provinceMap  = GetProvinceMap();
-		$provinceTime = microtime( true ) - $startTime;
+        // Test GetProvinceMap performance
+        $provinceMap  = GetProvinceMap();
+        $provinceTime = microtime(true) - $startTime;
 
-		$this->assertLessThan( 0.1, $provinceTime, 'Province mapping should complete in under 100ms' );
-		$this->assertIsArray( $provinceMap );
+        $this->assertLessThan(0.1, $provinceTime, 'Province mapping should complete in under 100ms');
+        $this->assertIsArray($provinceMap);
 
-		// Test GetSalaryEstimates performance
-		$startTime       = microtime( true );
-		$salaryEstimates = GetSalaryEstimates();
-		$salaryTime      = microtime( true ) - $startTime;
+        // Test GetSalaryEstimates performance
+        $startTime       = microtime(true);
+        $salaryEstimates = GetSalaryEstimates();
+        $salaryTime      = microtime(true) - $startTime;
 
-		$this->assertLessThan( 0.1, $salaryTime, 'Salary estimates mapping should complete in under 100ms' );
-		$this->assertIsArray( $salaryEstimates );
+        $this->assertLessThan(0.1, $salaryTime, 'Salary estimates mapping should complete in under 100ms');
+        $this->assertIsArray($salaryEstimates);
 
-		// Test GetIconMap performance
-		$startTime = microtime( true );
-		$iconMap   = GetIconMap();
-		$iconTime  = microtime( true ) - $startTime;
+        // Test GetIconMap performance
+        $startTime = microtime(true);
+        $iconMap   = GetIconMap();
+        $iconTime  = microtime(true) - $startTime;
 
-		$this->assertLessThan( 0.1, $iconTime, 'Icon mapping should complete in under 100ms' );
-		$this->assertIsArray( $iconMap );
-	}
+        $this->assertLessThan(0.1, $iconTime, 'Icon mapping should complete in under 100ms');
+        $this->assertIsArray($iconMap);
+    }
 
-	/**
-	 * Benchmark job schema building performance
-	 */
-	public function testJobSchemaBuildingPerformance() {
-		$item = (object) array(
-			'guid'           => 'test-guid-' . rand(),
-			'job_title'      => 'Test Job Title',
-			'job_desc'       => 'Test job description with some content',
-			'job_location'   => 'Brussels',
-			'job_salary_min' => rand( 30000, 50000 ),
-			'job_salary_max' => rand( 50000, 70000 ),
-		);
+    /**
+     * Benchmark job schema building performance
+     */
+    public function testJobSchemaBuildingPerformance()
+    {
+        $item = (object) array(
+        'guid'           => 'test-guid-' . rand(),
+        'job_title'      => 'Test Job Title',
+        'job_desc'       => 'Test job description with some content',
+        'job_location'   => 'Brussels',
+        'job_salary_min' => rand(30000, 50000),
+        'job_salary_max' => rand(50000, 70000),
+        );
 
-		$iterations = 100;
-		$startTime  = microtime( true );
+        $iterations = 100;
+        $startTime  = microtime(true);
 
-		for ( $i = 0; $i < $iterations; $i++ ) {
-			$schema = build_job_schema( 'Test Job', 'Test description', $item, 'Brussels', 'Full-time', false, 'test-org', 'IT & Telecommunicatie' );
-		}
+        for ( $i = 0; $i < $iterations; $i++ ) {
+            $schema = build_job_schema('Test Job', 'Test description', $item, 'Brussels', 'Full-time', false, 'test-org', 'IT & Telecommunicatie');
+        }
 
-		$totalTime = microtime( true ) - $startTime;
-		$avgTime   = $totalTime / $iterations;
+        $totalTime = microtime(true) - $startTime;
+        $avgTime   = $totalTime / $iterations;
 
-		$this->assertLessThan( 0.01, $avgTime, 'Job schema building should average under 10ms per operation' );
-		$this->assertIsArray( $schema );
-	}
+        $this->assertLessThan(0.01, $avgTime, 'Job schema building should average under 10ms per operation');
+        $this->assertIsArray($schema);
+    }
 
-	/**
-	 * Benchmark duplicate handling performance
-	 */
-	public function testDuplicateHandlingPerformance() {
-		$batchGuids     = array_map(
-			function ( $i ) {
-				return "guid-{$i}";
-			},
-			range( 1, 1000 )
-		);
-		$existingByGuid = array_combine(
-			array_map(
-				function ( $i ) {
-					return "guid-{$i}";
-				},
-				range( 1, 500 )
-			),
-			array_map(
-				function ( $i ) {
-					return array( 123 + $i );
-				},
-				range( 1, 500 )
-			)
-		);
+    /**
+     * Benchmark duplicate handling performance
+     */
+    public function testDuplicateHandlingPerformance()
+    {
+        $batchGuids     = array_map(
+            function ( $i ) {
+                return "guid-{$i}";
+            },
+            range(1, 1000)
+        );
+        $existingByGuid = array_combine(
+            array_map(
+                function ( $i ) {
+                        return "guid-{$i}";
+                },
+                range(1, 500)
+            ),
+            array_map(
+                function ( $i ) {
+                        return array( 123 + $i );
+                },
+                range(1, 500)
+            )
+        );
 
-		$startTime = microtime( true );
+        $startTime = microtime(true);
 
-		$logs              = array();
-		$duplicatesDrafted = 0;
-		$postIdsByGuid     = array();
+        $logs              = array();
+        $duplicatesDrafted = 0;
+        $postIdsByGuid     = array();
 
-		handle_duplicates( $batchGuids, $existingByGuid, $logs, $duplicatesDrafted, $postIdsByGuid );
+        handle_duplicates($batchGuids, $existingByGuid, $logs, $duplicatesDrafted, $postIdsByGuid);
 
-		$processingTime = microtime( true ) - $startTime;
+        $processingTime = microtime(true) - $startTime;
 
-		$this->assertLessThan( 0.5, $processingTime, 'Duplicate handling for 1000 items should complete in under 500ms' );
-		$this->assertIsArray( $logs );
-		$this->assertIsInt( $duplicatesDrafted );
-		$this->assertIsArray( $postIdsByGuid );
-	}
+        $this->assertLessThan(0.5, $processingTime, 'Duplicate handling for 1000 items should complete in under 500ms');
+        $this->assertIsArray($logs);
+        $this->assertIsInt($duplicatesDrafted);
+        $this->assertIsArray($postIdsByGuid);
+    }
 
-	/**
-	 * Memory usage benchmark
-	 */
-	public function testMemoryUsageBenchmark() {
-		$initialMemory = memory_get_usage();
+    /**
+     * Memory usage benchmark
+     */
+    public function testMemoryUsageBenchmark()
+    {
+        $initialMemory = memory_get_usage();
 
-		// Load mappings
-		$provinceMap     = GetProvinceMap();
-		$salaryEstimates = GetSalaryEstimates();
-		$iconMap         = GetIconMap();
+        // Load mappings
+        $provinceMap     = GetProvinceMap();
+        $salaryEstimates = GetSalaryEstimates();
+        $iconMap         = GetIconMap();
 
-		$loadedMemory   = memory_get_usage();
-		$memoryIncrease = $loadedMemory - $initialMemory;
+        $loadedMemory   = memory_get_usage();
+        $memoryIncrease = $loadedMemory - $initialMemory;
 
-		$this->assertLessThan( 5 * 1024 * 1024, $memoryIncrease, 'Memory increase should be under 5MB for loading mappings' );
-	}
+        $this->assertLessThan(5 * 1024 * 1024, $memoryIncrease, 'Memory increase should be under 5MB for loading mappings');
+    }
 
-	/**
-	 * Benchmark import operation timing
-	 */
-	public function testImportOperationTiming() {
-		// Mock a small import scenario
-		$startTime = microtime( true );
+    /**
+     * Benchmark import operation timing
+     */
+    public function testImportOperationTiming()
+    {
+        // Mock a small import scenario
+        $startTime = microtime(true);
 
-		// Simulate processing a small batch (this would normally call actual import functions)
-		// For testing, we'll just measure the overhead
-		$mockItems = array_fill(
-			0,
-			10,
-			(object) array(
-				'guid'      => 'test',
-				'job_title' => 'Test Job',
-			)
-		);
+        // Simulate processing a small batch (this would normally call actual import functions)
+        // For testing, we'll just measure the overhead
+        $mockItems = array_fill(
+            0,
+            10,
+            (object) array(
+            'guid'      => 'test',
+            'job_title' => 'Test Job',
+            )
+        );
 
-		foreach ( $mockItems as $item ) {
-			// Simulate basic processing
-			$processed = ! empty( $item->job_title );
-		}
+        foreach ( $mockItems as $item ) {
+            // Simulate basic processing
+            $processed = ! empty($item->job_title);
+        }
 
-		$duration = microtime( true ) - $startTime;
+        $duration = microtime(true) - $startTime;
 
-		$this->assertLessThan( 5.0, $duration, 'Import simulation should complete under 5 seconds' );
-	}
+        $this->assertLessThan(5.0, $duration, 'Import simulation should complete under 5 seconds');
+    }
 }
