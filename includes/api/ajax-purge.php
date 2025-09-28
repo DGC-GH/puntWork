@@ -186,6 +186,10 @@ function job_import_cleanup_duplicates_ajax()
             return;
         }
 
+        // Defer term and comment counting for better performance during bulk operations
+        wp_defer_term_counting(true);
+        wp_defer_comment_counting(true);
+
         // Process this batch
         foreach ($batch_jobs as $job) {
             $result = wp_delete_post($job->ID, true); // Force delete
@@ -208,6 +212,10 @@ function job_import_cleanup_duplicates_ajax()
                 PuntWorkLogger::error('Failed to delete job', PuntWorkLogger::CONTEXT_PURGE, ['job_id' => $job->ID]);
             }
         }
+
+        // Re-enable term and comment counting
+        wp_defer_term_counting(false);
+        wp_defer_comment_counting(false);
 
         // Update progress
         $progress['total_processed'] += count($batch_jobs);
@@ -454,6 +462,10 @@ function job_import_purge_ajax()
             return;
         }
 
+        // Defer term and comment counting for better performance during bulk operations
+        wp_defer_term_counting(true);
+        wp_defer_comment_counting(true);
+
         // Process this batch
         $deleted_count = 0;
         foreach ($batch_jobs as $job) {
@@ -486,6 +498,10 @@ function job_import_purge_ajax()
                 }
             }
         }
+
+        // Re-enable term and comment counting
+        wp_defer_term_counting(false);
+        wp_defer_comment_counting(false);
 
         // Update progress
         $progress['total_processed'] += count($batch_jobs);
