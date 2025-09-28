@@ -130,6 +130,7 @@ if ( ! function_exists( 'get_acf_fields' ) ) {
 			'driverslicense',
 			'driverslicenseid',
 			'publicationlanguage',
+			'company',
 			'companydescription',
 			// New fields
 			'job_posting',
