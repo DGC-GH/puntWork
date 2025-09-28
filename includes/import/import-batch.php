@@ -640,5 +640,34 @@ function continue_paused_import(): void {
 	}
 }
 
+/**
+ * Start a scheduled import process
+ * Called by WordPress cron after JSONL combination completes
+ *
+ * @return void
+ */
+function start_scheduled_import(): void {
+	error_log( '[PUNTWORK] Starting scheduled import process' );
+
+	// Check if import is already running
+	$import_lock_key = 'puntwork_import_lock';
+	if ( get_transient( $import_lock_key ) ) {
+		error_log( '[PUNTWORK] Scheduled import already running - skipping' );
+		return;
+	}
+
+	// Start the import
+	$result = import_all_jobs_from_json( true ); // preserve status
+
+	if ( $result['success'] ) {
+		error_log( '[PUNTWORK] Scheduled import completed successfully' );
+	} else {
+		error_log( '[PUNTWORK] Scheduled import failed: ' . ( $result['message'] ?? 'Unknown error' ) );
+	}
+}
+
 // Register the continuation hook
 add_action( 'puntwork_continue_import', 'continue_paused_import' );
+
+// Register the scheduled import start hook
+add_action( 'puntwork_start_scheduled_import', 'start_scheduled_import' );

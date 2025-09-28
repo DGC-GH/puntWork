@@ -47,9 +47,15 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 		error_log( '[PUNTWORK] [BATCH-TIMING] Processing batch of ' . $batch_size . ' items' );
 		error_log( '[PUNTWORK] [BATCH-TIMING] Previous batch time: ' . $previous_batch_time . 's, Last batch time: ' . $last_batch_time . 's' );
 
-	$item_counter                 = 0;
-	$intermediate_update_interval = 5; // Update status every 5 items for better UI responsiveness
-	$last_intermediate_update     = 0;		foreach ( $batch_guids as $guid ) {
+		// Collect all ACF updates for batch processing
+		$all_acf_updates = array();
+		$posts_to_update = array();
+
+		$item_counter                 = 0;
+		$intermediate_update_interval = 5; // Update status every 5 items for better UI responsiveness
+		$last_intermediate_update     = 0;
+
+	foreach ( $batch_guids as $guid ) {
 			// Check for cancellation at the start of each item
 			if ( get_transient( 'import_cancel' ) ) {
 				$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Batch processing cancelled by user';
@@ -172,11 +178,9 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 						}
 					}
 
-					// Use bulk update for ACF fields to avoid N+1 queries
-					bulk_update_post_meta( $post_id, $acf_updates );
-					if ( $item_counter % 100 == 0 ) {
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] ACF fields updated successfully' );
-					}
+					// Collect ACF updates for batch processing
+					$all_acf_updates[] = $acf_updates;
+					$posts_to_update[] = $post_id;
 
 						++$updated;
 						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Updated ID: ' . $post_id . ' GUID: ' . $guid;
@@ -234,11 +238,9 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 						}
 					}
 
-					// Use bulk update for ACF fields to avoid N+1 queries
-					bulk_update_post_meta( $post_id, $acf_updates );
-					if ( $item_counter % 100 == 0 ) {
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] ACF fields updated successfully for new post' );
-					}
+					// Collect ACF updates for batch processing
+					$all_acf_updates[] = $acf_updates;
+					$posts_to_update[] = $post_id;
 
 					$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Published ID: ' . $post_id . ' GUID: ' . $guid;
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - PUBLISHED ===' );
@@ -277,5 +279,20 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 		}
 		error_log( '[PUNTWORK] [ITEMS-DEBUG] process_batch_items completed processing all ' . $total_to_process . ' items' );
 		error_log( '[PUNTWORK] [ITEMS-DEBUG] Final counts: published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', processed_count=' . $processed_count );
+
+		// Execute bulk ACF updates for all posts in chunks
+		if ( ! empty( $all_acf_updates ) ) {
+			error_log( '[PUNTWORK] [ITEMS-DEBUG] Executing bulk ACF updates for ' . count( $all_acf_updates ) . ' posts' );
+			$chunk_size = 10; // Process in chunks of 10 posts to avoid overly large queries
+			$chunks = array_chunk( $all_acf_updates, $chunk_size );
+			$post_chunks = array_chunk( $posts_to_update, $chunk_size );
+			
+			foreach ( $chunks as $chunk_index => $chunk_updates ) {
+				$chunk_posts = $post_chunks[ $chunk_index ];
+				error_log( '[PUNTWORK] [ITEMS-DEBUG] Processing ACF chunk ' . ( $chunk_index + 1 ) . '/' . count( $chunks ) . ' (' . count( $chunk_updates ) . ' posts)' );
+				bulk_update_post_meta( $chunk_posts, $chunk_updates );
+			}
+			error_log( '[PUNTWORK] [ITEMS-DEBUG] Bulk ACF updates completed successfully' );
+		}
 	}
 }

@@ -159,6 +159,28 @@ function combine_jsonl_ajax() {
 			return;
 		}
 
+		// Update import status to show JSONL combination in progress
+		update_option( 'job_import_status', array(
+			'total'              => $total_items,
+			'processed'          => 0,
+			'published'          => 0,
+			'updated'            => 0,
+			'skipped'            => 0,
+			'duplicates_drafted' => 0,
+			'time_elapsed'       => 0,
+			'complete'           => false,
+			'success'            => false,
+			'error_message'      => '',
+			'batch_size'         => 10,
+			'inferred_languages' => 0,
+			'inferred_benefits'  => 0,
+			'schema_generated'   => 0,
+			'start_time'         => microtime( true ),
+			'end_time'           => null,
+			'last_update'        => time(),
+			'logs'               => array( 'Starting JSONL combination...' ),
+		) );
+
 		error_log( '[PUNTWORK] [JSONL-COMBINE] Starting JSONL combination for ' . $total_items . ' items' );
 		$logs = array();
 
@@ -166,36 +188,47 @@ function combine_jsonl_ajax() {
 		PuntWorkLogger::info( 'JSONL files combined successfully', PuntWorkLogger::CONTEXT_FEED, array( 'total_items' => $total_items ) );
 		error_log( '[PUNTWORK] [JSONL-COMBINE] JSONL files combined successfully, total_items=' . $total_items );
 
+		// Update import status to show JSONL combination complete
+		update_option( 'job_import_status', array(
+			'total'              => $total_items,
+			'processed'          => 0,
+			'published'          => 0,
+			'updated'            => 0,
+			'skipped'            => 0,
+			'duplicates_drafted' => 0,
+			'time_elapsed'       => microtime( true ) - (get_option( 'job_import_status' )['start_time'] ?? microtime( true )),
+			'complete'           => false,
+			'success'            => false,
+			'error_message'      => '',
+			'batch_size'         => 10,
+			'inferred_languages' => 0,
+			'inferred_benefits'  => 0,
+			'schema_generated'   => 0,
+			'start_time'         => get_option( 'job_import_status' )['start_time'] ?? microtime( true ),
+			'end_time'           => null,
+			'last_update'        => time(),
+			'logs'               => array_merge( get_option( 'job_import_status' )['logs'] ?? array(), array( 'JSONL combination completed, starting import...' ) ),
+		) );
+
 		// Automatically start the import after successful JSONL combination
-		PuntWorkLogger::info( 'Automatically starting import after JSONL combination', PuntWorkLogger::CONTEXT_FEED );
-		error_log( '[PUNTWORK] [AUTO-IMPORT] Starting automatic import after JSONL combination for ' . $total_items . ' items' );
+		PuntWorkLogger::info( 'Scheduling automatic import start after JSONL combination', PuntWorkLogger::CONTEXT_FEED );
+		error_log( '[PUNTWORK] [AUTO-IMPORT] Scheduling automatic import after JSONL combination for ' . $total_items . ' items' );
 
 		// Clear import cancel flag
 		delete_transient( 'import_cancel' );
 		PuntWorkLogger::info( 'Import cancellation flag cleared for automatic start', PuntWorkLogger::CONTEXT_FEED );
 		error_log( '[PUNTWORK] [AUTO-IMPORT] Import cancel flag cleared' );
 
-		// Start the import process
-		if ( ! function_exists( 'import_jobs_from_json' ) ) {
-			error_log( '[PUNTWORK] [AUTO-IMPORT] import_jobs_from_json function not found, attempting to load import-batch.php' );
-			// Load import functions if not already loaded
-			require_once __DIR__ . '/../import/import-batch.php';
-			error_log( '[PUNTWORK] [AUTO-IMPORT] import-batch.php loaded, function available: ' . ( function_exists( 'import_jobs_from_json' ) ? 'yes' : 'no' ) );
+		// Schedule the import to start asynchronously
+		if ( ! wp_next_scheduled( 'puntwork_start_scheduled_import' ) ) {
+			wp_schedule_single_event( time() + 2, 'puntwork_start_scheduled_import' ); // Start in 2 seconds
+			PuntWorkLogger::info( 'Import start scheduled via WordPress cron', PuntWorkLogger::CONTEXT_FEED );
+			error_log( '[PUNTWORK] [AUTO-IMPORT] Import start scheduled via cron' );
 		}
 
-		error_log( '[PUNTWORK] [AUTO-IMPORT] About to call import_jobs_from_json(true, 0)' );
-		$import_result = import_jobs_from_json( true, 0 );
-		error_log( '[PUNTWORK] [AUTO-IMPORT] import_jobs_from_json returned: ' . json_encode( $import_result ) );
-
-		if ( $import_result['success'] ) {
-			PuntWorkLogger::info( 'Import started successfully after JSONL combination', PuntWorkLogger::CONTEXT_FEED );
-			$logs[] = 'Import started automatically after JSONL combination';
-			error_log( '[PUNTWORK] [AUTO-IMPORT] Import started successfully - processed: ' . ( $import_result['processed'] ?? 0 ) . ', total: ' . ( $import_result['total'] ?? 0 ) );
-		} else {
-			PuntWorkLogger::error( 'Failed to start import after JSONL combination: ' . ( $import_result['message'] ?? 'Unknown error' ), PuntWorkLogger::CONTEXT_FEED );
-			$logs[] = 'Failed to start import after JSONL combination: ' . ( $import_result['message'] ?? 'Unknown error' );
-			error_log( '[PUNTWORK] [AUTO-IMPORT] Import failed to start: ' . ( $import_result['message'] ?? 'Unknown error' ) );
-		}
+		PuntWorkLogger::info( 'JSONL combination completed, import will start automatically', PuntWorkLogger::CONTEXT_FEED );
+		$logs[] = 'JSONL combination completed, import starting automatically';
+		error_log( '[PUNTWORK] [AUTO-IMPORT] JSONL combination completed, import scheduled to start automatically' );
 
 		PuntWorkLogger::logAjaxResponse( 'combine_jsonl', array( 'logs_count' => count( $logs ) ) );
 		AjaxErrorHandler::sendSuccess( array( 'logs' => $logs ) );

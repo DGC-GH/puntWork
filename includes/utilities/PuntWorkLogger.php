@@ -106,13 +106,11 @@ class PuntWorkLogger {
 			return;
 		}
 
-		$timestamp = date( 'd-M-Y H:i:s T' );
-		$function  = self::getCallingFunction();
+		$function = self::getCallingFunction();
 
-		// Format the log message
+		// Format the log message without timestamp (error_log will add it)
 		$formattedMessage = sprintf(
-			'[%s] [%s] [%s] %s',
-			$timestamp,
+			'[PUNTWORK] [%s] [%s] %s',
 			$level,
 			$context,
 			$message
@@ -335,8 +333,12 @@ class PuntWorkLogger {
 	 * @param string $context Context identifier
 	 */
 	public static function addAdminLog( $message, $level = self::INFO, $context = self::CONTEXT_SYSTEM ) {
-		$timestamp        = date( 'd-M-Y H:i:s T' );
-		$formattedMessage = "[{$timestamp}] [{$level}] [{$context}] {$message}";
+		$formattedMessage = sprintf(
+			'[PUNTWORK] [%s] [%s] %s',
+			$level,
+			$context,
+			$message
+		);
 
 		// Add to global import logs if available
 		if ( isset( $GLOBALS['import_logs'] ) && is_array( $GLOBALS['import_logs'] ) ) {

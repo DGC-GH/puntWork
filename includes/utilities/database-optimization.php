@@ -104,26 +104,52 @@ function create_database_indexes(): void {
 /**
  * Bulk update post meta values for better performance
  *
- * @param int   $post_id   Post ID
- * @param array $meta_data Array of meta_key => meta_value pairs
+ * @param int|array $post_id   Post ID or array of post IDs
+ * @param array     $meta_data Array of meta_key => meta_value pairs, or array of arrays for multiple posts
  */
-function bulk_update_post_meta( int $post_id, array $meta_data ): void {
+function bulk_update_post_meta( $post_id, array $meta_data ): void {
 	global $wpdb;
 
 	if ( empty( $meta_data ) ) {
 		return;
 	}
 
-	error_log( '[PUNTWORK] [DB-DEBUG] bulk_update_post_meta called for post ' . $post_id . ' with ' . count( $meta_data ) . ' fields' );
+	error_log( '[PUNTWORK] [DB-DEBUG] bulk_update_post_meta called for post ' . (is_array($post_id) ? 'multiple posts' : $post_id) . ' with ' . count( $meta_data ) . ' fields' );
 
 	$values       = array();
 	$placeholders = array();
 
-	foreach ( $meta_data as $key => $value ) {
-		$values[]       = $post_id;
-		$values[]       = $key;
-		$values[]       = $value;
-		$placeholders[] = '(%d, %s, %s)';
+	// Handle single post
+	if ( ! is_array( $post_id ) ) {
+		foreach ( $meta_data as $key => $value ) {
+			// Serialize array values to prevent wpdb->prepare errors
+			if ( is_array( $value ) ) {
+				$value = serialize( $value );
+			}
+
+			$values[]       = $post_id;
+			$values[]       = $key;
+			$values[]       = $value;
+			$placeholders[] = '(%d, %s, %s)';
+		}
+	} else {
+		// Handle multiple posts
+		foreach ( $post_id as $index => $pid ) {
+			if ( ! isset( $meta_data[ $index ] ) ) {
+				continue;
+			}
+			foreach ( $meta_data[ $index ] as $key => $value ) {
+				// Serialize array values to prevent wpdb->prepare errors
+				if ( is_array( $value ) ) {
+					$value = serialize( $value );
+				}
+
+				$values[]       = $pid;
+				$values[]       = $key;
+				$values[]       = $value;
+				$placeholders[] = '(%d, %s, %s)';
+			}
+		}
 	}
 
 	$query = $wpdb->prepare(
