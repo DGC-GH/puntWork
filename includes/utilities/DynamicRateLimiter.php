@@ -22,6 +22,25 @@ if (!defined('ABSPATH')) {
 class DynamicRateLimiter
 {
     /**
+     * Default configuration for dynamic rate limiting.
+     */
+    private static $default_config = [
+        'enabled' => true,
+        'memory_threshold_high' => 80,
+        'memory_threshold_low' => 20,
+        'cpu_threshold_high' => 80,
+        'cpu_threshold_low' => 20,
+        'response_time_threshold' => 5,
+        'error_rate_threshold' => 10,
+        'peak_hours_start' => 9,
+        'peak_hours_end' => 17,
+        'peak_hours_boost' => 1.2,
+        'off_peak_reduction' => 0.8,
+        'import_boost_factor' => 1.5,
+        'min_adjustment_percentage' => 20,
+        'max_adjustment_percentage' => 300,
+    ];
+    /**
      * Performance metrics storage key.
      */
     public const METRICS_KEY = 'puntwork_dynamic_rate_metrics';
@@ -760,7 +779,7 @@ class DynamicRateLimiter
         $config = self::getConfig();
         if (!$config['enabled']) {
             // Fall back to static rate limiting
-            return SecurityUtils::checkRateLimit($action);
+            return \Puntwork\SecurityUtils::checkStaticRateLimit($action);
         }
 
         // Get base configuration

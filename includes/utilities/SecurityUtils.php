@@ -269,7 +269,7 @@ class SecurityUtils
      * @param  ?int   $time_window  Time window in seconds (optional override)
      * @return bool|WP_Error True if allowed, WP_Error if rate limited
      */
-    private static function checkStaticRateLimit(string $action, ?int $max_requests = null, ?int $time_window = null)
+    public static function checkStaticRateLimit(string $action, ?int $max_requests = null, ?int $time_window = null)
     {
         // Use dynamic configuration if no overrides provided
         if ($max_requests == null || $time_window == null) {
