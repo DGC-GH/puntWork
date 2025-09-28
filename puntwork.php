@@ -142,61 +142,15 @@ function process_social_media_posts()
 add_action('init', __NAMESPACE__ . '\\setup_job_import');
 function setup_job_import()
 {
-    // Use WordPress option for robust cross-request locking (prevents race conditions)
-    $lock_key = 'puntwork_setup_lock';
-    $lock_timeout = 10; // 10 seconds lock timeout
-
-    $current_time = time();
-    $lock_value = get_option($lock_key, 0);
-
-    // Check if another process has the lock (within timeout window)
-    if ($lock_value > 0 && ($current_time - $lock_value) < $lock_timeout) {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[PUNTWORK] [INIT-SKIP] Setup locked by another process, skipping...');
-        }
-
-        return;
-    }
-
-    // Acquire lock
-    update_option($lock_key, $current_time);
-
-    // Check if setup was already completed recently using transient
-    $transient_key = 'puntwork_setup_done';
-    if (get_transient($transient_key)) {
-        // Release lock
-        delete_option($lock_key);
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[PUNTWORK] [INIT-SKIP] Setup already completed recently, skipping...');
-        }
-
-        return;
-    }
-
-    // Set transient to expire in 5 minutes (cross-request persistence)
-    set_transient($transient_key, true, 5 * MINUTE_IN_SECONDS);
+    // Prevent multiple include loading with a static flag (happens only once ever)
+    static $includes_loaded = false;
 
     // Increase memory limit to prevent exhaustion
     ini_set('memory_limit', '1024M');
 
     $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
 
-    if ($debug_mode) {
-        error_log('[PUNTWORK] [INIT-START] ===== SETUP_JOB_IMPORT START =====');
-        error_log('[PUNTWORK] [INIT-DEBUG] WordPress version: ' . get_bloginfo('version'));
-        error_log('[PUNTWORK] [INIT-DEBUG] PHP version: ' . PHP_VERSION);
-        error_log('[PUNTWORK] [INIT-DEBUG] Memory limit: ' . ini_get('memory_limit'));
-        error_log('[PUNTWORK] [INIT-DEBUG] Max execution time: ' . ini_get('max_execution_time'));
-        error_log('[PUNTWORK] [INIT-DEBUG] ABSPATH: ' . ABSPATH);
-        error_log('[PUNTWORK] [INIT-DEBUG] Plugin path: ' . PUNTWORK_PATH);
-    }
-
-    // Use WordPress option for include loading status (persistent across requests)
-    $includes_loaded_key = 'puntwork_includes_loaded';
-    $includes_loaded = get_option($includes_loaded_key, false);
-
-    // Load includes only once ever (across all requests)
+    // Load includes only once ever
     if (!$includes_loaded) {
         if ($debug_mode) {
             error_log('[PUNTWORK] [INIT-DEBUG] Loading includes...');
@@ -350,8 +304,28 @@ function setup_job_import()
             error_log('[PUNTWORK] [INIT-DEBUG] Include loading complete: ' . $loaded_count . ' loaded, ' . $failed_count . ' failed');
         }
 
-        // Mark includes as loaded permanently
-        update_option($includes_loaded_key, true);
+        $includes_loaded = true;
+    }
+
+    // Prevent multiple initialization with a static flag (happens only once per request)
+    static $setup_done = false;
+    if ($setup_done) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [INIT-SKIP] Setup already completed for this request, skipping...');
+        }
+
+        return;
+    }
+    $setup_done = true;
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [INIT-START] ===== SETUP_JOB_IMPORT START =====');
+        error_log('[PUNTWORK] [INIT-DEBUG] WordPress version: ' . get_bloginfo('version'));
+        error_log('[PUNTWORK] [INIT-DEBUG] PHP version: ' . PHP_VERSION);
+        error_log('[PUNTWORK] [INIT-DEBUG] Memory limit: ' . ini_get('memory_limit'));
+        error_log('[PUNTWORK] [INIT-DEBUG] Max execution time: ' . ini_get('max_execution_time'));
+        error_log('[PUNTWORK] [INIT-DEBUG] ABSPATH: ' . ABSPATH);
+        error_log('[PUNTWORK] [INIT-DEBUG] Plugin path: ' . PUNTWORK_PATH);
     }
 
     // Test database connection
@@ -488,9 +462,6 @@ function setup_job_import()
     if ($debug_mode) {
         error_log('[PUNTWORK] [INIT-END] ===== SETUP_JOB_IMPORT COMPLETED =====');
     }
-
-    // Release lock
-    delete_option($lock_key);
 }
 
 // Add custom favicon
