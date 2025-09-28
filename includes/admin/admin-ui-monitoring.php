@@ -9,41 +9,42 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+if (!defined('ABSPATH')) {
+    exit;
 }
 
 /**
  * System monitoring dashboard page.
  */
-function system_monitoring_page() {
-	// Check user capabilities
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
-	}
+function system_monitoring_page()
+{
+    // Check user capabilities
+    if (!current_user_can('manage_options')) {
+        wp_die(__('You do not have sufficient permissions to access this page.'));
+    }
 
-	// Enqueue monitoring scripts and styles
-	wp_enqueue_style( 'puntwork-monitoring', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION );
-	wp_enqueue_script( 'puntwork-monitoring', PUNTWORK_URL . 'assets/js/puntwork-logger.js', array( 'jquery' ), PUNTWORK_VERSION, true );
-	wp_enqueue_script( 'chart-js', 'https://cdn.jsdelivr.net/npm/chart.js', array(), '4.4.0', true );
+    // Enqueue monitoring scripts and styles
+    wp_enqueue_style('puntwork-monitoring', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
+    wp_enqueue_script('puntwork-monitoring', PUNTWORK_URL . 'assets/js/puntwork-logger.js', ['jquery'], PUNTWORK_VERSION, true);
+    wp_enqueue_script('chart-js', 'https://cdn.jsdelivr.net/npm/chart.js', [], '4.4.0', true);
 
-	wp_localize_script(
-		'puntwork-monitoring',
-		'puntworkMonitoring',
-		array(
-			'ajaxurl'          => admin_url( 'admin-ajax.php' ),
-			'nonce'            => wp_create_nonce( 'puntwork_monitoring_nonce' ),
-			'refresh_interval' => 30000, // 30 seconds
-		)
-	);
+    wp_localize_script(
+        'puntwork-monitoring',
+        'puntworkMonitoring',
+        [
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('puntwork_monitoring_nonce'),
+            'refresh_interval' => 30000, // 30 seconds
+        ]
+    );
 
-	?>
+    ?>
 	<div class="wrap puntwork-admin">
 		<div class="puntwork-container">
 			<!-- Header Section -->
 			<div class="puntwork-header">
-				<h1 class="puntwork-header__title"><?php _e( 'System Monitoring & Observability', 'puntwork' ); ?></h1>
-				<p class="puntwork-header__subtitle"><?php _e( 'Real-time monitoring of system health, performance metrics, and operational status.', 'puntwork' ); ?></p>
+				<h1 class="puntwork-header__title"><?php _e('System Monitoring & Observability', 'puntwork'); ?></h1>
+				<p class="puntwork-header__subtitle"><?php _e('Real-time monitoring of system health, performance metrics, and operational status.', 'puntwork'); ?></p>
 			</div>
 
 			<!-- Status Overview Cards -->
@@ -100,8 +101,8 @@ function system_monitoring_page() {
 			<!-- Performance Metrics -->
 			<div class="puntwork-card" style="margin-bottom: var(--spacing-2xl);">
 				<div class="puntwork-card__header">
-					<h2 class="puntwork-card__title"><?php _e( 'Performance Metrics', 'puntwork' ); ?></h2>
-					<p class="puntwork-card__subtitle"><?php _e( 'Real-time system performance and resource utilization', 'puntwork' ); ?></p>
+					<h2 class="puntwork-card__title"><?php _e('Performance Metrics', 'puntwork'); ?></h2>
+					<p class="puntwork-card__subtitle"><?php _e('Real-time system performance and resource utilization', 'puntwork'); ?></p>
 				</div>
 				<div class="puntwork-card__body">
 					<div class="puntwork-stats">
@@ -142,7 +143,7 @@ function system_monitoring_page() {
 				<!-- Performance Chart -->
 				<div class="puntwork-card">
 					<div class="puntwork-card__header">
-						<h3 class="puntwork-card__title"><?php _e( 'Import Performance (Last 24 Hours)', 'puntwork' ); ?></h3>
+						<h3 class="puntwork-card__title"><?php _e('Import Performance (Last 24 Hours)', 'puntwork'); ?></h3>
 					</div>
 					<div class="puntwork-card__body">
 						<div style="height: 300px;">
@@ -154,7 +155,7 @@ function system_monitoring_page() {
 				<!-- System Resources Chart -->
 				<div class="puntwork-card">
 					<div class="puntwork-card__header">
-						<h3 class="puntwork-card__title"><?php _e( 'System Resources', 'puntwork' ); ?></h3>
+						<h3 class="puntwork-card__title"><?php _e('System Resources', 'puntwork'); ?></h3>
 					</div>
 					<div class="puntwork-card__body">
 						<div style="height: 300px;">
@@ -167,7 +168,7 @@ function system_monitoring_page() {
 			<!-- Activity Log -->
 			<div class="puntwork-card" style="margin-bottom: var(--spacing-2xl);">
 				<div class="puntwork-card__header">
-					<h3 class="puntwork-card__title"><?php _e( 'Recent Activity', 'puntwork' ); ?></h3>
+					<h3 class="puntwork-card__title"><?php _e('Recent Activity', 'puntwork'); ?></h3>
 				</div>
 				<div class="puntwork-card__body">
 					<div id="activity-log" style="max-height: 300px; overflow-y: auto;">
@@ -175,7 +176,7 @@ function system_monitoring_page() {
 							<div class="puntwork-loading__spinner">
 								<i class="fas fa-spinner"></i>
 							</div>
-							<?php _e( 'Loading recent activity...', 'puntwork' ); ?>
+							<?php _e('Loading recent activity...', 'puntwork'); ?>
 						</div>
 					</div>
 				</div>
@@ -183,11 +184,11 @@ function system_monitoring_page() {
 					<div style="display: flex; gap: var(--spacing-md); justify-content: flex-end;">
 						<button type="button" id="refresh-activity" class="puntwork-btn puntwork-btn--secondary">
 							<i class="fas fa-sync-alt puntwork-btn__icon"></i>
-							<?php _e( 'Refresh', 'puntwork' ); ?>
+							<?php _e('Refresh', 'puntwork'); ?>
 						</button>
 						<button type="button" id="clear-logs" class="puntwork-btn puntwork-btn--outline">
 							<i class="fas fa-trash puntwork-btn__icon"></i>
-							<?php _e( 'Clear Old Logs', 'puntwork' ); ?>
+							<?php _e('Clear Old Logs', 'puntwork'); ?>
 						</button>
 					</div>
 				</div>
@@ -196,27 +197,27 @@ function system_monitoring_page() {
 			<!-- Alert Configuration -->
 			<div class="puntwork-card">
 				<div class="puntwork-card__header">
-					<h2 class="puntwork-card__title"><?php _e( 'Alert Configuration', 'puntwork' ); ?></h2>
-					<p class="puntwork-card__subtitle"><?php _e( 'Configure notifications for system events and thresholds', 'puntwork' ); ?></p>
+					<h2 class="puntwork-card__title"><?php _e('Alert Configuration', 'puntwork'); ?></h2>
+					<p class="puntwork-card__subtitle"><?php _e('Configure notifications for system events and thresholds', 'puntwork'); ?></p>
 				</div>
 				<div class="puntwork-card__body">
 					<form id="alert-settings-form" class="puntwork-form">
 						<div class="puntwork-grid puntwork-grid--2">
 							<div class="puntwork-form-group">
-								<label class="puntwork-form-label" for="alert-email"><?php _e( 'Alert Email', 'puntwork' ); ?></label>
-								<input type="email" id="alert-email" name="alert_email" class="puntwork-form-control" value="<?php echo esc_attr( get_option( 'puntwork_alert_email', '' ) ); ?>">
+								<label class="puntwork-form-label" for="alert-email"><?php _e('Alert Email', 'puntwork'); ?></label>
+								<input type="email" id="alert-email" name="alert_email" class="puntwork-form-control" value="<?php echo esc_attr(get_option('puntwork_alert_email', '')); ?>">
 							</div>
 							<div class="puntwork-form-group">
-								<label class="puntwork-form-label" for="alert-threshold"><?php _e( 'Error Threshold', 'puntwork' ); ?></label>
-								<input type="number" id="alert-threshold" name="alert_threshold" class="puntwork-form-control" value="<?php echo esc_attr( get_option( 'puntwork_alert_threshold', 5 ) ); ?>" min="1" max="100">
-								<span class="description" style="font-size: var(--font-size-xs); color: var(--color-gray-600); margin-top: var(--spacing-xs); display: block;"><?php _e( 'Consecutive errors before alerting', 'puntwork' ); ?></span>
+								<label class="puntwork-form-label" for="alert-threshold"><?php _e('Error Threshold', 'puntwork'); ?></label>
+								<input type="number" id="alert-threshold" name="alert_threshold" class="puntwork-form-control" value="<?php echo esc_attr(get_option('puntwork_alert_threshold', 5)); ?>" min="1" max="100">
+								<span class="description" style="font-size: var(--font-size-xs); color: var(--color-gray-600); margin-top: var(--spacing-xs); display: block;"><?php _e('Consecutive errors before alerting', 'puntwork'); ?></span>
 							</div>
 						</div>
 						<div class="puntwork-card__footer" style="padding: var(--spacing-lg) var(--spacing-xl); border-top: 1px solid var(--color-gray-100); background: var(--color-gray-50);">
 							<div style="display: flex; gap: var(--spacing-md); justify-content: flex-end;">
 								<button type="submit" class="puntwork-btn puntwork-btn--primary">
 									<i class="fas fa-save puntwork-btn__icon"></i>
-									<?php _e( 'Save Settings', 'puntwork' ); ?>
+									<?php _e('Save Settings', 'puntwork'); ?>
 								</button>
 							</div>
 						</div>
@@ -496,7 +497,7 @@ function system_monitoring_page() {
 					$log.empty();
 
 					if (!entries || entries.length == 0) {
-						$log.html('<div class="puntwork-empty"><div class="puntwork-empty__icon"><i class="fas fa-inbox"></i></div><div class="puntwork-empty__title"><?php _e( 'No recent activity', 'puntwork' ); ?></div><div class="puntwork-empty__message"><?php _e( 'Activity will appear here as the system processes jobs and events.', 'puntwork' ); ?></div></div>');
+						$log.html('<div class="puntwork-empty"><div class="puntwork-empty__icon"><i class="fas fa-inbox"></i></div><div class="puntwork-empty__title"><?php _e('No recent activity', 'puntwork'); ?></div><div class="puntwork-empty__message"><?php _e('Activity will appear here as the system processes jobs and events.', 'puntwork'); ?></div></div>');
 						return;
 					}
 
@@ -529,7 +530,7 @@ function system_monitoring_page() {
 				},
 
 				clearOldLogs: function() {
-					if (confirm('<?php _e( 'Are you sure you want to clear old logs?', 'puntwork' ); ?>')) {
+					if (confirm('<?php _e('Are you sure you want to clear old logs?', 'puntwork'); ?>')) {
 						$.ajax({
 							url: puntworkMonitoring.ajaxurl,
 							type: 'POST',
@@ -540,7 +541,7 @@ function system_monitoring_page() {
 							success: (response) => {
 								if (response.success) {
 									this.loadActivityLog();
-									alert('<?php _e( 'Old logs cleared successfully', 'puntwork' ); ?>');
+									alert('<?php _e('Old logs cleared successfully', 'puntwork'); ?>');
 								}
 							}
 						});
@@ -562,9 +563,9 @@ function system_monitoring_page() {
 						},
 						success: (response) => {
 							if (response.success) {
-								alert('<?php _e( 'Alert settings saved successfully', 'puntwork' ); ?>');
+								alert('<?php _e('Alert settings saved successfully', 'puntwork'); ?>');
 							} else {
-								alert('<?php _e( 'Error saving alert settings', 'puntwork' ); ?>');
+								alert('<?php _e('Error saving alert settings', 'puntwork'); ?>');
 							}
 						}
 					});
@@ -579,7 +580,7 @@ function system_monitoring_page() {
 							data: {
 								labels: [],
 								datasets: [{
-									label: '<?php _e( 'Import Speed', 'puntwork' ); ?>',
+									label: '<?php _e('Import Speed', 'puntwork'); ?>',
 									data: [],
 									borderColor: '#007bff',
 									backgroundColor: 'rgba(0,123,255,0.1)',
@@ -602,7 +603,7 @@ function system_monitoring_page() {
 						{
 							type: 'doughnut',
 							data: {
-								labels: ['<?php _e( 'Used', 'puntwork' ); ?>', '<?php _e( 'Available', 'puntwork' ); ?>'],
+								labels: ['<?php _e('Used', 'puntwork'); ?>', '<?php _e('Available', 'puntwork'); ?>'],
 								datasets: [{
 									data: [65, 35],
 									backgroundColor: ['#dc3545', '#28a745']

@@ -161,7 +161,7 @@ function setup_job_import()
     } else {
         // Fallback to simple test
         try {
-            $test_query = $wpdb->get_var("SELECT 1");
+            $test_query = $wpdb->get_var('SELECT 1');
             if ($debug_mode) {
                 error_log('[PUNTWORK] [INIT-DEBUG] Database connection test successful');
             }
@@ -172,7 +172,7 @@ function setup_job_import()
                     'host' => DB_HOST,
                     'name' => DB_NAME,
                     'user' => DB_USER,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]));
             }
         }

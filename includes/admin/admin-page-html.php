@@ -10,8 +10,8 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+if (!defined('ABSPATH')) {
+    exit;
 }
 
 // Load admin UI components
@@ -27,14 +27,15 @@ require_once __DIR__ . '/accessibility.php';
 require_once __DIR__ . '/../queue/queue-manager.php';
 require_once __DIR__ . '/../queue/queue-ajax.php';
 
-function feeds_dashboard_page() {
-	// Enqueue admin modern styles
-	wp_enqueue_style( 'puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION );
+function feeds_dashboard_page()
+{
+    // Enqueue admin modern styles
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
 
-	// Add inline styles as fallback
-	wp_add_inline_style(
-		'puntwork-admin-modern',
-		'
+    // Add inline styles as fallback
+    wp_add_inline_style(
+        'puntwork-admin-modern',
+        '
         .puntwork-admin {
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
             "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -126,43 +127,45 @@ function feeds_dashboard_page() {
         }
         .puntwork-btn__icon { margin-right: 6px; }
     '
-	);
+    );
 
-	// Remove debug logging for security
-	wp_enqueue_script( 'jquery' );
+    // Remove debug logging for security
+    wp_enqueue_script('jquery');
 
-	// Render main import UI
-	render_main_import_ui();
+    // Render main import UI
+    render_main_import_ui();
 
-	// Render scheduling UI
-	render_scheduling_ui();
+    // Render scheduling UI
+    render_scheduling_ui();
 
-	// Render import history UI
-	render_import_history_ui();
+    // Render import history UI
+    render_import_history_ui();
 
-	// Render JavaScript initialization
-	render_javascript_init();
+    // Render JavaScript initialization
+    render_javascript_init();
 }
 
 /**
  * Feed Configuration page callback.
  */
-function feed_config_page() {
-	// Enqueue admin modern styles
-	wp_enqueue_style( 'puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION );
+function feed_config_page()
+{
+    // Enqueue admin modern styles
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
 
-	// Enqueue Sortable library for drag-and-drop
-	wp_enqueue_script( 'jquery-ui-sortable' );
+    // Enqueue Sortable library for drag-and-drop
+    wp_enqueue_script('jquery-ui-sortable');
 
-	// Render feed configuration UI
-	render_feed_config_ui();
+    // Render feed configuration UI
+    render_feed_config_ui();
 }
 
 /**
  * Render JavaScript initialization for the admin page.
  */
-function render_javascript_init() {
-	?>
+function render_javascript_init()
+{
+    ?>
 	<script type="text/javascript">
 		jQuery(document).ready(function($) {
 			console.log('[PUNTWORK] Inline script: Document ready, checking modules...');
@@ -252,43 +255,45 @@ function render_javascript_init() {
 	<?php
 }
 
-function jobs_dashboard_page() {
-	// Enqueue admin modern styles
-	wp_enqueue_style( 'puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION );
+function jobs_dashboard_page()
+{
+    // Enqueue admin modern styles
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
 
-	error_log( '[PUNTWORK] jobs_dashboard_page() called' );
-	wp_enqueue_script( 'jquery' );
+    error_log('[PUNTWORK] jobs_dashboard_page() called');
+    wp_enqueue_script('jquery');
 
-	// Render jobs dashboard UI
-	render_jobs_dashboard_ui();
+    // Render jobs dashboard UI
+    render_jobs_dashboard_ui();
 
-	// Render JavaScript initialization for jobs dashboard
-	render_jobs_javascript_init();
+    // Render JavaScript initialization for jobs dashboard
+    render_jobs_javascript_init();
 }
 
 /**
  * Render the main puntWork dashboard page.
  */
-function puntwork_dashboard_page() {
-	// Enqueue FontAwesome
-	wp_enqueue_style(
-		'font-awesome',
-		'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-		array(),
-		'6.4.0'
-	);
+function puntwork_dashboard_page()
+{
+    // Enqueue FontAwesome
+    wp_enqueue_style(
+        'font-awesome',
+        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+        [],
+        '6.4.0'
+    );
 
-	// Enqueue admin modern styles
-	wp_enqueue_style( 'puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION );
+    // Enqueue admin modern styles
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
 
-	?>
+    ?>
 		<div class="wrap" style="max-width: 1200px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont,
 		'Segoe UI', Roboto, sans-serif; color: #1d1d1f; padding: 0 20px;">
 		<h1 style="font-size: 34px; font-weight: 600; text-align: center; margin: 40px 0 20px;">
-			<?php _e( 'puntWork Dashboard', 'puntwork' ); ?>
+			<?php _e('puntWork Dashboard', 'puntwork'); ?>
 		</h1>
 		<p style="font-size: 16px; color: #8e8e93; text-align: center; margin-bottom: 40px;">
-			<?php _e( 'Manage your job feeds and content with ease', 'puntwork' ); ?>
+			<?php _e('Manage your job feeds and content with ease', 'puntwork'); ?>
 		</p>
 
 		<!-- PWA Status Indicator -->
@@ -297,9 +302,9 @@ function puntwork_dashboard_page() {
 		color: white; padding: 12px 20px; border-radius: 12px; text-align: center; margin-bottom: 24px;
 		font-size: 14px; font-weight: 500; box-shadow: 0 2px 8px rgba(0,122,255,0.2);">
 			<i class="fas fa-mobile-alt" style="margin-right: 8px;"></i>
-			<?php _e( 'puntWork Admin is available as a Progressive Web App!', 'puntwork' ); ?>
+			<?php _e('puntWork Admin is available as a Progressive Web App!', 'puntwork'); ?>
 			<button id="pwa-install-btn" style="margin-left: 12px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">
-				<?php _e( 'Install', 'puntwork' ); ?>
+				<?php _e('Install', 'puntwork'); ?>
 			</button>
 		</div>
 
@@ -319,15 +324,15 @@ function puntwork_dashboard_page() {
 					</div>
 					<div>
 						<h3 style="font-size: 20px; font-weight: 600; margin: 0;">
-							<?php _e( 'Job Feeds', 'puntwork' ); ?>
+							<?php _e('Job Feeds', 'puntwork'); ?>
 						</h3>
 						<p style="font-size: 14px; color: #8e8e93; margin: 4px 0 0;">
-							<?php _e( 'Import and manage job feeds', 'puntwork' ); ?>
+							<?php _e('Import and manage job feeds', 'puntwork'); ?>
 						</p>
 					</div>
 				</div>
 				<div style="display: flex; justify-content: space-between; align-items: center;">
-					<span style="font-size: 14px; color: #8e8e93;"><?php _e( 'Manage feeds →', 'puntwork' ); ?></span>
+					<span style="font-size: 14px; color: #8e8e93;"><?php _e('Manage feeds →', 'puntwork'); ?></span>
 					<span style="font-size: 18px; color: #007aff;">→</span>
 				</div>
 			</div>
@@ -345,14 +350,14 @@ function puntwork_dashboard_page() {
 						<i class="fas fa-briefcase" style="font-size: 32px; color: white;"></i>
 					</div>
 					<div>
-						<h3 style="font-size: 20px; font-weight: 600; margin: 0;"><?php _e( 'Jobs', 'puntwork' ); ?></h3>
+						<h3 style="font-size: 20px; font-weight: 600; margin: 0;"><?php _e('Jobs', 'puntwork'); ?></h3>
 						<p style="font-size: 14px; color: #8e8e93; margin: 4px 0 0;">
-							<?php _e( 'View and manage job posts', 'puntwork' ); ?>
+							<?php _e('View and manage job posts', 'puntwork'); ?>
 						</p>
 					</div>
 				</div>
 				<div style="display: flex; justify-content: space-between; align-items: center;">
-					<span style="font-size: 14px; color: #34c759;"><?php _e( 'Browse jobs →', 'puntwork' ); ?></span>
+					<span style="font-size: 14px; color: #34c759;"><?php _e('Browse jobs →', 'puntwork'); ?></span>
 					<span style="font-size: 18px; color: #34c759;">→</span>
 				</div>
 			</div>
@@ -370,15 +375,15 @@ function puntwork_dashboard_page() {
 					</div>
 					<div>
 						<h3 style="font-size: 20px; font-weight: 600; margin: 0;">
-							<?php _e( 'Feed Config', 'puntwork' ); ?>
+							<?php _e('Feed Config', 'puntwork'); ?>
 						</h3>
 						<p style="font-size: 14px; color: #8e8e93; margin: 4px 0 0;">
-							<?php _e( 'Configure and reorder feeds', 'puntwork' ); ?>
+							<?php _e('Configure and reorder feeds', 'puntwork'); ?>
 						</p>
 					</div>
 				</div>
 				<div style="display: flex; justify-content: space-between; align-items: center;">
-					<span style="font-size: 14px; color: #8e8e93;"><?php _e( 'Configure feeds →', 'puntwork' ); ?></span>
+					<span style="font-size: 14px; color: #8e8e93;"><?php _e('Configure feeds →', 'puntwork'); ?></span>
 					<span style="font-size: 18px; color: #ff9500;">→</span>
 				</div>
 			</div>
@@ -396,16 +401,16 @@ function puntwork_dashboard_page() {
 					</div>
 					<div>
 						<h3 style="font-size: 20px; font-weight: 600; margin: 0;">
-							<?php _e( 'Scheduling', 'puntwork' ); ?>
+							<?php _e('Scheduling', 'puntwork'); ?>
 						</h3>
 						<p style="font-size: 14px; color: #8e8e93; margin: 4px 0 0;">
-							<?php _e( 'Automated import schedules', 'puntwork' ); ?>
+							<?php _e('Automated import schedules', 'puntwork'); ?>
 						</p>
 					</div>
 				</div>
 				<div style="display: flex; justify-content: space-between; align-items: center;">
 					<span style="font-size: 14px; color: #8e8e93;">
-						<?php _e( 'Configure schedules →', 'puntwork' ); ?>
+						<?php _e('Configure schedules →', 'puntwork'); ?>
 					</span>
 					<span style="font-size: 18px; color: #af52de;">→</span>
 				</div>
@@ -416,24 +421,24 @@ function puntwork_dashboard_page() {
 				<div style="background-color: white; border-radius: 16px; padding: 24px;
 			box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 40px;">
 			<h3 style="font-size: 24px; font-weight: 600; margin: 0 0 20px;">
-				<?php _e( 'Quick Overview', 'puntwork' ); ?>
+				<?php _e('Quick Overview', 'puntwork'); ?>
 			</h3>
 			<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px;">
 				<div style="text-align: center;">
 					<div style="font-size: 32px; font-weight: 700; color: #007aff; margin-bottom: 8px;">0</div>
-					<div style="font-size: 14px; color: #86868b;"><?php _e( 'Active Feeds', 'puntwork' ); ?></div>
+					<div style="font-size: 14px; color: #86868b;"><?php _e('Active Feeds', 'puntwork'); ?></div>
 				</div>
 				<div style="text-align: center;">
 					<div style="font-size: 32px; font-weight: 700; color: #34c759; margin-bottom: 8px;">0</div>
-					<div style="font-size: 14px; color: #86868b;"><?php _e( 'Total Jobs', 'puntwork' ); ?></div>
+					<div style="font-size: 14px; color: #86868b;"><?php _e('Total Jobs', 'puntwork'); ?></div>
 				</div>
 				<div style="text-align: center;">
 					<div style="font-size: 32px; font-weight: 700; color: #ff9500; margin-bottom: 8px;">0</div>
-					<div style="font-size: 14px; color: #86868b;"><?php _e( 'Scheduled Imports', 'puntwork' ); ?></div>
+					<div style="font-size: 14px; color: #86868b;"><?php _e('Scheduled Imports', 'puntwork'); ?></div>
 				</div>
 				<div style="text-align: center;">
 					<div style="font-size: 32px; font-weight: 700; color: #ff3b30; margin-bottom: 8px;">0</div>
-					<div style="font-size: 14px; color: #86868b;"><?php _e( 'Failed Imports', 'puntwork' ); ?></div>
+					<div style="font-size: 14px; color: #86868b;"><?php _e('Failed Imports', 'puntwork'); ?></div>
 				</div>
 			</div>
 		</div>
@@ -442,14 +447,14 @@ function puntwork_dashboard_page() {
 		<div style="background-color: white; border-radius: 16px; padding: 24px;
 			box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
 			<h3 style="font-size: 24px; font-weight: 600; margin: 0 0 20px;">
-				<?php _e( 'Recent Activity', 'puntwork' ); ?>
+				<?php _e('Recent Activity', 'puntwork'); ?>
 			</h3>
 			<div style="text-align: center; padding: 40px 20px; color: #8e8e93;">
 				<div style="font-size: 48px; margin-bottom: 16px;">
 					<i class="fas fa-chart-bar" style="color: #8e8e93;"></i>
 				</div>
 				<p style="font-size: 16px; margin: 0;">
-					<?php _e( 'Activity feed will appear here once you start importing jobs', 'puntwork' ); ?>
+					<?php _e('Activity feed will appear here once you start importing jobs', 'puntwork'); ?>
 				</p>
 			</div>
 		</div>
@@ -481,7 +486,7 @@ function puntwork_dashboard_page() {
 								navigator.serviceWorker.getRegistrations().then(registrations => {
 									if (registrations.length > 0) {
 										// PWA is registered, show manual install instructions
-										alert('<?php echo esc_js( __( "To install puntWork Admin as a PWA, click the install icon in your browser\'s address bar or use the browser menu.", 'puntwork' ) ); ?>');
+										alert('<?php echo esc_js(__("To install puntWork Admin as a PWA, click the install icon in your browser\'s address bar or use the browser menu.", 'puntwork')); ?>');
 									}
 								});
 							}
@@ -504,16 +509,17 @@ function puntwork_dashboard_page() {
 /**
  * Render the onboarding modal HTML.
  */
-function render_onboarding_modal() {
-	// Check if onboarding has been completed
-	$onboarding_completed = get_option( 'puntwork_onboarding_completed', false );
+function render_onboarding_modal()
+{
+    // Check if onboarding has been completed
+    $onboarding_completed = get_option('puntwork_onboarding_completed', false);
 
-	// Only show if not completed
-	if ( $onboarding_completed ) {
-		return;
-	}
+    // Only show if not completed
+    if ($onboarding_completed) {
+        return;
+    }
 
-	?>
+    ?>
 	<!-- Onboarding Modal Overlay -->
 	<div class="onboarding-overlay" id="onboarding-overlay" style="display: none;"></div>
 
@@ -522,21 +528,21 @@ function render_onboarding_modal() {
 		<div class="onboarding-modal">
 			<!-- Modal Header -->
 			<div class="onboarding-header">
-				<button type="button" id="onboarding-close" class="onboarding-close" aria-label="<?php esc_attr_e( 'Close onboarding', 'puntwork' ); ?>">
+				<button type="button" id="onboarding-close" class="onboarding-close" aria-label="<?php esc_attr_e('Close onboarding', 'puntwork'); ?>">
 					<i class="fas fa-times"></i>
 				</button>
-				<button type="button" id="onboarding-skip" class="onboarding-skip-btn" aria-label="<?php esc_attr_e( 'Skip onboarding', 'puntwork' ); ?>">
-					<?php _e( 'Skip', 'puntwork' ); ?>
+				<button type="button" id="onboarding-skip" class="onboarding-skip-btn" aria-label="<?php esc_attr_e('Skip onboarding', 'puntwork'); ?>">
+					<?php _e('Skip', 'puntwork'); ?>
 				</button>
 			</div>
 
 			<!-- Step Indicators -->
 			<div class="step-indicators">
-				<div class="step-indicator active" data-step="0" aria-label="<?php esc_attr_e( 'Welcome step', 'puntwork' ); ?>"></div>
-				<div class="step-indicator" data-step="1" aria-label="<?php esc_attr_e( 'Configure feeds step', 'puntwork' ); ?>"></div>
-				<div class="step-indicator" data-step="2" aria-label="<?php esc_attr_e( 'Set up scheduling step', 'puntwork' ); ?>"></div>
-				<div class="step-indicator" data-step="3" aria-label="<?php esc_attr_e( 'API configuration step', 'puntwork' ); ?>"></div>
-				<div class="step-indicator" data-step="4" aria-label="<?php esc_attr_e( 'Setup complete step', 'puntwork' ); ?>"></div>
+				<div class="step-indicator active" data-step="0" aria-label="<?php esc_attr_e('Welcome step', 'puntwork'); ?>"></div>
+				<div class="step-indicator" data-step="1" aria-label="<?php esc_attr_e('Configure feeds step', 'puntwork'); ?>"></div>
+				<div class="step-indicator" data-step="2" aria-label="<?php esc_attr_e('Set up scheduling step', 'puntwork'); ?>"></div>
+				<div class="step-indicator" data-step="3" aria-label="<?php esc_attr_e('API configuration step', 'puntwork'); ?>"></div>
+				<div class="step-indicator" data-step="4" aria-label="<?php esc_attr_e('Setup complete step', 'puntwork'); ?>"></div>
 			</div>
 
 			<!-- Step Content -->
@@ -557,11 +563,11 @@ function render_onboarding_modal() {
 			<div class="onboarding-footer">
 				<div class="footer-actions">
 					<!-- Navigation Buttons -->
-					<button type="button" id="onboarding-prev" class="onboarding-btn secondary prev-btn" style="display: none;" aria-label="<?php esc_attr_e( 'Previous step', 'puntwork' ); ?>">
-						<i class="fas fa-arrow-left"></i> <?php _e( 'Previous', 'puntwork' ); ?>
+					<button type="button" id="onboarding-prev" class="onboarding-btn secondary prev-btn" style="display: none;" aria-label="<?php esc_attr_e('Previous step', 'puntwork'); ?>">
+						<i class="fas fa-arrow-left"></i> <?php _e('Previous', 'puntwork'); ?>
 					</button>
-					<button type="button" id="onboarding-next" class="onboarding-btn primary next-btn" aria-label="<?php esc_attr_e( 'Next step', 'puntwork' ); ?>">
-						<?php _e( 'Next', 'puntwork' ); ?> <i class="fas fa-arrow-right"></i>
+					<button type="button" id="onboarding-next" class="onboarding-btn primary next-btn" aria-label="<?php esc_attr_e('Next step', 'puntwork'); ?>">
+						<?php _e('Next', 'puntwork'); ?> <i class="fas fa-arrow-right"></i>
 					</button>
 				</div>
 			</div>
@@ -573,8 +579,9 @@ function render_onboarding_modal() {
 /**
  * Render import history UI section.
  */
-function render_import_history_ui() {
-	?>
+function render_import_history_ui()
+{
+    ?>
 	<!-- Import History Section -->
 	<div class="wrap" style="max-width: 900px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1d1d1f; padding: 0 24px; background-color: #f5f5f7;">
 		<div id="import-history" style="max-width: 900px; margin: 0 auto; margin-top: 40px; background-color: #ffffff; border-radius: 16px; padding: 32px; box-shadow: 0 2px 10px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04); position: relative; overflow: hidden;">
@@ -582,17 +589,17 @@ function render_import_history_ui() {
 			<!-- Header Section -->
 			<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #e5e5e7;">
 				<div>
-					<h2 style="font-size: 28px; font-weight: 700; margin: 0 0 4px 0; color: #1d1d1f; letter-spacing: -0.02em;"><?php _e( 'Import History', 'puntwork' ); ?></h2>
-					<p style="font-size: 15px; color: #86868b; margin: 0; font-weight: 400;"><?php _e( 'View all import runs including manual, scheduled, and API-triggered imports', 'puntwork' ); ?></p>
+					<h2 style="font-size: 28px; font-weight: 700; margin: 0 0 4px 0; color: #1d1d1f; letter-spacing: -0.02em;"><?php _e('Import History', 'puntwork'); ?></h2>
+					<p style="font-size: 15px; color: #86868b; margin: 0; font-weight: 400;"><?php _e('View all import runs including manual, scheduled, and API-triggered imports', 'puntwork'); ?></p>
 				</div>
-				<button id="refresh-history-main" class="puntwork-btn puntwork-btn--secondary" aria-label="<?php esc_attr_e( 'Refresh import history', 'puntwork' ); ?>">
-					<i class="fas fa-sync-alt" style="margin-right: 6px;"></i><?php _e( 'Refresh', 'puntwork' ); ?>
+				<button id="refresh-history-main" class="puntwork-btn puntwork-btn--secondary" aria-label="<?php esc_attr_e('Refresh import history', 'puntwork'); ?>">
+					<i class="fas fa-sync-alt" style="margin-right: 6px;"></i><?php _e('Refresh', 'puntwork'); ?>
 				</button>
 			</div>
 
 			<!-- Import History Content -->
 			<div id="run-history-list" style="max-height: 600px; overflow-y: auto; font-size: 14px; border-radius: 8px; background-color: #fafbfc; padding: 20px;">
-				<div style="color: #86868b; text-align: center; padding: 24px; font-style: italic;"><?php _e( 'Loading history...', 'puntwork' ); ?></div>
+				<div style="color: #86868b; text-align: center; padding: 24px; font-style: italic;"><?php _e('Loading history...', 'puntwork'); ?></div>
 			</div>
 		</div>
 	</div>
@@ -632,8 +639,9 @@ function render_import_history_ui() {
 /**
  * Render JavaScript initialization for the jobs dashboard page.
  */
-function render_jobs_javascript_init() {
-	?>
+function render_jobs_javascript_init()
+{
+    ?>
 	<script type="text/javascript">
 		jQuery(document).ready(function($) {
 			console.log('[PUNTWORK] Jobs Dashboard: Document ready, checking modules...');

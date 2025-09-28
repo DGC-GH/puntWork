@@ -10,598 +10,614 @@
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+if (!defined('ABSPATH')) {
+    exit;
 }
 
 // Register custom cron intervals
 add_filter(
-	'cron_schedules',
-	function ( $schedules ) {
-		$schedules['puntwork_hourly']  = array(
-			'interval' => HOUR_IN_SECONDS,
-			'display'  => __( 'Every Hour (Puntwork)', 'puntwork' ),
-		);
-		$schedules['puntwork_3hours']  = array(
-			'interval' => 3 * HOUR_IN_SECONDS,
-			'display'  => __( 'Every 3 Hours (Puntwork)', 'puntwork' ),
-		);
-		$schedules['puntwork_6hours']  = array(
-			'interval' => 6 * HOUR_IN_SECONDS,
-			'display'  => __( 'Every 6 Hours (Puntwork)', 'puntwork' ),
-		);
-		$schedules['puntwork_12hours'] = array(
-			'interval' => 12 * HOUR_IN_SECONDS,
-			'display'  => __( 'Every 12 Hours (Puntwork)', 'puntwork' ),
-		);
-		$schedules['puntwork_5min']    = array(
-			'interval' => 5 * MINUTE_IN_SECONDS,
-			'display'  => __( 'Every 5 Minutes (Puntwork)', 'puntwork' ),
-		);
+    'cron_schedules',
+    function ($schedules) {
+        $schedules['puntwork_hourly'] = [
+            'interval' => HOUR_IN_SECONDS,
+            'display' => __('Every Hour (Puntwork)', 'puntwork'),
+        ];
+        $schedules['puntwork_3hours'] = [
+            'interval' => 3 * HOUR_IN_SECONDS,
+            'display' => __('Every 3 Hours (Puntwork)', 'puntwork'),
+        ];
+        $schedules['puntwork_6hours'] = [
+            'interval' => 6 * HOUR_IN_SECONDS,
+            'display' => __('Every 6 Hours (Puntwork)', 'puntwork'),
+        ];
+        $schedules['puntwork_12hours'] = [
+            'interval' => 12 * HOUR_IN_SECONDS,
+            'display' => __('Every 12 Hours (Puntwork)', 'puntwork'),
+        ];
+        $schedules['puntwork_5min'] = [
+            'interval' => 5 * MINUTE_IN_SECONDS,
+            'display' => __('Every 5 Minutes (Puntwork)', 'puntwork'),
+        ];
 
-		// Add custom intervals
-		for ( $i = 2; $i <= 24; $i++ ) {
-			$schedules[ 'puntwork_' . $i . 'hours' ] = array(
-				'interval' => $i * HOUR_IN_SECONDS,
-				'display'  => sprintf( __( 'Every %d Hours (Puntwork)', 'puntwork' ), $i ),
-			);
-		}
+        // Add custom intervals
+        for ($i = 2; $i <= 24; $i++) {
+            $schedules['puntwork_' . $i . 'hours'] = [
+                'interval' => $i * HOUR_IN_SECONDS,
+                'display' => sprintf(__('Every %d Hours (Puntwork)', 'puntwork'), $i),
+            ];
+        }
 
-		return $schedules;
-	}
+        return $schedules;
+    }
 );
 
 /**
  * Calculate the next run time based on schedule settings
  * Uses UTC for all time calculations (WordPress standard).
  */
-function calculate_next_run_time( $schedule_data ) {
-	// Get current time in UTC (Unix timestamp is always UTC)
-	$current_time = time();
-	$hour         = $schedule_data['hour'] ?? 9;
-	$minute       = $schedule_data['minute'] ?? 0;
-	$frequency    = $schedule_data['frequency'] ?? 'daily';
+function calculate_next_run_time($schedule_data)
+{
+    // Get current time in UTC (Unix timestamp is always UTC)
+    $current_time = time();
+    $hour = $schedule_data['hour'] ?? 9;
+    $minute = $schedule_data['minute'] ?? 0;
+    $frequency = $schedule_data['frequency'] ?? 'daily';
 
-	// Get WordPress timezone
-	$wp_timezone = wp_timezone();
+    // Get WordPress timezone
+    $wp_timezone = wp_timezone();
 
-	// Create DateTime objects in WordPress timezone
-	$now          = new \DateTime( 'now', $wp_timezone );
-	$today_target = new \DateTime( 'today', $wp_timezone );
-	$today_target->setTime( $hour, $minute, 0 );
+    // Create DateTime objects in WordPress timezone
+    $now = new \DateTime('now', $wp_timezone);
+    $today_target = new \DateTime('today', $wp_timezone);
+    $today_target->setTime($hour, $minute, 0);
 
-	// If today's target time has passed, calculate for tomorrow
-	if ( $today_target <= $now ) {
-		$today_target->modify( '+1 day' );
-	}
+    // If today's target time has passed, calculate for tomorrow
+    if ($today_target <= $now) {
+        $today_target->modify('+1 day');
+    }
 
-	// For non-daily frequencies, we need to find the next occurrence
-	if ( $frequency !== 'daily' ) {
-		$interval_hours = 0;
+    // For non-daily frequencies, we need to find the next occurrence
+    if ($frequency !== 'daily') {
+        $interval_hours = 0;
 
-		switch ( $frequency ) {
-			case 'hourly':
-				$interval_hours = 1;
+        switch ($frequency) {
+            case 'hourly':
+                $interval_hours = 1;
 
-				break;
-			case '3hours':
-				$interval_hours = 3;
+                break;
+            case '3hours':
+                $interval_hours = 3;
 
-				break;
-			case '6hours':
-				$interval_hours = 6;
+                break;
+            case '6hours':
+                $interval_hours = 6;
 
-				break;
-			case '12hours':
-				$interval_hours = 12;
+                break;
+            case '12hours':
+                $interval_hours = 12;
 
-				break;
-			case 'custom':
-				$interval_hours = $schedule_data['interval'] ?? 24;
+                break;
+            case 'custom':
+                $interval_hours = $schedule_data['interval'] ?? 24;
 
-				break;
-			default:
-				$interval_hours = 24; // fallback to daily
-		}
+                break;
+            default:
+                $interval_hours = 24; // fallback to daily
+        }
 
-		// For interval schedules, find the next time that matches the specified hour/minute pattern
-		// within the interval schedule (hour = base_hour + N * interval_hours)
-		$base_hour      = $hour;
-		$current_hour   = (int) $now->format( 'H' );
-		$current_minute = (int) $now->format( 'i' );
+        // For interval schedules, find the next time that matches the specified hour/minute pattern
+        // within the interval schedule (hour = base_hour + N * interval_hours)
+        $base_hour = $hour;
+        $current_hour = (int)$now->format('H');
+        $current_minute = (int)$now->format('i');
 
-		// Find the next valid hour that is >= current_hour and satisfies the pattern
-		$next_valid_hour = $base_hour;
-		while ( $next_valid_hour < $current_hour ) {
-			$next_valid_hour += $interval_hours;
-		}
+        // Find the next valid hour that is >= current_hour and satisfies the pattern
+        $next_valid_hour = $base_hour;
+        while ($next_valid_hour < $current_hour) {
+            $next_valid_hour += $interval_hours;
+        }
 
-		// Initialize $next_run as a DateTime object
-		$next_run = new \DateTime( 'now', $wp_timezone );
-		$next_run->setTime( $next_valid_hour, $minute, 0 );
+        // Initialize $next_run as a DateTime object
+        $next_run = new \DateTime('now', $wp_timezone);
+        $next_run->setTime($next_valid_hour, $minute, 0);
 
-		// If this exact time has already passed, move to the next interval
-		if ( $next_run <= $now ) {
-			$next_valid_hour += $interval_hours;
-			$next_run->setTime( $next_valid_hour, $minute, 0 );
-		}
+        // If this exact time has already passed, move to the next interval
+        if ($next_run <= $now) {
+            $next_valid_hour += $interval_hours;
+            $next_run->setTime($next_valid_hour, $minute, 0);
+        }
 
-		return $next_run->getTimestamp();
-	}
+        return $next_run->getTimestamp();
+    }
 
-	// For daily frequency, just return today's target (or tomorrow's if passed)
-	return $today_target->getTimestamp();
+    // For daily frequency, just return today's target (or tomorrow's if passed)
+    return $today_target->getTimestamp();
 }
 
 /**
  * Update WordPress cron schedule based on settings.
  */
-function update_cron_schedule( $schedule_data ) {
-	$hook = 'puntwork_scheduled_import';
+function update_cron_schedule($schedule_data)
+{
+    $hook = 'puntwork_scheduled_import';
 
-	// Clear existing schedule
-	wp_clear_scheduled_hook( $hook );
+    // Clear existing schedule
+    wp_clear_scheduled_hook($hook);
 
-	if ( $schedule_data['enabled'] ) {
-		$next_run_timestamp = calculate_next_run_time( $schedule_data );
-		$cron_interval      = get_cron_interval( $schedule_data );
+    if ($schedule_data['enabled']) {
+        $next_run_timestamp = calculate_next_run_time($schedule_data);
+        $cron_interval = get_cron_interval($schedule_data);
 
-		if ( wp_schedule_event( $next_run_timestamp, $cron_interval, $hook ) ) {
-			error_log( '[PUNTWORK] Scheduled import hook registered for: ' . wp_date( 'Y-m-d H:i:s', $next_run_timestamp ) . ' (' . wp_timezone_string() . ') with interval: ' . $cron_interval );
-		} else {
-			error_log( '[PUNTWORK] Failed to register scheduled import hook with interval: ' . $cron_interval );
-		}
-	}
+        if (wp_schedule_event($next_run_timestamp, $cron_interval, $hook)) {
+            error_log('[PUNTWORK] Scheduled import hook registered for: ' . wp_date('Y-m-d H:i:s', $next_run_timestamp) . ' (' . wp_timezone_string() . ') with interval: ' . $cron_interval);
+        } else {
+            error_log('[PUNTWORK] Failed to register scheduled import hook with interval: ' . $cron_interval);
+        }
+    }
 }
 
-function get_cron_interval( $schedule_data ) {
-	switch ( $schedule_data['frequency'] ) {
-		case 'hourly':
-			return 'puntwork_hourly';
-		case '3hours':
-			return 'puntwork_3hours';
-		case '6hours':
-			return 'puntwork_6hours';
-		case '12hours':
-			return 'puntwork_12hours';
-		case 'daily':
-			return 'daily';
-		case 'custom':
-			$interval_hours = intval( $schedule_data['interval'] );
-			// Use predefined custom intervals
-			if ( $interval_hours >= 2 && $interval_hours <= 24 ) {
-				return 'puntwork_' . $interval_hours . 'hours';
-			}
+function get_cron_interval($schedule_data)
+{
+    switch ($schedule_data['frequency']) {
+        case 'hourly':
+            return 'puntwork_hourly';
+        case '3hours':
+            return 'puntwork_3hours';
+        case '6hours':
+            return 'puntwork_6hours';
+        case '12hours':
+            return 'puntwork_12hours';
+        case 'daily':
+            return 'daily';
+        case 'custom':
+            $interval_hours = intval($schedule_data['interval']);
+            // Use predefined custom intervals
+            if ($interval_hours >= 2 && $interval_hours <= 24) {
+                return 'puntwork_' . $interval_hours . 'hours';
+            }
 
-			// Fallback to closest available interval
-			return 'puntwork_6hours';
-		default:
-			return 'daily';
-	}
+            // Fallback to closest available interval
+            return 'puntwork_6hours';
+        default:
+            return 'daily';
+    }
 }
 
 /**
  * Get next scheduled run time.
  */
-function get_next_scheduled_time() {
-	$next_scheduled = wp_next_scheduled( 'puntwork_scheduled_import' );
+function get_next_scheduled_time()
+{
+    $next_scheduled = wp_next_scheduled('puntwork_scheduled_import');
 
-	if ( $next_scheduled ) {
-		$current_time = current_time( 'timestamp' );
-		$time_diff    = $next_scheduled - $current_time;
+    if ($next_scheduled) {
+        $current_time = current_time('timestamp');
+        $time_diff = $next_scheduled - $current_time;
 
-		// Calculate relative time correctly
-		if ( $time_diff <= 0 ) {
-			$relative = 'now';
-		} elseif ( $time_diff < 60 ) {
-			$relative = 'in ' . $time_diff . ' second' . ( $time_diff !== 1 ? 's' : '' );
-		} elseif ( $time_diff < 3600 ) {
-			$minutes  = round( $time_diff / 60 );
-			$relative = 'in ' . $minutes . ' minute' . ( $minutes !== 1 ? 's' : '' );
-		} elseif ( $time_diff < 86400 ) {
-			$hours    = round( $time_diff / 3600 );
-			$relative = 'in ' . $hours . ' hour' . ( $hours !== 1 ? 's' : '' );
-		} else {
-			$days     = round( $time_diff / 86400 );
-			$relative = 'in ' . $days . ' day' . ( $days !== 1 ? 's' : '' );
-		}
+        // Calculate relative time correctly
+        if ($time_diff <= 0) {
+            $relative = 'now';
+        } elseif ($time_diff < 60) {
+            $relative = 'in ' . $time_diff . ' second' . ($time_diff !== 1 ? 's' : '');
+        } elseif ($time_diff < 3600) {
+            $minutes = round($time_diff / 60);
+            $relative = 'in ' . $minutes . ' minute' . ($minutes !== 1 ? 's' : '');
+        } elseif ($time_diff < 86400) {
+            $hours = round($time_diff / 3600);
+            $relative = 'in ' . $hours . ' hour' . ($hours !== 1 ? 's' : '');
+        } else {
+            $days = round($time_diff / 86400);
+            $relative = 'in ' . $days . ' day' . ($days !== 1 ? 's' : '');
+        }
 
-		return array(
-			'timestamp' => $next_scheduled,
-			'formatted' => wp_date( 'M j, Y H:i', $next_scheduled ),
-			'relative'  => $relative,
-		);
-	}
+        return [
+            'timestamp' => $next_scheduled,
+            'formatted' => wp_date('M j, Y H:i', $next_scheduled),
+            'relative' => $relative,
+        ];
+    }
 
-	return null;
+    return null;
 }
 
 /**
  * Get schedule status information.
  */
-function get_schedule_status() {
-	$schedule = get_option( 'puntwork_import_schedule', array( 'enabled' => false ) );
-	$next_run = get_next_scheduled_time();
-	$last_run = get_option( 'puntwork_last_import_run', null );
+function get_schedule_status()
+{
+    $schedule = get_option('puntwork_import_schedule', ['enabled' => false]);
+    $next_run = get_next_scheduled_time();
+    $last_run = get_option('puntwork_last_import_run', null);
 
-	$status = 'Disabled';
-	if ( $schedule['enabled'] ) {
-		if ( $next_run ) {
-			$status = 'Active';
-		} else {
-			$status = 'Error';
-		}
-	}
+    $status = 'Disabled';
+    if ($schedule['enabled']) {
+        if ($next_run) {
+            $status = 'Active';
+        } else {
+            $status = 'Error';
+        }
+    }
 
-	return array(
-		'status'    => $status,
-		'enabled'   => $schedule['enabled'],
-		'next_run'  => $next_run,
-		'last_run'  => $last_run,
-		'frequency' => $schedule['frequency'] ?? 'daily',
-		'interval'  => $schedule['interval'] ?? 24,
-	);
+    return [
+        'status' => $status,
+        'enabled' => $schedule['enabled'],
+        'next_run' => $next_run,
+        'last_run' => $last_run,
+        'frequency' => $schedule['frequency'] ?? 'daily',
+        'interval' => $schedule['interval'] ?? 24,
+    ];
 }
 
 /**
  * Health check for stuck imports
  * Similar to WooCommerce's cron healthcheck system.
  */
-function check_import_health() {
-	$status = get_option( 'job_import_status', array() );
+function check_import_health()
+{
+    $status = get_option('job_import_status', []);
 
-	// Check if there's an active import that's been running too long
-	if ( isset( $status['complete'] ) && ! $status['complete'] && ! isset( $status['paused'] ) ) {
-		$start_time   = $status['start_time'] ?? 0;
-		$current_time = time();
+    // Check if there's an active import that's been running too long
+    if (isset($status['complete']) && !$status['complete'] && !isset($status['paused'])) {
+        $start_time = $status['start_time'] ?? 0;
+        $current_time = time();
 
-		// If import has been running for more than 10 minutes without update, consider it stuck
-		if ( ( $current_time - $start_time ) > 600 ) { // 10 minutes
-			error_log( '[PUNTWORK] Detected stuck import - resetting status' );
+        // If import has been running for more than 10 minutes without update, consider it stuck
+        if (($current_time - $start_time) > 600) { // 10 minutes
+            error_log('[PUNTWORK] Detected stuck import - resetting status');
 
-			$status['error_message'] = 'Import appears to be stuck - reset by health check';
-			$status['complete']      = true;
-			$status['success']       = false;
-			$status['last_update']   = $current_time;
-			update_option( 'job_import_status', $status, false );
+            $status['error_message'] = 'Import appears to be stuck - reset by health check';
+            $status['complete'] = true;
+            $status['success'] = false;
+            $status['last_update'] = $current_time;
+            update_option('job_import_status', $status, false);
 
-			// Clear any scheduled continuations
-			wp_clear_scheduled_hook( 'puntwork_continue_import' );
-		}
-	}
+            // Clear any scheduled continuations
+            wp_clear_scheduled_hook('puntwork_continue_import');
+        }
+    }
 
-	// Check for paused imports that should be continued
-	if ( isset( $status['paused'] ) && $status['paused'] ) {
-		$last_update  = $status['last_update'] ?? 0;
-		$current_time = time();
+    // Check for paused imports that should be continued
+    if (isset($status['paused']) && $status['paused']) {
+        $last_update = $status['last_update'] ?? 0;
+        $current_time = time();
 
-		// If paused for more than 5 minutes, try to continue
-		if ( ( $current_time - $last_update ) > 300 ) { // 5 minutes
-			error_log( '[PUNTWORK] Attempting to continue long-paused import' );
-			wp_schedule_single_event( time() + 10, 'puntwork_continue_import' );
-		}
-	}
+        // If paused for more than 5 minutes, try to continue
+        if (($current_time - $last_update) > 300) { // 5 minutes
+            error_log('[PUNTWORK] Attempting to continue long-paused import');
+            wp_schedule_single_event(time() + 10, 'puntwork_continue_import');
+        }
+    }
 }
 
 // Schedule health check to run every 5 minutes
 add_action(
-	'wp',
-	function () {
-		if ( ! wp_next_scheduled( 'puntwork_import_health_check' ) ) {
-			wp_schedule_event( time(), 'puntwork_5min', 'puntwork_import_health_check' );
-		}
-	}
+    'wp',
+    function () {
+        if (!wp_next_scheduled('puntwork_import_health_check')) {
+            wp_schedule_event(time(), 'puntwork_5min', 'puntwork_import_health_check');
+        }
+    }
 );
-add_action( 'puntwork_import_health_check', __NAMESPACE__ . '\\check_import_health' );
+add_action('puntwork_import_health_check', __NAMESPACE__ . '\\check_import_health');
 
 /**
  * Advanced scheduling with dependency management and intelligent timing.
  */
-class AdvancedScheduler {
+class AdvancedScheduler
+{
+    private static array $jobDependencies = [];
+    private static array $jobPriorities = [];
+    private static array $jobConditions = [];
 
-	private static array $jobDependencies = array();
-	private static array $jobPriorities   = array();
-	private static array $jobConditions   = array();
+    /**
+     * Schedule a job with dependencies and conditions.
+     *
+     * @param  string $jobId        Unique job identifier
+     * @param  array  $schedule     Schedule configuration
+     * @param  array  $dependencies Array of job IDs this job depends on
+     * @param  array  $conditions   Conditional execution rules
+     * @param  int    $priority     Job priority (1-10, higher = more important)
+     * @return bool Success
+     */
+    public static function scheduleWithDependencies(
+        string $jobId,
+        array $schedule,
+        array $dependencies = [],
+        array $conditions = [],
+        int $priority = 5
+    ): bool {
+        // Store job configuration
+        self::$jobDependencies[$jobId] = $dependencies;
+        self::$jobPriorities[$jobId] = max(1, min(10, $priority));
+        self::$jobConditions[$jobId] = $conditions;
 
-	/**
-	 * Schedule a job with dependencies and conditions.
-	 *
-	 * @param  string $jobId        Unique job identifier
-	 * @param  array  $schedule     Schedule configuration
-	 * @param  array  $dependencies Array of job IDs this job depends on
-	 * @param  array  $conditions   Conditional execution rules
-	 * @param  int    $priority     Job priority (1-10, higher = more important)
-	 * @return bool Success
-	 */
-	public static function scheduleWithDependencies(
-		string $jobId,
-		array $schedule,
-		array $dependencies = array(),
-		array $conditions = array(),
-		int $priority = 5
-	): bool {
-		// Store job configuration
-		self::$jobDependencies[ $jobId ] = $dependencies;
-		self::$jobPriorities[ $jobId ]   = max( 1, min( 10, $priority ) );
-		self::$jobConditions[ $jobId ]   = $conditions;
+        // Calculate next run time considering dependencies
+        $nextRun = self::calculateNextRunWithDependencies($jobId, $schedule);
 
-		// Calculate next run time considering dependencies
-		$nextRun = self::calculateNextRunWithDependencies( $jobId, $schedule );
+        if ($nextRun) {
+            // Schedule the job
+            $hook = 'puntwork_scheduled_job_' . $jobId;
+            wp_schedule_single_event($nextRun, $hook, [$jobId]);
 
-		if ( $nextRun ) {
-			// Schedule the job
-			$hook = 'puntwork_scheduled_job_' . $jobId;
-			wp_schedule_single_event( $nextRun, $hook, array( $jobId ) );
+            // Store job metadata
+            update_option("puntwork_job_{$jobId}_schedule", $schedule);
+            update_option("puntwork_job_{$jobId}_next_run", $nextRun);
 
-			// Store job metadata
-			update_option( "puntwork_job_{$jobId}_schedule", $schedule );
-			update_option( "puntwork_job_{$jobId}_next_run", $nextRun );
+            return true;
+        }
 
-			return true;
-		}
+        return false;
+    }
 
-		return false;
-	}
+    /**
+     * Calculate next run time considering dependencies.
+     */
+    private static function calculateNextRunWithDependencies(string $jobId, array $schedule): ?int
+    {
+        $baseTime = calculate_next_run_time($schedule);
 
-	/**
-	 * Calculate next run time considering dependencies.
-	 */
-	private static function calculateNextRunWithDependencies( string $jobId, array $schedule ): ?int {
-		$baseTime = calculate_next_run_time( $schedule );
+        // Check if all dependencies are satisfied
+        if (!self::areDependenciesSatisfied($jobId)) {
+            // Schedule for later when dependencies might be met
+            return $baseTime + (6 * HOUR_IN_SECONDS); // Check again in 6 hours
+        }
 
-		// Check if all dependencies are satisfied
-		if ( ! self::areDependenciesSatisfied( $jobId ) ) {
-			// Schedule for later when dependencies might be met
-			return $baseTime + ( 6 * HOUR_IN_SECONDS ); // Check again in 6 hours
-		}
+        // Check conditional execution
+        if (!self::areConditionsMet($jobId)) {
+            // Skip this run, schedule next regular interval
+            return $baseTime + self::getIntervalSeconds($schedule);
+        }
 
-		// Check conditional execution
-		if ( ! self::areConditionsMet( $jobId ) ) {
-			// Skip this run, schedule next regular interval
-			return $baseTime + self::getIntervalSeconds( $schedule );
-		}
+        return $baseTime;
+    }
 
-		return $baseTime;
-	}
+    /**
+     * Check if all job dependencies are satisfied.
+     */
+    private static function areDependenciesSatisfied(string $jobId): bool
+    {
+        $dependencies = self::$jobDependencies[$jobId] ?? [];
 
-	/**
-	 * Check if all job dependencies are satisfied.
-	 */
-	private static function areDependenciesSatisfied( string $jobId ): bool {
-		$dependencies = self::$jobDependencies[ $jobId ] ?? array();
+        foreach ($dependencies as $depJobId) {
+            // Check if dependency job completed successfully recently
+            $lastRun = get_option("puntwork_job_{$depJobId}_last_success");
+            $lastFailure = get_option("puntwork_job_{$depJobId}_last_failure");
 
-		foreach ( $dependencies as $depJobId ) {
-			// Check if dependency job completed successfully recently
-			$lastRun     = get_option( "puntwork_job_{$depJobId}_last_success" );
-			$lastFailure = get_option( "puntwork_job_{$depJobId}_last_failure" );
+            // If dependency failed more recently than succeeded, it's not satisfied
+            if ($lastFailure && (!$lastRun || $lastFailure > $lastRun)) {
+                return false;
+            }
 
-			// If dependency failed more recently than succeeded, it's not satisfied
-			if ( $lastFailure && ( ! $lastRun || $lastFailure > $lastRun ) ) {
-				return false;
-			}
+            // If dependency never ran successfully, it's not satisfied
+            if (!$lastRun) {
+                return false;
+            }
 
-			// If dependency never ran successfully, it's not satisfied
-			if ( ! $lastRun ) {
-				return false;
-			}
+            // Check if dependency ran within reasonable time (last 24 hours)
+            if ($lastRun < (time() - DAY_IN_SECONDS)) {
+                return false;
+            }
+        }
 
-			// Check if dependency ran within reasonable time (last 24 hours)
-			if ( $lastRun < ( time() - DAY_IN_SECONDS ) ) {
-				return false;
-			}
-		}
+        return true;
+    }
 
-		return true;
-	}
+    /**
+     * Check if conditional execution rules are met.
+     */
+    private static function areConditionsMet(string $jobId): bool
+    {
+        $conditions = self::$jobConditions[$jobId] ?? [];
 
-	/**
-	 * Check if conditional execution rules are met.
-	 */
-	private static function areConditionsMet( string $jobId ): bool {
-		$conditions = self::$jobConditions[ $jobId ] ?? array();
+        foreach ($conditions as $condition) {
+            if (!self::evaluateCondition($condition)) {
+                return false;
+            }
+        }
 
-		foreach ( $conditions as $condition ) {
-			if ( ! self::evaluateCondition( $condition ) ) {
-				return false;
-			}
-		}
+        return true;
+    }
 
-		return true;
-	}
+    /**
+     * Evaluate a single condition.
+     */
+    private static function evaluateCondition(array $condition): bool
+    {
+        $type = $condition['type'] ?? '';
+        $value = $condition['value'] ?? null;
+        $operator = $condition['operator'] ?? 'equals';
 
-	/**
-	 * Evaluate a single condition.
-	 */
-	private static function evaluateCondition( array $condition ): bool {
-		$type     = $condition['type'] ?? '';
-		$value    = $condition['value'] ?? null;
-		$operator = $condition['operator'] ?? 'equals';
+        switch ($type) {
+            case 'time_range':
+                $currentHour = (int)wp_date('H');
+                $startHour = $value['start'] ?? 0;
+                $endHour = $value['end'] ?? 23;
 
-		switch ( $type ) {
-			case 'time_range':
-				$currentHour = (int) wp_date( 'H' );
-				$startHour   = $value['start'] ?? 0;
-				$endHour     = $value['end'] ?? 23;
+                return $currentHour >= $startHour && $currentHour <= $endHour;
 
-				return $currentHour >= $startHour && $currentHour <= $endHour;
+            case 'day_of_week':
+                $currentDay = (int)wp_date('w'); // 0 = Sunday
+                $allowedDays = is_array($value) ? $value : [$value];
 
-			case 'day_of_week':
-				$currentDay  = (int) wp_date( 'w' ); // 0 = Sunday
-				$allowedDays = is_array( $value ) ? $value : array( $value );
+                return in_array($currentDay, $allowedDays);
 
-				return in_array( $currentDay, $allowedDays );
+            case 'server_load':
+                $load = sys_getloadavg()[0] ?? 0;
 
-			case 'server_load':
-				$load = sys_getloadavg()[0] ?? 0;
+                return self::compareValues($load, $value, $operator);
 
-				return self::compareValues( $load, $value, $operator );
+            case 'memory_usage':
+                $usage = memory_get_usage(true) / 1024 / 1024; // MB
+                $limit = ini_get('memory_limit');
+                $limitMB = self::parseMemoryLimit($limit);
+                $usagePercent = ($usage / $limitMB) * 100;
 
-			case 'memory_usage':
-				$usage        = memory_get_usage( true ) / 1024 / 1024; // MB
-				$limit        = ini_get( 'memory_limit' );
-				$limitMB      = self::parseMemoryLimit( $limit );
-				$usagePercent = ( $usage / $limitMB ) * 100;
+                return self::compareValues($usagePercent, $value, $operator);
 
-				return self::compareValues( $usagePercent, $value, $operator );
+            case 'feed_health':
+                // Check if feeds are healthy
+                $healthy = true;
 
-			case 'feed_health':
-				// Check if feeds are healthy
-				$healthy = true;
+                // Implementation would check feed health status
+                return $healthy;
 
-				// Implementation would check feed health status
-				return $healthy;
+            case 'custom':
+                // Allow custom condition callbacks
+                if (is_callable($value)) {
+                    return (bool)call_user_func($value);
+                }
 
-			case 'custom':
-				// Allow custom condition callbacks
-				if ( is_callable( $value ) ) {
-					return (bool) call_user_func( $value );
-				}
+                return false;
 
-				return false;
+            default:
+                return true;
+        }
+    }
 
-			default:
-				return true;
-		}
-	}
+    /**
+     * Compare values with different operators.
+     */
+    private static function compareValues($actual, $expected, string $operator): bool
+    {
+        switch ($operator) {
+            case 'equals':
+                return $actual === $expected;
+            case 'not_equals':
+                return $actual !== $expected;
+            case 'greater':
+                return $actual > $expected;
+            case 'less':
+                return $actual < $expected;
+            case 'greater_equal':
+                return $actual >= $expected;
+            case 'less_equal':
+                return $actual <= $expected;
+            default:
+                return true;
+        }
+    }
 
-	/**
-	 * Compare values with different operators.
-	 */
-	private static function compareValues( $actual, $expected, string $operator ): bool {
-		switch ( $operator ) {
-			case 'equals':
-				return $actual === $expected;
-			case 'not_equals':
-				return $actual !== $expected;
-			case 'greater':
-				return $actual > $expected;
-			case 'less':
-				return $actual < $expected;
-			case 'greater_equal':
-				return $actual >= $expected;
-			case 'less_equal':
-				return $actual <= $expected;
-			default:
-				return true;
-		}
-	}
+    /**
+     * Parse memory limit string to MB.
+     */
+    private static function parseMemoryLimit(string $limit): float
+    {
+        if (preg_match('/^(\d+)(.)$/', $limit, $matches)) {
+            $value = (int)$matches[1];
+            $unit = strtoupper($matches[2]);
+            switch ($unit) {
+                case 'G':
+                    return $value * 1024;
+                case 'M':
+                    return $value;
+                case 'K':
+                    return $value / 1024;
+                default:
+                    return $value;
+            }
+        }
 
-	/**
-	 * Parse memory limit string to MB.
-	 */
-	private static function parseMemoryLimit( string $limit ): float {
-		if ( preg_match( '/^(\d+)(.)$/', $limit, $matches ) ) {
-			$value = (int) $matches[1];
-			$unit  = strtoupper( $matches[2] );
-			switch ( $unit ) {
-				case 'G':
-					return $value * 1024;
-				case 'M':
-					return $value;
-				case 'K':
-					return $value / 1024;
-				default:
-					return $value;
-			}
-		}
+        return 128; // Default 128MB
+    }
 
-		return 128; // Default 128MB
-	}
+    /**
+     * Get interval in seconds from schedule.
+     */
+    private static function getIntervalSeconds(array $schedule): int
+    {
+        $frequency = $schedule['frequency'] ?? 'daily';
 
-	/**
-	 * Get interval in seconds from schedule.
-	 */
-	private static function getIntervalSeconds( array $schedule ): int {
-		$frequency = $schedule['frequency'] ?? 'daily';
+        switch ($frequency) {
+            case 'hourly':
+                return HOUR_IN_SECONDS;
+            case '3hours':
+                return 3 * HOUR_IN_SECONDS;
+            case '6hours':
+                return 6 * HOUR_IN_SECONDS;
+            case '12hours':
+                return 12 * HOUR_IN_SECONDS;
+            case 'custom':
+                return ($schedule['interval'] ?? 24) * HOUR_IN_SECONDS;
+            default:
+                return DAY_IN_SECONDS;
+        }
+    }
 
-		switch ( $frequency ) {
-			case 'hourly':
-				return HOUR_IN_SECONDS;
-			case '3hours':
-				return 3 * HOUR_IN_SECONDS;
-			case '6hours':
-				return 6 * HOUR_IN_SECONDS;
-			case '12hours':
-				return 12 * HOUR_IN_SECONDS;
-			case 'custom':
-				return ( $schedule['interval'] ?? 24 ) * HOUR_IN_SECONDS;
-			default:
-				return DAY_IN_SECONDS;
-		}
-	}
+    /**
+     * Execute a scheduled job with dependency checking.
+     */
+    public static function executeJob(string $jobId): bool
+    {
+        // Double-check dependencies before execution
+        if (!self::areDependenciesSatisfied($jobId)) {
+            // Reschedule for later
+            $schedule = get_option("puntwork_job_{$jobId}_schedule", []);
+            if (!empty($schedule)) {
+                $nextRun = time() + (6 * HOUR_IN_SECONDS);
+                wp_schedule_single_event($nextRun, 'puntwork_scheduled_job_' . $jobId, [$jobId]);
+            }
 
-	/**
-	 * Execute a scheduled job with dependency checking.
-	 */
-	public static function executeJob( string $jobId ): bool {
-		// Double-check dependencies before execution
-		if ( ! self::areDependenciesSatisfied( $jobId ) ) {
-			// Reschedule for later
-			$schedule = get_option( "puntwork_job_{$jobId}_schedule", array() );
-			if ( ! empty( $schedule ) ) {
-				$nextRun = time() + ( 6 * HOUR_IN_SECONDS );
-				wp_schedule_single_event( $nextRun, 'puntwork_scheduled_job_' . $jobId, array( $jobId ) );
-			}
+            return false;
+        }
 
-			return false;
-		}
+        // Double-check conditions
+        if (!self::areConditionsMet($jobId)) {
+            // Skip this execution, schedule next regular run
+            $schedule = get_option("puntwork_job_{$jobId}_schedule", []);
+            if (!empty($schedule)) {
+                $nextRun = calculate_next_run_time($schedule);
+                wp_schedule_single_event($nextRun, 'puntwork_scheduled_job_' . $jobId, [$jobId]);
+            }
 
-		// Double-check conditions
-		if ( ! self::areConditionsMet( $jobId ) ) {
-			// Skip this execution, schedule next regular run
-			$schedule = get_option( "puntwork_job_{$jobId}_schedule", array() );
-			if ( ! empty( $schedule ) ) {
-				$nextRun = calculate_next_run_time( $schedule );
-				wp_schedule_single_event( $nextRun, 'puntwork_scheduled_job_' . $jobId, array( $jobId ) );
-			}
+            return false;
+        }
 
-			return false;
-		}
+        // Execute the job (this would be overridden by specific job implementations)
+        $result = self::runJobImplementation($jobId);
 
-		// Execute the job (this would be overridden by specific job implementations)
-		$result = self::runJobImplementation( $jobId );
+        // Record execution result
+        if ($result) {
+            update_option("puntwork_job_{$jobId}_last_success", time());
+        } else {
+            update_option("puntwork_job_{$jobId}_last_failure", time());
+        }
 
-		// Record execution result
-		if ( $result ) {
-			update_option( "puntwork_job_{$jobId}_last_success", time() );
-		} else {
-			update_option( "puntwork_job_{$jobId}_last_failure", time() );
-		}
+        // Schedule next run
+        $schedule = get_option("puntwork_job_{$jobId}_schedule", []);
+        if (!empty($schedule)) {
+            $nextRun = self::calculateNextRunWithDependencies($jobId, $schedule);
+            if ($nextRun) {
+                wp_schedule_single_event($nextRun, 'puntwork_scheduled_job_' . $jobId, [$jobId]);
+            }
+        }
 
-		// Schedule next run
-		$schedule = get_option( "puntwork_job_{$jobId}_schedule", array() );
-		if ( ! empty( $schedule ) ) {
-			$nextRun = self::calculateNextRunWithDependencies( $jobId, $schedule );
-			if ( $nextRun ) {
-				wp_schedule_single_event( $nextRun, 'puntwork_scheduled_job_' . $jobId, array( $jobId ) );
-			}
-		}
+        return $result;
+    }
 
-		return $result;
-	}
+    /**
+     * Run job implementation (to be overridden).
+     */
+    protected static function runJobImplementation(string $jobId): bool
+    {
+        // Default implementation - override in subclasses
+        do_action('puntwork_execute_scheduled_job', $jobId);
 
-	/**
-	 * Run job implementation (to be overridden).
-	 */
-	protected static function runJobImplementation( string $jobId ): bool {
-		// Default implementation - override in subclasses
-		do_action( 'puntwork_execute_scheduled_job', $jobId );
+        return true;
+    }
 
-		return true;
-	}
-
-	/**
-	 * Get job status and next run time.
-	 */
-	public static function getJobStatus( string $jobId ): array {
-		return array(
-			'job_id'       => $jobId,
-			'next_run'     => get_option( "puntwork_job_{$jobId}_next_run" ),
-			'last_success' => get_option( "puntwork_job_{$jobId}_last_success" ),
-			'last_failure' => get_option( "puntwork_job_{$jobId}_last_failure" ),
-			'dependencies' => self::$jobDependencies[ $jobId ] ?? array(),
-			'priority'     => self::$jobPriorities[ $jobId ] ?? 5,
-			'conditions'   => self::$jobConditions[ $jobId ] ?? array(),
-		);
-	}
+    /**
+     * Get job status and next run time.
+     */
+    public static function getJobStatus(string $jobId): array
+    {
+        return [
+            'job_id' => $jobId,
+            'next_run' => get_option("puntwork_job_{$jobId}_next_run"),
+            'last_success' => get_option("puntwork_job_{$jobId}_last_success"),
+            'last_failure' => get_option("puntwork_job_{$jobId}_last_failure"),
+            'dependencies' => self::$jobDependencies[$jobId] ?? [],
+            'priority' => self::$jobPriorities[$jobId] ?? 5,
+            'conditions' => self::$jobConditions[$jobId] ?? [],
+        ];
+    }
 }
