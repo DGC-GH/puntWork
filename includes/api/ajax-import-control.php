@@ -21,7 +21,6 @@ if (!defined('ABSPATH')) {
 
 // Explicitly load required utility classes for AJAX context
 require_once __DIR__ . '/../utilities/SecurityUtils.php';
-require_once __DIR__ . '/../utilities/AjaxErrorHandler.php';
 require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
 
 /*
@@ -87,7 +86,7 @@ function run_job_import_batch_ajax()
                     }
                 );
                 error_log('[PUNTWORK] AJAX: Available import functions: ' . implode(', ', $import_functions));
-                AjaxErrorHandler::sendError('Import function not available - files could not be loaded');
+                wp_send_json_error(['message' => 'Import function not available - files could not be loaded']);
 
                 return;
             }
@@ -113,7 +112,7 @@ function run_job_import_batch_ajax()
 
         if (is_wp_error($validation)) {
             error_log('[PUNTWORK] AJAX: Security validation failed: ' . $validation->get_error_message());
-            AjaxErrorHandler::sendError($validation);
+            wp_send_json_error(['message' => is_wp_error($validation) ? $validation->get_error_message() : 'Validation failed']);
 
             return;
         }
@@ -1171,25 +1170,24 @@ function process_feed_ajax()
         error_log('[PUNTWORK] [AJAX-LOAD] process_one_feed function available: ' . (function_exists('process_one_feed') ? 'yes' : 'no'));
     }
 
-    // Use comprehensive security validation with field validation
-    $validation = SecurityUtils::validateAjaxRequest(
-        'process_feed',
-        'job_import_nonce',
-        ['feed_key'], // required fields
-        [
-            'feed_key' => [
-                'type' => 'string',
-                'max_length' => 100,
-            ],
-        ]
-    );
-
-    if (is_wp_error($validation)) {
-        error_log('[PUNTWORK] [AJAX-VALIDATION] process_feed validation failed: ' . $validation->get_error_message());
-        AjaxErrorHandler::sendError($validation);
+    // Basic security validation
+    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'job_import_nonce')) {
+        error_log('[PUNTWORK] [AJAX-ERROR] Nonce verification failed');
+        wp_send_json_error(['message' => 'Security check failed']);
         return;
     }
-    error_log('[PUNTWORK] [AJAX-VALIDATION] process_feed validation passed');
+
+    if (!current_user_can('manage_options')) {
+        error_log('[PUNTWORK] [AJAX-ERROR] Insufficient permissions');
+        wp_send_json_error(['message' => 'Insufficient permissions']);
+        return;
+    }
+
+    if (!isset($_POST['feed_key']) || empty($_POST['feed_key'])) {
+        error_log('[PUNTWORK] [AJAX-ERROR] Missing feed_key parameter');
+        wp_send_json_error(['message' => 'Missing required parameter: feed_key']);
+        return;
+    }
 
     try {
         $feed_key = sanitize_text_field($_POST['feed_key']);
@@ -1200,7 +1198,7 @@ function process_feed_ajax()
         error_log('[PUNTWORK] [AJAX-FEEDS] Available feeds: ' . json_encode($feeds));
         if (!isset($feeds[$feed_key])) {
             error_log('[PUNTWORK] [AJAX-ERROR] Feed not found: ' . $feed_key);
-            AjaxErrorHandler::sendError('Feed not found: ' . $feed_key);
+            wp_send_json_error(['message' => 'Feed not found: ' . $feed_key]);
             return;
         }
         
@@ -1213,7 +1211,7 @@ function process_feed_ajax()
         // Ensure output directory exists
         if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
             error_log('[PUNTWORK] [AJAX-ERROR] Feeds directory not writable: ' . $output_dir);
-            AjaxErrorHandler::sendError('Feeds directory not writable');
+            wp_send_json_error(['message' => 'Feeds directory not writable']);
             return;
         }
         error_log('[PUNTWORK] [AJAX-SETUP] Output directory ready');
@@ -1241,7 +1239,7 @@ function process_feed_ajax()
         ]);
         
         error_log('[PUNTWORK] [AJAX-SUCCESS] process_feed_ajax completed successfully');
-        AjaxErrorHandler::sendSuccess([
+        wp_send_json_success([
             'feed_key' => $feed_key,
             'item_count' => $item_count,
             'logs' => $logs,
@@ -1250,7 +1248,7 @@ function process_feed_ajax()
         error_log('[PUNTWORK] [AJAX-EXCEPTION] process_feed_ajax exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
         error_log('[PUNTWORK] [AJAX-EXCEPTION] Stack trace: ' . $e->getTraceAsString());
         PuntWorkLogger::error('Process feed AJAX error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::sendError('Failed to process feed: ' . $e->getMessage());
+        wp_send_json_error(['message' => 'Failed to process feed: ' . $e->getMessage()]);
     }
 }
 
@@ -1268,25 +1266,24 @@ function combine_jsonl_ajax()
         error_log('[PUNTWORK] [AJAX-LOAD] combine_jsonl_files function available: ' . (function_exists('combine_jsonl_files') ? 'yes' : 'no'));
     }
 
-    // Use comprehensive security validation with field validation
-    $validation = SecurityUtils::validateAjaxRequest(
-        'combine_jsonl',
-        'job_import_nonce',
-        ['total_items'], // required fields
-        [
-            'total_items' => [
-                'type' => 'int',
-                'min' => 0,
-            ],
-        ]
-    );
-
-    if (is_wp_error($validation)) {
-        error_log('[PUNTWORK] [AJAX-VALIDATION] combine_jsonl validation failed: ' . $validation->get_error_message());
-        AjaxErrorHandler::sendError($validation);
+    // Basic security validation
+    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'job_import_nonce')) {
+        error_log('[PUNTWORK] [AJAX-ERROR] Nonce verification failed');
+        wp_send_json_error(['message' => 'Security check failed']);
         return;
     }
-    error_log('[PUNTWORK] [AJAX-VALIDATION] combine_jsonl validation passed');
+
+    if (!current_user_can('manage_options')) {
+        error_log('[PUNTWORK] [AJAX-ERROR] Insufficient permissions');
+        wp_send_json_error(['message' => 'Insufficient permissions']);
+        return;
+    }
+
+    if (!isset($_POST['total_items']) || !is_numeric($_POST['total_items'])) {
+        error_log('[PUNTWORK] [AJAX-ERROR] Missing or invalid total_items parameter');
+        wp_send_json_error(['message' => 'Missing or invalid required parameter: total_items']);
+        return;
+    }
 
     try {
         $total_items = intval($_POST['total_items']);
@@ -1298,7 +1295,7 @@ function combine_jsonl_ajax()
         // Ensure output directory exists
         if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
             error_log('[PUNTWORK] [AJAX-ERROR] Feeds directory not writable: ' . $output_dir);
-            AjaxErrorHandler::sendError('Feeds directory not writable');
+            wp_send_json_error(['message' => 'Feeds directory not writable']);
             return;
         }
         error_log('[PUNTWORK] [AJAX-SETUP] Output directory ready');
@@ -1343,7 +1340,7 @@ function combine_jsonl_ajax()
         ]);
         
         error_log('[PUNTWORK] [AJAX-SUCCESS] combine_jsonl_ajax completed successfully');
-        AjaxErrorHandler::sendSuccess([
+        wp_send_json_success([
             'total_items' => $total_items,
             'logs' => $logs,
             'combined_file_exists' => file_exists($combined_file),
@@ -1353,6 +1350,6 @@ function combine_jsonl_ajax()
         error_log('[PUNTWORK] [AJAX-EXCEPTION] combine_jsonl_ajax exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
         error_log('[PUNTWORK] [AJAX-EXCEPTION] Stack trace: ' . $e->getTraceAsString());
         PuntWorkLogger::error('Combine JSONL AJAX error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::sendError('Failed to combine JSONL files: ' . $e->getMessage());
+        wp_send_json_error(['message' => 'Failed to combine JSONL files: ' . $e->getMessage()]);
     }
 }
