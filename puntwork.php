@@ -125,9 +125,66 @@ function process_social_media_posts()
 add_action('init', __NAMESPACE__ . '\\setup_job_import');
 function setup_job_import()
 {
+    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [INIT-START] ===== SETUP_JOB_IMPORT START =====');
+        error_log('[PUNTWORK] [INIT-DEBUG] WordPress version: ' . get_bloginfo('version'));
+        error_log('[PUNTWORK] [INIT-DEBUG] PHP version: ' . PHP_VERSION);
+        error_log('[PUNTWORK] [INIT-DEBUG] Memory limit: ' . ini_get('memory_limit'));
+        error_log('[PUNTWORK] [INIT-DEBUG] Max execution time: ' . ini_get('max_execution_time'));
+        error_log('[PUNTWORK] [INIT-DEBUG] ABSPATH: ' . ABSPATH);
+        error_log('[PUNTWORK] [INIT-DEBUG] Plugin path: ' . PUNTWORK_PATH);
+        error_log('[PUNTWORK] [INIT-DEBUG] Testing database connection...');
+    }
+
+    // Test database connection
+    global $wpdb;
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [INIT-DEBUG] Testing database connection...');
+    }
+
+    // Use comprehensive database connection test
+    if (function_exists(__NAMESPACE__ . '\\test_database_connection')) {
+        $db_test_results = call_user_func(__NAMESPACE__ . '\\test_database_connection');
+        if (!$db_test_results['connected']) {
+            error_log('[PUNTWORK] [INIT-ERROR] Database connection test FAILED');
+            error_log('[PUNTWORK] [INIT-ERROR] Connection details: ' . json_encode($db_test_results));
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [INIT-ERROR] Database connection issues detected - this will cause AJAX failures');
+            }
+        } else {
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [INIT-DEBUG] Database connection test PASSED');
+            }
+        }
+    } else {
+        // Fallback to simple test
+        try {
+            $test_query = $wpdb->get_var("SELECT 1");
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [INIT-DEBUG] Database connection test successful');
+            }
+        } catch (\Exception $e) {
+            error_log('[PUNTWORK] [INIT-ERROR] Database connection test failed: ' . $e->getMessage());
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [INIT-ERROR] Database error details: ' . json_encode([
+                    'host' => DB_HOST,
+                    'name' => DB_NAME,
+                    'user' => DB_USER,
+                    'error' => $e->getMessage()
+                ]));
+            }
+        }
+    }
+
     // Global batch limit (from old 1)
     global $job_import_batch_limit;
     $job_import_batch_limit = 500;
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [INIT-DEBUG] Loading includes...');
+    }
 
     // Load function-based includes (cannot be autoloaded)
     $includes = [
@@ -232,6 +289,7 @@ function setup_job_import()
 
         // CRM Integration (classes are autoloaded)
         'crm/crm-integration.php',
+        'crm/crm-integration.php',
         'crm/hubspot-integration.php',
         'crm/salesforce-integration.php',
         'crm/zoho-integration.php',
@@ -255,64 +313,115 @@ function setup_job_import()
         'scheduling/scheduling-triggers.php',
         'scheduling/test-scheduling.php',
     ];
+
+    $loaded_count = 0;
+    $failed_count = 0;
     foreach ($includes as $include) {
         $file = PUNTWORK_PATH . 'includes/' . $include;
         if (file_exists($file)) {
             include_once $file;
+            $loaded_count++;
+            if ($debug_mode && $loaded_count % 10 == 0) {
+                error_log('[PUNTWORK] [INIT-DEBUG] Loaded ' . $loaded_count . ' includes so far...');
+            }
+        } else {
+            $failed_count++;
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [INIT-WARN] Include file not found: ' . $file);
+            }
         }
+    }
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [INIT-DEBUG] Include loading complete: ' . $loaded_count . ' loaded, ' . $failed_count . ' failed');
+        error_log('[PUNTWORK] [INIT-DEBUG] Loading text domain...');
     }
 
     // Load text domain for internationalization
     load_plugin_textdomain('puntwork', false, dirname(plugin_basename(__FILE__)) . '/languages');
 
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [INIT-DEBUG] Initializing scheduling...');
+    }
     // Initialize scheduling
     if (function_exists(__NAMESPACE__ . '\\init_scheduling')) {
         call_user_func(__NAMESPACE__ . '\\init_scheduling');
     }
 
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [INIT-DEBUG] Initializing async processing...');
+    }
     // Initialize async processing
     if (function_exists(__NAMESPACE__ . '\\init_async_processing')) {
         call_user_func(__NAMESPACE__ . '\\init_async_processing');
     }
 
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [INIT-DEBUG] Initializing feed health monitoring...');
+    }
     // Initialize feed health monitoring
     if (class_exists(__NAMESPACE__ . '\\FeedHealthMonitor')) {
         call_user_func([__NAMESPACE__ . '\\FeedHealthMonitor', 'init']);
     }
 
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [INIT-DEBUG] Initializing import analytics...');
+    }
     // Initialize import analytics
     if (class_exists(__NAMESPACE__ . '\\ImportAnalytics')) {
         call_user_func([__NAMESPACE__ . '\\ImportAnalytics', 'init']);
     }
 
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [INIT-DEBUG] Initializing social media functionality...');
+    }
     // Initialize social media functionality
     if (class_exists(__NAMESPACE__ . '\\PuntworkSocialMediaAdmin')) {
         // Admin interface is initialized in the class constructor
     }
 
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [INIT-DEBUG] Initializing GraphQL API...');
+    }
     // Initialize GraphQL API
     if (class_exists(__NAMESPACE__ . '\\API\\GraphQLAPI')) {
         call_user_func([__NAMESPACE__ . '\\API\\GraphQLAPI', 'init']);
     }
 
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [INIT-DEBUG] Initializing Webhook Manager...');
+    }
     // Initialize Webhook Manager
     if (class_exists(__NAMESPACE__ . '\\API\\WebhookManager')) {
         call_user_func([__NAMESPACE__ . '\\API\\WebhookManager', 'init']);
     }
 
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [INIT-DEBUG] Initializing Feed Optimizer...');
+    }
     // Initialize Feed Optimizer
     if (class_exists(__NAMESPACE__ . '\\AI\\FeedOptimizer')) {
         call_user_func([__NAMESPACE__ . '\\AI\\FeedOptimizer', 'init']);
     }
 
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [INIT-DEBUG] Initializing Multi-Site Support...');
+    }
     // Initialize Multi-Site Support
     if (is_multisite() && class_exists(__NAMESPACE__ . '\\MultiSite\\MultiSiteManager')) {
         call_user_func([__NAMESPACE__ . '\\MultiSite\\MultiSiteManager', 'init']);
     }
 
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [INIT-DEBUG] Initializing Multi-Site Admin UI...');
+    }
     // Initialize Multi-Site Admin UI
     if (is_multisite() && class_exists(__NAMESPACE__ . '\\MultiSiteAdminUI')) {
         call_user_func([__NAMESPACE__ . '\\MultiSiteAdminUI', 'init']);
+    }
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [INIT-END] ===== SETUP_JOB_IMPORT COMPLETED =====');
     }
 }
 

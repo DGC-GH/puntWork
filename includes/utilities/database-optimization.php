@@ -522,3 +522,192 @@ function end_import_performance_monitoring(array $monitoring_data, string $opera
         );
     }
 }
+
+/**
+ * Comprehensive database connection test with detailed logging.
+ *
+ * @return array Test results with connection status and details
+ */
+function test_database_connection(): array
+{
+    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+    $results = [
+        'connected' => false,
+        'error' => null,
+        'details' => [],
+        'tests' => [],
+    ];
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [DB-CONNECTION] ===== DATABASE CONNECTION TEST START =====');
+    }
+
+    global $wpdb;
+
+    // Test 1: Basic WordPress database connection
+    try {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [DB-CONNECTION] Testing basic WordPress database connection...');
+            error_log('[PUNTWORK] [DB-CONNECTION] DB_HOST: ' . DB_HOST);
+            error_log('[PUNTWORK] [DB-CONNECTION] DB_NAME: ' . DB_NAME);
+            error_log('[PUNTWORK] [DB-CONNECTION] DB_USER: ' . DB_USER);
+            error_log('[PUNTWORK] [DB-CONNECTION] Table prefix: ' . $wpdb->prefix);
+        }
+
+        $test_query = $wpdb->get_var("SELECT 1 as test");
+        if ($test_query === '1') {
+            $results['tests']['basic_connection'] = true;
+            $results['details']['basic_connection'] = 'SUCCESS';
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [DB-CONNECTION] Basic connection test PASSED');
+            }
+        } else {
+            $results['tests']['basic_connection'] = false;
+            $results['details']['basic_connection'] = 'FAILED: Unexpected result: ' . $test_query;
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [DB-CONNECTION] Basic connection test FAILED: Unexpected result: ' . $test_query);
+            }
+        }
+    } catch (\Exception $e) {
+        $results['tests']['basic_connection'] = false;
+        $results['details']['basic_connection'] = 'EXCEPTION: ' . $e->getMessage();
+        $results['error'] = $e->getMessage();
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [DB-CONNECTION] Basic connection test EXCEPTION: ' . $e->getMessage());
+        }
+    }
+
+    // Test 2: WordPress check_connection method
+    try {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [DB-CONNECTION] Testing WordPress check_connection method...');
+        }
+
+        if (method_exists($wpdb, 'check_connection')) {
+            $check_result = $wpdb->check_connection();
+            $results['tests']['check_connection'] = $check_result;
+            $results['details']['check_connection'] = $check_result ? 'SUCCESS' : 'FAILED';
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [DB-CONNECTION] check_connection method: ' . ($check_result ? 'PASSED' : 'FAILED'));
+            }
+        } else {
+            $results['tests']['check_connection'] = 'not_available';
+            $results['details']['check_connection'] = 'Method not available';
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [DB-CONNECTION] check_connection method not available');
+            }
+        }
+    } catch (\Exception $e) {
+        $results['tests']['check_connection'] = false;
+        $results['details']['check_connection'] = 'EXCEPTION: ' . $e->getMessage();
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [DB-CONNECTION] check_connection method EXCEPTION: ' . $e->getMessage());
+        }
+    }
+
+    // Test 3: wpdb last_error check
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [DB-CONNECTION] Checking wpdb last_error: ' . ($wpdb->last_error ?: 'None'));
+    }
+    $results['details']['last_error'] = $wpdb->last_error ?: null;
+
+    // Test 4: Table existence check
+    try {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [DB-CONNECTION] Testing core table access...');
+        }
+
+        $posts_count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->posts} LIMIT 1");
+        $results['tests']['posts_table'] = true;
+        $results['details']['posts_table'] = 'SUCCESS: Found ' . $posts_count . ' posts';
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [DB-CONNECTION] Posts table access: SUCCESS (' . $posts_count . ' posts)');
+        }
+    } catch (\Exception $e) {
+        $results['tests']['posts_table'] = false;
+        $results['details']['posts_table'] = 'EXCEPTION: ' . $e->getMessage();
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [DB-CONNECTION] Posts table access: EXCEPTION: ' . $e->getMessage());
+        }
+    }
+
+    // Test 5: Options table access (critical for get_option calls)
+    try {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [DB-CONNECTION] Testing options table access...');
+        }
+
+        $option_test = $wpdb->get_var($wpdb->prepare("SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", 'siteurl'));
+        $results['tests']['options_table'] = true;
+        $results['details']['options_table'] = 'SUCCESS: siteurl = ' . substr($option_test, 0, 50) . '...';
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [DB-CONNECTION] Options table access: SUCCESS');
+        }
+    } catch (\Exception $e) {
+        $results['tests']['options_table'] = false;
+        $results['details']['options_table'] = 'EXCEPTION: ' . $e->getMessage();
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [DB-CONNECTION] Options table access: EXCEPTION: ' . $e->getMessage());
+        }
+    }
+
+    // Overall connection status
+    $results['connected'] = $results['tests']['basic_connection'] &&
+                           ($results['tests']['check_connection'] === true || $results['tests']['check_connection'] === 'not_available') &&
+                           $results['tests']['posts_table'] &&
+                           $results['tests']['options_table'];
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [DB-CONNECTION] ===== DATABASE CONNECTION TEST COMPLETE =====');
+        error_log('[PUNTWORK] [DB-CONNECTION] Overall status: ' . ($results['connected'] ? 'CONNECTED' : 'FAILED'));
+        if (!$results['connected']) {
+            error_log('[PUNTWORK] [DB-CONNECTION] Failed tests: ' . json_encode(array_filter($results['tests'], function($v) { return $v === false; })));
+        }
+    }
+
+    return $results;
+}
+
+/**
+ * Safe get_option wrapper with debug logging.
+ *
+ * @param  string $option_name Option name
+ * @param  mixed  $default     Default value
+ * @return mixed Option value or default
+ */
+function safe_get_option(string $option_name, $default = false)
+{
+    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [DB-DEBUG] safe_get_option called for: ' . $option_name);
+    }
+
+    try {
+        global $wpdb;
+
+        // Check if we can access the database
+        if (!$wpdb->check_connection()) {
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [DB-ERROR] Database connection check failed for get_option: ' . $option_name);
+            }
+            return $default;
+        }
+
+        $value = get_option($option_name, $default);
+
+        if ($debug_mode) {
+            $value_type = gettype($value);
+            $value_preview = is_string($value) ? substr($value, 0, 100) : $value;
+            error_log('[PUNTWORK] [DB-DEBUG] get_option result for ' . $option_name . ': ' . $value_type . ' - ' . (is_array($value) ? 'Array(' . count($value) . ')' : $value_preview));
+        }
+
+        return $value;
+    } catch (\Exception $e) {
+        error_log('[PUNTWORK] [DB-ERROR] Exception in safe_get_option for ' . $option_name . ': ' . $e->getMessage());
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [DB-ERROR] Stack trace: ' . $e->getTraceAsString());
+        }
+        return $default;
+    }
+}

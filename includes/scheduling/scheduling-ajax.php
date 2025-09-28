@@ -173,18 +173,38 @@ function save_import_schedule_ajax()
  */
 function get_import_schedule_ajax()
 {
+    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [SCHEDULE-AJAX-START] ===== GET_IMPORT_SCHEDULE_AJAX START =====');
+        error_log('[PUNTWORK] [SCHEDULE-AJAX-START] POST data: ' . json_encode($_POST));
+        error_log('[PUNTWORK] [SCHEDULE-AJAX-START] Memory usage at start: ' . memory_get_usage(true) . ' bytes');
+    }
+
     PuntWorkLogger::logAjaxRequest('get_import_schedule', $_POST);
 
     // Use comprehensive security validation
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [SCHEDULE-AJAX-DEBUG] Starting security validation');
+    }
     $validation = SecurityUtils::validateAjaxRequest('get_import_schedule', 'job_import_nonce');
     if (is_wp_error($validation)) {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SCHEDULE-AJAX-ERROR] Security validation failed: ' . $validation->get_error_message());
+        }
         AjaxErrorHandler::sendError($validation);
 
         return;
     }
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [SCHEDULE-AJAX-DEBUG] Security validation passed');
+    }
 
     try {
-        $schedule = get_option(
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SCHEDULE-AJAX-DEBUG] Attempting to get schedule from database');
+        }
+        $schedule = safe_get_option(
             'puntwork_import_schedule',
             [
                 'enabled' => false,
@@ -197,6 +217,10 @@ function get_import_schedule_ajax()
             ]
         );
 
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SCHEDULE-AJAX-DEBUG] Schedule retrieved: ' . json_encode($schedule));
+        }
+
         PuntWorkLogger::info(
             'Retrieved import schedule',
             PuntWorkLogger::CONTEXT_SCHEDULING,
@@ -206,8 +230,16 @@ function get_import_schedule_ajax()
             ]
         );
 
-        $last_run = get_option('puntwork_last_import_run', null);
-        $last_run_details = get_option('puntwork_last_import_details', null);
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SCHEDULE-AJAX-DEBUG] Getting last run data');
+        }
+        $last_run = safe_get_option('puntwork_last_import_run', null);
+        $last_run_details = safe_get_option('puntwork_last_import_details', null);
+
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SCHEDULE-AJAX-DEBUG] Last run: ' . json_encode($last_run));
+            error_log('[PUNTWORK] [SCHEDULE-AJAX-DEBUG] Last run details: ' . json_encode($last_run_details));
+        }
 
         // Add formatted date to last run if it exists
         if ($last_run && isset($last_run['timestamp'])) {
@@ -215,11 +247,21 @@ function get_import_schedule_ajax()
             $last_run['formatted_date'] = wp_date('M j, Y H:i', $last_run['timestamp']);
         }
 
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SCHEDULE-AJAX-DEBUG] Getting next scheduled time');
+        }
+        $next_run = get_next_scheduled_time();
+
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SCHEDULE-AJAX-DEBUG] Next run: ' . json_encode($next_run));
+            error_log('[PUNTWORK] [SCHEDULE-AJAX-DEBUG] Preparing success response');
+        }
+
         PuntWorkLogger::logAjaxResponse(
             'get_import_schedule',
             [
                 'schedule' => $schedule,
-                'next_run' => get_next_scheduled_time(),
+                'next_run' => $next_run,
                 'last_run' => $last_run,
                 'last_run_details' => $last_run_details,
             ]
@@ -227,14 +269,29 @@ function get_import_schedule_ajax()
         AjaxErrorHandler::sendSuccess(
             [
                 'schedule' => $schedule,
-                'next_run' => get_next_scheduled_time(),
+                'next_run' => $next_run,
                 'last_run' => $last_run,
                 'last_run_details' => $last_run_details,
             ]
         );
+
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SCHEDULE-AJAX-END] ===== GET_IMPORT_SCHEDULE_AJAX SUCCESS =====');
+        }
     } catch (\Exception $e) {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SCHEDULE-AJAX-ERROR] Exception in get_import_schedule_ajax: ' . $e->getMessage());
+            error_log('[PUNTWORK] [SCHEDULE-AJAX-ERROR] Stack trace: ' . $e->getTraceAsString());
+        }
         PuntWorkLogger::error('Get schedule failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SCHEDULING);
         AjaxErrorHandler::sendError('Get schedule failed: ' . $e->getMessage());
+    } catch (\Throwable $e) {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SCHEDULE-AJAX-FATAL] Fatal error in get_import_schedule_ajax: ' . $e->getMessage());
+            error_log('[PUNTWORK] [SCHEDULE-AJAX-FATAL] Stack trace: ' . $e->getTraceAsString());
+        }
+        PuntWorkLogger::error('Get schedule fatal error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SCHEDULING);
+        AjaxErrorHandler::sendError('Get schedule failed with fatal error: ' . $e->getMessage());
     }
 }
 
@@ -243,24 +300,52 @@ function get_import_schedule_ajax()
  */
 function get_import_run_history_ajax()
 {
+    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [HISTORY-AJAX-START] ===== GET_IMPORT_RUN_HISTORY_AJAX START =====');
+        error_log('[PUNTWORK] [HISTORY-AJAX-START] POST data: ' . json_encode($_POST));
+        error_log('[PUNTWORK] [HISTORY-AJAX-START] Memory usage at start: ' . memory_get_usage(true) . ' bytes');
+    }
+
     PuntWorkLogger::logAjaxRequest('get_import_run_history', $_POST);
 
     // Use comprehensive security validation
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [HISTORY-AJAX-DEBUG] Starting security validation');
+    }
     $validation = SecurityUtils::validateAjaxRequest('get_import_run_history', 'job_import_nonce');
     if (is_wp_error($validation)) {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [HISTORY-AJAX-ERROR] Security validation failed: ' . $validation->get_error_message());
+        }
         AjaxErrorHandler::sendError($validation);
 
         return;
     }
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [HISTORY-AJAX-DEBUG] Security validation passed');
+    }
 
     try {
-        $history = get_option('puntwork_import_run_history', []);
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [HISTORY-AJAX-DEBUG] Attempting to get history from database');
+        }
+        $history = safe_get_option('puntwork_import_run_history', []);
+
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [HISTORY-AJAX-DEBUG] History retrieved, count: ' . count($history));
+        }
 
         // Format dates for history entries - timestamps are stored in UTC
         foreach ($history as &$entry) {
             if (isset($entry['timestamp'])) {
                 $entry['formatted_date'] = wp_date('M j, Y H:i', $entry['timestamp']);
             }
+        }
+
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [HISTORY-AJAX-DEBUG] History formatted, preparing response');
         }
 
         PuntWorkLogger::info(
@@ -284,9 +369,24 @@ function get_import_run_history_ajax()
                 'count' => count($history),
             ]
         );
+
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [HISTORY-AJAX-END] ===== GET_IMPORT_RUN_HISTORY_AJAX SUCCESS =====');
+        }
     } catch (\Exception $e) {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [HISTORY-AJAX-ERROR] Exception in get_import_run_history_ajax: ' . $e->getMessage());
+            error_log('[PUNTWORK] [HISTORY-AJAX-ERROR] Stack trace: ' . $e->getTraceAsString());
+        }
         PuntWorkLogger::error('Get run history failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SCHEDULING);
         AjaxErrorHandler::sendError('Get run history failed: ' . $e->getMessage());
+    } catch (\Throwable $e) {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [HISTORY-AJAX-FATAL] Fatal error in get_import_run_history_ajax: ' . $e->getMessage());
+            error_log('[PUNTWORK] [HISTORY-AJAX-FATAL] Stack trace: ' . $e->getTraceAsString());
+        }
+        PuntWorkLogger::error('Get run history fatal error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SCHEDULING);
+        AjaxErrorHandler::sendError('Get run history failed with fatal error: ' . $e->getMessage());
     }
 }
 

@@ -316,7 +316,7 @@ function get_job_import_status_ajax()
     }
 
     try {
-        $progress = get_option('job_import_status') ?: [
+        $progress = safe_get_option('job_import_status') ?: [
             'total' => 0,
             'processed' => 0,
             'published' => 0,
@@ -439,7 +439,7 @@ function get_job_import_status_ajax()
         }
 
         // Add resume_progress for JavaScript
-        $progress['resume_progress'] = (int)get_option('job_import_progress', 0);
+        $progress['resume_progress'] = (int)safe_get_option('job_import_progress', 0);
 
         // Track job importing start time
         if ($progress['total'] > 1 && !isset($progress['job_import_start_time'])) {
@@ -451,8 +451,8 @@ function get_job_import_status_ajax()
         $progress['job_importing_time_elapsed'] = isset($progress['job_import_start_time']) ? microtime(true) - $progress['job_import_start_time'] : $progress['time_elapsed'];
 
         // Add batch timing data for accurate time calculations
-        $progress['batch_time'] = (float)get_option('job_import_last_batch_time', 0);
-        $progress['batch_processed'] = (int)get_option('job_import_last_batch_processed', 0);
+        $progress['batch_time'] = (float)safe_get_option('job_import_last_batch_time', 0);
+        $progress['batch_processed'] = (int)safe_get_option('job_import_last_batch_processed', 0);
 
         // Add estimated time remaining calculation from PHP
         $progress['estimated_time_remaining'] = calculate_estimated_time_remaining($progress);
@@ -1073,13 +1073,13 @@ function get_api_key_ajax()
 
     try {
         // Generate or retrieve API key for real-time updates
-        $api_key = get_option('puntwork_api_key', '');
+        $api_key = safe_get_option('puntwork_api_key', '');
         if (empty($api_key)) {
             $api_key = wp_generate_password(32, false);
             update_option('puntwork_api_key', $api_key);
         }
 
-        PuntWorkLogger::logAjaxResponse('get_api_key', ['key_generated' => empty(get_option('puntwork_api_key', ''))]);
+        PuntWorkLogger::logAjaxResponse('get_api_key', ['key_generated' => empty(safe_get_option('puntwork_api_key', ''))]);
         AjaxErrorHandler::sendSuccess(['api_key' => $api_key]);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Get API key error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
@@ -1090,73 +1090,73 @@ function get_api_key_ajax()
 add_action('wp_ajax_get_async_status', __NAMESPACE__ . '\\get_async_status_ajax');
 function get_async_status_ajax()
 {
+    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [ASYNC-AJAX-START] ===== GET_ASYNC_STATUS_AJAX START =====');
+        error_log('[PUNTWORK] [ASYNC-AJAX-START] POST data: ' . json_encode($_POST));
+        error_log('[PUNTWORK] [ASYNC-AJAX-START] Memory usage at start: ' . memory_get_usage(true) . ' bytes');
+    }
+
     PuntWorkLogger::logAjaxRequest('get_async_status', $_POST);
 
     // Use comprehensive security validation
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [ASYNC-AJAX-DEBUG] Starting security validation');
+    }
     $validation = SecurityUtils::validateAjaxRequest('get_async_status', 'job_import_nonce');
     if (is_wp_error($validation)) {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [ASYNC-AJAX-ERROR] Security validation failed: ' . $validation->get_error_message());
+        }
         AjaxErrorHandler::sendError($validation);
 
         return;
     }
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [ASYNC-AJAX-DEBUG] Security validation passed');
+    }
 
     try {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [ASYNC-AJAX-DEBUG] Loading async processing utilities');
+        }
         // Include async processing utilities
         require_once __DIR__ . '/../utilities/async-processing.php';
 
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [ASYNC-AJAX-DEBUG] Calling get_async_processing_status');
+        }
         $status = get_async_processing_status();
+
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [ASYNC-AJAX-DEBUG] Async status retrieved: ' . json_encode($status));
+            error_log('[PUNTWORK] [ASYNC-AJAX-DEBUG] Preparing success response');
+        }
 
         PuntWorkLogger::logAjaxResponse('get_async_status', [
             'enabled' => $status['enabled'],
             'available' => $status['available'],
         ]);
         AjaxErrorHandler::sendSuccess($status);
+
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [ASYNC-AJAX-END] ===== GET_ASYNC_STATUS_AJAX SUCCESS =====');
+        }
     } catch (\Exception $e) {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [ASYNC-AJAX-ERROR] Exception in get_async_status_ajax: ' . $e->getMessage());
+            error_log('[PUNTWORK] [ASYNC-AJAX-ERROR] Stack trace: ' . $e->getTraceAsString());
+        }
         PuntWorkLogger::error('Get async status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to get async status: ' . $e->getMessage());
-    }
-}
-
-add_action('wp_ajax_save_async_settings', __NAMESPACE__ . '\\save_async_settings_ajax');
-function save_async_settings_ajax()
-{
-    PuntWorkLogger::logAjaxRequest('save_async_settings', $_POST);
-
-    // Use comprehensive security validation with field validation
-    $validation = SecurityUtils::validateAjaxRequest(
-        'save_async_settings',
-        'job_import_nonce',
-        ['enabled'], // required fields
-        [
-            'enabled' => [
-                'type' => 'boolean',
-            ],
-        ]
-    );
-
-    if (is_wp_error($validation)) {
-        AjaxErrorHandler::sendError($validation);
-
-        return;
-    }
-
-    try {
-        $enabled = filter_var($_POST['enabled'], FILTER_VALIDATE_BOOLEAN);
-
-        // Save async processing setting
-        update_option('puntwork_async_enabled', $enabled);
-
-        PuntWorkLogger::info(
-            'Async processing settings updated',
-            PuntWorkLogger::CONTEXT_AJAX,
-            ['enabled' => $enabled]
-        );
-
-        PuntWorkLogger::logAjaxResponse('save_async_settings', ['enabled' => $enabled]);
-        AjaxErrorHandler::sendSuccess(null, ['message' => 'Async settings saved successfully']);
-    } catch (\Exception $e) {
-        PuntWorkLogger::error('Save async settings error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::sendError('Failed to save async settings: ' . $e->getMessage());
+    } catch (\Throwable $e) {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [ASYNC-AJAX-FATAL] Fatal error in get_async_status_ajax: ' . $e->getMessage());
+            error_log('[PUNTWORK] [ASYNC-AJAX-FATAL] Stack trace: ' . $e->getTraceAsString());
+        }
+        PuntWorkLogger::error('Get async status fatal error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        AjaxErrorHandler::sendError('Failed to get async status with fatal error: ' . $e->getMessage());
     }
 }
 
