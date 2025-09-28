@@ -1,4 +1,5 @@
 - redownload download debug.log using [text](ftp_script.txt)
+- read Console.txt if attached
 - identify problems
 - analyze code
 - fix issues

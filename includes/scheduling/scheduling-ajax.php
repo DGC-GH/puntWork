@@ -726,6 +726,23 @@ function run_scheduled_import( bool $test_mode = false, string $trigger_type = '
 			$item_count   = process_one_feed( $feed_key, $feed_url, $output_dir, $fallback_domain, $logs );
 			$total_items += $item_count;
 
+			// Check if feed processing failed and log specific error
+			if ( $item_count === 0 && ! empty( $logs ) ) {
+				$last_log = end( $logs );
+				if ( strpos( $last_log, 'Download error:' ) !== false || strpos( $last_log, 'ERROR' ) !== false ) {
+					PuntWorkLogger::error(
+						'Feed processing failed',
+						PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+						array(
+							'feed_key' => $feed_key,
+							'feed_url' => $feed_url,
+							'error_details' => $last_log,
+							'all_logs' => $logs,
+						)
+					);
+				}
+			}
+
 			if ( $debug_mode ) {
 				error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Feed ' . $feed_key . ' processed, items: ' . $item_count );
 				error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Feed logs: ' . json_encode( $logs ) );

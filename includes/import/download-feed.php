@@ -100,8 +100,9 @@ function download_feed( $url, $feed_path, $output_dir, &$logs, &$format = null )
 				}
 
 				if ( ! $success || $http_code !== 200 || filesize( $full_feed_path ) < 10 ) {
-					error_log( '[PUNTWORK] [DOWNLOAD-ERROR] cURL download failed' );
-					throw new \Exception( "cURL download failed (HTTP $http_code, size: " . filesize( $full_feed_path ) . ', error: ' . $curl_error . ')' );
+					$error_details = "cURL download failed (HTTP $http_code, size: " . filesize( $full_feed_path ) . ' bytes, error: ' . $curl_error . ', URL: ' . $url . ')';
+					error_log( '[PUNTWORK] [DOWNLOAD-ERROR] ' . $error_details );
+					throw new \Exception( $error_details );
 				}
 			} else {
 				if ( $debug_mode ) {

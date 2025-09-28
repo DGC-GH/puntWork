@@ -266,8 +266,20 @@ function process_one_feed( string $feed_key, string $url, string $output_dir, st
 	}
 	$download_start = microtime( true );
 	if ( ! download_feed( $url, $feed_file_path, $output_dir, $logs ) ) {
+		$error_msg = 'Feed download failed for ' . $feed_key . ' from URL: ' . $url;
+		PuntWorkLogger::error(
+			'Feed download failed',
+			PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+			array(
+				'feed_key' => $feed_key,
+				'feed_url' => $url,
+				'feed_file_path' => $feed_file_path,
+				'logs' => $logs,
+			)
+		);
+		$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . $error_msg;
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [PROCESS-ERROR] Feed download failed for ' . $feed_key . ' after ' . ( microtime( true ) - $download_start ) . ' seconds' );
+			error_log( '[PUNTWORK] [PROCESS-ERROR] ' . $error_msg . ' after ' . ( microtime( true ) - $download_start ) . ' seconds' );
 		}
 		return 0;
 	}
@@ -275,6 +287,18 @@ function process_one_feed( string $feed_key, string $url, string $output_dir, st
 	if ( $debug_mode ) {
 		error_log( '[PUNTWORK] [PROCESS-DOWNLOAD] Feed download completed in ' . round( $download_time, 3 ) . ' seconds' );
 	}
+
+	// Log successful download
+	PuntWorkLogger::info(
+		'Feed download completed',
+		PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+		array(
+			'feed_key' => $feed_key,
+			'feed_url' => $url,
+			'download_time' => round( $download_time, 3 ),
+			'file_size' => filesize( $feed_file_path ),
+		)
+	);
 
 	// Check if downloaded file exists and has content
 	if ( ! file_exists( $feed_file_path ) ) {
