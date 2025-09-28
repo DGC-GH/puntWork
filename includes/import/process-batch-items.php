@@ -31,6 +31,12 @@ if (! function_exists('process_batch_items')) {
         $post_statuses = bulk_get_post_statuses($post_ids_for_status);
         error_log('[PUNTWORK] [ITEMS-DEBUG] Got post statuses');
 
+        // Preload post meta to avoid N+1 queries during ACF updates
+        if (!empty($post_ids_for_status)) {
+            $preloaded_meta = preload_post_meta_batch($post_ids_for_status);
+            error_log('[PUNTWORK] [ITEMS-DEBUG] Preloaded meta for ' . count($preloaded_meta) . ' posts');
+        }
+
         $total_to_process = count($batch_guids);
         error_log('[PUNTWORK] [ITEMS-DEBUG] Starting to process ' . $total_to_process . ' items');
         error_log('[PUNTWORK] [ITEMS-DEBUG] Current counts before processing: published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', processed_count=' . $processed_count);

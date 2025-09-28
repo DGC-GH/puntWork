@@ -47,7 +47,14 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
         $reason = 'moderate memory usage detected';
     } elseif ($last_memory_ratio < 0.4) {
         // Low memory usage - allow larger batches
-        $reason = 'low memory usage allows larger batches';
+        // Increase batch size when memory is low
+        $new_size = min(500, floor($batch_size * 1.3));
+        if ($new_size > $batch_size) {
+            $batch_size = $new_size;
+            $reason = 'low memory usage allows larger batches, increasing batch size';
+        } else {
+            $reason = 'low memory usage allows larger batches';
+        }
     } else {
         $reason = '';
     }
@@ -94,8 +101,8 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
             $adaptive_state['previous_good_batch_size'] = $batch_size;
             $adaptive_state['consecutive_slow_batches'] = 0;
 
-            // Exponentially increase batch size (multiply by 1.2, capped at 500)
-            $new_size = min(500, floor($batch_size * 1.2));
+            // Exponentially increase batch size (multiply by 1.5 for faster growth)
+            $new_size = min(500, floor($batch_size * 1.5));
 
             // Ensure minimum increase of 5
             if ($new_size <= $batch_size) {
@@ -116,6 +123,14 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
         }
 
         $adaptive_state['last_performance_check'] = time();
+    } elseif ($last_memory_ratio < 0.6 && empty($reason)) {
+        // First batch and memory is OK - allow initial increase
+        $new_size = min(500, floor($batch_size * 2.0));
+        if ($new_size > $batch_size) {
+            $batch_size = $new_size;
+            $reason = 'first batch with good memory, increasing batch size for initial adaptation';
+            $adaptive_state['previous_good_batch_size'] = $batch_size;
+        }
     }
 
     // Loop prevention: if we've adjusted too many times in a row, stabilize

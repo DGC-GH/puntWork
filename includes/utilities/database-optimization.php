@@ -276,6 +276,51 @@ function get_posts_by_guids_with_status( array $guids ): array
 }
 
 /**
+ * Preload all post meta for a batch of posts to avoid N+1 queries
+ *
+ * @param  array $post_ids Array of post IDs
+ * @return array Post ID => meta_key => meta_value mapping
+ */
+function preload_post_meta_batch( array $post_ids ): array {
+    global $wpdb;
+
+    if ( empty( $post_ids ) ) {
+        return array();
+    }
+
+    error_log( '[PUNTWORK] [DB-DEBUG] preload_post_meta_batch called with ' . count( $post_ids ) . ' post IDs' );
+
+    $placeholders = implode( ',', array_fill( 0, count( $post_ids ), '%d' ) );
+    $query        = $wpdb->prepare(
+        "
+        SELECT post_id, meta_key, meta_value
+        FROM {$wpdb->postmeta}
+        WHERE post_id IN ({$placeholders})
+        AND meta_key NOT LIKE '\_%'
+    ",
+        $post_ids
+    );
+
+    $start_time = microtime( true );
+    $results    = $wpdb->get_results( $query );
+    $query_time = microtime( true ) - $start_time;
+
+    error_log( '[PUNTWORK] [DB-DEBUG] preload_post_meta_batch query returned ' . count( $results ) . ' meta rows in ' . number_format( $query_time, 4 ) . ' seconds' );
+
+    $meta_cache = array();
+    foreach ( $results as $row ) {
+        if ( ! isset( $meta_cache[ $row->post_id ] ) ) {
+            $meta_cache[ $row->post_id ] = array();
+        }
+        $meta_cache[ $row->post_id ][ $row->meta_key ] = $row->meta_value;
+    }
+
+    error_log( '[PUNTWORK] [DB-DEBUG] Preloaded meta for ' . count( $meta_cache ) . ' posts' );
+
+    return $meta_cache;
+}
+
+/**
  * Get database optimization status
  *
  * @return array Status information
@@ -324,4 +369,75 @@ function get_database_optimization_status(): array
     'missing_indexes'       => array_keys($missing_indexes),
     'optimization_complete' => empty($missing_indexes),
     );
+}
+
+/**
+ * Start detailed performance monitoring for import operations
+ *
+ * @return array Monitoring data
+ */
+function start_import_performance_monitoring(): array {
+    $start_time = microtime( true );
+    $start_memory = memory_get_peak_usage( true );
+
+    // Clear any existing transients that might interfere
+    global $wpdb;
+    $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_puntwork_%'" );
+
+    return array(
+        'start_time' => $start_time,
+        'start_memory' => $start_memory,
+        'query_count_start' => $wpdb->num_queries,
+    );
+}
+
+/**
+ * End performance monitoring and log results
+ *
+ * @param  array  $monitoring_data Data from start_import_performance_monitoring
+ * @param  string $operation       Operation name
+ * @param  int    $items_processed Number of items processed
+ * @return void
+ */
+function end_import_performance_monitoring( array $monitoring_data, string $operation, int $items_processed = 0 ): void {
+    $end_time = microtime( true );
+    $end_memory = memory_get_peak_usage( true );
+
+    global $wpdb;
+    $query_count_end = $wpdb->num_queries;
+
+    $total_time = $end_time - $monitoring_data['start_time'];
+    $memory_used = $end_memory - $monitoring_data['start_memory'];
+    $queries_used = $query_count_end - $monitoring_data['query_count_start'];
+
+    $items_per_second = $items_processed > 0 ? $items_processed / $total_time : 0;
+    $queries_per_item = $items_processed > 0 ? $queries_used / $items_processed : 0;
+
+    error_log( sprintf(
+        '[PUNTWORK] [PERFORMANCE] %s completed in %.3fs, %d items (%.2f items/sec), Memory: %.2fMB used, Queries: %d total (%d new, %.1f per item)',
+        $operation,
+        $total_time,
+        $items_processed,
+        $items_per_second,
+        $memory_used / 1024 / 1024,
+        $query_count_end,
+        $queries_used,
+        $queries_per_item
+    ) );
+
+    // Store in performance logs table if it exists
+    if ( $wpdb->get_var( "SHOW TABLES LIKE '{$wpdb->prefix}puntwork_performance_logs'" ) ) {
+        $wpdb->insert(
+            $wpdb->prefix . 'puntwork_performance_logs',
+            array(
+                'operation' => $operation,
+                'total_time' => $total_time,
+                'items_processed' => $items_processed,
+                'items_per_second' => $items_per_second,
+                'memory_used' => $memory_used,
+                'query_count' => $queries_used,
+                'created_at' => current_time( 'mysql' ),
+            )
+        );
+    }
 }
