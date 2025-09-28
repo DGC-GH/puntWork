@@ -585,6 +585,26 @@ function process_batch_data(array $batch_guids, array $batch_items, array &$logs
         error_log('[PUNTWORK] [BATCH-DEBUG] Cache cleared after metadata');
     }
 
+    // Check for batch-level changes before processing individual items
+    $batch_change_check = check_batch_for_changes($batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid);
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [BATCH-DEBUG] Batch change check: ' . ($batch_change_check['has_changes'] ? 'CHANGES DETECTED' : 'NO CHANGES'));
+        error_log('[PUNTWORK] [BATCH-DEBUG] Batch change details: ' . json_encode($batch_change_check));
+    }
+
+    if (!$batch_change_check['has_changes']) {
+        // Entire batch unchanged - skip all processing
+        $skipped += count($batch_guids);
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch optimization: Skipped entire batch of ' . count($batch_guids) . ' items (no changes detected)';
+        error_log('[PUNTWORK] [BATCH-OPTIMIZATION] Skipped entire batch of ' . count($batch_guids) . ' items - no changes detected');
+
+        return ['processed_count' => count($batch_guids)];
+    }
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [BATCH-DEBUG] Batch has changes, proceeding with individual item processing');
+    }
+
     if ($debug_mode) {
         error_log('[PUNTWORK] [BATCH-DEBUG] About to call process_batch_items_with_metadata');
     }
@@ -623,6 +643,23 @@ function queue_batch_items(array $batch_guids, array $batch_items, array $batch_
     if (!$puntwork_queue_manager) {
         // Fallback to direct processing
         return process_batch_items_with_metadata($batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid, $logs, $updated, $published, $skipped);
+    }
+
+    // Check for batch-level changes before queuing individual items
+    $batch_change_check = check_batch_for_changes($batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid);
+    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [QUEUE-OPTIMIZATION] Batch change check: ' . ($batch_change_check['has_changes'] ? 'CHANGES DETECTED' : 'NO CHANGES'));
+    }
+
+    if (!$batch_change_check['has_changes']) {
+        // Entire batch unchanged - skip all queuing
+        $skipped += count($batch_guids);
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Queue optimization: Skipped entire batch of ' . count($batch_guids) . ' items (no changes detected)';
+        error_log('[PUNTWORK] [QUEUE-OPTIMIZATION] Skipped queuing entire batch of ' . count($batch_guids) . ' items - no changes detected');
+
+        return count($batch_guids); // Return count as "processed"
     }
 
     // Ensure queue table exists
@@ -698,4 +735,90 @@ function queue_batch_items(array $batch_guids, array $batch_items, array $batch_
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Total queued jobs: $queued_count";
 
     return $queued_count;
+}
+
+/**
+ * Check if an entire batch has changes before processing individual items.
+ * This optimization can skip entire batches that haven't changed.
+ *
+ * @param array $batch_guids     GUIDs in this batch
+ * @param array $batch_items     Batch items data
+ * @param array $batch_metadata  Prepared batch metadata
+ * @param array $post_ids_by_guid Post IDs mapped by GUID
+ * @return array Change detection result
+ */
+function check_batch_for_changes(array $batch_guids, array $batch_items, array $batch_metadata, array $post_ids_by_guid): array
+{
+    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [BATCH-CHANGE-CHECK] Starting batch change detection for ' . count($batch_guids) . ' items');
+    }
+
+    // Generate batch identifier for caching
+    $batch_identifier = 'batch_' . md5(implode(',', $batch_guids));
+    $batch_hash_key = 'puntwork_batch_hash_' . $batch_identifier;
+
+    // Calculate current batch hash
+    $batch_hash_data = [
+        'guids' => $batch_guids,
+        'items' => [],
+        'existing_posts' => [],
+    ];
+
+    // Include item data in hash
+    foreach ($batch_guids as $guid) {
+        if (isset($batch_items[$guid])) {
+            $item = $batch_items[$guid]['item'];
+            $batch_hash_data['items'][$guid] = [
+                'title' => $item['functiontitle'] ?? '',
+                'company' => $item['company'] ?? '',
+                'updated' => $item['updated'] ?? '',
+                'hash' => md5(json_encode($item)), // Content hash
+            ];
+        }
+    }
+
+    // Include existing post data in hash
+    foreach ($post_ids_by_guid as $guid => $post_id) {
+        $last_update = $batch_metadata['last_updates'][$post_id] ?? '';
+        $content_hash = $batch_metadata['hashes_by_post'][$post_id] ?? '';
+        $batch_hash_data['existing_posts'][$guid] = [
+            'post_id' => $post_id,
+            'last_update' => $last_update,
+            'content_hash' => $content_hash,
+        ];
+    }
+
+    // Calculate batch hash
+    $current_batch_hash = md5(json_encode($batch_hash_data));
+
+    // Get stored batch hash
+    $stored_batch_hash = get_transient($batch_hash_key);
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [BATCH-CHANGE-CHECK] Current batch hash: ' . substr($current_batch_hash, 0, 8) . '...');
+        error_log('[PUNTWORK] [BATCH-CHANGE-CHECK] Stored batch hash: ' . ($stored_batch_hash ? substr($stored_batch_hash, 0, 8) . '...' : 'none'));
+    }
+
+    // Check if batch has changed
+    $has_changes = ($stored_batch_hash !== $current_batch_hash);
+
+    // Store current hash for future comparisons (expires in 24 hours)
+    set_transient($batch_hash_key, $current_batch_hash, 24 * HOUR_IN_SECONDS);
+
+    $result = [
+        'has_changes' => $has_changes,
+        'batch_identifier' => $batch_identifier,
+        'current_hash' => $current_batch_hash,
+        'stored_hash' => $stored_batch_hash,
+        'items_count' => count($batch_guids),
+        'existing_posts_count' => count($post_ids_by_guid),
+    ];
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [BATCH-CHANGE-CHECK] Result: ' . ($has_changes ? 'CHANGES DETECTED' : 'NO CHANGES') . ' for batch ' . $batch_identifier);
+    }
+
+    return $result;
 }
