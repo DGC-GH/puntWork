@@ -184,7 +184,11 @@ class JobDeduplicator
         $words = explode(' ', strtolower(trim($text)));
 
         // Filter out common stop words and short words
-        $stop_words = array( 'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'shall' );
+        $stop_words = array(
+            'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+            'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does',
+            'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'shall'
+        );
 
         return array_filter(
             $words,
@@ -358,8 +362,13 @@ class JobDeduplicator
     /**
      * Enhanced duplicate handling with advanced algorithms
      */
-    public static function handleDuplicatesAdvanced($batch_guids, $existing_by_guid, &$logs, &$duplicates_drafted, &$post_ids_by_guid)
-    {
+    public static function handleDuplicatesAdvanced(
+        $batch_guids,
+        $existing_by_guid,
+        &$logs,
+        &$duplicates_drafted,
+        &$post_ids_by_guid
+    ) {
         global $wpdb;
 
         // First, handle exact GUID matches with existing logic
@@ -374,8 +383,13 @@ class JobDeduplicator
     /**
      * Handle exact GUID duplicates (existing logic)
      */
-    private static function handleExactGuidDuplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates_drafted, &$post_ids_by_guid)
-    {
+    private static function handleExactGuidDuplicates(
+        $batch_guids,
+        $existing_by_guid,
+        &$logs,
+        &$duplicates_drafted,
+        &$post_ids_by_guid
+    ) {
         global $wpdb;
 
         foreach ($batch_guids as $guid) {
@@ -410,9 +424,10 @@ class JobDeduplicator
                     $duplicates_to_draft = array();
 
                     // BULK LOAD all required metadata and post fields to avoid N+1 queries
-                    $placeholders   = implode(',', array_fill(0, count($existing), '%d'));
-                    $hashes_query   = $wpdb->prepare(
-                        "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
+                    $placeholders = implode(',', array_fill(0, count($existing), '%d'));
+                    $hashes_query = $wpdb->prepare(
+                        "SELECT post_id, meta_value FROM $wpdb->postmeta " .
+                        "WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
                         $existing
                     );
                     $hashes_results = $wpdb->get_results($hashes_query, OBJECT_K);
@@ -422,7 +437,7 @@ class JobDeduplicator
                     }
 
                     // Batch load post_modified and post_title
-                    $posts_query   = $wpdb->prepare(
+                    $posts_query = $wpdb->prepare(
                         "SELECT ID, post_modified, post_title FROM $wpdb->posts WHERE ID IN ($placeholders)",
                         $existing
                     );
@@ -443,7 +458,7 @@ class JobDeduplicator
                                 $duplicates_to_draft[] = $post_id;
                             } else {
                                 // If hashes differ, keep the most recently modified
-                                if (strtotime($post_modified[ $post_id ]) > strtotime($post_modified[ $post_to_keep ])) {
+                                if (strtotime($post_modified[$post_id]) > strtotime($post_modified[$post_to_keep])) {
                                         $duplicates_to_draft[] = $post_to_keep;
                                         $post_to_keep          = $post_id;
                                 } else {
@@ -483,14 +498,18 @@ class JobDeduplicator
                         );
 
                         ++$duplicates_drafted;
-                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Drafted duplicate ID: ' . $dup_id . ' GUID: ' . $guid . ' - ' . $reason;
-                        error_log('[PUNTWORK] [DUPLICATES-DEBUG] Drafted duplicate ID: ' . $dup_id . ' GUID: ' . $guid . ' - ' . $reason);
+                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Drafted duplicate ID: ' . $dup_id
+                            . ' GUID: ' . $guid . ' - ' . $reason;
+                        error_log('[PUNTWORK] [DUPLICATES-DEBUG] Drafted duplicate ID: ' . $dup_id
+                            . ' GUID: ' . $guid . ' - ' . $reason);
                     }
                     $post_ids_by_guid[ $guid ] = $post_to_keep;
                 } else {
                     // Single existing post for this GUID
-                    $first_item                = $posts_data[0];
-                    $post_ids_by_guid[ $guid ] = is_array($first_item) && isset($first_item['id']) ? $first_item['id'] : $first_item;
+                    $first_item = $posts_data[0];
+                    $post_ids_by_guid[ $guid ] = is_array($first_item) && isset($first_item['id'])
+                        ? $first_item['id']
+                        : $first_item;
                 }
             }
         }
@@ -641,8 +660,10 @@ class JobDeduplicator
                 );
 
                     ++$duplicates_drafted;
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Drafted AI-detected duplicate ID: ' . $dup_id . ' - Content similarity with ID: ' . $keep_id;
-                    error_log('[PUNTWORK] [DUPLICATES-DEBUG] Drafted AI-detected duplicate ID: ' . $dup_id . ' - Content similarity with ID: ' . $keep_id);
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Drafted AI-detected duplicate ID: '
+                        . $dup_id . ' - Content similarity with ID: ' . $keep_id;
+                    error_log('[PUNTWORK] [DUPLICATES-DEBUG] Drafted AI-detected duplicate ID: '
+                        . $dup_id . ' - Content similarity with ID: ' . $keep_id);
             }
         }
     }

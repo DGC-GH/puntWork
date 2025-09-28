@@ -32,7 +32,12 @@ function performance_metrics_page()
             case 'clear_performance_logs':
                 check_admin_referer('performance_metrics_nonce');
                 \Puntwork\Utilities\PerformanceMonitor::cleanupOldLogs(7); // Keep only 7 days
-                add_settings_error('performance_metrics', 'logs_cleared', 'Performance logs cleared successfully.', 'success');
+                add_settings_error(
+                    'performance_metrics',
+                    'logs_cleared',
+                    'Performance logs cleared successfully.',
+                    'success'
+                );
                 break;
         }
     }
@@ -41,14 +46,15 @@ function performance_metrics_page()
     $period    = sanitize_text_field($_GET['period'] ?? '7days');
     $operation = sanitize_text_field($_GET['operation'] ?? '');
 
-    $performance_stats = get_performance_statistics($operation, $period === '7days' ? 7 : ( $period === '30days' ? 30 : 90 ));
+    $days = $period === '7days' ? 7 : ($period === '30days' ? 30 : 90);
+    $performance_stats = get_performance_statistics($operation, $days);
     $current_snapshot  = get_performance_snapshot();
 
     // Get recent performance logs
     global $wpdb;
     $table_name = $wpdb->prefix . 'puntwork_performance_logs';
 
-    $where_clause = 'WHERE created_at >= DATE_SUB(NOW(), INTERVAL ' . ( $period === '7days' ? 7 : ( $period === '30days' ? 30 : 90 ) ) . ' DAY)';
+    $where_clause = 'WHERE created_at >= DATE_SUB(NOW(), INTERVAL ' . $days . ' DAY)';
     if ($operation) {
         $where_clause .= $wpdb->prepare(' AND operation = %s', $operation);
     }
@@ -88,18 +94,34 @@ function performance_metrics_page()
                 <div class="puntwork-card__body">
                     <form method="get" style="display: inline;">
                         <input type="hidden" name="page" value="puntwork-performance">
-                        <label for="period-select" style="margin-right: var(--spacing-md); font-weight: var(--font-weight-medium);"><?php _e('Time Period:', 'puntwork'); ?></label>
-                        <select name="period" id="period-select" onchange="this.form.submit()" style="margin-right: var(--spacing-lg);">
-                            <option value="7days" <?php selected($period, '7days'); ?>><?php _e('Last 7 Days', 'puntwork'); ?></option>
-                            <option value="30days" <?php selected($period, '30days'); ?>><?php _e('Last 30 Days', 'puntwork'); ?></option>
-                            <option value="90days" <?php selected($period, '90days'); ?>><?php _e('Last 90 Days', 'puntwork'); ?></option>
+                        <label for="period-select"
+                              style="margin-right: var(--spacing-md); font-weight: var(--font-weight-medium);">
+                            <?php _e('Time Period:', 'puntwork'); ?>
+                        </label>
+                        <select name="period" id="period-select" onchange="this.form.submit()"
+                                style="margin-right: var(--spacing-lg);">
+                            <option value="7days" <?php selected($period, '7days'); ?>>
+                                <?php _e('Last 7 Days', 'puntwork'); ?>
+                            </option>
+                            <option value="30days" <?php selected($period, '30days'); ?>>
+                                <?php _e('Last 30 Days', 'puntwork'); ?>
+                            </option>
+                            <option value="90days" <?php selected($period, '90days'); ?>>
+                                <?php _e('Last 90 Days', 'puntwork'); ?>
+                            </option>
                         </select>
 
-                        <label for="operation-select" style="margin-right: var(--spacing-md); font-weight: var(--font-weight-medium);"><?php _e('Operation:', 'puntwork'); ?></label>
-                        <select name="operation" id="operation-select" onchange="this.form.submit()" style="margin-right: var(--spacing-lg);">
+                        <label for="operation-select"
+                              style="margin-right: var(--spacing-md); font-weight: var(--font-weight-medium);">
+                            <?php _e('Operation:', 'puntwork'); ?>
+                        </label>
+                        <select name="operation" id="operation-select" onchange="this.form.submit()"
+                                style="margin-right: var(--spacing-lg);">
                             <option value=""><?php _e('All Operations', 'puntwork'); ?></option>
                             <?php foreach ($operation_types as $op) : ?>
-                                <option value="<?php echo esc_attr($op); ?>" <?php selected($operation, $op); ?>><?php echo esc_html($op); ?></option>
+                                <option value="<?php echo esc_attr($op); ?>" <?php selected($operation, $op); ?>>
+                                    <?php echo esc_html($op); ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </form>
@@ -108,7 +130,10 @@ function performance_metrics_page()
                     <form method="post" style="display: inline;">
                         <?php wp_nonce_field('performance_metrics_nonce'); ?>
                         <input type="hidden" name="action" value="clear_performance_logs">
-                        <button type="submit" class="puntwork-btn puntwork-btn--secondary" onclick="return confirm('<?php _e('Are you sure you want to clear old performance logs?', 'puntwork'); ?>')">
+                        <button type="submit" class="puntwork-btn puntwork-btn--secondary"
+                                onclick="return confirm('<?php
+                                    _e('Are you sure you want to clear old performance logs?', 'puntwork');
+                                ?>')">
                             <i class="fas fa-trash-alt puntwork-btn__icon"></i>
                             <?php _e('Clear Old Logs', 'puntwork'); ?>
                         </button>
@@ -148,7 +173,9 @@ function performance_metrics_page()
 
                     <?php if ($current_snapshot['load_average']) : ?>
                     <div class="status-card">
-                        <div class="status-value"><?php echo number_format($current_snapshot['load_average'][0], 2); ?></div>
+                        <div class="status-value"><?php
+                            echo number_format($current_snapshot['load_average'][0], 2);
+                        ?></div>
                         <div class="status-label"><?php _e('Load Average (1m)', 'puntwork'); ?></div>
                     </div>
                     <?php endif; ?>
@@ -238,9 +265,16 @@ function performance_metrics_page()
                                         <td><?php echo number_format($log->total_time, 3); ?>s</td>
                                         <td><?php echo size_format($log->total_memory_used); ?></td>
                                         <td><?php echo size_format($log->peak_memory); ?></td>
-                                        <td><?php echo $log->items_per_second ? number_format($log->items_per_second, 1) . '/s' : '—'; ?></td>
+                                        <td>                                        <td><?php
+                                            echo $log->items_per_second
+                                                ? number_format($log->items_per_second, 1) . '/s'
+                                                : '—';
+                                        ?></td></td>
                                         <td>
-                                            <button class="puntwork-btn puntwork-btn--outline" data-log-id="<?php echo $log->id; ?>" data-checkpoints='<?php echo esc_attr($log->checkpoints); ?>' data-metadata='<?php echo esc_attr($log->metadata); ?>'>
+                                            <button class="puntwork-btn puntwork-btn--outline"
+                                                    data-log-id="<?php echo $log->id; ?>"
+                                                    data-checkpoints='<?php echo esc_attr($log->checkpoints); ?>'
+                                                    data-metadata='<?php echo esc_attr($log->metadata); ?>'>
                                                 <?php _e('View Details', 'puntwork'); ?>
                                             </button>
                                         </td>
@@ -268,7 +302,9 @@ function performance_metrics_page()
                     </div>
 
                     <div class="cache-stat-card">
-                        <div class="cache-stat-value"><?php echo $cache_stats['wp_cache_supports_groups'] ? '✅' : '❌'; ?></div>
+                        <div class="cache-stat-value"><?php
+                            echo $cache_stats['wp_cache_supports_groups'] ? '✅' : '❌';
+                        ?></div>
                         <div class="cache-stat-label"><?php _e('Groups Support', 'puntwork'); ?></div>
                     </div>
                 </div>
@@ -297,16 +333,29 @@ function performance_metrics_page()
                     <div class="optimization-results">
                         <h3><?php _e('Last Optimization Results', 'puntwork'); ?></h3>
                         <p class="optimization-timestamp">
-                    <?php printf(__('Last run: %s', 'puntwork'), wp_date('M j, Y H:i', $last_optimization['timestamp'])); ?>
+                    <?php
+                        printf(
+                            __('Last run: %s', 'puntwork'),
+                            wp_date('M j, Y H:i', $last_optimization['timestamp'])
+                        );
+                    ?>
                         </p>
                         <div class="optimization-stats">
                             <div class="optimization-stat">
-                                <span class="optimization-stat-value"><?php echo $last_optimization['results']['feeds_analyzed'] ?? 0; ?></span>
-                                <span class="optimization-stat-label"><?php _e('Feeds Analyzed', 'puntwork'); ?></span>
+                                <span class="optimization-stat-value">
+                                    <?php echo $last_optimization['results']['feeds_analyzed'] ?? 0; ?>
+                                </span>
+                                <span class="optimization-stat-label">
+                                    <?php _e('Feeds Analyzed', 'puntwork'); ?>
+                                </span>
                             </div>
                             <div class="optimization-stat">
-                                <span class="optimization-stat-value"><?php echo $last_optimization['results']['optimizations_applied'] ?? 0; ?></span>
-                                <span class="optimization-stat-label"><?php _e('Optimizations Applied', 'puntwork'); ?></span>
+                                <span class="optimization-stat-value">
+                                    <?php echo $last_optimization['results']['optimizations_applied'] ?? 0; ?>
+                                </span>
+                                <span class="optimization-stat-label">
+                                    <?php _e('Optimizations Applied', 'puntwork'); ?>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -319,12 +368,18 @@ function performance_metrics_page()
                             <div class="recommendation-card">
                                 <h4><?php echo esc_html($feed_rec['feed_name']); ?></h4>
                         <?php foreach ($feed_rec['recommendations'] as $rec) : ?>
-                                    <div class="recommendation-item recommendation-<?php echo esc_attr($rec['severity']); ?>">
-                                        <span class="recommendation-type"><?php echo esc_html(ucfirst($rec['type'])); ?>:</span>
-                            <?php echo esc_html($rec['message']); ?>
-                            <?php if (! empty($rec['suggested_action'])) : ?>
-                                            <br><small><em><?php echo esc_html($rec['suggested_action']); ?></em></small>
-                            <?php endif; ?>
+                                    <div class="recommendation-item recommendation-<?php
+                                        echo esc_attr($rec['severity']);
+                                    ?>">
+                                        <span class="recommendation-type">
+                                            <?php echo esc_html(ucfirst($rec['type'])); ?>:
+                                        </span>
+                                        <?php echo esc_html($rec['message']); ?>
+                                        <?php if (! empty($rec['suggested_action'])) : ?>
+                                            <br><small><em><?php
+                                                echo esc_html($rec['suggested_action']);
+                                            ?></em></small>
+                                        <?php endif; ?>
                                     </div>
                         <?php endforeach; ?>
                             </div>
@@ -355,22 +410,30 @@ function performance_metrics_page()
                 <h2><?php _e('Machine Learning Analytics', 'puntwork'); ?></h2>
                 <div class="ml-analytics-grid">
                     <div class="ml-stat-card">
-                        <div class="ml-stat-value"><?php echo count(\Puntwork\AI\MachineLearningEngine::getTrainedModels()); ?></div>
+                        <div class="ml-stat-value">
+                            <?php echo count(\Puntwork\AI\MachineLearningEngine::getTrainedModels()); ?>
+                        </div>
                         <div class="ml-stat-label"><?php _e('Trained Models', 'puntwork'); ?></div>
                     </div>
 
                     <div class="ml-stat-card">
-                        <div class="ml-stat-value"><?php echo \Puntwork\AI\MachineLearningEngine::getAverageAccuracy(); ?>%</div>
+                        <div class="ml-stat-value">
+                            <?php echo \Puntwork\AI\MachineLearningEngine::getAverageAccuracy(); ?>%
+                        </div>
                         <div class="ml-stat-label"><?php _e('Avg Model Accuracy', 'puntwork'); ?></div>
                     </div>
 
                     <div class="ml-stat-card">
-                        <div class="ml-stat-value"><?php echo \Puntwork\AI\MachineLearningEngine::getPredictionsToday(); ?></div>
+                        <div class="ml-stat-value">
+                            <?php echo \Puntwork\AI\MachineLearningEngine::getPredictionsToday(); ?>
+                        </div>
                         <div class="ml-stat-label"><?php _e('Predictions Today', 'puntwork'); ?></div>
                     </div>
 
                     <div class="ml-stat-card">
-                        <div class="ml-stat-value"><?php echo \Puntwork\AI\MachineLearningEngine::getOptimizationsApplied(); ?></div>
+                        <div class="ml-stat-value">
+                            <?php echo \Puntwork\AI\MachineLearningEngine::getOptimizationsApplied(); ?>
+                        </div>
                         <div class="ml-stat-label"><?php _e('Auto Optimizations', 'puntwork'); ?></div>
                     </div>
                 </div>
@@ -508,8 +571,14 @@ function performance_metrics_page()
                     if (checkpoints.length > 0) {
                         content += '<h4>Checkpoints:</h4><ul>';
                         checkpoints.forEach(checkpoint => {
-                            content += `<li><strong>${checkpoint.name}</strong>: ${checkpoint.elapsed.toFixed(3)}s elapsed, ${formatBytes(checkpoint.memory_used)} memory used`;
+                            content += `<li><strong>${checkpoint.name}</strong>: ` +
+                                `${checkpoint.elapsed.toFixed(3)}s elapsed, ` +
+                                `${formatBytes(checkpoint.memory_used)} memory used`;
                             if (checkpoint.data && Object.keys(checkpoint.data).length > 0) {
+                                content += ` (${JSON.stringify(checkpoint.data)})`;
+                            }
+                            content += '</li>';
+                        });
                                 content += ` (${JSON.stringify(checkpoint.data)})`;
                             }
                             content += '</li>';
@@ -553,7 +622,8 @@ function performance_metrics_page()
             if (runOptimizationBtn && optimizationStatus) {
                 runOptimizationBtn.addEventListener('click', function() {
                     runOptimizationBtn.disabled = true;
-                    runOptimizationBtn.innerHTML = '<span class="dashicons dashicons-update dashicons-spin"></span> Running...';
+                    runOptimizationBtn.innerHTML = '<span class="dashicons dashicons-update dashicons-spin"></span> ' +
+                        'Running...';
                     optimizationStatus.textContent = 'Running feed optimization...';
 
                     const data = {
@@ -581,14 +651,16 @@ function performance_metrics_page()
                             optimizationStatus.style.color = 'red';
                             optimizationStatus.textContent = 'Error: ' + (data.data || 'Unknown error');
                             runOptimizationBtn.disabled = false;
-                            runOptimizationBtn.innerHTML = '<span class="dashicons dashicons-update"></span> Run Feed Optimization';
+                            runOptimizationBtn.innerHTML = '<span class="dashicons dashicons-update"></span> ' +
+                                'Run Feed Optimization';
                         }
                     })
                     .catch(error => {
                         optimizationStatus.style.color = 'red';
                         optimizationStatus.textContent = 'Error: ' + error.message;
                         runOptimizationBtn.disabled = false;
-                        runOptimizationBtn.innerHTML = '<span class="dashicons dashicons-update"></span> Run Feed Optimization';
+                        runOptimizationBtn.innerHTML = '<span class="dashicons dashicons-update"></span> ' +
+                            'Run Feed Optimization';
                     });
                 });
             }
@@ -601,7 +673,8 @@ function performance_metrics_page()
             if (warmCachesBtn && cacheStatus) {
                 warmCachesBtn.addEventListener('click', function() {
                     warmCachesBtn.disabled = true;
-                    warmCachesBtn.innerHTML = '<span class="dashicons dashicons-update dashicons-spin"></span> Warming...';
+                    warmCachesBtn.innerHTML = '<span class="dashicons dashicons-update dashicons-spin"></span> ' +
+                        'Warming...';
                     cacheStatus.textContent = 'Warming up caches...';
 
                     const data = {
@@ -689,7 +762,9 @@ function performance_metrics_page()
             if (runMemoryTestBtn && memoryStatus) {
                 runMemoryTestBtn.addEventListener('click', function() {
                     runMemoryTestBtn.disabled = true;
-                    runMemoryTestBtn.innerHTML = '<span class="dashicons dashicons-performance dashicons-spin"></span> Testing...';
+                    runMemoryTestBtn.innerHTML =
+                        '<span class="dashicons dashicons-performance dashicons-spin"></span> ' +
+                        'Testing...';
                     memoryStatus.textContent = 'Running memory performance test...';
 
                     const data = {
@@ -708,21 +783,25 @@ function performance_metrics_page()
                     .then(data => {
                         if (data.success) {
                             memoryStatus.style.color = 'green';
-                            memoryStatus.textContent = 'Memory test completed! Peak: ' + formatBytes(data.data.peak_memory) + ', Time: ' + data.data.test_time + 's';
+                                                        memoryStatus.textContent = 'Memory test completed! Peak: ' +
+                                formatBytes(data.data.peak_memory) + ', Time: ' + data.data.test_time + 's';
                             runMemoryTestBtn.disabled = false;
-                            runMemoryTestBtn.innerHTML = '<span class="dashicons dashicons-performance"></span> Run Memory Test';
+                            runMemoryTestBtn.innerHTML = '<span class="dashicons dashicons-performance"></span> ' +
+                                'Run Memory Test';
                         } else {
                             memoryStatus.style.color = 'red';
                             memoryStatus.textContent = 'Error: ' + (data.data || 'Unknown error');
                             runMemoryTestBtn.disabled = false;
-                            runMemoryTestBtn.innerHTML = '<span class="dashicons dashicons-performance"></span> Run Memory Test';
+                            runMemoryTestBtn.innerHTML = '<span class="dashicons dashicons-performance"></span> ' +
+                                'Run Memory Test';
                         }
                     })
                     .catch(error => {
                         memoryStatus.style.color = 'red';
                         memoryStatus.textContent = 'Error: ' + error.message;
                         runMemoryTestBtn.disabled = false;
-                        runMemoryTestBtn.innerHTML = '<span class="dashicons dashicons-performance"></span> Run Memory Test';
+                        runMemoryTestBtn.innerHTML = '<span class="dashicons dashicons-performance"></span> ' +
+                            'Run Memory Test';
                     });
                 });
             }
@@ -773,10 +852,10 @@ function performance_metrics_page()
             if (runMLOptimizationBtn && mlStatus) {
                 runMLOptimizationBtn.addEventListener('click', function() {
                     runMLOptimizationBtn.disabled = true;
-                    runMLOptimizationBtn.innerHTML = '<span class="dashicons dashicons-brain dashicons-spin"></span> Running ML Optimization...';
-                    mlStatus.textContent = 'Running machine learning optimization...';
-
-                    const data = {
+                    runMLOptimizationBtn.innerHTML =
+                        '<span class="dashicons dashicons-brain dashicons-spin"></span> ' +
+                        'Running ML Optimization...';
+                    mlStatus.textContent = 'Running machine learning optimization...';                    const data = {
                         action: 'run_ml_feed_optimization',
                         nonce: '<?php echo wp_create_nonce('puntwork_ml_optimization'); ?>'
                     };
@@ -792,9 +871,12 @@ function performance_metrics_page()
                     .then(data => {
                         if (data.success) {
                             mlStatus.style.color = 'green';
-                            mlStatus.textContent = `ML optimization completed! Applied ${data.data.optimizations_applied} optimizations to ${data.data.feeds_analyzed} feeds.`;
+                                                        mlStatus.textContent = `ML optimization completed! Applied ` +
+                                `${data.data.optimizations_applied} optimizations to ` +
+                                `${data.data.feeds_analyzed} feeds.`;
                             runMLOptimizationBtn.disabled = false;
-                            runMLOptimizationBtn.innerHTML = '<span class="dashicons dashicons-brain"></span> Run ML Optimization';
+                            runMLOptimizationBtn.innerHTML = '<span class="dashicons dashicons-brain"></span> ' +
+                                'Run ML Optimization';
                             // Reload the page to show updated stats
                             setTimeout(() => {
                                 location.reload();
@@ -803,14 +885,16 @@ function performance_metrics_page()
                             mlStatus.style.color = 'red';
                             mlStatus.textContent = 'Error: ' + (data.data || 'Unknown error');
                             runMLOptimizationBtn.disabled = false;
-                            runMLOptimizationBtn.innerHTML = '<span class="dashicons dashicons-brain"></span> Run ML Optimization';
+                            runMLOptimizationBtn.innerHTML = '<span class="dashicons dashicons-brain"></span> ' +
+                                'Run ML Optimization';
                         }
                     })
                     .catch(error => {
                         mlStatus.style.color = 'red';
                         mlStatus.textContent = 'Error: ' + error.message;
                         runMLOptimizationBtn.disabled = false;
-                        runMLOptimizationBtn.innerHTML = '<span class="dashicons dashicons-brain"></span> Run ML Optimization';
+                        runMLOptimizationBtn.innerHTML = '<span class="dashicons dashicons-brain"></span> ' +
+                            'Run ML Optimization';
                     });
                 });
             }
@@ -818,7 +902,9 @@ function performance_metrics_page()
             if (trainModelsBtn && mlStatus) {
                 trainModelsBtn.addEventListener('click', function() {
                     trainModelsBtn.disabled = true;
-                    trainModelsBtn.innerHTML = '<span class="dashicons dashicons-chart-line dashicons-spin"></span> Training Models...';
+                    trainModelsBtn.innerHTML =
+                        '<span class="dashicons dashicons-chart-line dashicons-spin"></span> ' +
+                        'Training Models...';
                     mlStatus.textContent = 'Training machine learning models...';
 
                     const data = {
@@ -837,9 +923,12 @@ function performance_metrics_page()
                     .then(data => {
                         if (data.success) {
                             mlStatus.style.color = 'green';
-                            mlStatus.textContent = `Model training completed! Trained ${data.data.models_trained} models with avg accuracy ${data.data.avg_accuracy}%.`;
+                                                        mlStatus.textContent = `Model training completed! Trained ` +
+                                `${data.data.models_trained} models with avg accuracy ` +
+                                `${data.data.avg_accuracy}%.`;
                             trainModelsBtn.disabled = false;
-                            trainModelsBtn.innerHTML = '<span class="dashicons dashicons-chart-line"></span> Train Models';
+                            trainModelsBtn.innerHTML = '<span class="dashicons dashicons-chart-line"></span> ' +
+                                'Train Models';
                             // Reload the page to show updated stats
                             setTimeout(() => {
                                 location.reload();
@@ -848,14 +937,16 @@ function performance_metrics_page()
                             mlStatus.style.color = 'red';
                             mlStatus.textContent = 'Error: ' + (data.data || 'Unknown error');
                             trainModelsBtn.disabled = false;
-                            trainModelsBtn.innerHTML = '<span class="dashicons dashicons-chart-line"></span> Train Models';
+                            trainModelsBtn.innerHTML = '<span class="dashicons dashicons-chart-line"></span> ' +
+                                'Train Models';
                         }
                     })
                     .catch(error => {
                         mlStatus.style.color = 'red';
                         mlStatus.textContent = 'Error: ' + error.message;
                         trainModelsBtn.disabled = false;
-                        trainModelsBtn.innerHTML = '<span class="dashicons dashicons-chart-line"></span> Train Models';
+                        trainModelsBtn.innerHTML = '<span class="dashicons dashicons-chart-line"></span> ' +
+                            'Train Models';
                     });
                 });
             }
@@ -890,7 +981,8 @@ function performance_metrics_page()
 
         function loadMLInsights() {
             const $content = $('#ml-insights-content');
-            $content.html('<div class="puntwork-loading"><div class="puntwork-spinner"></div><p>Loading ML insights...</p></div>');
+            $content.html('<div class="puntwork-loading"><div class="puntwork-spinner"></div>' +
+                '<p>Loading ML insights...</p></div>');
 
             $.ajax({
                 url: ajaxurl,
@@ -903,7 +995,8 @@ function performance_metrics_page()
                     if (response.success) {
                         displayMLInsights(response.data.insights);
                     } else {
-                        $content.html('<div class="puntwork-error">Failed to load insights: ' + response.data + '</div>');
+                        $content.html('<div class="puntwork-error">Failed to load insights: ' +
+                            response.data + '</div>');
                     }
                 },
                 error: function() {
@@ -923,9 +1016,12 @@ function performance_metrics_page()
                 Object.entries(insights.model_performance).forEach(([model, perf]) => {
                     html += '<div class="ml-insight-card">';
                     html += '<h5>' + model.replace('_', ' ').toUpperCase() + '</h5>';
-                    html += '<div class="ml-metric">Accuracy: <span class="ml-value">' + (perf.accuracy * 100).toFixed(1) + '%</span></div>';
-                    html += '<div class="ml-metric">Precision: <span class="ml-value">' + (perf.precision * 100).toFixed(1) + '%</span></div>';
-                    html += '<div class="ml-metric">Recall: <span class="ml-value">' + (perf.recall * 100).toFixed(1) + '%</span></div>';
+                                        html += '<div class="ml-metric">Accuracy: <span class="ml-value">' +
+                        (perf.accuracy * 100).toFixed(1) + '%</span></div>';
+                    html += '<div class="ml-metric">Precision: <span class="ml-value">' +
+                        (perf.precision * 100).toFixed(1) + '%</span></div>';
+                    html += '<div class="ml-metric">Recall: <span class="ml-value">' +
+                        (perf.recall * 100).toFixed(1) + '%</span></div>';
                     html += '</div>';
                 });
 
@@ -940,7 +1036,8 @@ function performance_metrics_page()
                 insights.feature_importance.slice(0, 10).forEach(feature => {
                     html += '<div class="ml-feature-item">';
                     html += '<span class="ml-feature-name">' + feature.name + '</span>';
-                    html += '<div class="ml-feature-bar"><div class="ml-feature-fill" style="width: ' + (feature.importance * 100) + '%"></div></div>';
+                    html += '<div class="ml-feature-bar"><div class="ml-feature-fill" style="width: ' +
+                        (feature.importance * 100) + '%"></div></div>';
                     html += '<span class="ml-feature-value">' + (feature.importance * 100).toFixed(1) + '%</span>';
                     html += '</div>';
                 });
@@ -956,8 +1053,10 @@ function performance_metrics_page()
                 insights.predictions.slice(0, 5).forEach(pred => {
                     html += '<div class="ml-prediction-item">';
                     html += '<div class="ml-prediction-feed">' + pred.feed_name + '</div>';
-                    html += '<div class="ml-prediction-metric">Success Rate: <span class="ml-value">' + (pred.predicted_success_rate * 100).toFixed(1) + '%</span></div>';
-                    html += '<div class="ml-prediction-confidence">Confidence: <span class="ml-value">' + (pred.confidence * 100).toFixed(1) + '%</span></div>';
+                    html += '<div class="ml-prediction-metric">Success Rate: <span class="ml-value">' +
+                        (pred.predicted_success_rate * 100).toFixed(1) + '%</span></div>';
+                    html += '<div class="ml-prediction-confidence">Confidence: <span class="ml-value">' +
+                        (pred.confidence * 100).toFixed(1) + '%</span></div>';
                     html += '</div>';
                 });
 
