@@ -5,7 +5,19 @@
  *
  * @package    Puntwork
  * @subpackage Processing
- * @since      1.0.13
+ 	private static function isJobBoardUrl( string $url ): bool {
+		$job_board_patterns = array(
+			'job_board://',  // Custom protocol for job boards
+		);
+
+		foreach ( $job_board_patterns as $pattern ) {
+			if ( strpos( $url, $pattern ) === 0 ) {
+				return true;
+			}
+		}
+
+		return false;
+	}0.13
  */
 
 namespace Puntwork;
