@@ -286,6 +286,10 @@ function render_main_import_ui(): void
                 <!-- Status Message -->
                 <div style="background-color: var(--color-gray-50); border-radius: var(--radius-md); padding: var(--spacing-md); text-align: center; margin-bottom: var(--spacing-lg);">
                     <span id="status-message" style="font-size: var(--font-size-sm); color: var(--color-gray-600);">Ready to start.</span>
+                    <div id="ui-update-indicator" style="font-size: var(--font-size-xs); color: var(--color-gray-500); margin-top: var(--spacing-xs); display: none;">
+                        <i class="fas fa-clock" style="margin-right: var(--spacing-xs);"></i>
+                        Last UI update: <span id="last-ui-update">Never</span>
+                    </div>
                 </div>
 
             <!-- Integrated Log Section -->

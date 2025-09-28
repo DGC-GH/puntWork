@@ -96,6 +96,8 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             $('#status-message').text('Ready to start.');
             $('#time-elapsed').text('0s');
             $('#time-left').text('Calculating...');
+            $('#ui-update-indicator').hide();
+            $('#last-ui-update').text('Never');
             console.log('[PUNTWORK] Progress UI cleared and reset');
         },
 
@@ -257,6 +259,16 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 }
             } else if (this.currentPhase === 'job-importing') {
                 // Job importing phase: 0-100% for this phase only
+                console.log('[PUNTWORK] UI UPDATE CHECK - Job importing phase detected at ' + new Date().toISOString());
+                console.log('[PUNTWORK] UI UPDATE CHECK - Data received:', {
+                    total: total,
+                    processed: processed,
+                    published: data.published,
+                    updated: data.updated,
+                    success: data.success,
+                    complete: data.complete
+                });
+                
                 if (total > 0) {
                     if ((processed >= total && data.success === true) || data.complete === true) {
                         percent = 100;
@@ -268,9 +280,11 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                     } else {
                         phaseProgress = processed / total;
                         percent = Math.round(phaseProgress * 100);
+                        console.log('[PUNTWORK] UI UPDATE CHECK - Calculated progress: ' + percent + '% (' + processed + '/' + total + ')');
                     }
                 } else {
                     percent = 0; // Start from 0 for importing phase
+                    console.log('[PUNTWORK] UI UPDATE CHECK - Total is 0, setting percent to 0');
                 }
             } else if (this.currentPhase === 'complete') {
                 // Ensure we show 100% when complete
@@ -370,6 +384,17 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 }
             } else {
                 // Job import phase - show normal stats
+                console.log('[PUNTWORK] UI UPDATE CHECK - Updating job import UI elements at ' + new Date().toISOString());
+                console.log('[PUNTWORK] UI UPDATE CHECK - Setting UI values:', {
+                    total: total,
+                    processed: processed,
+                    published: data.published || 0,
+                    updated: data.updated || 0,
+                    skipped: data.skipped || 0,
+                    duplicates_drafted: data.duplicates_drafted || 0,
+                    percent: percent
+                });
+                
                 $('#total-items').text(total);
                 $('#processed-items').text(processed);
                 $('#published-items').text(data.published || 0);
@@ -388,6 +413,12 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 } else {
                     $('#status-message').text(`Importing... - ${percent}%`);
                 }
+                
+                // Update UI update indicator
+                $('#ui-update-indicator').show();
+                $('#last-ui-update').text(new Date().toLocaleTimeString());
+                
+                console.log('[PUNTWORK] UI UPDATE CHECK - UI elements updated successfully');
             }
 
             // Update elapsed time - prioritize server-side calculation for consistency

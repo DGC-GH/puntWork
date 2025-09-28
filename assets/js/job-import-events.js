@@ -567,14 +567,20 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
                         // Update UI with progress data (including final completion status)
                         if (statusData.total > 0) {
-                            console.log('[PUNTWORK] Updating progress with polling data:', statusData);
+                            console.log('[PUNTWORK] POLLING CHECK - Updating progress with polling data at ' + new Date().toISOString() + ':', {
+                                total: statusData.total,
+                                processed: statusData.processed,
+                                published: statusData.published,
+                                updated: statusData.updated,
+                                phase: JobImportUI.currentPhase
+                            });
                             JobImportUI.updateProgress(statusData);
                             JobImportUI.appendLogs(statusData.logs || []);
                             // Import has started, clear the starting flag
                             isStartingNewImport = false;
                             hasSeenImportRunning = true; // Mark that we've seen the import running
                         } else if (statusData.total === 0 && !statusData.complete) {
-                            console.log('[PUNTWORK] Import not yet started (total=0), continuing to poll');
+                            console.log('[PUNTWORK] POLLING CHECK - Import not yet started (total=0), continuing to poll at ' + new Date().toISOString());
                             // Import hasn't started yet, keep polling
                         }
 
