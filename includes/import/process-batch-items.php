@@ -106,12 +106,17 @@ if (! function_exists('process_batch_items') ) {
                        update_post_meta($post_id, '_last_import_update', $xml_updated);
                        update_post_meta($post_id, '_import_hash', $item_hash);
 
+                    // Prepare ACF field updates for bulk operation
+                    $acf_updates = array();
                     foreach ( $acf_fields as $field ) {
                         $value      = $item[ $field ] ?? '';
                         $is_special = in_array($field, $zero_empty_fields);
                         $set_value  = $is_special && $value === '0' ? '' : $value;
-                        update_post_meta($post_id, $field, $set_value);
+                        $acf_updates[ $field ] = $set_value;
                     }
+
+                    // Use bulk update for ACF fields to avoid N+1 queries
+                    bulk_update_post_meta($post_id, $acf_updates);
 
                        ++$updated;
                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Updated ID: ' . $post_id . ' GUID: ' . $guid;
@@ -147,12 +152,17 @@ if (! function_exists('process_batch_items') ) {
                     $item_hash = md5(json_encode($item));
                     update_post_meta($post_id, '_import_hash', $item_hash);
 
+                    // Prepare ACF field updates for bulk operation
+                    $acf_updates = array();
                     foreach ( $acf_fields as $field ) {
                         $value      = $item[ $field ] ?? '';
                         $is_special = in_array($field, $zero_empty_fields);
                         $set_value  = $is_special && $value === '0' ? '' : $value;
-                        update_post_meta($post_id, $field, $set_value);
+                        $acf_updates[ $field ] = $set_value;
                     }
+
+                    // Use bulk update for ACF fields to avoid N+1 queries
+                    bulk_update_post_meta($post_id, $acf_updates);
 
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Published ID: ' . $post_id . ' GUID: ' . $guid;
                     error_log('Published ID: ' . $post_id . ' GUID: ' . $guid);
