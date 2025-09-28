@@ -100,6 +100,12 @@ function process_batch_items_logic( array $setup ): array
             error_log('[PUNTWORK] [BATCH-DEBUG] Memory manager reset completed');
         }
 
+        // Disable expensive plugin operations during batch processing for performance
+        disable_expensive_plugins();
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [BATCH-DEBUG] Expensive plugins disabled for batch processing');
+        }
+
         extract($setup);
 
         $batch_start_time = microtime(true); // Record start time for this batch
@@ -212,7 +218,15 @@ function process_batch_items_logic( array $setup ): array
                 if ($span ) {
                     $span->setAttribute('batch.cancelled', true);
                     $span->end();
-                }                // Restore memory limit
+                }                
+                
+                // Re-enable expensive plugin operations
+                enable_expensive_plugins();
+                if ($debug_mode) {
+                    error_log('[PUNTWORK] [BATCH-DEBUG] Expensive plugins re-enabled after batch cancellation');
+                }
+
+                // Restore memory limit
                 ini_set('memory_limit', $original_memory_limit);
 
                   return array(
@@ -347,6 +361,12 @@ function process_batch_items_logic( array $setup ): array
                 error_log('[PUNTWORK] [BATCH-DEBUG] Memory limit restored to ' . $original_memory_limit);
             }
 
+            // Re-enable expensive plugin operations
+            enable_expensive_plugins();
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [BATCH-DEBUG] Expensive plugins re-enabled');
+            }
+
             return array(
             'success'            => true,
             'processed'          => $end_index,
@@ -382,6 +402,12 @@ function process_batch_items_logic( array $setup ): array
                 $span->end();
             }
 
+            // Re-enable expensive plugin operations
+            enable_expensive_plugins();
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [BATCH-DEBUG] Expensive plugins re-enabled after batch error');
+            }
+
             // Restore memory limit
             ini_set('memory_limit', $original_memory_limit);
 
@@ -398,6 +424,12 @@ function process_batch_items_logic( array $setup ): array
             $span->recordException($e);
             $span->setStatus(\OpenTelemetry\API\Trace\StatusCode::STATUS_ERROR, $e->getMessage());
             $span->end();
+        }
+
+        // Re-enable expensive plugin operations (in case they were disabled during setup)
+        enable_expensive_plugins();
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [BATCH-DEBUG] Expensive plugins re-enabled after setup error');
         }
 
         // Restore memory limit

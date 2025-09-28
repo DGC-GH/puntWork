@@ -134,7 +134,7 @@ function bulk_update_post_meta( int $post_id, array $meta_data ): void
         VALUES " . implode(', ', $placeholders) . '
         ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value)
     ',
-        $values
+        ...$values
     );
 
     $start_time = microtime(true);

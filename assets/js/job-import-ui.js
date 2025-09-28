@@ -107,6 +107,8 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             var logArea = $('#log-textarea');
             logs.forEach(function(log) {
                 logArea.val(logArea.val() + log + '\n');
+                // Also log to browser console for batch size changes and important messages
+                console.log('[PUNTWORK-LOG] ' + log);
             });
             logArea.scrollTop(logArea[0].scrollHeight);
         },
