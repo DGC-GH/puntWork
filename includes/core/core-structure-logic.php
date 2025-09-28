@@ -262,10 +262,34 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
     $batch_size = 500;
     $total_items = 0;
 
+    error_log('[PUNTWORK] About to call FeedProcessor::processFeed');
+    try {
+        // Process feed using FeedProcessor
+        $count = \Puntwork\FeedProcessor::processFeed($feed_path, $format, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+        error_log('[PUNTWORK] FeedProcessor::processFeed returned count: ' . $count);
+        error_log('[PUNTWORK] Total items processed: ' . $total_items);
+    } catch (\Exception $e) {
+        error_log('[PUNTWORK] ERROR in FeedProcessor::processFeed: ' . $e->getMessage());
+        error_log('[PUNTWORK] ERROR class: ' . get_class($e));
+        error_log('[PUNTWORK] ERROR file: ' . $e->getFile() . ':' . $e->getLine());
+        error_log('[PUNTWORK] ERROR trace: ' . $e->getTraceAsString());
+        fclose($handle);
+        throw $e; // Re-throw to maintain existing behavior
+    }
+
+    fclose($handle);
+    @chmod($json_path, 0644);
+
+    error_log('[PUNTWORK] About to gzip file');
+    gzip_file($json_path, $gz_json_path);
+    error_log('[PUNTWORK] Gzip completed');
+
+    error_log('[PUNTWORK] ==== process_one_feed END ===');
+
+    return $count;
+}
 /**
  * Process a feed that has already been downloaded.
- *
- * @param  string $feed_key        Unique identifier for the feed
  * @param  string $feed_path       Path to the downloaded feed file
  * @param  string $output_dir      Directory to store processed files
  * @param  string $fallback_domain Fallback domain for job URLs
