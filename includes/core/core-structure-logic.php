@@ -22,14 +22,11 @@ use Puntwork\Utilities\CacheManager;
  */
 function get_feeds(): array
 {
-    $cache_key = 'puntwork_feeds';
-    $feeds = CacheManager::get($cache_key, CacheManager::GROUP_MAPPINGS);
-
-    if ($feeds === false) {
-        if (!defined('PHPUNIT_RUNNING') || !PHPUNIT_RUNNING) {
-            error_log('[PUNTWORK] [DEBUG] get_feeds: Cache miss, building feeds array');
-        }
-        $feeds = [];
+    // Always fetch fresh feeds - no caching
+    if (!defined('PHPUNIT_RUNNING') || !PHPUNIT_RUNNING) {
+        error_log('[PUNTWORK] [DEBUG] get_feeds: Always fetching fresh feeds (no caching)');
+    }
+    $feeds = [];
 
         // First, check if CPT is registered
         if (!post_type_exists('job-feed')) {
@@ -63,13 +60,13 @@ function get_feeds(): array
                 error_log('[PUNTWORK] [DEBUG] get_feeds: No feeds in options');
             }
 
-            // Cache for 1 hour
-            CacheManager::set($cache_key, $feeds, CacheManager::GROUP_MAPPINGS, HOUR_IN_SECONDS);
-            if (!defined('PHPUNIT_RUNNING') || !PHPUNIT_RUNNING) {
-                error_log('[PUNTWORK] [DEBUG] get_feeds: Returning feeds (no CPT): ' . json_encode($feeds));
-            }
+        // Cache for 1 hour
+        // CacheManager::set($cache_key, $feeds, CacheManager::GROUP_MAPPINGS, HOUR_IN_SECONDS);
+        if (!defined('PHPUNIT_RUNNING') || !PHPUNIT_RUNNING) {
+            error_log('[PUNTWORK] [DEBUG] get_feeds: Returning feeds (no CPT): ' . json_encode($feeds));
+        }
 
-            return $feeds;
+        return $feeds;
         }
 
         if (!defined('PHPUNIT_RUNNING') || !PHPUNIT_RUNNING) {
@@ -157,10 +154,10 @@ function get_feeds(): array
         $feeds = array_merge($feeds, $job_board_feeds);
 
         // Cache for 1 hour
-        CacheManager::set($cache_key, $feeds, CacheManager::GROUP_MAPPINGS, HOUR_IN_SECONDS);
-    } elseif (!defined('PHPUNIT_RUNNING') || !PHPUNIT_RUNNING) {
-        error_log('[PUNTWORK] [DEBUG] get_feeds: Using cached feeds: ' . json_encode($feeds));
-    }
+        // CacheManager::set($cache_key, $feeds, CacheManager::GROUP_MAPPINGS, HOUR_IN_SECONDS);
+    // } elseif (!defined('PHPUNIT_RUNNING') || !PHPUNIT_RUNNING) {
+    //     error_log('[PUNTWORK] [DEBUG] get_feeds: Using cached feeds: ' . json_encode($feeds));
+    // }
 
     if (!defined('PHPUNIT_RUNNING') || !PHPUNIT_RUNNING) {
         error_log('[PUNTWORK] [DEBUG] get_feeds: Final feeds array: ' . json_encode($feeds));
@@ -194,16 +191,17 @@ function get_job_board_feeds(): array
 }
 
 // Clear feeds cache when job-feed post is updated
-add_action(
-    'save_post',
-    function ($post_id, $post, $update) {
-        if ($post->post_type == 'job-feed' && $post->post_status == 'publish') {
-            CacheManager::delete('puntwork_feeds', CacheManager::GROUP_MAPPINGS);
-        }
-    },
-    10,
-    3
-);
+// Disabled - no longer using caching
+// add_action(
+//     'save_post',
+//     function ($post_id, $post, $update) {
+//         if ($post->post_type == 'job-feed' && $post->post_status == 'publish') {
+//             CacheManager::delete('puntwork_feeds', CacheManager::GROUP_MAPPINGS);
+//         }
+//     },
+//     10,
+//     3
+// );
 
 /**
  * Process a single feed and return the number of items processed.
@@ -451,6 +449,33 @@ function fetch_and_generate_combined_json(): array
             throw new \Exception('Feeds directory not writable - check Hostinger permissions');
         }
         $fallback_domain = 'belgiumjobs.work';
+
+        // Delete existing JSONL files to force fresh recreation
+        error_log('[PUNTWORK] [FRESH-PROCESSING] Deleting existing JSONL files to force fresh recreation');
+        $existing_jsonl_files = glob($output_dir . '*.jsonl');
+        foreach ($existing_jsonl_files as $jsonl_file) {
+            if (unlink($jsonl_file)) {
+                error_log('[PUNTWORK] [FRESH-PROCESSING] Deleted existing JSONL file: ' . basename($jsonl_file));
+            } else {
+                error_log('[PUNTWORK] [FRESH-PROCESSING] Failed to delete JSONL file: ' . basename($jsonl_file));
+            }
+        }
+        // Also delete the combined file
+        $combined_file = $output_dir . 'combined-jobs.jsonl';
+        if (file_exists($combined_file)) {
+            if (unlink($combined_file)) {
+                error_log('[PUNTWORK] [FRESH-PROCESSING] Deleted existing combined JSONL file');
+            } else {
+                error_log('[PUNTWORK] [FRESH-PROCESSING] Failed to delete combined JSONL file');
+            }
+        }
+        // Delete gzipped versions too
+        $gz_files = glob($output_dir . '*.jsonl.gz');
+        foreach ($gz_files as $gz_file) {
+            if (unlink($gz_file)) {
+                error_log('[PUNTWORK] [FRESH-PROCESSING] Deleted existing GZ file: ' . basename($gz_file));
+            }
+        }
 
         $total_items = 0;
         libxml_use_internal_errors(true);
