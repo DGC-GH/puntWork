@@ -492,6 +492,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             this.maxCompletePolls = 3; // Continue polling for 3 more polls after detecting complete
             var totalZeroCount = 0; // Counter for polls where total remains 0
             this.maxTotalZeroPolls = 100; // Stop polling after 100 polls with total=0 (200 seconds)
+            this.totalPollCount = 0; // Counter for total polls
+            this.maxTotalPolls = 1800; // Stop polling after 1800 polls (30 minutes at 1 second intervals)
             var isStartingNewImport = true; // Flag to prevent hiding UI when starting a new import
             var hasSeenImportRunning = false; // Flag to track if we've seen the import actually running
 
@@ -509,6 +511,22 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             // Store the polling function for reuse
             this.pollStatus = function() {
                 console.log('[PUNTWORK] Polling for status update (interval: ' + JobImportEvents.currentPollingInterval + 'ms)...');
+                JobImportEvents.totalPollCount++;
+                console.log('[PUNTWORK] Total polls so far: ' + JobImportEvents.totalPollCount);
+
+                // Safety check: Stop polling if we've exceeded maximum polls
+                if (JobImportEvents.totalPollCount >= JobImportEvents.maxTotalPolls) {
+                    console.log('[PUNTWORK] Polling exceeded maximum polls (' + JobImportEvents.maxTotalPolls + '), stopping polling');
+                    PuntWorkJSLogger.warn('Polling exceeded maximum polls, stopping', 'EVENTS', {
+                        totalPollCount: JobImportEvents.totalPollCount,
+                        maxTotalPolls: JobImportEvents.maxTotalPolls
+                    });
+                    JobImportEvents.stopStatusPolling();
+                    JobImportUI.resetButtons();
+                    $('#status-message').text('Import monitoring timed out - please refresh the page');
+                    return;
+                }
+
                 JobImportAPI.getImportStatus().then(function(response) {
                     console.log('[PUNTWORK] Status polling response:', response);
                     PuntWorkJSLogger.debug('Status polling response', 'EVENTS', {
