@@ -181,6 +181,7 @@ function setup_job_import()
         // Import functionality (functions)
         'import/combine-jsonl.php',
         'import/download-feed.php',
+        'import/parallel-feed-downloader.php',
         'import/import-batch.php',
         'import/import-finalization.php',
         'import/import-setup.php',

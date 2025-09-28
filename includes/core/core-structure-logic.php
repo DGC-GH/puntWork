@@ -288,6 +288,77 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
 }
 
 /**
+ * Process a feed that has already been downloaded.
+ *
+ * @param  string $feed_key        Unique identifier for the feed
+ * @param  string $feed_path       Path to the downloaded feed file
+ * @param  string $output_dir      Directory to store processed files
+ * @param  string $fallback_domain Fallback domain for job URLs
+ * @param  array  &$logs           Reference to logs array for recording processing details
+ * @return int Number of items processed from this feed
+ * @throws \Exception If feed processing fails
+ */
+function process_downloaded_feed(string $feed_key, string $feed_path, string $output_dir, string $fallback_domain, array &$logs): int
+{
+    error_log('[PUNTWORK] ==== process_downloaded_feed START ===');
+    error_log('[PUNTWORK] Feed key: ' . $feed_key);
+    error_log('[PUNTWORK] Feed path: ' . $feed_path);
+    error_log('[PUNTWORK] Output dir: ' . $output_dir);
+
+    if (!file_exists($feed_path)) {
+        error_log('[PUNTWORK] Feed file does not exist: ' . $feed_path);
+
+        return 0;
+    }
+
+    $json_filename = $feed_key . '.jsonl';
+    $json_path = $output_dir . $json_filename;
+    $gz_json_path = $json_path . '.gz';
+
+    error_log('[PUNTWORK] JSON path: ' . $json_path);
+    error_log('[PUNTWORK] GZ JSON path: ' . $gz_json_path);
+
+    // Detect format from file content
+    $content = file_get_contents($feed_path);
+    if ($content === false) {
+        error_log('[PUNTWORK] Failed to read feed file: ' . $feed_path);
+
+        return 0;
+    }
+
+    $format = \Puntwork\FeedProcessor::detectFormat('', $content);
+    error_log('[PUNTWORK] Detected format: ' . $format);
+
+    $handle = fopen($json_path, 'w');
+    if (!$handle) {
+        error_log('[PUNTWORK] Failed to open JSON file: ' . $json_path);
+
+        throw new \Exception("Can't open $json_path");
+    }
+    error_log('[PUNTWORK] JSON file opened successfully');
+
+    $batch_size = 100;
+    $total_items = 0;
+
+    error_log('[PUNTWORK] About to call FeedProcessor::processFeed');
+    // Process feed using FeedProcessor
+    $count = \Puntwork\FeedProcessor::processFeed($feed_path, $format, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+    error_log('[PUNTWORK] FeedProcessor::processFeed returned count: ' . $count);
+    error_log('[PUNTWORK] Total items processed: ' . $total_items);
+
+    fclose($handle);
+    @chmod($json_path, 0644);
+
+    error_log('[PUNTWORK] About to gzip file');
+    gzip_file($json_path, $gz_json_path);
+    error_log('[PUNTWORK] Gzip completed');
+
+    error_log('[PUNTWORK] ==== process_downloaded_feed END ===');
+
+    return $count;
+}
+
+/**
  * Fetch and process all configured feeds, generating combined JSONL output.
  *
  * @global array $import_logs Global logs array for recording import details
@@ -312,9 +383,28 @@ function fetch_and_generate_combined_json(): array
     $total_items = 0;
     libxml_use_internal_errors(true);
 
-    foreach ($feeds as $feed_key => $url) {
-        $count = process_one_feed($feed_key, $url, $output_dir, $fallback_domain, $import_logs);
-        $total_items += $count;
+    // Use parallel downloading for better performance
+    if (function_exists('\Puntwork\download_feeds_parallel')) {
+        error_log('[PUNTWORK] Using parallel feed downloads');
+        $download_results = \Puntwork\download_feeds_parallel($feeds, $output_dir, $import_logs, 5); // Max 5 concurrent
+
+        // Process each downloaded feed
+        foreach ($download_results as $feed_key => $result) {
+            if ($result['success']) {
+                // Process the downloaded feed
+                $count = process_downloaded_feed($feed_key, $result['path'], $output_dir, $fallback_domain, $import_logs);
+                $total_items += $count;
+            } else {
+                error_log("[PUNTWORK] Failed to download feed {$feed_key}: " . ($result['error'] ?? 'Unknown error'));
+            }
+        }
+    } else {
+        // Fallback to sequential processing
+        error_log('[PUNTWORK] Falling back to sequential feed processing');
+        foreach ($feeds as $feed_key => $url) {
+            $count = process_one_feed($feed_key, $url, $output_dir, $fallback_domain, $import_logs);
+            $total_items += $count;
+        }
     }
 
     combine_jsonl_files($feeds, $output_dir, $total_items, $import_logs);

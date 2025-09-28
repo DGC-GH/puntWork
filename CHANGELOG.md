@@ -28,6 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed undefined function bulk_get_post_statuses by adding proper function declaration and debug logs
 
 ### Performance
+- Implemented parallel feed downloading using Symfony HTTP Client to reduce total import time for multiple feeds
+- Added HTTP caching support with ETag and Last-Modified headers to skip unchanged feeds
+- Optimized feed processing with concurrent downloads (up to 5 simultaneous connections)
+- Added feed cache cleanup to prevent disk space issues
+- Reduced memory usage by processing downloaded feeds without redundant format detection
 - Optimized load balancer initialization by caching table existence checks
 - Reduced logging frequency for routine instance updates
 - Drag-and-drop functionality in feed configuration by replacing SortableJS with jQuery UI Sortable
