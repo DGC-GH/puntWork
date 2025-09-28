@@ -1,24 +1,22 @@
 <?php
 
 /**
- * Timeout Protection and Background Processing Fixes
+ * Timeout Protection and Background Processing Fixes.
  *
  * This file documents the timeout protection fixes implemented to prevent
  * WordPress cron jobs from being automatically stopped due to execution time limits.
  *
- * @package    Puntwork
- * @subpackage Documentation
  * @since      1.0.1
  */
 
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+if (!defined('ABSPATH')) {
+    exit;
 }
 
-/**
+/*
  * TIMEOUT PROTECTION FIXES
  *
  * Problem: WordPress scheduled imports were being automatically stopped when

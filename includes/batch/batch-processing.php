@@ -1,26 +1,21 @@
 <?php
 
 /**
- * Batch processing utilities
+ * Batch processing utilities.
  *
- * @package    Puntwork
- * @subpackage Batch
  * @since      1.0.0
  */
 
 declare(strict_types=1);
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+if (!defined('ABSPATH')) {
+    exit;
 }
-
-use Puntwork\Utilities\CacheManager;
-use Puntwork\Utilities\EnhancedCacheManager;
 
 /**
  * Batch processing logic
- * Handles the core batch processing operations for job imports
+ * Handles the core batch processing operations for job imports.
  */
 
 // Include database optimization utilities

@@ -1,119 +1,121 @@
 <?php
 
 /**
- * JSONL file combination utilities
+ * JSONL file combination utilities.
  *
- * @package    Puntwork
- * @subpackage Utilities
  * @since      1.0.0
  */
 
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+if (!defined('ABSPATH')) {
+    exit;
 }
 
-function combine_jsonl_files( $feeds, $output_dir, $total_items, &$logs ) {
-	// Ensure output directory exists
-	if ( ! wp_mkdir_p( $output_dir ) || ! is_writable( $output_dir ) ) {
-		throw new \Exception( 'Feeds directory not writable' );
-	}
+function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs)
+{
+    // Ensure output directory exists
+    if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
+        throw new \Exception('Feeds directory not writable');
+    }
 
-	$combined_json_path = $output_dir . 'combined-jobs.jsonl';
-	$combined_gz_path   = $combined_json_path . '.gz';
-	$combined_handle    = fopen( $combined_json_path, 'w' );
-	if ( ! $combined_handle ) {
-		throw new \Exception( 'Cant open combined JSONL' );
-	}
+    $combined_json_path = $output_dir . 'combined-jobs.jsonl';
+    $combined_gz_path = $combined_json_path . '.gz';
+    $combined_handle = fopen($combined_json_path, 'w');
+    if (!$combined_handle) {
+        throw new \Exception('Cant open combined JSONL');
+    }
 
-	$seen_guids      = array();
-	$duplicate_count = 0;
-	$unique_count    = 0;
+    $seen_guids = [];
+    $duplicate_count = 0;
+    $unique_count = 0;
 
-	PuntWorkLogger::info( 'Starting JSONL file combination', PuntWorkLogger::CONTEXT_FEED, array(
-		'feeds_count' => count( $feeds ),
-		'output_dir' => $output_dir,
-		'total_items' => $total_items
-	) );
-	error_log( '[PUNTWORK] [JSONL-COMBINE] Starting JSONL file combination, feeds count: ' . count( $feeds ) . ', output_dir: ' . $output_dir );
+    PuntWorkLogger::info('Starting JSONL file combination', PuntWorkLogger::CONTEXT_FEED, [
+        'feeds_count' => count($feeds),
+        'output_dir' => $output_dir,
+        'total_items' => $total_items,
+    ]);
+    error_log('[PUNTWORK] [JSONL-COMBINE] Starting JSONL file combination, feeds count: ' . count($feeds) . ', output_dir: ' . $output_dir);
 
-	foreach ( $feeds as $feed_key => $url ) {
-		$feed_json_path = $output_dir . $feed_key . '.jsonl';
-		PuntWorkLogger::debug( "Processing feed file: {$feed_key}", PuntWorkLogger::CONTEXT_FEED, array(
-			'feed_file' => $feed_json_path,
-			'exists' => file_exists( $feed_json_path )
-		) );
-		error_log( '[PUNTWORK] [JSONL-COMBINE] Processing feed: ' . $feed_key . ', file: ' . $feed_json_path . ', exists: ' . ( file_exists( $feed_json_path ) ? 'yes' : 'no' ) );
-		if ( file_exists( $feed_json_path ) ) {
-			$feed_handle = fopen( $feed_json_path, 'r' );
-			if ( $feed_handle ) {
-				$feed_line_count = 0;
-				while ( ( $line = fgets( $feed_handle ) ) !== false ) {
-					$line = trim( $line );
-					if ( empty( $line ) ) {
-						continue;
-					}
+    foreach ($feeds as $feed_key => $url) {
+        $feed_json_path = $output_dir . $feed_key . '.jsonl';
+        PuntWorkLogger::debug("Processing feed file: {$feed_key}", PuntWorkLogger::CONTEXT_FEED, [
+            'feed_file' => $feed_json_path,
+            'exists' => file_exists($feed_json_path),
+        ]);
+        error_log('[PUNTWORK] [JSONL-COMBINE] Processing feed: ' . $feed_key . ', file: ' . $feed_json_path . ', exists: ' . (file_exists($feed_json_path) ? 'yes' : 'no'));
+        if (file_exists($feed_json_path)) {
+            $feed_handle = fopen($feed_json_path, 'r');
+            if ($feed_handle) {
+                $feed_line_count = 0;
+                while (($line = fgets($feed_handle)) !== false) {
+                    $line = trim($line);
+                    if (empty($line)) {
+                        continue;
+                    }
 
-					// Parse JSON to check GUID
-					$job_data = json_decode( $line, true );
-					if ( $job_data == null ) {
-						// Invalid JSON, skip
-						PuntWorkLogger::debug( 'Skipping invalid JSON line in feed: ' . $feed_key, PuntWorkLogger::CONTEXT_FEED );
-						continue;
-					}
+                    // Parse JSON to check GUID
+                    $job_data = json_decode($line, true);
+                    if ($job_data == null) {
+                        // Invalid JSON, skip
+                        PuntWorkLogger::debug('Skipping invalid JSON line in feed: ' . $feed_key, PuntWorkLogger::CONTEXT_FEED);
 
-					$guid = isset( $job_data['guid'] ) ? trim( $job_data['guid'] ) : '';
-					if ( empty( $guid ) ) {
-						// No GUID, include but log
-						fwrite( $combined_handle, $line . "\n" );
-						++$unique_count;
-						continue;
-					}
+                        continue;
+                    }
 
-					// Check for duplicates
-					if ( isset( $seen_guids[ $guid ] ) ) {
-						++$duplicate_count;
-						continue; // Skip duplicate
-					}
+                    $guid = isset($job_data['guid']) ? trim($job_data['guid']) : '';
+                    if (empty($guid)) {
+                        // No GUID, include but log
+                        fwrite($combined_handle, $line . "\n");
+                        $unique_count++;
 
-					// New unique job
-					$seen_guids[ $guid ] = true;
-					fwrite( $combined_handle, $line . "\n" );
-					++$unique_count;
-					++$feed_line_count;
-				}
-				fclose( $feed_handle );
-				PuntWorkLogger::debug( "Feed processed: {$feed_key}", PuntWorkLogger::CONTEXT_FEED, array(
-					'lines_added' => $feed_line_count
-				) );
-				error_log( '[PUNTWORK] [JSONL-COMBINE] Feed ' . $feed_key . ' processed, lines added: ' . $feed_line_count );
-			} else {
-				PuntWorkLogger::error( "Could not open feed file: {$feed_json_path}", PuntWorkLogger::CONTEXT_FEED );
-				error_log( '[PUNTWORK] [JSONL-COMBINE] Could not open feed file: ' . $feed_json_path );
-			}
-		} else {
-			PuntWorkLogger::warn( "Feed file not found: {$feed_json_path}", PuntWorkLogger::CONTEXT_FEED );
-			error_log( '[PUNTWORK] [JSONL-COMBINE] Feed file not found: ' . $feed_json_path );
-		}
-	}
+                        continue;
+                    }
 
-	fclose( $combined_handle );
-	@chmod( $combined_json_path, 0644 );
+                    // Check for duplicates
+                    if (isset($seen_guids[$guid])) {
+                        $duplicate_count++;
 
-	$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "Combined JSONL ($unique_count unique items, $duplicate_count duplicates removed)";
-	PuntWorkLogger::info( 'JSONL combination completed', PuntWorkLogger::CONTEXT_FEED, array(
-		'unique_count' => $unique_count,
-		'duplicate_count' => $duplicate_count,
-		'total_processed' => $unique_count + $duplicate_count
-	) );
-	error_log( "Combined JSONL ($unique_count unique items, $duplicate_count duplicates removed)" );
-	error_log( '[PUNTWORK] [JSONL-COMBINE] JSONL combination completed, unique_count=' . $unique_count . ', duplicate_count=' . $duplicate_count );
+                        continue; // Skip duplicate
+                    }
 
-	gzip_file( $combined_json_path, $combined_gz_path );
-	PuntWorkLogger::info( 'GZIP compression completed', PuntWorkLogger::CONTEXT_FEED, array(
-		'gz_file' => $combined_gz_path
-	) );
-	error_log( '[PUNTWORK] [JSONL-COMBINE] GZIP compression completed for ' . $combined_gz_path );
+                    // New unique job
+                    $seen_guids[$guid] = true;
+                    fwrite($combined_handle, $line . "\n");
+                    $unique_count++;
+                    $feed_line_count++;
+                }
+                fclose($feed_handle);
+                PuntWorkLogger::debug("Feed processed: {$feed_key}", PuntWorkLogger::CONTEXT_FEED, [
+                    'lines_added' => $feed_line_count,
+                ]);
+                error_log('[PUNTWORK] [JSONL-COMBINE] Feed ' . $feed_key . ' processed, lines added: ' . $feed_line_count);
+            } else {
+                PuntWorkLogger::error("Could not open feed file: {$feed_json_path}", PuntWorkLogger::CONTEXT_FEED);
+                error_log('[PUNTWORK] [JSONL-COMBINE] Could not open feed file: ' . $feed_json_path);
+            }
+        } else {
+            PuntWorkLogger::warn("Feed file not found: {$feed_json_path}", PuntWorkLogger::CONTEXT_FEED);
+            error_log('[PUNTWORK] [JSONL-COMBINE] Feed file not found: ' . $feed_json_path);
+        }
+    }
+
+    fclose($combined_handle);
+    @chmod($combined_json_path, 0644);
+
+    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Combined JSONL ($unique_count unique items, $duplicate_count duplicates removed)";
+    PuntWorkLogger::info('JSONL combination completed', PuntWorkLogger::CONTEXT_FEED, [
+        'unique_count' => $unique_count,
+        'duplicate_count' => $duplicate_count,
+        'total_processed' => $unique_count + $duplicate_count,
+    ]);
+    error_log("Combined JSONL ($unique_count unique items, $duplicate_count duplicates removed)");
+    error_log('[PUNTWORK] [JSONL-COMBINE] JSONL combination completed, unique_count=' . $unique_count . ', duplicate_count=' . $duplicate_count);
+
+    gzip_file($combined_json_path, $combined_gz_path);
+    PuntWorkLogger::info('GZIP compression completed', PuntWorkLogger::CONTEXT_FEED, [
+        'gz_file' => $combined_gz_path,
+    ]);
+    error_log('[PUNTWORK] [JSONL-COMBINE] GZIP compression completed for ' . $combined_gz_path);
 }

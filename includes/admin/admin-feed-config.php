@@ -1,38 +1,37 @@
 <?php
 
 /**
- * Drag-and-drop feed configuration UI
+ * Drag-and-drop feed configuration UI.
  *
- * @package    Puntwork
- * @subpackage Admin
  * @since      2.0.0
  */
 
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+if (!defined('ABSPATH')) {
+    exit;
 }
 
 /**
- * Render drag-and-drop feed configuration UI
+ * Render drag-and-drop feed configuration UI.
  *
  * @return void
  */
-function render_feed_config_ui(): void {
-	$feeds      = get_feeds();
-	$feed_posts = get_posts(
-		array(
-			'post_type'      => 'job-feed',
-			'post_status'    => 'publish',
-			'posts_per_page' => -1,
-			'orderby'        => 'menu_order',
-			'order'          => 'ASC',
-		)
-	);
+function render_feed_config_ui(): void
+{
+    $feeds = get_feeds();
+    $feed_posts = get_posts(
+        [
+            'post_type' => 'job-feed',
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'orderby' => 'menu_order',
+            'order' => 'ASC',
+        ]
+    );
 
-	?>
+    ?>
 	<div class="puntwork-admin">
 		<div class="puntwork-container">
 			<header class="puntwork-header">
@@ -49,7 +48,7 @@ function render_feed_config_ui(): void {
 
 				<div class="puntwork-card__body">
 					<div id="feed-list" class="feed-list">
-						<?php if ( empty( $feed_posts ) ) : ?>
+						<?php if (empty($feed_posts)) : ?>
 							<div class="puntwork-empty">
 								<i class="fas fa-rss puntwork-empty__icon"></i>
 								<div class="puntwork-empty__title">No feeds configured</div>
@@ -60,13 +59,13 @@ function render_feed_config_ui(): void {
 							</div>
 						<?php else : ?>
 							<?php
-							foreach ( $feed_posts as $post ) :
-								$feed_url     = get_post_meta( $post->ID, 'feed_url', true );
-								$is_enabled   = get_post_meta( $post->ID, 'feed_enabled', true ) !== '0'; // Default to enabled
-								$last_import  = get_post_meta( $post->ID, 'last_import', true );
-								$import_count = get_post_meta( $post->ID, 'import_count', true ) ?: 0;
-								?>
-								<div class="feed-item" data-feed-id="<?php echo esc_attr( $post->ID ); ?>">
+                            foreach ($feed_posts as $post) :
+                                $feed_url = get_post_meta($post->ID, 'feed_url', true);
+                                $is_enabled = get_post_meta($post->ID, 'feed_enabled', true) !== '0'; // Default to enabled
+                                $last_import = get_post_meta($post->ID, 'last_import', true);
+                                $import_count = get_post_meta($post->ID, 'import_count', true) ?: 0;
+                                ?>
+								<div class="feed-item" data-feed-id="<?php echo esc_attr($post->ID); ?>">
 									<div class="feed-item__handle">
 										<i class="fas fa-grip-vertical"></i>
 									</div>
@@ -74,12 +73,12 @@ function render_feed_config_ui(): void {
 									<div class="feed-item__content">
 										<div class="feed-item__header">
 											<div class="feed-item__title">
-												<strong><?php echo esc_html( $post->post_title ); ?></strong>
-												<span class="feed-item__url"><?php echo esc_url( $feed_url ); ?></span>
+												<strong><?php echo esc_html($post->post_title); ?></strong>
+												<span class="feed-item__url"><?php echo esc_url($feed_url); ?></span>
 											</div>
 											<div class="feed-item__actions">
 												<label class="feed-toggle">
-													<input type="checkbox" class="feed-enabled" <?php checked( $is_enabled ); ?>>
+													<input type="checkbox" class="feed-enabled" <?php checked($is_enabled); ?>>
 													<span class="feed-toggle-slider"></span>
 													<span class="feed-toggle-label">Enabled</span>
 												</label>
@@ -95,17 +94,17 @@ function render_feed_config_ui(): void {
 										<div class="feed-item__meta">
 											<span class="feed-meta-item">
 												<i class="fas fa-chart-line"></i>
-								<?php echo number_format( $import_count ); ?> imports
+								<?php echo number_format($import_count); ?> imports
 											</span>
-								<?php if ( $last_import ) : ?>
+								<?php if ($last_import) : ?>
 												<span class="feed-meta-item">
 													<i class="fas fa-clock"></i>
-													Last import: <?php echo esc_html( date( 'M j, Y H:i', strtotime( $last_import ) ) ); ?>
+													Last import: <?php echo esc_html(date('M j, Y H:i', strtotime($last_import))); ?>
 												</span>
 								<?php endif; ?>
 											<span class="feed-meta-item">
 												<i class="fas fa-tag"></i>
-								<?php echo esc_html( $post->post_name ); ?>
+								<?php echo esc_html($post->post_name); ?>
 											</span>
 										</div>
 									</div>
@@ -114,7 +113,7 @@ function render_feed_config_ui(): void {
 						<?php endif; ?>
 					</div>
 
-					<?php if ( ! empty( $feed_posts ) ) : ?>
+					<?php if (!empty($feed_posts)) : ?>
 						<div class="feed-actions" style="margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--color-gray-200);">
 							<button id="add-new-feed" class="puntwork-btn puntwork-btn--primary">
 								<i class="fas fa-plus puntwork-btn__icon"></i>Add New Feed
@@ -141,7 +140,7 @@ function render_feed_config_ui(): void {
 							<div class="puntwork-stat__icon">
 								<i class="fas fa-rss"></i>
 							</div>
-							<div class="puntwork-stat__value"><?php echo count( $feed_posts ); ?></div>
+							<div class="puntwork-stat__value"><?php echo count($feed_posts); ?></div>
 							<div class="puntwork-stat__label">Total Feeds</div>
 						</div>
 
@@ -151,14 +150,14 @@ function render_feed_config_ui(): void {
 							</div>
 							<div class="puntwork-stat__value">
 								<?php
-								$enabled_count = 0;
-								foreach ( $feed_posts as $post ) {
-									if ( get_post_meta( $post->ID, 'feed_enabled', true ) !== '0' ) {
-										++$enabled_count;
-									}
-								}
-								echo $enabled_count;
-								?>
+                                $enabled_count = 0;
+    foreach ($feed_posts as $post) {
+        if (get_post_meta($post->ID, 'feed_enabled', true) !== '0') {
+            $enabled_count++;
+        }
+    }
+    echo $enabled_count;
+    ?>
 							</div>
 							<div class="puntwork-stat__label">Enabled Feeds</div>
 						</div>
@@ -169,12 +168,12 @@ function render_feed_config_ui(): void {
 							</div>
 							<div class="puntwork-stat__value">
 								<?php
-								$total_imports = 0;
-								foreach ( $feed_posts as $post ) {
-									$total_imports += (int) get_post_meta( $post->ID, 'import_count', true );
-								}
-								echo number_format( $total_imports );
-								?>
+    $total_imports = 0;
+    foreach ($feed_posts as $post) {
+        $total_imports += (int)get_post_meta($post->ID, 'import_count', true);
+    }
+    echo number_format($total_imports);
+    ?>
 							</div>
 							<div class="puntwork-stat__label">Total Imports</div>
 						</div>
@@ -185,20 +184,20 @@ function render_feed_config_ui(): void {
 							</div>
 							<div class="puntwork-stat__value">
 								<?php
-								$last_import_times = array();
-								foreach ( $feed_posts as $post ) {
-									$last_import = get_post_meta( $post->ID, 'last_import', true );
-									if ( $last_import ) {
-										$last_import_times[] = strtotime( $last_import );
-									}
-								}
-								if ( ! empty( $last_import_times ) ) {
-									$most_recent = max( $last_import_times );
-									echo esc_html( date( 'M j', $most_recent ) );
-								} else {
-									echo 'Never';
-								}
-								?>
+    $last_import_times = [];
+    foreach ($feed_posts as $post) {
+        $last_import = get_post_meta($post->ID, 'last_import', true);
+        if ($last_import) {
+            $last_import_times[] = strtotime($last_import);
+        }
+    }
+    if (!empty($last_import_times)) {
+        $most_recent = max($last_import_times);
+        echo esc_html(date('M j', $most_recent));
+    } else {
+        echo 'Never';
+    }
+    ?>
 							</div>
 							<div class="puntwork-stat__label">Last Import</div>
 						</div>
@@ -713,7 +712,7 @@ function render_feed_config_ui(): void {
 					feed_url: url,
 					feed_slug: slug,
 					feed_enabled: enabled,
-					nonce: '<?php echo wp_create_nonce( 'puntwork_feed_config' ); ?>'
+					nonce: '<?php echo wp_create_nonce('puntwork_feed_config'); ?>'
 				};
 
 				// Make AJAX request
@@ -740,7 +739,7 @@ function render_feed_config_ui(): void {
 					action: 'puntwork_toggle_feed',
 					feed_id: feedId,
 					enabled: enabled,
-					nonce: '<?php echo wp_create_nonce( 'puntwork_feed_config' ); ?>'
+					nonce: '<?php echo wp_create_nonce('puntwork_feed_config'); ?>'
 				};
 
 				$.post(ajaxurl, data)
@@ -762,7 +761,7 @@ function render_feed_config_ui(): void {
 				const data = {
 					action: 'puntwork_delete_feed',
 					feed_id: feedId,
-					nonce: '<?php echo wp_create_nonce( 'puntwork_feed_config' ); ?>'
+					nonce: '<?php echo wp_create_nonce('puntwork_feed_config'); ?>'
 				};
 
 				$.post(ajaxurl, data)
@@ -792,7 +791,7 @@ function render_feed_config_ui(): void {
 				const data = {
 					action: 'puntwork_save_feed_order',
 					feed_order: feedOrder,
-					nonce: '<?php echo wp_create_nonce( 'puntwork_feed_config' ); ?>'
+					nonce: '<?php echo wp_create_nonce('puntwork_feed_config'); ?>'
 				};
 
 				$('#save-feed-order').prop('disabled', true).text('Saving...');

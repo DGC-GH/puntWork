@@ -2,27 +2,26 @@
 
 /**
  * Main import UI components for job import plugin
- * Contains the primary import interface and progress display
+ * Contains the primary import interface and progress display.
  *
- * @package    Puntwork
- * @subpackage Admin
  * @since      1.0.0
  */
 
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+if (!defined('ABSPATH')) {
+    exit;
 }
 
 /**
- * Render jobs dashboard UI section
+ * Render jobs dashboard UI section.
  *
  * @return void
  */
-function render_jobs_dashboard_ui(): void {
-	?>
+function render_jobs_dashboard_ui(): void
+{
+    ?>
 	<div class="puntwork-admin">
 		<div class="puntwork-container">
 			<header class="puntwork-header">
@@ -164,12 +163,13 @@ function render_jobs_dashboard_ui(): void {
 }
 
 /**
- * Render main import UI section
+ * Render main import UI section.
  *
  * @return void
  */
-function render_main_import_ui(): void {
-	?>
+function render_main_import_ui(): void
+{
+    ?>
 	<div class="puntwork-admin">
 		<div class="puntwork-container">
 			<header class="puntwork-header">
@@ -427,7 +427,7 @@ function render_main_import_ui(): void {
 				per_page: 20,
 				status: filters.status || 'any',
 				search: filters.search || '',
-				nonce: '<?php echo wp_create_nonce( 'puntwork_load_jobs' ); ?>'
+				nonce: '<?php echo wp_create_nonce('puntwork_load_jobs'); ?>'
 			};
 
 			// Make AJAX request
@@ -552,7 +552,7 @@ function render_main_import_ui(): void {
 
 				const jobId = target.dataset.id;
 				if (target.classList.contains('edit-job')) {
-					window.open(`<?php echo admin_url( 'post.php?action=edit&post=' ); ?>\${jobId}`, '_blank');
+					window.open(`<?php echo admin_url('post.php?action=edit&post='); ?>\${jobId}`, '_blank');
 				} else if (target.classList.contains('view-job')) {
 					window.open(`<?php echo get_permalink(); ?>?p=\${jobId}`, '_blank');
 				}

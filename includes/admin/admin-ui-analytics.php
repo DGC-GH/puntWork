@@ -1,126 +1,125 @@
 <?php
 
 /**
- * Admin UI for Import Analytics Dashboard
+ * Admin UI for Import Analytics Dashboard.
  *
- * @package    Puntwork
- * @subpackage Admin
  * @since      1.0.12
  */
 
 namespace Puntwork;
 
 // Prevent direct access.
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+if (!defined('ABSPATH')) {
+    exit;
 }
 
 /**
- * Import Analytics Dashboard Admin Page
+ * Import Analytics Dashboard Admin Page.
  */
-function import_analytics_page() {
-	// Enqueue admin modern styles.
-	wp_enqueue_style( 'puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION );
+function import_analytics_page()
+{
+    // Enqueue admin modern styles.
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
 
-	// Enqueue Chart.js for visualizations.
-	wp_enqueue_script( 'chart-js', 'https://cdn.jsdelivr.net/npm/chart.js', array(), 'latest', true );
+    // Enqueue Chart.js for visualizations.
+    wp_enqueue_script('chart-js', 'https://cdn.jsdelivr.net/npm/chart.js', [], 'latest', true);
 
-	// Handle CSV export.
-	if ( isset( $_POST['export_csv'] ) && check_admin_referer( 'analytics_export_nonce' ) ) {
-		$period      = sanitize_text_field( wp_unslash( $_POST['export_period'] ?? '30days' ) );
-		$csv_content = ImportAnalytics::export_analytics_csv( $period );
+    // Handle CSV export.
+    if (isset($_POST['export_csv']) && check_admin_referer('analytics_export_nonce')) {
+        $period = sanitize_text_field(wp_unslash($_POST['export_period'] ?? '30days'));
+        $csv_content = ImportAnalytics::export_analytics_csv($period);
 
-		if ( $csv_content ) {
-			$filename = 'puntwork-analytics-' . $period . '-' . gmdate( 'Y-m-d' ) . '.csv';
-			header( 'Content-Type: text/csv' );
-			header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
-			header( 'Content-Length: ' . strlen( $csv_content ) );
-         // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			echo $csv_content;
-			exit;
-		} else {
-			add_settings_error( 'analytics_export', 'no_data', 'No analytics data available for export.', 'error' );
-		}
-	}
+        if ($csv_content) {
+            $filename = 'puntwork-analytics-' . $period . '-' . gmdate('Y-m-d') . '.csv';
+            header('Content-Type: text/csv');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Content-Length: ' . strlen($csv_content));
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+            echo $csv_content;
+            exit;
+        } else {
+            add_settings_error('analytics_export', 'no_data', 'No analytics data available for export.', 'error');
+        }
+    }
 
-	// Get analytics data with caching.
-	$period = sanitize_text_field( wp_unslash( $_GET['period'] ?? '30days' ) );
+    // Get analytics data with caching.
+    $period = sanitize_text_field(wp_unslash($_GET['period'] ?? '30days'));
 
-	// Localize script with translations.
-	wp_localize_script(
-		'puntwork-analytics',
-		'puntworkAnalyticsL10n',
-		array(
-			'loading'              => __( 'Loading analytics data...', 'puntwork' ),
-			'errorLoading'         => __( 'Error loading analytics data. Please try again.', 'puntwork' ),
-			'retry'                => __( 'Retry', 'puntwork' ),
-			'overview'             => __( 'Overview', 'puntwork' ),
-			'totalImports'         => __( 'Total Imports', 'puntwork' ),
-			'jobsProcessed'        => __( 'Jobs Processed', 'puntwork' ),
-			'avgSuccessRate'       => __( 'Avg Success Rate', 'puntwork' ),
-			'avgDuration'          => __( 'Avg Duration', 'puntwork' ),
-			'performanceByTrigger' => __( 'Performance by Trigger Type', 'puntwork' ),
-			'imports'              => __( 'Imports', 'puntwork' ),
-			'count'                => __( 'Count:', 'puntwork' ),
-			'avgDurationShort'     => __( 'Avg Duration:', 'puntwork' ),
-			'successRate'          => __( 'Success Rate:', 'puntwork' ),
-			'jobsProcessedShort'   => __( 'Jobs Processed:', 'puntwork' ),
-			'importTrends'         => __( 'Import Trends', 'puntwork' ),
-			'feedPerformance'      => __( 'Feed Performance', 'puntwork' ),
-			'avgFeedsProcessed'    => __( 'Avg Feeds Processed', 'puntwork' ),
-			'avgFeedsSuccessful'   => __( 'Avg Feeds Successful', 'puntwork' ),
-			'avgFeedsFailed'       => __( 'Avg Feeds Failed', 'puntwork' ),
-			'avgResponseTime'      => __( 'Avg Response Time', 'puntwork' ),
-			'jobProcessingStats'   => __( 'Job Processing Statistics', 'puntwork' ),
-			'published'            => __( 'Published:', 'puntwork' ),
-			'updated'              => __( 'Updated:', 'puntwork' ),
-			'duplicates'           => __( 'Duplicates:', 'puntwork' ),
-			'errorSummary'         => __( 'Error Summary', 'puntwork' ),
-			'importsHadErrors'     => __( 'imports had errors', 'puntwork' ),
-			'commonErrorMessages'  => __( 'Common Error Messages:', 'puntwork' ),
-			'importActivityByHour' => __( 'Import Activity by Hour', 'puntwork' ),
-			'numberOfImports'      => __( 'Number of Imports', 'puntwork' ),
-			'jobsProcessedLabel'   => __( 'Jobs Processed', 'puntwork' ),
-		)
-	);
+    // Localize script with translations.
+    wp_localize_script(
+        'puntwork-analytics',
+        'puntworkAnalyticsL10n',
+        [
+            'loading' => __('Loading analytics data...', 'puntwork'),
+            'errorLoading' => __('Error loading analytics data. Please try again.', 'puntwork'),
+            'retry' => __('Retry', 'puntwork'),
+            'overview' => __('Overview', 'puntwork'),
+            'totalImports' => __('Total Imports', 'puntwork'),
+            'jobsProcessed' => __('Jobs Processed', 'puntwork'),
+            'avgSuccessRate' => __('Avg Success Rate', 'puntwork'),
+            'avgDuration' => __('Avg Duration', 'puntwork'),
+            'performanceByTrigger' => __('Performance by Trigger Type', 'puntwork'),
+            'imports' => __('Imports', 'puntwork'),
+            'count' => __('Count:', 'puntwork'),
+            'avgDurationShort' => __('Avg Duration:', 'puntwork'),
+            'successRate' => __('Success Rate:', 'puntwork'),
+            'jobsProcessedShort' => __('Jobs Processed:', 'puntwork'),
+            'importTrends' => __('Import Trends', 'puntwork'),
+            'feedPerformance' => __('Feed Performance', 'puntwork'),
+            'avgFeedsProcessed' => __('Avg Feeds Processed', 'puntwork'),
+            'avgFeedsSuccessful' => __('Avg Feeds Successful', 'puntwork'),
+            'avgFeedsFailed' => __('Avg Feeds Failed', 'puntwork'),
+            'avgResponseTime' => __('Avg Response Time', 'puntwork'),
+            'jobProcessingStats' => __('Job Processing Statistics', 'puntwork'),
+            'published' => __('Published:', 'puntwork'),
+            'updated' => __('Updated:', 'puntwork'),
+            'duplicates' => __('Duplicates:', 'puntwork'),
+            'errorSummary' => __('Error Summary', 'puntwork'),
+            'importsHadErrors' => __('imports had errors', 'puntwork'),
+            'commonErrorMessages' => __('Common Error Messages:', 'puntwork'),
+            'importActivityByHour' => __('Import Activity by Hour', 'puntwork'),
+            'numberOfImports' => __('Number of Imports', 'puntwork'),
+            'jobsProcessedLabel' => __('Jobs Processed', 'puntwork'),
+        ]
+    );
 
-	// Check if this is an AJAX request for lazy loading.
-	// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda
-	if ( isset( $_GET['ajax'] ) && $_GET['ajax'] == '1' ) {
-		$analytics_data = ImportAnalytics::get_analytics_data( $period );
-		wp_send_json(
-			array(
-				'success' => true,
-				'data'    => $analytics_data,
-				'period'  => $period,
-			)
-		);
-	}
+    // Check if this is an AJAX request for lazy loading.
+    // phpcs:ignore WordPress.PHP.YodaConditions.NotYoda
+    if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
+        $analytics_data = ImportAnalytics::get_analytics_data($period);
+        wp_send_json(
+            [
+                'success' => true,
+                'data' => $analytics_data,
+                'period' => $period,
+            ]
+        );
+    }
 
-	?>
+    ?>
 	<div class="wrap">
-		<h1><?php esc_html_e( 'Import Analytics Dashboard', 'puntwork' ); ?></h1>
+		<h1><?php esc_html_e('Import Analytics Dashboard', 'puntwork'); ?></h1>
 
-	<?php settings_errors( 'analytics_export' ); ?>
+	<?php settings_errors('analytics_export'); ?>
 
 		<!-- Period Selector -->
 		<div class="analytics-period-selector">
 			<form method="get" style="display: inline;">
 				<input type="hidden" name="page" value="puntwork-analytics">
-				<label for="period-select"><?php esc_html_e( 'Time Period:', 'puntwork' ); ?></label>
+				<label for="period-select"><?php esc_html_e('Time Period:', 'puntwork'); ?></label>
 				<select name="period" id="period-select" onchange="this.form.submit()">
-					<option value="7days" <?php selected( $period, '7days' ); ?>><?php esc_html_e( 'Last 7 Days', 'puntwork' ); ?></option>
-					<option value="30days" <?php selected( $period, '30days' ); ?>><?php esc_html_e( 'Last 30 Days', 'puntwork' ); ?></option>
-					<option value="90days" <?php selected( $period, '90days' ); ?>><?php esc_html_e( 'Last 90 Days', 'puntwork' ); ?></option>
+					<option value="7days" <?php selected($period, '7days'); ?>><?php esc_html_e('Last 7 Days', 'puntwork'); ?></option>
+					<option value="30days" <?php selected($period, '30days'); ?>><?php esc_html_e('Last 30 Days', 'puntwork'); ?></option>
+					<option value="90days" <?php selected($period, '90days'); ?>><?php esc_html_e('Last 90 Days', 'puntwork'); ?></option>
 				</select>
 			</form>
 
 			<!-- Export Button -->
 			<form method="post" style="display: inline; margin-left: 20px;">
-				<?php wp_nonce_field( 'analytics_export_nonce' ); ?>
-				<input type="hidden" name="export_period" value="<?php echo esc_attr( $period ); ?>">
+				<?php wp_nonce_field('analytics_export_nonce'); ?>
+				<input type="hidden" name="export_period" value="<?php echo esc_attr($period); ?>">
 				<button type="submit" name="export_csv" class="puntwork-btn puntwork-btn--secondary">
-					<?php esc_html_e( 'Export CSV', 'puntwork' ); ?>
+					<?php esc_html_e('Export CSV', 'puntwork'); ?>
 				</button>
 			</form>
 		</div>
@@ -131,7 +130,7 @@ function import_analytics_page() {
 			<div id="analytics-loading" class="analytics-loading">
 				<div class="loading-spinner">
 					<i class="fas fa-spinner fa-spin"></i>
-					<div><?php esc_html_e( 'Loading analytics data...', 'puntwork' ); ?></div>
+					<div><?php esc_html_e('Loading analytics data...', 'puntwork'); ?></div>
 				</div>
 			</div>
 
@@ -144,7 +143,7 @@ function import_analytics_page() {
 
 	<script>
 		// Analytics Lazy Loading.
-		let currentAnalyticsPeriod = '<?php echo esc_js( $period ); ?>';
+		let currentAnalyticsPeriod = '<?php echo esc_js($period); ?>';
 
 		function loadAnalyticsData(period) {
 			const dashboard = document.getElementById('analytics-dashboard');

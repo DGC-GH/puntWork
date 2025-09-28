@@ -1,92 +1,91 @@
 <?php
 
 /**
- * Admin UI for Performance Metrics Dashboard
+ * Admin UI for Performance Metrics Dashboard.
  *
- * @package    Puntwork
- * @subpackage Admin
  * @since      0.0.4
  */
 
 namespace Puntwork;
 
 // Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+if (!defined('ABSPATH')) {
+    exit;
 }
 
-use Puntwork\Utilities\PerformanceMonitor;
 use Puntwork\Utilities\CacheManager;
 
 /**
- * Performance Metrics Dashboard Admin Page
+ * Performance Metrics Dashboard Admin Page.
  */
-function performance_metrics_page() {
-	// Enqueue admin modern styles
-	wp_enqueue_style( 'puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION );
+function performance_metrics_page()
+{
+    // Enqueue admin modern styles
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
 
-	// Handle AJAX actions
-	if ( isset( $_POST['action'] ) ) {
-		switch ( $_POST['action'] ) {
-			case 'clear_performance_logs':
-				check_admin_referer( 'performance_metrics_nonce' );
-				\Puntwork\Utilities\PerformanceMonitor::cleanupOldLogs( 7 ); // Keep only 7 days
-				add_settings_error(
-					'performance_metrics',
-					'logs_cleared',
-					'Performance logs cleared successfully.',
-					'success'
-				);
-				break;
-		}
-	}
+    // Handle AJAX actions
+    if (isset($_POST['action'])) {
+        switch ($_POST['action']) {
+            case 'clear_performance_logs':
+                check_admin_referer('performance_metrics_nonce');
+                \Puntwork\Utilities\PerformanceMonitor::cleanupOldLogs(7); // Keep only 7 days
+                add_settings_error(
+                    'performance_metrics',
+                    'logs_cleared',
+                    'Performance logs cleared successfully.',
+                    'success'
+                );
 
-	// Get performance data
-	$period    = sanitize_text_field( $_GET['period'] ?? '7days' );
-	$operation = sanitize_text_field( $_GET['operation'] ?? '' );
+                break;
+        }
+    }
 
-	$days              = $period == '7days' ? 7 : ( $period == '30days' ? 30 : 90 );
-	$performance_stats = get_performance_statistics( $operation, $days );
-	$current_snapshot  = get_performance_snapshot();
+    // Get performance data
+    $period = sanitize_text_field($_GET['period'] ?? '7days');
+    $operation = sanitize_text_field($_GET['operation'] ?? '');
 
-	// Get recent performance logs
-	global $wpdb;
-	$table_name = $wpdb->prefix . 'puntwork_performance_logs';
+    $days = $period == '7days' ? 7 : ($period == '30days' ? 30 : 90);
+    $performance_stats = get_performance_statistics($operation, $days);
+    $current_snapshot = get_performance_snapshot();
 
-	$where_clause = 'WHERE created_at >= DATE_SUB(NOW(), INTERVAL ' . $days . ' DAY)';
-	if ( $operation ) {
-		$where_clause .= $wpdb->prepare( ' AND operation = %s', $operation );
-	}
+    // Get recent performance logs
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'puntwork_performance_logs';
 
-	$recent_logs = $wpdb->get_results(
-		$wpdb->prepare(
-			"
+    $where_clause = 'WHERE created_at >= DATE_SUB(NOW(), INTERVAL ' . $days . ' DAY)';
+    if ($operation) {
+        $where_clause .= $wpdb->prepare(' AND operation = %s', $operation);
+    }
+
+    $recent_logs = $wpdb->get_results(
+        $wpdb->prepare(
+            "
         SELECT * FROM $table_name
         $where_clause
         ORDER BY created_at DESC
         LIMIT 50
     "
-		)
-	);
+        )
+    );
 
-	// Get operation types for filter
-	$operation_types = $wpdb->get_col(
-		"
+    // Get operation types for filter
+    $operation_types = $wpdb->get_col(
+        "
         SELECT DISTINCT operation FROM $table_name
         WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
         ORDER BY operation
     "
-	);
+    );
 
-	?>
+    ?>
 	<div class="puntwork-admin">
 		<div class="puntwork-container">
 			<header class="puntwork-header">
-				<h1 class="puntwork-header__title"><?php _e( 'Performance Metrics Dashboard', 'puntwork' ); ?></h1>
+				<h1 class="puntwork-header__title"><?php _e('Performance Metrics Dashboard', 'puntwork'); ?></h1>
 				<p class="puntwork-header__subtitle">Monitor and analyze your job import performance</p>
 			</header>
 
-	<?php settings_errors( 'performance_metrics' ); ?>
+	<?php settings_errors('performance_metrics'); ?>
 
 			<!-- Filters -->
 			<div class="puntwork-card" style="margin-bottom: var(--spacing-xl);">
@@ -95,31 +94,31 @@ function performance_metrics_page() {
 						<input type="hidden" name="page" value="puntwork-performance">
 						<label for="period-select"
 								style="margin-right: var(--spacing-md); font-weight: var(--font-weight-medium);">
-							<?php _e( 'Time Period:', 'puntwork' ); ?>
+							<?php _e('Time Period:', 'puntwork'); ?>
 						</label>
 						<select name="period" id="period-select" onchange="this.form.submit()"
 								style="margin-right: var(--spacing-lg);">
-							<option value="7days" <?php selected( $period, '7days' ); ?>>
-								<?php _e( 'Last 7 Days', 'puntwork' ); ?>
+							<option value="7days" <?php selected($period, '7days'); ?>>
+								<?php _e('Last 7 Days', 'puntwork'); ?>
 							</option>
-							<option value="30days" <?php selected( $period, '30days' ); ?>>
-								<?php _e( 'Last 30 Days', 'puntwork' ); ?>
+							<option value="30days" <?php selected($period, '30days'); ?>>
+								<?php _e('Last 30 Days', 'puntwork'); ?>
 							</option>
-							<option value="90days" <?php selected( $period, '90days' ); ?>>
-								<?php _e( 'Last 90 Days', 'puntwork' ); ?>
+							<option value="90days" <?php selected($period, '90days'); ?>>
+								<?php _e('Last 90 Days', 'puntwork'); ?>
 							</option>
 						</select>
 
 						<label for="operation-select"
 								style="margin-right: var(--spacing-md); font-weight: var(--font-weight-medium);">
-							<?php _e( 'Operation:', 'puntwork' ); ?>
+							<?php _e('Operation:', 'puntwork'); ?>
 						</label>
 						<select name="operation" id="operation-select" onchange="this.form.submit()"
 								style="margin-right: var(--spacing-lg);">
-							<option value=""><?php _e( 'All Operations', 'puntwork' ); ?></option>
-							<?php foreach ( $operation_types as $op ) : ?>
-								<option value="<?php echo esc_attr( $op ); ?>" <?php selected( $operation, $op ); ?>>
-									<?php echo esc_html( $op ); ?>
+							<option value=""><?php _e('All Operations', 'puntwork'); ?></option>
+							<?php foreach ($operation_types as $op) : ?>
+								<option value="<?php echo esc_attr($op); ?>" <?php selected($operation, $op); ?>>
+									<?php echo esc_html($op); ?>
 								</option>
 							<?php endforeach; ?>
 						</select>
@@ -127,16 +126,16 @@ function performance_metrics_page() {
 
 					<!-- Clear Logs Button -->
 					<form method="post" style="display: inline;">
-						<?php wp_nonce_field( 'performance_metrics_nonce' ); ?>
+						<?php wp_nonce_field('performance_metrics_nonce'); ?>
 						<input type="hidden" name="action" value="clear_performance_logs">
 						<button type="submit" class="puntwork-btn puntwork-btn--secondary"
 								onclick="return confirm('
 								<?php
-									_e( 'Are you sure you want to clear old performance logs?', 'puntwork' );
-								?>
+                                    _e('Are you sure you want to clear old performance logs?', 'puntwork');
+    ?>
 								')">
 							<i class="fas fa-trash-alt puntwork-btn__icon"></i>
-							<?php _e( 'Clear Old Logs', 'puntwork' ); ?>
+							<?php _e('Clear Old Logs', 'puntwork'); ?>
 						</button>
 					</form>
 				</div>
@@ -145,59 +144,59 @@ function performance_metrics_page() {
 		<div class="performance-dashboard">
 			<!-- Current System Status -->
 			<div class="performance-section">
-				<h2><?php _e( 'Current System Status', 'puntwork' ); ?></h2>
+				<h2><?php _e('Current System Status', 'puntwork'); ?></h2>
 				<div class="system-status-grid">
 					<div class="status-card">
-						<div class="status-value"><?php echo size_format( $current_snapshot['memory_current'] ); ?></div>
-						<div class="status-label"><?php _e( 'Current Memory', 'puntwork' ); ?></div>
+						<div class="status-value"><?php echo size_format($current_snapshot['memory_current']); ?></div>
+						<div class="status-label"><?php _e('Current Memory', 'puntwork'); ?></div>
 					</div>
 
 					<div class="status-card">
-						<div class="status-value"><?php echo size_format( $current_snapshot['memory_peak'] ); ?></div>
-						<div class="status-label"><?php _e( 'Peak Memory', 'puntwork' ); ?></div>
+						<div class="status-value"><?php echo size_format($current_snapshot['memory_peak']); ?></div>
+						<div class="status-label"><?php _e('Peak Memory', 'puntwork'); ?></div>
 					</div>
 
 					<div class="status-card">
-						<div class="status-value"><?php echo size_format( $current_snapshot['memory_limit'] ); ?></div>
-						<div class="status-label"><?php _e( 'Memory Limit', 'puntwork' ); ?></div>
+						<div class="status-value"><?php echo size_format($current_snapshot['memory_limit']); ?></div>
+						<div class="status-label"><?php _e('Memory Limit', 'puntwork'); ?></div>
 					</div>
 
 					<div class="status-card">
 						<div class="status-value"><?php echo $current_snapshot['php_version']; ?></div>
-						<div class="status-label"><?php _e( 'PHP Version', 'puntwork' ); ?></div>
+						<div class="status-label"><?php _e('PHP Version', 'puntwork'); ?></div>
 					</div>
 
 					<div class="status-card">
 						<div class="status-value"><?php echo $current_snapshot['wordpress_version']; ?></div>
-						<div class="status-label"><?php _e( 'WordPress Version', 'puntwork' ); ?></div>
+						<div class="status-label"><?php _e('WordPress Version', 'puntwork'); ?></div>
 					</div>
 
-					<?php if ( $current_snapshot['load_average'] ) : ?>
+					<?php if ($current_snapshot['load_average']) : ?>
 					<div class="status-card">
 						<div class="status-value">
 						<?php
-							echo number_format( $current_snapshot['load_average'][0], 2 );
-						?>
+                            echo number_format($current_snapshot['load_average'][0], 2);
+					    ?>
 						</div>
-						<div class="status-label"><?php _e( 'Load Average (1m)', 'puntwork' ); ?></div>
+						<div class="status-label"><?php _e('Load Average (1m)', 'puntwork'); ?></div>
 					</div>
 					<?php endif; ?>
 				</div>
 			</div>
 
 			<!-- Performance Overview -->
-	<?php if ( ! empty( $performance_stats ) ) : ?>
+	<?php if (!empty($performance_stats)) : ?>
 			<div class="performance-section">
-				<h2><?php _e( 'Performance Overview', 'puntwork' ); ?></h2>
+				<h2><?php _e('Performance Overview', 'puntwork'); ?></h2>
 				<div class="performance-overview-grid">
 					<div class="overview-card">
-						<div class="overview-value"><?php echo number_format( $performance_stats['total_runs'] ); ?></div>
-						<div class="overview-label"><?php _e( 'Total Operations', 'puntwork' ); ?></div>
+						<div class="overview-value"><?php echo number_format($performance_stats['total_runs']); ?></div>
+						<div class="overview-label"><?php _e('Total Operations', 'puntwork'); ?></div>
 					</div>
 
 					<div class="overview-card">
 						<div class="overview-value"><?php echo $performance_stats['avg_time_seconds']; ?>s</div>
-						<div class="overview-label"><?php _e( 'Avg Duration', 'puntwork' ); ?></div>
+						<div class="overview-label"><?php _e('Avg Duration', 'puntwork'); ?></div>
 						<div class="overview-subtext">
 							Min: <?php echo $performance_stats['min_time_seconds']; ?>s |
 							Max: <?php echo $performance_stats['max_time_seconds']; ?>s
@@ -206,16 +205,16 @@ function performance_metrics_page() {
 
 					<div class="overview-card">
 						<div class="overview-value"><?php echo $performance_stats['avg_memory_mb']; ?> MB</div>
-						<div class="overview-label"><?php _e( 'Avg Memory Usage', 'puntwork' ); ?></div>
+						<div class="overview-label"><?php _e('Avg Memory Usage', 'puntwork'); ?></div>
 						<div class="overview-subtext">
 							Peak: <?php echo $performance_stats['max_peak_memory_mb']; ?> MB
 						</div>
 					</div>
 
-		<?php if ( $performance_stats['avg_items_per_second'] ) : ?>
+		<?php if ($performance_stats['avg_items_per_second']) : ?>
 					<div class="overview-card">
 						<div class="overview-value"><?php echo $performance_stats['avg_items_per_second']; ?>/s</div>
-						<div class="overview-label"><?php _e( 'Avg Processing Rate', 'puntwork' ); ?></div>
+						<div class="overview-label"><?php _e('Avg Processing Rate', 'puntwork'); ?></div>
 					</div>
 		<?php endif; ?>
 				</div>
@@ -224,15 +223,15 @@ function performance_metrics_page() {
 
 			<!-- Performance Charts -->
 			<div class="performance-section">
-				<h2><?php _e( 'Performance Trends', 'puntwork' ); ?></h2>
+				<h2><?php _e('Performance Trends', 'puntwork'); ?></h2>
 				<div class="charts-container">
 					<div class="chart-wrapper">
-						<h3><?php _e( 'Execution Time Trend', 'puntwork' ); ?></h3>
+						<h3><?php _e('Execution Time Trend', 'puntwork'); ?></h3>
 						<canvas id="time-trend-chart" width="400" height="200"></canvas>
 					</div>
 
 					<div class="chart-wrapper">
-						<h3><?php _e( 'Memory Usage Trend', 'puntwork' ); ?></h3>
+						<h3><?php _e('Memory Usage Trend', 'puntwork'); ?></h3>
 						<canvas id="memory-trend-chart" width="400" height="200"></canvas>
 					</div>
 				</div>
@@ -240,47 +239,47 @@ function performance_metrics_page() {
 
 			<!-- Recent Performance Logs -->
 			<div class="performance-section">
-				<h2><?php _e( 'Recent Performance Logs', 'puntwork' ); ?></h2>
+				<h2><?php _e('Recent Performance Logs', 'puntwork'); ?></h2>
 
-				<?php if ( empty( $recent_logs ) ) : ?>
+				<?php if (empty($recent_logs)) : ?>
 					<div class="notice notice-info">
-						<p><?php _e( 'No performance logs found for the selected period.', 'puntwork' ); ?></p>
+						<p><?php _e('No performance logs found for the selected period.', 'puntwork'); ?></p>
 					</div>
 				<?php else : ?>
 					<div class="performance-logs-table-container">
 						<table class="wp-list-table widefat fixed striped performance-logs-table">
 							<thead>
 								<tr>
-									<th><?php _e( 'Time', 'puntwork' ); ?></th>
-									<th><?php _e( 'Operation', 'puntwork' ); ?></th>
-									<th><?php _e( 'Duration', 'puntwork' ); ?></th>
-									<th><?php _e( 'Memory Used', 'puntwork' ); ?></th>
-									<th><?php _e( 'Peak Memory', 'puntwork' ); ?></th>
-									<th><?php _e( 'Processing Rate', 'puntwork' ); ?></th>
-									<th><?php _e( 'Details', 'puntwork' ); ?></th>
+									<th><?php _e('Time', 'puntwork'); ?></th>
+									<th><?php _e('Operation', 'puntwork'); ?></th>
+									<th><?php _e('Duration', 'puntwork'); ?></th>
+									<th><?php _e('Memory Used', 'puntwork'); ?></th>
+									<th><?php _e('Peak Memory', 'puntwork'); ?></th>
+									<th><?php _e('Processing Rate', 'puntwork'); ?></th>
+									<th><?php _e('Details', 'puntwork'); ?></th>
 								</tr>
 							</thead>
 							<tbody>
-								<?php foreach ( $recent_logs as $log ) : ?>
+								<?php foreach ($recent_logs as $log) : ?>
 									<tr>
-										<td><?php echo wp_date( 'M j, H:i:s', strtotime( $log->created_at ) ); ?></td>
-										<td><?php echo esc_html( $log->operation ); ?></td>
-										<td><?php echo number_format( $log->total_time, 3 ); ?>s</td>
-										<td><?php echo size_format( $log->total_memory_used ); ?></td>
-										<td><?php echo size_format( $log->peak_memory ); ?></td>
+										<td><?php echo wp_date('M j, H:i:s', strtotime($log->created_at)); ?></td>
+										<td><?php echo esc_html($log->operation); ?></td>
+										<td><?php echo number_format($log->total_time, 3); ?>s</td>
+										<td><?php echo size_format($log->total_memory_used); ?></td>
+										<td><?php echo size_format($log->peak_memory); ?></td>
 										<td>                                        <td>
 										<?php
-											echo $log->items_per_second
-												? number_format( $log->items_per_second, 1 ) . '/s'
-												: '—';
-										?>
+					                        echo $log->items_per_second
+					                            ? number_format($log->items_per_second, 1) . '/s'
+					                            : '—';
+								    ?>
 										</td></td>
 										<td>
 											<button class="puntwork-btn puntwork-btn--outline"
 													data-log-id="<?php echo $log->id; ?>"
-													data-checkpoints='<?php echo esc_attr( $log->checkpoints ); ?>'
-													data-metadata='<?php echo esc_attr( $log->metadata ); ?>'>
-												<?php _e( 'View Details', 'puntwork' ); ?>
+													data-checkpoints='<?php echo esc_attr($log->checkpoints); ?>'
+													data-metadata='<?php echo esc_attr($log->metadata); ?>'>
+												<?php _e('View Details', 'puntwork'); ?>
 											</button>
 										</td>
 									</tr>
@@ -293,59 +292,59 @@ function performance_metrics_page() {
 
 			<!-- Cache Performance -->
 			<div class="performance-section">
-				<h2><?php _e( 'Cache Performance', 'puntwork' ); ?></h2>
+				<h2><?php _e('Cache Performance', 'puntwork'); ?></h2>
 				<?php $cache_stats = CacheManager::getStats(); ?>
 				<div class="cache-stats-grid">
 					<div class="cache-stat-card">
 						<div class="cache-stat-value"><?php echo $cache_stats['redis_available'] ? '✅' : '❌'; ?></div>
-						<div class="cache-stat-label"><?php _e( 'Redis Available', 'puntwork' ); ?></div>
+						<div class="cache-stat-label"><?php _e('Redis Available', 'puntwork'); ?></div>
 					</div>
 
 					<div class="cache-stat-card">
-						<div class="cache-stat-value"><?php echo count( $cache_stats['cache_groups'] ); ?></div>
-						<div class="cache-stat-label"><?php _e( 'Cache Groups', 'puntwork' ); ?></div>
+						<div class="cache-stat-value"><?php echo count($cache_stats['cache_groups']); ?></div>
+						<div class="cache-stat-label"><?php _e('Cache Groups', 'puntwork'); ?></div>
 					</div>
 
 					<div class="cache-stat-card">
 						<div class="cache-stat-value">
 						<?php
-							echo $cache_stats['wp_cache_supports_groups'] ? '✅' : '❌';
-						?>
+                            echo $cache_stats['wp_cache_supports_groups'] ? '✅' : '❌';
+    ?>
 						</div>
-						<div class="cache-stat-label"><?php _e( 'Groups Support', 'puntwork' ); ?></div>
+						<div class="cache-stat-label"><?php _e('Groups Support', 'puntwork'); ?></div>
 					</div>
 				</div>
 			</div>
 
 			<!-- AI Feed Optimization -->
 			<div class="performance-section">
-				<h2><?php _e( 'AI Feed Optimization', 'puntwork' ); ?></h2>
+				<h2><?php _e('AI Feed Optimization', 'puntwork'); ?></h2>
 				<?php
-				$last_optimization = get_option( 'puntwork_last_optimization', array() );
-				$recommendations   = array();
+                $last_optimization = get_option('puntwork_last_optimization', []);
+    $recommendations = [];
 
-				if ( class_exists( '\Puntwork\AI\FeedOptimizer' ) ) {
-					$recommendations = \Puntwork\AI\FeedOptimizer::getOptimizationRecommendations();
-				}
-				?>
+    if (class_exists('\Puntwork\AI\FeedOptimizer')) {
+        $recommendations = \Puntwork\AI\FeedOptimizer::getOptimizationRecommendations();
+    }
+    ?>
 				<div class="optimization-controls">
 					<button id="run-optimization" class="puntwork-btn puntwork-btn--primary">
 						<i class="fas fa-rocket puntwork-btn__icon"></i>
-						<?php _e( 'Run Feed Optimization', 'puntwork' ); ?>
+						<?php _e('Run Feed Optimization', 'puntwork'); ?>
 					</button>
 					<span id="optimization-status"></span>
 				</div>
 
-				<?php if ( ! empty( $last_optimization ) ) : ?>
+				<?php if (!empty($last_optimization)) : ?>
 					<div class="optimization-results">
-						<h3><?php _e( 'Last Optimization Results', 'puntwork' ); ?></h3>
+						<h3><?php _e('Last Optimization Results', 'puntwork'); ?></h3>
 						<p class="optimization-timestamp">
 					<?php
-						printf(
-							__( 'Last run: %s', 'puntwork' ),
-							wp_date( 'M j, Y H:i', $last_optimization['timestamp'] )
-						);
-					?>
+            printf(
+                __('Last run: %s', 'puntwork'),
+                wp_date('M j, Y H:i', $last_optimization['timestamp'])
+            );
+				    ?>
 						</p>
 						<div class="optimization-stats">
 							<div class="optimization-stat">
@@ -353,7 +352,7 @@ function performance_metrics_page() {
 									<?php echo $last_optimization['results']['feeds_analyzed'] ?? 0; ?>
 								</span>
 								<span class="optimization-stat-label">
-									<?php _e( 'Feeds Analyzed', 'puntwork' ); ?>
+									<?php _e('Feeds Analyzed', 'puntwork'); ?>
 								</span>
 							</div>
 							<div class="optimization-stat">
@@ -361,34 +360,34 @@ function performance_metrics_page() {
 									<?php echo $last_optimization['results']['optimizations_applied'] ?? 0; ?>
 								</span>
 								<span class="optimization-stat-label">
-									<?php _e( 'Optimizations Applied', 'puntwork' ); ?>
+									<?php _e('Optimizations Applied', 'puntwork'); ?>
 								</span>
 							</div>
 						</div>
 					</div>
 				<?php endif; ?>
 
-				<?php if ( ! empty( $recommendations['feed_optimizations'] ) ) : ?>
+				<?php if (!empty($recommendations['feed_optimizations'])) : ?>
 					<div class="optimization-recommendations">
-						<h3><?php _e( 'Feed Optimization Recommendations', 'puntwork' ); ?></h3>
-					<?php foreach ( $recommendations['feed_optimizations'] as $feed_rec ) : ?>
+						<h3><?php _e('Feed Optimization Recommendations', 'puntwork'); ?></h3>
+					<?php foreach ($recommendations['feed_optimizations'] as $feed_rec) : ?>
 							<div class="recommendation-card">
-								<h4><?php echo esc_html( $feed_rec['feed_name'] ); ?></h4>
-						<?php foreach ( $feed_rec['recommendations'] as $rec ) : ?>
+								<h4><?php echo esc_html($feed_rec['feed_name']); ?></h4>
+						<?php foreach ($feed_rec['recommendations'] as $rec) : ?>
 									<div class="recommendation-item recommendation-
 									<?php
-										echo esc_attr( $rec['severity'] );
-									?>
+				                        echo esc_attr($rec['severity']);
+						    ?>
 									">
 										<span class="recommendation-type">
-											<?php echo esc_html( ucfirst( $rec['type'] ) ); ?>:
+											<?php echo esc_html(ucfirst($rec['type'])); ?>:
 										</span>
-										<?php echo esc_html( $rec['message'] ); ?>
-										<?php if ( ! empty( $rec['suggested_action'] ) ) : ?>
+										<?php echo esc_html($rec['message']); ?>
+										<?php if (!empty($rec['suggested_action'])) : ?>
 											<br><small><em>
 											<?php
-												echo esc_html( $rec['suggested_action'] );
-											?>
+						                echo esc_html($rec['suggested_action']);
+										    ?>
 											</em></small>
 										<?php endif; ?>
 									</div>
@@ -398,15 +397,15 @@ function performance_metrics_page() {
 					</div>
 				<?php endif; ?>
 
-				<?php if ( ! empty( $recommendations['global_optimizations'] ) ) : ?>
+				<?php if (!empty($recommendations['global_optimizations'])) : ?>
 					<div class="optimization-recommendations">
-						<h3><?php _e( 'Global Optimization Recommendations', 'puntwork' ); ?></h3>
-					<?php foreach ( $recommendations['global_optimizations'] as $rec ) : ?>
-							<div class="recommendation-item recommendation-<?php echo esc_attr( $rec['severity'] ); ?>">
-								<span class="recommendation-type"><?php echo esc_html( ucfirst( $rec['type'] ) ); ?>:</span>
-						<?php echo esc_html( $rec['message'] ); ?>
-						<?php if ( ! empty( $rec['suggested_action'] ) ) : ?>
-									<br><small><em><?php echo esc_html( $rec['suggested_action'] ); ?></em></small>
+						<h3><?php _e('Global Optimization Recommendations', 'puntwork'); ?></h3>
+					<?php foreach ($recommendations['global_optimizations'] as $rec) : ?>
+							<div class="recommendation-item recommendation-<?php echo esc_attr($rec['severity']); ?>">
+								<span class="recommendation-type"><?php echo esc_html(ucfirst($rec['type'])); ?>:</span>
+						<?php echo esc_html($rec['message']); ?>
+						<?php if (!empty($rec['suggested_action'])) : ?>
+									<br><small><em><?php echo esc_html($rec['suggested_action']); ?></em></small>
 						<?php endif; ?>
 									</div>
 					<?php endforeach; ?>
@@ -418,49 +417,49 @@ function performance_metrics_page() {
 
 			<!-- Machine Learning Analytics -->
 			<div class="performance-section">
-				<h2><?php _e( 'Machine Learning Analytics', 'puntwork' ); ?></h2>
+				<h2><?php _e('Machine Learning Analytics', 'puntwork'); ?></h2>
 				<div class="ml-analytics-grid">
 					<div class="ml-stat-card">
 						<div class="ml-stat-value">
-							<?php echo count( \Puntwork\AI\MachineLearningEngine::getTrainedModels() ); ?>
+							<?php echo count(\Puntwork\AI\MachineLearningEngine::getTrainedModels()); ?>
 						</div>
-						<div class="ml-stat-label"><?php _e( 'Trained Models', 'puntwork' ); ?></div>
+						<div class="ml-stat-label"><?php _e('Trained Models', 'puntwork'); ?></div>
 					</div>
 
 					<div class="ml-stat-card">
 						<div class="ml-stat-value">
 							<?php echo \Puntwork\AI\MachineLearningEngine::getAverageAccuracy(); ?>%
 						</div>
-						<div class="ml-stat-label"><?php _e( 'Avg Model Accuracy', 'puntwork' ); ?></div>
+						<div class="ml-stat-label"><?php _e('Avg Model Accuracy', 'puntwork'); ?></div>
 					</div>
 
 					<div class="ml-stat-card">
 						<div class="ml-stat-value">
 							<?php echo \Puntwork\AI\MachineLearningEngine::getPredictionsToday(); ?>
 						</div>
-						<div class="ml-stat-label"><?php _e( 'Predictions Today', 'puntwork' ); ?></div>
+						<div class="ml-stat-label"><?php _e('Predictions Today', 'puntwork'); ?></div>
 					</div>
 
 					<div class="ml-stat-card">
 						<div class="ml-stat-value">
 							<?php echo \Puntwork\AI\MachineLearningEngine::getOptimizationsApplied(); ?>
 						</div>
-						<div class="ml-stat-label"><?php _e( 'Auto Optimizations', 'puntwork' ); ?></div>
+						<div class="ml-stat-label"><?php _e('Auto Optimizations', 'puntwork'); ?></div>
 					</div>
 				</div>
 
 				<div class="ml-controls">
 					<button id="run-ml-optimization" class="puntwork-btn puntwork-btn--primary">
 						<i class="fas fa-brain puntwork-btn__icon"></i>
-						<?php _e( 'Run ML Optimization', 'puntwork' ); ?>
+						<?php _e('Run ML Optimization', 'puntwork'); ?>
 					</button>
 					<button id="train-models" class="puntwork-btn puntwork-btn--secondary">
 						<i class="fas fa-chart-line puntwork-btn__icon"></i>
-						<?php _e( 'Train Models', 'puntwork' ); ?>
+						<?php _e('Train Models', 'puntwork'); ?>
 					</button>
 					<button id="view-ml-insights" class="puntwork-btn puntwork-btn--outline">
 						<i class="fas fa-eye puntwork-btn__icon"></i>
-						<?php _e( 'View Insights', 'puntwork' ); ?>
+						<?php _e('View Insights', 'puntwork'); ?>
 					</button>
 					<span id="ml-status"></span>
 				</div>
@@ -473,7 +472,7 @@ function performance_metrics_page() {
 	<div id="performance-details-modal" class="performance-modal" style="display: none;">
 		<div class="performance-modal-content">
 			<div class="performance-modal-header">
-				<h3><?php _e( 'Performance Details', 'puntwork' ); ?></h3>
+				<h3><?php _e('Performance Details', 'puntwork'); ?></h3>
 				<button class="performance-modal-close">&times;</button>
 			</div>
 			<div class="performance-modal-body">
@@ -505,7 +504,7 @@ function performance_metrics_page() {
 	<script>
 		document.addEventListener('DOMContentLoaded', function() {
 			// Get chart data from PHP
-			const chartData = <?php echo json_encode( get_performance_chart_data( $period, $operation ) ); ?>;
+			const chartData = <?php echo json_encode(get_performance_chart_data($period, $operation)); ?>;
 
 			// Time Trend Chart
 			if (chartData.time_trend && chartData.time_trend.labels.length > 0) {
@@ -639,7 +638,7 @@ function performance_metrics_page() {
 
 					const data = {
 						action: 'run_feed_optimization',
-						nonce: '<?php echo wp_create_nonce( 'puntwork_feed_optimization' ); ?>'
+						nonce: '<?php echo wp_create_nonce('puntwork_feed_optimization'); ?>'
 					};
 
 					fetch(ajaxurl, {
@@ -690,7 +689,7 @@ function performance_metrics_page() {
 
 					const data = {
 						action: 'warm_performance_caches',
-						nonce: '<?php echo wp_create_nonce( 'puntwork_performance_caches' ); ?>'
+						nonce: '<?php echo wp_create_nonce('puntwork_performance_caches'); ?>'
 					};
 
 					fetch(ajaxurl, {
@@ -732,7 +731,7 @@ function performance_metrics_page() {
 
 					const data = {
 						action: 'reset_cache_analytics',
-						nonce: '<?php echo wp_create_nonce( 'puntwork_cache_analytics' ); ?>'
+						nonce: '<?php echo wp_create_nonce('puntwork_cache_analytics'); ?>'
 					};
 
 					fetch(ajaxurl, {
@@ -780,7 +779,7 @@ function performance_metrics_page() {
 
 					const data = {
 						action: 'run_memory_performance_test',
-						nonce: '<?php echo wp_create_nonce( 'puntwork_memory_test' ); ?>'
+						nonce: '<?php echo wp_create_nonce('puntwork_memory_test'); ?>'
 					};
 
 					fetch(ajaxurl, {
@@ -824,7 +823,7 @@ function performance_metrics_page() {
 
 					const data = {
 						action: 'clear_memory_pool',
-						nonce: '<?php echo wp_create_nonce( 'puntwork_memory_pool' ); ?>'
+						nonce: '<?php echo wp_create_nonce('puntwork_memory_pool'); ?>'
 					};
 
 					fetch(ajaxurl, {
@@ -868,7 +867,7 @@ function performance_metrics_page() {
 						'Running ML Optimization...';
 					mlStatus.textContent = 'Running machine learning optimization...';                    const data = {
 						action: 'run_ml_feed_optimization',
-						nonce: '<?php echo wp_create_nonce( 'puntwork_ml_optimization' ); ?>'
+						nonce: '<?php echo wp_create_nonce('puntwork_ml_optimization'); ?>'
 					};
 
 					fetch(ajaxurl, {
@@ -920,7 +919,7 @@ function performance_metrics_page() {
 
 					const data = {
 						action: 'train_ml_models',
-						nonce: '<?php echo wp_create_nonce( 'puntwork_train_models' ); ?>'
+						nonce: '<?php echo wp_create_nonce('puntwork_train_models'); ?>'
 					};
 
 					fetch(ajaxurl, {
@@ -1439,15 +1438,15 @@ function performance_metrics_page() {
 	</style>
 	<?php
 
-	// Localize script data for ML AJAX nonces
-	wp_localize_script(
-		'puntwork-admin-performance',
-		'puntwork_ml',
-		array(
-			'nonce'          => wp_create_nonce( 'puntwork_ml_optimization' ),
-			'train_nonce'    => wp_create_nonce( 'puntwork_train_models' ),
-			'insights_nonce' => wp_create_nonce( 'puntwork_ml_insights' ),
-			'ajax_url'       => admin_url( 'admin-ajax.php' ),
-		)
-	);
+    // Localize script data for ML AJAX nonces
+    wp_localize_script(
+        'puntwork-admin-performance',
+        'puntwork_ml',
+        [
+            'nonce' => wp_create_nonce('puntwork_ml_optimization'),
+            'train_nonce' => wp_create_nonce('puntwork_train_models'),
+            'insights_nonce' => wp_create_nonce('puntwork_ml_insights'),
+            'ajax_url' => admin_url('admin-ajax.php'),
+        ]
+    );
 }
