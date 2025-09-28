@@ -167,7 +167,6 @@ function setup_job_import()
     'batch/batch-data.php',
     'batch/batch-loading.php',
     'batch/batch-processing.php',
-    'batch/batch-processing-core.php',
     'batch/batch-size-management.php',
     'batch/batch-utils.php',
 
@@ -196,6 +195,7 @@ function setup_job_import()
     'utilities/shortcode.php',
     'utilities/PuntworkHorizontalScalingManager.php',
     'utilities/async-processing.php',
+    'batch/batch-processing-core.php',
     'utilities/PuntworkLoadBalancer.php',
     'utilities/utility-helpers.php',
     'utilities/item-cleaning.php',
