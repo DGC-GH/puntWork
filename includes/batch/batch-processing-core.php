@@ -307,30 +307,46 @@ function process_batch_items_logic( array $setup ): array {
 			$perf_data['database'] = $db_perf_data;
 
 			// Update import status for UI polling
-			$current_status                        = get_option( 'job_import_status', array() );
-			$current_status['total']               = $setup['total'];
-			$current_status['processed']           = $end_index;
-			$current_status['published']           = ( $current_status['published'] ?? 0 ) + $published;
-			$current_status['updated']             = ( $current_status['updated'] ?? 0 ) + $updated;
-			$current_status['skipped']             = ( $current_status['skipped'] ?? 0 ) + $skipped;
-			$current_status['duplicates_drafted']  = ( $current_status['duplicates_drafted'] ?? 0 ) + $duplicates_drafted;
-			$current_status['time_elapsed']        = $time_elapsed;
-			$current_status['complete']            = ( $end_index >= $setup['total'] );
-			$current_status['success']             = true;
-			$current_status['error_message']       = '';
-			$current_status['batch_size']          = $batch_size;
-			$current_status['inferred_languages']  = ( $current_status['inferred_languages'] ?? 0 ) + $inferred_languages;
-			$current_status['inferred_benefits']   = ( $current_status['inferred_benefits'] ?? 0 ) + $inferred_benefits;
-			$current_status['schema_generated']    = ( $current_status['schema_generated'] ?? 0 ) + $schema_generated;
-			$current_status['start_time']          = $setup['start_time'];
-			$current_status['end_time']            = $current_status['complete'] ? microtime( true ) : null;
-					$current_status['last_update'] = time();
-					$current_status['logs']        = array_slice( $logs, -50 ); // Keep last 50 log entries
-					update_option( 'job_import_status', $current_status, false );
+			$current_status = get_option( 'job_import_status', array() );
 
-					// Flush cache for real-time status updates
-			if ( function_exists( 'wp_cache_flush' ) ) {
-				wp_cache_flush();
+			// Check if there's a recent intermediate update that should be preserved
+			$has_recent_intermediate = isset( $current_status['is_intermediate_update'] ) &&
+			                           isset( $current_status['intermediate_update_time'] ) &&
+			                           ( microtime( true ) - $current_status['intermediate_update_time'] ) < 2; // Within last 2 seconds
+
+			if ( $has_recent_intermediate ) {
+				error_log( '[PUNTWORK] [UI-STATUS] Preserving recent intermediate update from ' . round( microtime( true ) - $current_status['intermediate_update_time'], 2 ) . ' seconds ago' );
+				// Don't overwrite the intermediate update - let the frontend see it
+				// The intermediate update will be naturally replaced on the next batch or final completion
+			} else {
+				$current_status['total']               = $setup['total'];
+				$current_status['processed']           = $end_index;
+				$current_status['published']           = ( $current_status['published'] ?? 0 ) + $published;
+				$current_status['updated']             = ( $current_status['updated'] ?? 0 ) + $updated;
+				$current_status['skipped']             = ( $current_status['skipped'] ?? 0 ) + $skipped;
+				$current_status['duplicates_drafted']  = ( $current_status['duplicates_drafted'] ?? 0 ) + $duplicates_drafted;
+				$current_status['time_elapsed']        = $time_elapsed;
+				$current_status['complete']            = ( $end_index >= $setup['total'] );
+				$current_status['success']             = true;
+				$current_status['error_message']       = '';
+				$current_status['batch_size']          = $batch_size;
+				$current_status['inferred_languages']  = ( $current_status['inferred_languages'] ?? 0 ) + $inferred_languages;
+				$current_status['inferred_benefits']   = ( $current_status['inferred_benefits'] ?? 0 ) + $inferred_benefits;
+				$current_status['schema_generated']    = ( $current_status['schema_generated'] ?? 0 ) + $schema_generated;
+				$current_status['start_time']          = $setup['start_time'];
+				$current_status['end_time']            = $current_status['complete'] ? microtime( true ) : null;
+				$current_status['last_update']         = time();
+				$current_status['logs']                = array_slice( $logs, -50 ); // Keep last 50 log entries
+
+				// Clear intermediate update flags
+				unset( $current_status['is_intermediate_update'], $current_status['intermediate_update_time'] );
+
+				update_option( 'job_import_status', $current_status, false );
+
+				// Flush cache for real-time status updates
+				if ( function_exists( 'wp_cache_flush' ) ) {
+					wp_cache_flush();
+				}
 			}            // Schedule async analytics update for better performance
 			$analytics_data = array(
 				'import_id'          => wp_generate_uuid4(),
@@ -454,12 +470,17 @@ function process_batch_items_logic( array $setup ): array {
  * @param array $logs            Current logs
  */
 function update_intermediate_batch_status( int $processed_count, int $total_in_batch, int $published, int $updated, int $skipped, array $logs ): void {
+	error_log( '[PUNTWORK] [UI-STATUS] update_intermediate_batch_status called with: processed_count=' . $processed_count . ', total_in_batch=' . $total_in_batch . ', published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped );
+
 	// Get current status
 	$current_status = get_option( 'job_import_status', array() );
+	error_log( '[PUNTWORK] [UI-STATUS] Current status from DB: processed=' . ( $current_status['processed'] ?? 'null' ) . ', total=' . ( $current_status['total'] ?? 'null' ) . ', last_update=' . ( isset( $current_status['last_update'] ) ? date( 'H:i:s', $current_status['last_update'] ) : 'null' ) );
 
 	// Calculate total processed so far (previous batches + current batch progress)
 	$previous_processed = $current_status['processed'] ?? 0;
 	$total_processed    = $previous_processed + $processed_count;
+
+	error_log( '[PUNTWORK] [UI-STATUS] Calculated: previous_processed=' . $previous_processed . ', total_processed=' . $total_processed );
 
 	// Update status with intermediate values
 	$intermediate_status                 = $current_status;
@@ -473,14 +494,25 @@ function update_intermediate_batch_status( int $processed_count, int $total_in_b
 	$intermediate_status['last_update']  = time();
 	$intermediate_status['logs']         = array_slice( $logs, -50 ); // Keep last 50 log entries
 
-	// Add intermediate progress message
-	$intermediate_status['logs'][] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "Processing batch: {$processed_count}/{$total_in_batch} items completed";
+	// Add intermediate progress message with more detail
+	$progress_percent = $total_in_batch > 0 ? round( ( $processed_count / $total_in_batch ) * 100, 1 ) : 0;
+	$intermediate_status['logs'][] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "Processing batch: {$processed_count}/{$total_in_batch} items completed ({$progress_percent}%)";
+
+	// Add intermediate status flag to prevent immediate overwriting
+	$intermediate_status['is_intermediate_update'] = true;
+	$intermediate_status['intermediate_update_time'] = microtime( true );
+
+	error_log( '[PUNTWORK] [UI-STATUS] Updated status: processed=' . $intermediate_status['processed'] . ', published=' . $intermediate_status['published'] . ', updated=' . $intermediate_status['updated'] . ', skipped=' . $intermediate_status['skipped'] . ', time_elapsed=' . round( $intermediate_status['time_elapsed'], 2 ) . 's' );
 
 	update_option( 'job_import_status', $intermediate_status, false );
+	error_log( '[PUNTWORK] [UI-STATUS] Status saved to database' );
 
 	// Flush cache for real-time status updates
 	if ( function_exists( 'wp_cache_flush' ) ) {
 		wp_cache_flush();
+		error_log( '[PUNTWORK] [UI-STATUS] Cache flushed' );
+	} else {
+		error_log( '[PUNTWORK] [UI-STATUS] wp_cache_flush not available' );
 	}
 }
 function process_batch_data( array $batch_guids, array $batch_items, array &$logs, int &$published, int &$updated, int &$skipped, int &$duplicates_drafted ): array {

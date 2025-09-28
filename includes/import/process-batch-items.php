@@ -47,11 +47,9 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 		error_log( '[PUNTWORK] [BATCH-TIMING] Processing batch of ' . $batch_size . ' items' );
 		error_log( '[PUNTWORK] [BATCH-TIMING] Previous batch time: ' . $previous_batch_time . 's, Last batch time: ' . $last_batch_time . 's' );
 
-		$item_counter                 = 0;
-		$intermediate_update_interval = 10; // Update status every 10 items
-		$last_intermediate_update     = 0;
-
-		foreach ( $batch_guids as $guid ) {
+	$item_counter                 = 0;
+	$intermediate_update_interval = 5; // Update status every 5 items for better UI responsiveness
+	$last_intermediate_update     = 0;		foreach ( $batch_guids as $guid ) {
 			// Check for cancellation at the start of each item
 			if ( get_transient( 'import_cancel' ) ) {
 				$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Batch processing cancelled by user';
@@ -252,10 +250,13 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 				// Update intermediate status every N items to keep UI responsive
 				if ( $processed_count % $intermediate_update_interval == 0 || $processed_count >= $total_to_process ) {
 					$current_time = microtime( true );
-					if ( $current_time - $last_intermediate_update >= 1 || $processed_count >= $total_to_process ) { // At least 1 second between updates
+					if ( $current_time - $last_intermediate_update >= 0.5 || $processed_count >= $total_to_process ) { // At least 0.5 seconds between updates
+						error_log( '[PUNTWORK] [UI-STATUS] About to call update_intermediate_batch_status: processed=' . $processed_count . ', total=' . $total_to_process . ', published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped );
 						update_intermediate_batch_status( $processed_count, $total_to_process, $published, $updated, $skipped, $logs );
 						$last_intermediate_update = $current_time;
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] Intermediate status update at ' . $processed_count . '/' . $total_to_process . ' items' );
+						error_log( '[PUNTWORK] [UI-STATUS] Intermediate status update completed at ' . $processed_count . '/' . $total_to_process . ' items' );
+					} else {
+						error_log( '[PUNTWORK] [UI-STATUS] Skipping intermediate update - too soon since last update (' . round( $current_time - $last_intermediate_update, 2 ) . 's ago)' );
 					}
 				}
 

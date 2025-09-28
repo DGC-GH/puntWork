@@ -572,7 +572,9 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                                 processed: statusData.processed,
                                 published: statusData.published,
                                 updated: statusData.updated,
-                                phase: JobImportUI.currentPhase
+                                phase: JobImportUI.currentPhase,
+                                isIntermediate: statusData.is_intermediate_update || false,
+                                intermediateTime: statusData.intermediate_update_time || null
                             });
                             JobImportUI.updateProgress(statusData);
                             JobImportUI.appendLogs(statusData.logs || []);
