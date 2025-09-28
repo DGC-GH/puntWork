@@ -486,7 +486,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             }
 
             // Initialize dynamic polling variables
-            this.currentPollingInterval = 2000; // Start with 2000ms for better performance
+            this.currentPollingInterval = 1000; // Start with 1000ms for better real-time updates
             this.lastProcessedCount = -1;
             this.unchangedCount = 0;
             this.maxUnchangedBeforeSlow = 50; // After 50 unchanged polls (100 seconds), slow down
@@ -506,7 +506,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             $('#reset-import').show();
             $('#status-message').text('Import in progress...');
 
-            console.log('[PUNTWORK] Starting dynamic status polling (initial: 500ms)');
+            console.log('[PUNTWORK] Starting dynamic status polling (initial: 1000ms)');
 
             // Store the polling function for reuse
             this.pollStatus = function() {

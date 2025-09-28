@@ -277,6 +277,11 @@ console.info("=== Job Import Logic Script Loaded ===");
             JobImportUI.resetButtons();
             this.isImporting = false; // Reset importing flag on completion
             
+            // Stop status polling on completion
+            if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
+                window.JobImportEvents.stopStatusPolling();
+            }
+            
             // Disconnect from real-time updates on completion
             if (window.JobImportRealtime && JobImportRealtime.getConnectionStatus()) {
                 JobImportRealtime.disconnect();
@@ -519,6 +524,13 @@ console.info("=== Job Import Logic Script Loaded ===");
                 }
                 
                 console.log('[PUNTWORK] Starting batch import with', total_items, 'items');
+                
+                // Start status polling for real-time UI updates before beginning batch processing
+                if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
+                    console.log('[PUNTWORK] Starting status polling for real-time UI updates');
+                    window.JobImportEvents.startStatusPolling();
+                }
+                
                 await this.handleImport(0);
 
             } catch (error) {
@@ -549,6 +561,13 @@ console.info("=== Job Import Logic Script Loaded ===");
 
             try {
                 await JobImportAPI.clearImportCancel();
+                
+                // Start status polling for real-time UI updates before resuming
+                if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
+                    console.log('[PUNTWORK] Starting status polling for resume import');
+                    window.JobImportEvents.startStatusPolling();
+                }
+                
                 await this.handleImport(jobImportData.resume_progress || 0);
             } catch (error) {
                 PuntWorkJSLogger.error('Resume import error', 'LOGIC', error);
