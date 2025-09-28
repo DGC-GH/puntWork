@@ -21,6 +21,7 @@ class PuntworkLoadBalancer
     private const LOAD_BALANCER_TABLE = 'puntwork_load_balancer';
 
     private $balancing_strategy;
+    private $health_checks;
 
     public function __construct()
     {
