@@ -493,7 +493,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             this.completeDetectedCount = 0; // Counter for complete detections
             this.maxCompletePolls = 3; // Continue polling for 3 more polls after detecting complete
             var totalZeroCount = 0; // Counter for polls where total remains 0
-            this.maxTotalZeroPolls = 20; // Stop polling after 20 polls with total=0 (40 seconds)
+            this.maxTotalZeroPolls = 100; // Stop polling after 100 polls with total=0 (200 seconds)
             var isStartingNewImport = true; // Flag to prevent hiding UI when starting a new import
             var hasSeenImportRunning = false; // Flag to track if we've seen the import actually running
 

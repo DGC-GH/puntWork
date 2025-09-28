@@ -388,6 +388,10 @@ if (! function_exists('import_all_jobs_from_json') ) {
                     // Update status with total items
                     $initial_status['total'] = $total_items;
                     update_option('job_import_status', $initial_status, false);
+                    // Flush cache to ensure AJAX can see the updated status
+                    if (function_exists('wp_cache_flush') ) {
+                        wp_cache_flush();
+                    }
                     error_log('[PUNTWORK] [LOOP-DEBUG] Set total items for import: ' . $total_items . ' (first batch)');
                 }
 
@@ -461,6 +465,10 @@ if (! function_exists('import_all_jobs_from_json') ) {
                 $current_status['last_update']        = time();
                 $current_status['logs']               = array_slice($all_logs, -50); // Keep last 50 log entries for UI
                 update_option('job_import_status', $current_status, false);
+                // Flush cache to ensure AJAX can see the updated status
+                if (function_exists('wp_cache_flush') ) {
+                    wp_cache_flush();
+                }
                 error_log(
                     '[PUNTWORK] [LOOP-DEBUG] Updated import status after batch ' . $batch_count .
                     ': processed=' . $total_processed . '/' . $total_items .
