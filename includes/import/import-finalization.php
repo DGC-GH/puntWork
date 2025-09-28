@@ -111,28 +111,38 @@ function finalize_batch_import($result)
             log_scheduled_run($details, $test_mode, $trigger_type);
         }
 
-        error_log(
-            sprintf(
-                '[PUNTWORK] Import completed and logged to history - Trigger: %s, Duration: %.2fs, Processed: %d/%d',
-                $trigger_type,
-                $total_elapsed,
-                $result['processed'],
-                $result['total']
-            )
-        );
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log(
+                sprintf(
+                    '[PUNTWORK] Import completed and logged to history - Trigger: %s, Duration: %.2fs, Processed: %d/%d',
+                    $trigger_type,
+                    $total_elapsed,
+                    $result['processed'],
+                    $result['total']
+                )
+            );
+        }
 
         // Post new jobs to social media if enabled
         if (get_option('puntwork_social_auto_post_jobs', false)) {
-            error_log('[PUNTWORK] [FINALIZE-SOCIAL] Auto-posting new jobs to social media');
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[PUNTWORK] [FINALIZE-SOCIAL] Auto-posting new jobs to social media');
+            }
             post_new_jobs_to_social_media($result);
         } else {
-            error_log('[PUNTWORK] [FINALIZE-SOCIAL] Social media auto-post disabled');
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[PUNTWORK] [FINALIZE-SOCIAL] Social media auto-post disabled');
+            }
         }
     } else {
-        error_log('[PUNTWORK] [FINALIZE-INCOMPLETE] Import not complete or failed, skipping history logging and social media posting');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [FINALIZE-INCOMPLETE] Import not complete or failed, skipping history logging and social media posting');
+        }
     }
 
-    error_log('[PUNTWORK] [FINALIZE-END] finalize_batch_import completed');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [FINALIZE-END] finalize_batch_import completed');
+    }
 
     return $result;
 }
