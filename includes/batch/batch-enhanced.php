@@ -388,7 +388,12 @@ function determine_batch_complexity_zone(array $batch_items): string
 
     $avg_complexity = $total_complexity / $item_count;
 
-    if ($avg_complexity < 0.3) return 'low';
-    if ($avg_complexity < 0.7) return 'medium';
+    if ($avg_complexity < 0.3) {
+        return 'low';
+    }
+    if ($avg_complexity < 0.7) {
+        return 'medium';
+    }
+
     return 'high';
 }

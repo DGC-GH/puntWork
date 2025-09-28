@@ -119,12 +119,12 @@ class AdvancedJsonlProcessor
             ));
 
             return true;
-
         } catch (\Exception $e) {
             error_log('[PUNTWORK] [JSONL-COMBINE] Streaming combination failed: ' . $e->getMessage());
             if (isset($output_handle) && $output_handle) {
                 fclose($output_handle);
             }
+
             return false;
         }
     }
@@ -143,12 +143,14 @@ class AdvancedJsonlProcessor
 
         if (!file_exists($feed_path)) {
             error_log("[PUNTWORK] [JSONL-COMBINE] Feed file not found: $feed_path");
+
             return $stats;
         }
 
         $handle = fopen($feed_path, 'r');
         if (!$handle) {
             error_log("[PUNTWORK] [JSONL-COMBINE] Cannot open feed file: $feed_path");
+
             return $stats;
         }
 
@@ -168,6 +170,7 @@ class AdvancedJsonlProcessor
             $item = json_decode($line, true);
             if ($item === null) {
                 $stats['invalid']++;
+
                 continue;
             }
 
@@ -184,11 +187,13 @@ class AdvancedJsonlProcessor
                     // Check if this is actually a duplicate or just same GUID with different content
                     if ($dedup_cache[$guid] === $item_hash) {
                         $stats['duplicates']++;
+
                         continue;
                     } else {
                         // Same GUID but different content - this might be an update
                         // For now, treat as duplicate to be safe
                         $stats['duplicates']++;
+
                         continue;
                     }
                 }
@@ -233,6 +238,7 @@ class AdvancedJsonlProcessor
         // Check if parallel processing is available
         if (!function_exists('pcntl_fork') || !function_exists('pcntl_waitpid')) {
             error_log('[PUNTWORK] [JSONL-COMBINE] Parallel processing not available, falling back to streaming');
+
             return self::combineJsonlStreaming($feed_files, $output_path, $stats);
         }
 
@@ -297,7 +303,6 @@ class AdvancedJsonlProcessor
             ));
 
             return true;
-
         } catch (\Exception $e) {
             error_log('[PUNTWORK] [JSONL-COMBINE] Parallel combination failed: ' . $e->getMessage());
 
@@ -356,6 +361,7 @@ class AdvancedJsonlProcessor
                 // No new items, just clean up
                 unlink($temp_file);
                 $stats['processing_time'] = microtime(true) - $start_time;
+
                 return true;
             }
 
@@ -394,7 +400,6 @@ class AdvancedJsonlProcessor
             ));
 
             return true;
-
         } catch (\Exception $e) {
             error_log('[PUNTWORK] [JSONL-COMBINE] Progressive combination failed: ' . $e->getMessage());
 
@@ -434,7 +439,9 @@ class AdvancedJsonlProcessor
             if ($handle) {
                 while (($line = fgets($handle)) !== false) {
                     $line = trim($line);
-                    if (empty($line)) continue;
+                    if (empty($line)) {
+                        continue;
+                    }
 
                     $item = json_decode($line, true);
                     if ($item && isset($item['guid'])) {
@@ -531,14 +538,20 @@ class AdvancedJsonlProcessor
         $dedup_cache = [];
 
         foreach ($temp_files as $temp_file) {
-            if (!file_exists($temp_file)) continue;
+            if (!file_exists($temp_file)) {
+                continue;
+            }
 
             $temp_handle = fopen($temp_file, 'r');
-            if (!$temp_handle) continue;
+            if (!$temp_handle) {
+                continue;
+            }
 
             while (($line = fgets($temp_handle)) !== false) {
                 $line = trim($line);
-                if (empty($line)) continue;
+                if (empty($line)) {
+                    continue;
+                }
 
                 $item = json_decode($line, true);
                 if ($item && isset($item['guid'])) {
@@ -632,6 +645,7 @@ class AdvancedJsonlProcessor
             $item = json_decode($line, true);
             if ($item === null) {
                 $validation_stats['invalid_json']++;
+
                 continue;
             }
 

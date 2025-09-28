@@ -116,7 +116,6 @@ class DataPrefetcher
                 $stats['prefetch_time'],
                 $stats['memory_usage_mb']
             ));
-
         } catch (\Exception $e) {
             error_log('[PUNTWORK] [PREFETCH] Prefetch failed: ' . $e->getMessage());
             $stats['error'] = $e->getMessage();
@@ -157,6 +156,7 @@ class DataPrefetcher
 
         if ($cached !== false) {
             $stats['cache_hits'] = count($cached);
+
             return $stats;
         }
 
@@ -218,6 +218,7 @@ class DataPrefetcher
 
         if ($cached !== false) {
             $stats['cache_hits'] = 1;
+
             return $stats;
         }
 
@@ -265,6 +266,7 @@ class DataPrefetcher
 
         if ($cached !== false) {
             $stats['cache_hits'] = count($cached);
+
             return $stats;
         }
 
@@ -308,6 +310,7 @@ class DataPrefetcher
 
         if ($cached !== false) {
             $stats['cache_hits'] = 1;
+
             return $stats;
         }
 

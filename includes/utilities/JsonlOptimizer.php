@@ -84,7 +84,7 @@ class JsonlOptimizer
             $items = self::loadAndAnalyzeItems($input_file, $stats);
 
             if (empty($items)) {
-                throw new \Exception("No valid items found in input file");
+                throw new \Exception('No valid items found in input file');
             }
 
             // Apply optimization strategies
@@ -111,9 +111,9 @@ class JsonlOptimizer
             ));
 
             return true;
-
         } catch (\Exception $e) {
             error_log('[PUNTWORK] [JSONL-OPTIMIZE] Optimization failed: ' . $e->getMessage());
+
             return false;
         }
     }
@@ -132,10 +132,14 @@ class JsonlOptimizer
 
         while (($line = fgets($handle)) !== false) {
             $line = trim($line);
-            if (empty($line)) continue;
+            if (empty($line)) {
+                continue;
+            }
 
             $item = json_decode($line, true);
-            if ($item === null) continue;
+            if ($item === null) {
+                continue;
+            }
 
             // Analyze item for optimization metadata
             $analyzed_item = self::analyzeItemForOptimization($item);
@@ -201,10 +205,19 @@ class JsonlOptimizer
         $days_since_update = (time() - $update_time) / (60 * 60 * 24);
 
         // Items updated more recently get higher scores (processed first)
-        if ($days_since_update < 1) return 1.0;     // Updated today
-        if ($days_since_update < 7) return 0.9;     // Updated this week
-        if ($days_since_update < 30) return 0.7;    // Updated this month
-        if ($days_since_update < 90) return 0.5;    // Updated this quarter
+        if ($days_since_update < 1) {
+            return 1.0;
+        }     // Updated today
+        if ($days_since_update < 7) {
+            return 0.9;
+        }     // Updated this week
+        if ($days_since_update < 30) {
+            return 0.7;
+        }    // Updated this month
+        if ($days_since_update < 90) {
+            return 0.5;
+        }    // Updated this quarter
+
         return 0.3;                                 // Updated longer ago
     }
 
@@ -257,6 +270,7 @@ class JsonlOptimizer
         // Extract base type if it's a job_type variant
         if (strpos($content_type, 'job_') === 0) {
             $base_type = substr($content_type, 4);
+
             return $priorities[$base_type] ?? 0.6;
         }
 
@@ -304,10 +318,18 @@ class JsonlOptimizer
     {
         $location_parts = [];
 
-        if (isset($item['city'])) $location_parts[] = $item['city'];
-        if (isset($item['state'])) $location_parts[] = $item['state'];
-        if (isset($item['country'])) $location_parts[] = $item['country'];
-        if (isset($item['location'])) $location_parts[] = $item['location'];
+        if (isset($item['city'])) {
+            $location_parts[] = $item['city'];
+        }
+        if (isset($item['state'])) {
+            $location_parts[] = $item['state'];
+        }
+        if (isset($item['country'])) {
+            $location_parts[] = $item['country'];
+        }
+        if (isset($item['location'])) {
+            $location_parts[] = $item['location'];
+        }
 
         return implode(', ', $location_parts) ?: 'unknown';
     }
@@ -348,7 +370,7 @@ class JsonlOptimizer
         $strategies_applied = [];
 
         // Multi-dimensional sort by overall score (descending - higher scores first)
-        usort($items, function($a, $b) {
+        usort($items, function ($a, $b) {
             return $b['overall_score'] <=> $a['overall_score'];
         });
 
@@ -387,15 +409,23 @@ class JsonlOptimizer
 
             // Complexity distribution
             $complexity = $item['optimization_scores']['complexity'] ?? 0;
-            if ($complexity < 0.3) $stats['complexity_distribution']['low']++;
-            elseif ($complexity < 0.7) $stats['complexity_distribution']['medium']++;
-            else $stats['complexity_distribution']['high']++;
+            if ($complexity < 0.3) {
+                $stats['complexity_distribution']['low']++;
+            } elseif ($complexity < 0.7) {
+                $stats['complexity_distribution']['medium']++;
+            } else {
+                $stats['complexity_distribution']['high']++;
+            }
 
             // Update frequency distribution
             $update_freq = $item['optimization_scores']['update_frequency'] ?? 0.5;
-            if ($update_freq > 0.8) $stats['update_frequency_distribution']['recent']++;
-            elseif ($update_freq > 0.4) $stats['update_frequency_distribution']['medium']++;
-            else $stats['update_frequency_distribution']['old']++;
+            if ($update_freq > 0.8) {
+                $stats['update_frequency_distribution']['recent']++;
+            } elseif ($update_freq > 0.4) {
+                $stats['update_frequency_distribution']['medium']++;
+            } else {
+                $stats['update_frequency_distribution']['old']++;
+            }
         }
 
         return $stats;

@@ -162,6 +162,7 @@ class BatchPrioritizer
             $analysis['priority'] = self::PRIORITY_NEW;
             $analysis['change_type'] = 'new';
             $analysis['reasons'][] = 'no_existing_post';
+
             return $analysis;
         }
 
@@ -331,7 +332,7 @@ class BatchPrioritizer
     {
         $indices = array_keys($item_priorities);
 
-        usort($indices, function($a, $b) use ($item_priorities) {
+        usort($indices, function ($a, $b) use ($item_priorities) {
             $priority_a = $item_priorities[$a]['priority'];
             $priority_b = $item_priorities[$b]['priority'];
 
@@ -390,12 +391,15 @@ class BatchPrioritizer
             switch ($item['change_type']) {
                 case 'new':
                     $stats['new_count']++;
+
                     break;
                 case 'updated':
                     $stats['updated_count']++;
+
                     break;
                 case 'unchanged':
                     $stats['unchanged_count']++;
+
                     break;
             }
 

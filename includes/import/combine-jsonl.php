@@ -29,6 +29,7 @@ function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs)
 
     if (empty($existing_feeds)) {
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'No feed files found to combine';
+
         return;
     }
 
@@ -53,6 +54,7 @@ function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs)
     if (!$success) {
         // Fallback to original method if advanced processing fails
         error_log('[PUNTWORK] [JSONL-COMBINE] Advanced processing failed, falling back to original method');
+
         return combine_jsonl_files_fallback($feeds, $output_dir, $total_items, $logs);
     }
 
