@@ -1,20 +1,8 @@
 <?php
 
 /**
- * Batch item processing        $item_counter = 0;
-        foreach ( $batch_guids as $guid ) {
-            ++$item_counter;
-            error_log('[PUNTWORK] [ITEMS-DEBUG] ===== STARTING ITEM ' . $item_counter . '/' . $total_to_process . ' =====');
-            error_log('[PUNTWORK] [ITEMS-DEBUG] Processing GUID: ' . $guid);
-            try {
-                $item           = $batch_items[ $guid ]['item'];
-                $xml_updated    = isset($item['updated']) ? $item['updated'] : '';
-                $xml_updated_ts = strtotime($xml_updated);
-                $post_id        = isset($post_ids_by_guid[ $guid ]) ? $post_ids_by_guid[ $guid ] : null;
-
-                error_log('[PUNTWORK] [ITEMS-DEBUG] Item data: post_id=' . ( $post_id ?? 'null' ) . ', xml_updated="' . $xml_updated . '", xml_updated_ts=' . $xml_updated_ts);
-                error_log('[PUNTWORK] [ITEMS-DEBUG] Item title: "' . (isset($item['functiontitle']) ? $item['functiontitle'] : 'MISSING') . '"');
-                error_log('[PUNTWORK] [ITEMS-DEBUG] Item company: "' . (isset($item['company']) ? $item['company'] : 'MISSING') . '"'); *
+ * Batch item processing
+ *
  * @package    Puntwork
  * @subpackage Processing
  * @since      1.0.0
@@ -48,14 +36,17 @@ if (! function_exists('process_batch_items') ) {
         $item_counter = 0;
         foreach ( $batch_guids as $guid ) {
             ++$item_counter;
-            error_log('[PUNTWORK] [ITEMS-DEBUG] Processing item ' . $item_counter . '/' . $total_to_process . ' GUID: ' . $guid);
+            error_log('[PUNTWORK] [ITEMS-DEBUG] ===== STARTING ITEM ' . $item_counter . '/' . $total_to_process . ' =====');
+            error_log('[PUNTWORK] [ITEMS-DEBUG] Processing GUID: ' . $guid);
             try {
                 $item           = $batch_items[ $guid ]['item'];
                 $xml_updated    = isset($item['updated']) ? $item['updated'] : '';
                 $xml_updated_ts = strtotime($xml_updated);
                 $post_id        = isset($post_ids_by_guid[ $guid ]) ? $post_ids_by_guid[ $guid ] : null;
 
-                error_log('[PUNTWORK] [ITEMS-DEBUG] GUID ' . $guid . ': post_id=' . ( $post_id ?? 'null' ) . ', xml_updated=' . $xml_updated . ', xml_updated_ts=' . $xml_updated_ts);
+                error_log('[PUNTWORK] [ITEMS-DEBUG] Item data: post_id=' . ( $post_id ?? 'null' ) . ', xml_updated="' . $xml_updated . '", xml_updated_ts=' . $xml_updated_ts);
+                error_log('[PUNTWORK] [ITEMS-DEBUG] Item title: "' . (isset($item['functiontitle']) ? $item['functiontitle'] : 'MISSING') . '"');
+                error_log('[PUNTWORK] [ITEMS-DEBUG] Item company: "' . (isset($item['company']) ? $item['company'] : 'MISSING') . '"');
 
                 // If post exists, check if it needs updating
                 if ($post_id ) {
