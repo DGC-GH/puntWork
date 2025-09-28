@@ -330,92 +330,117 @@ console.info("=== Job Import Logic Script Loaded ===");
          * @returns {Promise} Start import process promise
          */
         handleStartImport: async function() {
-            console.log('[PUNTWORK] [JS-FLOW] ===== START IMPORT PROCESS =====');
-            console.log('[PUNTWORK] [JS-FLOW] handleStartImport called');
-            console.log('[PUNTWORK] [JS-FLOW] Current timestamp: ' + new Date().toISOString());
-            console.log('[PUNTWORK] [JS-FLOW] Browser: ' + navigator.userAgent);
-            console.log('[PUNTWORK] [JS-FLOW] Window location: ' + window.location.href);
-            console.log('[PUNTWORK] [JS-FLOW] jQuery version: ' + $.fn.jquery);
-            console.log('[PUNTWORK] [JS-FLOW] Current isImporting flag:', this.isImporting);
-            console.log('[PUNTWORK] [JS-FLOW] Start time:', this.startTime);
-            console.log('[PUNTWORK] [JS-FLOW] Elapsed time:', this.getElapsedTime());
+            console.log('[PUNTWORK] [DEBUG-IMPORT] ===== START IMPORT PROCESS =====');
+            console.log('[PUNTWORK] [DEBUG-IMPORT] Timestamp:', new Date().toISOString());
+            console.log('[PUNTWORK] [DEBUG-IMPORT] Browser:', navigator.userAgent);
+            console.log('[PUNTWORK] [DEBUG-IMPORT] Window location:', window.location.href);
+            console.log('[PUNTWORK] [DEBUG-IMPORT] jQuery version:', $.fn.jquery);
+            console.log('[PUNTWORK] [DEBUG-IMPORT] Current isImporting flag:', this.isImporting);
+            console.log('[PUNTWORK] [DEBUG-IMPORT] Start time:', this.startTime);
+            console.log('[PUNTWORK] [DEBUG-IMPORT] Elapsed time:', this.getElapsedTime());
+            console.log('[PUNTWORK] [DEBUG-IMPORT] jobImportData:', jobImportData);
+            console.log('[PUNTWORK] [DEBUG-IMPORT] Feeds count:', Object.keys(jobImportData.feeds || {}).length);
+            console.log('[PUNTWORK] [DEBUG-IMPORT] Nonce:', jobImportData.nonce);
+            console.log('[PUNTWORK] [DEBUG-IMPORT] AjaxURL:', jobImportData.ajaxurl);
+
             PuntWorkJSLogger.info('Start Import clicked', 'LOGIC');
-            console.log('[PUNTWORK] Start Import clicked');
-            console.log('[PUNTWORK] jobImportData:', jobImportData);
-            console.log('[PUNTWORK] feeds:', jobImportData.feeds);
-            console.log('[PUNTWORK] nonce:', jobImportData.nonce);
-            console.log('[PUNTWORK] ajaxurl:', jobImportData.ajaxurl);
+            console.log('[PUNTWORK] [DEBUG-IMPORT] Start Import clicked - checking import status');
 
             if (this.isImporting) {
-                console.log('[PUNTWORK] [ERROR] Import already in progress - blocking start');
-                console.log('[PUNTWORK] [DEBUG] isImporting:', this.isImporting);
-                console.log('[PUNTWORK] [DEBUG] startTime:', this.startTime);
-                console.log('[PUNTWORK] [DEBUG] elapsed time:', this.getElapsedTime());
+                console.log('[PUNTWORK] [DEBUG-IMPORT] ERROR: Import already in progress - blocking start');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] isImporting:', this.isImporting);
+                console.log('[PUNTWORK] [DEBUG-IMPORT] startTime:', this.startTime);
+                console.log('[PUNTWORK] [DEBUG-IMPORT] elapsed time:', this.getElapsedTime());
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Checking if we should force reset...');
+
                 PuntWorkJSLogger.warn('Import already in progress - blocking start', 'LOGIC', {
                     isImporting: this.isImporting,
                     startTime: this.startTime,
                     elapsed: this.getElapsedTime()
                 });
+
                 // Force reset the flag if it's been too long (stuck import)
                 if (this.startTime && (Date.now() - this.startTime) > 300000) { // 5 minutes
-                    console.log('[PUNTWORK] [DEBUG] Import has been running for >5 minutes, forcing reset');
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Import has been running for >5 minutes, forcing reset');
                     this.isImporting = false;
+                    this.startTime = null;
                     PuntWorkJSLogger.warn('Forcing import flag reset due to timeout', 'LOGIC');
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Forced reset complete, continuing with import');
                 } else {
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Not forcing reset, returning early');
                     return;
                 }
             }
 
-            console.log('[PUNTWORK] [JS-FLOW] Import not in progress, proceeding...');
+            console.log('[PUNTWORK] [DEBUG-IMPORT] Import not in progress, proceeding...');
             this.isImporting = true;
-            console.log('[PUNTWORK] [JS-FLOW] Set isImporting to true');
+            this.startTime = Date.now();
+            console.log('[PUNTWORK] [DEBUG-IMPORT] Set isImporting to true, startTime:', this.startTime);
 
             try {
-                console.log('[PUNTWORK] [JS-FLOW] Clearing progress and setting up UI');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 0: UI SETUP =====');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Clearing progress and setting up UI');
                 JobImportUI.clearProgress();
-                this.startTime = Date.now(); // Record start time in milliseconds
                 JobImportUI.setPhase('feed-processing');
                 $('#start-import').hide();
                 $('#resume-import').hide();
                 $('#cancel-import').show();
                 $('#reset-import').show();
                 JobImportUI.showImportUI();
+                $('#status-message').text('Initializing import...');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] UI setup complete');
 
-                console.log('[PUNTWORK] ===== PHASE 1: FEED PROCESSING =====');
-                JobImportUI.appendLogs(['Starting feed processing...']);
-                $('#status-message').text('Processing feeds...');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 0.1: IMPORT RESET =====');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] About to reset import via API');
 
                 // Reset import
-                console.log('[PUNTWORK] [JS-FLOW] About to reset import');
+                const resetStartTime = Date.now();
                 const resetResponse = await JobImportAPI.resetImport();
-                console.log('[PUNTWORK] [JS-FLOW] Reset API response:', resetResponse);
+                const resetEndTime = Date.now();
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Reset API call took:', (resetEndTime - resetStartTime), 'ms');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Reset API response:', resetResponse);
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Reset response success:', resetResponse.success);
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Reset response message:', resetResponse.message);
+
                 if (resetResponse.success) {
-                    console.log('[PUNTWORK] Import reset successful');
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Import reset successful');
                     JobImportUI.appendLogs(['Import reset for fresh start']);
                 } else {
-                    console.warn('[PUNTWORK] [JS-FLOW] Import reset failed:', resetResponse);
+                    console.warn('[PUNTWORK] [DEBUG-IMPORT] Import reset failed:', resetResponse);
                     JobImportUI.appendLogs(['Warning: Import reset failed - ' + (resetResponse.message || 'Unknown error')]);
                 }
 
+                console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 0.2: STATUS RESET =====');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] About to reset status for real-time updates');
+
                 // Additional status reset for real-time updates
-                console.log('[PUNTWORK] [JS-FLOW] About to reset status for real-time updates');
+                const statusResetStartTime = Date.now();
                 const statusResetResponse = await $.ajax({
                     url: jobImportData.ajaxurl,
                     type: 'POST',
-                    data: { action: 'reset_job_import_status', nonce: jobImportData.nonce }
+                    data: { action: 'reset_job_import_status', nonce: jobImportData.nonce },
+                    timeout: 30000
                 });
-                console.log('[PUNTWORK] [JS-FLOW] Status reset API response:', statusResetResponse);
+                const statusResetEndTime = Date.now();
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Status reset API call took:', (statusResetEndTime - statusResetStartTime), 'ms');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Status reset API response:', statusResetResponse);
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Status reset response success:', statusResetResponse.success);
+
                 if (statusResetResponse.success) {
-                    console.log('[PUNTWORK] Status reset for real-time updates successful');
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Status reset for real-time updates successful');
                     JobImportUI.appendLogs(['Import status reset for real-time updates']);
                 } else {
-                    console.warn('[PUNTWORK] [JS-FLOW] Status reset failed:', statusResetResponse);
+                    console.warn('[PUNTWORK] [DEBUG-IMPORT] Status reset failed:', statusResetResponse);
                 }
+
+                console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 1: FEED PROCESSING =====');
+                JobImportUI.appendLogs(['Starting feed processing...']);
+                $('#status-message').text('Processing feeds...');
 
                 // Process feeds
                 const feeds = jobImportData.feeds;
-                console.log('[PUNTWORK] Processing feeds:', feeds);
-                console.log('[PUNTWORK] Number of feeds to process:', Object.keys(feeds).length);
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Processing feeds:', feeds);
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Number of feeds to process:', Object.keys(feeds).length);
                 let total_items = 0;
                 const total_feeds = Object.keys(feeds).length;
 
@@ -430,55 +455,52 @@ console.info("=== Job Import Logic Script Loaded ===");
                     skipped: 0,
                     duplicates_drafted: 0,
                     drafted_old: 0,
-                    time_elapsed: this.getElapsedTime() / 1000, // Convert to seconds for server compatibility
+                    time_elapsed: this.getElapsedTime() / 1000,
                     complete: false
                 });
 
                 for (let i = 0; i < Object.keys(feeds).length; i++) {
                     const feed = Object.keys(feeds)[i];
-                    console.log('[PUNTWORK] Processing feed', (i + 1) + '/' + total_feeds + ':', feed);
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PROCESSING FEED', (i + 1) + '/' + total_feeds + ':', feed, '=====');
 
                     // Update progress for current feed
                     const current_feed_num = i + 1;
                     $('#status-message').text(`Processing feed ${current_feed_num}/${total_feeds}: ${feed}`);
                     JobImportUI.updateProgress({
                         total: total_feeds,
-                        processed: current_feed_num - 1, // Show progress up to current feed
+                        processed: current_feed_num - 1,
                         published: 0,
                         updated: 0,
                         skipped: 0,
                         duplicates_drafted: 0,
                         drafted_old: 0,
-                        time_elapsed: this.getElapsedTime() / 1000, // Convert to seconds for server compatibility
+                        time_elapsed: this.getElapsedTime() / 1000,
                         complete: false
                     });
 
-                    // DETAILED DEBUGGING LOGS
-                    console.log('[PUNTWORK] ===== FEED PROCESSING DEBUG =====');
-                    console.log('[PUNTWORK] Feed being processed:', feed);
-                    console.log('[PUNTWORK] Feed URL:', feeds[feed]);
-                    console.log('[PUNTWORK] Current feed number:', current_feed_num, '/', total_feeds);
-                    console.log('[PUNTWORK] JobImportData nonce:', jobImportData.nonce);
-                    console.log('[PUNTWORK] JobImportData ajaxurl:', jobImportData.ajaxurl);
-                    console.log('[PUNTWORK] About to call JobImportAPI.processFeed...');
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Feed URL:', feeds[feed]);
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] About to call JobImportAPI.processFeed...');
 
+                    const feedStartTime = Date.now();
                     const response = await JobImportAPI.processFeed(feed);
-                    console.log('[PUNTWORK] JobImportAPI.processFeed response received');
-                    console.log('[PUNTWORK] Response success:', response.success);
-                    console.log('[PUNTWORK] Response data:', response.data);
-                    console.log('[PUNTWORK] Response message:', response.message);
-                    console.log('[PUNTWORK] Response full object:', response);
+                    const feedEndTime = Date.now();
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Feed processing took:', (feedEndTime - feedStartTime), 'ms');
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Process feed response:', response);
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Response success:', response.success);
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Response data:', response.data);
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Response message:', response.message);
 
                     PuntWorkJSLogger.debug(`Process feed ${feed} response`, 'LOGIC', response);
 
                     if (response.success) {
-                        if (!response.data || response.data.item_count === 0) {
-                            console.warn(`[PUNTWORK] WARNING: Feed ${feed} processed with success but item_count is 0!`);
+                        const itemCount = (response.data && response.data.item_count) || 0;
+                        if (itemCount === 0) {
+                            console.warn('[PUNTWORK] [DEBUG-IMPORT] WARNING: Feed', feed, 'processed with success but item_count is 0!');
                             PuntWorkJSLogger.warn(`Feed ${feed} processed with success but item_count is 0`, 'LOGIC', response);
                         }
-                        console.log('[PUNTWORK] Feed', feed, 'processed successfully - items found:', (response.data && response.data.item_count) || 0);
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] Feed', feed, 'processed successfully - items found:', itemCount);
                         JobImportUI.appendLogs((response.data && response.data.logs) || []);
-                        total_items += (response.data && response.data.item_count) || 0;
+                        total_items += itemCount;
 
                         // Update progress after successful feed processing
                         JobImportUI.updateProgress({
@@ -489,27 +511,27 @@ console.info("=== Job Import Logic Script Loaded ===");
                             skipped: 0,
                             duplicates_drafted: 0,
                             drafted_old: 0,
-                            time_elapsed: this.getElapsedTime() / 1000, // Convert to seconds for server compatibility
+                            time_elapsed: this.getElapsedTime() / 1000,
                             complete: false
                         });
                     } else {
-                        console.error(`[PUNTWORK] ERROR: Processing feed ${feed} failed:`, response);
+                        console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: Processing feed', feed, 'failed:', response);
                         PuntWorkJSLogger.error(`Processing feed ${feed} failed`, 'LOGIC', response);
                         throw new Error(`Processing feed ${feed} failed: ` + (response.message || 'Unknown error'));
                     }
                 }
 
-                console.log('[PUNTWORK] ===== PHASE 1 COMPLETE =====');
-                console.log('[PUNTWORK] Total items after feed processing:', total_items);
+                console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 1 COMPLETE =====');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Total items after feed processing:', total_items);
 
                 if (total_items === 0) {
-                    console.error('[PUNTWORK] ERROR: No items found in feeds after processing. Feeds:', feeds);
+                    console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: No items found in feeds after processing');
+                    console.error('[PUNTWORK] [DEBUG-IMPORT] Feeds processed:', feeds);
                     PuntWorkLogger.error('No items found in feeds after processing', 'LOGIC', feeds);
                     throw new Error('No items found in feeds. Please check that feeds are configured and accessible.');
                 }
 
-                console.log('[PUNTWORK] ===== PHASE 2: JSONL COMBINATION =====');
-                // Combine JSONL files
+                console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 2: JSONL COMBINATION =====');
                 $('#status-message').text('Combining JSONL files...');
                 JobImportUI.appendLogs(['Starting JSONL combination...']);
 
@@ -522,17 +544,22 @@ console.info("=== Job Import Logic Script Loaded ===");
                     skipped: 0,
                     duplicates_drafted: 0,
                     drafted_old: 0,
-                    time_elapsed: this.getElapsedTime() / 1000, // Convert to seconds for server compatibility
+                    time_elapsed: this.getElapsedTime() / 1000,
                     complete: false
                 });
 
-                console.log('[PUNTWORK] [JS-FLOW] About to call JobImportAPI.combineJsonl with total_items=' + total_items);
+                console.log('[PUNTWORK] [DEBUG-IMPORT] About to call JobImportAPI.combineJsonl with total_items=' + total_items);
+                const combineStartTime = Date.now();
                 const combineResponse = await JobImportAPI.combineJsonl(total_items);
-                console.log('[PUNTWORK] [JS-FLOW] combineJsonl response received:', combineResponse);
+                const combineEndTime = Date.now();
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Combine JSONL call took:', (combineEndTime - combineStartTime), 'ms');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Combine JSONL response:', combineResponse);
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Combine response success:', combineResponse.success);
+
                 PuntWorkJSLogger.debug('Combine JSONL response', 'LOGIC', combineResponse);
 
                 if (combineResponse.success) {
-                    console.log('[PUNTWORK] [JS-FLOW] JSONL combination successful - import should start automatically');
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] JSONL combination successful');
                     JobImportUI.appendLogs(combineResponse.data.logs || []);
 
                     // Update progress to show JSONL combination complete
@@ -544,79 +571,90 @@ console.info("=== Job Import Logic Script Loaded ===");
                         skipped: 0,
                         duplicates_drafted: 0,
                         drafted_old: 0,
-                        time_elapsed: this.getElapsedTime() / 1000, // Convert to seconds for server compatibility
+                        time_elapsed: this.getElapsedTime() / 1000,
                         complete: false
                     });
                 } else {
-                    console.error('[PUNTWORK] [JS-FLOW] JSONL combination failed:', combineResponse);
+                    console.error('[PUNTWORK] [DEBUG-IMPORT] JSONL combination failed:', combineResponse);
                     throw new Error('Combining JSONL failed: ' + (combineResponse.message || 'Unknown error'));
                 }
 
-                console.log('[PUNTWORK] ===== PHASE 2 COMPLETE =====');
-                console.log('[PUNTWORK] ===== PHASE 3: BATCH IMPORT =====');
-                // Import will start automatically after JSONL combination
+                console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 2 COMPLETE =====');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 3: BATCH IMPORT =====');
                 $('#status-message').text('Starting import...');
                 JobImportUI.appendLogs(['Starting batch import processing...']);
+
+                console.log('[PUNTWORK] [DEBUG-IMPORT] About to clear import cancel');
                 await JobImportAPI.clearImportCancel();
-                
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Import cancel cleared');
+
                 // Connect to real-time updates for import progress
                 if (window.JobImportRealtime && JobImportRealtime.isSupported()) {
-                    // Get API key from localized data or try to get it from server
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Real-time updates supported, attempting to connect');
                     let apiKey = jobImportData.api_key;
                     if (!apiKey) {
-                        // Try to get API key from server
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] No API key in jobImportData, trying to get from server');
                         try {
                             const keyResponse = await JobImportAPI.getApiKey();
                             if (keyResponse.success && keyResponse.api_key) {
                                 apiKey = keyResponse.api_key;
+                                console.log('[PUNTWORK] [DEBUG-IMPORT] Got API key from server');
                             }
                         } catch (e) {
-                            console.warn('[PUNTWORK] Could not get API key for real-time updates:', e);
+                            console.warn('[PUNTWORK] [DEBUG-IMPORT] Could not get API key for real-time updates:', e);
                         }
                     }
-                    
+
                     if (apiKey) {
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] Connecting to real-time updates with API key');
                         const connected = JobImportRealtime.connect(apiKey);
                         if (connected) {
-                            console.log('[PUNTWORK] Real-time updates connected for import progress');
+                            console.log('[PUNTWORK] [DEBUG-IMPORT] Real-time updates connected successfully');
                             PuntWorkJSLogger.info('Real-time updates connected for import progress', 'LOGIC');
                         } else {
-                            console.warn('[PUNTWORK] Failed to connect to real-time updates');
+                            console.warn('[PUNTWORK] [DEBUG-IMPORT] Failed to connect to real-time updates');
                             PuntWorkJSLogger.warn('Failed to connect to real-time updates', 'LOGIC');
                         }
                     } else {
-                        console.warn('[PUNTWORK] No API key available for real-time updates');
+                        console.warn('[PUNTWORK] [DEBUG-IMPORT] No API key available for real-time updates');
                         PuntWorkJSLogger.warn('No API key available for real-time updates', 'LOGIC');
                     }
                 } else {
-                    console.warn('[PUNTWORK] Real-time updates not supported in this browser');
+                    console.warn('[PUNTWORK] [DEBUG-IMPORT] Real-time updates not supported in this browser');
                     PuntWorkJSLogger.warn('Real-time updates not supported in this browser', 'LOGIC');
                 }
-                
-                console.log('[PUNTWORK] [JS-FLOW] Import started automatically by server after JSONL combination - no manual handleImport(0) call needed');
+
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Import started automatically by server after JSONL combination');
                 PuntWorkJSLogger.info('Import started automatically by server after JSONL combination', 'LOGIC');
-                
+
                 // Start status polling for real-time UI updates
                 if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
-                    console.log('[PUNTWORK] [JS-FLOW] Starting status polling for real-time UI updates');
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Starting status polling for real-time UI updates');
                     window.JobImportEvents.startStatusPolling();
                 }
-                
-                // The import has been started automatically by the server
-                // Status polling will show the progress
+
+                console.log('[PUNTWORK] [DEBUG-IMPORT] ===== START IMPORT PROCESS COMPLETE =====');
 
             } catch (error) {
-                console.error('[PUNTWORK] ===== START IMPORT ERROR =====');
-                console.error('[PUNTWORK] Error details:', error);
-                console.error('[PUNTWORK] Error stack:', error.stack);
+                console.error('[PUNTWORK] [DEBUG-IMPORT] ===== START IMPORT ERROR =====');
+                console.error('[PUNTWORK] [DEBUG-IMPORT] Error details:', error);
+                console.error('[PUNTWORK] [DEBUG-IMPORT] Error message:', error.message);
+                console.error('[PUNTWORK] [DEBUG-IMPORT] Error stack:', error.stack);
+                console.error('[PUNTWORK] [DEBUG-IMPORT] Current isImporting before reset:', this.isImporting);
+
                 PuntWorkJSLogger.error('Start import error', 'LOGIC', error);
                 JobImportUI.appendLogs([error.message]);
                 $('#status-message').text('Error: ' + error.message);
                 JobImportUI.resetButtons();
-                this.isImporting = false; // Ensure importing flag is reset on error
-                
+
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Resetting isImporting flag to false');
+                this.isImporting = false;
+                console.log('[PUNTWORK] [DEBUG-IMPORT] isImporting flag reset complete');
+
                 // Log failed import to history
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Logging failed import run');
                 await this.logFailedManualImportRun({ message: error.message });
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Failed import logging complete');
             }
         },
 

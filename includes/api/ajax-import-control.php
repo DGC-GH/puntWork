@@ -283,19 +283,29 @@ add_action('wp_ajax_reset_job_import_status', __NAMESPACE__ . '\\reset_job_impor
 add_action('wp_ajax_reset_job_import', __NAMESPACE__ . '\\reset_job_import_status_ajax'); // Alias for compatibility
 function reset_job_import_status_ajax()
 {
+    error_log('[PUNTWORK] [DEBUG-PHP] ===== RESET_JOB_IMPORT_STATUS_AJAX START =====');
+    error_log('[PUNTWORK] [DEBUG-PHP] Timestamp: ' . date('Y-m-d H:i:s T'));
+    error_log('[PUNTWORK] [DEBUG-PHP] POST data: ' . json_encode($_POST));
+    error_log('[PUNTWORK] [DEBUG-PHP] Memory usage: ' . memory_get_usage(true) . ' bytes');
+
     PuntWorkLogger::logAjaxRequest('reset_job_import_status', $_POST);
 
+    error_log('[PUNTWORK] [DEBUG-PHP] Starting security validation');
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('reset_job_import_status', 'job_import_nonce');
     if (is_wp_error($validation)) {
+        error_log('[PUNTWORK] [DEBUG-PHP] Security validation failed: ' . $validation->get_error_message());
         AjaxErrorHandler::sendError($validation);
-
         return;
     }
+    error_log('[PUNTWORK] [DEBUG-PHP] Security validation passed');
 
     try {
+        error_log('[PUNTWORK] [DEBUG-PHP] Starting import status reset');
         // Clear only the import status, not other options
         delete_option('job_import_status');
+        error_log('[PUNTWORK] [DEBUG-PHP] Deleted job_import_status option');
+
         // Also reset progress and related options for complete reset
         delete_option('job_import_progress');
         delete_option('job_import_processed_guids');
@@ -304,12 +314,17 @@ function reset_job_import_status_ajax()
         delete_option('job_import_batch_size');
         delete_option('job_import_consecutive_small_batches');
         delete_transient('import_cancel');
+        error_log('[PUNTWORK] [DEBUG-PHP] Deleted all related import options and transients');
 
         PuntWorkLogger::info('Import status and progress completely reset', PuntWorkLogger::CONTEXT_BATCH);
 
         PuntWorkLogger::logAjaxResponse('reset_job_import_status', ['message' => 'Import status reset']);
+        error_log('[PUNTWORK] [DEBUG-PHP] Sending success response');
         AjaxErrorHandler::sendSuccess(null, ['message' => 'Import status reset']);
+        error_log('[PUNTWORK] [DEBUG-PHP] ===== RESET_JOB_IMPORT_STATUS_AJAX SUCCESS =====');
     } catch (\Exception $e) {
+        error_log('[PUNTWORK] [DEBUG-PHP] Exception in reset_job_import_status_ajax: ' . $e->getMessage());
+        error_log('[PUNTWORK] [DEBUG-PHP] Stack trace: ' . $e->getTraceAsString());
         PuntWorkLogger::error('Reset import status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to reset import status: ' . $e->getMessage());
     }
@@ -1192,59 +1207,50 @@ function get_async_status_ajax()
 add_action('wp_ajax_process_feed', __NAMESPACE__ . '\\process_feed_ajax');
 function process_feed_ajax()
 {
-    error_log('[PUNTWORK] [AJAX-ENTRY] process_feed_ajax function called with POST data: ' . json_encode($_POST));
-    error_log('[PUNTWORK] [AJAX-ENTRY] Current timestamp: ' . date('Y-m-d H:i:s T'));
-    error_log('[PUNTWORK] [AJAX-ENTRY] Memory usage: ' . memory_get_usage(true) . ' bytes');
-    error_log('[PUNTWORK] [AJAX-ENTRY] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
-    error_log('[PUNTWORK] [AJAX-ENTRY] PHP version: ' . PHP_VERSION);
-    error_log('[PUNTWORK] [AJAX-ENTRY] WordPress version: ' . get_bloginfo('version'));
-    error_log('[PUNTWORK] [AJAX-ENTRY] Current user ID: ' . get_current_user_id());
-    error_log('[PUNTWORK] [AJAX-ENTRY] Current user capabilities: ' . (current_user_can('manage_options') ? 'admin' : 'non-admin'));
-    error_log('[PUNTWORK] [AJAX-ENTRY] Request method: ' . $_SERVER['REQUEST_METHOD'] ?? 'unknown');
-    error_log('[PUNTWORK] [AJAX-ENTRY] User agent: ' . $_SERVER['HTTP_USER_AGENT'] ?? 'unknown');
+    error_log('[PUNTWORK] [DEBUG-PHP] ===== PROCESS_FEED_AJAX START =====');
+    error_log('[PUNTWORK] [DEBUG-PHP] Timestamp: ' . date('Y-m-d H:i:s T'));
+    error_log('[PUNTWORK] [DEBUG-PHP] POST data: ' . json_encode($_POST));
+    error_log('[PUNTWORK] [DEBUG-PHP] Memory usage: ' . memory_get_usage(true) . ' bytes');
+    error_log('[PUNTWORK] [DEBUG-PHP] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
 
     PuntWorkLogger::logAjaxRequest('process_feed', $_POST);
 
     // Ensure required functions are loaded
     if (!function_exists('process_one_feed')) {
-        error_log('[PUNTWORK] [AJAX-LOAD] Loading core-structure-logic.php for process_one_feed function');
+        error_log('[PUNTWORK] [DEBUG-PHP] Loading core-structure-logic.php for process_one_feed function');
         require_once __DIR__ . '/../core/core-structure-logic.php';
-        error_log('[PUNTWORK] [AJAX-LOAD] process_one_feed function available: ' . (function_exists('process_one_feed') ? 'yes' : 'no'));
+        error_log('[PUNTWORK] [DEBUG-PHP] process_one_feed function available: ' . (function_exists('process_one_feed') ? 'yes' : 'no'));
     }
 
     // Basic security validation
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'job_import_nonce')) {
-        error_log('[PUNTWORK] [AJAX-ERROR] Nonce verification failed');
+        error_log('[PUNTWORK] [DEBUG-PHP] Nonce verification failed');
         wp_send_json_error(['message' => 'Security check failed']);
-
         return;
     }
 
     if (!current_user_can('manage_options')) {
-        error_log('[PUNTWORK] [AJAX-ERROR] Insufficient permissions');
+        error_log('[PUNTWORK] [DEBUG-PHP] Insufficient permissions');
         wp_send_json_error(['message' => 'Insufficient permissions']);
-
         return;
     }
 
     if (!isset($_POST['feed_key']) || empty($_POST['feed_key'])) {
-        error_log('[PUNTWORK] [AJAX-ERROR] Missing feed_key parameter');
+        error_log('[PUNTWORK] [DEBUG-PHP] Missing feed_key parameter');
         wp_send_json_error(['message' => 'Missing required parameter: feed_key']);
-
         return;
     }
 
     try {
         $feed_key = sanitize_text_field($_POST['feed_key']);
-        error_log('[PUNTWORK] [AJAX-PROCESS] Processing feed: ' . $feed_key);
+        error_log('[PUNTWORK] [DEBUG-PHP] Processing feed: ' . $feed_key);
 
         // Get feeds and find the URL for this feed key
         $feeds = get_feeds();
-        error_log('[PUNTWORK] [AJAX-FEEDS] Available feeds: ' . json_encode($feeds));
+        error_log('[PUNTWORK] [DEBUG-PHP] Available feeds: ' . json_encode($feeds));
         if (!isset($feeds[$feed_key])) {
-            error_log('[PUNTWORK] [AJAX-ERROR] Feed not found: ' . $feed_key);
+            error_log('[PUNTWORK] [DEBUG-PHP] Feed not found: ' . $feed_key);
             wp_send_json_error(['message' => 'Feed not found: ' . $feed_key]);
-
             return;
         }
 
@@ -1252,24 +1258,30 @@ function process_feed_ajax()
         $output_dir = ABSPATH . 'feeds/';
         $fallback_domain = 'belgiumjobs.work';
 
-        error_log('[PUNTWORK] [AJAX-SETUP] Feed URL: ' . $feed_url . ', Output dir: ' . $output_dir);
+        error_log('[PUNTWORK] [DEBUG-PHP] Feed URL: ' . $feed_url . ', Output dir: ' . $output_dir);
 
         // Ensure output directory exists
         if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
-            error_log('[PUNTWORK] [AJAX-ERROR] Feeds directory not writable: ' . $output_dir);
+            error_log('[PUNTWORK] [DEBUG-PHP] Feeds directory not writable: ' . $output_dir);
             wp_send_json_error(['message' => 'Feeds directory not writable']);
-
             return;
         }
-        error_log('[PUNTWORK] [AJAX-SETUP] Output directory ready');
+        error_log('[PUNTWORK] [DEBUG-PHP] Output directory ready');
 
         $logs = [];
-        error_log('[PUNTWORK] [AJAX-CALL] Calling process_one_feed...');
+        error_log('[PUNTWORK] [DEBUG-PHP] Calling process_one_feed...');
 
         try {
+            $start_time = microtime(true);
             $item_count = process_one_feed($feed_key, $feed_url, $output_dir, $fallback_domain, $logs);
-            error_log('[PUNTWORK] [AJAX-RESULT] process_one_feed returned item_count: ' . $item_count);
+            $end_time = microtime(true);
+            $processing_time = $end_time - $start_time;
+            error_log('[PUNTWORK] [DEBUG-PHP] process_one_feed completed in ' . round($processing_time, 2) . ' seconds');
+            error_log('[PUNTWORK] [DEBUG-PHP] process_one_feed returned item_count: ' . $item_count);
         } catch (\Exception $e) {
+            error_log('[PUNTWORK] [DEBUG-PHP] process_one_feed threw exception: ' . $e->getMessage());
+            error_log('[PUNTWORK] [DEBUG-PHP] Exception file: ' . $e->getFile() . ':' . $e->getLine());
+            error_log('[PUNTWORK] [DEBUG-PHP] Exception trace: ' . $e->getTraceAsString());
             \Puntwork\PuntWorkLogger::error('Feed processing failed with exception', \Puntwork\PuntWorkLogger::CONTEXT_AJAX, [
                 'feed_key' => $feed_key,
                 'feed_url' => $feed_url,
@@ -1277,14 +1289,10 @@ function process_feed_ajax()
                 'error_file' => $e->getFile(),
                 'error_line' => $e->getLine(),
             ]);
-            error_log('[PUNTWORK] [AJAX-EXCEPTION] process_one_feed threw exception: ' . $e->getMessage());
-            error_log('[PUNTWORK] [AJAX-EXCEPTION] Exception file: ' . $e->getFile() . ':' . $e->getLine());
-            error_log('[PUNTWORK] [AJAX-EXCEPTION] Exception trace: ' . $e->getTraceAsString());
             wp_send_json_error(['message' => 'Feed processing failed: ' . $e->getMessage()]);
-
             return;
         }
-        error_log('[PUNTWORK] [AJAX-RESULT] Logs from processing: ' . json_encode($logs));
+        error_log('[PUNTWORK] [DEBUG-PHP] Logs from processing: ' . json_encode($logs));
 
         PuntWorkLogger::info(
             'Feed processed via AJAX',
@@ -1305,7 +1313,7 @@ function process_feed_ajax()
             ]
         );
 
-        error_log('[PUNTWORK] [AJAX-SUCCESS] process_feed_ajax completed successfully');
+        error_log('[PUNTWORK] [DEBUG-PHP] ===== PROCESS_FEED_AJAX SUCCESS =====');
         wp_send_json_success(
             [
                 'feed_key' => $feed_key,
@@ -1314,8 +1322,8 @@ function process_feed_ajax()
             ]
         );
     } catch (\Exception $e) {
-        error_log('[PUNTWORK] [AJAX-EXCEPTION] process_feed_ajax exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
-        error_log('[PUNTWORK] [AJAX-EXCEPTION] Stack trace: ' . $e->getTraceAsString());
+        error_log('[PUNTWORK] [DEBUG-PHP] process_feed_ajax exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+        error_log('[PUNTWORK] [DEBUG-PHP] Stack trace: ' . $e->getTraceAsString());
         PuntWorkLogger::error('Process feed AJAX error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         wp_send_json_error(['message' => 'Failed to process feed: ' . $e->getMessage()]);
     }
@@ -1324,45 +1332,37 @@ function process_feed_ajax()
 add_action('wp_ajax_combine_jsonl', __NAMESPACE__ . '\\combine_jsonl_ajax');
 function combine_jsonl_ajax()
 {
-    error_log('[PUNTWORK] [AJAX-ENTRY] combine_jsonl_ajax function called with POST data: ' . json_encode($_POST));
-    error_log('[PUNTWORK] [AJAX-ENTRY] Current timestamp: ' . date('Y-m-d H:i:s T'));
-    error_log('[PUNTWORK] [AJAX-ENTRY] Memory usage: ' . memory_get_usage(true) . ' bytes');
-    error_log('[PUNTWORK] [AJAX-ENTRY] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
-    error_log('[PUNTWORK] [AJAX-ENTRY] PHP version: ' . PHP_VERSION);
-    error_log('[PUNTWORK] [AJAX-ENTRY] WordPress version: ' . get_bloginfo('version'));
-    error_log('[PUNTWORK] [AJAX-ENTRY] Current user ID: ' . get_current_user_id());
-    error_log('[PUNTWORK] [AJAX-ENTRY] Current user capabilities: ' . (current_user_can('manage_options') ? 'admin' : 'non-admin'));
-    error_log('[PUNTWORK] [AJAX-ENTRY] Request method: ' . $_SERVER['REQUEST_METHOD'] ?? 'unknown');
-    error_log('[PUNTWORK] [AJAX-ENTRY] User agent: ' . $_SERVER['HTTP_USER_AGENT'] ?? 'unknown');
+    error_log('[PUNTWORK] [DEBUG-PHP] ===== COMBINE_JSONL_AJAX START =====');
+    error_log('[PUNTWORK] [DEBUG-PHP] Timestamp: ' . date('Y-m-d H:i:s T'));
+    error_log('[PUNTWORK] [DEBUG-PHP] POST data: ' . json_encode($_POST));
+    error_log('[PUNTWORK] [DEBUG-PHP] Memory usage: ' . memory_get_usage(true) . ' bytes');
+    error_log('[PUNTWORK] [DEBUG-PHP] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
 
     PuntWorkLogger::logAjaxRequest('combine_jsonl', $_POST);
 
     // Ensure required functions are loaded
     if (!function_exists('combine_jsonl_files')) {
-        error_log('[PUNTWORK] [AJAX-LOAD] Loading combine-jsonl.php for combine_jsonl_files function');
+        error_log('[PUNTWORK] [DEBUG-PHP] Loading combine-jsonl.php for combine_jsonl_files function');
         require_once __DIR__ . '/../import/combine-jsonl.php';
-        error_log('[PUNTWORK] [AJAX-LOAD] combine_jsonl_files function available: ' . (function_exists('combine_jsonl_files') ? 'yes' : 'no'));
+        error_log('[PUNTWORK] [DEBUG-PHP] combine_jsonl_files function available: ' . (function_exists('combine_jsonl_files') ? 'yes' : 'no'));
     }
 
     // Basic security validation
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'job_import_nonce')) {
-        error_log('[PUNTWORK] [AJAX-ERROR] Nonce verification failed');
+        error_log('[PUNTWORK] [DEBUG-PHP] Nonce verification failed');
         wp_send_json_error(['message' => 'Security check failed']);
-
         return;
     }
 
     if (!current_user_can('manage_options')) {
-        error_log('[PUNTWORK] [AJAX-ERROR] Insufficient permissions');
+        error_log('[PUNTWORK] [DEBUG-PHP] Insufficient permissions');
         wp_send_json_error(['message' => 'Insufficient permissions']);
-
         return;
     }
 
     if (!isset($_POST['total_items']) || !is_numeric($_POST['total_items'])) {
-        error_log('[PUNTWORK] [AJAX-ERROR] Missing or invalid total_items parameter');
+        error_log('[PUNTWORK] [DEBUG-PHP] Missing or invalid total_items parameter');
         wp_send_json_error(['message' => 'Missing or invalid required parameter: total_items']);
-
         return;
     }
 
@@ -1371,34 +1371,52 @@ function combine_jsonl_ajax()
         $feeds = get_feeds();
         $output_dir = ABSPATH . 'feeds/';
 
-        error_log('[PUNTWORK] [AJAX-SETUP] Combining JSONL for ' . count($feeds) . ' feeds, total_items: ' . $total_items);
-        error_log('[PUNTWORK] [AJAX-SETUP] Available feeds: ' . json_encode($feeds));
-        error_log('[PUNTWORK] [AJAX-SETUP] Output directory: ' . $output_dir);
+        error_log('[PUNTWORK] [DEBUG-PHP] Combining JSONL for ' . count($feeds) . ' feeds, total_items: ' . $total_items);
+        error_log('[PUNTWORK] [DEBUG-PHP] Available feeds: ' . json_encode($feeds));
+        error_log('[PUNTWORK] [DEBUG-PHP] Output directory: ' . $output_dir);
 
         // Ensure output directory exists
         if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
-            error_log('[PUNTWORK] [AJAX-ERROR] Feeds directory not writable: ' . $output_dir);
+            error_log('[PUNTWORK] [DEBUG-PHP] Feeds directory not writable: ' . $output_dir);
             wp_send_json_error(['message' => 'Feeds directory not writable']);
-
             return;
         }
-        error_log('[PUNTWORK] [AJAX-SETUP] Output directory ready');
+        error_log('[PUNTWORK] [DEBUG-PHP] Output directory ready');
 
         $logs = [];
-        error_log('[PUNTWORK] [AJAX-CALL] Calling combine_jsonl_files...');
-        combine_jsonl_files($feeds, $output_dir, $total_items, $logs);
-        error_log('[PUNTWORK] [AJAX-RESULT] combine_jsonl_files completed, logs: ' . json_encode($logs));
+        error_log('[PUNTWORK] [DEBUG-PHP] Calling combine_jsonl_files...');
+
+        try {
+            $start_time = microtime(true);
+            combine_jsonl_files($feeds, $output_dir, $total_items, $logs);
+            $end_time = microtime(true);
+            $processing_time = $end_time - $start_time;
+            error_log('[PUNTWORK] [DEBUG-PHP] combine_jsonl_files completed in ' . round($processing_time, 2) . ' seconds');
+        } catch (\Exception $e) {
+            error_log('[PUNTWORK] [DEBUG-PHP] combine_jsonl_files threw exception: ' . $e->getMessage());
+            error_log('[PUNTWORK] [DEBUG-PHP] Exception file: ' . $e->getFile() . ':' . $e->getLine());
+            error_log('[PUNTWORK] [DEBUG-PHP] Exception trace: ' . $e->getTraceAsString());
+            \Puntwork\PuntWorkLogger::error('JSONL combination failed with exception', \Puntwork\PuntWorkLogger::CONTEXT_AJAX, [
+                'total_items' => $total_items,
+                'error' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+            ]);
+            wp_send_json_error(['message' => 'JSONL combination failed: ' . $e->getMessage()]);
+            return;
+        }
+        error_log('[PUNTWORK] [DEBUG-PHP] Logs from combination: ' . json_encode($logs));
 
         // Check if combined file was created and start import automatically
         $combined_file = $output_dir . 'combined-jobs.jsonl';
         if (file_exists($combined_file)) {
             $file_size = filesize($combined_file);
-            error_log('[PUNTWORK] [AJAX-RESULT] Combined file created: ' . $combined_file . ' (' . $file_size . ' bytes)');
+            error_log('[PUNTWORK] [DEBUG-PHP] Combined file created: ' . $combined_file . ' (' . $file_size . ' bytes)');
 
             // Start the import automatically after JSONL combination
             if ($file_size > 0) {
                 // Import will start automatically via scheduled import
-                error_log('[PUNTWORK] [AJAX-SCHEDULE] Scheduling automatic import start in 5 seconds');
+                error_log('[PUNTWORK] [DEBUG-PHP] Scheduling automatic import start in 5 seconds');
                 wp_schedule_single_event(time() + 5, 'puntwork_start_scheduled_import');
 
                 PuntWorkLogger::info(
@@ -1410,10 +1428,10 @@ function combine_jsonl_ajax()
                     ]
                 );
             } else {
-                error_log('[PUNTWORK] [AJAX-WARNING] Combined file created but is empty');
+                error_log('[PUNTWORK] [DEBUG-PHP] Combined file created but is empty');
             }
         } else {
-            error_log('[PUNTWORK] [AJAX-ERROR] Combined file was not created');
+            error_log('[PUNTWORK] [DEBUG-PHP] Combined file was not created');
         }
 
         PuntWorkLogger::logAjaxResponse(
@@ -1426,7 +1444,7 @@ function combine_jsonl_ajax()
             ]
         );
 
-        error_log('[PUNTWORK] [AJAX-SUCCESS] combine_jsonl_ajax completed successfully');
+        error_log('[PUNTWORK] [DEBUG-PHP] ===== COMBINE_JSONL_AJAX SUCCESS =====');
         wp_send_json_success(
             [
                 'total_items' => $total_items,
@@ -1436,8 +1454,8 @@ function combine_jsonl_ajax()
             ]
         );
     } catch (\Exception $e) {
-        error_log('[PUNTWORK] [AJAX-EXCEPTION] combine_jsonl_ajax exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
-        error_log('[PUNTWORK] [AJAX-EXCEPTION] Stack trace: ' . $e->getTraceAsString());
+        error_log('[PUNTWORK] [DEBUG-PHP] combine_jsonl_ajax exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+        error_log('[PUNTWORK] [DEBUG-PHP] Stack trace: ' . $e->getTraceAsString());
         PuntWorkLogger::error('Combine JSONL AJAX error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         wp_send_json_error(['message' => 'Failed to combine JSONL files: ' . $e->getMessage()]);
     }
