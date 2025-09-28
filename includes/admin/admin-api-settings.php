@@ -213,6 +213,244 @@ function api_settings_page()
 					</div>
 				</div>
 			</div>
+
+			<div class="puntwork-api-section">
+				<h2><?php _e('Dynamic Rate Limiting', 'puntwork'); ?></h2>
+				<p><?php _e('Configure intelligent rate limiting that automatically adjusts based on server performance and usage patterns.', 'puntwork'); ?></p>
+
+				<?php
+                // Handle dynamic rate limit form submissions
+                if (isset($_POST['update_dynamic_rate_config']) && check_admin_referer('puntwork_dynamic_rate_limits')) {
+                    $dynamic_config = [
+                        'enabled' => isset($_POST['dynamic_enabled']) ? true : false,
+                        'monitoring_interval' => intval($_POST['monitoring_interval'] ?? 60),
+                        'adjustment_interval' => intval($_POST['adjustment_interval'] ?? 300),
+                        'max_adjustment_percentage' => intval($_POST['max_adjustment_percentage'] ?? 200),
+                        'min_adjustment_percentage' => intval($_POST['min_adjustment_percentage'] ?? 25),
+                        'cpu_threshold_high' => intval($_POST['cpu_threshold_high'] ?? 80),
+                        'cpu_threshold_low' => intval($_POST['cpu_threshold_low'] ?? 30),
+                        'memory_threshold_high' => intval($_POST['memory_threshold_high'] ?? 85),
+                        'memory_threshold_low' => intval($_POST['memory_threshold_low'] ?? 50),
+                        'response_time_threshold' => floatval($_POST['response_time_threshold'] ?? 2.0),
+                        'error_rate_threshold' => intval($_POST['error_rate_threshold'] ?? 10),
+                        'import_boost_factor' => floatval($_POST['import_boost_factor'] ?? 1.5),
+                        'peak_hours_boost' => floatval($_POST['peak_hours_boost'] ?? 1.2),
+                        'off_peak_reduction' => floatval($_POST['off_peak_reduction'] ?? 0.8),
+                        'peak_hours_start' => intval($_POST['peak_hours_start'] ?? 9),
+                        'peak_hours_end' => intval($_POST['peak_hours_end'] ?? 17),
+                    ];
+
+                    if (\Puntwork\DynamicRateLimiter::updateConfig($dynamic_config)) {
+                        echo '<div class="notice notice-success"><p>' . __('Dynamic rate limiting configuration updated successfully!', 'puntwork') . '</p></div>';
+                    } else {
+                        echo '<div class="notice notice-error"><p>' . __('Failed to update dynamic rate limiting configuration.', 'puntwork') . '</p></div>';
+                    }
+                }
+
+                if (isset($_POST['reset_dynamic_rate_metrics']) && check_admin_referer('puntwork_dynamic_rate_limits')) {
+                    if (\Puntwork\DynamicRateLimiter::reset()) {
+                        echo '<div class="notice notice-success"><p>' . __('Dynamic rate limiting metrics reset successfully!', 'puntwork') . '</p></div>';
+                    } else {
+                        echo '<div class="notice notice-error"><p>' . __('Failed to reset dynamic rate limiting metrics.', 'puntwork') . '</p></div>';
+                    }
+                }
+
+                // Get current dynamic configuration
+                $dynamic_config = \Puntwork\DynamicRateLimiter::getConfig();
+                $dynamic_status = \Puntwork\DynamicRateLimiter::getStatus();
+                ?>
+
+				<form method="post">
+					<?php wp_nonce_field('puntwork_dynamic_rate_limits'); ?>
+
+					<table class="wp-list-table widefat fixed striped">
+						<thead>
+							<tr>
+								<th><?php _e('Setting', 'puntwork'); ?></th>
+								<th><?php _e('Value', 'puntwork'); ?></th>
+								<th><?php _e('Description', 'puntwork'); ?></th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><strong><?php _e('Enable Dynamic Rate Limiting', 'puntwork'); ?></strong></td>
+								<td>
+									<input type="checkbox" name="dynamic_enabled" value="1" <?php checked($dynamic_config['enabled']); ?> />
+								</td>
+								<td><?php _e('Enable automatic rate limit adjustments based on system performance', 'puntwork'); ?></td>
+							</tr>
+							<tr>
+								<td><?php _e('Monitoring Interval', 'puntwork'); ?></td>
+								<td>
+									<input type="number" name="monitoring_interval" value="<?php echo esc_attr($dynamic_config['monitoring_interval']); ?>" min="10" max="3600" class="small-text" />
+									<span class="description"><?php _e('seconds', 'puntwork'); ?></span>
+								</td>
+								<td><?php _e('How often to collect performance metrics', 'puntwork'); ?></td>
+							</tr>
+							<tr>
+								<td><?php _e('Adjustment Interval', 'puntwork'); ?></td>
+								<td>
+									<input type="number" name="adjustment_interval" value="<?php echo esc_attr($dynamic_config['adjustment_interval']); ?>" min="60" max="3600" class="small-text" />
+									<span class="description"><?php _e('seconds', 'puntwork'); ?></span>
+								</td>
+								<td><?php _e('How often to recalculate rate limit adjustments', 'puntwork'); ?></td>
+							</tr>
+							<tr>
+								<td><?php _e('Max Adjustment %', 'puntwork'); ?></td>
+								<td>
+									<input type="number" name="max_adjustment_percentage" value="<?php echo esc_attr($dynamic_config['max_adjustment_percentage']); ?>" min="100" max="1000" class="small-text" />
+									<span class="description">%</span>
+								</td>
+								<td><?php _e('Maximum rate limit increase (as percentage of base)', 'puntwork'); ?></td>
+							</tr>
+							<tr>
+								<td><?php _e('Min Adjustment %', 'puntwork'); ?></td>
+								<td>
+									<input type="number" name="min_adjustment_percentage" value="<?php echo esc_attr($dynamic_config['min_adjustment_percentage']); ?>" min="1" max="100" class="small-text" />
+									<span class="description">%</span>
+								</td>
+								<td><?php _e('Minimum rate limit (as percentage of base)', 'puntwork'); ?></td>
+							</tr>
+							<tr>
+								<td><?php _e('High CPU Threshold', 'puntwork'); ?></td>
+								<td>
+									<input type="number" name="cpu_threshold_high" value="<?php echo esc_attr($dynamic_config['cpu_threshold_high']); ?>" min="50" max="100" class="small-text" />
+									<span class="description">%</span>
+								</td>
+								<td><?php _e('CPU usage above this triggers rate limit reduction', 'puntwork'); ?></td>
+							</tr>
+							<tr>
+								<td><?php _e('Low CPU Threshold', 'puntwork'); ?></td>
+								<td>
+									<input type="number" name="cpu_threshold_low" value="<?php echo esc_attr($dynamic_config['cpu_threshold_low']); ?>" min="1" max="50" class="small-text" />
+									<span class="description">%</span>
+								</td>
+								<td><?php _e('CPU usage below this allows rate limit increase', 'puntwork'); ?></td>
+							</tr>
+							<tr>
+								<td><?php _e('High Memory Threshold', 'puntwork'); ?></td>
+								<td>
+									<input type="number" name="memory_threshold_high" value="<?php echo esc_attr($dynamic_config['memory_threshold_high']); ?>" min="50" max="100" class="small-text" />
+									<span class="description">%</span>
+								</td>
+								<td><?php _e('Memory usage above this triggers rate limit reduction', 'puntwork'); ?></td>
+							</tr>
+							<tr>
+								<td><?php _e('Low Memory Threshold', 'puntwork'); ?></td>
+								<td>
+									<input type="number" name="memory_threshold_low" value="<?php echo esc_attr($dynamic_config['memory_threshold_low']); ?>" min="1" max="80" class="small-text" />
+									<span class="description">%</span>
+								</td>
+								<td><?php _e('Memory usage below this allows rate limit increase', 'puntwork'); ?></td>
+							</tr>
+							<tr>
+								<td><?php _e('Response Time Threshold', 'puntwork'); ?></td>
+								<td>
+									<input type="number" name="response_time_threshold" value="<?php echo esc_attr($dynamic_config['response_time_threshold']); ?>" min="0.1" max="10" step="0.1" class="small-text" />
+									<span class="description"><?php _e('seconds', 'puntwork'); ?></span>
+								</td>
+								<td><?php _e('Response time above this triggers rate limit reduction', 'puntwork'); ?></td>
+							</tr>
+							<tr>
+								<td><?php _e('Error Rate Threshold', 'puntwork'); ?></td>
+								<td>
+									<input type="number" name="error_rate_threshold" value="<?php echo esc_attr($dynamic_config['error_rate_threshold']); ?>" min="1" max="50" class="small-text" />
+									<span class="description">%</span>
+								</td>
+								<td><?php _e('Error rate above this triggers rate limit reduction', 'puntwork'); ?></td>
+							</tr>
+							<tr>
+								<td><?php _e('Import Boost Factor', 'puntwork'); ?></td>
+								<td>
+									<input type="number" name="import_boost_factor" value="<?php echo esc_attr($dynamic_config['import_boost_factor']); ?>" min="1.0" max="3.0" step="0.1" class="small-text" />
+									<span class="description">x</span>
+								</td>
+								<td><?php _e('Multiplier for import operations', 'puntwork'); ?></td>
+							</tr>
+							<tr>
+								<td><?php _e('Peak Hours Boost', 'puntwork'); ?></td>
+								<td>
+									<input type="number" name="peak_hours_boost" value="<?php echo esc_attr($dynamic_config['peak_hours_boost']); ?>" min="1.0" max="2.0" step="0.1" class="small-text" />
+									<span class="description">x</span>
+								</td>
+								<td><?php _e('Multiplier during peak hours', 'puntwork'); ?></td>
+							</tr>
+							<tr>
+								<td><?php _e('Off-Peak Reduction', 'puntwork'); ?></td>
+								<td>
+									<input type="number" name="off_peak_reduction" value="<?php echo esc_attr($dynamic_config['off_peak_reduction']); ?>" min="0.1" max="1.0" step="0.1" class="small-text" />
+									<span class="description">x</span>
+								</td>
+								<td><?php _e('Multiplier during off-peak hours', 'puntwork'); ?></td>
+							</tr>
+							<tr>
+								<td><?php _e('Peak Hours Start', 'puntwork'); ?></td>
+								<td>
+									<input type="number" name="peak_hours_start" value="<?php echo esc_attr($dynamic_config['peak_hours_start']); ?>" min="0" max="23" class="small-text" />
+									<span class="description"><?php _e('hour (24h)', 'puntwork'); ?></span>
+								</td>
+								<td><?php _e('Start hour for peak hours (0-23)', 'puntwork'); ?></td>
+							</tr>
+							<tr>
+								<td><?php _e('Peak Hours End', 'puntwork'); ?></td>
+								<td>
+									<input type="number" name="peak_hours_end" value="<?php echo esc_attr($dynamic_config['peak_hours_end']); ?>" min="0" max="23" class="small-text" />
+									<span class="description"><?php _e('hour (24h)', 'puntwork'); ?></span>
+								</td>
+								<td><?php _e('End hour for peak hours (0-23)', 'puntwork'); ?></td>
+							</tr>
+						</tbody>
+					</table>
+
+					<div style="margin-top: 20px;">
+						<input type="submit" name="update_dynamic_rate_config" value="<?php esc_attr_e('Update Dynamic Configuration', 'puntwork'); ?>"
+								class="puntwork-btn puntwork-btn--primary" />
+
+						<input type="submit" name="reset_dynamic_rate_metrics" value="<?php esc_attr_e('Reset Metrics', 'puntwork'); ?>"
+								class="puntwork-btn puntwork-btn--outline"
+								onclick="return confirm('<?php esc_js(__('Are you sure you want to reset all dynamic rate limiting metrics?', 'puntwork')); ?>');" />
+
+						<a href="<?php echo esc_url(admin_url('admin.php?page=puntwork-api-settings')); ?>" class="puntwork-btn puntwork-btn--outline">
+							<?php _e('Refresh', 'puntwork'); ?>
+						</a>
+					</div>
+				</form>
+
+				<h3><?php _e('Dynamic Rate Limiting Status', 'puntwork'); ?></h3>
+				<div class="dynamic-rate-status">
+					<div class="status-grid">
+						<div class="status-item">
+							<strong><?php _e('Status:', 'puntwork'); ?></strong>
+							<span class="status-indicator <?php echo $dynamic_status['enabled'] ? 'enabled' : 'disabled'; ?>">
+								<?php echo $dynamic_status['enabled'] ? __('Enabled', 'puntwork') : __('Disabled', 'puntwork'); ?>
+							</span>
+						</div>
+						<div class="status-item">
+							<strong><?php _e('Total Metrics:', 'puntwork'); ?></strong>
+							<span><?php echo number_format($dynamic_status['total_metrics']); ?></span>
+						</div>
+						<div class="status-item">
+							<strong><?php _e('Recent Metrics:', 'puntwork'); ?></strong>
+							<span><?php echo number_format($dynamic_status['recent_metrics']); ?></span>
+						</div>
+						<div class="status-item">
+							<strong><?php _e('Current Load:', 'puntwork'); ?></strong>
+							<span><?php echo number_format($dynamic_status['current_load'], 2); ?></span>
+						</div>
+						<div class="status-item">
+							<strong><?php _e('Current Memory:', 'puntwork'); ?></strong>
+							<span><?php echo number_format($dynamic_status['current_memory'], 1); ?>%</span>
+						</div>
+						<div class="status-item">
+							<strong><?php _e('Current CPU:', 'puntwork'); ?></strong>
+							<span><?php echo number_format($dynamic_status['current_cpu'], 1); ?>%</span>
+						</div>
+					</div>
+					<p class="description" style="margin-top: 15px;">
+						<?php _e('Dynamic rate limiting automatically adjusts limits based on server performance. Enable it to allow intelligent scaling of rate limits.', 'puntwork'); ?>
+					</p>
+				</div>
+			</div>
 		</div>
 	</div>
 
@@ -407,6 +645,106 @@ function api_settings_page()
 
 			// Auto-refresh rate limit status every 30 seconds
 			setInterval(loadRateLimitStatus, 30000);
+
+			// Dynamic rate limiting functionality
+			function refreshDynamicStatus() {
+				const statusContainer = $('.dynamic-rate-status .status-grid');
+				statusContainer.addClass('loading');
+
+				$.ajax({
+					url: ajaxurl,
+					type: 'POST',
+					data: {
+						action: 'get_dynamic_rate_status',
+						nonce: '<?php echo wp_create_nonce('puntwork_dynamic_rate_limits'); ?>'
+					},
+					success: function(response) {
+						if (response.success) {
+							updateDynamicStatusDisplay(response.data);
+						}
+					},
+					error: function() {
+						console.error('Failed to load dynamic rate limiting status');
+					},
+					complete: function() {
+						statusContainer.removeClass('loading');
+					}
+				});
+			}
+
+			function updateDynamicStatusDisplay(data) {
+				// Update status indicator
+				const statusIndicator = $('.status-indicator');
+				statusIndicator.removeClass('enabled disabled');
+				statusIndicator.addClass(data.enabled ? 'enabled' : 'disabled');
+				statusIndicator.text(data.enabled ? '<?php esc_js(_e('Enabled', 'puntwork')); ?>' : '<?php esc_js(_e('Disabled', 'puntwork')); ?>');
+
+				// Update metrics
+				$('.status-item:contains("Total Metrics") span').text(number_format(data.total_metrics));
+				$('.status-item:contains("Recent Metrics") span').text(number_format(data.recent_metrics));
+				$('.status-item:contains("Current Load") span').text(number_format(data.current_load, 2));
+				$('.status-item:contains("Current Memory") span').text(number_format(data.current_memory, 1) + '%');
+				$('.status-item:contains("Current CPU") span').text(number_format(data.current_cpu, 1) + '%');
+			}
+
+			function number_format(number, decimals = 0) {
+				return new Intl.NumberFormat('en-US', {
+					minimumFractionDigits: decimals,
+					maximumFractionDigits: decimals
+				}).format(number);
+			}
+
+			// Auto-refresh dynamic status every 60 seconds
+			setInterval(refreshDynamicStatus, 60000);
+
+			// Handle dynamic configuration form validation
+			$('form input[name="update_dynamic_rate_config"]').closest('form').on('submit', function(e) {
+				const form = $(this);
+				const inputs = form.find('input[type="number"]');
+				let isValid = true;
+
+				inputs.each(function() {
+					const input = $(this);
+					const value = parseFloat(input.val());
+					const min = parseFloat(input.attr('min'));
+					const max = parseFloat(input.attr('max'));
+
+					if (value < min || value > max) {
+						alert('<?php esc_js(_e('Please enter valid values within the allowed ranges.', 'puntwork')); ?>');
+						input.focus();
+						isValid = false;
+						return false;
+					}
+				});
+
+				if (!isValid) {
+					e.preventDefault();
+					return false;
+				}
+
+				// Show loading state
+				const submitBtn = form.find('input[type="submit"][name="update_dynamic_rate_config"]');
+				const originalText = submitBtn.val();
+				submitBtn.val('<?php esc_js(_e('Updating...', 'puntwork')); ?>').prop('disabled', true);
+
+				// Re-enable after form submission (will be handled by page reload)
+				setTimeout(function() {
+					submitBtn.val(originalText).prop('disabled', false);
+				}, 1000);
+			});
+
+			// Handle reset metrics confirmation
+			$('input[name="reset_dynamic_rate_metrics"]').on('click', function(e) {
+				const confirmed = confirm('<?php esc_js(_e('Are you sure you want to reset all dynamic rate limiting metrics? This will clear all performance data and may temporarily affect rate limit accuracy.', 'puntwork')); ?>');
+				if (!confirmed) {
+					e.preventDefault();
+					return false;
+				}
+
+				const btn = $(this);
+				const originalText = btn.val();
+				btn.val('<?php esc_js(_e('Resetting...', 'puntwork')); ?>').prop('disabled', true);
+			});
 		});
 	</script>
 	<?php

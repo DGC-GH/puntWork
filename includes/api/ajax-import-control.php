@@ -989,6 +989,32 @@ function get_rate_limit_status_ajax()
     }
 }
 
+add_action('wp_ajax_get_dynamic_rate_status', __NAMESPACE__ . '\\get_dynamic_rate_status_ajax');
+function get_dynamic_rate_status_ajax()
+{
+    PuntWorkLogger::logAjaxRequest('get_dynamic_rate_status', $_POST);
+
+    // Use comprehensive security validation
+    $validation = SecurityUtils::validateAjaxRequest('get_dynamic_rate_status', 'puntwork_dynamic_rate_limits');
+    if (is_wp_error($validation)) {
+        AjaxErrorHandler::sendError($validation);
+        return;
+    }
+
+    try {
+        $status = \Puntwork\DynamicRateLimiter::getStatus();
+
+        PuntWorkLogger::logAjaxResponse('get_dynamic_rate_status', [
+            'enabled' => $status['enabled'],
+            'total_metrics' => $status['total_metrics']
+        ]);
+        AjaxErrorHandler::sendSuccess($status);
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Get dynamic rate status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        AjaxErrorHandler::sendError('Failed to get dynamic rate limiting status: ' . $e->getMessage());
+    }
+}
+
 add_action('wp_ajax_get_api_key', __NAMESPACE__ . '\\get_api_key_ajax');
 function get_api_key_ajax()
 {

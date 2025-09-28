@@ -13,6 +13,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Include dynamic rate limiter
+require_once __DIR__ . '/DynamicRateLimiter.php';
+
 /**
  * Security utilities class.
  */
@@ -184,7 +187,7 @@ class SecurityUtils
         array $validation_rules = []
     ) {
         try {
-            // Check rate limiting first with action-specific limits
+            // Check rate limiting first with dynamic rate limiting
             $rate_limit_check = self::checkRateLimit($action);
             if (is_wp_error($rate_limit_check)) {
                 PuntWorkLogger::warn("Rate limit exceeded for action: {$action}", PuntWorkLogger::CONTEXT_SECURITY);
@@ -248,6 +251,25 @@ class SecurityUtils
      * @return bool|WP_Error True if allowed, WP_Error if rate limited
      */
     public static function checkRateLimit(string $action, ?int $max_requests = null, ?int $time_window = null)
+    {
+        // Include dynamic rate limiter if available
+        if (class_exists('\Puntwork\DynamicRateLimiter')) {
+            return \Puntwork\DynamicRateLimiter::applyDynamicRateLimit($action);
+        }
+
+        // Fallback to static rate limiting if dynamic limiter is not available
+        return self::checkStaticRateLimit($action, $max_requests, $time_window);
+    }
+
+    /**
+     * Check static rate limiting for AJAX requests (fallback method).
+     *
+     * @param  string $action       Action name
+     * @param  ?int   $max_requests Maximum requests per time window (optional override)
+     * @param  ?int   $time_window  Time window in seconds (optional override)
+     * @return bool|WP_Error True if allowed, WP_Error if rate limited
+     */
+    private static function checkStaticRateLimit(string $action, ?int $max_requests = null, ?int $time_window = null)
     {
         // Use dynamic configuration if no overrides provided
         if ($max_requests == null || $time_window == null) {

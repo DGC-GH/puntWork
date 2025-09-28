@@ -114,7 +114,7 @@ add debug logs where neccesery to pinpoint and prevent issues.
 
 ## Project Improvment Protocol:
 
-1. **Initial Analysis**: **Always check debug.log via FTP (using credentials from .env) for recent errors and deployment issues**. Look for errors in debug.log. Look for problems to solve from debug.log. Scan structure, review dependencies, identify smells, analyze errors and issues, evaluate features, assess performance.  **Also verify that the previously pushed commit changes are present on the server via FTP. If not, stop and investigate the automatic GIT deploy issue on Hostinger**.
+1. **Initial Analysis**: **Always redownload debug.log via FTP (using credentials from .env) for recent errors and deployment issues**. Look for errors in debug.log. Look for problems to solve from debug.log. Scan structure, review dependencies, identify smells, analyze errors and issues, evaluate features, assess performance.  **Also verify that the previously pushed commit changes are present on the server via FTP. If not, stop and investigate the automatic GIT deploy issue on Hostinger**.
 
 2. **Propose Improvements**: Suggest errors and issues fixes and enhancements, grouped by category (e.g., speed, simplicity). Add or modify the debug logs to prevent the issues in the future.
 
