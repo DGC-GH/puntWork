@@ -336,6 +336,9 @@ console.info("=== Job Import Logic Script Loaded ===");
             console.log('[PUNTWORK] [JS-FLOW] Browser: ' + navigator.userAgent);
             console.log('[PUNTWORK] [JS-FLOW] Window location: ' + window.location.href);
             console.log('[PUNTWORK] [JS-FLOW] jQuery version: ' + $.fn.jquery);
+            console.log('[PUNTWORK] [JS-FLOW] Current isImporting flag:', this.isImporting);
+            console.log('[PUNTWORK] [JS-FLOW] Start time:', this.startTime);
+            console.log('[PUNTWORK] [JS-FLOW] Elapsed time:', this.getElapsedTime());
             PuntWorkJSLogger.info('Start Import clicked', 'LOGIC');
             console.log('[PUNTWORK] Start Import clicked');
             console.log('[PUNTWORK] jobImportData:', jobImportData);
@@ -344,16 +347,26 @@ console.info("=== Job Import Logic Script Loaded ===");
             console.log('[PUNTWORK] ajaxurl:', jobImportData.ajaxurl);
 
             if (this.isImporting) {
-                console.log('[PUNTWORK] Import already in progress');
-                return;
+                console.log('[PUNTWORK] [ERROR] Import already in progress - blocking start');
+                console.log('[PUNTWORK] [DEBUG] isImporting:', this.isImporting);
+                console.log('[PUNTWORK] [DEBUG] startTime:', this.startTime);
+                console.log('[PUNTWORK] [DEBUG] elapsed time:', this.getElapsedTime());
+                PuntWorkJSLogger.warn('Import already in progress - blocking start', 'LOGIC', {
+                    isImporting: this.isImporting,
+                    startTime: this.startTime,
+                    elapsed: this.getElapsedTime()
+                });
+                // Force reset the flag if it's been too long (stuck import)
+                if (this.startTime && (Date.now() - this.startTime) > 300000) { // 5 minutes
+                    console.log('[PUNTWORK] [DEBUG] Import has been running for >5 minutes, forcing reset');
+                    this.isImporting = false;
+                    PuntWorkJSLogger.warn('Forcing import flag reset due to timeout', 'LOGIC');
+                } else {
+                    return;
+                }
             }
 
-            // Stop any existing status polling (from scheduled imports)
-            if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
-                console.log('[PUNTWORK] [JS-FLOW] Stopping existing status polling');
-                window.JobImportEvents.stopStatusPolling();
-            }
-
+            console.log('[PUNTWORK] [JS-FLOW] Import not in progress, proceeding...');
             this.isImporting = true;
             console.log('[PUNTWORK] [JS-FLOW] Set isImporting to true');
 
@@ -783,8 +796,9 @@ console.info("=== Job Import Logic Script Loaded ===");
         debugImportStatus: async function() {
             console.log('[PUNTWORK] ===== IMPORT DEBUG STATUS =====');
             console.log('Is importing:', this.isImporting);
-            console.log('Start time:', this.startTime ? new Date(this.startTime * 1000).toISOString() : 'Not set');
-            console.log('Elapsed time:', this.getElapsedTime(), 'seconds');
+            console.log('Start time:', this.startTime ? new Date(this.startTime).toISOString() : 'Not set');
+            console.log('Elapsed time:', this.getElapsedTime(), 'milliseconds');
+            console.log('Elapsed time (seconds):', this.getElapsedTime() / 1000, 'seconds');
 
             try {
                 const statusResponse = await JobImportAPI.getImportStatus();
@@ -829,6 +843,44 @@ console.info("=== Job Import Logic Script Loaded ===");
             }
 
             console.log('===== END DEBUG STATUS =====');
+        },
+
+        /**
+         * Force reset import state - call from browser console if import gets stuck
+         * Usage: JobImportLogic.forceResetImport()
+         */
+        forceResetImport: function() {
+            console.log('[PUNTWORK] ===== FORCE RESET IMPORT STATE =====');
+            console.log('Previous isImporting:', this.isImporting);
+            console.log('Previous startTime:', this.startTime);
+
+            this.isImporting = false;
+            this.startTime = null;
+
+            // Stop status polling
+            if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
+                window.JobImportEvents.stopStatusPolling();
+                console.log('Stopped status polling');
+            }
+
+            // Disconnect real-time updates
+            if (window.JobImportRealtime && window.JobImportRealtime.disconnect) {
+                window.JobImportRealtime.disconnect();
+                console.log('Disconnected real-time updates');
+            }
+
+            // Reset UI
+            JobImportUI.resetButtons();
+            JobImportUI.clearProgress();
+            JobImportUI.hideImportUI();
+            $('#status-message').text('Import state reset - ready to start');
+
+            console.log('Import state has been force reset');
+            console.log('New isImporting:', this.isImporting);
+            console.log('New startTime:', this.startTime);
+            console.log('===== FORCE RESET COMPLETE =====');
+
+            PuntWorkJSLogger.warn('Import state force reset from debug function', 'LOGIC');
         },
     };
 
