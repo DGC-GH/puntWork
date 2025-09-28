@@ -94,9 +94,9 @@ class FeedProcessor {
 			}
 		}
 
-		// Default to XML for backward compatibility
-		error_log( '[PUNTWORK] detectFormat: Defaulting to XML for URL: ' . $url );
-		return self::FORMAT_XML;
+		// Default to JSON for modern feeds
+		error_log( '[PUNTWORK] detectFormat: Defaulting to JSON for URL: ' . $url );
+		return self::FORMAT_JSON;
 	}
 
 	/**

@@ -104,11 +104,9 @@
 - **Prompt Update Suggestions**: Propose concrete additions, modifications, or removals to this prompt document (e.g., new tools, biases, or protocols). Format suggestions as bullet points with rationale, and include example text for changes. Prioritize enhancements that improve speed, simplicity, security, or adaptability to new project types.
 - **Implementation Guidance**: If approved by the user, apply the suggested changes to `prompt.md` immediately, then commit and push to ensure the updated prompt is available for future conversations. If no enhancements are needed, state "No updates required" with a brief justification.
 
-## Protocol:
+## Project Improvment Protocol:
 
-Adapt the following workflow based on context. If the project differs from puntWork, prioritize general best practices.
-
-1. **Initial Analysis**: **Always check debug.log via FTP (using credentials from .env) for recent errors and deployment issues**. Look for errors in debug.log. Scan structure, review dependencies, identify smells, analyze errors and issues, evaluate features, assess performance.  **Also verify that the previously pushed commit changes are present on the server via FTP. If not, stop and investigate the automatic GIT deploy issue on Hostinger**.
+1. **Initial Analysis**: **Always check debug.log via FTP (using credentials from .env) for recent errors and deployment issues**. Look for errors in debug.log. Look for problems to solve from debug.log. Scan structure, review dependencies, identify smells, analyze errors and issues, evaluate features, assess performance.  **Also verify that the previously pushed commit changes are present on the server via FTP. If not, stop and investigate the automatic GIT deploy issue on Hostinger**.
 
 2. **Propose Improvements**: Suggest errors and issues fixes and enhancements, grouped by category (e.g., speed, simplicity). Add or modify the debug logs to prevent the issues in the future.
 

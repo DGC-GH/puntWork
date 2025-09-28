@@ -192,19 +192,19 @@ class PuntworkHorizontalScalingManager {
 			}
 
 			// Table exists but is malformed - recreate it
-			$sql = "CREATE TABLE $table_name (";
-			$sql .= "instance_id varchar(100) NOT NULL,";
-			$sql .= "server_name varchar(100) NOT NULL,";
-			$sql .= "ip_address varchar(45) NOT NULL,";
-			$sql .= "role varchar(50) NOT NULL,";
+			$sql  = "CREATE TABLE $table_name (";
+			$sql .= 'instance_id varchar(100) NOT NULL,';
+			$sql .= 'server_name varchar(100) NOT NULL,';
+			$sql .= 'ip_address varchar(45) NOT NULL,';
+			$sql .= 'role varchar(50) NOT NULL,';
 			$sql .= "status enum('active','inactive','maintenance') DEFAULT 'active',";
-			$sql .= "cpu_count int(11) DEFAULT 1,";
-			$sql .= "memory_limit bigint(20) DEFAULT 0,";
-			$sql .= "last_seen datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,";
-			$sql .= "created_at datetime DEFAULT CURRENT_TIMESTAMP,";
-			$sql .= "PRIMARY KEY (instance_id),";
-			$sql .= "KEY server_name (server_name),";
-			$sql .= "KEY status_last_seen (status, last_seen)";
+			$sql .= 'cpu_count int(11) DEFAULT 1,';
+			$sql .= 'memory_limit bigint(20) DEFAULT 0,';
+			$sql .= 'last_seen datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,';
+			$sql .= 'created_at datetime DEFAULT CURRENT_TIMESTAMP,';
+			$sql .= 'PRIMARY KEY (instance_id),';
+			$sql .= 'KEY server_name (server_name),';
+			$sql .= 'KEY status_last_seen (status, last_seen)';
 			$sql .= ") $charset_collate;";
 
 			include_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -213,8 +213,7 @@ class PuntworkHorizontalScalingManager {
 			// Mark table as verified after creation
 			set_transient( 'puntwork_instances_table_verified', true, 86400 );
 		}
-
-    } // <-- Add this closing brace to end createInstanceTable()
+	} // <-- Add this closing brace to end createInstanceTable()
 
 	/**
 	 * Register this instance

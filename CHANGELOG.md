@@ -14,11 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Protocol update: Always check debug.log for new errors before running tests
 
 ### Fixed
-- Fixed risky PHPUnit test in MultiSiteTest::testNetworkSyncDataStructure by adding assertion
-- Resolved PHP 8.4 deprecation warnings in SecurityUtils.php for nullable parameters
-- Auto-fixed 4551 PHPCS violations across 122 files for PSR-12 compliance
-- Auto-fixed 56527 additional PHPCS violations across 124 files for PSR-12 compliance, reducing errors to 0 with only warnings remaining
-- Renamed Puntwork_CRM_Admin class back to PuntworkCrmAdmin for final PascalCase compliance
+- Changed default feed format detection from XML to JSON to properly handle modern API feeds
+- Fixed job board configuration issues for API-based feeds
 - Fixed undefined function load_and_prepare_batch_items by adding namespace prefix \Puntwork\
 - Optimized instances table creation check with transient caching to eliminate repetitive database queries and logging
 - Improved accessibility error handling for non-array menu parameters
