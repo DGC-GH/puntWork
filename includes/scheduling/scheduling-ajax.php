@@ -663,6 +663,10 @@ function run_scheduled_import(bool $test_mode = false, string $trigger_type = 's
     $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
     $start_time = microtime(true);
 
+    // Initialize memory management for large batch operations
+    \Puntwork\Utilities\MemoryManager::reset();
+    \Puntwork\Utilities\MemoryManager::optimizeForLargeBatch();
+
     if ($debug_mode) {
         error_log('[PUNTWORK] [SCHEDULED-IMPORT] ===== STARTING SCHEDULED IMPORT =====');
         error_log('[PUNTWORK] [SCHEDULED-IMPORT] Test mode: ' . ($test_mode ? 'true' : 'false'));
@@ -751,6 +755,15 @@ function run_scheduled_import(bool $test_mode = false, string $trigger_type = 's
             }
 
             $all_logs = array_merge($all_logs, $logs);
+
+            // Check memory usage after each feed processing
+            $memory_check = \Puntwork\Utilities\MemoryManager::checkMemoryUsage($total_items);
+            if (!empty($memory_check['actions_taken'])) {
+                $all_logs[] = 'Memory management triggered: ' . implode(', ', $memory_check['actions_taken']) . ' (Usage: ' . round($memory_check['memory_ratio'] * 100, 1) . '%)';
+                if ($debug_mode) {
+                    error_log('[PUNTWORK] [SCHEDULED-IMPORT] Memory check after feed ' . $feed_key . ': ' . json_encode($memory_check));
+                }
+            }
         }
 
         if ($debug_mode) {
@@ -760,6 +773,19 @@ function run_scheduled_import(bool $test_mode = false, string $trigger_type = 's
         // Step 3: Combine JSONL files
         if (!function_exists('combine_jsonl_files')) {
             require_once __DIR__ . '/../import/combine-jsonl.php';
+        }
+
+        // Check memory before combining
+        $memory_check = \Puntwork\Utilities\MemoryManager::checkMemoryUsage($total_items);
+        if ($memory_check['memory_ratio'] > 0.7) {
+            $all_logs[] = 'High memory usage before combining: ' . round($memory_check['memory_ratio'] * 100, 1) . '% - forcing cleanup';
+            gc_collect_cycles();
+            if (function_exists('wp_cache_flush')) {
+                wp_cache_flush();
+            }
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [SCHEDULED-IMPORT] Memory cleanup before combining: ' . json_encode($memory_check));
+            }
         }
 
         if ($debug_mode) {
@@ -804,6 +830,19 @@ function run_scheduled_import(bool $test_mode = false, string $trigger_type = 's
         }
 
         // Step 4: Run the import
+        // Check memory before import
+        $memory_check = \Puntwork\Utilities\MemoryManager::checkMemoryUsage($total_items);
+        if ($memory_check['memory_ratio'] > 0.8) {
+            $all_logs[] = 'High memory usage before import: ' . round($memory_check['memory_ratio'] * 100, 1) . '% - forcing cleanup';
+            gc_collect_cycles();
+            if (function_exists('wp_cache_flush')) {
+                wp_cache_flush();
+            }
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [SCHEDULED-IMPORT] Memory cleanup before import: ' . json_encode($memory_check));
+            }
+        }
+
         if ($debug_mode) {
             error_log('[PUNTWORK] [SCHEDULED-IMPORT] Starting import process...');
         }

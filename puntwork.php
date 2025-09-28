@@ -264,6 +264,7 @@ function setup_job_import()
         'utilities/AdvancedJsonlProcessor.php',
         'utilities/JsonlOptimizer.php',
         'utilities/IterativeLearner.php',
+        'utilities/MemoryManager.php',
         'utilities/database-optimization.php',
         'utilities/performance-functions.php',
         'utilities/PuntWorkLogger.php',
