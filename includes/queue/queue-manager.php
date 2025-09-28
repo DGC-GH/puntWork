@@ -340,7 +340,11 @@ class PuntworkQueueManager
             throw new \Exception('GUID and job data required for job import');
         }
 
-        // Get required data
+        // Check if required functions exist
+        if (! function_exists('get_acf_fields') || ! function_exists('get_zero_empty_fields') || ! function_exists('update_field') ) {
+            throw new \Exception('Required ACF functions not available');
+        }
+
         $acf_fields = get_acf_fields();
         $zero_empty_fields = get_zero_empty_fields();
         $user_id = get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : get_current_user_id();

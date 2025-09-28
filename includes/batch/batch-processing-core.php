@@ -456,6 +456,9 @@ function queue_batch_items( array $batch_guids, array $batch_items, array $batch
         return process_batch_items_with_metadata($batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid, $logs, $updated, $published, $skipped);
     }
 
+    // Ensure queue table exists
+    $puntwork_queue_manager->ensureTableExists();
+
     $queued_count = 0;
 
     foreach ( $batch_guids as $index => $guid ) {
@@ -480,6 +483,11 @@ function queue_batch_items( array $batch_guids, array $batch_items, array $batch
                     continue;
                 }
             }
+            // Existing job, will be updated
+            ++$updated;
+        } else {
+            // New job, will be published
+            ++$published;
         }
 
         // Add to queue
@@ -496,7 +504,19 @@ function queue_batch_items( array $batch_guids, array $batch_items, array $batch
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Queued job import for GUID: $guid";
         } else {
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Failed to queue job import for GUID: $guid";
+            // Revert the count since queuing failed
+            if ($post_id) {
+                --$updated;
+            } else {
+                --$published;
+            }
         }
+    }
+
+    // Trigger immediate queue processing after queuing jobs
+    if ($queued_count > 0) {
+        $puntwork_queue_manager->processQueue();
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Triggered immediate queue processing for $queued_count jobs";
     }
 
     return $queued_count;
