@@ -354,8 +354,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             // Clear progress first to ensure clean state
             JobImportUI.clearProgress();
 
-            // Hide all import buttons immediately to prevent flash of unwanted buttons
-            $('#start-import').hide();
+            // Show Start Import button by default - only hide if there's an incomplete import
+            $('#start-import').show().text('Start Import');
             $('#resume-import').hide();
             $('#cancel-import').hide();
             $('#reset-import').hide();
@@ -452,18 +452,17 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         console.log('[PUNTWORK] Import was interrupted, showing resume and reset options');
                     }
                 } else {
-                    // Clean state - hide all import controls except start
-                    $('#start-import').show().text('Start Import');
+                    // Clean state - hide all import controls except start (already shown)
                     $('#resume-import').hide();
                     $('#cancel-import').hide();
                     $('#reset-import').hide();
                     JobImportUI.hideImportUI();
-                    console.log('[PUNTWORK] Clean state detected - showing start button only');
+                    console.log('[PUNTWORK] Clean state detected - start button already visible');
                 }
             }).catch(function(xhr, status, error) {
                 PuntWorkJSLogger.error('Initial status AJAX error', 'EVENTS', error);
                 JobImportUI.appendLogs(['Initial status AJAX error: ' + error]);
-                // Ensure UI is in clean state even on error
+                // Ensure UI is in clean state even on error - show start button
                 JobImportUI.clearProgress();
                 JobImportUI.hideImportUI();
                 $('#start-import').show().text('Start Import');
