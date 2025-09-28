@@ -215,6 +215,19 @@ function handle_import_progress_sse($request)
                 $current_status = deep_sanitize_for_json($current_status);
                 error_log('[PUNTWORK] SSE: After deep sanitization: ' . json_encode($current_status));
 
+                // Check for "undefined" values in the status
+                $undefined_found = false;
+                array_walk_recursive($current_status, function ($value, $key) use (&$undefined_found) {
+                    if ($value === 'undefined' || (is_string($value) && strpos($value, 'undefined') !== false)) {
+                        error_log('[PUNTWORK] SSE: Found "undefined" in status[' . $key . ']: ' . var_export($value, true));
+                        $undefined_found = true;
+                    }
+                });
+                if ($undefined_found) {
+                    error_log('[PUNTWORK] SSE: WARNING - "undefined" values found in current_status before JSON encoding');
+                    error_log('[PUNTWORK] SSE: Full current_status: ' . print_r($current_status, true));
+                }
+
                 // Check for async import status if applicable
                 $async_status = check_async_import_status();
                 if ($async_status['active']) {

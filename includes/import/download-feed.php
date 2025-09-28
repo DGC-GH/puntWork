@@ -34,9 +34,19 @@ function download_feed($url, $feed_path, $output_dir, &$logs, &$format = null)
     }
 
     try {
-        $real_output_dir = realpath($output_dir);
-        $real_feed_path = realpath(dirname($feed_path)) . '/' . basename($feed_path);
+        // Handle both absolute and relative paths
+        if (strpos($feed_path, '/') === 0) {
+            // Absolute path
+            $full_feed_path = $feed_path;
+        } else {
+            // Relative path - construct full path from output_dir
+            $full_feed_path = $output_dir . $feed_path;
+        }
 
+        $real_output_dir = realpath($output_dir);
+        $real_feed_path = realpath(dirname($full_feed_path)) . '/' . basename($full_feed_path);
+
+        error_log('[PUNTWORK] Full feed path: ' . $full_feed_path);
         error_log('[PUNTWORK] Real output dir: ' . $real_output_dir);
         error_log('[PUNTWORK] Real feed path: ' . $real_feed_path);
         error_log('[PUNTWORK] Is writable: ' . (is_writable($output_dir) ? 'yes' : 'no'));
@@ -58,11 +68,11 @@ function download_feed($url, $feed_path, $output_dir, &$logs, &$format = null)
             if (function_exists('curl_init')) {
                 error_log('[PUNTWORK] Using cURL for download');
                 $ch = curl_init($url);
-                $fp = fopen($feed_path, 'w');
+                $fp = fopen($full_feed_path, 'w');
                 if (!$fp) {
-                    error_log('[PUNTWORK] Failed to open file for writing: ' . $feed_path);
+                    error_log('[PUNTWORK] Failed to open file for writing: ' . $full_feed_path);
 
-                    throw new \Exception("Can't open $feed_path for write");
+                    throw new \Exception("Can't open $full_feed_path for write");
                 }
                 curl_setopt($ch, CURLOPT_FILE, $fp);
                 curl_setopt($ch, CURLOPT_TIMEOUT, 300);
@@ -75,12 +85,12 @@ function download_feed($url, $feed_path, $output_dir, &$logs, &$format = null)
 
                 error_log('[PUNTWORK] cURL success: ' . ($success ? 'true' : 'false'));
                 error_log('[PUNTWORK] HTTP code: ' . $http_code);
-                error_log('[PUNTWORK] File size: ' . filesize($feed_path));
+                error_log('[PUNTWORK] File size: ' . filesize($full_feed_path));
 
-                if (!$success || $http_code !== 200 || filesize($feed_path) < 10) {
+                if (!$success || $http_code !== 200 || filesize($full_feed_path) < 10) {
                     error_log('[PUNTWORK] cURL download failed');
 
-                    throw new \Exception("cURL download failed (HTTP $http_code, size: " . filesize($feed_path) . ')');
+                    throw new \Exception("cURL download failed (HTTP $http_code, size: " . filesize($full_feed_path) . ')');
                 }
             } else {
                 error_log('[PUNTWORK] Using wp_remote_get for download');
@@ -97,24 +107,24 @@ function download_feed($url, $feed_path, $output_dir, &$logs, &$format = null)
 
                     throw new \Exception('Empty or small response');
                 }
-                file_put_contents($feed_path, $body);
+                file_put_contents($full_feed_path, $body);
                 error_log('[PUNTWORK] File written successfully');
             }
 
             // Detect format from downloaded content
-            $content = file_get_contents($feed_path);
+            $content = file_get_contents($full_feed_path);
             $format = \Puntwork\FeedProcessor::detectFormat($url, $content);
 
             error_log('[PUNTWORK] Detected format: ' . $format);
             error_log('[PUNTWORK] Content preview: ' . substr($content, 0, 200));
 
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' .
-            "Downloaded feed ($format): " . filesize($feed_path) . ' bytes';
-            error_log("Downloaded feed ($format): " . filesize($feed_path) . ' bytes');
-            @chmod($feed_path, 0644);
+            "Downloaded feed ($format): " . filesize($full_feed_path) . ' bytes';
+            error_log("Downloaded feed ($format): " . filesize($full_feed_path) . ' bytes');
+            @chmod($full_feed_path, 0644);
 
             if ($span) {
-                $span->setAttribute('feed.size', filesize($feed_path));
+                $span->setAttribute('feed.size', filesize($full_feed_path));
                 $span->setAttribute('feed.format', $format);
                 $span->end();
             }
