@@ -485,7 +485,7 @@ class JobDeduplicator
 
                         ++$duplicates_drafted;
                         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Drafted duplicate ID: ' . $dup_id . ' GUID: ' . $guid . ' - ' . $reason;
-                        error_log('Drafted duplicate ID: ' . $dup_id . ' GUID: ' . $guid . ' - ' . $reason);
+                        error_log('[PUNTWORK] [DUPLICATES-DEBUG] Drafted duplicate ID: ' . $dup_id . ' GUID: ' . $guid . ' - ' . $reason);
                     }
                     $post_ids_by_guid[ $guid ] = $post_to_keep;
                 } else {
@@ -643,6 +643,7 @@ class JobDeduplicator
 
                    ++$duplicates_drafted;
                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Drafted AI-detected duplicate ID: ' . $dup_id . ' - Content similarity with ID: ' . $keep_id;
+                   error_log('[PUNTWORK] [DUPLICATES-DEBUG] Drafted AI-detected duplicate ID: ' . $dup_id . ' - Content similarity with ID: ' . $keep_id);
             }
         }
     }
