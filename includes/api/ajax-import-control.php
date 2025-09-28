@@ -270,6 +270,7 @@ function reset_job_import_ajax()
         delete_option('job_import_batch_size');
         delete_option('job_import_consecutive_small_batches');
         delete_transient('import_cancel');
+        delete_transient('puntwork_import_lock'); // Clear the import lock
 
         PuntWorkLogger::info('Import system completely reset', PuntWorkLogger::CONTEXT_BATCH);
 
