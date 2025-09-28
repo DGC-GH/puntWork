@@ -241,14 +241,17 @@
          * Schedule a report
          */
         scheduleReport: function() {
+            console.log('[PUNTWORK] [REPORTS-SCHEDULE] scheduleReport() called');
             // Open scheduling modal
             this.showScheduleModal();
+            console.log('[PUNTWORK] [REPORTS-SCHEDULE] Schedule modal opened');
         },
 
         /**
          * Show schedule report modal
          */
         showScheduleModal: function() {
+            console.log('[PUNTWORK] [REPORTS-MODAL] showScheduleModal() called');
             var modal = $('#report-modal');
             var modalTitle = $('#modal-title');
             var modalContent = $('#modal-content');
@@ -259,6 +262,7 @@
 
             // Bind schedule form events
             this.bindScheduleFormEvents();
+            console.log('[PUNTWORK] [REPORTS-MODAL] Schedule report modal displayed and form events bound');
         },
 
         getScheduleForm: function() {
@@ -293,22 +297,28 @@
          * Bind schedule form events
          */
         bindScheduleFormEvents: function() {
+            console.log('[PUNTWORK] [REPORTS-EVENTS] bindScheduleFormEvents() called');
             var self = this;
 
             $('#schedule-report-form').on('submit', function(e) {
+                console.log('[PUNTWORK] [REPORTS-EVENTS] Schedule report form submitted');
                 e.preventDefault();
                 self.submitScheduleForm();
             });
+            console.log('[PUNTWORK] [REPORTS-EVENTS] Schedule form submit event bound');
 
             $('.cancel-schedule').on('click', function() {
+                console.log('[PUNTWORK] [REPORTS-EVENTS] Cancel schedule button clicked');
                 self.closeModal();
             });
+            console.log('[PUNTWORK] [REPORTS-EVENTS] Cancel schedule button event bound');
         },
 
         /**
          * Submit schedule form
          */
         submitScheduleForm: function() {
+            console.log('[PUNTWORK] [REPORTS-SUBMIT] submitScheduleForm() called');
             var self = this;
             var formData = new FormData(document.getElementById('schedule-report-form'));
 
@@ -325,6 +335,8 @@
                 }
             };
 
+            console.log('[PUNTWORK] [REPORTS-SUBMIT] Schedule form data:', data);
+
             this.showLoading('#schedule-report-form button[type="submit"]', 'Scheduling...');
 
             $.ajax({
@@ -332,19 +344,24 @@
                 type: 'POST',
                 data: data,
                 success: function(response) {
+                    console.log('[PUNTWORK] [REPORTS-SUBMIT] AJAX success response:', response);
                     if (response.success) {
                         self.closeModal();
                         self.showMessage('Report scheduled successfully', 'success');
                         self.loadReportsList();
+                        console.log('[PUNTWORK] [REPORTS-SUBMIT] Report scheduled successfully');
                     } else {
+                        console.error('[PUNTWORK] [REPORTS-SUBMIT] Schedule failed:', response.data);
                         self.showMessage(response.data || puntworkReports.strings.error, 'error');
                     }
                 },
                 error: function(xhr, status, error) {
+                    console.error('[PUNTWORK] [REPORTS-SUBMIT] AJAX error:', {xhr: xhr, status: status, error: error});
                     self.showMessage(puntworkReports.strings.error + ': ' + error, 'error');
                 },
                 complete: function() {
                     self.hideLoading('#schedule-report-form button[type="submit"]', 'Schedule Report');
+                    console.log('[PUNTWORK] [REPORTS-SUBMIT] Schedule form submission completed');
                 }
             });
         },
