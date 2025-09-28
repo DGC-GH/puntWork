@@ -244,7 +244,6 @@ function setup_job_import()
         'import/import-setup.php',
         'import/process-batch-items.php',
         'import/process-xml-batch.php',
-        'import/reset-import.php',
 
         // Utilities (functions - classes are autoloaded)
         'utilities/CacheManager.php',

@@ -434,7 +434,6 @@ $includes = array(
 	'import/import-finalization.php',
 	'import/import-setup.php',
 	'import/process-batch-items.php',
-	'import/reset-import.php',
 	'import/process-xml-batch.php',
 
 	// CRM functionality - testing

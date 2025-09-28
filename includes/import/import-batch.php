@@ -766,6 +766,7 @@ if (!function_exists('import_all_jobs_from_json')) {
         } catch (\Exception $e) {
             if ($debug_mode) {
                 error_log('[PUNTWORK] import_all_jobs_from_json exception: ' . $e->getMessage());
+                error_log('[PUNTWORK] Exception trace: ' . $e->getTraceAsString());
             }
             // Release lock on error
             delete_transient('puntwork_import_lock');
