@@ -184,7 +184,12 @@ class PuntworkHorizontalScalingManager
 
         if ($table_exists) {
             // Check if primary key exists - try information_schema first, fallback to SHOW INDEXES
+            \Puntwork\PuntWorkLogger::debug('Checking primary key existence for instances table', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM, [
+                'table' => $table_name,
+            ]);
+
             try {
+                $start_time = microtime(true);
                 $primary_key_exists = $wpdb->get_var(
                     $wpdb->prepare(
                         'SELECT COUNT(*) FROM information_schema.KEY_COLUMN_USAGE
@@ -194,19 +199,39 @@ class PuntworkHorizontalScalingManager
                         $table_name
                     )
                 );
+                $duration = microtime(true) - $start_time;
+                \Puntwork\PuntWorkLogger::debug('Successfully checked primary key using information_schema', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM, [
+                    'primary_key_exists' => $primary_key_exists,
+                    'duration' => round($duration, 4),
+                ]);
             } catch (\Exception $e) {
                 // Fallback: Use SHOW INDEXES to check for PRIMARY key
+                \Puntwork\PuntWorkLogger::warn('information_schema access denied for primary key check, using SHOW INDEXES fallback', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM, [
+                    'error' => $e->getMessage(),
+                    'table' => $table_name,
+                ]);
+
                 try {
+                    $start_time = microtime(true);
                     $primary_key_exists = $wpdb->get_var(
                         $wpdb->prepare(
                             "SHOW INDEXES FROM %s WHERE Key_name = 'PRIMARY'",
                             $table_name
                         )
                     );
+                    $duration = microtime(true) - $start_time;
                     $primary_key_exists = $primary_key_exists ? 1 : 0;
+                    \Puntwork\PuntWorkLogger::debug('Successfully checked primary key using SHOW INDEXES fallback', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM, [
+                        'primary_key_exists' => $primary_key_exists,
+                        'duration' => round($duration, 4),
+                    ]);
                 } catch (\Exception $fallback_e) {
                     // If we can't check, assume table needs recreation
                     $primary_key_exists = 0;
+                    \Puntwork\PuntWorkLogger::error('Failed to check primary key existence, assuming table needs recreation', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM, [
+                        'error' => $fallback_e->getMessage(),
+                        'table' => $table_name,
+                    ]);
                 }
             }
 

@@ -20,84 +20,151 @@ function create_database_indexes(): void
 {
     global $wpdb;
 
+    \Puntwork\PuntWorkLogger::info('Starting database index creation', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM);
+
     // Index for GUID lookups (critical for duplicate detection)
-    $wpdb->query(
+    $start_time = microtime(true);
+    $result = $wpdb->query(
         "
         CREATE INDEX IF NOT EXISTS idx_postmeta_guid
         ON {$wpdb->postmeta} (meta_key, meta_value(50))
         WHERE meta_key = 'guid'
     "
     );
+    $duration = microtime(true) - $start_time;
+    \Puntwork\PuntWorkLogger::debug('Created idx_postmeta_guid index', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM, [
+        'result' => $result !== false,
+        'duration' => round($duration, 4),
+        'table' => $wpdb->postmeta,
+    ]);
 
     // Index for import hash lookups
-    $wpdb->query(
+    $start_time = microtime(true);
+    $result = $wpdb->query(
         "
         CREATE INDEX IF NOT EXISTS idx_postmeta_import_hash
         ON {$wpdb->postmeta} (meta_key, meta_value(32))
         WHERE meta_key = '_import_hash'
     "
     );
+    $duration = microtime(true) - $start_time;
+    \Puntwork\PuntWorkLogger::debug('Created idx_postmeta_import_hash index', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM, [
+        'result' => $result !== false,
+        'duration' => round($duration, 4),
+        'table' => $wpdb->postmeta,
+    ]);
 
     // Index for last import update timestamps
-    $wpdb->query(
+    $start_time = microtime(true);
+    $result = $wpdb->query(
         "
         CREATE INDEX IF NOT EXISTS idx_postmeta_last_update
         ON {$wpdb->postmeta} (meta_key, post_id)
         WHERE meta_key = '_last_import_update'
     "
     );
+    $duration = microtime(true) - $start_time;
+    \Puntwork\PuntWorkLogger::debug('Created idx_postmeta_last_update index', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM, [
+        'result' => $result !== false,
+        'duration' => round($duration, 4),
+        'table' => $wpdb->postmeta,
+    ]);
 
     // Composite index for post status and type (for job queries)
-    $wpdb->query(
+    $start_time = microtime(true);
+    $result = $wpdb->query(
         "
         CREATE INDEX IF NOT EXISTS idx_posts_job_status
         ON {$wpdb->posts} (post_type, post_status, post_modified)
         WHERE post_type = 'job'
     "
     );
+    $duration = microtime(true) - $start_time;
+    \Puntwork\PuntWorkLogger::debug('Created idx_posts_job_status index', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM, [
+        'result' => $result !== false,
+        'duration' => round($duration, 4),
+        'table' => $wpdb->posts,
+    ]);
 
     // Index for feed URL lookups
-    $wpdb->query(
+    $start_time = microtime(true);
+    $result = $wpdb->query(
         "
         CREATE INDEX IF NOT EXISTS idx_postmeta_feed_url
         ON {$wpdb->postmeta} (meta_key, meta_value(255))
         WHERE meta_key = 'feed_url'
     "
     );
+    $duration = microtime(true) - $start_time;
+    \Puntwork\PuntWorkLogger::debug('Created idx_postmeta_feed_url index', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM, [
+        'result' => $result !== false,
+        'duration' => round($duration, 4),
+        'table' => $wpdb->postmeta,
+    ]);
 
     // Additional performance indexes
-    $wpdb->query(
+    $start_time = microtime(true);
+    $result = $wpdb->query(
         "
         CREATE INDEX IF NOT EXISTS idx_posts_job_date
         ON {$wpdb->posts} (post_type, post_date, post_modified)
         WHERE post_type = 'job'
     "
     );
+    $duration = microtime(true) - $start_time;
+    \Puntwork\PuntWorkLogger::debug('Created idx_posts_job_date index', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM, [
+        'result' => $result !== false,
+        'duration' => round($duration, 4),
+        'table' => $wpdb->posts,
+    ]);
 
     // Index for job title searches
-    $wpdb->query(
+    $start_time = microtime(true);
+    $result = $wpdb->query(
         "
         CREATE INDEX IF NOT EXISTS idx_posts_job_title
         ON {$wpdb->posts} (post_type, post_title(100))
         WHERE post_type = 'job'
     "
     );
+    $duration = microtime(true) - $start_time;
+    \Puntwork\PuntWorkLogger::debug('Created idx_posts_job_title index', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM, [
+        'result' => $result !== false,
+        'duration' => round($duration, 4),
+        'table' => $wpdb->posts,
+    ]);
 
     // Index for performance logs queries
     $performance_table = $wpdb->prefix . 'puntwork_performance_logs';
-    $wpdb->query(
+    $start_time = microtime(true);
+    $result = $wpdb->query(
         "
         CREATE INDEX IF NOT EXISTS idx_performance_operation_time
         ON {$performance_table} (operation, created_at)
     "
     );
+    $duration = microtime(true) - $start_time;
+    \Puntwork\PuntWorkLogger::debug('Created idx_performance_operation_time index', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM, [
+        'result' => $result !== false,
+        'duration' => round($duration, 4),
+        'table' => $performance_table,
+    ]);
 
-    $wpdb->query(
+    $start_time = microtime(true);
+    $result = $wpdb->query(
         "
         CREATE INDEX IF NOT EXISTS idx_performance_duration
         ON {$performance_table} (total_time, items_per_second)
     "
     );
+    $duration = microtime(true) - $start_time;
+    \Puntwork\PuntWorkLogger::debug('Created idx_performance_duration index', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM, [
+        'result' => $result !== false,
+        'duration' => round($duration, 4),
+        'table' => $performance_table,
+    ]);
+
+    \Puntwork\PuntWorkLogger::info('Database index creation completed', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM);
 }
 
 /**
@@ -452,6 +519,8 @@ function get_database_optimization_status(): array
 {
     global $wpdb;
 
+    \Puntwork\PuntWorkLogger::debug('Checking database optimization status', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM);
+
     $indexes = [
         'idx_postmeta_guid' => false,
         'idx_postmeta_import_hash' => false,
@@ -466,6 +535,8 @@ function get_database_optimization_status(): array
 
     // Check which indexes exist - try information_schema first, fallback to SHOW INDEXES
     try {
+        \Puntwork\PuntWorkLogger::debug('Attempting to check indexes using information_schema', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM);
+        $start_time = microtime(true);
         $existing_indexes = $wpdb->get_col(
             "
         SELECT INDEX_NAME
@@ -475,25 +546,37 @@ function get_database_optimization_status(): array
         AND INDEX_NAME IN ('" . implode("','", array_keys($indexes)) . "')
     "
         );
+        $duration = microtime(true) - $start_time;
 
         foreach ($existing_indexes as $index) {
             $indexes[$index] = true;
         }
+
+        \Puntwork\PuntWorkLogger::debug('Successfully checked indexes using information_schema', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM, [
+            'found_indexes' => count($existing_indexes),
+            'duration' => round($duration, 4),
+        ]);
     } catch (\Exception $e) {
         // Fallback: Try SHOW INDEXES queries for each table
-        \Puntwork\PuntWorkLogger::debug('information_schema access denied, using SHOW INDEXES fallback', \Puntwork\PuntWorkLogger::CONTEXT_DATABASE);
+        \Puntwork\PuntWorkLogger::warn('information_schema access denied, using SHOW INDEXES fallback', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM, [
+            'error' => $e->getMessage(),
+        ]);
 
         $tables_to_check = [$wpdb->postmeta, $wpdb->posts, $wpdb->prefix . 'puntwork_performance_logs'];
 
         foreach ($tables_to_check as $table) {
             try {
+                \Puntwork\PuntWorkLogger::debug("Checking indexes for table: $table", \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM);
                 $table_indexes = $wpdb->get_col("SHOW INDEXES FROM `$table` WHERE Key_name IN ('" . implode("','", array_keys($indexes)) . "')");
                 foreach ($table_indexes as $index) {
                     $indexes[$index] = true;
                 }
+                \Puntwork\PuntWorkLogger::debug('Found ' . count($table_indexes) . " indexes in table $table", \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM);
             } catch (\Exception $table_e) {
                 // If table doesn't exist or can't be accessed, continue
-                \Puntwork\PuntWorkLogger::debug("Could not check indexes for table $table: " . $table_e->getMessage(), \Puntwork\PuntWorkLogger::CONTEXT_DATABASE);
+                \Puntwork\PuntWorkLogger::warn("Could not check indexes for table $table", \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM, [
+                    'error' => $table_e->getMessage(),
+                ]);
             }
         }
     }
@@ -505,12 +588,21 @@ function get_database_optimization_status(): array
         }
     );
 
-    return [
+    $status = [
         'indexes_created' => count($indexes) - count($missing_indexes),
         'total_indexes' => count($indexes),
         'missing_indexes' => array_keys($missing_indexes),
         'optimization_complete' => empty($missing_indexes),
     ];
+
+    \Puntwork\PuntWorkLogger::info('Database optimization status check completed', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM, [
+        'indexes_created' => $status['indexes_created'],
+        'total_indexes' => $status['total_indexes'],
+        'missing_indexes' => $status['missing_indexes'],
+        'optimization_complete' => $status['optimization_complete'],
+    ]);
+
+    return $status;
 }
 
 /**
