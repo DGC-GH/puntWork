@@ -125,11 +125,12 @@ function process_social_media_posts()
 add_action('init', __NAMESPACE__ . '\\setup_job_import');
 function setup_job_import()
 {
-    static $initialized = false;
-    if ($initialized) {
+    // Prevent multiple initialization with a persistent flag
+    $init_flag = 'puntwork_plugin_initialized_' . md5(__FILE__);
+    if (wp_cache_get($init_flag)) {
         return;
     }
-    $initialized = true;
+    wp_cache_set($init_flag, true, '', 3600); // Cache for 1 hour
 
     // Increase memory limit to prevent exhaustion
     ini_set('memory_limit', '1024M');
