@@ -20,312 +20,297 @@ use Puntwork\CRM\PipedriveIntegration;
 /**
  * CRM Integration Test Suite
  */
-class CRMIntegrationTest extends TestCase
-{
+class CRMIntegrationTest extends TestCase {
 
-    /**
-     * Test CRM Manager initialization
-     */
-    public function testCRMManagerInitialization(): void
-    {
-        $crmManager = new CRMManager();
 
-        $this->assertInstanceOf(CRMManager::class, $crmManager);
+	/**
+	 * Test CRM Manager initialization
+	 */
+	public function testCRMManagerInitialization(): void {
+		$crmManager = new CRMManager();
 
-        $availablePlatforms = $crmManager->getAvailablePlatforms();
-        $this->assertIsArray($availablePlatforms);
-        $this->assertArrayHasKey('hubspot', $availablePlatforms);
-        $this->assertArrayHasKey('salesforce', $availablePlatforms);
-        $this->assertArrayHasKey('zoho', $availablePlatforms);
-        $this->assertArrayHasKey('pipedrive', $availablePlatforms);
-    }
+		$this->assertInstanceOf( CRMManager::class, $crmManager );
 
-    /**
-     * Test platform configuration requirements
-     */
-    public function testPlatformConfigurationRequirements(): void
-    {
-        $availablePlatforms = CRMManager::getAvailablePlatforms();
+		$availablePlatforms = $crmManager->getAvailablePlatforms();
+		$this->assertIsArray( $availablePlatforms );
+		$this->assertArrayHasKey( 'hubspot', $availablePlatforms );
+		$this->assertArrayHasKey( 'salesforce', $availablePlatforms );
+		$this->assertArrayHasKey( 'zoho', $availablePlatforms );
+		$this->assertArrayHasKey( 'pipedrive', $availablePlatforms );
+	}
 
-        // Test HubSpot config requirements
-        $this->assertArrayHasKey('required_config', $availablePlatforms['hubspot']);
-        $this->assertArrayHasKey('access_token', $availablePlatforms['hubspot']['required_config']);
+	/**
+	 * Test platform configuration requirements
+	 */
+	public function testPlatformConfigurationRequirements(): void {
+		$availablePlatforms = CRMManager::getAvailablePlatforms();
 
-        // Test Salesforce config requirements
-        $this->assertArrayHasKey('client_id', $availablePlatforms['salesforce']['required_config']);
-        $this->assertArrayHasKey('client_secret', $availablePlatforms['salesforce']['required_config']);
-        $this->assertArrayHasKey('username', $availablePlatforms['salesforce']['required_config']);
-        $this->assertArrayHasKey('password', $availablePlatforms['salesforce']['required_config']);
+		// Test HubSpot config requirements
+		$this->assertArrayHasKey( 'required_config', $availablePlatforms['hubspot'] );
+		$this->assertArrayHasKey( 'access_token', $availablePlatforms['hubspot']['required_config'] );
 
-        // Test Zoho config requirements
-        $this->assertArrayHasKey('client_id', $availablePlatforms['zoho']['required_config']);
-        $this->assertArrayHasKey('client_secret', $availablePlatforms['zoho']['required_config']);
-        $this->assertArrayHasKey('refresh_token', $availablePlatforms['zoho']['required_config']);
+		// Test Salesforce config requirements
+		$this->assertArrayHasKey( 'client_id', $availablePlatforms['salesforce']['required_config'] );
+		$this->assertArrayHasKey( 'client_secret', $availablePlatforms['salesforce']['required_config'] );
+		$this->assertArrayHasKey( 'username', $availablePlatforms['salesforce']['required_config'] );
+		$this->assertArrayHasKey( 'password', $availablePlatforms['salesforce']['required_config'] );
 
-        // Test Pipedrive config requirements
-        $this->assertArrayHasKey('api_token', $availablePlatforms['pipedrive']['required_config']);
-    }
+		// Test Zoho config requirements
+		$this->assertArrayHasKey( 'client_id', $availablePlatforms['zoho']['required_config'] );
+		$this->assertArrayHasKey( 'client_secret', $availablePlatforms['zoho']['required_config'] );
+		$this->assertArrayHasKey( 'refresh_token', $availablePlatforms['zoho']['required_config'] );
 
-    /**
-     * Test HubSpot integration basic functionality
-     */
-    public function testHubSpotIntegrationBasic(): void
-    {
-        $config  = array( 'access_token' => 'test_token' );
-        $hubspot = new HubSpotIntegration($config);
+		// Test Pipedrive config requirements
+		$this->assertArrayHasKey( 'api_token', $availablePlatforms['pipedrive']['required_config'] );
+	}
 
-        $this->assertEquals('hubspot', $hubspot->getPlatformId());
-        $this->assertEquals('HubSpot', $hubspot->getPlatformName());
-        $this->assertTrue($hubspot->isConfigured()); // Should be configured with access token
-    }
+	/**
+	 * Test HubSpot integration basic functionality
+	 */
+	public function testHubSpotIntegrationBasic(): void {
+		$config  = array( 'access_token' => 'test_token' );
+		$hubspot = new HubSpotIntegration( $config );
 
-    /**
-     * Test Salesforce integration basic functionality
-     */
-    public function testSalesforceIntegrationBasic(): void
-    {
-        $config     = array(
-        'client_id'     => 'test_client_id',
-        'client_secret' => 'test_client_secret',
-        'username'      => 'test@example.com',
-        'password'      => 'test_password',
-        );
-        $salesforce = new SalesforceIntegration($config);
+		$this->assertEquals( 'hubspot', $hubspot->getPlatformId() );
+		$this->assertEquals( 'HubSpot', $hubspot->getPlatformName() );
+		$this->assertTrue( $hubspot->isConfigured() ); // Should be configured with access token
+	}
 
-        $this->assertEquals('salesforce', $salesforce->getPlatformId());
-        $this->assertEquals('Salesforce', $salesforce->getPlatformName());
-        $this->assertTrue($salesforce->isConfigured());
-    }
+	/**
+	 * Test Salesforce integration basic functionality
+	 */
+	public function testSalesforceIntegrationBasic(): void {
+		$config     = array(
+			'client_id'     => 'test_client_id',
+			'client_secret' => 'test_client_secret',
+			'username'      => 'test@example.com',
+			'password'      => 'test_password',
+		);
+		$salesforce = new SalesforceIntegration( $config );
 
-    /**
-     * Test Zoho integration basic functionality
-     */
-    public function testZohoIntegrationBasic(): void
-    {
-        $config = array(
-        'client_id'     => 'test_client_id',
-        'client_secret' => 'test_client_secret',
-        'refresh_token' => 'test_refresh_token',
-        );
-        $zoho   = new ZohoIntegration($config);
+		$this->assertEquals( 'salesforce', $salesforce->getPlatformId() );
+		$this->assertEquals( 'Salesforce', $salesforce->getPlatformName() );
+		$this->assertTrue( $salesforce->isConfigured() );
+	}
 
-        $this->assertEquals('zoho', $zoho->getPlatformId());
-        $this->assertEquals('Zoho CRM', $zoho->getPlatformName());
-        $this->assertTrue($zoho->isConfigured());
-    }
+	/**
+	 * Test Zoho integration basic functionality
+	 */
+	public function testZohoIntegrationBasic(): void {
+		$config = array(
+			'client_id'     => 'test_client_id',
+			'client_secret' => 'test_client_secret',
+			'refresh_token' => 'test_refresh_token',
+		);
+		$zoho   = new ZohoIntegration( $config );
 
-    /**
-     * Test Pipedrive integration basic functionality
-     */
-    public function testPipedriveIntegrationBasic(): void
-    {
-        $config    = array( 'api_token' => 'test_api_token' );
-        $pipedrive = new PipedriveIntegration($config);
+		$this->assertEquals( 'zoho', $zoho->getPlatformId() );
+		$this->assertEquals( 'Zoho CRM', $zoho->getPlatformName() );
+		$this->assertTrue( $zoho->isConfigured() );
+	}
 
-        $this->assertEquals('pipedrive', $pipedrive->getPlatformId());
-        $this->assertEquals('Pipedrive', $pipedrive->getPlatformName());
-        $this->assertTrue($pipedrive->isConfigured());
-    }
+	/**
+	 * Test Pipedrive integration basic functionality
+	 */
+	public function testPipedriveIntegrationBasic(): void {
+		$config    = array( 'api_token' => 'test_api_token' );
+		$pipedrive = new PipedriveIntegration( $config );
 
-    /**
-     * Test contact data standardization
-     */
-    public function testContactDataStandardization(): void
-    {
-        $hubspot = new HubSpotIntegration(array());
+		$this->assertEquals( 'pipedrive', $pipedrive->getPlatformId() );
+		$this->assertEquals( 'Pipedrive', $pipedrive->getPlatformName() );
+		$this->assertTrue( $pipedrive->isConfigured() );
+	}
 
-        $testData = array(
-        'first_name'    => 'John',
-        'last_name'     => 'Doe',
-        'email'         => 'john.doe@example.com',
-        'phone'         => '+1-555-0123',
-        'company'       => 'Test Company',
-        'job_title'     => 'Developer',
-        'custom_fields' => array( 'source' => 'puntwork' ),
-        );
+	/**
+	 * Test contact data standardization
+	 */
+	public function testContactDataStandardization(): void {
+		$hubspot = new HubSpotIntegration( array() );
 
-        $standardized = $this->invokePrivateMethod($hubspot, 'standardizeContactData', array( $testData ));
+		$testData = array(
+			'first_name'    => 'John',
+			'last_name'     => 'Doe',
+			'email'         => 'john.doe@example.com',
+			'phone'         => '+1-555-0123',
+			'company'       => 'Test Company',
+			'job_title'     => 'Developer',
+			'custom_fields' => array( 'source' => 'puntwork' ),
+		);
 
-        $this->assertEquals('John', $standardized['first_name']);
-        $this->assertEquals('Doe', $standardized['last_name']);
-        $this->assertEquals('john.doe@example.com', $standardized['email']);
-        $this->assertEquals('+1-555-0123', $standardized['phone']);
-        $this->assertEquals('Test Company', $standardized['company']);
-        $this->assertEquals('Developer', $standardized['job_title']);
-        $this->assertArrayHasKey('custom_fields', $standardized);
-        $this->assertEquals(array( 'source' => 'puntwork' ), $standardized['custom_fields']);
-    }
+		$standardized = $this->invokePrivateMethod( $hubspot, 'standardizeContactData', array( $testData ) );
 
-    /**
-     * Test deal data standardization
-     */
-    public function testDealDataStandardization(): void
-    {
-        $hubspot = new HubSpotIntegration(array());
+		$this->assertEquals( 'John', $standardized['first_name'] );
+		$this->assertEquals( 'Doe', $standardized['last_name'] );
+		$this->assertEquals( 'john.doe@example.com', $standardized['email'] );
+		$this->assertEquals( '+1-555-0123', $standardized['phone'] );
+		$this->assertEquals( 'Test Company', $standardized['company'] );
+		$this->assertEquals( 'Developer', $standardized['job_title'] );
+		$this->assertArrayHasKey( 'custom_fields', $standardized );
+		$this->assertEquals( array( 'source' => 'puntwork' ), $standardized['custom_fields'] );
+	}
 
-        $testData = array(
-        'title'      => 'Job Application: Developer Position',
-        'value'      => 75000,
-        'currency'   => 'USD',
-        'stage'      => 'application_received',
-        'contact_id' => 'contact_123',
-        'source'     => 'puntwork',
-        );
+	/**
+	 * Test deal data standardization
+	 */
+	public function testDealDataStandardization(): void {
+		$hubspot = new HubSpotIntegration( array() );
 
-        $standardized = $this->invokePrivateMethod($hubspot, 'standardizeDealData', array( $testData ));
+		$testData = array(
+			'title'      => 'Job Application: Developer Position',
+			'value'      => 75000,
+			'currency'   => 'USD',
+			'stage'      => 'application_received',
+			'contact_id' => 'contact_123',
+			'source'     => 'puntwork',
+		);
 
-        $this->assertEquals('Job Application: Developer Position', $standardized['title']);
-        $this->assertEquals(75000, $standardized['value']);
-        $this->assertEquals('USD', $standardized['currency']);
-        $this->assertEquals('application_received', $standardized['stage']);
-        $this->assertEquals('contact_123', $standardized['contact_id']);
-        $this->assertEquals('puntwork', $standardized['source']);
-    }
+		$standardized = $this->invokePrivateMethod( $hubspot, 'standardizeDealData', array( $testData ) );
 
-    /**
-     * Test CRM manager configuration methods
-     */
-    public function testCRMManagerConfiguration(): void
-    {
-        $testConfig = array(
-        'enabled'      => true,
-        'access_token' => 'test_token',
-        );
+		$this->assertEquals( 'Job Application: Developer Position', $standardized['title'] );
+		$this->assertEquals( 75000, $standardized['value'] );
+		$this->assertEquals( 'USD', $standardized['currency'] );
+		$this->assertEquals( 'application_received', $standardized['stage'] );
+		$this->assertEquals( 'contact_123', $standardized['contact_id'] );
+		$this->assertEquals( 'puntwork', $standardized['source'] );
+	}
 
-        // Test configuration saving (this would normally interact with WordPress options)
-        $result = CRMManager::configurePlatform('hubspot', $testConfig);
-        $this->assertTrue($result); // Method should return true even in test environment
+	/**
+	 * Test CRM manager configuration methods
+	 */
+	public function testCRMManagerConfiguration(): void {
+		$testConfig = array(
+			'enabled'      => true,
+			'access_token' => 'test_token',
+		);
 
-        // Test configuration retrieval
-        $retrievedConfig = CRMManager::getPlatformConfig('hubspot');
-        // In test environment, this might return null or empty array
-        $this->assertTrue(is_array($retrievedConfig) || is_null($retrievedConfig));
-    }
+		// Test configuration saving (this would normally interact with WordPress options)
+		$result = CRMManager::configurePlatform( 'hubspot', $testConfig );
+		$this->assertTrue( $result ); // Method should return true even in test environment
 
-    /**
-     * Test sync job application data structure
-     */
-    public function testSyncJobApplicationDataStructure(): void
-    {
-        $crmManager = new CRMManager();
+		// Test configuration retrieval
+		$retrievedConfig = CRMManager::getPlatformConfig( 'hubspot' );
+		// In test environment, this might return null or empty array
+		$this->assertTrue( is_array( $retrievedConfig ) || is_null( $retrievedConfig ) );
+	}
 
-        $testApplication = array(
-        'id'               => 'app_123',
-        'first_name'       => 'Jane',
-        'last_name'        => 'Smith',
-        'email'            => 'jane.smith@example.com',
-        'phone'            => '+1-555-0199',
-        'current_company'  => 'Tech Corp',
-        'current_position' => 'Senior Developer',
-        'job_title'        => 'Lead Developer',
-        'application_date' => '2024-01-15',
-        'source'           => 'puntwork',
-        );
+	/**
+	 * Test sync job application data structure
+	 */
+	public function testSyncJobApplicationDataStructure(): void {
+		$crmManager = new CRMManager();
 
-        // Test the data formatting methods
-        $contactData = $this->invokePrivateMethod($crmManager, 'formatApplicationAsContact', array( $testApplication ));
-        $dealData    = $this->invokePrivateMethod(
-            $crmManager,
-            'formatApplicationAsDeal',
-            array( $testApplication, 'contact_456' )
-        );
+		$testApplication = array(
+			'id'               => 'app_123',
+			'first_name'       => 'Jane',
+			'last_name'        => 'Smith',
+			'email'            => 'jane.smith@example.com',
+			'phone'            => '+1-555-0199',
+			'current_company'  => 'Tech Corp',
+			'current_position' => 'Senior Developer',
+			'job_title'        => 'Lead Developer',
+			'application_date' => '2024-01-15',
+			'source'           => 'puntwork',
+		);
 
-        $this->assertEquals('Jane', $contactData['first_name']);
-        $this->assertEquals('Smith', $contactData['last_name']);
-        $this->assertEquals('jane.smith@example.com', $contactData['email']);
-        $this->assertEquals('Tech Corp', $contactData['company']);
-        $this->assertEquals('Senior Developer', $contactData['job_title']);
+		// Test the data formatting methods
+		$contactData = $this->invokePrivateMethod( $crmManager, 'formatApplicationAsContact', array( $testApplication ) );
+		$dealData    = $this->invokePrivateMethod(
+			$crmManager,
+			'formatApplicationAsDeal',
+			array( $testApplication, 'contact_456' )
+		);
 
-        $this->assertStringContainsString('Job Application: Lead Developer', $dealData['title']);
-        $this->assertEquals('application_received', $dealData['stage']);
-        $this->assertEquals('contact_456', $dealData['contact_id']);
-    }
+		$this->assertEquals( 'Jane', $contactData['first_name'] );
+		$this->assertEquals( 'Smith', $contactData['last_name'] );
+		$this->assertEquals( 'jane.smith@example.com', $contactData['email'] );
+		$this->assertEquals( 'Tech Corp', $contactData['company'] );
+		$this->assertEquals( 'Senior Developer', $contactData['job_title'] );
 
-    /**
-     * Test rate limiting logic
-     */
-    public function testRateLimiting(): void
-    {
-        $hubspot = new HubSpotIntegration(array( 'access_token' => 'test_token' ));
+		$this->assertStringContainsString( 'Job Application: Lead Developer', $dealData['title'] );
+		$this->assertEquals( 'application_received', $dealData['stage'] );
+		$this->assertEquals( 'contact_456', $dealData['contact_id'] );
+	}
 
-        // Test rate limit check method
-        $canProceed = $this->invokePrivateMethod($hubspot, 'checkRateLimit', array());
-        $this->assertTrue($canProceed); // Should pass in test environment
+	/**
+	 * Test rate limiting logic
+	 */
+	public function testRateLimiting(): void {
+		$hubspot = new HubSpotIntegration( array( 'access_token' => 'test_token' ) );
 
-        // Test record request method
-        $this->invokePrivateMethod($hubspot, 'recordRequest', array());
-        // Should not throw exception
-        $this->assertTrue(true);
-    }
+		// Test rate limit check method
+		$canProceed = $this->invokePrivateMethod( $hubspot, 'checkRateLimit', array() );
+		$this->assertTrue( $canProceed ); // Should pass in test environment
 
-    /**
-     * Test API error handling
-     */
-    public function testApiErrorHandling(): void
-    {
-        $hubspot = new HubSpotIntegration(array( 'access_token' => 'test_token' ));
+		// Test record request method
+		$this->invokePrivateMethod( $hubspot, 'recordRequest', array() );
+		// Should not throw exception
+		$this->assertTrue( true );
+	}
 
-        // Test handleApiError with error response
-        $errorResponse = array(
-        'status'  => 'error',
-        'message' => 'Test error',
-        );
+	/**
+	 * Test API error handling
+	 */
+	public function testApiErrorHandling(): void {
+		$hubspot = new HubSpotIntegration( array( 'access_token' => 'test_token' ) );
 
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('HubSpot API Error: Test error');
+		// Test handleApiError with error response
+		$errorResponse = array(
+			'status'  => 'error',
+			'message' => 'Test error',
+		);
 
-        $this->invokePrivateMethod($hubspot, 'handleApiError', array( $errorResponse ));
-    }
+		$this->expectException( \Exception::class );
+		$this->expectExceptionMessage( 'HubSpot API Error: Test error' );
 
-    /**
-     * Helper method to invoke private methods for testing
-     */
-    private function invokePrivateMethod( $object, string $methodName, array $parameters = array() )
-    {
-        $reflection = new \ReflectionClass(get_class($object));
-        $method     = $reflection->getMethod($methodName);
-        $method->setAccessible(true);
+		$this->invokePrivateMethod( $hubspot, 'handleApiError', array( $errorResponse ) );
+	}
 
-        return $method->invokeArgs($object, $parameters);
-    }
+	/**
+	 * Helper method to invoke private methods for testing
+	 */
+	private function invokePrivateMethod( $object, string $methodName, array $parameters = array() ) {
+		$reflection = new \ReflectionClass( get_class( $object ) );
+		$method     = $reflection->getMethod( $methodName );
+		$method->setAccessible( true );
 
-    /**
-     * Test statistics retrieval
-     */
-    public function testStatisticsRetrieval(): void
-    {
-        $crmManager = new CRMManager();
+		return $method->invokeArgs( $object, $parameters );
+	}
 
-        $stats = $crmManager->getStatistics();
+	/**
+	 * Test statistics retrieval
+	 */
+	public function testStatisticsRetrieval(): void {
+		$crmManager = new CRMManager();
 
-        $this->assertIsArray($stats);
-        $this->assertArrayHasKey('total_syncs', $stats);
-        $this->assertArrayHasKey('successful_syncs', $stats);
-        $this->assertArrayHasKey('failed_syncs', $stats);
-        $this->assertArrayHasKey('last_sync', $stats);
+		$stats = $crmManager->getStatistics();
 
-        // Values should be numeric or null
-        $this->assertTrue(is_numeric($stats['total_syncs']) || is_null($stats['total_syncs']));
-        $this->assertTrue(is_numeric($stats['successful_syncs']) || is_null($stats['successful_syncs']));
-        $this->assertTrue(is_numeric($stats['failed_syncs']) || is_null($stats['failed_syncs']));
-    }
+		$this->assertIsArray( $stats );
+		$this->assertArrayHasKey( 'total_syncs', $stats );
+		$this->assertArrayHasKey( 'successful_syncs', $stats );
+		$this->assertArrayHasKey( 'failed_syncs', $stats );
+		$this->assertArrayHasKey( 'last_sync', $stats );
 
-    /**
-     * Test platform availability check
-     */
-    public function testPlatformAvailability(): void
-    {
-        $crmManager = new CRMManager();
+		// Values should be numeric or null
+		$this->assertTrue( is_numeric( $stats['total_syncs'] ) || is_null( $stats['total_syncs'] ) );
+		$this->assertTrue( is_numeric( $stats['successful_syncs'] ) || is_null( $stats['successful_syncs'] ) );
+		$this->assertTrue( is_numeric( $stats['failed_syncs'] ) || is_null( $stats['failed_syncs'] ) );
+	}
 
-        // Test configured platforms (should be empty in test environment)
-        $configuredPlatforms = $crmManager->getConfiguredPlatforms();
-        $this->assertIsArray($configuredPlatforms);
-        // In test environment, this might be empty or have test data
-        $this->assertTrue(is_array($configuredPlatforms));
+	/**
+	 * Test platform availability check
+	 */
+	public function testPlatformAvailability(): void {
+		$crmManager = new CRMManager();
 
-        // Test platform configuration check (may vary in test environment)
-        $isHubSpotConfigured = $crmManager->isPlatformConfigured('hubspot');
-        $this->assertIsBool($isHubSpotConfigured);
-        $this->assertFalse($crmManager->isPlatformConfigured('nonexistent'));
-    }
+		// Test configured platforms (should be empty in test environment)
+		$configuredPlatforms = $crmManager->getConfiguredPlatforms();
+		$this->assertIsArray( $configuredPlatforms );
+		// In test environment, this might be empty or have test data
+		$this->assertTrue( is_array( $configuredPlatforms ) );
+
+		// Test platform configuration check (may vary in test environment)
+		$isHubSpotConfigured = $crmManager->isPlatformConfigured( 'hubspot' );
+		$this->assertIsBool( $isHubSpotConfigured );
+		$this->assertFalse( $crmManager->isPlatformConfigured( 'nonexistent' ) );
+	}
 }

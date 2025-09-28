@@ -11,170 +11,161 @@ namespace Puntwork;
 
 use PHPUnit\Framework\TestCase;
 
-class HorizontalScalingTest extends TestCase
-{
+class HorizontalScalingTest extends TestCase {
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        // Mock WordPress functions
-        if (! defined('ABSPATH') ) {
-            define('ABSPATH', '/tmp/wordpress/');
-        }
-    }
 
-    /**
-     * Test instance ID generation
-     */
-    public function testInstanceIdGeneration()
-    {
-        $scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
+	protected function setUp(): void {
+		parent::setUp();
+		// Mock WordPress functions
+		if ( ! defined( 'ABSPATH' ) ) {
+			define( 'ABSPATH', '/tmp/wordpress/' );
+		}
+	}
 
-        $instance_info = $scaling_manager->getCurrentInstance();
+	/**
+	 * Test instance ID generation
+	 */
+	public function testInstanceIdGeneration() {
+		$scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
 
-        $this->assertIsArray($instance_info);
-        $this->assertArrayHasKey('instance_id', $instance_info);
-        $this->assertArrayHasKey('role', $instance_info);
-        $this->assertArrayHasKey('server_name', $instance_info);
-        $this->assertArrayHasKey('ip_address', $instance_info);
-        $this->assertArrayHasKey('cpu_count', $instance_info);
-        $this->assertArrayHasKey('memory_limit', $instance_info);
+		$instance_info = $scaling_manager->getCurrentInstance();
 
-        $this->assertIsString($instance_info['instance_id']);
-        $this->assertNotEmpty($instance_info['instance_id']);
-    }
+		$this->assertIsArray( $instance_info );
+		$this->assertArrayHasKey( 'instance_id', $instance_info );
+		$this->assertArrayHasKey( 'role', $instance_info );
+		$this->assertArrayHasKey( 'server_name', $instance_info );
+		$this->assertArrayHasKey( 'ip_address', $instance_info );
+		$this->assertArrayHasKey( 'cpu_count', $instance_info );
+		$this->assertArrayHasKey( 'memory_limit', $instance_info );
 
-    /**
-     * Test instance role determination
-     */
-    public function testInstanceRoleDetermination()
-    {
-        // Test heavy processing role
-        $this->assertTrue($this->isRoleAssigned('heavy_processing'));
+		$this->assertIsString( $instance_info['instance_id'] );
+		$this->assertNotEmpty( $instance_info['instance_id'] );
+	}
 
-        // Test standard processing role
-        $this->assertTrue($this->isRoleAssigned('standard_processing'));
+	/**
+	 * Test instance role determination
+	 */
+	public function testInstanceRoleDetermination() {
+		// Test heavy processing role
+		$this->assertTrue( $this->isRoleAssigned( 'heavy_processing' ) );
 
-        // Test light processing role
-        $this->assertTrue($this->isRoleAssigned('light_processing'));
+		// Test standard processing role
+		$this->assertTrue( $this->isRoleAssigned( 'standard_processing' ) );
 
-        // Test coordinator only role
-        $this->assertTrue($this->isRoleAssigned('coordinator_only'));
-    }
+		// Test light processing role
+		$this->assertTrue( $this->isRoleAssigned( 'light_processing' ) );
 
-    /**
-     * Helper to check if a role is valid
-     */
-    private function isRoleAssigned( $expected_role )
-    {
-        $scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
-        $instance_info   = $scaling_manager->getCurrentInstance();
+		// Test coordinator only role
+		$this->assertTrue( $this->isRoleAssigned( 'coordinator_only' ) );
+	}
 
-        $valid_roles = array( 'heavy_processing', 'standard_processing', 'light_processing', 'coordinator_only' );
+	/**
+	 * Helper to check if a role is valid
+	 */
+	private function isRoleAssigned( $expected_role ) {
+		$scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
+		$instance_info   = $scaling_manager->getCurrentInstance();
 
-        return in_array($instance_info['role'], $valid_roles);
-    }
+		$valid_roles = array( 'heavy_processing', 'standard_processing', 'light_processing', 'coordinator_only' );
 
-    /**
-     * Test instance capability checking
-     */
-    public function testInstanceCapabilityChecking()
-    {
-        $scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
+		return in_array( $instance_info['role'], $valid_roles );
+	}
 
-        $job_types = array( 'feed_import', 'batch_process', 'analytics_update', 'notification', 'cleanup' );
+	/**
+	 * Test instance capability checking
+	 */
+	public function testInstanceCapabilityChecking() {
+		$scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
 
-        foreach ( $job_types as $job_type ) {
-            $can_handle = $scaling_manager->canHandleJob($job_type);
-            $this->assertIsBool($can_handle);
-        }
-    }
+		$job_types = array( 'feed_import', 'batch_process', 'analytics_update', 'notification', 'cleanup' );
 
-    /**
-     * Test instance statistics
-     */
-    public function testInstanceStatistics()
-    {
-        $scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
+		foreach ( $job_types as $job_type ) {
+			$can_handle = $scaling_manager->canHandleJob( $job_type );
+			$this->assertIsBool( $can_handle );
+		}
+	}
 
-        $stats = $scaling_manager->getInstanceStats();
+	/**
+	 * Test instance statistics
+	 */
+	public function testInstanceStatistics() {
+		$scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
 
-        $this->assertIsArray($stats);
-        $this->assertArrayHasKey('active', $stats);
-        $this->assertArrayHasKey('inactive', $stats);
-        $this->assertArrayHasKey('maintenance', $stats);
-        $this->assertArrayHasKey('total', $stats);
+		$stats = $scaling_manager->getInstanceStats();
 
-        $this->assertIsInt($stats['active']);
-        $this->assertIsInt($stats['inactive']);
-        $this->assertIsInt($stats['maintenance']);
-        $this->assertIsInt($stats['total']);
+		$this->assertIsArray( $stats );
+		$this->assertArrayHasKey( 'active', $stats );
+		$this->assertArrayHasKey( 'inactive', $stats );
+		$this->assertArrayHasKey( 'maintenance', $stats );
+		$this->assertArrayHasKey( 'total', $stats );
 
-        $this->assertGreaterThanOrEqual(0, $stats['active']);
-        $this->assertGreaterThanOrEqual(0, $stats['inactive']);
-        $this->assertGreaterThanOrEqual(0, $stats['maintenance']);
-        $this->assertEquals($stats['total'], $stats['active'] + $stats['inactive'] + $stats['maintenance']);
-    }
+		$this->assertIsInt( $stats['active'] );
+		$this->assertIsInt( $stats['inactive'] );
+		$this->assertIsInt( $stats['maintenance'] );
+		$this->assertIsInt( $stats['total'] );
 
-    /**
-     * Test optimal instance selection
-     */
-    public function testOptimalInstanceSelection()
-    {
-        $scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
+		$this->assertGreaterThanOrEqual( 0, $stats['active'] );
+		$this->assertGreaterThanOrEqual( 0, $stats['inactive'] );
+		$this->assertGreaterThanOrEqual( 0, $stats['maintenance'] );
+		$this->assertEquals( $stats['total'], $stats['active'] + $stats['inactive'] + $stats['maintenance'] );
+	}
 
-        $job_types = array( 'feed_import', 'batch_process', 'analytics_update' );
+	/**
+	 * Test optimal instance selection
+	 */
+	public function testOptimalInstanceSelection() {
+		$scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
 
-        foreach ( $job_types as $job_type ) {
-            $optimal_instance = $scaling_manager->getOptimalInstance($job_type);
+		$job_types = array( 'feed_import', 'batch_process', 'analytics_update' );
 
-            // In single instance setup, it should return null or current instance
-            $this->assertTrue($optimal_instance === null || is_array($optimal_instance));
-        }
-    }
+		foreach ( $job_types as $job_type ) {
+			$optimal_instance = $scaling_manager->getOptimalInstance( $job_type );
 
-    /**
-     * Test health check functionality
-     */
-    public function testHealthCheckFunctionality()
-    {
-        $scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
+			// In single instance setup, it should return null or current instance
+			$this->assertTrue( $optimal_instance === null || is_array( $optimal_instance ) );
+		}
+	}
 
-        // Health check should not throw exceptions
-        $this->expectNotToPerformAssertions();
+	/**
+	 * Test health check functionality
+	 */
+	public function testHealthCheckFunctionality() {
+		$scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
 
-        // This would normally run health checks, but in test environment
-        // we just ensure the method exists and doesn't crash
-        try {
-            // Simulate health check call
-            $reflection = new \ReflectionClass($scaling_manager);
-            $method     = $reflection->getMethod('healthCheck');
-            $method->setAccessible(true);
-            $method->invoke($scaling_manager);
-        } catch ( \Exception $e ) {
-            // Health check might fail in test environment, which is OK
-            $this->assertInstanceOf(\Exception::class, $e);
-        }
-    }
+		// Health check should not throw exceptions
+		$this->expectNotToPerformAssertions();
 
-    /**
-     * Test instance cleanup
-     */
-    public function testInstanceCleanup()
-    {
-        $scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
+		// This would normally run health checks, but in test environment
+		// we just ensure the method exists and doesn't crash
+		try {
+			// Simulate health check call
+			$reflection = new \ReflectionClass( $scaling_manager );
+			$method     = $reflection->getMethod( 'healthCheck' );
+			$method->setAccessible( true );
+			$method->invoke( $scaling_manager );
+		} catch ( \Exception $e ) {
+			// Health check might fail in test environment, which is OK
+			$this->assertInstanceOf( \Exception::class, $e );
+		}
+	}
 
-        // Cleanup should not throw exceptions
-        $this->expectNotToPerformAssertions();
+	/**
+	 * Test instance cleanup
+	 */
+	public function testInstanceCleanup() {
+		$scaling_manager = new \Puntwork\PuntworkHorizontalScalingManager();
 
-        try {
-            $reflection = new \ReflectionClass($scaling_manager);
-            $method     = $reflection->getMethod('cleanupDeadInstances');
-            $method->setAccessible(true);
-            $method->invoke($scaling_manager);
-        } catch ( \Exception $e ) {
-            // Cleanup might fail in test environment, which is OK
-            $this->assertInstanceOf(\Exception::class, $e);
-        }
-    }
+		// Cleanup should not throw exceptions
+		$this->expectNotToPerformAssertions();
+
+		try {
+			$reflection = new \ReflectionClass( $scaling_manager );
+			$method     = $reflection->getMethod( 'cleanupDeadInstances' );
+			$method->setAccessible( true );
+			$method->invoke( $scaling_manager );
+		} catch ( \Exception $e ) {
+			// Cleanup might fail in test environment, which is OK
+			$this->assertInstanceOf( \Exception::class, $e );
+		}
+	}
 }
