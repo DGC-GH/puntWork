@@ -297,10 +297,16 @@ function puntwork_dashboard_page()
 		</p>
 
 		<!-- PWA Status Indicator -->
-				<div id="pwa-status-indicator" style="display: none;
-			background: linear-gradient(135deg, #007aff 0%, #0056cc 100%);
-			color: white; padding: 12px 20px; border-radius: 12px; text-align: center; margin-bottom: 24px;
-			font-size: 14px; font-weight: 500; box-shadow: 0 2px 8px rgba(0,122,255,0.2);">
+		<div id="pwa-status-indicator" style="display: none;
+		background: linear-gradient(135deg, #007aff 0%, #0056cc 100%);
+		color: white; padding: 12px 20px; border-radius: 12px; text-align: center; margin-bottom: 24px;
+		font-size: 14px; font-weight: 500; box-shadow: 0 2px 8px rgba(0,122,255,0.2);">
+			<i class="fas fa-mobile-alt" style="margin-right: 8px;"></i>
+			<?php _e('puntWork Admin is available as a Progressive Web App!', 'puntwork'); ?>
+			<button id="pwa-install-btn" style="margin-left: 12px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">
+				<?php _e('Install', 'puntwork'); ?>
+			</button>
+		</div>
 
 		<!-- Overview Cards -->
 		<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
