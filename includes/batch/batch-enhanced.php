@@ -124,6 +124,18 @@ function process_batch_enhanced(array $batch_guids, array $batch_items, array &$
             'success' => true,
         ]);
 
+        // Trigger iterative learning analysis for weight adjustments
+        if (class_exists('Puntwork\\Utilities\\IterativeLearner')) {
+            $learning_results = \Puntwork\Utilities\IterativeLearner::analyzeAndAdjustWeights();
+            if ($learning_results['analysis_performed']) {
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . sprintf(
+                    'Iterative learning analysis completed - Confidence: %.2f, Adjustments: %d',
+                    $learning_results['confidence_level'],
+                    count($learning_results['adjustments_made'])
+                );
+            }
+        }
+
         end_performance_monitoring($monitor_id);
 
         return [

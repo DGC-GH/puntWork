@@ -85,6 +85,13 @@ class AdaptiveResourceManager
         // Store current allocation for monitoring
         self::$current_allocation = $allocation;
 
+        // Record performance for learning system
+        self::recordResourcePerformance($allocation, [
+            'batch_size' => $batch_size,
+            'content_complexity' => $content_complexity,
+            'profile_selected' => $profile,
+        ]);
+
         return $allocation;
     }
 
@@ -448,5 +455,43 @@ class AdaptiveResourceManager
             'system_load' => self::getSystemLoad(),
             'available_memory' => self::getAvailableMemory(),
         ];
+    }
+
+    /**
+     * Get resource profiles.
+     */
+    public static function getResourceProfiles(): array
+    {
+        return self::$resource_profiles;
+    }
+
+    /**
+     * Update resource profiles.
+     */
+    public static function updateResourceProfiles(array $new_profiles): bool
+    {
+        self::$resource_profiles = array_merge(self::$resource_profiles, $new_profiles);
+        return true;
+    }
+
+    /**
+     * Record resource allocation performance for learning.
+     */
+    public static function recordResourcePerformance(array $allocation, array $context = []): bool
+    {
+        if (!class_exists('Puntwork\\Utilities\\IterativeLearner')) {
+            return false;
+        }
+
+        $performance_data = [
+            'optimization_type' => 'resource_allocation',
+            'memory_limit_mb' => self::parseMemoryLimit($allocation['memory_limit']) / (1024 * 1024), // Convert bytes to MB
+            'max_execution_time' => $allocation['max_execution_time'],
+            'memory_buffer_mb' => $allocation['memory_buffer'] / (1024 * 1024),
+            'system_load' => self::getSystemLoad(),
+            'available_memory_mb' => self::getAvailableMemory() / (1024 * 1024),
+        ];
+
+        return IterativeLearner::recordSessionPerformance($performance_data, $context);
     }
 }

@@ -110,6 +110,13 @@ class JsonlOptimizer
                 $stats['memory_peak_mb']
             ));
 
+            // Record performance for learning system
+            self::recordOptimizationPerformance($stats, [
+                'input_file' => basename($input_file),
+                'output_file' => basename($output_file),
+                'optimization_config' => self::$optimization_config,
+            ]);
+
             return true;
         } catch (\Exception $e) {
             error_log('[PUNTWORK] [JSONL-OPTIMIZE] Optimization failed: ' . $e->getMessage());
@@ -593,5 +600,43 @@ class JsonlOptimizer
     public static function getStats(): array
     {
         return self::$optimization_config;
+    }
+
+    /**
+     * Get optimization configuration.
+     */
+    public static function getOptimizationConfig(): array
+    {
+        return self::$optimization_config;
+    }
+
+    /**
+     * Update optimization configuration.
+     */
+    public static function updateOptimizationConfig(array $new_config): bool
+    {
+        self::$optimization_config = array_merge(self::$optimization_config, $new_config);
+        return true;
+    }
+
+    /**
+     * Record optimization performance for learning.
+     */
+    public static function recordOptimizationPerformance(array $stats, array $context = []): bool
+    {
+        if (!class_exists('Puntwork\\Utilities\\IterativeLearner')) {
+            return false;
+        }
+
+        $performance_data = [
+            'optimization_type' => 'jsonl_optimization',
+            'processing_time_per_item' => $stats['optimization_time'] / max(1, $stats['items_processed']),
+            'memory_usage_mb' => $stats['memory_peak_mb'],
+            'items_processed' => $stats['items_processed'],
+            'strategies_applied' => $stats['strategies_applied'],
+            'compression_ratio' => $stats['output_file_size'] / max(1, $stats['input_file_size']),
+        ];
+
+        return IterativeLearner::recordSessionPerformance($performance_data, $context);
     }
 }

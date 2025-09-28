@@ -99,6 +99,12 @@ class BatchPrioritizer
             $priority_stats['unchanged_count']
         ));
 
+        // Record performance for learning system
+        self::recordPrioritizationPerformance($priority_stats, [
+            'batch_size' => count($batch_guids),
+            'priority_config' => self::$priority_config,
+        ]);
+
         return [
             'prioritized_guids' => $prioritized_data['guids'],
             'prioritized_items' => $prioritized_data['items'],
@@ -425,13 +431,5 @@ class BatchPrioritizer
     public static function configure(array $config): void
     {
         self::$priority_config = array_merge(self::$priority_config, $config);
-    }
-
-    /**
-     * Get priority statistics for a batch.
-     */
-    public static function getPriorityStats(array $item_priorities): array
-    {
-        return self::calculatePriorityStats($item_priorities, 0);
     }
 }
