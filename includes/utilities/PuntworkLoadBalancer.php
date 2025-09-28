@@ -250,6 +250,15 @@ class PuntworkLoadBalancer
             return;
         }
 
+        // Cache table existence check to reduce database queries
+        $cache_key = 'puntwork_instances_table_ready';
+        $table_ready = get_transient($cache_key);
+        if ($table_ready) {
+            // Table is ready, just register instance
+            $this->registerCurrentInstance();
+            return;
+        }
+
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'puntwork_instances';
@@ -350,6 +359,9 @@ class PuntworkLoadBalancer
 
         // Register this server instance if not already registered
         $this->registerCurrentInstance();
+
+        // Cache that table is ready for 1 hour
+        set_transient($cache_key, true, HOUR_IN_SECONDS);
     }
 
     /**
@@ -367,8 +379,6 @@ class PuntworkLoadBalancer
         $table_name  = $wpdb->prefix . 'puntwork_instances';
         $instance_id = 'wp-instance-' . get_current_blog_id() . '-' . substr(md5(site_url()), 0, 8);
 
-        error_log('[PUNTWORK] Attempting to register instance: ' . $instance_id);
-
         // Check if instance already exists
         $existing = $wpdb->get_var(
             $wpdb->prepare(
@@ -378,8 +388,7 @@ class PuntworkLoadBalancer
         );
 
         if ($existing) {
-            error_log('[PUNTWORK] Instance already exists, updating last_seen');
-            // Update last seen
+            // Update last seen without logging every time
             $result = $wpdb->update(
                 $table_name,
                 array( 'last_seen' => current_time('mysql') ),
@@ -390,11 +399,9 @@ class PuntworkLoadBalancer
 
             if ($result === false) {
                    error_log('[PUNTWORK] Failed to update instance last_seen: ' . $wpdb->last_error);
-            } else {
-                error_log('[PUNTWORK] Successfully updated instance last_seen');
             }
         } else {
-            error_log('[PUNTWORK] Registering new instance');
+            error_log('[PUNTWORK] Registering new instance: ' . $instance_id);
             // Register this instance
             $server_name = get_bloginfo('name') ?: 'WordPress Instance';
             $ip_address  = $_SERVER['SERVER_ADDR'] ?? $_SERVER['LOCAL_ADDR'] ?? '127.0.0.1';

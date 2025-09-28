@@ -19,6 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auto-fixed 4551 PHPCS violations across 122 files for PSR-12 compliance
 - Renamed Puntwork_CRM_Admin class back to PuntworkCrmAdmin for final PascalCase compliance
 - Added missing CacheManager.php include to resolve "Class not found" error for EnhancedCacheManager
+- Fixed namespace declaration in JsonlIterator class (batch-loading.php) for PSR-12 compliance
+- Added caching to instances table creation check to reduce repetitive database queries and logging
+- Reduced verbose logging in instance registration to only log errors and new registrations
+- Added nonce verification to AJAX import control handlers for improved security
+
+### Performance
+- Optimized load balancer initialization by caching table existence checks
+- Reduced logging frequency for routine instance updates
 - Drag-and-drop functionality in feed configuration by replacing SortableJS with jQuery UI Sortable
 - Fatal error in CRM admin class instantiation preventing plugin initialization
 - PHPCS error: Renamed Puntwork_CRM_Admin class to PuntworkCrmAdmin for PascalCase compliance

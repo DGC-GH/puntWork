@@ -34,6 +34,12 @@ require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
 add_action('wp_ajax_run_job_import_batch', __NAMESPACE__ . '\\run_job_import_batch_ajax');
 function run_job_import_batch_ajax()
 {
+    // Verify nonce for security
+    if (! isset($_POST['nonce']) || ! wp_verify_nonce($_POST['nonce'], 'puntwork_import_nonce')) {
+        wp_send_json_error(array( 'message' => 'Security check failed' ));
+        return;
+    }
+
     // Log that we entered the function
     error_log('[PUNTWORK] AJAX: run_job_import_batch_ajax function called');
 
