@@ -37,7 +37,7 @@ class JobDeduplicator
      * Configuration for deduplication rules
      */
     private static $config = array(
-    'enable_fuzzy_matching'        => true,
+    'enable_fuzzy_matching'        => false, // Disabled to prevent N+1 queries during import
     'title_similarity_threshold'   => 0.85,
     'company_similarity_threshold' => 0.90,
     'max_candidates'               => 10,
@@ -403,12 +403,36 @@ class JobDeduplicator
                         )
                     ) ?: array();
 
+                    if (empty($existing) ) {
+                        continue; // No posts found, skip
+                    }
+
                     $post_to_keep        = null;
                     $duplicates_to_draft = array();
-                    $hashes              = array();
 
-                    foreach ( $existing as $post_id ) {
-                              $hashes[ $post_id ] = get_post_meta($post_id, '_import_hash', true);
+                    // BULK LOAD all required metadata and post fields to avoid N+1 queries
+                    $placeholders   = implode(',', array_fill(0, count($existing), '%d'));
+                    $hashes_query   = $wpdb->prepare(
+                        "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
+                        $existing
+                    );
+                    $hashes_results = $wpdb->get_results($hashes_query, OBJECT_K);
+                    $hashes         = array();
+                    foreach ( $hashes_results as $row ) {
+                        $hashes[ $row->post_id ] = $row->meta_value;
+                    }
+
+                    // Batch load post_modified and post_title
+                    $posts_query   = $wpdb->prepare(
+                        "SELECT ID, post_modified, post_title FROM $wpdb->posts WHERE ID IN ($placeholders)",
+                        $existing
+                    );
+                    $posts_results = $wpdb->get_results($posts_query, OBJECT_K);
+                    $post_modified = array();
+                    $post_titles   = array();
+                    foreach ( $posts_results as $post_id => $post ) {
+                        $post_modified[ $post_id ] = $post->post_modified;
+                        $post_titles[ $post_id ]   = $post->post_title;
                     }
 
                     foreach ( $existing as $post_id ) {
@@ -420,7 +444,7 @@ class JobDeduplicator
                                 $duplicates_to_draft[] = $post_id;
                             } else {
                                 // If hashes differ, keep the most recently modified
-                                if (strtotime(get_post_field('post_modified', $post_id)) > strtotime(get_post_field('post_modified', $post_to_keep)) ) {
+                                if (strtotime($post_modified[ $post_id ]) > strtotime($post_modified[ $post_to_keep ]) ) {
                                        $duplicates_to_draft[] = $post_to_keep;
                                        $post_to_keep          = $post_id;
                                 } else {
@@ -430,13 +454,27 @@ class JobDeduplicator
                         }
                     }
 
-                    // Draft duplicates
+                    // Draft duplicates instead of deleting them, and append reason to title
                     foreach ( $duplicates_to_draft as $dup_id ) {
-                        $current_title = get_post_field('post_title', $dup_id);
-                        $reason        = $hashes[ $dup_id ] === $hashes[ $post_to_keep ] ? 'Identical content' : 'Older version kept';
-                        $new_title     = strpos($current_title, 'Duplicate - ') === false ?
-                        $current_title . ' [Duplicate - ' . $reason . ']' : $current_title;
+                        // Get current title from batched data
+                        $current_title = $post_titles[ $dup_id ] ?? '';
 
+                        // Determine reason for drafting
+                        $reason = 'Duplicate - ';
+                        if ($hashes[ $dup_id ] === $hashes[ $post_to_keep ] ) {
+                            $reason .= 'Identical content';
+                        } else {
+                            $reason .= 'Older version kept';
+                        }
+
+                        // Append reason to title if not already present
+                        if (strpos($current_title, $reason) === false ) {
+                            $new_title = $current_title . ' [' . $reason . ']';
+                        } else {
+                            $new_title = $current_title;
+                        }
+
+                        // Update post to draft status and modify title
                         wp_update_post(
                             array(
                             'ID'          => $dup_id,
@@ -447,8 +485,8 @@ class JobDeduplicator
 
                         ++$duplicates_drafted;
                         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Drafted duplicate ID: ' . $dup_id . ' GUID: ' . $guid . ' - ' . $reason;
+                        error_log('Drafted duplicate ID: ' . $dup_id . ' GUID: ' . $guid . ' - ' . $reason);
                     }
-
                     $post_ids_by_guid[ $guid ] = $post_to_keep;
                 } else {
                     // Single existing post for this GUID
@@ -511,6 +549,8 @@ class JobDeduplicator
      */
     private static function handleAiDuplicates( &$logs, &$duplicates_drafted )
     {
+        global $wpdb;
+
         // Get all published jobs for AI similarity analysis
         $existing_jobs = get_posts(
             array(
@@ -525,13 +565,43 @@ class JobDeduplicator
             return;
         }
 
+        // BULK LOAD all required metadata and post fields to avoid N+1 queries
+        $placeholders = implode(',', array_fill(0, count($existing_jobs), '%d'));
+
+        // Batch load post titles
+        $posts_query = $wpdb->prepare(
+            "SELECT ID, post_title FROM $wpdb->posts WHERE ID IN ($placeholders)",
+            $existing_jobs
+        );
+        $posts_results = $wpdb->get_results($posts_query, OBJECT_K);
+        $post_titles   = array();
+        foreach ( $posts_results as $post_id => $post ) {
+            $post_titles[ $post_id ] = $post->post_title;
+        }
+
+        // Batch load metadata for job_description and company
+        $meta_keys     = array( 'job_description', 'company' );
+        $meta_query    = $wpdb->prepare(
+            "SELECT post_id, meta_key, meta_value FROM $wpdb->postmeta
+             WHERE post_id IN ($placeholders) AND meta_key IN ('job_description', 'company')",
+            $existing_jobs
+        );
+        $meta_results = $wpdb->get_results($meta_query);
+        $meta_data    = array();
+        foreach ( $meta_results as $row ) {
+            if (! isset($meta_data[ $row->post_id ]) ) {
+                $meta_data[ $row->post_id ] = array();
+            }
+            $meta_data[ $row->post_id ][ $row->meta_key ] = $row->meta_value;
+        }
+
         // Build job data array for AI similarity detection
         $job_data = array();
         foreach ( $existing_jobs as $post_id ) {
             $job_data[] = array(
-            'job_title'       => get_post_field('post_title', $post_id),
-            'job_description' => get_post_meta($post_id, 'job_description', true) ?: '',
-            'job_company'     => get_post_meta($post_id, 'company', true) ?: '',
+            'job_title'       => $post_titles[ $post_id ] ?? '',
+            'job_description' => $meta_data[ $post_id ]['job_description'] ?? '',
+            'job_company'     => $meta_data[ $post_id ]['company'] ?? '',
             );
         }
 
@@ -559,7 +629,7 @@ class JobDeduplicator
 
             // Draft the AI-detected duplicates
             foreach ( $duplicates as $dup_id ) {
-                $current_title = get_post_field('post_title', $dup_id);
+                $current_title = $post_titles[ $dup_id ] ?? '';
                 $new_title     = strpos($current_title, 'Duplicate - ') === false ?
                  $current_title . ' [Duplicate - AI Content Similarity]' : $current_title;
 
