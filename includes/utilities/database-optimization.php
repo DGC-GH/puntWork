@@ -206,7 +206,7 @@ function bulk_update_acf_fields(array $post_ids, array $acf_data): void
             }
             $field_time = microtime(true) - $field_start;
             if ($field_time > 1.0) { // Log slow field updates
-                error_log('[PUNTWORK] [ACF-DEBUG] SLOW ACF field update: ' . $field_name . ' took ' . number_format($field_time, 4) . ' seconds for post ' . $post_id);
+                error_log('[PUNTWORK] [ACF-DEBUG] SLOW ACF field update: ' . $field_name . ' took ' . number_format($field_time, 4) . ' seconds for post ' . $post_id . ' (value length: ' . strlen(is_array($value) ? json_encode($value) : $value) . ')');
             }
         }
 

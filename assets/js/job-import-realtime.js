@@ -85,6 +85,7 @@
 
                 // Handle progress updates
                 this.eventSource.addEventListener('progress', function(event) {
+                    console.log('[PUNTWORK] SSE progress event raw data:', '"' + event.data + '"');
                     try {
                         if (!event.data || typeof event.data === 'undefined' || event.data.trim() === '') {
                             console.log('[PUNTWORK] SSE progress event: empty data');
