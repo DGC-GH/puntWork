@@ -169,12 +169,49 @@ function bulk_update_post_meta($post_id, array $meta_data): void
 }
 
 /**
- * Bulk fetch post statuses to avoid N+1 queries.
+ * Bulk update ACF fields for multiple posts using ACF's update_field function.
+ * This ensures proper ACF field processing and relationships.
  *
  * @param  array $post_ids Array of post IDs
- * @return array Post ID => status mapping
+ * @param  array $acf_data Array of ACF field data keyed by post index
+ * @return void
  */
-function bulk_get_post_statuses(array $post_ids): array
+function bulk_update_acf_fields(array $post_ids, array $acf_data): void
+{
+    if (empty($acf_data) || empty($post_ids)) {
+        return;
+    }
+
+    error_log('[PUNTWORK] [ACF-DEBUG] bulk_update_acf_fields called for ' . count($post_ids) . ' posts with ACF data');
+
+    $start_time = microtime(true);
+
+    foreach ($post_ids as $index => $post_id) {
+        if (!isset($acf_data[$index])) {
+            continue;
+        }
+
+        $post_acf_start = microtime(true);
+        $fields = $acf_data[$index];
+
+        error_log('[PUNTWORK] [ACF-DEBUG] Updating ACF fields for post ' . $post_id . ' (' . count($fields) . ' fields)');
+
+        foreach ($fields as $field_name => $value) {
+            if (function_exists('update_field')) {
+                update_field($field_name, $value, $post_id);
+            } else {
+                // Fallback to postmeta if ACF not available
+                update_post_meta($post_id, $field_name, $value);
+            }
+        }
+
+        $post_acf_time = microtime(true) - $post_acf_start;
+        error_log('[PUNTWORK] [ACF-DEBUG] ACF update for post ' . $post_id . ' completed in ' . number_format($post_acf_time, 4) . ' seconds');
+    }
+
+    $total_time = microtime(true) - $start_time;
+    error_log('[PUNTWORK] [ACF-DEBUG] bulk_update_acf_fields completed in ' . number_format($total_time, 4) . ' seconds total (' . number_format($total_time / count($post_ids), 4) . ' seconds per post)');
+}
 {
     global $wpdb;
 

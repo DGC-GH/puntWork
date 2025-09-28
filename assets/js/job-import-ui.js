@@ -150,6 +150,9 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             // Some responses have data directly, others have it in .data property
             var data = response.data || response;
 
+            // CRITICAL: Preserve the original total value before any processing
+            var originalTotal = data.total;
+
             // Ensure all counter fields are present and numeric
             data.total = parseInt(data.total) || 0;
             data.processed = parseInt(data.processed) || 0;
@@ -160,6 +163,16 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             data.time_elapsed = parseFloat(data.time_elapsed) || 0;
             data.success = data.success !== undefined ? data.success : null;
             data.error_message = data.error_message || '';
+
+            // DEBUG: Log total normalization to catch issues
+            if (originalTotal != data.total) {
+                console.log('[PUNTWORK] [UI-DEBUG] Total normalization: original=' + originalTotal + ', parsed=' + data.total);
+                PuntWorkJSLogger.debug('Total value changed during normalization', 'UI', {
+                    original: originalTotal,
+                    parsed: data.total,
+                    responseData: response
+                });
+            }
 
             PuntWorkJSLogger.debug('Normalized response data', 'UI', {
                 total: data.total,
@@ -185,6 +198,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             data = this.normalizeResponseData(data);
 
             console.log('[PUNTWORK] JobImportUI.updateProgress called with data:', data);
+            console.log('[PUNTWORK] [PHASE-DEBUG] Current phase: ' + this.currentPhase + ', incoming total: ' + data.total + ', processed: ' + data.processed);
             PuntWorkJSLogger.debug('Updating progress with data', 'UI', data);
             console.log('[PUNTWORK] Progress data received:', data);
 
@@ -206,6 +220,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
 
             // Detect if we should force phase to job-importing when total changes significantly (e.g., from feeds to jobs)
             if ((this.currentPhase === 'feed-processing' || this.currentPhase === 'jsonl-combining') && total > 10) {
+                console.log('[PUNTWORK] [UI-DEBUG] Phase transition triggered: current=' + this.currentPhase + ', total=' + total + ', processed=' + processed);
                 this.setPhase('job-importing');
                 PuntWorkJSLogger.debug('Forced transition to job-importing phase due to large total (' + total + ')', 'UI');
             }
@@ -284,7 +299,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                     }
                 } else {
                     percent = 0; // Start from 0 for importing phase
-                    console.log('[PUNTWORK] UI UPDATE CHECK - Total is 0, setting percent to 0');
+                    console.log('[PUNTWORK] UI UPDATE CHECK - Total is 0 or invalid, setting percent to 0. Total value: ' + total + ', type: ' + typeof total);
                 }
             } else if (this.currentPhase === 'complete') {
                 // Ensure we show 100% when complete

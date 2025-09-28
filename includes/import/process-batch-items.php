@@ -147,6 +147,7 @@ if (!function_exists('process_batch_items')) {
 
                     error_log('[PUNTWORK] [ITEMS-DEBUG] Update details: title="' . $xml_title . '", validfrom="' . $xml_validfrom . '", modified="' . $post_modified . '"');
 
+                    $post_update_start = microtime(true);
                     wp_update_post(
                         [
                             'ID' => $post_id,
@@ -157,6 +158,8 @@ if (!function_exists('process_batch_items')) {
                             'post_modified' => $post_modified,
                         ]
                     );
+                    $post_update_time = microtime(true) - $post_update_start;
+                    error_log('[PUNTWORK] [ITEMS-DEBUG] Post update completed in ' . number_format($post_update_time, 4) . ' seconds');
 
                     error_log('[PUNTWORK] [ITEMS-DEBUG] Post updated successfully, now updating metadata');
 
@@ -207,7 +210,10 @@ if (!function_exists('process_batch_items')) {
                         'post_author' => $user_id,
                     ];
 
+                    $post_insert_start = microtime(true);
                     $post_id = wp_insert_post($post_data);
+                    $post_insert_time = microtime(true) - $post_insert_start;
+                    error_log('[PUNTWORK] [ITEMS-DEBUG] Post insert completed in ' . number_format($post_insert_time, 4) . ' seconds');
                     if (is_wp_error($post_id)) {
                         $error_msg = 'Create failed GUID: ' . $guid . ' - ' . $post_id->get_error_message();
                         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
@@ -290,12 +296,19 @@ if (!function_exists('process_batch_items')) {
             $chunks = array_chunk($all_acf_updates, $chunk_size);
             $post_chunks = array_chunk($posts_to_update, $chunk_size);
 
+            $total_acf_start = microtime(true);
             foreach ($chunks as $chunk_index => $chunk_updates) {
                 $chunk_posts = $post_chunks[$chunk_index];
+                $chunk_start = microtime(true);
                 error_log('[PUNTWORK] [ITEMS-DEBUG] Processing ACF chunk ' . ($chunk_index + 1) . '/' . count($chunks) . ' (' . count($chunk_updates) . ' posts)');
-                bulk_update_post_meta($chunk_posts, $chunk_updates);
+
+                bulk_update_acf_fields($chunk_posts, $chunk_updates);
+
+                $chunk_time = microtime(true) - $chunk_start;
+                error_log('[PUNTWORK] [ITEMS-DEBUG] ACF chunk ' . ($chunk_index + 1) . ' completed in ' . number_format($chunk_time, 4) . ' seconds');
             }
-            error_log('[PUNTWORK] [ITEMS-DEBUG] Bulk ACF updates completed successfully');
+            $total_acf_time = microtime(true) - $total_acf_start;
+            error_log('[PUNTWORK] [ITEMS-DEBUG] Bulk ACF updates completed in ' . number_format($total_acf_time, 4) . ' seconds total (' . number_format($total_acf_time / count($all_acf_updates), 4) . ' seconds per post)');
         }
     }
 }
