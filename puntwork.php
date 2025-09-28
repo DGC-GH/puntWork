@@ -131,6 +131,9 @@ function setup_job_import()
     }
     $puntwork_initialized = true;
 
+    // Increase memory limit to prevent exhaustion
+    ini_set('memory_limit', '1024M');
+
     $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
 
     if ($debug_mode) {
