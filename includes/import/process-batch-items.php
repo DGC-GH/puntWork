@@ -43,7 +43,7 @@ if (! function_exists('process_batch_items') ) {
                 $xml_updated_ts = strtotime($xml_updated);
                 $post_id        = isset($post_ids_by_guid[ $guid ]) ? $post_ids_by_guid[ $guid ] : null;
 
-                error_log('[PUNTWORK] [ITEMS-DEBUG] GUID ' . $guid . ': post_id=' . ( $post_id ?? 'null' ) . ', xml_updated=' . $xml_updated);
+                error_log('[PUNTWORK] [ITEMS-DEBUG] GUID ' . $guid . ': post_id=' . ( $post_id ?? 'null' ) . ', xml_updated=' . $xml_updated . ', xml_updated_ts=' . $xml_updated_ts);
 
                 // If post exists, check if it needs updating
                 if ($post_id ) {
@@ -65,17 +65,27 @@ if (! function_exists('process_batch_items') ) {
                     $current_last_update = isset($last_updates[ $post_id ]) ? $last_updates[ $post_id ]->meta_value : '';
                     $current_last_ts     = $current_last_update ? strtotime($current_last_update) : 0;
 
+                    error_log('[PUNTWORK] [ITEMS-DEBUG] GUID ' . $guid . ' timestamp comparison:');
+                    error_log('[PUNTWORK] [ITEMS-DEBUG]   - xml_updated: "' . $xml_updated . '" -> timestamp: ' . $xml_updated_ts);
+                    error_log('[PUNTWORK] [ITEMS-DEBUG]   - current_last_update: "' . $current_last_update . '" -> timestamp: ' . $current_last_ts);
+                    error_log('[PUNTWORK] [ITEMS-DEBUG]   - comparison: xml_updated_ts=' . $xml_updated_ts . ', current_last_ts=' . $current_last_ts);
+
                     // Skip if no update timestamp or if current version is newer/equal
                     if ($xml_updated_ts && $current_last_ts >= $xml_updated_ts ) {
-                        error_log('[PUNTWORK] [ITEMS-DEBUG] Skipping GUID ' . $guid . ' - not updated (current: ' . $current_last_ts . ', xml: ' . $xml_updated_ts . ')');
+                        error_log('[PUNTWORK] [ITEMS-DEBUG] Skipping GUID ' . $guid . ' - not updated (current: ' . $current_last_ts . ' >= xml: ' . $xml_updated_ts . ')');
                         ++$skipped;
-                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - Not updated';
+                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - Not updated (current: ' . date('Y-m-d H:i:s', $current_last_ts) . ', xml: ' . date('Y-m-d H:i:s', $xml_updated_ts) . ')';
                         ++$processed_count;
                         continue;
                     }
 
                     $current_hash = $all_hashes_by_post[ $post_id ] ?? '';
                     $item_hash    = md5(json_encode($item));
+
+                    error_log('[PUNTWORK] [ITEMS-DEBUG] GUID ' . $guid . ' hash comparison:');
+                    error_log('[PUNTWORK] [ITEMS-DEBUG]   - current_hash: ' . substr($current_hash, 0, 8) . '...');
+                    error_log('[PUNTWORK] [ITEMS-DEBUG]   - item_hash: ' . substr($item_hash, 0, 8) . '...');
+                    error_log('[PUNTWORK] [ITEMS-DEBUG]   - hash_match: ' . ($current_hash === $item_hash ? 'true' : 'false'));
 
                     // Skip if content hasn't changed
                     if ($current_hash === $item_hash ) {
@@ -122,18 +132,20 @@ if (! function_exists('process_batch_items') ) {
                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Updated ID: ' . $post_id . ' GUID: ' . $guid;
                        error_log('Updated ID: ' . $post_id . ' GUID: ' . $guid);
                 } else {
-                    error_log('[PUNTWORK] [ITEMS-DEBUG] Creating new post for GUID ' . $guid);
+                    error_log('[PUNTWORK] [ITEMS-DEBUG] Creating new post for GUID ' . $guid . ' (no existing post found)');
                     // Create new post only if it doesn't exist
                     $xml_title     = isset($item['functiontitle']) ? $item['functiontitle'] : '';
                     $xml_validfrom = isset($item['validfrom']) ? $item['validfrom'] : current_time('mysql');
                     $post_modified = $xml_updated ?: current_time('mysql');
+
+                    error_log('[PUNTWORK] [ITEMS-DEBUG] Creating post with title: "' . $xml_title . '", validfrom: ' . $xml_validfrom);
 
                     $post_data = array(
                     'post_type'      => 'job',
                     'post_title'     => $xml_title,
                     'post_name'      => sanitize_title($xml_title . '-' . $guid),
                     'post_status'    => 'publish',
-                    'post_date'      => $xml_validfrom,
+                    'post_date'     => $xml_validfrom,
                     'post_modified'  => $post_modified,
                     'comment_status' => 'closed',
                     'post_author'    => $user_id,
@@ -143,10 +155,11 @@ if (! function_exists('process_batch_items') ) {
                     if (is_wp_error($post_id) ) {
                         $error_msg = 'Create failed GUID: ' . $guid . ' - ' . $post_id->get_error_message();
                         $logs[]    = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
-                        error_log($error_msg);
+                        error_log('[PUNTWORK] [ITEMS-DEBUG] ' . $error_msg);
                         continue;
                     }
 
+                    error_log('[PUNTWORK] [ITEMS-DEBUG] Successfully created post ID: ' . $post_id . ' for GUID: ' . $guid);
                     ++$published;
                     update_post_meta($post_id, '_last_import_update', $xml_updated);
                     $item_hash = md5(json_encode($item));
@@ -165,7 +178,7 @@ if (! function_exists('process_batch_items') ) {
                     bulk_update_post_meta($post_id, $acf_updates);
 
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Published ID: ' . $post_id . ' GUID: ' . $guid;
-                    error_log('Published ID: ' . $post_id . ' GUID: ' . $guid);
+                    error_log('[PUNTWORK] [ITEMS-DEBUG] Published ID: ' . $post_id . ' GUID: ' . $guid);
                 }
 
                 ++$processed_count;
@@ -186,5 +199,6 @@ if (! function_exists('process_batch_items') ) {
             }
         }
         error_log('[PUNTWORK] [ITEMS-DEBUG] process_batch_items completed processing all ' . $total_to_process . ' items');
+        error_log('[PUNTWORK] [ITEMS-DEBUG] Batch summary: published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', processed_count=' . $processed_count);
     }
 }
