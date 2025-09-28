@@ -167,8 +167,12 @@ function setup_job_import()
     'batch/batch-data.php',
     'batch/batch-loading.php',
     'batch/batch-processing.php',
+    'batch/batch-duplicates.php',
+    'batch/batch-metadata.php',
     'batch/batch-size-management.php',
     'batch/batch-utils.php',
+    'utilities/async-processing.php',
+    'batch/batch-processing-core.php',
 
     // Queue management (functions)
     'queue/queue-manager.php',
@@ -194,8 +198,6 @@ function setup_job_import()
     'utilities/SecurityUtils.php',
     'utilities/shortcode.php',
     'utilities/PuntworkHorizontalScalingManager.php',
-    'utilities/async-processing.php',
-    'batch/batch-processing-core.php',
     'utilities/PuntworkLoadBalancer.php',
     'utilities/utility-helpers.php',
     'utilities/item-cleaning.php',
