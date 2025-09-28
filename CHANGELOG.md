@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added nonce verification to AJAX import control handlers for improved security
 - Fixed excessive logging in DatabasePerformanceMonitor by making per-query logging conditional on PUNTWORK_DB_DEBUG constant
 - Fixed undefined function bulk_get_post_statuses by adding proper function declaration and debug logs
+- **Memory Exhaustion Fix**: Increased PHP memory limit from 512MB to 1024MB and added comprehensive memory usage logging to prevent import failures with large datasets (7476+ items)
+- **SSE JSON Parse Error Fix**: Added sanitization functions to remove "undefined" values from import status data before JSON serialization, preventing JavaScript parse errors
+- **Concurrent Import Prevention**: Implemented transient-based locking mechanism to prevent multiple simultaneous imports that cause "Import already running" errors
+- **Status Data Sanitization**: Added sanitize_import_status() function to clean AJAX responses and prevent corrupted status data from breaking real-time updates
 
 ### Performance
 - Implemented parallel feed downloading using Symfony HTTP Client to reduce total import time for multiple feeds
