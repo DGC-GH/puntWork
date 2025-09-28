@@ -197,8 +197,8 @@ class AdvancedMemoryManager extends MemoryManager
         return array(
             'predicted_peak'         => $predictedPeak,
             'memory_limit'           => $memoryLimit,
-            'will_exceed_limit'      => $predicted_peak > $memoryLimit,
-            'recommended_batch_size' => $predicted_peak > $memoryLimit ?
+            'will_exceed_limit'      => $predictedPeak > $memoryLimit,
+            'recommended_batch_size' => $predictedPeak > $memoryLimit ?
             max(1, (int) ( $batchSize * ( $memoryLimit - $baseMemory - $safetyBuffer ) / $estimatedBatchMemory )) :
             $batchSize,
         );

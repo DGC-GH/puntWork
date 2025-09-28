@@ -23,8 +23,8 @@ class AjaxErrorHandler
     /**
      * Send JSON error response with proper formatting
      *
-     * @param string|WP_Error $error           Error message or WP_Error object
-     * @param array           $additional_data Additional data to include
+     * @param string|\WP_Error $error           Error message or WP_Error object
+     * @param array            $additional_data Additional data to include
      */
     public static function sendError($error, array $additional_data = array())
     {

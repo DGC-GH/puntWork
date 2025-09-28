@@ -214,7 +214,9 @@ class PuntworkHorizontalScalingManager
 
         // Mark table as verified after creation
         set_transient('puntwork_instances_table_verified', true, 86400);
-    }    /**
+    }
+
+    /**
      * Register this instance
      */
     private function registerInstance()

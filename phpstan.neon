@@ -1,0 +1,16 @@
+parameters:
+    level: 5
+    paths:
+        - includes/
+        - puntwork.php
+    excludePaths:
+        - includes/vendor/
+        - includes/tests/
+    ignoreErrors:
+        - '#Function gethostname not found#'
+        - '#Function disk_free_space not found#'
+        - '#Function disk_total_space not found#'
+        - '#Undefined variable: \$wpdb#'
+        - '#Undefined variable: \$table_prefix#'
+    bootstrapFiles:
+        - phpstan-bootstrap.php

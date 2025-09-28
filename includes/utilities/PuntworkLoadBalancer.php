@@ -18,12 +18,9 @@ if (! defined('ABSPATH')) {
  */
 class PuntworkLoadBalancer
 {
-    private const LOAD_BALANCER_TABLE  = 'puntwork_load_balancer';
-    private const HEALTH_CHECK_TIMEOUT = 10; // seconds
-    private const MAX_RETRIES          = 3;
+    private const LOAD_BALANCER_TABLE = 'puntwork_load_balancer';
 
     private $balancing_strategy;
-    private $health_checks;
 
     public function __construct()
     {
@@ -84,7 +81,7 @@ class PuntworkLoadBalancer
     public function renderLoadBalancerPage()
     {
         if (! current_user_can('manage_options')) {
-            wp_die(__('You do not have sufficient permissions to access this page.'));
+            wp_die(__('You do not have sufficient permissions to access this page.', 'puntwork'));
         }
 
         $stats     = $this->getLoadBalancerStats();
@@ -543,7 +540,7 @@ class PuntworkLoadBalancer
             return;
         }
 
-        $this->send_job_to_instance($job, $instance);
+        $this->sendJobToInstance($job, $instance);
     }
 
     /**

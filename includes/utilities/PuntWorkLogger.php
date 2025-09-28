@@ -39,6 +39,9 @@ class PuntWorkLogger
     public const CONTEXT_SCHEDULING = 'SCHEDULING';
     public const CONTEXT_SOCIAL     = 'SOCIAL';
     public const CONTEXT_MONITORING = 'MONITORING';
+    public const CONTEXT_PURGE      = 'PURGE';
+    public const CONTEXT_ANALYTICS  = 'ANALYTICS';
+    public const CONTEXT_AI         = 'AI';
 
     /**
      * Log a debug message

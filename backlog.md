@@ -61,23 +61,3 @@ Admin dashboard opened: https://belgiumjobs.work/wp-admin/admin.php?page=job-fee
 Debug.log will need re-check after fixes.
 
 
-
-
-take a loog at the logs, are we missing something for debugging the rest of the import process untill completion?
-
-
-
-
-Import Progress block UI is not being updated during the import -  use "real time updated"
-
-
-optimize dynamic batch functionality analize - the logs for timings
-
-optimize the process based on logs (console and debug)
-
-disable (not remove) some debugging to minimize spam in console and debug,log size
-
-increase max batch size
-
-TO DO:
-get v3 Import metrics and settings

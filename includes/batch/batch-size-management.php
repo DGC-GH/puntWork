@@ -34,7 +34,7 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
     $old_batch_size = $batch_size;
 
     // Ensure batch size is within reasonable bounds
-    $batch_size = max(5, min(500, $batch_size));
+    $batch_size = max(10, min(500, $batch_size));
 
     // Memory-based adjustment (most critical - always override other adjustments)
     if ($last_memory_ratio > 0.85) {
@@ -249,10 +249,10 @@ function validate_and_adjust_batch_size(array $setup): array
 {
     $memory_limit_bytes = get_memory_limit_bytes();
     $threshold          = 0.6 * $memory_limit_bytes;
-    $batch_size         = get_option('job_import_batch_size') ?: 5; // Force smaller starting batch size for real-time progress
+    $batch_size         = get_option('job_import_batch_size') ?: 10; // Force smaller starting batch size for real-time progress
 
-    // Ensure batch_size is at least 5 for incremental updates
-    $batch_size = max(5, (int) $batch_size);
+    // Ensure batch_size is at least 10 for incremental updates
+    $batch_size = max(10, (int) $batch_size);
 
     $old_batch_size     = $batch_size;
     $prev_time_per_item = get_option('job_import_time_per_job', 0);
@@ -265,7 +265,7 @@ function validate_and_adjust_batch_size(array $setup): array
 
     $adjustment_result = adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time);
     $batch_size        = $adjustment_result['batch_size'];
-    $batch_size        = max(5, (int) $batch_size); // Ensure batch_size is at least 5 for real-time progress
+    $batch_size        = max(10, (int) $batch_size); // Ensure batch_size is at least 10 for real-time progress
 
     $logs = array();
     if ($batch_size != $old_batch_size) {

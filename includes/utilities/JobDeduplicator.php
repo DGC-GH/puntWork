@@ -277,13 +277,13 @@ class JobDeduplicator
         }
 
         // Check title + company combination
-        $title_sim   = self::calculate_text_similarity(
-            self::normalize_text($job1->title ?? ''),
-            self::normalize_text($job2->post_title ?? '')
+        $title_sim   = self::calculateTextSimilarity(
+            self::normalizeText($job1->title ?? ''),
+            self::normalizeText($job2->post_title ?? '')
         );
-        $company_sim = self::calculate_text_similarity(
-            self::normalize_text($job1->company ?? $job1->companyname ?? ''),
-            self::normalize_text(get_post_meta($job2->ID, 'company', true) ?? '')
+        $company_sim = self::calculateTextSimilarity(
+            self::normalizeText($job1->company ?? $job1->companyname ?? ''),
+            self::normalizeText(get_post_meta($job2->ID, 'company', true) ?? '')
         );
 
         if ($title_sim >= self::HIGH_SIMILARITY && $company_sim >= self::HIGH_SIMILARITY) {
