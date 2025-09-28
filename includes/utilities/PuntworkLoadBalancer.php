@@ -388,7 +388,7 @@ class PuntworkLoadBalancer {
 				array( '%s' )
 			);
 
-			if ( $result == false ) {
+			if ( $result === false ) {
 					error_log( '[PUNTWORK] Failed to update instance last_seen: ' . $wpdb->last_error );
 			}
 		} else {

@@ -1,0 +1,227 @@
+[28-Sep-2025 14:43:59 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:44:01 UTC] [28-Sep-2025 14:44:01 UTC] [DEBUG] [AJAX] AJAX Request: reset_job_import_status (in Puntwork\PuntWorkLogger::debug) | Data: {"action":"reset_job_import","nonce":"fe9d115dda"}
+[28-Sep-2025 14:44:01 UTC] [28-Sep-2025 14:44:01 UTC] [DEBUG] [SECURITY] AJAX request validation passed for action: reset_job_import_status (in Puntwork\PuntWorkLogger::debug)
+[28-Sep-2025 14:44:01 UTC] [28-Sep-2025 14:44:01 UTC] [INFO] [BATCH] Import status and progress completely reset (in Puntwork\PuntWorkLogger::info)
+[28-Sep-2025 14:44:01 UTC] [28-Sep-2025 14:44:01 UTC] [DEBUG] [AJAX] AJAX Response: reset_job_import_status - SUCCESS (in Puntwork\PuntWorkLogger::logAjaxResponse) | Data: {"message":"Import status reset"}
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:44:01 UTC] [28-Sep-2025 14:44:01 UTC] [DEBUG] [AJAX] AJAX Request: process_feed (in Puntwork\PuntWorkLogger::debug) | Data: {"action":"process_feed","feed_key":"[REDACTED]","nonce":"fe9d115dda"}
+[28-Sep-2025 14:44:01 UTC] [28-Sep-2025 14:44:01 UTC] [DEBUG] [SECURITY] AJAX request validation passed for action: process_feed (in Puntwork\PuntWorkLogger::debug)
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] [DEBUG] get_feeds: Using cached feeds: {"expressmedical-be":"https:\/\/feeds.expressmedical.be\/api\/vacancies","unique-be":"https:\/\/feeds.unique.be\/api\/vacancies","internationalrecruitment-be":"https:\/\/feeds.internationalrecruitment.be\/api\/vacancies","startpeople-be":"https:\/\/feeds.startpeople.be\/api\/vacancies"}
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] [DEBUG] get_feeds: Final feeds array: {"expressmedical-be":"https:\/\/feeds.expressmedical.be\/api\/vacancies","unique-be":"https:\/\/feeds.unique.be\/api\/vacancies","internationalrecruitment-be":"https:\/\/feeds.internationalrecruitment.be\/api\/vacancies","startpeople-be":"https:\/\/feeds.startpeople.be\/api\/vacancies"}
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] [DEBUG] process_feed_ajax: ==== SERVER process_feed DEBUG ===
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] [DEBUG] process_feed_ajax: Feed key received: expressmedical-be
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] [DEBUG] process_feed_ajax: Available feeds: Array
+(
+    [expressmedical-be] => https://feeds.expressmedical.be/api/vacancies
+    [unique-be] => https://feeds.unique.be/api/vacancies
+    [internationalrecruitment-be] => https://feeds.internationalrecruitment.be/api/vacancies
+    [startpeople-be] => https://feeds.startpeople.be/api/vacancies
+)
+
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] [DEBUG] process_feed_ajax: Feed URL for key: https://feeds.expressmedical.be/api/vacancies
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] [DEBUG] process_feed_ajax: ABSPATH: /home/u164580062/domains/belgiumjobs.work/public_html/
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] [DEBUG] process_feed_ajax: Output directory: /home/u164580062/domains/belgiumjobs.work/public_html/feeds/
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] [DEBUG] process_feed_ajax: Output directory exists: yes
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] [DEBUG] process_feed_ajax: Output directory writable: yes
+[28-Sep-2025 14:44:01 UTC] [28-Sep-2025 14:44:01 UTC] [INFO] [FEED] Processing feed: expressmedical-be (in Puntwork\PuntWorkLogger::info) | Data: {"url":"https://feeds.expressmedical.be/api/vacancies"}
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] About to call process_one_feed with:
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] - feed_key: expressmedical-be
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] - url: https://feeds.expressmedical.be/api/vacancies
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] - output_dir: /home/u164580062/domains/belgiumjobs.work/public_html/feeds/
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] - fallback_domain: belgiumjobs.work
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] ==== process_one_feed START ===
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] Feed key: expressmedical-be
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] URL: https://feeds.expressmedical.be/api/vacancies
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] Output dir: /home/u164580062/domains/belgiumjobs.work/public_html/feeds/
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] Fallback domain: belgiumjobs.work
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] Detected extension: job_board
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] Feed path: /home/u164580062/domains/belgiumjobs.work/public_html/feeds/expressmedical-be.job_board
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] JSON path: /home/u164580062/domains/belgiumjobs.work/public_html/feeds/expressmedical-be.jsonl
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] GZ JSON path: /home/u164580062/domains/belgiumjobs.work/public_html/feeds/expressmedical-be.jsonl.gz
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] Handling as job board feed
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] Final format: job_board
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] JSON file opened successfully
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] About to call FeedProcessor::processFeed
+[28-Sep-2025 14:44:01 UTC] PHP Warning:  include_once(/home/u164580062/domains/belgiumjobs.work/public_html/wp-content/plugins/puntWork/jobboards/jobboard-manager.php): Failed to open stream: No such file or directory in /home/u164580062/domains/belgiumjobs.work/public_html/wp-content/plugins/puntWork/includes/import/feed-processor.php on line 488
+[28-Sep-2025 14:44:01 UTC] PHP Warning:  include_once(): Failed opening '/home/u164580062/domains/belgiumjobs.work/public_html/wp-content/plugins/puntWork/jobboards/jobboard-manager.php' for inclusion (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/u164580062/domains/belgiumjobs.work/public_html/wp-content/plugins/puntWork/includes/import/feed-processor.php on line 488
+[28-Sep-2025 14:44:01 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:44:01 UTC] [28-Sep-2025 14:44:01 UTC] [DEBUG] [AJAX] AJAX Request: log_manual_import_run (in Puntwork\PuntWorkLogger::debug) | Data: {"action":"log_manual_import_run","nonce":"fe9d115dda","timestamp":"1759070644","duration":"0.000758","success":"false","processed":"0","total":"0","published":"0","updated":"0","skipped":"0","error_message":"Import failed","trigger_type":"manual"}
+[28-Sep-2025 14:44:01 UTC] [28-Sep-2025 14:44:01 UTC] [ERROR] [SECURITY] Field validation failed for success: success must be a boolean (in Puntwork\PuntWorkLogger::error)
+[28-Sep-2025 14:44:01 UTC] [28-Sep-2025 14:44:01 UTC] [ERROR] [AJAX] AJAX Error Response: success must be a boolean (in Puntwork\PuntWorkLogger::error) | Data: {"error_code":"validation","error_data":null}
+[28-Sep-2025 14:44:09 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:44:09 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:44:09 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:44:19 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:44:19 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:44:19 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:44:29 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:44:39 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:44:39 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:44:39 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:44:49 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:44:49 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:44:59 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:45:09 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:45:09 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:45:09 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:45:19 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:45:29 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:45:39 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:45:49 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:45:49 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:45:59 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:46:09 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:46:09 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:46:19 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:46:19 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:46:19 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:46:29 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:46:39 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:46:39 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:46:49 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:46:49 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:46:59 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:47:14 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:47:18 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:47:18 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:47:28 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:47:35 UTC] WordPress database error Commands out of sync; you can't run this command now for query UPDATE `wp_puntwork_instances` SET `status` = 'inactive' WHERE `instance_id` = 'nl-srv-web334.main-hosting.eu-1252554-1759070845' made by shutdown_action_hook, do_action('shutdown'), WP_Hook->do_action, WP_Hook->apply_filters, Puntwork\PuntworkHorizontalScalingManager->unregisterInstance, QM_DB->query
+[28-Sep-2025 14:47:42 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:47:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:48:10 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:48:10 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:48:49 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:48:49 UTC] [28-Sep-2025 14:48:49 UTC] [DEBUG] [AJAX] AJAX Request: get_import_schedule (in Puntwork\PuntWorkLogger::debug) | Data: {"action":"get_import_schedule","nonce":"fe9d115dda"}
+[28-Sep-2025 14:48:49 UTC] [28-Sep-2025 14:48:49 UTC] [DEBUG] [AJAX] AJAX Request: get_import_run_history (in Puntwork\PuntWorkLogger::debug) | Data: {"action":"get_import_run_history","nonce":"fe9d115dda"}
+[28-Sep-2025 14:48:49 UTC] [28-Sep-2025 14:48:49 UTC] [DEBUG] [SECURITY] AJAX request validation passed for action: get_import_schedule (in Puntwork\PuntWorkLogger::debug)
+[28-Sep-2025 14:48:49 UTC] [28-Sep-2025 14:48:49 UTC] [INFO] [SCHEDULING] Retrieved import schedule (in Puntwork\PuntWorkLogger::info) | Data: {"enabled":true,"frequency":"hourly"}
+[28-Sep-2025 14:48:49 UTC] [28-Sep-2025 14:48:49 UTC] [DEBUG] [AJAX] AJAX Response: get_import_schedule - SUCCESS (in Puntwork\PuntWorkLogger::logAjaxResponse) | Data: {"schedule":{"enabled":true,"frequency":"hourly","interval":24,"hour":6,"minute":0,"updated_at":1758848091,"updated_by":1},"next_run":null,"last_run":{"timestamp":1758956445,"duration":36.33986711502075,"test_mode":false,"result":{"success":true,"processed":0,"total":7483,"published":0,"updated":0,"skipped":0,"duplicates_drafted":0,"time_elapsed":0.7911040782928467,"complete":true,"logs":[],"batches_processed":0,"message":"Full import completed successfully - Processed: 0/7483 items (Published: 0, Updated: 0, Skipped: 0) in 0.8 seconds"},"formatted_date":"Sep 27, 2025 09:00"},"last_run_details":{"success":true,"duration":36.33986711502075,"processed":0,"total":7483,"published":0,"updated":0,"skipped":0,"error_message":"Full import completed successfully - Processed: 0/7483 items (Published: 0, Updated: 0, Skipped: 0) in 0.8 seconds","timestamp":1758956445}}
+[28-Sep-2025 14:48:49 UTC] [28-Sep-2025 14:48:49 UTC] [DEBUG] [SECURITY] AJAX request validation passed for action: get_import_run_history (in Puntwork\PuntWorkLogger::debug)
+[28-Sep-2025 14:48:49 UTC] [28-Sep-2025 14:48:49 UTC] [INFO] [SCHEDULING] Retrieved import run history (in Puntwork\PuntWorkLogger::info) | Data: {"history_count":20}
+[28-Sep-2025 14:48:49 UTC] [28-Sep-2025 14:48:49 UTC] [DEBUG] [AJAX] AJAX Response: get_import_run_history - SUCCESS (in Puntwork\PuntWorkLogger::logAjaxResponse) | Data: {"history":[{"timestamp":1759060671,"formatted_date":"Sep 28, 2025 13:57","duration":0.22067900000000001,"success":false,"processed":0,"total":0,"published":0,"updated":0,"skipped":0,"error_message":"Import failed","test_mode":false,"trigger_type":"manual"},{"timestamp":1759052499,"formatted_date":"Sep 28, 2025 11:41","duration":1.1192660331726074,"success":true,"processed":0,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759031039,"formatted_date":"Sep 28, 2025 05:43","duration":2.5709431171417236,"success":true,"processed":0,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759030676,"formatted_date":"Sep 28, 2025 05:37","duration":63.12941098213196,"success":true,"processed":7441,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759030257,"formatted_date":"Sep 28, 2025 05:30","duration":0.00045900000000000004,"success":false,"processed":0,"total":0,"published":0,"updated":0,"skipped":0,"error_message":"Import failed","test_mode":false,"trigger_type":"manual"},{"timestamp":1759030253,"formatted_date":"Sep 28, 2025 05:30","duration":0.00036199999999999996,"success":false,"processed":0,"total":0,"published":0,"updated":0,"skipped":0,"error_message":"Import failed","test_mode":false,"trigger_type":"manual"},{"timestamp":1759030248,"formatted_date":"Sep 28, 2025 05:30","duration":0.00041,"success":false,"processed":0,"total":0,"published":0,"updated":0,"skipped":0,"error_message":"Import failed","test_mode":false,"trigger_type":"manual"},{"timestamp":1759030246,"formatted_date":"Sep 28, 2025 05:30","duration":1205.4935331344604,"success":true,"processed":7441,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759030049,"formatted_date":"Sep 28, 2025 05:27","duration":1008.4678461551666,"success":true,"processed":7441,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759029942,"formatted_date":"Sep 28, 2025 05:25","duration":901.8262600898743,"success":true,"processed":7441,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759029082,"formatted_date":"Sep 28, 2025 05:11","duration":40.99740195274353,"success":true,"processed":7441,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759028754,"formatted_date":"Sep 28, 2025 05:05","duration":38.07856607437134,"success":true,"processed":7441,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759025400,"formatted_date":"Sep 28, 2025 04:10","duration":0.07427500000000001,"success":false,"processed":0,"total":0,"published":0,"updated":0,"skipped":0,"error_message":"Batch failed after 4 attempts:","test_mode":false,"trigger_type":"manual"},{"timestamp":1759024547,"formatted_date":"Sep 28, 2025 03:55","duration":1.2962441444396973,"success":true,"processed":2,"total":7441,"published":0,"updated":0,"skipped":2,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759024379,"formatted_date":"Sep 28, 2025 03:52","duration":1.3942289352416992,"success":true,"processed":2,"total":7441,"published":0,"updated":0,"skipped":2,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759024065,"formatted_date":"Sep 28, 2025 03:47","duration":1.2548439502716064,"success":true,"processed":2,"total":7441,"published":0,"updated":0,"skipped":2,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759022251,"formatted_date":"Sep 28, 2025 03:17","duration":1.1437361240386963,"success":true,"processed":0,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759020835,"formatted_date":"Sep 28, 2025 02:53","duration":1.0893011093139648,"success":true,"processed":0,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759019379,"formatted_date":"Sep 28, 2025 02:29","duration":15.601227045059204,"success":true,"processed":0,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759016982,"formatted_date":"Sep 28, 2025 01:49","duration":14.734516859054565,"success":true,"processed":0,"total":7452,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"}],"count":20}
+[28-Sep-2025 14:48:50 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:48:50 UTC] Cron reschedule event error for hook: litespeed_task_lqip, Error code: could_not_set, Error message: The cron event list could not be saved., Data: {"schedule":"litespeed_filter","args":[],"interval":60}
+[28-Sep-2025 14:48:55 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:48:55 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:48:55 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:49:56 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:50:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:50:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:50:53 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:51:03 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:51:13 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:51:23 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:51:33 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:51:33 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:51:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:51:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:51:53 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:52:03 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:52:03 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:52:03 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:52:13 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:52:23 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:52:33 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:52:33 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:52:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:52:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:52:53 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:53:03 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:53:03 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:53:13 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:53:23 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:53:33 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:53:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:53:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:53:49 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:53:49 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:53:49 UTC] [28-Sep-2025 14:53:49 UTC] [DEBUG] [AJAX] AJAX Request: get_import_run_history (in Puntwork\PuntWorkLogger::debug) | Data: {"action":"get_import_run_history","nonce":"fe9d115dda"}
+[28-Sep-2025 14:53:49 UTC] [28-Sep-2025 14:53:49 UTC] [DEBUG] [SECURITY] AJAX request validation passed for action: get_import_run_history (in Puntwork\PuntWorkLogger::debug)
+[28-Sep-2025 14:53:49 UTC] [28-Sep-2025 14:53:49 UTC] [INFO] [SCHEDULING] Retrieved import run history (in Puntwork\PuntWorkLogger::info) | Data: {"history_count":20}
+[28-Sep-2025 14:53:49 UTC] [28-Sep-2025 14:53:49 UTC] [DEBUG] [AJAX] AJAX Response: get_import_run_history - SUCCESS (in Puntwork\PuntWorkLogger::logAjaxResponse) | Data: {"history":[{"timestamp":1759060671,"formatted_date":"Sep 28, 2025 13:57","duration":0.22067900000000001,"success":false,"processed":0,"total":0,"published":0,"updated":0,"skipped":0,"error_message":"Import failed","test_mode":false,"trigger_type":"manual"},{"timestamp":1759052499,"formatted_date":"Sep 28, 2025 11:41","duration":1.1192660331726074,"success":true,"processed":0,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759031039,"formatted_date":"Sep 28, 2025 05:43","duration":2.5709431171417236,"success":true,"processed":0,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759030676,"formatted_date":"Sep 28, 2025 05:37","duration":63.12941098213196,"success":true,"processed":7441,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759030257,"formatted_date":"Sep 28, 2025 05:30","duration":0.00045900000000000004,"success":false,"processed":0,"total":0,"published":0,"updated":0,"skipped":0,"error_message":"Import failed","test_mode":false,"trigger_type":"manual"},{"timestamp":1759030253,"formatted_date":"Sep 28, 2025 05:30","duration":0.00036199999999999996,"success":false,"processed":0,"total":0,"published":0,"updated":0,"skipped":0,"error_message":"Import failed","test_mode":false,"trigger_type":"manual"},{"timestamp":1759030248,"formatted_date":"Sep 28, 2025 05:30","duration":0.00041,"success":false,"processed":0,"total":0,"published":0,"updated":0,"skipped":0,"error_message":"Import failed","test_mode":false,"trigger_type":"manual"},{"timestamp":1759030246,"formatted_date":"Sep 28, 2025 05:30","duration":1205.4935331344604,"success":true,"processed":7441,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759030049,"formatted_date":"Sep 28, 2025 05:27","duration":1008.4678461551666,"success":true,"processed":7441,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759029942,"formatted_date":"Sep 28, 2025 05:25","duration":901.8262600898743,"success":true,"processed":7441,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759029082,"formatted_date":"Sep 28, 2025 05:11","duration":40.99740195274353,"success":true,"processed":7441,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759028754,"formatted_date":"Sep 28, 2025 05:05","duration":38.07856607437134,"success":true,"processed":7441,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759025400,"formatted_date":"Sep 28, 2025 04:10","duration":0.07427500000000001,"success":false,"processed":0,"total":0,"published":0,"updated":0,"skipped":0,"error_message":"Batch failed after 4 attempts:","test_mode":false,"trigger_type":"manual"},{"timestamp":1759024547,"formatted_date":"Sep 28, 2025 03:55","duration":1.2962441444396973,"success":true,"processed":2,"total":7441,"published":0,"updated":0,"skipped":2,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759024379,"formatted_date":"Sep 28, 2025 03:52","duration":1.3942289352416992,"success":true,"processed":2,"total":7441,"published":0,"updated":0,"skipped":2,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759024065,"formatted_date":"Sep 28, 2025 03:47","duration":1.2548439502716064,"success":true,"processed":2,"total":7441,"published":0,"updated":0,"skipped":2,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759022251,"formatted_date":"Sep 28, 2025 03:17","duration":1.1437361240386963,"success":true,"processed":0,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759020835,"formatted_date":"Sep 28, 2025 02:53","duration":1.0893011093139648,"success":true,"processed":0,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759019379,"formatted_date":"Sep 28, 2025 02:29","duration":15.601227045059204,"success":true,"processed":0,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759016982,"formatted_date":"Sep 28, 2025 01:49","duration":14.734516859054565,"success":true,"processed":0,"total":7452,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"}],"count":20}
+[28-Sep-2025 14:53:49 UTC] [28-Sep-2025 14:53:49 UTC] [DEBUG] [AJAX] AJAX Request: get_import_schedule (in Puntwork\PuntWorkLogger::debug) | Data: {"action":"get_import_schedule","nonce":"fe9d115dda"}
+[28-Sep-2025 14:53:49 UTC] [28-Sep-2025 14:53:49 UTC] [DEBUG] [SECURITY] AJAX request validation passed for action: get_import_schedule (in Puntwork\PuntWorkLogger::debug)
+[28-Sep-2025 14:53:49 UTC] [28-Sep-2025 14:53:49 UTC] [INFO] [SCHEDULING] Retrieved import schedule (in Puntwork\PuntWorkLogger::info) | Data: {"enabled":true,"frequency":"hourly"}
+[28-Sep-2025 14:53:49 UTC] [28-Sep-2025 14:53:49 UTC] [DEBUG] [AJAX] AJAX Response: get_import_schedule - SUCCESS (in Puntwork\PuntWorkLogger::logAjaxResponse) | Data: {"schedule":{"enabled":true,"frequency":"hourly","interval":24,"hour":6,"minute":0,"updated_at":1758848091,"updated_by":1},"next_run":null,"last_run":{"timestamp":1758956445,"duration":36.33986711502075,"test_mode":false,"result":{"success":true,"processed":0,"total":7483,"published":0,"updated":0,"skipped":0,"duplicates_drafted":0,"time_elapsed":0.7911040782928467,"complete":true,"logs":[],"batches_processed":0,"message":"Full import completed successfully - Processed: 0/7483 items (Published: 0, Updated: 0, Skipped: 0) in 0.8 seconds"},"formatted_date":"Sep 27, 2025 09:00"},"last_run_details":{"success":true,"duration":36.33986711502075,"processed":0,"total":7483,"published":0,"updated":0,"skipped":0,"error_message":"Full import completed successfully - Processed: 0/7483 items (Published: 0, Updated: 0, Skipped: 0) in 0.8 seconds","timestamp":1758956445}}
+[28-Sep-2025 14:53:49 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:53:53 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:54:03 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:54:03 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:54:13 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:54:23 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:54:33 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:54:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:54:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:54:53 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:55:03 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:55:03 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:55:13 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:55:23 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:55:33 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:55:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:55:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:55:53 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:56:03 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:56:03 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:56:03 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:56:04 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:56:13 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:56:23 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:56:33 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:56:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:56:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:56:53 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:57:03 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:57:13 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:57:13 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:57:23 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:57:33 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:57:33 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:57:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:57:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:57:50 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:57:57 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:57:57 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:58:20 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:58:20 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:58:20 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:58:48 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:58:48 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:58:48 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:58:49 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:58:49 UTC] [28-Sep-2025 14:58:49 UTC] [DEBUG] [AJAX] AJAX Request: get_import_schedule (in Puntwork\PuntWorkLogger::debug) | Data: {"action":"get_import_schedule","nonce":"fe9d115dda"}
+[28-Sep-2025 14:58:49 UTC] [28-Sep-2025 14:58:49 UTC] [DEBUG] [AJAX] AJAX Request: get_import_run_history (in Puntwork\PuntWorkLogger::debug) | Data: {"action":"get_import_run_history","nonce":"fe9d115dda"}
+[28-Sep-2025 14:58:49 UTC] [28-Sep-2025 14:58:49 UTC] [DEBUG] [SECURITY] AJAX request validation passed for action: get_import_schedule (in Puntwork\PuntWorkLogger::debug)
+[28-Sep-2025 14:58:49 UTC] [28-Sep-2025 14:58:49 UTC] [INFO] [SCHEDULING] Retrieved import schedule (in Puntwork\PuntWorkLogger::info) | Data: {"enabled":true,"frequency":"hourly"}
+[28-Sep-2025 14:58:49 UTC] [28-Sep-2025 14:58:49 UTC] [DEBUG] [AJAX] AJAX Response: get_import_schedule - SUCCESS (in Puntwork\PuntWorkLogger::logAjaxResponse) | Data: {"schedule":{"enabled":true,"frequency":"hourly","interval":24,"hour":6,"minute":0,"updated_at":1758848091,"updated_by":1},"next_run":null,"last_run":{"timestamp":1758956445,"duration":36.33986711502075,"test_mode":false,"result":{"success":true,"processed":0,"total":7483,"published":0,"updated":0,"skipped":0,"duplicates_drafted":0,"time_elapsed":0.7911040782928467,"complete":true,"logs":[],"batches_processed":0,"message":"Full import completed successfully - Processed: 0/7483 items (Published: 0, Updated: 0, Skipped: 0) in 0.8 seconds"},"formatted_date":"Sep 27, 2025 09:00"},"last_run_details":{"success":true,"duration":36.33986711502075,"processed":0,"total":7483,"published":0,"updated":0,"skipped":0,"error_message":"Full import completed successfully - Processed: 0/7483 items (Published: 0, Updated: 0, Skipped: 0) in 0.8 seconds","timestamp":1758956445}}
+[28-Sep-2025 14:58:49 UTC] [28-Sep-2025 14:58:49 UTC] [DEBUG] [SECURITY] AJAX request validation passed for action: get_import_run_history (in Puntwork\PuntWorkLogger::debug)
+[28-Sep-2025 14:58:49 UTC] [28-Sep-2025 14:58:49 UTC] [INFO] [SCHEDULING] Retrieved import run history (in Puntwork\PuntWorkLogger::info) | Data: {"history_count":20}
+[28-Sep-2025 14:58:49 UTC] [28-Sep-2025 14:58:49 UTC] [DEBUG] [AJAX] AJAX Response: get_import_run_history - SUCCESS (in Puntwork\PuntWorkLogger::logAjaxResponse) | Data: {"history":[{"timestamp":1759060671,"formatted_date":"Sep 28, 2025 13:57","duration":0.22067900000000001,"success":false,"processed":0,"total":0,"published":0,"updated":0,"skipped":0,"error_message":"Import failed","test_mode":false,"trigger_type":"manual"},{"timestamp":1759052499,"formatted_date":"Sep 28, 2025 11:41","duration":1.1192660331726074,"success":true,"processed":0,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759031039,"formatted_date":"Sep 28, 2025 05:43","duration":2.5709431171417236,"success":true,"processed":0,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759030676,"formatted_date":"Sep 28, 2025 05:37","duration":63.12941098213196,"success":true,"processed":7441,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759030257,"formatted_date":"Sep 28, 2025 05:30","duration":0.00045900000000000004,"success":false,"processed":0,"total":0,"published":0,"updated":0,"skipped":0,"error_message":"Import failed","test_mode":false,"trigger_type":"manual"},{"timestamp":1759030253,"formatted_date":"Sep 28, 2025 05:30","duration":0.00036199999999999996,"success":false,"processed":0,"total":0,"published":0,"updated":0,"skipped":0,"error_message":"Import failed","test_mode":false,"trigger_type":"manual"},{"timestamp":1759030248,"formatted_date":"Sep 28, 2025 05:30","duration":0.00041,"success":false,"processed":0,"total":0,"published":0,"updated":0,"skipped":0,"error_message":"Import failed","test_mode":false,"trigger_type":"manual"},{"timestamp":1759030246,"formatted_date":"Sep 28, 2025 05:30","duration":1205.4935331344604,"success":true,"processed":7441,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759030049,"formatted_date":"Sep 28, 2025 05:27","duration":1008.4678461551666,"success":true,"processed":7441,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759029942,"formatted_date":"Sep 28, 2025 05:25","duration":901.8262600898743,"success":true,"processed":7441,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759029082,"formatted_date":"Sep 28, 2025 05:11","duration":40.99740195274353,"success":true,"processed":7441,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759028754,"formatted_date":"Sep 28, 2025 05:05","duration":38.07856607437134,"success":true,"processed":7441,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759025400,"formatted_date":"Sep 28, 2025 04:10","duration":0.07427500000000001,"success":false,"processed":0,"total":0,"published":0,"updated":0,"skipped":0,"error_message":"Batch failed after 4 attempts:","test_mode":false,"trigger_type":"manual"},{"timestamp":1759024547,"formatted_date":"Sep 28, 2025 03:55","duration":1.2962441444396973,"success":true,"processed":2,"total":7441,"published":0,"updated":0,"skipped":2,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759024379,"formatted_date":"Sep 28, 2025 03:52","duration":1.3942289352416992,"success":true,"processed":2,"total":7441,"published":0,"updated":0,"skipped":2,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759024065,"formatted_date":"Sep 28, 2025 03:47","duration":1.2548439502716064,"success":true,"processed":2,"total":7441,"published":0,"updated":0,"skipped":2,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759022251,"formatted_date":"Sep 28, 2025 03:17","duration":1.1437361240386963,"success":true,"processed":0,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759020835,"formatted_date":"Sep 28, 2025 02:53","duration":1.0893011093139648,"success":true,"processed":0,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759019379,"formatted_date":"Sep 28, 2025 02:29","duration":15.601227045059204,"success":true,"processed":0,"total":7441,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"},{"timestamp":1759016982,"formatted_date":"Sep 28, 2025 01:49","duration":14.734516859054565,"success":true,"processed":0,"total":7452,"published":0,"updated":0,"skipped":0,"error_message":"","test_mode":false,"trigger_type":"manual"}],"count":20}
+[28-Sep-2025 14:59:00 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:59:23 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 14:59:50 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 15:00:11 UTC] [PUNTWORK] Checking/creating instances table: wp_puntwork_instances
+[28-Sep-2025 15:00:11 UTC] [PUNTWORK] Checking/creating instances table: wp_puntwork_instances
+[28-Sep-2025 15:00:11 UTC] [PUNTWORK] Instances table already exists, checking structure
+[28-Sep-2025 15:00:11 UTC] [PUNTWORK] Instances table already exists, checking structure
+[28-Sep-2025 15:00:11 UTC] [PUNTWORK] id column exists but is not AUTO_INCREMENT, attempting to fix
+[28-Sep-2025 15:00:11 UTC] [PUNTWORK] id column exists but is not AUTO_INCREMENT, attempting to fix
+[28-Sep-2025 15:00:11 UTC] [PUNTWORK] Successfully modified id column to AUTO_INCREMENT
+[28-Sep-2025 15:00:11 UTC] [PUNTWORK] Successfully modified id column to AUTO_INCREMENT
+[28-Sep-2025 15:00:11 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 15:00:11 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 15:00:36 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 15:00:51 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 15:01:40 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 15:02:13 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 15:02:13 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 15:02:13 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 15:02:23 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 15:02:33 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 15:02:33 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 15:02:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 15:02:43 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 15:02:53 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 15:03:03 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 15:03:03 UTC] [PUNTWORK] Failed to update instance last_seen: 
+[28-Sep-2025 15:03:13 UTC] [PUNTWORK] Failed to update instance last_seen: 
