@@ -21,13 +21,6 @@ if (! defined('ABSPATH') ) {
  * Handles batch processing, cancellation, and status retrieval
  */
 
-namespace Puntwork;
-
-// Prevent direct access
-if (! defined('ABSPATH') ) {
-    exit;
-}
-
 // Explicitly load required utility classes for AJAX context
 require_once __DIR__ . '/../utilities/SecurityUtils.php';
 require_once __DIR__ . '/../utilities/AjaxErrorHandler.php';
