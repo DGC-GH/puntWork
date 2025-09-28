@@ -159,6 +159,11 @@ function run_job_import_batch_ajax()
             error_log('[PUNTWORK] AJAX: All required functions are available');
 
             try {
+                error_log('[PUNTWORK] AJAX: Starting manual import process...');
+                error_log('[PUNTWORK] AJAX: Batch start parameter: ' . ($start ?? 'null'));
+                error_log('[PUNTWORK] AJAX: Current user ID: ' . get_current_user_id());
+                error_log('[PUNTWORK] AJAX: Current user capabilities: ' . (current_user_can('manage_options') ? 'admin' : 'non-admin'));
+
                 error_log('[PUNTWORK] AJAX: Calling import_jobs_from_json...');
                 $result = import_jobs_from_json(true, $start);
                 error_log('[PUNTWORK] AJAX: import_jobs_from_json returned successfully');

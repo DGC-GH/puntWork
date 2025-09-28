@@ -141,6 +141,12 @@ if (!function_exists('import_jobs_from_json')) {
      */
     function import_jobs_from_json(bool $is_batch = false, int $batch_start = 0): array
     {
+        error_log('[PUNTWORK] [IMPORT-ENTRY] import_jobs_from_json ENTRY POINT - is_batch=' . ($is_batch ? 'true' : 'false') . ', batch_start=' . $batch_start);
+        error_log('[PUNTWORK] [IMPORT-ENTRY] Memory usage at start: ' . memory_get_usage(true) . ' bytes');
+        error_log('[PUNTWORK] [IMPORT-ENTRY] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
+        error_log('[PUNTWORK] [IMPORT-ENTRY] PHP version: ' . PHP_VERSION);
+        error_log('[PUNTWORK] [IMPORT-ENTRY] WordPress version: ' . get_bloginfo('version'));
+
         try {
             error_log('[PUNTWORK] [IMPORT-START] import_jobs_from_json called with is_batch=' . ($is_batch ? 'true' : 'false') . ', batch_start=' . $batch_start);
 
