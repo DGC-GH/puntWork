@@ -32,36 +32,75 @@ require_once __DIR__ . '/../utilities/utility-helpers.php';
  */
 function validate_jsonl_file( $json_path )
 {
+    error_log('[PUNTWORK] validate_jsonl_file: Starting validation of ' . basename($json_path));
+
     if (( $handle = fopen($json_path, 'r') ) === false ) {
+        error_log('[PUNTWORK] validate_jsonl_file: Cannot open file for validation');
         return new WP_Error('file_open_failed', 'Cannot open JSONL file for validation');
     }
 
     $bom           = "\xef\xbb\xbf";
     $checked_lines = 0;
-    $max_check     = min(100, filesize($json_path) / 100); // Check up to 100 lines or 1% of file
+    $valid_lines   = 0;
+    $invalid_lines = 0;
+    $empty_lines   = 0;
+    $missing_guids = 0;
+    $file_size     = filesize($json_path);
+    $max_check     = min(100, max(10, $file_size / 1000)); // Check up to 100 lines or 0.1% of file, minimum 10
+
+    error_log('[PUNTWORK] validate_jsonl_file: File size: ' . $file_size . ' bytes, checking up to ' . $max_check . ' lines');
 
     while ( $checked_lines < $max_check && ( $line = fgets($handle) ) !== false ) {
+        ++$checked_lines;
+        $original_line = $line;
         $line = trim($line);
+
         // Remove BOM if present
         if (substr($line, 0, 3) === $bom ) {
             $line = substr($line, 3);
         }
-        if (! empty($line) ) {
-            $item = json_decode($line, true);
-            if ($item === null && json_last_error() !== JSON_ERROR_NONE ) {
-                fclose($handle);
-                return new WP_Error('invalid_json', 'Invalid JSON at line ' . ( $checked_lines + 1 ) . ': ' . json_last_error_msg());
-            }
-            // Check for required fields
-            if (! isset($item['guid']) || empty($item['guid']) ) {
-                fclose($handle);
-                return new WP_Error('missing_guid', 'Missing or empty GUID at line ' . ( $checked_lines + 1 ));
-            }
-            ++$checked_lines;
+
+        if (empty($line) ) {
+            ++$empty_lines;
+            continue;
+        }
+
+        $item = json_decode($line, true);
+        if ($item === null && json_last_error() !== JSON_ERROR_NONE ) {
+            ++$invalid_lines;
+            error_log('[PUNTWORK] validate_jsonl_file: INVALID JSON at line ' . $checked_lines . ': ' . json_last_error_msg());
+            error_log('[PUNTWORK] validate_jsonl_file: Line preview: ' . substr($original_line, 0, 100) . (strlen($original_line) > 100 ? '...[truncated]' : ''));
+            continue;
+        }
+
+        ++$valid_lines;
+
+        // Check for required fields
+        if (! isset($item['guid']) || empty($item['guid']) ) {
+            ++$missing_guids;
+            error_log('[PUNTWORK] validate_jsonl_file: Missing or empty GUID at line ' . $checked_lines . ', item keys: ' . implode(', ', array_keys($item)));
         }
     }
 
     fclose($handle);
+
+    $valid_percentage = $checked_lines > 0 ? round(($valid_lines / $checked_lines) * 100, 2) : 0;
+    error_log('[PUNTWORK] validate_jsonl_file: Validation complete - Checked: ' . $checked_lines . ' lines, Valid: ' . $valid_lines . ' (' . $valid_percentage . '%), Invalid: ' . $invalid_lines . ', Empty: ' . $empty_lines . ', Missing GUIDs: ' . $missing_guids);
+
+    if ($invalid_lines > 0) {
+        error_log('[PUNTWORK] validate_jsonl_file: WARNING - Found ' . $invalid_lines . ' invalid JSON lines in sample');
+    }
+
+    if ($valid_percentage < 80) {
+        error_log('[PUNTWORK] validate_jsonl_file: CRITICAL - Only ' . $valid_percentage . '% of sampled lines are valid JSON');
+        return new WP_Error('low_valid_percentage', 'Only ' . $valid_percentage . '% of sampled lines contain valid JSON');
+    }
+
+    if ($missing_guids > 0) {
+        error_log('[PUNTWORK] validate_jsonl_file: WARNING - Found ' . $missing_guids . ' items missing GUIDs');
+    }
+
+    error_log('[PUNTWORK] validate_jsonl_file: File validation passed');
     return true;
 }
 

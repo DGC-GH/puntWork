@@ -280,7 +280,25 @@ function load_json_batch( $json_path, $start_index, $batch_size )
                     error_log('[PUNTWORK] load_json_batch: Successfully decoded item ' . $count . ' at file position ' . ( $start_index + $lines_read ) . ' with GUID: ' . ( $item['guid'] ?? 'MISSING' ));
                 } else {
                     ++$invalid_json;
-                    error_log('[PUNTWORK] load_json_batch: Failed to decode JSON at line ' . ( $start_index + $lines_read ) . ': ' . json_last_error_msg() . ' - Line length: ' . strlen($line) . ' - Line start: ' . substr($line, 0, 100));
+                    $json_error = json_last_error_msg();
+                    $json_error_code = json_last_error();
+                    $line_preview = substr($line, 0, 200);
+                    $line_length = strlen($line);
+                    $file_line_number = $start_index + $lines_read;
+
+                    error_log('[PUNTWORK] load_json_batch: INVALID JSON at file line ' . $file_line_number . ' (position ' . ( $start_index + $lines_read ) . ')');
+                    error_log('[PUNTWORK] load_json_batch: JSON Error: ' . $json_error . ' (code: ' . $json_error_code . ')');
+                    error_log('[PUNTWORK] load_json_batch: Line length: ' . $line_length . ' characters');
+                    error_log('[PUNTWORK] load_json_batch: Line preview: ' . $line_preview . (strlen($line) > 200 ? '...[truncated]' : ''));
+                    error_log('[PUNTWORK] load_json_batch: Line ends with: ' . substr($line, -50));
+
+                    // Log if line appears to be truncated or malformed
+                    if (strpos($line, '{') === false || strpos($line, '}') === false) {
+                        error_log('[PUNTWORK] load_json_batch: WARNING - Line missing JSON braces');
+                    }
+                    if (substr_count($line, '{') !== substr_count($line, '}')) {
+                        error_log('[PUNTWORK] load_json_batch: WARNING - Unmatched braces: ' . substr_count($line, '{') . ' opening, ' . substr_count($line, '}') . ' closing');
+                    }
                 }
             } else {
                 ++$empty_lines;
@@ -299,6 +317,21 @@ function load_json_batch( $json_path, $start_index, $batch_size )
     }
 
     error_log('[PUNTWORK] load_json_batch: returning ' . count($items) . ' items (read ' . $lines_read . ' lines, empty: ' . $empty_lines . ', invalid JSON: ' . $invalid_json . ', start_index: ' . $start_index . ', batch_size: ' . $batch_size . ')');
+
+    // Log detailed breakdown for debugging
+    if ($lines_read > 0) {
+        $valid_percentage = round((count($items) / $lines_read) * 100, 2);
+        error_log('[PUNTWORK] load_json_batch: BREAKDOWN - Total lines read: ' . $lines_read . ', Valid items: ' . count($items) . ' (' . $valid_percentage . '%), Empty lines: ' . $empty_lines . ', Invalid JSON: ' . $invalid_json);
+
+        if ($invalid_json > 0) {
+            error_log('[PUNTWORK] load_json_batch: WARNING - Found ' . $invalid_json . ' invalid JSON lines in this batch!');
+        }
+
+        if ($valid_percentage < 50 && $lines_read > 5) {
+            error_log('[PUNTWORK] load_json_batch: CRITICAL - Only ' . $valid_percentage . '% of lines are valid JSON. File may be corrupted or not a proper JSONL file.');
+        }
+    }
+
     if (empty($items) ) {
         error_log('[PUNTWORK] load_json_batch: WARNING - NO ITEMS LOADED! This will cause 0 processed items.');
         error_log('[PUNTWORK] load_json_batch: DEBUG - start_index=' . $start_index . ', batch_size=' . $batch_size . ', lines_read=' . $lines_read . ', empty_lines=' . $empty_lines . ', invalid_json=' . $invalid_json);
