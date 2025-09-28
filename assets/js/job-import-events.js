@@ -68,6 +68,11 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 JobImportEvents.handleTestSingleJob();
             });
 
+            $('#clear-rate-limits').on('click', function(e) {
+                console.log('[PUNTWORK] Clear rate limits button clicked!');
+                JobImportEvents.handleClearRateLimits();
+            });
+
             console.log('[PUNTWORK] Test single job button binding check:', $('#test-single-job').length);
             if ($('#test-single-job').length > 0) {
                 console.log('[PUNTWORK] Test single job button found and bound');
@@ -212,6 +217,52 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 });
             } else {
                 console.log('[PUNTWORK] User cancelled test single job');
+            }
+        },
+
+        /**
+         * Handle clear rate limits button click
+         */
+        handleClearRateLimits: function() {
+            console.log('[PUNTWORK] Clear Rate Limits clicked - starting handler');
+
+            if (confirm('This will clear all rate limiting restrictions for AJAX requests. This may temporarily reduce security. Continue?')) {
+                console.log('[PUNTWORK] User confirmed clear rate limits');
+                $('#clear-rate-limits').prop('disabled', true);
+                $('#clear-rate-text').hide();
+                $('#clear-rate-loading').show();
+
+                // Call the clear rate limits API
+                JobImportAPI.clearRateLimits().then(function(response) {
+                    console.log('[PUNTWORK] Clear rate limits response received:', response);
+
+                    if (response.success) {
+                        console.log('[PUNTWORK] Rate limits cleared successfully');
+                        $('#import-status').text('Rate limits cleared successfully!');
+                        JobImportUI.appendLogs(['✅ Rate limits cleared successfully']);
+                        if (response.data.message) {
+                            JobImportUI.appendLogs(['ℹ️ ' + response.data.message]);
+                        }
+                    } else {
+                        console.log('[PUNTWORK] Clear rate limits failed:', response.data);
+                        $('#import-status').text('Failed to clear rate limits: ' + (response.data.error || 'Unknown error'));
+                        JobImportUI.appendLogs(['❌ Failed to clear rate limits: ' + (response.data.error || 'Unknown error')]);
+                    }
+
+                    $('#clear-rate-limits').prop('disabled', false);
+                    $('#clear-rate-text').show();
+                    $('#clear-rate-loading').hide();
+                    console.log('[PUNTWORK] Clear rate limits completed, button re-enabled');
+                }).catch(function(xhr, status, error) {
+                    console.log('[PUNTWORK] Clear rate limits error caught:', error);
+                    $('#import-status').text('Clear rate limits error: ' + error);
+                    JobImportUI.appendLogs(['❌ Clear rate limits error: ' + error]);
+                    $('#clear-rate-limits').prop('disabled', false);
+                    $('#clear-rate-text').show();
+                    $('#clear-rate-loading').hide();
+                });
+            } else {
+                console.log('[PUNTWORK] User cancelled clear rate limits');
             }
         },
 

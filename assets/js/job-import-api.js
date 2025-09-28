@@ -419,6 +419,18 @@ console.log('[PUNTWORK] job-import-api.js loaded');
                 type: 'POST',
                 data: { action: 'get_api_key', nonce: jobImportData.nonce }
             });
+        },
+
+        /**
+         * Clear rate limits for AJAX requests
+         * @returns {Promise} AJAX promise
+         */
+        clearRateLimits: function() {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: { action: 'clear_rate_limits_ajax', nonce: jobImportData.nonce }
+            });
         }
     };
 

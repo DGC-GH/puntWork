@@ -27,6 +27,149 @@ class SecurityUtils
     private static $rate_limits = array();
 
     /**
+     * Get dynamic rate limit configuration for an action
+     *
+     * @param  string $action Action name
+     * @return array Rate limit configuration with 'max_requests' and 'time_window'
+     */
+    public static function getRateLimitConfig( string $action ): array
+    {
+        // Get stored rate limits from options
+        $stored_limits = get_option('puntwork_rate_limits', array());
+
+        // Default rate limits
+        $defaults = array(
+            'default' => array(
+                'max_requests' => 10,
+                'time_window' => 60, // 1 minute
+            ),
+            'run_job_import_batch' => array(
+                'max_requests' => 100,
+                'time_window' => 300, // 5 minutes
+            ),
+            'get_job_import_status' => array(
+                'max_requests' => 30,
+                'time_window' => 60, // 1 minute
+            ),
+            'process_feed' => array(
+                'max_requests' => 20,
+                'time_window' => 300, // 5 minutes
+            ),
+            'test_single_job_import' => array(
+                'max_requests' => 5,
+                'time_window' => 300, // 5 minutes
+            ),
+            'clear_rate_limits' => array(
+                'max_requests' => 3,
+                'time_window' => 3600, // 1 hour
+            ),
+        );
+
+        // Apply filter for customization
+        $defaults = apply_filters('puntwork_rate_limit_defaults', $defaults);
+
+        // Merge stored limits with defaults
+        $config = array_merge($defaults, $stored_limits);
+
+        // Return specific action config or default
+        return $config[$action] ?? $config['default'];
+    }
+
+    /**
+     * Set rate limit configuration for an action
+     *
+     * @param string $action       Action name
+     * @param int    $max_requests Maximum requests allowed
+     * @param int    $time_window  Time window in seconds
+     * @return bool True if saved successfully
+     */
+    public static function setRateLimitConfig( string $action, int $max_requests, int $time_window ): bool
+    {
+        // Validate inputs
+        if ($max_requests < 1 || $time_window < 1) {
+            return false;
+        }
+
+        $stored_limits = get_option('puntwork_rate_limits', array());
+        $stored_limits[$action] = array(
+            'max_requests' => $max_requests,
+            'time_window' => $time_window,
+        );
+
+        return update_option('puntwork_rate_limits', $stored_limits);
+    }
+
+    /**
+     * Reset rate limit configuration for an action to default
+     *
+     * @param string $action Action name
+     * @return bool True if reset successfully
+     */
+    public static function resetRateLimitConfig( string $action ): bool
+    {
+        $stored_limits = get_option('puntwork_rate_limits', array());
+        if (isset($stored_limits[$action])) {
+            unset($stored_limits[$action]);
+            return update_option('puntwork_rate_limits', $stored_limits);
+        }
+        return true; // Already at default
+    }
+
+    /**
+     * Get all rate limit configurations
+     *
+     * @return array All rate limit configurations
+     */
+    public static function getAllRateLimitConfigs(): array
+    {
+        $stored_limits = get_option('puntwork_rate_limits', array());
+
+        // Default rate limits
+        $defaults = array(
+            'default' => array(
+                'max_requests' => 10,
+                'time_window' => 60,
+            ),
+            'run_job_import_batch' => array(
+                'max_requests' => 100,
+                'time_window' => 300,
+            ),
+            'get_job_import_status' => array(
+                'max_requests' => 30,
+                'time_window' => 60,
+            ),
+            'process_feed' => array(
+                'max_requests' => 20,
+                'time_window' => 300,
+            ),
+            'test_single_job_import' => array(
+                'max_requests' => 5,
+                'time_window' => 300,
+            ),
+            'clear_rate_limits' => array(
+                'max_requests' => 3,
+                'time_window' => 3600,
+            ),
+        );
+
+        // Apply filter for customization
+        $defaults = apply_filters('puntwork_rate_limit_defaults', $defaults);
+
+        // Merge stored limits with defaults
+        return array_merge($defaults, $stored_limits);
+    }
+
+    /**
+     * Reset all rate limit configurations to defaults
+     *
+     * @return bool True if reset successfully
+     */
+    public static function resetAllRateLimitConfigs(): bool
+    {
+        return delete_option('puntwork_rate_limits');
+    }
+
+    /**
      * Validate AJAX request with comprehensive security checks
      *
      * @param  string $action           Action name for logging
@@ -42,7 +185,7 @@ class SecurityUtils
         array $validation_rules = array()
     ) {
         try {
-            // Check rate limiting first
+            // Check rate limiting first with action-specific limits
             $rate_limit_check = self::checkRateLimit($action);
             if (is_wp_error($rate_limit_check) ) {
                 PuntWorkLogger::warn("Rate limit exceeded for action: {$action}", PuntWorkLogger::CONTEXT_SECURITY);
@@ -94,12 +237,23 @@ class SecurityUtils
      * Check rate limiting for AJAX requests
      *
      * @param  string $action       Action name
-     * @param  int    $max_requests Maximum requests per time window
-     * @param  int    $time_window  Time window in seconds
+     * @param  int    $max_requests Maximum requests per time window (optional override)
+     * @param  int    $time_window  Time window in seconds (optional override)
      * @return bool|WP_Error True if allowed, WP_Error if rate limited
      */
-    public static function checkRateLimit( string $action, int $max_requests = 10, int $time_window = 60 )
+    public static function checkRateLimit( string $action, int $max_requests = null, int $time_window = null )
     {
+        // Use dynamic configuration if no overrides provided
+        if ($max_requests === null || $time_window === null) {
+            $config = self::getRateLimitConfig($action);
+            $max_requests = $max_requests ?? $config['max_requests'];
+            $time_window = $time_window ?? $config['time_window'];
+        }
+
+        // Allow filter to override rate limits
+        $max_requests = apply_filters('puntwork_rate_limit_max_requests', $max_requests, $action);
+        $time_window = apply_filters('puntwork_rate_limit_time_window', $time_window, $action);
+
         $user_id = get_current_user_id();
         $key     = "rate_limit_{$action}_{$user_id}";
 
@@ -120,7 +274,22 @@ class SecurityUtils
 
         // Check if rate limit exceeded
         if (count($requests) >= $max_requests ) {
-            return new \WP_Error('rate_limit', 'Rate limit exceeded. Please wait before trying again.');
+            $remaining_time = 0;
+            if (! empty($requests)) {
+                $oldest_request = min($requests);
+                $remaining_time = $time_window - ($current_time - $oldest_request);
+                $remaining_time = max(0, $remaining_time);
+            }
+
+            $error_message = sprintf(
+                'Rate limit exceeded for "%s". Maximum %d requests per %d seconds. Please wait %d seconds before trying again.',
+                $action,
+                $max_requests,
+                $time_window,
+                $remaining_time
+            );
+
+            return new \WP_Error('rate_limit', $error_message);
         }
 
         // Add current request
@@ -130,6 +299,50 @@ class SecurityUtils
         set_transient($key, $requests, $time_window + 6);
 
         return true;
+    }
+
+    /**
+     * Clear rate limit for a specific action and user
+     *
+     * @param  string $action Action name
+     * @param  int    $user_id User ID (optional, defaults to current user)
+     * @return bool True if cleared
+     */
+    public static function clearRateLimit( string $action, int $user_id = null ): bool
+    {
+        $user_id = $user_id ?? get_current_user_id();
+        $key     = "rate_limit_{$action}_{$user_id}";
+
+        return delete_transient($key);
+    }
+
+    /**
+     * Clear all rate limits for current user
+     *
+     * @return int Number of transients cleared
+     */
+    public static function clearAllRateLimits(): int
+    {
+        global $wpdb;
+        $user_id = get_current_user_id();
+        $pattern = $wpdb->esc_like("_transient_rate_limit_%_{$user_id}") . '%';
+
+        $cleared = 0;
+        $transients = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s",
+                $pattern
+            )
+        );
+
+        foreach ( $transients as $transient ) {
+            $transient_name = str_replace('_transient_', '', $transient);
+            if (delete_transient($transient_name) ) {
+                $cleared++;
+            }
+        }
+
+        return $cleared;
     }
 
     /**

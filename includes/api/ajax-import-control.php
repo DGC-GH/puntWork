@@ -886,6 +886,83 @@ function test_single_job_import_ajax()
     }
 }
 
+add_action('wp_ajax_clear_rate_limits', __NAMESPACE__ . '\\clear_rate_limits_ajax');
+function clear_rate_limits_ajax()
+{
+    PuntWorkLogger::logAjaxRequest('clear_rate_limits', $_POST);
+
+    // Use comprehensive security validation
+    $validation = SecurityUtils::validateAjaxRequest('clear_rate_limits', 'job_import_nonce');
+    if (is_wp_error($validation) ) {
+        AjaxErrorHandler::sendError($validation);
+        return;
+    }
+
+    try {
+        // Include SecurityUtils
+        include_once __DIR__ . '/../utilities/SecurityUtils.php';
+
+        $cleared = SecurityUtils::clearAllRateLimits();
+
+        PuntWorkLogger::info('Rate limits cleared', PuntWorkLogger::CONTEXT_AJAX, array( 'cleared_count' => $cleared ));
+
+        PuntWorkLogger::logAjaxResponse('clear_rate_limits', array( 'message' => 'Rate limits cleared', 'cleared_count' => $cleared ));
+        AjaxErrorHandler::sendSuccess(null, array( 'message' => "Cleared {$cleared} rate limit entries" ));
+    } catch ( \Exception $e ) {
+        PuntWorkLogger::error('Clear rate limits error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        AjaxErrorHandler::sendError('Failed to clear rate limits: ' . $e->getMessage());
+    }
+}
+
+add_action('wp_ajax_get_rate_limit_status', __NAMESPACE__ . '\\get_rate_limit_status_ajax');
+function get_rate_limit_status_ajax()
+{
+    PuntWorkLogger::logAjaxRequest('get_rate_limit_status', $_POST);
+
+    // Use comprehensive security validation
+    $validation = SecurityUtils::validateAjaxRequest('get_rate_limit_status', 'puntwork_rate_limits');
+    if (is_wp_error($validation) ) {
+        AjaxErrorHandler::sendError($validation);
+        return;
+    }
+
+    try {
+        $user_id = get_current_user_id();
+        $configs = SecurityUtils::getAllRateLimitConfigs();
+        $status = array();
+
+        foreach ($configs as $action => $config) {
+            $key = "rate_limit_{$action}_{$user_id}";
+            $requests = get_transient($key);
+
+            if (! $requests ) {
+                $requests = array();
+            }
+
+            // Clean old requests
+            $current_time = time();
+            $requests = array_filter(
+                $requests,
+                function ( $timestamp ) use ( $current_time, $config ) {
+                    return ( $current_time - $timestamp ) < $config['time_window'];
+                }
+            );
+
+            $status[$action] = array(
+                'requests' => count($requests),
+                'limit' => $config['max_requests'],
+                'window' => $config['time_window'],
+            );
+        }
+
+        PuntWorkLogger::logAjaxResponse('get_rate_limit_status', array( 'status_count' => count($status) ));
+        AjaxErrorHandler::sendSuccess($status);
+    } catch ( \Exception $e ) {
+        PuntWorkLogger::error('Get rate limit status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        AjaxErrorHandler::sendError('Failed to get rate limit status: ' . $e->getMessage());
+    }
+}
+
 add_action('wp_ajax_get_api_key', __NAMESPACE__ . '\\get_api_key_ajax');
 function get_api_key_ajax()
 {
