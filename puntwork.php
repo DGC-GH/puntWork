@@ -125,12 +125,12 @@ function process_social_media_posts()
 add_action('init', __NAMESPACE__ . '\\setup_job_import');
 function setup_job_import()
 {
-    // Prevent multiple initialization with a global flag
-    global $puntwork_setup_done;
-    if (isset($puntwork_setup_done) && $puntwork_setup_done) {
+    // Prevent multiple initialization with a static flag
+    static $setup_done = false;
+    if ($setup_done) {
         return;
     }
-    $puntwork_setup_done = true;
+    $setup_done = true;
 
     // Increase memory limit to prevent exhaustion
     ini_set('memory_limit', '1024M');
@@ -259,9 +259,9 @@ function setup_job_import()
         'utilities/CacheManager.php',
         'utilities/JobDeduplicator.php',
         'utilities/EnhancedCacheManager.php',
-        'utilities/ResourceManager.php',
+        'utilities/AdaptiveResourceManager.php',
         'utilities/BatchPrioritizer.php',
-        'utilities/JsonlProcessor.php',
+        'utilities/AdvancedJsonlProcessor.php',
         'utilities/IterativeLearner.php',
         'utilities/MemoryManager.php',
         'utilities/database-optimization.php',
