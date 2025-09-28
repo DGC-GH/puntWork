@@ -70,7 +70,9 @@ function process_batch_items_logic( array $setup ): array
 
         // Start database performance monitoring
         start_db_performance_monitoring();
-        error_log('[PUNTWORK] [BATCH-DEBUG] Database performance monitoring started');        // Optimize memory for large batch
+        error_log('[PUNTWORK] [BATCH-DEBUG] Database performance monitoring started');
+
+        // Optimize memory for large batch
         optimize_memory_for_batch();
         error_log('[PUNTWORK] [BATCH-DEBUG] Memory optimization completed');
 
@@ -156,7 +158,7 @@ function process_batch_items_logic( array $setup ): array
                   $current_status['error_message']      = '';
                   $current_status['batch_size']         = $batch_size;
                   $current_status['inferred_languages'] = ( $current_status['inferred_languages'] ?? 0 ) + $inferred_languages;
-                  $current_status['inferred_benefits']  = ( $current_status['inferred_benefits'] ?? 0 ) + $inferred_benefits;
+                  $current_status['inferred_benefits'] = ( $current_status['inferred_benefits'] ?? 0 ) + $inferred_benefits;
                   $current_status['schema_generated']   = ( $current_status['schema_generated'] ?? 0 ) + $schema_generated;
                   $current_status['start_time']         = $setup['start_time'];
                   $current_status['end_time']           = $current_status['complete'] ? microtime(true) : null;
@@ -250,7 +252,7 @@ function process_batch_items_logic( array $setup ): array
             $current_status['error_message']      = '';
             $current_status['batch_size']         = $batch_size;
             $current_status['inferred_languages'] = ( $current_status['inferred_languages'] ?? 0 ) + $inferred_languages;
-            $current_status['inferred_benefits']  = ( $current_status['inferred_benefits'] ?? 0 ) + $inferred_benefits;
+            $current_status['inferred_benefits'] = ( $current_status['inferred_benefits'] ?? 0 ) + $inferred_benefits;
             $current_status['schema_generated']   = ( $current_status['schema_generated'] ?? 0 ) + $schema_generated;
             $current_status['start_time']         = $setup['start_time'];
             $current_status['end_time']           = $current_status['complete'] ? microtime(true) : null;
@@ -371,9 +373,10 @@ function process_batch_data( array $batch_guids, array $batch_items, array &$log
     global $wpdb;
 
     try {
+        error_log('[PUNTWORK] [BATCH-DEBUG] About to call get_posts_by_guids_with_status');
         // Use optimized function to get posts by GUIDs with status
         $existing_by_guid = get_posts_by_guids_with_status($batch_guids);
-        error_log('[PUNTWORK] Got existing posts by GUID: ' . count($existing_by_guid));
+        error_log('[PUNTWORK] [BATCH-DEBUG] get_posts_by_guids_with_status completed, found ' . count($existing_by_guid) . ' existing GUIDs');
     } catch ( \Exception $e ) {
         error_log('[PUNTWORK] Error getting existing posts: ' . $e->getMessage());
         throw $e;
@@ -381,31 +384,34 @@ function process_batch_data( array $batch_guids, array $batch_items, array &$log
 
     $post_ids_by_guid = array();
 
+    error_log('[PUNTWORK] [BATCH-DEBUG] About to call handle_batch_duplicates');
     // Handle duplicates
     handle_batch_duplicates($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
-    error_log('[PUNTWORK] Handled duplicates');
+    error_log('[PUNTWORK] [BATCH-DEBUG] handle_batch_duplicates completed, post_ids_by_guid has ' . count($post_ids_by_guid) . ' entries');
 
     // Clear cache to prevent memory accumulation
     if (function_exists('wp_cache_flush')) {
         wp_cache_flush();
     }
     \Puntwork\Utilities\CacheManager::clearGroup(\Puntwork\Utilities\CacheManager::GROUP_ANALYTICS);
-    error_log('[PUNTWORK] Cache cleared after duplicates');
+    error_log('[PUNTWORK] [BATCH-DEBUG] Cache cleared after duplicates');
 
+    error_log('[PUNTWORK] [BATCH-DEBUG] About to call prepare_batch_metadata');
     // Prepare batch metadata
     $batch_metadata = prepare_batch_metadata($post_ids_by_guid);
-    error_log('[PUNTWORK] Prepared batch metadata');
+    error_log('[PUNTWORK] [BATCH-DEBUG] prepare_batch_metadata completed');
 
     // Clear cache again after metadata preparation
     if (function_exists('wp_cache_flush')) {
         wp_cache_flush();
     }
     \Puntwork\Utilities\CacheManager::clearGroup(\Puntwork\Utilities\CacheManager::GROUP_ANALYTICS);
-    error_log('[PUNTWORK] Cache cleared after metadata');
+    error_log('[PUNTWORK] [BATCH-DEBUG] Cache cleared after metadata');
 
+    error_log('[PUNTWORK] [BATCH-DEBUG] About to call process_batch_items_with_metadata');
     // Process items
     $processed_count = process_batch_items_with_metadata($batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid, $logs, $updated, $published, $skipped);
-    error_log('[PUNTWORK] Processed batch items, count=' . $processed_count);
+    error_log('[PUNTWORK] [BATCH-DEBUG] process_batch_items_with_metadata completed, processed_count=' . $processed_count);
 
     return array( 'processed_count' => $processed_count );
 }
