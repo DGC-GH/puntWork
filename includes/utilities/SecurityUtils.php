@@ -45,7 +45,7 @@ class SecurityUtils
             // Check rate limiting first
             $rate_limit_check = self::checkRateLimit($action);
             if (is_wp_error($rate_limit_check) ) {
-                PuntWorkLogger::warning("Rate limit exceeded for action: {$action}", PuntWorkLogger::CONTEXT_SECURITY);
+                PuntWorkLogger::warn("Rate limit exceeded for action: {$action}", PuntWorkLogger::CONTEXT_SECURITY);
                 return $rate_limit_check;
             }
 

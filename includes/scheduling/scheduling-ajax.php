@@ -358,7 +358,7 @@ function run_scheduled_import_ajax()
                         ( $time_elapsed > 300 ); // 5 minutes
 
             if ($is_stuck ) {
-                PuntWorkLogger::warning(
+                PuntWorkLogger::warn(
                     'Detected stuck import, clearing status for new run',
                     PuntWorkLogger::CONTEXT_SCHEDULING,
                     array(
@@ -413,7 +413,7 @@ function run_scheduled_import_ajax()
             wp_schedule_single_event(time() + 1, 'puntwork_scheduled_import_async');
         } else {
             // Final fallback: Run synchronously (not ideal for UI but maintains functionality)
-            PuntWorkLogger::warning('No async scheduling available, running synchronously', PuntWorkLogger::CONTEXT_SCHEDULING);
+            PuntWorkLogger::warn('No async scheduling available, running synchronously', PuntWorkLogger::CONTEXT_SCHEDULING);
             $result = run_scheduled_import();
 
             if ($result['success'] ) {

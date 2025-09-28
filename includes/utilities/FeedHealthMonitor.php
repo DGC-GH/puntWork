@@ -101,7 +101,7 @@ class FeedHealthMonitor
         $feeds = get_feeds();
 
         if (empty($feeds) ) {
-            PuntWorkLogger::warning('No feeds configured for health monitoring', PuntWorkLogger::CONTEXT_MONITORING);
+            PuntWorkLogger::warn('No feeds configured for health monitoring', PuntWorkLogger::CONTEXT_MONITORING);
             return;
         }
 
@@ -342,7 +342,7 @@ class FeedHealthMonitor
         }
 
         // Log the alert
-        PuntWorkLogger::warning(
+        PuntWorkLogger::warn(
             "Feed alert sent: $alert_type for $feed_key",
             PuntWorkLogger::CONTEXT_MONITORING,
             array(
