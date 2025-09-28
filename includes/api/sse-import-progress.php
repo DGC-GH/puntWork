@@ -325,7 +325,7 @@ function handle_import_progress_sse( $request )
             }
 
             // Wait before next check (balance between real-time updates and server load)
-            sleep(2);
+            sleep(1);
         }
 
         error_log('[PUNTWORK] SSE: Connection closed');

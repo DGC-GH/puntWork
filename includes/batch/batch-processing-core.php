@@ -198,12 +198,15 @@ function process_batch_items_logic( array $setup ): array
                   $current_status['logs']               = array_slice($logs, -50);
                   update_option('job_import_status', $current_status, false);
 
+                  // Flush cache for real-time status updates
+                  if (function_exists('wp_cache_flush')) {
+                      wp_cache_flush();
+                  }
+
                 if ($span ) {
                     $span->setAttribute('batch.cancelled', true);
                     $span->end();
-                }
-
-                // Restore memory limit
+                }                // Restore memory limit
                 ini_set('memory_limit', $original_memory_limit);
 
                   return array(
@@ -292,11 +295,14 @@ function process_batch_items_logic( array $setup ): array
             $current_status['schema_generated']   = ( $current_status['schema_generated'] ?? 0 ) + $schema_generated;
             $current_status['start_time']         = $setup['start_time'];
             $current_status['end_time']           = $current_status['complete'] ? microtime(true) : null;
-            $current_status['last_update']        = time();
-            $current_status['logs']               = array_slice($logs, -50); // Keep last 50 log entries
-            update_option('job_import_status', $current_status, false);
+                  $current_status['last_update']        = time();
+                  $current_status['logs']               = array_slice($logs, -50); // Keep last 50 log entries
+                  update_option('job_import_status', $current_status, false);
 
-            // Schedule async analytics update for better performance
+                  // Flush cache for real-time status updates
+                  if (function_exists('wp_cache_flush')) {
+                      wp_cache_flush();
+                  }            // Schedule async analytics update for better performance
             $analytics_data = array(
             'import_id'          => wp_generate_uuid4(),
             'start_time'         => $setup['start_time'],

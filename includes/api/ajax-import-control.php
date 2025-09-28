@@ -248,37 +248,29 @@ function clear_import_cancel_ajax()
     }
 }
 
-add_action('wp_ajax_reset_job_import', __NAMESPACE__ . '\\reset_job_import_ajax');
-function reset_job_import_ajax()
+add_action('wp_ajax_reset_job_import_status', __NAMESPACE__ . '\\reset_job_import_status_ajax');
+function reset_job_import_status_ajax()
 {
-    PuntWorkLogger::logAjaxRequest('reset_job_import', $_POST);
+    PuntWorkLogger::logAjaxRequest('reset_job_import_status', $_POST);
 
     // Use comprehensive security validation
-    $validation = SecurityUtils::validateAjaxRequest('reset_job_import', 'job_import_nonce');
+    $validation = SecurityUtils::validateAjaxRequest('reset_job_import_status', 'job_import_nonce');
     if (is_wp_error($validation) ) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
 
     try {
-        // Clear all import-related data
+        // Clear only the import status, not other options
         delete_option('job_import_status');
-        delete_option('job_import_progress');
-        delete_option('job_import_processed_guids');
-        delete_option('job_import_last_batch_time');
-        delete_option('job_import_last_batch_processed');
-        delete_option('job_import_batch_size');
-        delete_option('job_import_consecutive_small_batches');
-        delete_transient('import_cancel');
-        delete_transient('puntwork_import_lock'); // Clear the import lock
+        
+        PuntWorkLogger::info('Import status completely reset', PuntWorkLogger::CONTEXT_BATCH);
 
-        PuntWorkLogger::info('Import system completely reset', PuntWorkLogger::CONTEXT_BATCH);
-
-        PuntWorkLogger::logAjaxResponse('reset_job_import', array( 'message' => 'Import system reset' ));
-        AjaxErrorHandler::sendSuccess(null, array( 'message' => 'Import system reset' ));
+        PuntWorkLogger::logAjaxResponse('reset_job_import_status', array( 'message' => 'Import status reset' ));
+        AjaxErrorHandler::sendSuccess(null, array( 'message' => 'Import status reset' ));
     } catch ( \Exception $e ) {
-        PuntWorkLogger::error('Reset import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::sendError('Failed to reset import: ' . $e->getMessage());
+        PuntWorkLogger::error('Reset import status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        AjaxErrorHandler::sendError('Failed to reset import status: ' . $e->getMessage());
     }
 }
 

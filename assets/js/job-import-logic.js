@@ -300,6 +300,16 @@ console.info("=== Job Import Logic Script Loaded ===");
                     JobImportUI.appendLogs(['Import reset for fresh start']);
                 }
 
+                // Additional status reset for real-time updates
+                const statusResetResponse = await $.ajax({
+                    url: jobImportData.ajaxurl,
+                    type: 'POST',
+                    data: { action: 'reset_job_import_status', nonce: jobImportData.nonce }
+                });
+                if (statusResetResponse.success) {
+                    JobImportUI.appendLogs(['Import status reset for real-time updates']);
+                }
+
                 // Process feeds
                 const feeds = jobImportData.feeds;
                 console.log('[PUNTWORK] Processing feeds:', feeds);
