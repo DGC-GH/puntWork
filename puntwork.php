@@ -165,7 +165,9 @@ function setup_job_import()
     // Batch processing (functions)
     'batch/batch-core.php',
     'batch/batch-data.php',
+    'batch/batch-loading.php',
     'batch/batch-processing.php',
+    'batch/batch-processing-core.php',
     'batch/batch-size-management.php',
     'batch/batch-utils.php',
 

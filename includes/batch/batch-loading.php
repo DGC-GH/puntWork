@@ -10,8 +10,6 @@
 
 declare(strict_types=1);
 
-namespace Puntwork;
-
 // Prevent direct access
 if (! defined('ABSPATH') ) {
     exit;
