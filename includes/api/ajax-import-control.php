@@ -1068,7 +1068,7 @@ function get_async_status_ajax()
 
         PuntWorkLogger::logAjaxResponse('get_async_status', [
             'enabled' => $status['enabled'],
-            'available' => $status['available']
+            'available' => $status['available'],
         ]);
         AjaxErrorHandler::sendSuccess($status);
     } catch (\Exception $e) {

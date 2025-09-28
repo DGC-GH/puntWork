@@ -40,26 +40,9 @@ function job_import_cleanup_duplicates_ajax()
 
     try {
         // Get batch parameters with validation - start with smaller batch size for dynamic adjustment
-        $batch_size = SecurityUtils::validateField(
-            $_POST,
-            'batch_size',
-            'integer',
-            [
-                'min' => 1,
-                'max' => 500,
-                'default' => 10,
-            ]
-        );
-        $offset = SecurityUtils::validateField(
-            $_POST,
-            'offset',
-            'integer',
-            [
-                'min' => 0,
-                'default' => 0,
-            ]
-        );
-        $is_continue = SecurityUtils::validateField($_POST, 'is_continue', 'boolean', ['default' => false]);
+        $batch_size = isset($_POST['batch_size']) ? intval($_POST['batch_size']) : 10;
+        $offset = isset($_POST['offset']) ? intval($_POST['offset']) : 0;
+        $is_continue = isset($_POST['is_continue']) ? filter_var($_POST['is_continue'], FILTER_VALIDATE_BOOLEAN) : false;
 
         PuntWorkLogger::info(
             'Starting cleanup duplicates batch',
@@ -314,26 +297,9 @@ function job_import_purge_ajax()
 
     try {
         // Get batch parameters with validation
-        $batch_size = SecurityUtils::validateField(
-            $_POST,
-            'batch_size',
-            'integer',
-            [
-                'min' => 1,
-                'max' => 500,
-                'default' => 50,
-            ]
-        );
-        $offset = SecurityUtils::validateField(
-            $_POST,
-            'offset',
-            'integer',
-            [
-                'min' => 0,
-                'default' => 0,
-            ]
-        );
-        $is_continue = SecurityUtils::validateField($_POST, 'is_continue', 'boolean', ['default' => false]);
+        $batch_size = isset($_POST['batch_size']) ? intval($_POST['batch_size']) : 50;
+        $offset = isset($_POST['offset']) ? intval($_POST['offset']) : 0;
+        $is_continue = isset($_POST['is_continue']) ? filter_var($_POST['is_continue'], FILTER_VALIDATE_BOOLEAN) : false;
 
         PuntWorkLogger::info(
             'Starting purge batch',
@@ -593,16 +559,7 @@ function job_import_cleanup_continue_ajax()
         }
 
         // Get batch parameters with validation
-        $batch_size = SecurityUtils::validateField(
-            $_POST,
-            'batch_size',
-            'integer',
-            [
-                'min' => 1,
-                'max' => 500,
-                'default' => 50,
-            ]
-        );
+        $batch_size = isset($_POST['batch_size']) ? intval($_POST['batch_size']) : 50;
 
         PuntWorkLogger::info(
             'Continuing cleanup operation',
