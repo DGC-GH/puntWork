@@ -23,21 +23,27 @@ if (! defined('ABSPATH') ) {
  */
 function process_batch_items_logic( array $setup ): array
 {
-    error_log('=== PUNTWORK BATCH DEBUG: process_batch_items_logic STARTED ===');
-    error_log(
-        '[PUNTWORK] process_batch_items_logic called with setup: ' . json_encode(
-            array(
-                'start_index'    => $setup['start_index'] ?? 'not set',
-                'total'          => $setup['total'] ?? 'not set',
-                'json_path'      => isset($setup['json_path']) ? basename($setup['json_path']) : 'not set',
-                'json_path_full' => $setup['json_path'] ?? 'not set',
+    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+    
+    if ($debug_mode) {
+        error_log('=== PUNTWORK BATCH DEBUG: process_batch_items_logic STARTED ===');
+        error_log(
+            '[PUNTWORK] process_batch_items_logic called with setup: ' . json_encode(
+                array(
+                    'start_index'    => $setup['start_index'] ?? 'not set',
+                    'total'          => $setup['total'] ?? 'not set',
+                    'json_path'      => isset($setup['json_path']) ? basename($setup['json_path']) : 'not set',
+                    'json_path_full' => $setup['json_path'] ?? 'not set',
+                )
             )
-        )
-    );
+        );
+    }
 
     // Check if json_path exists and is readable
-    if (isset($setup['json_path']) ) {
-        error_log('[PUNTWORK] JSON file check: exists=' . ( file_exists($setup['json_path']) ? 'yes' : 'no' ) . ', readable=' . ( is_readable($setup['json_path']) ? 'yes' : 'no' ) . ', size=' . ( file_exists($setup['json_path']) ? filesize($setup['json_path']) : 'N/A' ));
+    if (isset($setup['json_path'])) {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] JSON file check: exists=' . ( file_exists($setup['json_path']) ? 'yes' : 'no' ) . ', readable=' . ( is_readable($setup['json_path']) ? 'yes' : 'no' ) . ', size=' . ( file_exists($setup['json_path']) ? filesize($setup['json_path']) : 'N/A' ));
+        }
     }
 
     // Start tracing span for batch processing (only if available)
@@ -54,31 +60,45 @@ function process_batch_items_logic( array $setup ): array
     }
 
     try {
-        error_log('[PUNTWORK] [BATCH-DEBUG] Starting performance monitoring');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [BATCH-DEBUG] Starting performance monitoring');
+        }
         // Start performance monitoring
         $perf_id = start_performance_monitoring('batch_import');
-        error_log('[PUNTWORK] [BATCH-DEBUG] Performance monitoring started with ID: ' . $perf_id);
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [BATCH-DEBUG] Performance monitoring started with ID: ' . $perf_id);
+        }
 
         // Increase memory limit for batch processing
         $original_memory_limit = ini_get('memory_limit');
         ini_set('memory_limit', '1024M');
-        error_log('[PUNTWORK] [BATCH-DEBUG] Memory limit increased to 1024M');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [BATCH-DEBUG] Memory limit increased to 1024M');
+        }
 
         // Clear analytics cache to prevent memory accumulation during import
         \Puntwork\Utilities\CacheManager::clearGroup(\Puntwork\Utilities\CacheManager::GROUP_ANALYTICS);
-        error_log('[PUNTWORK] [BATCH-DEBUG] Analytics cache cleared');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [BATCH-DEBUG] Analytics cache cleared');
+        }
 
         // Start database performance monitoring
         start_db_performance_monitoring();
-        error_log('[PUNTWORK] [BATCH-DEBUG] Database performance monitoring started');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [BATCH-DEBUG] Database performance monitoring started');
+        }
 
         // Optimize memory for large batch
         optimize_memory_for_batch();
-        error_log('[PUNTWORK] [BATCH-DEBUG] Memory optimization completed');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [BATCH-DEBUG] Memory optimization completed');
+        }
 
         // Reset memory manager
         reset_memory_manager();
-        error_log('[PUNTWORK] [BATCH-DEBUG] Memory manager reset completed');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [BATCH-DEBUG] Memory manager reset completed');
+        }
 
         extract($setup);
 
@@ -89,7 +109,9 @@ function process_batch_items_logic( array $setup ): array
         $batch_size_info = validate_and_adjust_batch_size($setup);
         $batch_size      = $batch_size_info['batch_size'];
         $logs            = $batch_size_info['logs'];
-        error_log('[PUNTWORK] [BATCH-DEBUG] validate_and_adjust_batch_size completed, batch_size=' . $batch_size);
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [BATCH-DEBUG] validate_and_adjust_batch_size completed, batch_size=' . $batch_size);
+        }
 
         // Initialize variables
         $end_index = $setup['start_index'];
@@ -128,7 +150,9 @@ function process_batch_items_logic( array $setup ): array
             $batch_guids     = $batch_load_info['batch_guids'];
             $lines_read      = $batch_load_info['lines_read'] ?? $batch_size;
             $end_index       = $setup['start_index'] + $lines_read;
-            error_log('[PUNTWORK] [BATCH-DEBUG] load_and_prepare_batch_items completed, loaded ' . count($batch_guids) . ' GUIDs, lines_read=' . $lines_read . ', end_index=' . $end_index);
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [BATCH-DEBUG] load_and_prepare_batch_items completed, loaded ' . count($batch_guids) . ' GUIDs, lines_read=' . $lines_read . ', end_index=' . $end_index);
+            }
 
             // Checkpoint: Batch items loaded
             checkpoint_performance(
@@ -141,7 +165,9 @@ function process_batch_items_logic( array $setup ): array
             );
 
             if ($batch_load_info['cancelled'] ) {
-                  error_log('[PUNTWORK] [BATCH-DEBUG] Batch was cancelled, returning early');
+                  if ($debug_mode) {
+                      error_log('[PUNTWORK] [BATCH-DEBUG] Batch was cancelled, returning early');
+                  }
                   update_option('job_import_progress', $end_index, false);
                   update_option('job_import_processed_guids', $processed_guids, false);
                   $time_elapsed = microtime(true) - $setup['start_time'];
@@ -202,10 +228,14 @@ function process_batch_items_logic( array $setup ): array
                   );
             }
 
-            error_log('[PUNTWORK] [BATCH-DEBUG] Calling process_batch_data');
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [BATCH-DEBUG] Calling process_batch_data');
+            }
             // Process batch items
             $result = process_batch_data($batch_guids, $batch_items, $logs, $published, $updated, $skipped, $duplicates_drafted);
-            error_log('[PUNTWORK] [BATCH-DEBUG] process_batch_data completed, processed_count=' . $result['processed_count']);
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [BATCH-DEBUG] process_batch_data completed, processed_count=' . $result['processed_count']);
+            }
 
             // Checkpoint: Batch processing complete
             checkpoint_performance(
@@ -285,11 +315,15 @@ function process_batch_items_logic( array $setup ): array
                 schedule_async_analytics_update($analytics_data);
             }
 
-            error_log('[PUNTWORK] [BATCH-DEBUG] process_batch_items_logic completed successfully');
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [BATCH-DEBUG] process_batch_items_logic completed successfully');
+            }
 
             // Restore original memory limit
             ini_set('memory_limit', $original_memory_limit);
-            error_log('[PUNTWORK] [BATCH-DEBUG] Memory limit restored to ' . $original_memory_limit);
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [BATCH-DEBUG] Memory limit restored to ' . $original_memory_limit);
+            }
 
             return array(
             'success'            => true,
@@ -370,7 +404,11 @@ function process_batch_items_logic( array $setup ): array
  */
 function process_batch_data( array $batch_guids, array $batch_items, array &$logs, int &$published, int &$updated, int &$skipped, int &$duplicates_drafted ): array
 {
-    error_log('[PUNTWORK] process_batch_data called with ' . count($batch_guids) . ' GUIDs');
+    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+    
+    if ($debug_mode) {
+        error_log('[PUNTWORK] process_batch_data called with ' . count($batch_guids) . ' GUIDs');
+    }
 
     if (empty($batch_guids) ) {
         error_log('[PUNTWORK] ERROR: process_batch_data called with empty batch_guids! This means load_and_prepare_batch_items failed to load valid items.');
@@ -381,10 +419,14 @@ function process_batch_data( array $batch_guids, array $batch_items, array &$log
     global $wpdb;
 
     try {
-        error_log('[PUNTWORK] [BATCH-DEBUG] About to call get_posts_by_guids_with_status');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [BATCH-DEBUG] About to call get_posts_by_guids_with_status');
+        }
         // Use optimized function to get posts by GUIDs with status
         $existing_by_guid = get_posts_by_guids_with_status($batch_guids);
-        error_log('[PUNTWORK] [BATCH-DEBUG] get_posts_by_guids_with_status completed, found ' . count($existing_by_guid) . ' existing GUIDs');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [BATCH-DEBUG] get_posts_by_guids_with_status completed, found ' . count($existing_by_guid) . ' existing GUIDs');
+        }
     } catch ( \Exception $e ) {
         error_log('[PUNTWORK] Error getting existing posts: ' . $e->getMessage());
         throw $e;
@@ -392,31 +434,45 @@ function process_batch_data( array $batch_guids, array $batch_items, array &$log
 
     $post_ids_by_guid = array();
 
-    error_log('[PUNTWORK] [BATCH-DEBUG] About to call handle_batch_duplicates');
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [BATCH-DEBUG] About to call handle_batch_duplicates');
+    }
     // Handle duplicates
     handle_batch_duplicates($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
-    error_log('[PUNTWORK] [BATCH-DEBUG] handle_batch_duplicates completed, post_ids_by_guid has ' . count($post_ids_by_guid) . ' entries');
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [BATCH-DEBUG] handle_batch_duplicates completed, post_ids_by_guid has ' . count($post_ids_by_guid) . ' entries');
+    }
 
     // Clear cache to prevent memory accumulation
     if (function_exists('wp_cache_flush')) {
         wp_cache_flush();
     }
     \Puntwork\Utilities\CacheManager::clearGroup(\Puntwork\Utilities\CacheManager::GROUP_ANALYTICS);
-    error_log('[PUNTWORK] [BATCH-DEBUG] Cache cleared after duplicates');
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [BATCH-DEBUG] Cache cleared after duplicates');
+    }
 
-    error_log('[PUNTWORK] [BATCH-DEBUG] About to call prepare_batch_metadata');
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [BATCH-DEBUG] About to call prepare_batch_metadata');
+    }
     // Prepare batch metadata
     $batch_metadata = prepare_batch_metadata($post_ids_by_guid);
-    error_log('[PUNTWORK] [BATCH-DEBUG] prepare_batch_metadata completed');
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [BATCH-DEBUG] prepare_batch_metadata completed');
+    }
 
     // Clear cache again after metadata preparation
     if (function_exists('wp_cache_flush')) {
         wp_cache_flush();
     }
     \Puntwork\Utilities\CacheManager::clearGroup(\Puntwork\Utilities\CacheManager::GROUP_ANALYTICS);
-    error_log('[PUNTWORK] [BATCH-DEBUG] Cache cleared after metadata');
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [BATCH-DEBUG] Cache cleared after metadata');
+    }
 
-    error_log('[PUNTWORK] [BATCH-DEBUG] About to call process_batch_items_with_metadata');
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [BATCH-DEBUG] About to call process_batch_items_with_metadata');
+    }
     // Process items - either directly or via queue
     if (class_exists('Puntwork\\PuntworkQueueManager') && isset($GLOBALS['puntwork_queue_manager'])) {
         // Use queue for processing
@@ -425,7 +481,9 @@ function process_batch_data( array $batch_guids, array $batch_items, array &$log
         // Direct processing
         $processed_count = process_batch_items_with_metadata($batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid, $logs, $updated, $published, $skipped);
     }
-    error_log('[PUNTWORK] [BATCH-DEBUG] process_batch_items_with_metadata completed, processed_count=' . $processed_count);
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [BATCH-DEBUG] process_batch_items_with_metadata completed, processed_count=' . $processed_count);
+    }
 
     return array( 'processed_count' => $processed_count );
 }
@@ -460,64 +518,72 @@ function queue_batch_items( array $batch_guids, array $batch_items, array $batch
     $puntwork_queue_manager->ensureTableExists();
 
     $queued_count = 0;
+    $chunk_size = 100; // Process in chunks to prevent timeouts
+    $chunks = array_chunk($batch_guids, $chunk_size, true);
 
-    foreach ( $batch_guids as $index => $guid ) {
-        $job_data = isset($batch_items[$index]) ? $batch_items[$index] : null;
+    foreach ( $chunks as $chunk_index => $chunk_guids ) {
+        $chunk_queued = 0;
 
-        if (! $job_data ) {
-            continue;
-        }
+        foreach ( $chunk_guids as $index => $guid ) {
+            $job_data = isset($batch_items[$index]) ? $batch_items[$index] : null;
 
-        // Check if job needs updating (same logic as direct processing)
-        $post_id = $post_ids_by_guid[$guid] ?? null;
-        if ($post_id ) {
-            $last_update = $batch_metadata['last_updates'][$post_id] ?? null;
-            $xml_updated = $job_data['updated'] ?? $job_data['pubdate'] ?? null;
+            if (! $job_data ) {
+                continue;
+            }
 
-            if ($last_update && $xml_updated ) {
-                $last_update_ts = strtotime($last_update);
-                $xml_updated_ts = strtotime($xml_updated);
+            // Check if job needs updating (same logic as direct processing)
+            $post_id = $post_ids_by_guid[$guid] ?? null;
+            if ($post_id ) {
+                $last_update = $batch_metadata['last_updates'][$post_id] ?? null;
+                $xml_updated = $job_data['updated'] ?? $job_data['pubdate'] ?? null;
 
-                if ($last_update_ts >= $xml_updated_ts ) {
-                    ++$skipped;
-                    continue;
+                if ($last_update && $xml_updated ) {
+                    $last_update_ts = strtotime($last_update);
+                    $xml_updated_ts = strtotime($xml_updated);
+
+                    if ($last_update_ts >= $xml_updated_ts ) {
+                        ++$skipped;
+                        continue;
+                    }
+                }
+                // Existing job, will be updated
+                ++$updated;
+            } else {
+                // New job, will be published
+                ++$published;
+            }
+
+            // Add to queue
+            $queue_data = array(
+                'guid' => $guid,
+                'job_data' => $job_data,
+                'post_id' => $post_id,
+            );
+
+            $job_id = $puntwork_queue_manager->addJob('job_import', $queue_data, 10);
+
+            if ($job_id ) {
+                ++$queued_count;
+                ++$chunk_queued;
+            } else {
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Failed to queue job import for GUID: $guid";
+                // Revert the count since queuing failed
+                if ($post_id) {
+                    --$updated;
+                } else {
+                    --$published;
                 }
             }
-            // Existing job, will be updated
-            ++$updated;
-        } else {
-            // New job, will be published
-            ++$published;
         }
 
-        // Add to queue
-        $queue_data = array(
-            'guid' => $guid,
-            'job_data' => $job_data,
-            'post_id' => $post_id,
-        );
-
-        $job_id = $puntwork_queue_manager->addJob('job_import', $queue_data, 10);
-
-        if ($job_id ) {
-            ++$queued_count;
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Queued job import for GUID: $guid";
-        } else {
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Failed to queue job import for GUID: $guid";
-            // Revert the count since queuing failed
-            if ($post_id) {
-                --$updated;
-            } else {
-                --$published;
-            }
+        // Trigger immediate queue processing after each chunk
+        if ($chunk_queued > 0) {
+            $puntwork_queue_manager->processQueue();
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Processed chunk " . ($chunk_index + 1) . "/" . count($chunks) . " ($chunk_queued jobs queued)";
         }
     }
 
-    // Trigger immediate queue processing after queuing jobs
-    if ($queued_count > 0) {
-        $puntwork_queue_manager->processQueue();
-        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Triggered immediate queue processing for $queued_count jobs";
-    }
+    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Total queued jobs: $queued_count";
 
     return $queued_count;
 }

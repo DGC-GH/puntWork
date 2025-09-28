@@ -252,28 +252,95 @@ class PuntworkQueueManager
         } catch ( \Exception $e ) {
             error_log('[PUNTWORK] Job failed: ' . $e->getMessage());
 
-            // Check if max attempts reached
-            if ($job['attempts'] + 1 >= $job['max_attempts'] ) {
-                $wpdb->update(
-                    $table_name,
-                    array( 'status' => 'failed' ),
-                    array( 'id' => $job['id'] ),
-                    array( '%s' ),
-                    array( '%d' )
-                );
+            $this->handleJobFailure($job, $e);
+        }
+    }
 
-                do_action('puntwork_job_failed', $job['id'], $job['job_type'], $e->getMessage());
-            } else {
-                // Reset to pending for retry
-                $wpdb->update(
-                    $table_name,
-                    array( 'status' => 'pending' ),
-                    array( 'id' => $job['id'] ),
-                    array( '%s' ),
-                    array( '%d' )
-                );
+    /**
+     * Handle job failure with enhanced retry logic
+     */
+    private function handleJobFailure( $job, \Exception $e )
+    {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . self::TABLE_NAME;
+        $error_message = $e->getMessage();
+
+        // Determine if error is retryable
+        $is_retryable = $this->isRetryableError($error_message);
+
+        // Check if max attempts reached or error is not retryable
+        if ($job['attempts'] + 1 >= $job['max_attempts'] || ! $is_retryable ) {
+            $wpdb->update(
+                $table_name,
+                array( 'status' => 'failed' ),
+                array( 'id' => $job['id'] ),
+                array( '%s' ),
+                array( '%d' )
+            );
+
+            do_action('puntwork_job_failed', $job['id'], $job['job_type'], $error_message);
+        } else {
+            // Calculate exponential backoff delay
+            $delay = $this->calculateRetryDelay($job['attempts'] + 1);
+
+            // Reset to pending for retry with delay
+            $wpdb->update(
+                $table_name,
+                array(
+                'status' => 'pending',
+                'scheduled_at' => date('Y-m-d H:i:s', time() + $delay),
+                ),
+                array( 'id' => $job['id'] ),
+                array( '%s', '%s' ),
+                array( '%d' )
+            );
+
+            do_action('puntwork_job_retry_scheduled', $job['id'], $job['job_type'], $delay, $error_message);
+        }
+    }
+
+    /**
+     * Determine if an error is retryable
+     */
+    private function isRetryableError( $error_message )
+    {
+        $retryable_patterns = array(
+        'timeout',
+        'connection',
+        'network',
+        'temporary',
+        'server error',
+        '503',
+        '502',
+        '504',
+        'database connection',
+        'lock wait',
+        'deadlock',
+        );
+
+        $error_lower = strtolower($error_message);
+
+        foreach ( $retryable_patterns as $pattern ) {
+            if (strpos($error_lower, $pattern) !== false ) {
+                return true;
             }
         }
+
+        return false;
+    }
+
+    /**
+     * Calculate exponential backoff delay for retries
+     */
+    private function calculateRetryDelay( $attempt )
+    {
+        // Exponential backoff: 30s, 1m, 2m, 4m, 8m, 16m (max 16 minutes)
+        $base_delay = 30; // 30 seconds
+        $delay = $base_delay * pow(2, $attempt - 1);
+
+        // Cap at 16 minutes
+        return min($delay, 960);
     }
 
     /**
@@ -587,6 +654,87 @@ class PuntworkQueueManager
         'failed'     => 0,
         'total'      => 0,
         );
+    }
+
+    /**
+     * Get queue health metrics
+     */
+    public function getQueueHealth()
+    {
+        $stats = $this->getQueueStats();
+        $health = array(
+            'status' => 'healthy',
+            'issues' => array(),
+            'metrics' => $stats,
+        );
+
+        // Check for issues
+        if ($stats['failed'] > 10) {
+            $health['status'] = 'warning';
+            $health['issues'][] = 'High number of failed jobs (' . $stats['failed'] . ')';
+        }
+
+        if ($stats['pending'] > 1000) {
+            $health['status'] = 'warning';
+            $health['issues'][] = 'Large pending queue (' . $stats['pending'] . ' jobs)';
+        }
+
+        if ($stats['processing'] > 50) {
+            $health['status'] = 'warning';
+            $health['issues'][] = 'Many jobs stuck in processing (' . $stats['processing'] . ')';
+        }
+
+        // Check for stuck jobs (processing for more than 10 minutes)
+        global $wpdb;
+        $table_name = $wpdb->prefix . self::TABLE_NAME;
+        $stuck_jobs = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE status = 'processing' AND started_at < %s",
+                date('Y-m-d H:i:s', time() - 600) // 10 minutes ago
+            )
+        );
+
+        if ($stuck_jobs > 0) {
+            $health['status'] = 'error';
+            $health['issues'][] = $stuck_jobs . ' jobs stuck in processing for more than 10 minutes';
+        }
+
+        // Performance metrics
+        $recent_completed = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM $table_name WHERE status = 'completed' AND completed_at > %s",
+                date('Y-m-d H:i:s', time() - 3600) // Last hour
+            )
+        );
+
+        $health['metrics']['throughput_per_hour'] = $recent_completed;
+        $health['metrics']['avg_processing_time'] = $this->getAverageProcessingTime();
+
+        return $health;
+    }
+
+    /**
+     * Get average processing time for completed jobs
+     */
+    private function getAverageProcessingTime()
+    {
+        global $wpdb;
+        $table_name = $wpdb->prefix . self::TABLE_NAME;
+
+        $result = $wpdb->get_row(
+            "
+            SELECT
+                AVG(TIMESTAMPDIFF(SECOND, started_at, completed_at)) as avg_time
+            FROM $table_name
+            WHERE status = 'completed'
+            AND started_at IS NOT NULL
+            AND completed_at IS NOT NULL
+            AND completed_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)
+        ",
+            ARRAY_A
+        );
+
+        return $result ? round($result['avg_time'], 2) : 0;
     }
 
     /**
