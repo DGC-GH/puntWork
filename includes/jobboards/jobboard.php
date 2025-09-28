@@ -11,267 +11,256 @@
 namespace Puntwork\JobBoards;
 
 // Prevent direct access
-if (! defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
  * Abstract base class for job board integrations
  */
-abstract class JobBoard
-{
-    /**
-     * Job board identifier
-     */
-    protected string $board_id;
+abstract class JobBoard {
 
-    /**
-     * Job board name
-     */
-    protected string $board_name;
+	/**
+	 * Job board identifier
+	 */
+	protected string $board_id;
 
-    /**
-     * API endpoint URL
-     */
-    protected string $api_url;
+	/**
+	 * Job board name
+	 */
+	protected string $board_name;
 
-    /**
-     * Authentication credentials
-     */
-    protected array $credentials = array();
+	/**
+	 * API endpoint URL
+	 */
+	protected string $api_url;
 
-    /**
-     * Rate limiting settings
-     */
-    protected array $rate_limits = array(
-        'requests_per_minute' => 60,
-        'requests_per_hour'   => 1000,
-    );
+	/**
+	 * Authentication credentials
+	 */
+	protected array $credentials = array();
 
-    /**
-     * Constructor
-     *
-     * @param array $config Configuration array
-     */
-    public function __construct(array $config = array())
-    {
-        $this->configure($config);
-    }
+	/**
+	 * Rate limiting settings
+	 */
+	protected array $rate_limits = array(
+		'requests_per_minute' => 60,
+		'requests_per_hour'   => 1000,
+	);
 
-    /**
-     * Configure the job board
-     *
-     * @param array $config Configuration options
-     */
-    public function configure(array $config): void
-    {
-        if (isset($config['api_url'])) {
-            $this->api_url = $config['api_url'];
-        }
+	/**
+	 * Constructor
+	 *
+	 * @param array $config Configuration array
+	 */
+	public function __construct( array $config = array() ) {
+		$this->configure( $config );
+	}
 
-        if (isset($config['credentials'])) {
-            $this->credentials = $config['credentials'];
-        }
+	/**
+	 * Configure the job board
+	 *
+	 * @param array $config Configuration options
+	 */
+	public function configure( array $config ): void {
+		if ( isset( $config['api_url'] ) ) {
+			$this->api_url = $config['api_url'];
+		}
 
-        if (isset($config['rate_limits'])) {
-            $this->rate_limits = array_merge($this->rate_limits, $config['rate_limits']);
-        }
-    }
+		if ( isset( $config['credentials'] ) ) {
+			$this->credentials = $config['credentials'];
+		}
 
-    /**
-     * Get job board identifier
-     */
-    public function getBoardId(): string
-    {
-        return $this->board_id;
-    }
+		if ( isset( $config['rate_limits'] ) ) {
+			$this->rate_limits = array_merge( $this->rate_limits, $config['rate_limits'] );
+		}
+	}
 
-    /**
-     * Get job board name
-     */
-    public function getBoardName(): string
-    {
-        return $this->board_name;
-    }
+	/**
+	 * Get job board identifier
+	 */
+	public function getBoardId(): string {
+		return $this->board_id;
+	}
 
-    /**
-     * Check if the job board is properly configured
-     */
-    public function isConfigured(): bool
-    {
-        return ! empty($this->api_url) && ! empty($this->credentials);
-    }
+	/**
+	 * Get job board name
+	 */
+	public function getBoardName(): string {
+		return $this->board_name;
+	}
 
-    /**
-     * Fetch jobs from the job board
-     *
-     * @param  array $params Query parameters
-     * @return array Array of job data
-     */
-    abstract public function fetchJobs(array $params = array()): array;
+	/**
+	 * Check if the job board is properly configured
+	 */
+	public function isConfigured(): bool {
+		return ! empty( $this->api_url ) && ! empty( $this->credentials );
+	}
 
-    /**
-     * Get job details by ID
-     *
-     * @param  string $jobId Job identifier
-     * @return array|null Job details or null if not found
-     */
-    abstract public function getJobDetails(string $jobId): ?array;
+	/**
+	 * Fetch jobs from the job board
+	 *
+	 * @param  array $params Query parameters
+	 * @return array Array of job data
+	 */
+	abstract public function fetchJobs( array $params = array() ): array;
 
-    /**
-     * Search jobs with filters
-     *
-     * @param  array $filters Search filters
-     * @return array Array of matching jobs
-     */
-    abstract public function searchJobs(array $filters = array()): array;
+	/**
+	 * Get job details by ID
+	 *
+	 * @param  string $jobId Job identifier
+	 * @return array|null Job details or null if not found
+	 */
+	abstract public function getJobDetails( string $jobId ): ?array;
 
-    /**
-     * Get supported search filters
-     */
-    public function getSupportedFilters(): array
-    {
-        return array(
-            'keywords',
-            'location',
-            'category',
-            'company',
-            'date_posted',
-            'salary_min',
-            'salary_max',
-            'job_type',
-            'experience_level',
-        );
-    }
+	/**
+	 * Search jobs with filters
+	 *
+	 * @param  array $filters Search filters
+	 * @return array Array of matching jobs
+	 */
+	abstract public function searchJobs( array $filters = array() ): array;
 
-    /**
-     * Normalize job data to standard format
-     *
-     * @param  array $jobData Raw job data from API
-     * @return array Normalized job data
-     */
-    protected function normalizeJobData(array $jobData): array
-    {
-        return array(
-            'id'                   => $jobData['id'] ?? uniqid($this->board_id . '_'),
-            'title'                => $jobData['title'] ?? '',
-            'description'          => $jobData['description'] ?? '',
-            'company'              => $jobData['company'] ?? '',
-            'location'             => $jobData['location'] ?? '',
-            'salary'               => $jobData['salary'] ?? '',
-            'job_type'             => $jobData['job_type'] ?? 'full-time',
-            'category'             => $jobData['category'] ?? '',
-            'url'                  => $jobData['url'] ?? '',
-            'date_posted'          => $jobData['date_posted'] ?? date('Y-m-d'),
-            'application_deadline' => $jobData['application_deadline'] ?? null,
-            'requirements'         => $jobData['requirements'] ?? '',
-            'benefits'             => $jobData['benefits'] ?? '',
-            'contact_info'         => $jobData['contact_info'] ?? '',
-            'source'               => $this->board_id,
-            'raw_data'             => $jobData,
-        );
-    }
+	/**
+	 * Get supported search filters
+	 */
+	public function getSupportedFilters(): array {
+		return array(
+			'keywords',
+			'location',
+			'category',
+			'company',
+			'date_posted',
+			'salary_min',
+			'salary_max',
+			'job_type',
+			'experience_level',
+		);
+	}
 
-    /**
-     * Make API request with rate limiting
-     *
-     * @param  string $endpoint API endpoint
-     * @param  array  $params   Query parameters
-     * @param  string $method   HTTP method
-     * @return array Response data
-     */
-    protected function makeApiRequest(string $endpoint, array $params = array(), string $method = 'GET'): array
-    {
-        // Rate limiting check
-        $this->checkRateLimit();
+	/**
+	 * Normalize job data to standard format
+	 *
+	 * @param  array $jobData Raw job data from API
+	 * @return array Normalized job data
+	 */
+	protected function normalizeJobData( array $jobData ): array {
+		return array(
+			'id'                   => $jobData['id'] ?? uniqid( $this->board_id . '_' ),
+			'title'                => $jobData['title'] ?? '',
+			'description'          => $jobData['description'] ?? '',
+			'company'              => $jobData['company'] ?? '',
+			'location'             => $jobData['location'] ?? '',
+			'salary'               => $jobData['salary'] ?? '',
+			'job_type'             => $jobData['job_type'] ?? 'full-time',
+			'category'             => $jobData['category'] ?? '',
+			'url'                  => $jobData['url'] ?? '',
+			'date_posted'          => $jobData['date_posted'] ?? date( 'Y-m-d' ),
+			'application_deadline' => $jobData['application_deadline'] ?? null,
+			'requirements'         => $jobData['requirements'] ?? '',
+			'benefits'             => $jobData['benefits'] ?? '',
+			'contact_info'         => $jobData['contact_info'] ?? '',
+			'source'               => $this->board_id,
+			'raw_data'             => $jobData,
+		);
+	}
 
-        $url = $this->api_url . $endpoint;
+	/**
+	 * Make API request with rate limiting
+	 *
+	 * @param  string $endpoint API endpoint
+	 * @param  array  $params   Query parameters
+	 * @param  string $method   HTTP method
+	 * @return array Response data
+	 */
+	protected function makeApiRequest( string $endpoint, array $params = array(), string $method = 'GET' ): array {
+		// Rate limiting check
+		$this->checkRateLimit();
 
-        if ($method === 'GET' && ! empty($params)) {
-            $url .= '?' . http_build_query($params);
-        }
+		$url = $this->api_url . $endpoint;
 
-        $args = array(
-            'method'  => $method,
-            'timeout' => 30,
-            'headers' => $this->getHeaders(),
-        );
+		if ( $method === 'GET' && ! empty( $params ) ) {
+			$url .= '?' . http_build_query( $params );
+		}
 
-        if ($method === 'POST' && ! empty($params)) {
-            $args['body']                    = json_encode($params);
-            $args['headers']['Content-Type'] = 'application/json';
-        }
+		$args = array(
+			'method'  => $method,
+			'timeout' => 30,
+			'headers' => $this->getHeaders(),
+		);
 
-        $response = wp_remote_request($url, $args);
+		if ( $method === 'POST' && ! empty( $params ) ) {
+			$args['body']                    = json_encode( $params );
+			$args['headers']['Content-Type'] = 'application/json';
+		}
 
-        if (is_wp_error($response)) {
-            throw new \Exception('API request failed: ' . $response->get_error_message());
-        }
+		$response = wp_remote_request( $url, $args );
 
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
+		if ( is_wp_error( $response ) ) {
+			throw new \Exception( 'API request failed: ' . $response->get_error_message() );
+		}
 
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \Exception('Invalid JSON response from API');
-        }
+		$body = wp_remote_retrieve_body( $response );
+		$data = json_decode( $body, true );
 
-        return $data;
-    }
+		if ( json_last_error() !== JSON_ERROR_NONE ) {
+			throw new \Exception( 'Invalid JSON response from API' );
+		}
 
-    /**
-     * Get authentication headers
-     */
-    protected function getHeaders(): array
-    {
-        return array(
-            'User-Agent' => 'PuntWork/' . PUNTWORK_VERSION . ' (WordPress Plugin)',
-            'Accept'     => 'application/json',
-        );
-    }
+		return $data;
+	}
 
-    /**
-     * Check rate limits
-     */
-    protected function checkRateLimit(): void
-    {
-        $transient_key = 'jobboard_ratelimit_' . $this->board_id;
-        $requests      = get_transient($transient_key) ?: array();
+	/**
+	 * Get authentication headers
+	 */
+	protected function getHeaders(): array {
+		return array(
+			'User-Agent' => 'PuntWork/' . PUNTWORK_VERSION . ' (WordPress Plugin)',
+			'Accept'     => 'application/json',
+		);
+	}
 
-        // Clean old requests (older than 1 minute)
-        $requests = array_filter(
-            $requests,
-            function ($timestamp) {
-                return $timestamp > ( time() - 60 );
-            }
-        );
+	/**
+	 * Check rate limits
+	 */
+	protected function checkRateLimit(): void {
+		$transient_key = 'jobboard_ratelimit_' . $this->board_id;
+		$requests      = get_transient( $transient_key ) ?: array();
 
-        if (count($requests) >= $this->rate_limits['requests_per_minute']) {
-            $oldest_request = min($requests);
-            $wait_time      = 60 - ( time() - $oldest_request );
-            if ($wait_time > 0) {
-                sleep($wait_time);
-            }
-        }
+		// Clean old requests (older than 1 minute)
+		$requests = array_filter(
+			$requests,
+			function ( $timestamp ) {
+				return $timestamp > ( time() - 60 );
+			}
+		);
 
-        $requests[] = time();
-        set_transient($transient_key, $requests, 70); // Cache for 70 seconds
-    }
+		if ( count( $requests ) >= $this->rate_limits['requests_per_minute'] ) {
+			$oldest_request = min( $requests );
+			$wait_time      = 60 - ( time() - $oldest_request );
+			if ( $wait_time > 0 ) {
+				sleep( $wait_time );
+			}
+		}
 
-    /**
-     * Handle API errors
-     *
-     * @param array $response API response
-     */
-    protected function handleApiError(array $response): void
-    {
-        if (isset($response['error'])) {
-            $error_msg = $response['error']['message'] ?? 'Unknown API error';
-            throw new \Exception("{$this->board_name} API Error: {$error_msg}");
-        }
+		$requests[] = time();
+		set_transient( $transient_key, $requests, 70 ); // Cache for 70 seconds
+	}
 
-        $status_code = wp_remote_retrieve_response_code($response);
-        if ($status_code >= 400) {
-            throw new \Exception("{$this->board_name} API returned status {$status_code}");
-        }
-    }
+	/**
+	 * Handle API errors
+	 *
+	 * @param array $response API response
+	 */
+	protected function handleApiError( array $response ): void {
+		if ( isset( $response['error'] ) ) {
+			$error_msg = $response['error']['message'] ?? 'Unknown API error';
+			throw new \Exception( "{$this->board_name} API Error: {$error_msg}" );
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		if ( $status_code >= 400 ) {
+			throw new \Exception( "{$this->board_name} API returned status {$status_code}" );
+		}
+	}
 }

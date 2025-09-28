@@ -11,188 +11,182 @@
 namespace Puntwork\AI;
 
 // Prevent direct access
-if (! defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
  * Duplicate detection engine using similarity algorithms
  */
-class DuplicateDetector
-{
-    /**
-     * Similarity threshold for considering items as duplicates
-     */
-    public const SIMILARITY_THRESHOLD = 0.85;
+class DuplicateDetector {
 
-    /**
-     * Detect potential duplicates in a batch of jobs using content similarity
-     *
-     * @param  array $jobBatch Array of job data arrays
-     * @return array Array of duplicate groups, each containing similar job indices
-     */
-    public static function detectDuplicates(array $jobBatch): array
-    {
-        $duplicates = array();
-        $processed  = array();
+	/**
+	 * Similarity threshold for considering items as duplicates
+	 */
+	public const SIMILARITY_THRESHOLD = 0.85;
 
-        foreach ($jobBatch as $i => $job1) {
-            if (in_array($i, $processed)) {
-                continue;
-            }
+	/**
+	 * Detect potential duplicates in a batch of jobs using content similarity
+	 *
+	 * @param  array $jobBatch Array of job data arrays
+	 * @return array Array of duplicate groups, each containing similar job indices
+	 */
+	public static function detectDuplicates( array $jobBatch ): array {
+		$duplicates = array();
+		$processed  = array();
 
-            $group       = array( $i );
-            $processed[] = $i;
+		foreach ( $jobBatch as $i => $job1 ) {
+			if ( in_array( $i, $processed ) ) {
+				continue;
+			}
 
-            foreach ($jobBatch as $j => $job2) {
-                if ($i === $j || in_array($j, $processed)) {
-                    continue;
-                }
+			$group       = array( $i );
+			$processed[] = $i;
 
-                $similarity = self::calculateSimilarity($job1, $job2);
+			foreach ( $jobBatch as $j => $job2 ) {
+				if ( $i === $j || in_array( $j, $processed ) ) {
+					continue;
+				}
 
-                if ($similarity >= self::SIMILARITY_THRESHOLD) {
-                    $group[]     = $j;
-                    $processed[] = $j;
-                }
-            }
+				$similarity = self::calculateSimilarity( $job1, $job2 );
 
-            if (count($group) > 1) {
-                $duplicates[] = $group;
-            }
-        }
+				if ( $similarity >= self::SIMILARITY_THRESHOLD ) {
+					$group[]     = $j;
+					$processed[] = $j;
+				}
+			}
 
-        return $duplicates;
-    }
+			if ( count( $group ) > 1 ) {
+				$duplicates[] = $group;
+			}
+		}
 
-    /**
-     * Calculate similarity between two jobs using multiple algorithms
-     *
-     * @param  array $job1 First job data
-     * @param  array $job2 Second job data
-     * @return float Similarity score between 0 and 1
-     */
-    public static function calculateSimilarity(array $job1, array $job2): float
-    {
-        // Extract comparable fields
-        $title1   = strtolower($job1['job_title'] ?? '');
-        $title2   = strtolower($job2['job_title'] ?? '');
-        $desc1    = strtolower($job1['job_description'] ?? '');
-        $desc2    = strtolower($job2['job_description'] ?? '');
-        $company1 = strtolower($job1['job_company'] ?? '');
-        $company2 = strtolower($job2['job_company'] ?? '');
+		return $duplicates;
+	}
 
-        // Calculate different similarity scores
-        $titleSimilarity   = self::jaccardSimilarity($title1, $title2);
-        $descSimilarity    = self::jaccardSimilarity($desc1, $desc2);
-        $companySimilarity = self::levenshteinSimilarity($company1, $company2);
+	/**
+	 * Calculate similarity between two jobs using multiple algorithms
+	 *
+	 * @param  array $job1 First job data
+	 * @param  array $job2 Second job data
+	 * @return float Similarity score between 0 and 1
+	 */
+	public static function calculateSimilarity( array $job1, array $job2 ): float {
+		// Extract comparable fields
+		$title1   = strtolower( $job1['job_title'] ?? '' );
+		$title2   = strtolower( $job2['job_title'] ?? '' );
+		$desc1    = strtolower( $job1['job_description'] ?? '' );
+		$desc2    = strtolower( $job2['job_description'] ?? '' );
+		$company1 = strtolower( $job1['job_company'] ?? '' );
+		$company2 = strtolower( $job2['job_company'] ?? '' );
 
-        // Weighted combination (title and description are most important)
-        $weightedSimilarity = (
-            $titleSimilarity * 0.4 +
-            $descSimilarity * 0.4 +
-            $companySimilarity * 0.2
-        );
+		// Calculate different similarity scores
+		$titleSimilarity   = self::jaccardSimilarity( $title1, $title2 );
+		$descSimilarity    = self::jaccardSimilarity( $desc1, $desc2 );
+		$companySimilarity = self::levenshteinSimilarity( $company1, $company2 );
 
-        return $weightedSimilarity;
-    }
+		// Weighted combination (title and description are most important)
+		$weightedSimilarity = (
+			$titleSimilarity * 0.4 +
+			$descSimilarity * 0.4 +
+			$companySimilarity * 0.2
+		);
 
-    /**
-     * Calculate Jaccard similarity between two strings
-     *
-     * @param  string $str1 First string
-     * @param  string $str2 Second string
-     * @return float Similarity score between 0 and 1
-     */
-    private static function jaccardSimilarity(string $str1, string $str2): float
-    {
-        if (empty($str1) && empty($str2)) {
-            return 1.0;
-        }
+		return $weightedSimilarity;
+	}
 
-        if (empty($str1) || empty($str2)) {
-            return 0.0;
-        }
+	/**
+	 * Calculate Jaccard similarity between two strings
+	 *
+	 * @param  string $str1 First string
+	 * @param  string $str2 Second string
+	 * @return float Similarity score between 0 and 1
+	 */
+	private static function jaccardSimilarity( string $str1, string $str2 ): float {
+		if ( empty( $str1 ) && empty( $str2 ) ) {
+			return 1.0;
+		}
 
-        // Tokenize strings (split by whitespace and punctuation)
-        $tokens1 = preg_split('/\s+|[^\w\s]/', $str1, -1, PREG_SPLIT_NO_EMPTY);
-        $tokens2 = preg_split('/\s+|[^\w\s]/', $str2, -1, PREG_SPLIT_NO_EMPTY);
+		if ( empty( $str1 ) || empty( $str2 ) ) {
+			return 0.0;
+		}
 
-        if (empty($tokens1) && empty($tokens2)) {
-            return 1.0;
-        }
+		// Tokenize strings (split by whitespace and punctuation)
+		$tokens1 = preg_split( '/\s+|[^\w\s]/', $str1, -1, PREG_SPLIT_NO_EMPTY );
+		$tokens2 = preg_split( '/\s+|[^\w\s]/', $str2, -1, PREG_SPLIT_NO_EMPTY );
 
-        $set1 = array_unique($tokens1);
-        $set2 = array_unique($tokens2);
+		if ( empty( $tokens1 ) && empty( $tokens2 ) ) {
+			return 1.0;
+		}
 
-        $intersection = array_intersect($set1, $set2);
-        $union        = array_unique(array_merge($set1, $set2));
+		$set1 = array_unique( $tokens1 );
+		$set2 = array_unique( $tokens2 );
 
-        return count($intersection) / count($union);
-    }
+		$intersection = array_intersect( $set1, $set2 );
+		$union        = array_unique( array_merge( $set1, $set2 ) );
 
-    /**
-     * Calculate Levenshtein similarity between two strings
-     *
-     * @param  string $str1 First string
-     * @param  string $str2 Second string
-     * @return float Similarity score between 0 and 1
-     */
-    private static function levenshteinSimilarity(string $str1, string $str2): float
-    {
-        if (empty($str1) && empty($str2)) {
-            return 1.0;
-        }
+		return count( $intersection ) / count( $union );
+	}
 
-        if (empty($str1) || empty($str2)) {
-            return 0.0;
-        }
+	/**
+	 * Calculate Levenshtein similarity between two strings
+	 *
+	 * @param  string $str1 First string
+	 * @param  string $str2 Second string
+	 * @return float Similarity score between 0 and 1
+	 */
+	private static function levenshteinSimilarity( string $str1, string $str2 ): float {
+		if ( empty( $str1 ) && empty( $str2 ) ) {
+			return 1.0;
+		}
 
-        $len1 = strlen($str1);
-        $len2 = strlen($str2);
+		if ( empty( $str1 ) || empty( $str2 ) ) {
+			return 0.0;
+		}
 
-        // Normalize by the longer string length
-        $maxLen = max($len1, $len2);
-        if ($maxLen === 0) {
-            return 1.0;
-        }
+		$len1 = strlen( $str1 );
+		$len2 = strlen( $str2 );
 
-        $distance = levenshtein($str1, $str2);
-        return 1 - ( $distance / $maxLen );
-    }
+		// Normalize by the longer string length
+		$maxLen = max( $len1, $len2 );
+		if ( $maxLen === 0 ) {
+			return 1.0;
+		}
 
-    /**
-     * Fuzzy match two strings using multiple algorithms
-     *
-     * @param  string $str1 First string
-     * @param  string $str2 Second string
-     * @return float Fuzzy match score between 0 and 1
-     */
-    public static function fuzzyMatch(string $str1, string $str2): float
-    {
-        $str1 = strtolower(trim($str1));
-        $str2 = strtolower(trim($str2));
+		$distance = levenshtein( $str1, $str2 );
+		return 1 - ( $distance / $maxLen );
+	}
 
-        if ($str1 === $str2) {
-            return 1.0;
-        }
+	/**
+	 * Fuzzy match two strings using multiple algorithms
+	 *
+	 * @param  string $str1 First string
+	 * @param  string $str2 Second string
+	 * @return float Fuzzy match score between 0 and 1
+	 */
+	public static function fuzzyMatch( string $str1, string $str2 ): float {
+		$str1 = strtolower( trim( $str1 ) );
+		$str2 = strtolower( trim( $str2 ) );
 
-        // Use combination of Jaccard and Levenshtein
-        $jaccard     = self::jaccardSimilarity($str1, $str2);
-        $levenshtein = self::levenshteinSimilarity($str1, $str2);
+		if ( $str1 === $str2 ) {
+			return 1.0;
+		}
 
-        return ( $jaccard * 0.6 ) + ( $levenshtein * 0.4 );
-    }
+		// Use combination of Jaccard and Levenshtein
+		$jaccard     = self::jaccardSimilarity( $str1, $str2 );
+		$levenshtein = self::levenshteinSimilarity( $str1, $str2 );
 
-    /**
-     * Check if two jobs are duplicates based on similarity
-     *
-     * @param  array $job1 First job data
-     * @param  array $job2 Second job data
-     * @return bool True if jobs are considered duplicates
-     */
-    public static function isDuplicate(array $job1, array $job2): bool
-    {
-        return self::calculateSimilarity($job1, $job2) >= self::SIMILARITY_THRESHOLD;
-    }
+		return ( $jaccard * 0.6 ) + ( $levenshtein * 0.4 );
+	}
+
+	/**
+	 * Check if two jobs are duplicates based on similarity
+	 *
+	 * @param  array $job1 First job data
+	 * @param  array $job2 Second job data
+	 * @return bool True if jobs are considered duplicates
+	 */
+	public static function isDuplicate( array $job1, array $job2 ): bool {
+		return self::calculateSimilarity( $job1, $job2 ) >= self::SIMILARITY_THRESHOLD;
+	}
 }

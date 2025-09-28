@@ -11,429 +11,411 @@
 namespace Puntwork\SocialMedia;
 
 // Prevent direct access
-if (! defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
  * Twitter/X platform integration
  */
-class TwitterPlatform extends SocialMediaPlatform
-{
-    /**
-     * Ads manager instance
-     */
-    private ?TwitterAdsManager $ads_manager = null;
+class TwitterPlatform extends SocialMediaPlatform {
 
-    /**
-     * API base URL
-     */
-    private string $api_base = 'https://api.twitter.com/2';
+	/**
+	 * Ads manager instance
+	 */
+	private ?TwitterAdsManager $ads_manager = null;
 
-    /**
-     * Ads API base URL
-     */
-    private string $ads_api_base = 'https://ads-api.twitter.com/12';
+	/**
+	 * API base URL
+	 */
+	private string $api_base = 'https://api.twitter.com/2';
 
-    /**
-     * Constructor
-     */
-    public function __construct(array $config = array())
-    {
-        $this->platform_id   = 'twitter';
-        $this->platform_name = 'Twitter/X';
-        $this->rate_limits   = array(
-            'posts_per_hour' => 300,  // Twitter allows 300 posts per 3 hours
-            'posts_per_day'  => 5000,   // Conservative daily limit
-        );
+	/**
+	 * Ads API base URL
+	 */
+	private string $ads_api_base = 'https://ads-api.twitter.com/12';
 
-        parent::__construct($config);
+	/**
+	 * Constructor
+	 */
+	public function __construct( array $config = array() ) {
+		$this->platform_id   = 'twitter';
+		$this->platform_name = 'Twitter/X';
+		$this->rate_limits   = array(
+			'posts_per_hour' => 300,  // Twitter allows 300 posts per 3 hours
+			'posts_per_day'  => 5000,   // Conservative daily limit
+		);
 
-        // Initialize ads manager if ads credentials are provided
-        if ($this->hasAdsCredentials()) {
-            $this->ads_manager = new TwitterAdsManager($this);
-        }
-    }
+		parent::__construct( $config );
 
-    /**
-     * Check if Twitter is properly configured
-     */
-    public function isConfigured(): bool
-    {
-        return parent::isConfigured() &&
-                isset($this->credentials['api_key']) &&
-                isset($this->credentials['api_secret']) &&
-                isset($this->credentials['access_token']) &&
-                isset($this->credentials['access_token_secret']);
-    }
+		// Initialize ads manager if ads credentials are provided
+		if ( $this->hasAdsCredentials() ) {
+			$this->ads_manager = new TwitterAdsManager( $this );
+		}
+	}
 
-    /**
-     * Check if ads credentials are configured
-     */
-    public function hasAdsCredentials(): bool
-    {
-        return isset($this->credentials['ads_account_id']) &&
-                isset($this->credentials['bearer_token']);
-    }
+	/**
+	 * Check if Twitter is properly configured
+	 */
+	public function isConfigured(): bool {
+		return parent::isConfigured() &&
+				isset( $this->credentials['api_key'] ) &&
+				isset( $this->credentials['api_secret'] ) &&
+				isset( $this->credentials['access_token'] ) &&
+				isset( $this->credentials['access_token_secret'] );
+	}
 
-    /**
-     * Check if ads functionality is available
-     */
-    public function supportsAds(): bool
-    {
-        return $this->ads_manager !== null;
-    }
+	/**
+	 * Check if ads credentials are configured
+	 */
+	public function hasAdsCredentials(): bool {
+		return isset( $this->credentials['ads_account_id'] ) &&
+				isset( $this->credentials['bearer_token'] );
+	}
 
-    /**
-     * Post content to Twitter
-     */
-    public function post(array $content, array $options = array()): array
-    {
-        if (! $this->isConfigured()) {
-            throw new \Exception('Twitter integration not properly configured');
-        }
+	/**
+	 * Check if ads functionality is available
+	 */
+	public function supportsAds(): bool {
+		return $this->ads_manager !== null;
+	}
 
-        // Validate content
-        $validation_errors = $this->validateContent($content);
-        if (! empty($validation_errors)) {
-            throw new \Exception('Content validation failed: ' . implode(', ', $validation_errors));
-        }
+	/**
+	 * Post content to Twitter
+	 */
+	public function post( array $content, array $options = array() ): array {
+		if ( ! $this->isConfigured() ) {
+			throw new \Exception( 'Twitter integration not properly configured' );
+		}
 
-        try {
-            $post_data = $this->preparePostData($content, $options);
-            $response  = $this->makeApiRequest('tweets', $post_data, 'POST');
+		// Validate content
+		$validation_errors = $this->validateContent( $content );
+		if ( ! empty( $validation_errors ) ) {
+			throw new \Exception( 'Content validation failed: ' . implode( ', ', $validation_errors ) );
+		}
 
-            $this->recordPost();
+		try {
+			$post_data = $this->preparePostData( $content, $options );
+			$response  = $this->makeApiRequest( 'tweets', $post_data, 'POST' );
 
-            return array(
-                'success'   => true,
-                'post_id'   => $response['data']['id'] ?? null,
-                'url'       => isset($response['data']['id']) ? "https://twitter.com/i/status/{$response['data']['id']}" : null,
-                'platform'  => 'twitter',
-                'timestamp' => time(),
-            );
-        } catch (\Exception $e) {
-            PuntWorkLogger::error(
-                'Twitter posting failed',
-                PuntWorkLogger::CONTEXT_SOCIAL,
-                array(
-                    'error'   => $e->getMessage(),
-                    'content' => $content,
-                )
-            );
+			$this->recordPost();
 
-            return array(
-                'success'   => false,
-                'error'     => $e->getMessage(),
-                'platform'  => 'twitter',
-                'timestamp' => time(),
-            );
-        }
-    }
+			return array(
+				'success'   => true,
+				'post_id'   => $response['data']['id'] ?? null,
+				'url'       => isset( $response['data']['id'] ) ? "https://twitter.com/i/status/{$response['data']['id']}" : null,
+				'platform'  => 'twitter',
+				'timestamp' => time(),
+			);
+		} catch ( \Exception $e ) {
+			PuntWorkLogger::error(
+				'Twitter posting failed',
+				PuntWorkLogger::CONTEXT_SOCIAL,
+				array(
+					'error'   => $e->getMessage(),
+					'content' => $content,
+				)
+			);
 
-    /**
-     * Post content with ads campaign
-     */
-    public function postWithAds(array $content, array $ads_config): array
-    {
-        if (! $this->supportsAds()) {
-            throw new \Exception('Twitter ads not configured. Please provide ads_account_id and bearer_token.');
-        }
+			return array(
+				'success'   => false,
+				'error'     => $e->getMessage(),
+				'platform'  => 'twitter',
+				'timestamp' => time(),
+			);
+		}
+	}
 
-        // First post the regular tweet
-        $post_result = $this->post($content);
+	/**
+	 * Post content with ads campaign
+	 */
+	public function postWithAds( array $content, array $ads_config ): array {
+		if ( ! $this->supportsAds() ) {
+			throw new \Exception( 'Twitter ads not configured. Please provide ads_account_id and bearer_token.' );
+		}
 
-        if (! $post_result['success']) {
-            return $post_result;
-        }
+		// First post the regular tweet
+		$post_result = $this->post( $content );
 
-        try {
-            // Create ads campaign for the tweet
-            $ads_result = $this->ads_manager->postJobWithAds(
-                array( 'tweet_id' => $post_result['post_id'] ),
-                $ads_config
-            );
+		if ( ! $post_result['success'] ) {
+			return $post_result;
+		}
 
-            return array_merge(
-                $post_result,
-                array(
-                    'ads_campaign' => $ads_result,
-                    'has_ads'      => true,
-                )
-            );
-        } catch (\Exception $e) {
-            PuntWorkLogger::error(
-                'Twitter ads creation failed',
-                PuntWorkLogger::CONTEXT_SOCIAL,
-                array(
-                    'tweet_id' => $post_result['post_id'],
-                    'error'    => $e->getMessage(),
-                )
-            );
+		try {
+			// Create ads campaign for the tweet
+			$ads_result = $this->ads_manager->postJobWithAds(
+				array( 'tweet_id' => $post_result['post_id'] ),
+				$ads_config
+			);
 
-            // Return the successful tweet post but with ads error
-            return array_merge(
-                $post_result,
-                array(
-                    'ads_error' => $e->getMessage(),
-                    'has_ads'   => false,
-                )
-            );
-        }
-    }
+			return array_merge(
+				$post_result,
+				array(
+					'ads_campaign' => $ads_result,
+					'has_ads'      => true,
+				)
+			);
+		} catch ( \Exception $e ) {
+			PuntWorkLogger::error(
+				'Twitter ads creation failed',
+				PuntWorkLogger::CONTEXT_SOCIAL,
+				array(
+					'tweet_id' => $post_result['post_id'],
+					'error'    => $e->getMessage(),
+				)
+			);
 
-    /**
-     * Get ads campaign metrics
-     */
-    public function getAdsMetrics(string $campaign_id): array
-    {
-        if (! $this->supportsAds()) {
-            throw new \Exception('Twitter ads not configured');
-        }
+			// Return the successful tweet post but with ads error
+			return array_merge(
+				$post_result,
+				array(
+					'ads_error' => $e->getMessage(),
+					'has_ads'   => false,
+				)
+			);
+		}
+	}
 
-        return $this->ads_manager->getCampaignMetrics(
-            $campaign_id,
-            $this->credentials['ads_account_id']
-        );
-    }
+	/**
+	 * Get ads campaign metrics
+	 */
+	public function getAdsMetrics( string $campaign_id ): array {
+		if ( ! $this->supportsAds() ) {
+			throw new \Exception( 'Twitter ads not configured' );
+		}
 
-    /**
-     * Get posting limits and remaining quota
-     */
-    public function getLimits(): array
-    {
-        $transient_key = 'socialmedia_ratelimit_' . $this->platform_id;
-        $posts_today   = get_transient($transient_key) ?: 0;
+		return $this->ads_manager->getCampaignMetrics(
+			$campaign_id,
+			$this->credentials['ads_account_id']
+		);
+	}
 
-        $hourly_key = $transient_key . '_hour_' . date('Y-m-d-H');
-        $posts_hour = get_transient($hourly_key) ?: 0;
+	/**
+	 * Get posting limits and remaining quota
+	 */
+	public function getLimits(): array {
+		$transient_key = 'socialmedia_ratelimit_' . $this->platform_id;
+		$posts_today   = get_transient( $transient_key ) ?: 0;
 
-        return array(
-            'posts_today'       => $posts_today,
-            'posts_today_limit' => $this->rate_limits['posts_per_day'],
-            'posts_hour'        => $posts_hour,
-            'posts_hour_limit'  => $this->rate_limits['posts_per_hour'],
-            'remaining_today'   => max(0, $this->rate_limits['posts_per_day'] - $posts_today),
-            'remaining_hour'    => max(0, $this->rate_limits['posts_per_hour'] - $posts_hour),
-        );
-    }
+		$hourly_key = $transient_key . '_hour_' . date( 'Y-m-d-H' );
+		$posts_hour = get_transient( $hourly_key ) ?: 0;
 
-    /**
-     * Get maximum text length
-     */
-    protected function getMaxTextLength(): int
-    {
-        return 280;
-    }
+		return array(
+			'posts_today'       => $posts_today,
+			'posts_today_limit' => $this->rate_limits['posts_per_day'],
+			'posts_hour'        => $posts_hour,
+			'posts_hour_limit'  => $this->rate_limits['posts_per_hour'],
+			'remaining_today'   => max( 0, $this->rate_limits['posts_per_day'] - $posts_today ),
+			'remaining_hour'    => max( 0, $this->rate_limits['posts_per_hour'] - $posts_hour ),
+		);
+	}
 
-    /**
-     * Prepare post data for Twitter API
-     */
-    private function preparePostData(array $content, array $options): array
-    {
-        $post_data = array();
+	/**
+	 * Get maximum text length
+	 */
+	protected function getMaxTextLength(): int {
+		return 280;
+	}
 
-        // Add text content
-        if (! empty($content['text'])) {
-            $text              = $this->processTextContent($content['text'], $options);
-            $post_data['text'] = $text;
-        }
+	/**
+	 * Prepare post data for Twitter API
+	 */
+	private function preparePostData( array $content, array $options ): array {
+		$post_data = array();
 
-        // Add media if provided
-        if (! empty($content['media'])) {
-            $media_ids = $this->uploadMedia($content['media']);
-            if (! empty($media_ids)) {
-                $post_data['media'] = array( 'media_ids' => $media_ids );
-            }
-        }
+		// Add text content
+		if ( ! empty( $content['text'] ) ) {
+			$text              = $this->processTextContent( $content['text'], $options );
+			$post_data['text'] = $text;
+		}
 
-        // Add reply settings
-        if (isset($options['reply_settings'])) {
-            $post_data['reply_settings'] = $options['reply_settings'];
-        }
+		// Add media if provided
+		if ( ! empty( $content['media'] ) ) {
+			$media_ids = $this->uploadMedia( $content['media'] );
+			if ( ! empty( $media_ids ) ) {
+				$post_data['media'] = array( 'media_ids' => $media_ids );
+			}
+		}
 
-        // Add poll if provided
-        if (! empty($content['poll'])) {
-            $post_data['poll'] = $this->preparePoll($content['poll']);
-        }
+		// Add reply settings
+		if ( isset( $options['reply_settings'] ) ) {
+			$post_data['reply_settings'] = $options['reply_settings'];
+		}
 
-        return $post_data;
-    }
+		// Add poll if provided
+		if ( ! empty( $content['poll'] ) ) {
+			$post_data['poll'] = $this->preparePoll( $content['poll'] );
+		}
 
-    /**
-     * Process text content with URL shortening and hashtag handling
-     */
-    private function processTextContent(string $text, array $options): string
-    {
-        // Shorten URLs if enabled
-        if (isset($options['shorten_urls']) && $options['shorten_urls']) {
-            $text = $this->shortenUrls($text);
-        }
+		return $post_data;
+	}
 
-        // Add hashtags if provided
-        if (! empty($options['hashtags'])) {
-            $hashtags = is_array($options['hashtags']) ? $options['hashtags'] : array( $options['hashtags'] );
-            $text    .= ' ' . implode(
-                ' ',
-                array_map(
-                    function ($tag) {
-                        return '#' . ltrim($tag, '#');
-                    },
-                    $hashtags
-                )
-            );
-        }
+	/**
+	 * Process text content with URL shortening and hashtag handling
+	 */
+	private function processTextContent( string $text, array $options ): string {
+		// Shorten URLs if enabled
+		if ( isset( $options['shorten_urls'] ) && $options['shorten_urls'] ) {
+			$text = $this->shortenUrls( $text );
+		}
 
-        // Ensure text doesn't exceed limit
-        if (strlen($text) > $this->getMaxTextLength()) {
-            $text = substr($text, 0, $this->getMaxTextLength() - 3) . '...';
-        }
+		// Add hashtags if provided
+		if ( ! empty( $options['hashtags'] ) ) {
+			$hashtags = is_array( $options['hashtags'] ) ? $options['hashtags'] : array( $options['hashtags'] );
+			$text    .= ' ' . implode(
+				' ',
+				array_map(
+					function ( $tag ) {
+						return '#' . ltrim( $tag, '#' );
+					},
+					$hashtags
+				)
+			);
+		}
 
-        return $text;
-    }
+		// Ensure text doesn't exceed limit
+		if ( strlen( $text ) > $this->getMaxTextLength() ) {
+			$text = substr( $text, 0, $this->getMaxTextLength() - 3 ) . '...';
+		}
 
-    /**
-     * Upload media to Twitter
-     */
-    private function uploadMedia(array $media_files): array
-    {
-        $media_ids = array();
+		return $text;
+	}
 
-        foreach ($media_files as $media_file) {
-            try {
-                if (is_string($media_file)) {
-                    // Assume it's a URL or file path
-                    $file_path = $this->downloadMediaFile($media_file);
-                } elseif (is_array($media_file) && isset($media_file['tmp_name'])) {
-                    // WordPress upload array
-                    $file_path = $media_file['tmp_name'];
-                } else {
-                    continue;
-                }
+	/**
+	 * Upload media to Twitter
+	 */
+	private function uploadMedia( array $media_files ): array {
+		$media_ids = array();
 
-                $media_id = $this->uploadMediaToTwitter($file_path);
-                if ($media_id) {
-                    $media_ids[] = $media_id;
-                }
-            } catch (\Exception $e) {
-                PuntWorkLogger::error(
-                    'Twitter media upload failed',
-                    PuntWorkLogger::CONTEXT_SOCIAL,
-                    array(
-                        'error'      => $e->getMessage(),
-                        'media_file' => $media_file,
-                    )
-                );
-            }
-        }
+		foreach ( $media_files as $media_file ) {
+			try {
+				if ( is_string( $media_file ) ) {
+					// Assume it's a URL or file path
+					$file_path = $this->downloadMediaFile( $media_file );
+				} elseif ( is_array( $media_file ) && isset( $media_file['tmp_name'] ) ) {
+					// WordPress upload array
+					$file_path = $media_file['tmp_name'];
+				} else {
+					continue;
+				}
 
-        return $media_ids;
-    }
+				$media_id = $this->uploadMediaToTwitter( $file_path );
+				if ( $media_id ) {
+					$media_ids[] = $media_id;
+				}
+			} catch ( \Exception $e ) {
+				PuntWorkLogger::error(
+					'Twitter media upload failed',
+					PuntWorkLogger::CONTEXT_SOCIAL,
+					array(
+						'error'      => $e->getMessage(),
+						'media_file' => $media_file,
+					)
+				);
+			}
+		}
 
-    /**
-     * Upload media file to Twitter
-     */
-    private function uploadMediaToTwitter(string $file_path): ?string
-    {
-        if (! file_exists($file_path)) {
-            return null;
-        }
+		return $media_ids;
+	}
 
-        // For Twitter API v2, we'd use the media upload endpoint
-        // This is a simplified implementation - in production, you'd use proper OAuth
+	/**
+	 * Upload media file to Twitter
+	 */
+	private function uploadMediaToTwitter( string $file_path ): ?string {
+		if ( ! file_exists( $file_path ) ) {
+			return null;
+		}
 
-        $file_data = file_get_contents($file_path);
-        $file_size = strlen($file_data);
+		// For Twitter API v2, we'd use the media upload endpoint
+		// This is a simplified implementation - in production, you'd use proper OAuth
 
-        // Check file size limits (5MB for images, 15MB for video)
-        if ($file_size > 5 * 1024 * 1024) {
-            throw new \Exception('File size exceeds Twitter limits');
-        }
+		$file_data = file_get_contents( $file_path );
+		$file_size = strlen( $file_data );
 
-        // In a real implementation, you'd make the actual API call here
-        // For now, return a mock media ID
-        return 'media_' . uniqid();
-    }
+		// Check file size limits (5MB for images, 15MB for video)
+		if ( $file_size > 5 * 1024 * 1024 ) {
+			throw new \Exception( 'File size exceeds Twitter limits' );
+		}
 
-    /**
-     * Download media file from URL
-     */
-    private function downloadMediaFile(string $url): string
-    {
-        $temp_file = wp_tempnam();
-        $response  = wp_remote_get($url);
+		// In a real implementation, you'd make the actual API call here
+		// For now, return a mock media ID
+		return 'media_' . uniqid();
+	}
 
-        if (is_wp_error($response)) {
-            throw new \Exception('Failed to download media file');
-        }
+	/**
+	 * Download media file from URL
+	 */
+	private function downloadMediaFile( string $url ): string {
+		$temp_file = wp_tempnam();
+		$response  = wp_remote_get( $url );
 
-        file_put_contents($temp_file, wp_remote_retrieve_body($response));
-        return $temp_file;
-    }
+		if ( is_wp_error( $response ) ) {
+			throw new \Exception( 'Failed to download media file' );
+		}
 
-    /**
-     * Prepare poll data
-     */
-    private function preparePoll(array $poll): array
-    {
-        return array(
-            'options'          => array_slice($poll['options'], 0, 4), // Max 4 options
-            'duration_minutes' => min(max($poll['duration_minutes'] ?? 1440, 5), 10080), // 5 min to 7 days
-        );
-    }
+		file_put_contents( $temp_file, wp_remote_retrieve_body( $response ) );
+		return $temp_file;
+	}
 
-    /**
-     * Shorten URLs in text
-     */
-    private function shortenUrls(string $text): string
-    {
-        // Simple URL shortening - in production, you'd use a URL shortener service
-        return preg_replace_callback(
-            '/https?:\/\/[^\s]+/',
-            function ($matches) {
-                $url = $matches[0];
-                // For demo purposes, just return the original URL
-                // In production, you'd shorten it
-                return $url;
-            },
-            $text
-        );
-    }
+	/**
+	 * Prepare poll data
+	 */
+	private function preparePoll( array $poll ): array {
+		return array(
+			'options'          => array_slice( $poll['options'], 0, 4 ), // Max 4 options
+			'duration_minutes' => min( max( $poll['duration_minutes'] ?? 1440, 5 ), 10080 ), // 5 min to 7 days
+		);
+	}
 
-    /**
-     * Execute API request
-     */
-    protected function executeApiRequest(string $endpoint, array $params, string $method)
-    {
-        $url = $this->api_base . '/' . $endpoint;
+	/**
+	 * Shorten URLs in text
+	 */
+	private function shortenUrls( string $text ): string {
+		// Simple URL shortening - in production, you'd use a URL shortener service
+		return preg_replace_callback(
+			'/https?:\/\/[^\s]+/',
+			function ( $matches ) {
+				$url = $matches[0];
+				// For demo purposes, just return the original URL
+				// In production, you'd shorten it
+				return $url;
+			},
+			$text
+		);
+	}
 
-        // In a real implementation, you'd use proper OAuth 1.0a authentication
-        // For now, this is a mock implementation
-        $args = array(
-            'method'  => $method,
-            'headers' => array(
-                'Authorization' => 'Bearer ' . ( $this->credentials['bearer_token'] ?? '' ),
-                'Content-Type'  => 'application/json',
-            ),
-            'body'    => json_encode($params),
-            'timeout' => 30,
-        );
+	/**
+	 * Execute API request
+	 */
+	protected function executeApiRequest( string $endpoint, array $params, string $method ) {
+		$url = $this->api_base . '/' . $endpoint;
 
-        return wp_remote_request($url, $args);
-    }
+		// In a real implementation, you'd use proper OAuth 1.0a authentication
+		// For now, this is a mock implementation
+		$args = array(
+			'method'  => $method,
+			'headers' => array(
+				'Authorization' => 'Bearer ' . ( $this->credentials['bearer_token'] ?? '' ),
+				'Content-Type'  => 'application/json',
+			),
+			'body'    => json_encode( $params ),
+			'timeout' => 30,
+		);
 
-    /**
-     * Handle Twitter API errors
-     */
-    protected function handleApiError(array $response): void
-    {
-        if (isset($response['errors'])) {
-            $error_messages = array_column($response['errors'], 'message');
-            throw new \Exception('Twitter API Error: ' . implode(', ', $error_messages));
-        }
+		return wp_remote_request( $url, $args );
+	}
 
-        if (isset($response['title'])) {
-            throw new \Exception('Twitter API Error: ' . $response['title']);
-        }
-    }
+	/**
+	 * Handle Twitter API errors
+	 */
+	protected function handleApiError( array $response ): void {
+		if ( isset( $response['errors'] ) ) {
+			$error_messages = array_column( $response['errors'], 'message' );
+			throw new \Exception( 'Twitter API Error: ' . implode( ', ', $error_messages ) );
+		}
+
+		if ( isset( $response['title'] ) ) {
+			throw new \Exception( 'Twitter API Error: ' . $response['title'] );
+		}
+	}
 }
