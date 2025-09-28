@@ -426,7 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof puntworkQueue !== 'undefined') {
         // Only show queue management on relevant pages
         const currentPage = new URLSearchParams(window.location.search).get('page') || '';
-        const queuePages = ['puntwork-dashboard', 'puntwork-monitoring', 'job-feed-dashboard'];
+        const queuePages = ['puntwork-monitoring', 'job-feed-dashboard'];
 
         if (queuePages.includes(currentPage)) {
             window.puntworkQueueInterface = new PuntworkQueueInterface();
