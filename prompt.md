@@ -114,6 +114,7 @@
    - `./vendor/bin/phpcs includes/ --standard=WordPress --report=summary` - Check all includes for violations
    - `./vendor/bin/phpcs includes/admin/crm-admin.php --standard=WordPress` - Check specific file
    - `./vendor/bin/phpunit --testdox` - Run tests with verbose output
+   - **PHP-CS-Fixer Notes**: When fixing multiple files, use `--config=.php-cs-fixer.php` explicitly: `./vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --allow-risky=yes file1.php file2.php`. Parallel processing is enabled for faster analysis on multi-core systems.
 
 4. **Deployment Prep**: Clean debug.log if needed, open https://belgiumjobs.work/ in VS Code Simple Browser to verify plugin functionality, check for new errors in debug.log via FTP (using credentials from .env). If static analysis tools are configured, run them to verify no new issues introduced.
 

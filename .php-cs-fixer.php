@@ -130,4 +130,5 @@ return $config->setRules([
     'yoda_style' => false,
 ])
 ->setFinder($finder)
-->setUsingCache(true);
+->setUsingCache(true)
+->setParallelConfig(PhpCsFixer\Runner\Parallel\ParallelConfigFactory::detect());
