@@ -125,14 +125,11 @@ function process_social_media_posts()
 add_action('init', __NAMESPACE__ . '\\setup_job_import');
 function setup_job_import()
 {
-    global $puntwork_initialized;
-    if (isset($puntwork_initialized) && $puntwork_initialized) {
+    static $initialized = false;
+    if ($initialized) {
         return;
     }
-    if (defined('PUNTWORK_SETUP_COMPLETED')) {
-        return;
-    }
-    $puntwork_initialized = true;
+    $initialized = true;
 
     // Increase memory limit to prevent exhaustion
     ini_set('memory_limit', '1024M');
@@ -435,8 +432,6 @@ function setup_job_import()
     if ($debug_mode) {
         error_log('[PUNTWORK] [INIT-END] ===== SETUP_JOB_IMPORT COMPLETED =====');
     }
-
-    define('PUNTWORK_SETUP_COMPLETED', true);
 }
 
 // Add custom favicon
