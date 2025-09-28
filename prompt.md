@@ -107,16 +107,16 @@
 
 Adapt the following workflow based on context. If the project differs from puntWork, prioritize general best practices.
 
-1. **Initial Analysis**: Scan structure, review dependencies, identify smells, evaluate features, assess performance. **Always check debug.log via FTP (using credentials from .env) for recent errors and deployment issues**. **Also verify that the previously pushed commit changes are present on the server via FTP. If not, stop and investigate the automatic GIT deploy issue on Hostinger**.
+1. **Initial Analysis**: Scan structure, review dependencies, identify smells, analyze errors and issues, evaluate features, assess performance. **Always check debug.log via FTP (using credentials from .env) for recent errors and deployment issues**. **Also verify that the previously pushed commit changes are present on the server via FTP. If not, stop and investigate the automatic GIT deploy issue on Hostinger**.
 
-2. **Propose Improvements**: Suggest fixes and enhancements, grouped by category (e.g., speed, simplicity).
+2. **Propose Improvements**: Suggest errors and issues fixes and enhancements, grouped by category (e.g., speed, simplicity).
 
 3. **Validation Steps**: **Always check debug.log via FTP (using credentials from .env) for new errors before running any other tests first.** Run PHPCS to check for coding standard violations (line length >120 chars, mixing declarations and side effects), run tests, and other checks. If tools unavailable, suggest manual alternatives.
    - `./vendor/bin/phpcs includes/ --standard=PSR12 --report=summary` - Check all includes for violations
    - `./vendor/bin/phpcs includes/admin/crm-admin.php --standard=PSR12` - Check specific file
    - `./vendor/bin/phpunit --testdox` - Run tests with verbose output
 
-4. **Deployment Prep**: Clean debug.log if needed, open https://belgiumjobs.work/wp-admin/admin.php?page=job-feed-dashboard in VS Code Simple Browser to verify plugin functionality, check for new errors in debug.log via FTP (using credentials from .env).
+4. **Deployment Prep**: Clean debug.log if needed, open https://belgiumjobs.work/ in VS Code Simple Browser to verify plugin functionality, check for new errors in debug.log via FTP (using credentials from .env).
 
 5. **User Confirmation**: Wait for approval before implementing.
 
