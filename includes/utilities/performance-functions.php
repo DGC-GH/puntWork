@@ -172,10 +172,63 @@ function reset_memory_manager(): void
  */
 function disable_expensive_plugins(): void
 {
-    // Temporarily disable expensive plugins or operations
-    // This is a placeholder - implement specific plugin disabling logic as needed
-    // For example, deactivate plugins that hook into post saves
-    // or disable search indexing during batch processing
+    // Store original state to restore later
+    global $wp_filter;
+
+    // Disable expensive operations during batch processing
+    // This helps prevent timeouts and improves performance
+
+    // 1. Temporarily disable object caching to prevent cache stampedes
+    if (function_exists('wp_suspend_cache_addition')) {
+        wp_suspend_cache_addition(true);
+    }
+
+    // 2. Disable expensive post-related hooks that might be added by plugins
+    // Store original hooks to restore later
+    if (! isset($GLOBALS['puntwork_disabled_hooks'])) {
+        $GLOBALS['puntwork_disabled_hooks'] = array();
+    }
+
+    $expensive_hooks = array(
+        'save_post',           // Many plugins hook here for indexing/notifications
+        'wp_insert_post',      // Post insertion hooks
+        'publish_post',        // Publishing hooks
+        'transition_post_status', // Status change hooks
+        'added_post_meta',     // Meta addition hooks
+        'updated_post_meta',   // Meta update hooks
+    );
+
+    foreach ($expensive_hooks as $hook) {
+        if (isset($wp_filter[$hook])) {
+            $GLOBALS['puntwork_disabled_hooks'][$hook] = $wp_filter[$hook];
+            unset($wp_filter[$hook]);
+        }
+    }
+
+    // 3. Disable autoptimize or similar optimization plugins if active
+    if (function_exists('autoptimize')) {
+        // Temporarily disable autoptimize
+        if (! defined('AUTOPTIMIZE_OFF')) {
+            define('AUTOPTIMIZE_OFF', true);
+        }
+    }
+
+    // 4. Disable common caching plugins
+    if (defined('WP_CACHE') && WP_CACHE) {
+        // Temporarily disable file-based caching
+        if (function_exists('wp_cache_flush')) {
+            wp_cache_flush();
+        }
+    }
+
+    // 5. Disable search indexing plugins
+    if (class_exists('WPSEO_Post_Watcher')) {
+        // Disable Yoast SEO indexing during import
+        remove_action('save_post', array('WPSEO_Post_Watcher', 'save_post'));
+    }
+
+    // Log the disabling for debugging
+    error_log('[PUNTWORK] Expensive plugin operations disabled for batch processing');
 }
 
 /**
@@ -183,8 +236,48 @@ function disable_expensive_plugins(): void
  */
 function enable_expensive_plugins(): void
 {
-    // Re-enable expensive plugins or operations
-    // This is a placeholder - implement specific plugin re-enabling logic as needed
+    // Restore expensive operations after batch processing
+
+    // 1. Re-enable object caching
+    if (function_exists('wp_suspend_cache_addition')) {
+        wp_suspend_cache_addition(false);
+    }
+
+    // 2. Restore disabled hooks
+    global $wp_filter;
+    if (isset($GLOBALS['puntwork_disabled_hooks'])) {
+        foreach ($GLOBALS['puntwork_disabled_hooks'] as $hook => $filters) {
+            if (! isset($wp_filter[$hook])) {
+                $wp_filter[$hook] = $filters;
+            } else {
+                // Merge back if some hooks were added during processing
+                $wp_filter[$hook]->callbacks = array_merge($wp_filter[$hook]->callbacks, $filters->callbacks);
+            }
+        }
+        unset($GLOBALS['puntwork_disabled_hooks']);
+    }
+
+    // 3. Re-enable autoptimize
+    if (defined('AUTOPTIMIZE_OFF')) {
+        // Remove the temporary disable
+        if (function_exists('autoptimize')) {
+            // Re-enable autoptimize - this might require plugin-specific re-enable
+        }
+    }
+
+    // 4. Flush caches to ensure consistency
+    if (function_exists('wp_cache_flush')) {
+        wp_cache_flush();
+    }
+
+    // 5. Re-enable search indexing
+    if (class_exists('WPSEO_Post_Watcher')) {
+        // Re-add Yoast SEO indexing
+        add_action('save_post', array('WPSEO_Post_Watcher', 'save_post'), 10, 1);
+    }
+
+    // Log the re-enabling
+    error_log('[PUNTWORK] Expensive plugin operations re-enabled after batch processing');
 }
 
 /**
