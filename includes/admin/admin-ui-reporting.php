@@ -13,7 +13,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -22,7 +22,6 @@ if (! defined('ABSPATH') ) {
  */
 class ReportingAdminUI
 {
-
     /**
      * Initialize admin interface
      */
@@ -52,9 +51,9 @@ class ReportingAdminUI
     /**
      * Enqueue admin scripts and styles
      */
-    public static function enqueueScripts( string $hook ): void
+    public static function enqueueScripts(string $hook): void
     {
-        if ($hook !== 'puntwork_page_puntwork-reports' ) {
+        if ($hook !== 'puntwork_page_puntwork-reports') {
             return;
         }
 
@@ -89,7 +88,7 @@ class ReportingAdminUI
      */
     public static function renderAdminPage(): void
     {
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.'));
         }
 
@@ -711,12 +710,12 @@ class ReportingAdminUI
     public static function ajaxExportReport(): void
     {
         try {
-            if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_export_report') ) {
+            if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_export_report')) {
                 wp_send_json_error('Security check failed');
                 return;
             }
 
-            if (! current_user_can('manage_options') ) {
+            if (! current_user_can('manage_options')) {
                 wp_send_json_error('Insufficient permissions');
                 return;
             }
@@ -724,7 +723,7 @@ class ReportingAdminUI
             $report_id = intval($_POST['report_id'] ?? 0);
             $format    = sanitize_text_field($_POST['format'] ?? 'html');
 
-            if (! $report_id ) {
+            if (! $report_id) {
                 wp_send_json_error('Invalid report ID');
                 return;
             }
@@ -742,7 +741,7 @@ class ReportingAdminUI
                 ARRAY_A
             );
 
-            if (! $report ) {
+            if (! $report) {
                    wp_send_json_error('Report not found');
                    return;
             }
@@ -757,7 +756,7 @@ class ReportingAdminUI
 
             echo $report['report_data'];
             exit;
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             wp_send_json_error('Export failed: ' . $e->getMessage());
         }
     }
@@ -768,19 +767,19 @@ class ReportingAdminUI
     public static function ajaxDeleteReport(): void
     {
         try {
-            if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_delete_report') ) {
+            if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_delete_report')) {
                 wp_send_json_error('Security check failed');
                 return;
             }
 
-            if (! current_user_can('manage_options') ) {
+            if (! current_user_can('manage_options')) {
                 wp_send_json_error('Insufficient permissions');
                 return;
             }
 
             $report_id = intval($_POST['report_id'] ?? 0);
 
-            if (! $report_id ) {
+            if (! $report_id) {
                 wp_send_json_error('Invalid report ID');
                 return;
             }
@@ -790,13 +789,13 @@ class ReportingAdminUI
 
             $result = $wpdb->delete($table_name, array( 'id' => $report_id ), array( '%d' ));
 
-            if ($result === false ) {
+            if ($result === false) {
                 wp_send_json_error('Failed to delete report');
                 return;
             }
 
             wp_send_json_success(array( 'message' => 'Report deleted successfully' ));
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             wp_send_json_error('Delete failed: ' . $e->getMessage());
         }
     }

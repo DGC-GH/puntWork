@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -27,24 +27,24 @@ function get_feeds(): array
     $cache_key = 'puntwork_feeds';
     $feeds     = CacheManager::get($cache_key, CacheManager::GROUP_MAPPINGS);
 
-    if ($feeds === false ) {
+    if ($feeds === false) {
         error_log('[PUNTWORK] [DEBUG] get_feeds: Cache miss, building feeds array');
         $feeds = array();
 
         // First, check if CPT is registered
-        if (! post_type_exists('job-feed') ) {
+        if (! post_type_exists('job-feed')) {
             error_log('[PUNTWORK] [DEBUG] get_feeds: job-feed post type not registered, checking options');
             // Try alternative: check if feeds are stored as options
             $option_feeds = get_option('job_feed_url');
             error_log('[PUNTWORK] [DEBUG] get_feeds: job_feed_url option value: ' . print_r($option_feeds, true));
-            if (! empty($option_feeds) ) {
-                if (is_array($option_feeds) ) {
+            if (! empty($option_feeds)) {
+                if (is_array($option_feeds)) {
                     $feeds = $option_feeds;
                     error_log('[PUNTWORK] [DEBUG] get_feeds: Using array from option: ' . json_encode($feeds));
-                } elseif (is_string($option_feeds) ) {
+                } elseif (is_string($option_feeds)) {
                     // Try to parse as JSON
                     $parsed = json_decode($option_feeds, true);
-                    if ($parsed && is_array($parsed) ) {
+                    if ($parsed && is_array($parsed)) {
                         $feeds = $parsed;
                         error_log('[PUNTWORK] [DEBUG] get_feeds: Parsed JSON from option: ' . json_encode($feeds));
                     } else {
@@ -72,37 +72,37 @@ function get_feeds(): array
         );
 
         error_log('[PUNTWORK] [DEBUG] get_feeds: Query found ' . $query->found_posts . ' job-feed posts');
-        if ($query->have_posts() ) {
-            foreach ( $query->posts as $post_id ) {
+        if ($query->have_posts()) {
+            foreach ($query->posts as $post_id) {
                 error_log('[PUNTWORK] [DEBUG] get_feeds: Processing post ID ' . $post_id);
                 $feed_url  = get_post_meta($post_id, 'feed_url', true);
                 $feed_type = get_post_meta($post_id, 'feed_type', true) ?: 'traditional';
                 $post      = get_post($post_id);
 
                 // Also check for ACF field if regular meta is empty
-                if (empty($feed_url) && function_exists('get_field') ) {
+                if (empty($feed_url) && function_exists('get_field')) {
                     $feed_url = get_field('feed_url', $post_id);
                     error_log('[PUNTWORK] [DEBUG] get_feeds: Got feed_url from ACF: ' . $feed_url);
                 }
 
-                if (! empty($feed_url) ) {
+                if (! empty($feed_url)) {
                     $feed_url = esc_url_raw($feed_url);
-                    if (! filter_var($feed_url, FILTER_VALIDATE_URL) ) {
+                    if (! filter_var($feed_url, FILTER_VALIDATE_URL)) {
                            error_log('[PUNTWORK] [DEBUG] get_feeds: Invalid URL for post ' . $post_id . ': ' . $feed_url);
                            continue; // skip invalid URLs
                     }
                     $feeds[ $post->post_name ] = $feed_url; // Use slug as key
                     error_log('[PUNTWORK] [DEBUG] get_feeds: Added feed ' . $post->post_name . ' -> ' . $feed_url);
-                } elseif ($feed_type === 'job_board' ) {
+                } elseif ($feed_type === 'job_board') {
                     error_log('[PUNTWORK] [DEBUG] get_feeds: Handling job board feed for post ' . $post_id);
                     // Handle job board feeds
                     $board_id     = get_post_meta($post_id, 'job_board_id', true);
                     $board_params = get_post_meta($post_id, 'job_board_params', true) ?: array();
 
-                    if (! empty($board_id) ) {
+                    if (! empty($board_id)) {
                         // Create job board URL: job_board://board_id?param1=value1&...
                         $job_board_url = 'job_board://' . $board_id;
-                        if (! empty($board_params) ) {
+                        if (! empty($board_params)) {
                             $job_board_url .= '?' . http_build_query($board_params);
                         }
                         $feeds[ $post->post_name ] = $job_board_url;
@@ -149,7 +149,7 @@ function get_job_board_feeds(): array
     $board_manager     = new \Puntwork\JobBoards\JobBoardManager();
     $configured_boards = $board_manager->getConfiguredBoards();
 
-    foreach ( $configured_boards as $board_id ) {
+    foreach ($configured_boards as $board_id) {
         // Create job board URL for each configured board
         $job_board_url                               = 'job_board://' . $board_id;
         $job_board_feeds[ 'job_board_' . $board_id ] = $job_board_url;
@@ -161,8 +161,8 @@ function get_job_board_feeds(): array
 // Clear feeds cache when job-feed post is updated
 add_action(
     'save_post',
-    function ( $post_id, $post, $update ) {
-        if ($post->post_type === 'job-feed' && $post->post_status === 'publish' ) {
+    function ($post_id, $post, $update) {
+        if ($post->post_type === 'job-feed' && $post->post_status === 'publish') {
             CacheManager::delete('puntwork_feeds', CacheManager::GROUP_MAPPINGS);
         }
     },
@@ -181,7 +181,7 @@ add_action(
  * @return int Number of items processed from this feed
  * @throws \Exception If feed processing fails
  */
-function process_one_feed( string $feed_key, string $url, string $output_dir, string $fallback_domain, array &$logs ): int
+function process_one_feed(string $feed_key, string $url, string $output_dir, string $fallback_domain, array &$logs): int
 {
     error_log('[PUNTWORK] ===== process_one_feed START =====');
     error_log('[PUNTWORK] Feed key: ' . $feed_key);
@@ -203,7 +203,7 @@ function process_one_feed( string $feed_key, string $url, string $output_dir, st
     error_log('[PUNTWORK] GZ JSON path: ' . $gz_json_path);
 
     // Handle job board feeds differently - no download needed
-    if ($extension === \Puntwork\FeedProcessor::FORMAT_JOB_BOARD ) {
+    if ($extension === \Puntwork\FeedProcessor::FORMAT_JOB_BOARD) {
         error_log('[PUNTWORK] Handling as job board feed');
         $feed_path       = $url; // Use the job board URL directly
         $detected_format = \Puntwork\FeedProcessor::FORMAT_JOB_BOARD;
@@ -211,7 +211,7 @@ function process_one_feed( string $feed_key, string $url, string $output_dir, st
         error_log('[PUNTWORK] Handling as regular feed, downloading...');
         // Download feed and detect format
         $detected_format = null;
-        if (! download_feed($url, $feed_path, $output_dir, $logs, $detected_format) ) {
+        if (! download_feed($url, $feed_path, $output_dir, $logs, $detected_format)) {
             error_log('[PUNTWORK] download_feed failed');
             return 0;
         }
@@ -223,7 +223,7 @@ function process_one_feed( string $feed_key, string $url, string $output_dir, st
     error_log('[PUNTWORK] Final format: ' . $format);
 
     $handle = fopen($json_path, 'w');
-    if (! $handle ) {
+    if (! $handle) {
         error_log('[PUNTWORK] Failed to open JSON file: ' . $json_path);
         throw new \Exception("Can't open $json_path");
     }
@@ -264,7 +264,7 @@ function fetch_and_generate_combined_json(): array
     set_time_limit(1800);
     $feeds      = get_feeds();
     $output_dir = ABSPATH . 'feeds/';
-    if (! wp_mkdir_p($output_dir) || ! is_writable($output_dir) ) {
+    if (! wp_mkdir_p($output_dir) || ! is_writable($output_dir)) {
         error_log("Directory $output_dir not writable");
         throw new \Exception('Feeds directory not writable - check Hostinger permissions');
     }
@@ -273,7 +273,7 @@ function fetch_and_generate_combined_json(): array
     $total_items = 0;
     libxml_use_internal_errors(true);
 
-    foreach ( $feeds as $feed_key => $url ) {
+    foreach ($feeds as $feed_key => $url) {
         $count        = process_one_feed($feed_key, $url, $output_dir, $fallback_domain, $import_logs);
         $total_items += $count;
     }

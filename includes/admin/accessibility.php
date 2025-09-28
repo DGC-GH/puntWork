@@ -8,7 +8,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -18,7 +18,7 @@ if (! defined('ABSPATH') ) {
 function handle_clear_cache()
 {
     // Verify nonce
-    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_accessibility_nonce') ) {
+    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_accessibility_nonce')) {
         wp_send_json_error(array( 'message' => __('Security check failed.', 'puntwork') ));
         return;
     }
@@ -26,7 +26,7 @@ function handle_clear_cache()
     // Clear various caches
     try {
         // Clear WordPress object cache
-        if (function_exists('wp_cache_flush') ) {
+        if (function_exists('wp_cache_flush')) {
             wp_cache_flush();
         }
 
@@ -41,7 +41,7 @@ function handle_clear_cache()
 
         // Clear any cached feed data
         $feed_cache_keys = get_option('puntwork_feed_cache_keys', array());
-        foreach ( $feed_cache_keys as $key ) {
+        foreach ($feed_cache_keys as $key) {
             delete_transient($key);
         }
         delete_option('puntwork_feed_cache_keys');
@@ -51,7 +51,7 @@ function handle_clear_cache()
             'message' => __('Cache cleared successfully. Page will refresh.', 'puntwork'),
             )
         );
-    } catch ( Exception $e ) {
+    } catch (Exception $e) {
         wp_send_json_error(
             array(
             'message' => __('Error clearing cache: ', 'puntwork') . $e->getMessage(),
@@ -66,7 +66,7 @@ add_action('wp_ajax_puntwork_clear_cache', __NAMESPACE__ . '\\handle_clear_cache
  */
 function add_accessibility_headers()
 {
-    if (is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0 ) {
+    if (is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0) {
         // Add viewport meta tag for proper mobile accessibility
         add_action(
             'admin_head',
@@ -90,16 +90,16 @@ add_action('admin_init', __NAMESPACE__ . '\\add_accessibility_headers');
 /**
  * Add accessibility attributes to admin menu items
  */
-function enhance_admin_menu_accessibility( $menu )
+function enhance_admin_menu_accessibility($menu)
 {
-    if (is_admin() && is_array($menu) ) {
-        foreach ( $menu as &$item ) {
-            if (isset($item[2]) && strpos($item[2], 'puntwork') === 0 ) {
+    if (is_admin() && is_array($menu)) {
+        foreach ($menu as &$item) {
+            if (isset($item[2]) && strpos($item[2], 'puntwork') === 0) {
                 // Add aria-label for better screen reader support
                 $item[4] = ( $item[4] ?? '' ) . ' aria-label="' . esc_attr($item[0]) . '"';
             }
         }
-    } elseif (is_admin() && ! is_array($menu) ) {
+    } elseif (is_admin() && ! is_array($menu)) {
         error_log('[PUNTWORK] enhance_admin_menu_accessibility received non-array menu parameter: ' . gettype($menu));
     }
     return $menu;
@@ -109,9 +109,9 @@ add_filter('admin_menu', __NAMESPACE__ . '\\enhance_admin_menu_accessibility');
 /**
  * Add keyboard shortcuts help to admin bar
  */
-function add_keyboard_shortcuts_help( $wp_admin_bar )
+function add_keyboard_shortcuts_help($wp_admin_bar)
 {
-    if (is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0 ) {
+    if (is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0) {
         $wp_admin_bar->add_node(
             array(
             'id'    => 'puntwork-keyboard-help',
@@ -132,7 +132,7 @@ add_action('admin_bar_menu', __NAMESPACE__ . '\\add_keyboard_shortcuts_help', 10
  */
 function add_accessibility_notices()
 {
-    if (is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0 ) {
+    if (is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0) {
         // Add live region for dynamic content updates
         add_action(
             'admin_footer',
@@ -157,7 +157,7 @@ add_action('admin_init', __NAMESPACE__ . '\\add_accessibility_notices');
  */
 function enhance_form_accessibility()
 {
-    if (is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0 ) {
+    if (is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0) {
         // Add required field indicators
         add_action(
             'admin_footer',
@@ -205,7 +205,7 @@ add_action('admin_init', __NAMESPACE__ . '\\enhance_form_accessibility');
  */
 function add_accessibility_testing()
 {
-    if (defined('WP_DEBUG') && WP_DEBUG && is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0 ) {
+    if (defined('WP_DEBUG') && WP_DEBUG && is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0) {
         add_action(
             'admin_footer',
             function () {

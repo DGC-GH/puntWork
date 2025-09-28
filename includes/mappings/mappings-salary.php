@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -27,11 +27,11 @@ use Puntwork\Utilities\CacheManager;
  *
  * @return array Salary estimates by category.
  */
-if (! function_exists('GetSalaryEstimates') ) {
+if (! function_exists('GetSalaryEstimates')) {
     function GetSalaryEstimates()
     {
         $cached = CacheManager::get('salary_estimates', CacheManager::GROUP_MAPPINGS);
-        if (false === $cached ) {
+        if (false === $cached) {
             $cached = array(
             'Accounting'                            => array(
             'low'  => 3500,

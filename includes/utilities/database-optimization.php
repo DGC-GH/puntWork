@@ -9,7 +9,7 @@
  */
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -108,11 +108,11 @@ function create_database_indexes(): void
  * @param int   $post_id   Post ID
  * @param array $meta_data Array of meta_key => meta_value pairs
  */
-function bulk_update_post_meta( int $post_id, array $meta_data ): void
+function bulk_update_post_meta(int $post_id, array $meta_data): void
 {
     global $wpdb;
 
-    if (empty($meta_data) ) {
+    if (empty($meta_data)) {
         return;
     }
 
@@ -121,7 +121,7 @@ function bulk_update_post_meta( int $post_id, array $meta_data ): void
     $values       = array();
     $placeholders = array();
 
-    foreach ( $meta_data as $key => $value ) {
+    foreach ($meta_data as $key => $value) {
         $values[]       = $post_id;
         $values[]       = $key;
         $values[]       = $value;
@@ -150,11 +150,11 @@ function bulk_update_post_meta( int $post_id, array $meta_data ): void
  * @param  array $post_ids Array of post IDs
  * @return array Post ID => status mapping
  */
-function bulk_get_post_statuses( array $post_ids ): array
+function bulk_get_post_statuses(array $post_ids): array
 {
     global $wpdb;
 
-    if (empty($post_ids) ) {
+    if (empty($post_ids)) {
         return array();
     }
 
@@ -165,7 +165,7 @@ function bulk_get_post_statuses( array $post_ids ): array
     $cache_key     = 'post_statuses_' . md5(implode(',', $post_ids));
     $cached_result = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
 
-    if ($cached_result !== false ) {
+    if ($cached_result !== false) {
         error_log('[PUNTWORK] [DB-DEBUG] Returning cached result for post statuses');
         return $cached_result;
     }
@@ -192,7 +192,7 @@ function bulk_get_post_statuses( array $post_ids ): array
 
     $statuses = array();
 
-    foreach ( $results as $post_id => $post ) {
+    foreach ($results as $post_id => $post) {
         $statuses[ $post_id ] = $post->post_status;
     }
 
@@ -210,11 +210,11 @@ function bulk_get_post_statuses( array $post_ids ): array
  * @param  array $guids Array of GUIDs to look up
  * @return array GUID => post data mapping
  */
-function get_posts_by_guids_with_status( array $guids ): array
+function get_posts_by_guids_with_status(array $guids): array
 {
     global $wpdb;
 
-    if (empty($guids) ) {
+    if (empty($guids)) {
         return array();
     }
 
@@ -225,7 +225,7 @@ function get_posts_by_guids_with_status( array $guids ): array
     $cache_key     = 'posts_by_guids_' . md5(implode(',', $guids));
     $cached_result = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
 
-    if ($cached_result !== false ) {
+    if ($cached_result !== false) {
         error_log('[PUNTWORK] [DB-DEBUG] Returning cached result for GUID lookup');
         return $cached_result;
     }
@@ -255,8 +255,8 @@ function get_posts_by_guids_with_status( array $guids ): array
 
     $posts_by_guid = array();
 
-    foreach ( $results as $row ) {
-        if (! isset($posts_by_guid[ $row->guid ]) ) {
+    foreach ($results as $row) {
+        if (! isset($posts_by_guid[ $row->guid ])) {
             $posts_by_guid[ $row->guid ] = array();
         }
         $posts_by_guid[ $row->guid ][] = array(
@@ -281,16 +281,17 @@ function get_posts_by_guids_with_status( array $guids ): array
  * @param  array $post_ids Array of post IDs
  * @return array Post ID => meta_key => meta_value mapping
  */
-function preload_post_meta_batch( array $post_ids ): array {
+function preload_post_meta_batch(array $post_ids): array
+{
     global $wpdb;
 
-    if ( empty( $post_ids ) ) {
+    if (empty($post_ids)) {
         return array();
     }
 
-    error_log( '[PUNTWORK] [DB-DEBUG] preload_post_meta_batch called with ' . count( $post_ids ) . ' post IDs' );
+    error_log('[PUNTWORK] [DB-DEBUG] preload_post_meta_batch called with ' . count($post_ids) . ' post IDs');
 
-    $placeholders = implode( ',', array_fill( 0, count( $post_ids ), '%d' ) );
+    $placeholders = implode(',', array_fill(0, count($post_ids), '%d'));
     $query        = $wpdb->prepare(
         "
         SELECT post_id, meta_key, meta_value
@@ -301,21 +302,21 @@ function preload_post_meta_batch( array $post_ids ): array {
         $post_ids
     );
 
-    $start_time = microtime( true );
-    $results    = $wpdb->get_results( $query );
-    $query_time = microtime( true ) - $start_time;
+    $start_time = microtime(true);
+    $results    = $wpdb->get_results($query);
+    $query_time = microtime(true) - $start_time;
 
-    error_log( '[PUNTWORK] [DB-DEBUG] preload_post_meta_batch query returned ' . count( $results ) . ' meta rows in ' . number_format( $query_time, 4 ) . ' seconds' );
+    error_log('[PUNTWORK] [DB-DEBUG] preload_post_meta_batch query returned ' . count($results) . ' meta rows in ' . number_format($query_time, 4) . ' seconds');
 
     $meta_cache = array();
-    foreach ( $results as $row ) {
-        if ( ! isset( $meta_cache[ $row->post_id ] ) ) {
+    foreach ($results as $row) {
+        if (! isset($meta_cache[ $row->post_id ])) {
             $meta_cache[ $row->post_id ] = array();
         }
         $meta_cache[ $row->post_id ][ $row->meta_key ] = $row->meta_value;
     }
 
-    error_log( '[PUNTWORK] [DB-DEBUG] Preloaded meta for ' . count( $meta_cache ) . ' posts' );
+    error_log('[PUNTWORK] [DB-DEBUG] Preloaded meta for ' . count($meta_cache) . ' posts');
 
     return $meta_cache;
 }
@@ -352,13 +353,13 @@ function get_database_optimization_status(): array
     "
     );
 
-    foreach ( $existing_indexes as $index ) {
+    foreach ($existing_indexes as $index) {
         $indexes[ $index ] = true;
     }
 
     $missing_indexes = array_filter(
         $indexes,
-        function ( $exists ) {
+        function ($exists) {
             return ! $exists;
         }
     );
@@ -376,13 +377,14 @@ function get_database_optimization_status(): array
  *
  * @return array Monitoring data
  */
-function start_import_performance_monitoring(): array {
-    $start_time = microtime( true );
-    $start_memory = memory_get_peak_usage( true );
+function start_import_performance_monitoring(): array
+{
+    $start_time = microtime(true);
+    $start_memory = memory_get_peak_usage(true);
 
     // Clear any existing transients that might interfere
     global $wpdb;
-    $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_puntwork_%'" );
+    $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_puntwork_%'");
 
     return array(
         'start_time' => $start_time,
@@ -399,9 +401,10 @@ function start_import_performance_monitoring(): array {
  * @param  int    $items_processed Number of items processed
  * @return void
  */
-function end_import_performance_monitoring( array $monitoring_data, string $operation, int $items_processed = 0 ): void {
-    $end_time = microtime( true );
-    $end_memory = memory_get_peak_usage( true );
+function end_import_performance_monitoring(array $monitoring_data, string $operation, int $items_processed = 0): void
+{
+    $end_time = microtime(true);
+    $end_memory = memory_get_peak_usage(true);
 
     global $wpdb;
     $query_count_end = $wpdb->num_queries;
@@ -413,7 +416,7 @@ function end_import_performance_monitoring( array $monitoring_data, string $oper
     $items_per_second = $items_processed > 0 ? $items_processed / $total_time : 0;
     $queries_per_item = $items_processed > 0 ? $queries_used / $items_processed : 0;
 
-    error_log( sprintf(
+    error_log(sprintf(
         '[PUNTWORK] [PERFORMANCE] %s completed in %.3fs, %d items (%.2f items/sec), Memory: %.2fMB used, Queries: %d total (%d new, %.1f per item)',
         $operation,
         $total_time,
@@ -423,10 +426,10 @@ function end_import_performance_monitoring( array $monitoring_data, string $oper
         $query_count_end,
         $queries_used,
         $queries_per_item
-    ) );
+    ));
 
     // Store in performance logs table if it exists
-    if ( $wpdb->get_var( "SHOW TABLES LIKE '{$wpdb->prefix}puntwork_performance_logs'" ) ) {
+    if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}puntwork_performance_logs'")) {
         $wpdb->insert(
             $wpdb->prefix . 'puntwork_performance_logs',
             array(
@@ -436,7 +439,7 @@ function end_import_performance_monitoring( array $monitoring_data, string $oper
                 'items_per_second' => $items_per_second,
                 'memory_used' => $memory_used,
                 'query_count' => $queries_used,
-                'created_at' => current_time( 'mysql' ),
+                'created_at' => current_time('mysql'),
             )
         );
     }

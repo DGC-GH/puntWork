@@ -11,7 +11,7 @@
 namespace Puntwork\Utilities;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class MemoryManager
 {
-
     private static int $gc_threshold    = 100; // Run GC every 100 items
     private static int $processed_count = 0;
     private static int $last_gc_run     = 0;
@@ -32,7 +31,7 @@ class MemoryManager
      * @param  float $threshold     Memory threshold (0-1)
      * @return array Memory management actions taken
      */
-    public static function checkMemoryUsage( int $current_index, float $threshold = 0.8 ): array
+    public static function checkMemoryUsage(int $current_index, float $threshold = 0.8): array
     {
         $actions      = array();
         $memory_usage = memory_get_usage(true);
@@ -42,16 +41,16 @@ class MemoryManager
         ++self::$processed_count;
 
         // Force garbage collection periodically
-        if (self::$processed_count - self::$last_gc_run >= self::$gc_threshold ) {
+        if (self::$processed_count - self::$last_gc_run >= self::$gc_threshold) {
             gc_collect_cycles();
             self::$last_gc_run = self::$processed_count;
             $actions[]         = 'garbage_collection';
         }
 
         // Memory pressure detected
-        if ($memory_ratio > $threshold ) {
+        if ($memory_ratio > $threshold) {
             // Aggressive cleanup
-            if (function_exists('wp_cache_flush') ) {
+            if (function_exists('wp_cache_flush')) {
                 wp_cache_flush();
                 $actions[] = 'cache_flush';
             }
@@ -61,7 +60,7 @@ class MemoryManager
             $actions[] = 'forced_gc';
 
             // Clear any large static caches if they exist
-            if (isset($GLOBALS['wp_object_cache']) && method_exists($GLOBALS['wp_object_cache'], 'flush') ) {
+            if (isset($GLOBALS['wp_object_cache']) && method_exists($GLOBALS['wp_object_cache'], 'flush')) {
                 $GLOBALS['wp_object_cache']->flush();
                 $actions[] = 'object_cache_flush';
             }
@@ -84,12 +83,12 @@ class MemoryManager
         gc_mem_caches();
 
         // Disable some WordPress features that consume memory
-        if (! defined('WP_DISABLE_FATAL_ERROR_HANDLER') ) {
+        if (! defined('WP_DISABLE_FATAL_ERROR_HANDLER')) {
             define('WP_DISABLE_FATAL_ERROR_HANDLER', true);
         }
 
         // Reduce autoload overhead for known classes
-        if (function_exists('spl_autoload_register') ) {
+        if (function_exists('spl_autoload_register')) {
             // Preload critical classes if needed
         }
     }
@@ -100,18 +99,18 @@ class MemoryManager
     private static function getMemoryLimitBytes(): int
     {
         $limit = ini_get('memory_limit');
-        if (preg_match('/^(\d+)(.)$/', $limit, $matches) ) {
+        if (preg_match('/^(\d+)(.)$/', $limit, $matches)) {
             $value = (int) $matches[1];
             $unit  = strtoupper($matches[2]);
-            switch ( $unit ) {
-            case 'G':
-                return $value * 1024 * 1024 * 1024;
-            case 'M':
-                return $value * 1024 * 1024;
-            case 'K':
-                return $value * 1024;
-            default:
-                return $value;
+            switch ($unit) {
+                case 'G':
+                    return $value * 1024 * 1024 * 1024;
+                case 'M':
+                    return $value * 1024 * 1024;
+                case 'K':
+                    return $value * 1024;
+                default:
+                    return $value;
             }
         }
         return 128 * 1024 * 1024; // Default 128MB

@@ -11,13 +11,13 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 add_action(
     'wp_ajax_debug_trigger_async',
     function () {
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_die('Permission denied');
         }
 
@@ -33,7 +33,7 @@ add_action(
 add_action(
     'wp_ajax_debug_clear_import_status',
     function () {
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_die('Permission denied');
         }
 
@@ -54,7 +54,7 @@ function save_import_schedule_ajax()
 
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('save_import_schedule', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -153,7 +153,7 @@ function save_import_schedule_ajax()
             'last_run_details' => $last_run_details,
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Save schedule failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SCHEDULING);
         AjaxErrorHandler::sendError('Save schedule failed: ' . $e->getMessage());
     }
@@ -168,7 +168,7 @@ function get_import_schedule_ajax()
 
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('get_import_schedule', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -200,7 +200,7 @@ function get_import_schedule_ajax()
         $last_run_details = get_option('puntwork_last_import_details', null);
 
         // Add formatted date to last run if it exists
-        if ($last_run && isset($last_run['timestamp']) ) {
+        if ($last_run && isset($last_run['timestamp'])) {
             // Timestamps are now stored in UTC using time(), wp_date() handles timezone conversion
             $last_run['formatted_date'] = wp_date('M j, Y H:i', $last_run['timestamp']);
         }
@@ -222,7 +222,7 @@ function get_import_schedule_ajax()
             'last_run_details' => $last_run_details,
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Get schedule failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SCHEDULING);
         AjaxErrorHandler::sendError('Get schedule failed: ' . $e->getMessage());
     }
@@ -237,7 +237,7 @@ function get_import_run_history_ajax()
 
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('get_import_run_history', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -246,8 +246,8 @@ function get_import_run_history_ajax()
         $history = get_option('puntwork_import_run_history', array());
 
         // Format dates for history entries - timestamps are stored in UTC
-        foreach ( $history as &$entry ) {
-            if (isset($entry['timestamp']) ) {
+        foreach ($history as &$entry) {
+            if (isset($entry['timestamp'])) {
                 $entry['formatted_date'] = wp_date('M j, Y H:i', $entry['timestamp']);
             }
         }
@@ -273,7 +273,7 @@ function get_import_run_history_ajax()
             'count'   => count($history),
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Get run history failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SCHEDULING);
         AjaxErrorHandler::sendError('Get run history failed: ' . $e->getMessage());
     }
@@ -288,7 +288,7 @@ function test_import_schedule_ajax()
 
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('test_import_schedule', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -320,7 +320,7 @@ function test_import_schedule_ajax()
             'result'  => $result,
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Test import schedule failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SCHEDULING);
         AjaxErrorHandler::sendError('Test import schedule failed: ' . $e->getMessage());
     }
@@ -336,7 +336,7 @@ function run_scheduled_import_ajax()
 
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('run_scheduled_import', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -344,12 +344,12 @@ function run_scheduled_import_ajax()
     try {
         // Check if an import is already running
         $import_status = get_option('job_import_status', array());
-        if (isset($import_status['complete']) && ! $import_status['complete'] ) {
+        if (isset($import_status['complete']) && ! $import_status['complete']) {
             // Calculate actual time elapsed
             $time_elapsed = 0;
-            if (isset($import_status['start_time']) && $import_status['start_time'] > 0 ) {
+            if (isset($import_status['start_time']) && $import_status['start_time'] > 0) {
                 $time_elapsed = microtime(true) - $import_status['start_time'];
-            } elseif (isset($import_status['time_elapsed']) ) {
+            } elseif (isset($import_status['time_elapsed'])) {
                 $time_elapsed = $import_status['time_elapsed'];
             }
 
@@ -357,7 +357,7 @@ function run_scheduled_import_ajax()
             $is_stuck = ( ! isset($import_status['processed']) || $import_status['processed'] == 0 ) &&
                         ( $time_elapsed > 300 ); // 5 minutes
 
-            if ($is_stuck ) {
+            if ($is_stuck) {
                 PuntWorkLogger::warn(
                     'Detected stuck import, clearing status for new run',
                     PuntWorkLogger::CONTEXT_SCHEDULING,
@@ -403,11 +403,11 @@ function run_scheduled_import_ajax()
         delete_transient('import_cancel');
 
         // Schedule the import to run asynchronously
-        if (function_exists('as_schedule_single_action') ) {
+        if (function_exists('as_schedule_single_action')) {
             // Use Action Scheduler if available
             PuntWorkLogger::info('Scheduling async import using Action Scheduler', PuntWorkLogger::CONTEXT_SCHEDULING);
             as_schedule_single_action(time(), 'puntwork_scheduled_import_async');
-        } elseif (function_exists('wp_schedule_single_event') ) {
+        } elseif (function_exists('wp_schedule_single_event')) {
             // Fallback: Use WordPress cron for near-immediate execution
             PuntWorkLogger::info('Action Scheduler not available, using WordPress cron', PuntWorkLogger::CONTEXT_SCHEDULING);
             wp_schedule_single_event(time() + 1, 'puntwork_scheduled_import_async');
@@ -416,7 +416,7 @@ function run_scheduled_import_ajax()
             PuntWorkLogger::warn('No async scheduling available, running synchronously', PuntWorkLogger::CONTEXT_SCHEDULING);
             $result = run_scheduled_import();
 
-            if ($result['success'] ) {
+            if ($result['success']) {
                 PuntWorkLogger::info('Synchronous scheduled import completed successfully', PuntWorkLogger::CONTEXT_SCHEDULING);
                 PuntWorkLogger::logAjaxResponse(
                     'run_scheduled_import',
@@ -463,7 +463,7 @@ function run_scheduled_import_ajax()
             'async'   => true,
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Run scheduled import failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SCHEDULING);
         AjaxErrorHandler::sendError('Failed to start import: ' . $e->getMessage());
     }
@@ -507,7 +507,8 @@ function run_scheduled_import_async()
     $import_status = get_option('job_import_status', array());
     error_log('[PUNTWORK] Current import status at async start: ' . json_encode($import_status));
 
-    if (isset($import_status['complete']) && $import_status['complete'] === false
+    if (
+        isset($import_status['complete']) && $import_status['complete'] === false
         && isset($import_status['processed']) && $import_status['processed'] > 0
     ) {
         error_log('[PUNTWORK] Async import skipped - import already running and has processed items');
@@ -530,7 +531,7 @@ function run_scheduled_import_async()
         error_log('[PUNTWORK] Import result: ' . print_r($result, true));
 
         // Import runs to completion without pausing
-        if ($result['success'] ) {
+        if ($result['success']) {
             error_log('[PUNTWORK] Async scheduled import completed successfully');
         } else {
             error_log('[PUNTWORK] Async scheduled import failed: ' . ( $result['message'] ?? 'Unknown error' ));
@@ -538,7 +539,7 @@ function run_scheduled_import_async()
             delete_option('job_import_status');
             error_log('[PUNTWORK] Reset job_import_status due to import failure');
         }
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         error_log('[PUNTWORK] Async scheduled import exception: ' . $e->getMessage());
         error_log('[PUNTWORK] Exception trace: ' . $e->getTraceAsString());
         // Reset import status on exception so future attempts can start
@@ -559,7 +560,8 @@ function run_manual_import_cron()
 
     // Check if an import is already running
     $import_status = get_option('job_import_status', array());
-    if (isset($import_status['complete']) && $import_status['complete'] === false
+    if (
+        isset($import_status['complete']) && $import_status['complete'] === false
         && isset($import_status['processed']) && $import_status['processed'] > 0
     ) {
         error_log('[PUNTWORK] Manual import cron skipped - import already running and has processed items');
@@ -570,12 +572,12 @@ function run_manual_import_cron()
         $result = run_scheduled_import();
 
         // Import runs to completion without pausing
-        if ($result['success'] ) {
+        if ($result['success']) {
             error_log('[PUNTWORK] Manual import cron completed successfully');
         } else {
             error_log('[PUNTWORK] Manual import cron failed: ' . ( $result['message'] ?? 'Unknown error' ));
         }
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         error_log('[PUNTWORK] Manual import cron exception: ' . $e->getMessage());
     }
 }

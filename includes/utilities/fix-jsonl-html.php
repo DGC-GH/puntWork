@@ -9,13 +9,13 @@
  */
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
-function fix_jsonl_html_encoding( $jsonl_path )
+function fix_jsonl_html_encoding($jsonl_path)
 {
-    if (! file_exists($jsonl_path) ) {
+    if (! file_exists($jsonl_path)) {
         return new WP_Error('file_not_found', 'JSONL file not found: ' . $jsonl_path);
     }
 
@@ -23,30 +23,30 @@ function fix_jsonl_html_encoding( $jsonl_path )
     $handle      = fopen($jsonl_path, 'r');
     $temp_handle = fopen($temp_path, 'w');
 
-    if (! $handle || ! $temp_handle ) {
+    if (! $handle || ! $temp_handle) {
         return new WP_Error('file_open_error', 'Could not open files for processing');
     }
 
     $processed = 0;
     $errors    = 0;
 
-    while ( ( $line = fgets($handle) ) !== false ) {
+    while (( $line = fgets($handle) ) !== false) {
         $line = trim($line);
-        if (empty($line) ) {
+        if (empty($line)) {
             continue;
         }
 
         try {
             $job = json_decode($line, true);
-            if ($job === null ) {
+            if ($job === null) {
                 ++$errors;
                 continue;
             }
 
             // Fix HTML encoding in description fields
             $html_fields = array( 'description', 'functiondescription', 'offerdescription', 'requirementsdescription', 'companydescription' );
-            foreach ( $html_fields as $field ) {
-                if (isset($job[ $field ]) ) {
+            foreach ($html_fields as $field) {
+                if (isset($job[ $field ])) {
                     $content = $job[ $field ];
                     // Decode HTML entities (handle double-encoding)
                     $content = html_entity_decode($content, ENT_QUOTES | ENT_HTML5);
@@ -63,8 +63,8 @@ function fix_jsonl_html_encoding( $jsonl_path )
 
             // Fix HTML encoding in title fields
             $title_fields = array( 'functiontitle', 'title' );
-            foreach ( $title_fields as $field ) {
-                if (isset($job[ $field ]) ) {
+            foreach ($title_fields as $field) {
+                if (isset($job[ $field ])) {
                     $content       = $job[ $field ];
                     $content       = html_entity_decode($content, ENT_QUOTES | ENT_HTML5);
                     $content       = html_entity_decode($content, ENT_QUOTES | ENT_HTML5);
@@ -77,10 +77,10 @@ function fix_jsonl_html_encoding( $jsonl_path )
             fwrite($temp_handle, json_encode($job, JSON_UNESCAPED_UNICODE) . "\n");
             ++$processed;
 
-            if ($processed % 500 == 0 ) {
+            if ($processed % 500 == 0) {
                 error_log("Fixed $processed jobs so far...");
             }
-        } catch ( Exception $e ) {
+        } catch (Exception $e) {
             ++$errors;
             error_log('Error processing job: ' . $e->getMessage());
         }
@@ -90,7 +90,7 @@ function fix_jsonl_html_encoding( $jsonl_path )
     fclose($temp_handle);
 
     // Replace original file with fixed version
-    if (rename($temp_path, $jsonl_path) ) {
+    if (rename($temp_path, $jsonl_path)) {
         return array(
         'success'   => true,
         'processed' => $processed,

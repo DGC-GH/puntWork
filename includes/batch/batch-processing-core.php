@@ -11,7 +11,7 @@
 declare(strict_types=1);
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -21,10 +21,10 @@ if (! defined('ABSPATH') ) {
  * @param  array $setup Setup data from prepare_import_setup.
  * @return array Processing results.
  */
-function process_batch_items_logic( array $setup ): array
+function process_batch_items_logic(array $setup): array
 {
     $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
-    
+
     if ($debug_mode) {
         error_log('=== PUNTWORK BATCH DEBUG: process_batch_items_logic STARTED ===');
         error_log(
@@ -48,7 +48,7 @@ function process_batch_items_logic( array $setup ): array
 
     // Start tracing span for batch processing (only if available)
     $span = null;
-    if (class_exists('\Puntwork\PuntworkTracing') ) {
+    if (class_exists('\Puntwork\PuntworkTracing')) {
         $span = \Puntwork\PuntworkTracing::startActiveSpan(
             'process_batch_items_logic',
             array(
@@ -176,10 +176,10 @@ function process_batch_items_logic( array $setup ): array
                 )
             );
 
-            if ($batch_load_info['cancelled'] ) {
-                  if ($debug_mode) {
-                      error_log('[PUNTWORK] [BATCH-DEBUG] Batch was cancelled, returning early');
-                  }
+            if ($batch_load_info['cancelled']) {
+                if ($debug_mode) {
+                    error_log('[PUNTWORK] [BATCH-DEBUG] Batch was cancelled, returning early');
+                }
                   update_option('job_import_progress', $end_index, false);
                   update_option('job_import_processed_guids', $processed_guids, false);
                   $time_elapsed = microtime(true) - $setup['start_time'];
@@ -211,15 +211,15 @@ function process_batch_items_logic( array $setup ): array
                   update_option('job_import_status', $current_status, false);
 
                   // Flush cache for real-time status updates
-                  if (function_exists('wp_cache_flush')) {
-                      wp_cache_flush();
-                  }
+                if (function_exists('wp_cache_flush')) {
+                    wp_cache_flush();
+                }
 
-                if ($span ) {
+                if ($span) {
                     $span->setAttribute('batch.cancelled', true);
                     $span->end();
-                }                
-                
+                }
+
                 // Re-enable expensive plugin operations
                 enable_expensive_plugins();
                 if ($debug_mode) {
@@ -254,7 +254,7 @@ function process_batch_items_logic( array $setup ): array
             if ($debug_mode) {
                 error_log('[PUNTWORK] [BATCH-DEBUG] Calling process_batch_data');
             }
-            
+
             // Update status to show batch processing has started
             $current_status = get_option('job_import_status', array());
             $current_status['last_update'] = time();
@@ -263,7 +263,7 @@ function process_batch_items_logic( array $setup ): array
             if (function_exists('wp_cache_flush')) {
                 wp_cache_flush();
             }
-            
+
             // Process batch items
             $result = process_batch_data($batch_guids, $batch_items, $logs, $published, $updated, $skipped, $duplicates_drafted);
             if ($debug_mode) {
@@ -330,9 +330,9 @@ function process_batch_items_logic( array $setup ): array
                   update_option('job_import_status', $current_status, false);
 
                   // Flush cache for real-time status updates
-                  if (function_exists('wp_cache_flush')) {
-                      wp_cache_flush();
-                  }            // Schedule async analytics update for better performance
+            if (function_exists('wp_cache_flush')) {
+                wp_cache_flush();
+            }            // Schedule async analytics update for better performance
             $analytics_data = array(
             'import_id'          => wp_generate_uuid4(),
             'start_time'         => $setup['start_time'],
@@ -388,7 +388,7 @@ function process_batch_items_logic( array $setup ): array
             'performance'        => $perf_data,
             'message'            => '', // No error message for success
             );
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             // End performance monitoring on error
             $perf_data = end_performance_monitoring($perf_id);
 
@@ -396,7 +396,7 @@ function process_batch_items_logic( array $setup ): array
             error_log($error_msg);
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
 
-            if ($span ) {
+            if ($span) {
                 $span->recordException($e);
                 $span->setStatus(\OpenTelemetry\API\Trace\StatusCode::STATUS_ERROR, $e->getMessage());
                 $span->end();
@@ -418,9 +418,9 @@ function process_batch_items_logic( array $setup ): array
             'performance' => $perf_data,
             );
         }
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         // Handle outer try exceptions (setup/initialization errors)
-        if ($span ) {
+        if ($span) {
             $span->recordException($e);
             $span->setStatus(\OpenTelemetry\API\Trace\StatusCode::STATUS_ERROR, $e->getMessage());
             $span->end();
@@ -458,11 +458,11 @@ function update_intermediate_batch_status(int $processed_count, int $total_in_ba
 {
     // Get current status
     $current_status = get_option('job_import_status', array());
-    
+
     // Calculate total processed so far (previous batches + current batch progress)
     $previous_processed = $current_status['processed'] ?? 0;
     $total_processed = $previous_processed + $processed_count;
-    
+
     // Update status with intermediate values
     $intermediate_status = $current_status;
     $intermediate_status['processed'] = $total_processed;
@@ -474,26 +474,26 @@ function update_intermediate_batch_status(int $processed_count, int $total_in_ba
     $intermediate_status['success'] = true; // Still successful so far
     $intermediate_status['last_update'] = time();
     $intermediate_status['logs'] = array_slice($logs, -50); // Keep last 50 log entries
-    
+
     // Add intermediate progress message
     $intermediate_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Processing batch: {$processed_count}/{$total_in_batch} items completed";
-    
+
     update_option('job_import_status', $intermediate_status, false);
-    
+
     // Flush cache for real-time status updates
     if (function_exists('wp_cache_flush')) {
         wp_cache_flush();
     }
 }
-function process_batch_data( array $batch_guids, array $batch_items, array &$logs, int &$published, int &$updated, int &$skipped, int &$duplicates_drafted ): array
+function process_batch_data(array $batch_guids, array $batch_items, array &$logs, int &$published, int &$updated, int &$skipped, int &$duplicates_drafted): array
 {
     $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
-    
+
     if ($debug_mode) {
         error_log('[PUNTWORK] process_batch_data called with ' . count($batch_guids) . ' GUIDs');
     }
 
-    if (empty($batch_guids) ) {
+    if (empty($batch_guids)) {
         error_log('[PUNTWORK] ERROR: process_batch_data called with empty batch_guids! This means load_and_prepare_batch_items failed to load valid items.');
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'ERROR: No GUIDs to process in this batch';
         return array( 'processed_count' => 0 );
@@ -510,7 +510,7 @@ function process_batch_data( array $batch_guids, array $batch_items, array &$log
         if ($debug_mode) {
             error_log('[PUNTWORK] [BATCH-DEBUG] get_posts_by_guids_with_status completed, found ' . count($existing_by_guid) . ' existing GUIDs');
         }
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         error_log('[PUNTWORK] Error getting existing posts: ' . $e->getMessage());
         throw $e;
     }
@@ -568,7 +568,7 @@ function process_batch_data( array $batch_guids, array $batch_items, array &$log
 /**
  * Process batch items with prepared metadata.
  */
-function process_batch_items_with_metadata( array $batch_guids, array $batch_items, array $batch_metadata, array $post_ids_by_guid, array &$logs, int &$updated, int &$published, int &$skipped ): int
+function process_batch_items_with_metadata(array $batch_guids, array $batch_items, array $batch_metadata, array $post_ids_by_guid, array &$logs, int &$updated, int &$published, int &$skipped): int
 {
     $processed_count   = 0;
     $acf_fields        = get_acf_fields();
@@ -582,11 +582,11 @@ function process_batch_items_with_metadata( array $batch_guids, array $batch_ite
 /**
  * Queue batch items for processing instead of processing directly.
  */
-function queue_batch_items( array $batch_guids, array $batch_items, array $batch_metadata, array $post_ids_by_guid, array &$logs, int &$updated, int &$published, int &$skipped ): int
+function queue_batch_items(array $batch_guids, array $batch_items, array $batch_metadata, array $post_ids_by_guid, array &$logs, int &$updated, int &$published, int &$skipped): int
 {
     global $puntwork_queue_manager;
 
-    if (! $puntwork_queue_manager ) {
+    if (! $puntwork_queue_manager) {
         // Fallback to direct processing
         return process_batch_items_with_metadata($batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid, $logs, $updated, $published, $skipped);
     }
@@ -598,27 +598,27 @@ function queue_batch_items( array $batch_guids, array $batch_items, array $batch
     $chunk_size = 100; // Process in chunks to prevent timeouts
     $chunks = array_chunk($batch_guids, $chunk_size, true);
 
-    foreach ( $chunks as $chunk_index => $chunk_guids ) {
+    foreach ($chunks as $chunk_index => $chunk_guids) {
         $chunk_queued = 0;
 
-        foreach ( $chunk_guids as $index => $guid ) {
+        foreach ($chunk_guids as $index => $guid) {
             $job_data = isset($batch_items[$index]) ? $batch_items[$index] : null;
 
-            if (! $job_data ) {
+            if (! $job_data) {
                 continue;
             }
 
             // Check if job needs updating (same logic as direct processing)
             $post_id = $post_ids_by_guid[$guid] ?? null;
-            if ($post_id ) {
+            if ($post_id) {
                 $last_update = $batch_metadata['last_updates'][$post_id] ?? null;
                 $xml_updated = $job_data['updated'] ?? $job_data['pubdate'] ?? null;
 
-                if ($last_update && $xml_updated ) {
+                if ($last_update && $xml_updated) {
                     $last_update_ts = strtotime($last_update);
                     $xml_updated_ts = strtotime($xml_updated);
 
-                    if ($last_update_ts >= $xml_updated_ts ) {
+                    if ($last_update_ts >= $xml_updated_ts) {
                         ++$skipped;
                         continue;
                     }
@@ -639,7 +639,7 @@ function queue_batch_items( array $batch_guids, array $batch_items, array $batch
 
             $job_id = $puntwork_queue_manager->addJob('job_import', $queue_data, 10);
 
-            if ($job_id ) {
+            if ($job_id) {
                 ++$queued_count;
                 ++$chunk_queued;
             } else {

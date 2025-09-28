@@ -12,7 +12,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -21,7 +21,7 @@ if (! defined('ABSPATH') ) {
  */
 function render_debug_ui()
 {
-    if (! defined('WP_DEBUG') || ! WP_DEBUG ) {
+    if (! defined('WP_DEBUG') || ! WP_DEBUG) {
         return;
     }
     ?>

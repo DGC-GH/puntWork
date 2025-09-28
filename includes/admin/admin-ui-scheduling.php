@@ -12,7 +12,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -60,7 +60,7 @@ function render_scheduling_ui()
                     <div class="form-group">
                         <label for="schedule-hour" style="display: block; font-size: 14px; font-weight: 500; color: #424245; margin-bottom: 8px; letter-spacing: -0.01em;"><?php _e('Start Time - Hour', 'puntwork'); ?></label>
                         <select id="schedule-hour" style="width: 100%; padding: 12px 16px; border: 1px solid #d1d1d6; border-radius: 10px; font-size: 16px; background-color: #ffffff; color: #1d1d1f; font-weight: 400; transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
-                            <?php for ( $i = 0; $i < 24; $i++ ) : ?>
+                            <?php for ($i = 0; $i < 24; $i++) : ?>
                                 <option value="<?php echo $i; ?>" <?php echo $i == 9 ? 'selected' : ''; ?>><?php echo str_pad($i, 2, '0', STR_PAD_LEFT); ?>:00</option>
                             <?php endfor; ?>
                         </select>
@@ -68,7 +68,7 @@ function render_scheduling_ui()
                     <div class="form-group">
                         <label for="schedule-minute" style="display: block; font-size: 14px; font-weight: 500; color: #424245; margin-bottom: 8px; letter-spacing: -0.01em;"><?php _e('Minute', 'puntwork'); ?></label>
                         <select id="schedule-minute" style="width: 100%; padding: 12px 16px; border: 1px solid #d1d1d6; border-radius: 10px; font-size: 16px; background-color: #ffffff; color: #1d1d1f; font-weight: 400; transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
-                            <?php for ( $i = 0; $i < 60; $i++ ) : ?>
+                            <?php for ($i = 0; $i < 60; $i++) : ?>
                                 <option value="<?php echo $i; ?>" <?php echo $i == 0 ? 'selected' : ''; ?>><?php echo str_pad($i, 2, '0', STR_PAD_LEFT); ?></option>
                             <?php endfor; ?>
                         </select>

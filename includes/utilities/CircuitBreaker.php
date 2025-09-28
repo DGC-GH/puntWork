@@ -11,7 +11,7 @@
 namespace Puntwork\Utilities;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class CircuitBreaker
 {
-
     private static array $circuits = array();
     public const STATE_CLOSED      = 'closed';     // Normal operation
     public const STATE_OPEN        = 'open';         // Failing, reject requests
@@ -32,24 +31,24 @@ class CircuitBreaker
      * @param  string $circuit_name Circuit identifier
      * @return bool True if request should proceed
      */
-    public static function canProceed( string $circuit_name ): bool
+    public static function canProceed(string $circuit_name): bool
     {
         $circuit = self::getCircuitState($circuit_name);
 
-        switch ( $circuit['state'] ) {
-        case self::STATE_CLOSED:
-            return true;
-        case self::STATE_OPEN:
-            // Check if timeout has passed
-            if (time() - $circuit['last_failure'] > $circuit['timeout'] ) {
-                self::$circuits[ $circuit_name ]['state'] = self::STATE_HALF_OPEN;
-                return true; // Allow one test request
-            }
-            return false;
-        case self::STATE_HALF_OPEN:
-            return true; // Allow test request
-        default:
-            return true;
+        switch ($circuit['state']) {
+            case self::STATE_CLOSED:
+                return true;
+            case self::STATE_OPEN:
+                // Check if timeout has passed
+                if (time() - $circuit['last_failure'] > $circuit['timeout']) {
+                    self::$circuits[ $circuit_name ]['state'] = self::STATE_HALF_OPEN;
+                    return true; // Allow one test request
+                }
+                return false;
+            case self::STATE_HALF_OPEN:
+                return true; // Allow test request
+            default:
+                return true;
         }
     }
 
@@ -58,15 +57,15 @@ class CircuitBreaker
      *
      * @param string $circuit_name Circuit identifier
      */
-    public static function recordSuccess( string $circuit_name ): void
+    public static function recordSuccess(string $circuit_name): void
     {
-        if (! isset(self::$circuits[ $circuit_name ]) ) {
+        if (! isset(self::$circuits[ $circuit_name ])) {
             self::initCircuit($circuit_name);
         }
 
         $circuit = &self::$circuits[ $circuit_name ];
 
-        if ($circuit['state'] === self::STATE_HALF_OPEN ) {
+        if ($circuit['state'] === self::STATE_HALF_OPEN) {
             // Service recovered, close circuit
             $circuit['state']         = self::STATE_CLOSED;
             $circuit['failure_count'] = 0;
@@ -78,9 +77,9 @@ class CircuitBreaker
      *
      * @param string $circuit_name Circuit identifier
      */
-    public static function recordFailure( string $circuit_name ): void
+    public static function recordFailure(string $circuit_name): void
     {
-        if (! isset(self::$circuits[ $circuit_name ]) ) {
+        if (! isset(self::$circuits[ $circuit_name ])) {
             self::initCircuit($circuit_name);
         }
 
@@ -89,7 +88,7 @@ class CircuitBreaker
         $circuit['last_failure'] = time();
 
         // Open circuit if failure threshold reached
-        if ($circuit['failure_count'] >= $circuit['failure_threshold'] ) {
+        if ($circuit['failure_count'] >= $circuit['failure_threshold']) {
             $circuit['state'] = self::STATE_OPEN;
         }
     }
@@ -100,9 +99,9 @@ class CircuitBreaker
      * @param  string $circuit_name Circuit identifier
      * @return array Circuit state data
      */
-    private static function getCircuitState( string $circuit_name ): array
+    private static function getCircuitState(string $circuit_name): array
     {
-        if (! isset(self::$circuits[ $circuit_name ]) ) {
+        if (! isset(self::$circuits[ $circuit_name ])) {
             self::initCircuit($circuit_name);
         }
         return self::$circuits[ $circuit_name ];
@@ -113,7 +112,7 @@ class CircuitBreaker
      *
      * @param string $circuit_name Circuit identifier
      */
-    private static function initCircuit( string $circuit_name ): void
+    private static function initCircuit(string $circuit_name): void
     {
         self::$circuits[ $circuit_name ] = array(
         'state'             => self::STATE_CLOSED,

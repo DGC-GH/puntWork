@@ -12,7 +12,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -35,7 +35,7 @@ function mark_existing_jobs_as_processed()
         "
         );
 
-        if ($job_count === null ) {
+        if ($job_count === null) {
             $job_count = 0;
         }
 
@@ -46,7 +46,7 @@ function mark_existing_jobs_as_processed()
         'message' => 'Existing jobs marked as processed',
         'total'   => (int) $job_count,
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         error_log('[PUNTWORK] Failed to count existing jobs: ' . $e->getMessage());
         return array(
         'success' => false,
@@ -55,14 +55,14 @@ function mark_existing_jobs_as_processed()
         );
     }
 }
-function run_scheduled_import( $test_mode = false, $trigger_type = 'scheduled' )
+function run_scheduled_import($test_mode = false, $trigger_type = 'scheduled')
 {
     error_log('[PUNTWORK] run_scheduled_import called with test_mode=' . ( $test_mode ? 'true' : 'false' ) . ', trigger_type=' . $trigger_type);
 
     // Check if scheduling is still enabled (skip this check for test mode or API triggers)
-    if (! $test_mode && $trigger_type !== 'api' ) {
+    if (! $test_mode && $trigger_type !== 'api') {
         $schedule = get_option('puntwork_import_schedule', array( 'enabled' => false ));
-        if (! $schedule['enabled'] ) {
+        if (! $schedule['enabled']) {
             error_log('[PUNTWORK] Scheduled import skipped - scheduling is disabled');
             return array(
             'success' => false,
@@ -80,7 +80,7 @@ function run_scheduled_import( $test_mode = false, $trigger_type = 'scheduled' )
 
         // For scheduled imports, refresh the feed data first
         // For API imports, also refresh to get latest data
-        if (! $test_mode ) {
+        if (! $test_mode) {
             error_log('[PUNTWORK] Refreshing feed data for import');
             try {
                 // Check if feeds are configured before refreshing
@@ -90,8 +90,8 @@ function run_scheduled_import( $test_mode = false, $trigger_type = 'scheduled' )
 
                 error_log('[PUNTWORK] Feed check: feeds found = ' . count($feeds) . ', jsonl_exists = ' . ( $jsonl_exists ? 'true' : 'false' ));
 
-                if (empty($feeds) ) {
-                    if ($jsonl_exists ) {
+                if (empty($feeds)) {
+                    if ($jsonl_exists) {
                         // No feeds configured but JSONL file exists - use existing data
                         error_log('[PUNTWORK] No feeds configured but JSONL file exists - proceeding with import');
                         // Don't refresh feeds, just proceed with existing JSONL file
@@ -100,7 +100,7 @@ function run_scheduled_import( $test_mode = false, $trigger_type = 'scheduled' )
                         error_log('[PUNTWORK] No feeds configured and no JSONL file - marking existing jobs as processed');
                         $result = mark_existing_jobs_as_processed();
                         error_log('[PUNTWORK] mark_existing_jobs_as_processed result: ' . json_encode($result));
-                        if (! $result['success'] ) {
+                        if (! $result['success']) {
                                   return array(
                                    'success' => false,
                                    'message' => 'Failed to mark existing jobs as processed: ' . $result['message'],
@@ -109,7 +109,7 @@ function run_scheduled_import( $test_mode = false, $trigger_type = 'scheduled' )
 
                         // Update status to indicate using existing data
                         $feed_status = get_option('job_import_status', array());
-                        if (! empty($feed_status) ) {
+                        if (! empty($feed_status)) {
                                   $feed_status['logs'][] = 'No feeds configured - marked ' . $result['total'] . ' existing jobs as processed';
                                   update_option('job_import_status', $feed_status, false);
                         }
@@ -136,12 +136,12 @@ function run_scheduled_import( $test_mode = false, $trigger_type = 'scheduled' )
 
                     // Update status after feed refresh
                     $feed_status = get_option('job_import_status', array());
-                    if (! empty($feed_status) ) {
+                    if (! empty($feed_status)) {
                         $feed_status['logs'][] = 'Feed data refreshed successfully';
                         update_option('job_import_status', $feed_status, false);
                     }
                 }
-            } catch ( \Exception $e ) {
+            } catch (\Exception $e) {
                 error_log('[PUNTWORK] Feed refresh failed: ' . $e->getMessage());
                 return array(
                 'success' => false,
@@ -171,7 +171,7 @@ function run_scheduled_import( $test_mode = false, $trigger_type = 'scheduled' )
         update_option('puntwork_last_import_run', $last_run_data);
 
         // Store detailed run information
-        if (isset($result['success']) ) {
+        if (isset($result['success'])) {
             $details = array(
             'success'       => $result['success'],
             'duration'      => $duration,
@@ -194,13 +194,13 @@ function run_scheduled_import( $test_mode = false, $trigger_type = 'scheduled' )
 
             // Only log to history if the import is actually complete (not paused)
             // Paused imports will be logged when they resume and complete
-            if (! isset($result['paused']) || ! $result['paused'] ) {
+            if (! isset($result['paused']) || ! $result['paused']) {
                 log_scheduled_run($details, $test_mode, $trigger_type);
             }
         }
 
         return $result;
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         $end_time = microtime(true);
         $duration = $end_time - $start_time;
 
@@ -242,7 +242,7 @@ function run_scheduled_import( $test_mode = false, $trigger_type = 'scheduled' )
 /**
  * Log a scheduled run to history
  */
-function log_scheduled_run( $details, $test_mode = false, $trigger_type = 'scheduled' )
+function log_scheduled_run($details, $test_mode = false, $trigger_type = 'scheduled')
 {
     $run_entry = array(
     'timestamp'      => $details['timestamp'],
@@ -266,7 +266,7 @@ function log_scheduled_run( $details, $test_mode = false, $trigger_type = 'sched
     array_unshift($history, $run_entry);
 
     // Keep only the last 20 runs to prevent the option from growing too large
-    if (count($history) > 20 ) {
+    if (count($history) > 20) {
         $history = array_slice($history, 0, 20);
     }
 
@@ -293,7 +293,7 @@ function log_scheduled_run( $details, $test_mode = false, $trigger_type = 'sched
 /**
  * Log a manual import run to history
  */
-function log_manual_import_run( $details )
+function log_manual_import_run($details)
 {
     $run_entry = array(
     'timestamp'      => $details['timestamp'],
@@ -317,7 +317,7 @@ function log_manual_import_run( $details )
     array_unshift($history, $run_entry);
 
     // Keep only the last 20 runs to prevent the option from growing too large
-    if (count($history) > 20 ) {
+    if (count($history) > 20) {
         $history = array_slice($history, 0, 20);
     }
 

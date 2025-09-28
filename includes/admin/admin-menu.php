@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,7 @@ add_action(
     'admin_init',
     function () {
         // This helps ensure the admin menu icon is refreshed
-        if (isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0 ) {
+        if (isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0) {
             // Add a small cache-busting parameter to force icon reload
             add_action(
                 'admin_head',
@@ -124,7 +124,7 @@ add_action(
     'admin_menu',
     function () {
         // Onboarding menu item (only show if onboarding not completed) - always last
-        if (! PuntworkOnboardingWizard::isOnboardingCompleted() ) {
+        if (! PuntworkOnboardingWizard::isOnboardingCompleted()) {
             add_submenu_page(
                 'puntwork-dashboard',
                 __('Setup Wizard', 'puntwork'),

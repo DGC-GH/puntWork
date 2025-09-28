@@ -11,13 +11,13 @@
 namespace Puntwork\CRM;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
 // Mock WordPress functions for testing
-if (! function_exists('wp_remote_post') ) {
-    function wp_remote_post( $url, $args = array() )
+if (! function_exists('wp_remote_post')) {
+    function wp_remote_post($url, $args = array())
     {
         // Mock HTTP response
         return array(
@@ -27,15 +27,15 @@ if (! function_exists('wp_remote_post') ) {
     }
 }
 
-if (! function_exists('wp_remote_retrieve_body') ) {
-    function wp_remote_retrieve_body( $response )
+if (! function_exists('wp_remote_retrieve_body')) {
+    function wp_remote_retrieve_body($response)
     {
         return $response['body'] ?? '';
     }
 }
 
-if (! function_exists('is_wp_error') ) {
-    function is_wp_error( $thing )
+if (! function_exists('is_wp_error')) {
+    function is_wp_error($thing)
     {
         return false;
     }
@@ -46,7 +46,6 @@ if (! function_exists('is_wp_error') ) {
  */
 class SalesforceIntegration extends CRMIntegration
 {
-
     /**
      * API base URL
      */
@@ -65,7 +64,7 @@ class SalesforceIntegration extends CRMIntegration
     /**
      * Constructor
      */
-    public function __construct( array $config = array() )
+    public function __construct(array $config = array())
     {
         $this->platform_id   = 'salesforce';
         $this->platform_name = 'Salesforce';
@@ -83,7 +82,7 @@ class SalesforceIntegration extends CRMIntegration
      */
     protected function initialize(): void
     {
-        if ($this->isConfigured() ) {
+        if ($this->isConfigured()) {
             $this->authenticate();
         }
     }
@@ -118,18 +117,18 @@ class SalesforceIntegration extends CRMIntegration
                 )
             );
 
-            if (is_wp_error($response) ) {
+            if (is_wp_error($response)) {
                    throw new \Exception('Authentication request failed: ' . $response->get_error_message());
             }
 
             $body = wp_remote_retrieve_body($response);
             $data = json_decode($body, true);
 
-            if (json_last_error() !== JSON_ERROR_NONE ) {
+            if (json_last_error() !== JSON_ERROR_NONE) {
                 throw new \Exception('Invalid JSON response from Salesforce authentication');
             }
 
-            if (isset($data['error']) ) {
+            if (isset($data['error'])) {
                 throw new \Exception('Salesforce authentication error: ' . $data['error_description']);
             }
 
@@ -137,7 +136,7 @@ class SalesforceIntegration extends CRMIntegration
             $this->instance_url = $data['instance_url'];
 
             return true;
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error(
                 'Salesforce authentication failed',
                 PuntWorkLogger::CONTEXT_CRM,
@@ -154,7 +153,7 @@ class SalesforceIntegration extends CRMIntegration
      */
     public function testConnection(): array
     {
-        if (! $this->isConfigured() ) {
+        if (! $this->isConfigured()) {
             return array(
             'success' => false,
             'message' => 'Salesforce credentials not configured',
@@ -162,7 +161,7 @@ class SalesforceIntegration extends CRMIntegration
         }
 
         try {
-            if (! $this->authenticate() ) {
+            if (! $this->authenticate()) {
                 return array(
                 'success' => false,
                 'message' => 'Salesforce authentication failed',
@@ -177,7 +176,7 @@ class SalesforceIntegration extends CRMIntegration
             'message'      => 'Salesforce connection successful',
             'instance_url' => $this->instance_url,
             );
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             return array(
             'success' => false,
             'message' => 'Salesforce connection failed: ' . $e->getMessage(),
@@ -188,7 +187,7 @@ class SalesforceIntegration extends CRMIntegration
     /**
      * Create or update a contact
      */
-    public function createContact( array $contact_data ): array
+    public function createContact(array $contact_data): array
     {
         $standardized_data = $this->standardizeContactData($contact_data);
 
@@ -203,7 +202,7 @@ class SalesforceIntegration extends CRMIntegration
             'platform'   => 'salesforce',
             'timestamp'  => time(),
             );
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error(
                 'Salesforce contact creation failed',
                 PuntWorkLogger::CONTEXT_CRM,
@@ -225,7 +224,7 @@ class SalesforceIntegration extends CRMIntegration
     /**
      * Update existing contact
      */
-    public function updateContact( string $contact_id, array $contact_data ): array
+    public function updateContact(string $contact_id, array $contact_data): array
     {
         $standardized_data = $this->standardizeContactData($contact_data);
 
@@ -240,7 +239,7 @@ class SalesforceIntegration extends CRMIntegration
             'platform'   => 'salesforce',
             'timestamp'  => time(),
             );
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error(
                 'Salesforce contact update failed',
                 PuntWorkLogger::CONTEXT_CRM,
@@ -262,13 +261,13 @@ class SalesforceIntegration extends CRMIntegration
     /**
      * Find contact by email
      */
-    public function findContactByEmail( string $email ): ?array
+    public function findContactByEmail(string $email): ?array
     {
         try {
             $query    = "SELECT Id, FirstName, LastName, Email, Phone, Account.Name FROM Contact WHERE Email = '{$email}'";
             $response = $this->makeApiRequest('query', array( 'q' => $query ), 'GET');
 
-            if (! empty($response['records']) ) {
+            if (! empty($response['records'])) {
                 return array(
                  'id'         => $response['records'][0]['Id'],
                  'properties' => $response['records'][0],
@@ -276,7 +275,7 @@ class SalesforceIntegration extends CRMIntegration
             }
 
             return null;
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error(
                 'Salesforce contact search failed',
                 PuntWorkLogger::CONTEXT_CRM,
@@ -293,7 +292,7 @@ class SalesforceIntegration extends CRMIntegration
     /**
      * Create a deal/opportunity
      */
-    public function createDeal( array $deal_data ): array
+    public function createDeal(array $deal_data): array
     {
         $standardized_data = $this->standardizeDealData($deal_data);
 
@@ -310,7 +309,7 @@ class SalesforceIntegration extends CRMIntegration
             $response = $this->makeApiRequest('sobjects/Opportunity', $sf_opportunity, 'POST');
 
             // Associate opportunity with contact if contact_id provided
-            if (! empty($standardized_data['contact_id']) ) {
+            if (! empty($standardized_data['contact_id'])) {
                 $this->associateOpportunityWithContact($response['id'], $standardized_data['contact_id']);
             }
 
@@ -320,7 +319,7 @@ class SalesforceIntegration extends CRMIntegration
             'platform'  => 'salesforce',
             'timestamp' => time(),
             );
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error(
                 'Salesforce opportunity creation failed',
                 PuntWorkLogger::CONTEXT_CRM,
@@ -342,57 +341,57 @@ class SalesforceIntegration extends CRMIntegration
     /**
      * Format contact data for Salesforce API
      */
-    private function formatContactData( array $contact_data ): array
+    private function formatContactData(array $contact_data): array
     {
         $sf_contact = array();
 
-        if (! empty($contact_data['first_name']) ) {
+        if (! empty($contact_data['first_name'])) {
             $sf_contact['FirstName'] = $contact_data['first_name'];
         }
 
-        if (! empty($contact_data['last_name']) ) {
+        if (! empty($contact_data['last_name'])) {
             $sf_contact['LastName'] = $contact_data['last_name'];
         }
 
-        if (! empty($contact_data['email']) ) {
+        if (! empty($contact_data['email'])) {
             $sf_contact['Email'] = $contact_data['email'];
         }
 
-        if (! empty($contact_data['phone']) ) {
+        if (! empty($contact_data['phone'])) {
             $sf_contact['Phone'] = $contact_data['phone'];
         }
 
-        if (! empty($contact_data['company']) ) {
+        if (! empty($contact_data['company'])) {
             $sf_contact['Account'] = array( 'Name' => $contact_data['company'] );
         }
 
-        if (! empty($contact_data['job_title']) ) {
+        if (! empty($contact_data['job_title'])) {
             $sf_contact['Title'] = $contact_data['job_title'];
         }
 
-        if (! empty($contact_data['address']) ) {
+        if (! empty($contact_data['address'])) {
             $sf_contact['MailingStreet'] = $contact_data['address'];
         }
 
-        if (! empty($contact_data['city']) ) {
+        if (! empty($contact_data['city'])) {
             $sf_contact['MailingCity'] = $contact_data['city'];
         }
 
-        if (! empty($contact_data['state']) ) {
+        if (! empty($contact_data['state'])) {
             $sf_contact['MailingState'] = $contact_data['state'];
         }
 
-        if (! empty($contact_data['zip']) ) {
+        if (! empty($contact_data['zip'])) {
             $sf_contact['MailingPostalCode'] = $contact_data['zip'];
         }
 
-        if (! empty($contact_data['country']) ) {
+        if (! empty($contact_data['country'])) {
             $sf_contact['MailingCountry'] = $contact_data['country'];
         }
 
         // Add custom fields
-        if (! empty($contact_data['custom_fields']) ) {
-            foreach ( $contact_data['custom_fields'] as $key => $value ) {
+        if (! empty($contact_data['custom_fields'])) {
+            foreach ($contact_data['custom_fields'] as $key => $value) {
                 $sf_contact[ $key ] = $value;
             }
         }
@@ -403,7 +402,7 @@ class SalesforceIntegration extends CRMIntegration
     /**
      * Map deal stage to Salesforce opportunity stages
      */
-    private function mapOpportunityStage( string $stage ): string
+    private function mapOpportunityStage(string $stage): string
     {
         $stage_mapping = array(
         'lead'                 => 'Prospecting',
@@ -421,7 +420,7 @@ class SalesforceIntegration extends CRMIntegration
     /**
      * Associate opportunity with contact
      */
-    private function associateOpportunityWithContact( string $opportunity_id, string $contact_id ): void
+    private function associateOpportunityWithContact(string $opportunity_id, string $contact_id): void
     {
         try {
             // Create Opportunity Contact Role
@@ -433,7 +432,7 @@ class SalesforceIntegration extends CRMIntegration
             );
 
             $this->makeApiRequest('sobjects/OpportunityContactRole', $ocr_data, 'POST');
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error(
                 'Salesforce opportunity-contact association failed',
                 PuntWorkLogger::CONTEXT_CRM,
@@ -468,14 +467,14 @@ class SalesforceIntegration extends CRMIntegration
     /**
      * Handle Salesforce API errors
      */
-    protected function handleApiError( array $response ): void
+    protected function handleApiError(array $response): void
     {
-        if (isset($response[0]['errorCode']) ) {
+        if (isset($response[0]['errorCode'])) {
             $message = $response[0]['message'] ?? 'Unknown error';
             throw new \Exception('Salesforce API Error: ' . $message);
         }
 
-        if (isset($response['error']) ) {
+        if (isset($response['error'])) {
             $message = $response['error']['message'] ?? 'Unknown error';
             throw new \Exception('Salesforce API Error: ' . $message);
         }

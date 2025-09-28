@@ -11,7 +11,7 @@
 namespace Puntwork\Utilities;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,11 +20,10 @@ if (! defined('ABSPATH') ) {
  */
 class AdvancedMemoryManager extends MemoryManager
 {
-
     /**
      * Streaming JSONL processor for memory-efficient large file handling
      */
-    public static function processJsonlStreaming( string $filePath, callable $processor, int $chunkSize = 1000 ): array
+    public static function processJsonlStreaming(string $filePath, callable $processor, int $chunkSize = 1000): array
     {
         $stats = array(
         'total_processed' => 0,
@@ -34,35 +33,35 @@ class AdvancedMemoryManager extends MemoryManager
 
         $startTime = microtime(true);
 
-        if (! file_exists($filePath) ) {
+        if (! file_exists($filePath)) {
             throw new \Exception("File not found: $filePath");
         }
 
         $handle = fopen($filePath, 'r');
-        if (! $handle ) {
+        if (! $handle) {
             throw new \Exception("Cannot open file: $filePath");
         }
 
         $buffer     = array();
         $lineNumber = 0;
 
-        while ( ( $line = fgets($handle) ) !== false ) {
+        while (( $line = fgets($handle) ) !== false) {
             ++$lineNumber;
             $line = trim($line);
 
-            if (empty($line) ) {
+            if (empty($line)) {
                 continue;
             }
 
             $item = json_decode($line, true);
-            if ($item === null ) {
+            if ($item === null) {
                 continue; // Skip invalid JSON
             }
 
             $buffer[] = $item;
 
             // Process in chunks
-            if (count($buffer) >= $chunkSize ) {
+            if (count($buffer) >= $chunkSize) {
                 $processed                 = $processor($buffer);
                 $stats['total_processed'] += $processed;
                 $stats['memory_peaks'][]   = memory_get_peak_usage(true);
@@ -74,7 +73,7 @@ class AdvancedMemoryManager extends MemoryManager
         }
 
         // Process remaining items
-        if (! empty($buffer) ) {
+        if (! empty($buffer)) {
             $processed                 = $processor($buffer);
             $stats['total_processed'] += $processed;
             $stats['memory_peaks'][]   = memory_get_peak_usage(true);
@@ -93,14 +92,14 @@ class AdvancedMemoryManager extends MemoryManager
     /**
      * Memory-mapped file reader for extremely large files
      */
-    public static function readLargeFileChunk( string $filePath, int $offset, int $length ): string
+    public static function readLargeFileChunk(string $filePath, int $offset, int $length): string
     {
-        if (! function_exists('fopen') ) {
+        if (! function_exists('fopen')) {
             throw new \Exception('File functions not available');
         }
 
         $handle = fopen($filePath, 'r');
-        if (! $handle ) {
+        if (! $handle) {
             throw new \Exception("Cannot open file: $filePath");
         }
 
@@ -122,10 +121,10 @@ class AdvancedMemoryManager extends MemoryManager
         $memoryLimit  = self::getMemoryLimitBytes();
         $currentRatio = $memoryUsage / $memoryLimit;
 
-        if ($currentRatio > $targetMemoryRatio ) {
+        if ($currentRatio > $targetMemoryRatio) {
             // Reduce batch size
             $newSize = max(1, (int) ( $currentBatchSize * 0.8 ));
-        } elseif ($currentRatio < $targetMemoryRatio * 0.5 ) {
+        } elseif ($currentRatio < $targetMemoryRatio * 0.5) {
             // Can increase batch size
             $newSize = min($currentBatchSize * 2, 10000); // Cap at 10k
         } else {
@@ -141,11 +140,11 @@ class AdvancedMemoryManager extends MemoryManager
      */
     private static $objectPool = array();
 
-    public static function getFromPool( string $className, ...$args )
+    public static function getFromPool(string $className, ...$args)
     {
         $key = $className . '_' . md5(serialize($args));
 
-        if (isset(self::$objectPool[ $key ]) ) {
+        if (isset(self::$objectPool[ $key ])) {
             return self::$objectPool[ $key ];
         }
 
@@ -170,14 +169,14 @@ class AdvancedMemoryManager extends MemoryManager
         $memoryLimit = self::getMemoryLimitBytes();
         $ratio       = $memoryUsage / $memoryLimit;
 
-        if ($ratio > 0.85 ) {
+        if ($ratio > 0.85) {
             // Aggressive cleanup
             self::clearPool();
-            if (function_exists('wp_cache_flush') ) {
+            if (function_exists('wp_cache_flush')) {
                 wp_cache_flush();
             }
             gc_collect_cycles();
-        } elseif ($ratio > 0.75 ) {
+        } elseif ($ratio > 0.75) {
             // Moderate cleanup
             gc_collect_cycles();
         }
@@ -186,7 +185,7 @@ class AdvancedMemoryManager extends MemoryManager
     /**
      * Memory usage prediction for batch operations
      */
-    public static function predictMemoryUsage( int $batchSize, int $itemSizeEstimate = 1024 ): array
+    public static function predictMemoryUsage(int $batchSize, int $itemSizeEstimate = 1024): array
     {
         $baseMemory           = memory_get_usage(true);
         $estimatedBatchMemory = $batchSize * $itemSizeEstimate;
@@ -208,16 +207,16 @@ class AdvancedMemoryManager extends MemoryManager
     /**
      * Compressed caching for large datasets
      */
-    public static function setCompressed( string $key, $data, string $group = '', int $expiration = 3600 ): bool
+    public static function setCompressed(string $key, $data, string $group = '', int $expiration = 3600): bool
     {
         $compressed = gzcompress(serialize($data), 6);
         return self::set($key . '_compressed', $compressed, $group, $expiration);
     }
 
-    public static function getCompressed( string $key, string $group = '' )
+    public static function getCompressed(string $key, string $group = '')
     {
         $compressed = self::get($key . '_compressed', $group);
-        if ($compressed === false ) {
+        if ($compressed === false) {
             return false;
         }
 

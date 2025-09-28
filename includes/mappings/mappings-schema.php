@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,8 +20,8 @@ if (! defined('ABSPATH') ) {
  * Handles job posting and e-commerce schema generation
  */
 
-if (! function_exists('build_job_schema') ) {
-    function build_job_schema( $enhanced_title, $job_desc, $item, $norm_province, $job_time, $job_remote, $fg, $estimate_key )
+if (! function_exists('build_job_schema')) {
+    function build_job_schema($enhanced_title, $job_desc, $item, $norm_province, $job_time, $job_remote, $fg, $estimate_key)
     {
         $schema = array(
         '@context'                      => 'https://schema.org',
@@ -72,8 +72,8 @@ if (! function_exists('build_job_schema') ) {
     }
 }
 
-if (! function_exists('build_ecomm_schema') ) {
-    function build_ecomm_schema( $enhanced_title, $job_desc, $item, $estimate_key )
+if (! function_exists('build_ecomm_schema')) {
+    function build_ecomm_schema($enhanced_title, $job_desc, $item, $estimate_key)
     {
         $schema = array(
         '@context'    => 'https://schema.org',

@@ -11,7 +11,7 @@
 namespace Puntwork\JobBoards;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 abstract class JobBoard
 {
-
     /**
      * Job board identifier
      */
@@ -54,7 +53,7 @@ abstract class JobBoard
      *
      * @param array $config Configuration array
      */
-    public function __construct( array $config = array() )
+    public function __construct(array $config = array())
     {
         $this->configure($config);
     }
@@ -64,17 +63,17 @@ abstract class JobBoard
      *
      * @param array $config Configuration options
      */
-    public function configure( array $config ): void
+    public function configure(array $config): void
     {
-        if (isset($config['api_url']) ) {
+        if (isset($config['api_url'])) {
             $this->api_url = $config['api_url'];
         }
 
-        if (isset($config['credentials']) ) {
+        if (isset($config['credentials'])) {
             $this->credentials = $config['credentials'];
         }
 
-        if (isset($config['rate_limits']) ) {
+        if (isset($config['rate_limits'])) {
             $this->rate_limits = array_merge($this->rate_limits, $config['rate_limits']);
         }
     }
@@ -109,7 +108,7 @@ abstract class JobBoard
      * @param  array $params Query parameters
      * @return array Array of job data
      */
-    abstract public function fetchJobs( array $params = array() ): array;
+    abstract public function fetchJobs(array $params = array()): array;
 
     /**
      * Get job details by ID
@@ -117,7 +116,7 @@ abstract class JobBoard
      * @param  string $jobId Job identifier
      * @return array|null Job details or null if not found
      */
-    abstract public function getJobDetails( string $jobId ): ?array;
+    abstract public function getJobDetails(string $jobId): ?array;
 
     /**
      * Search jobs with filters
@@ -125,7 +124,7 @@ abstract class JobBoard
      * @param  array $filters Search filters
      * @return array Array of matching jobs
      */
-    abstract public function searchJobs( array $filters = array() ): array;
+    abstract public function searchJobs(array $filters = array()): array;
 
     /**
      * Get supported search filters
@@ -151,7 +150,7 @@ abstract class JobBoard
      * @param  array $jobData Raw job data from API
      * @return array Normalized job data
      */
-    protected function normalizeJobData( array $jobData ): array
+    protected function normalizeJobData(array $jobData): array
     {
         return array(
         'id'                   => $jobData['id'] ?? uniqid($this->board_id . '_'),
@@ -181,14 +180,14 @@ abstract class JobBoard
      * @param  string $method   HTTP method
      * @return array Response data
      */
-    protected function makeApiRequest( string $endpoint, array $params = array(), string $method = 'GET' ): array
+    protected function makeApiRequest(string $endpoint, array $params = array(), string $method = 'GET'): array
     {
         // Rate limiting check
         $this->checkRateLimit();
 
         $url = $this->api_url . $endpoint;
 
-        if ($method === 'GET' && ! empty($params) ) {
+        if ($method === 'GET' && ! empty($params)) {
             $url .= '?' . http_build_query($params);
         }
 
@@ -198,21 +197,21 @@ abstract class JobBoard
         'headers' => $this->getHeaders(),
         );
 
-        if ($method === 'POST' && ! empty($params) ) {
+        if ($method === 'POST' && ! empty($params)) {
             $args['body']                    = json_encode($params);
             $args['headers']['Content-Type'] = 'application/json';
         }
 
         $response = wp_remote_request($url, $args);
 
-        if (is_wp_error($response) ) {
+        if (is_wp_error($response)) {
             throw new \Exception('API request failed: ' . $response->get_error_message());
         }
 
         $body = wp_remote_retrieve_body($response);
         $data = json_decode($body, true);
 
-        if (json_last_error() !== JSON_ERROR_NONE ) {
+        if (json_last_error() !== JSON_ERROR_NONE) {
             throw new \Exception('Invalid JSON response from API');
         }
 
@@ -241,15 +240,15 @@ abstract class JobBoard
         // Clean old requests (older than 1 minute)
         $requests = array_filter(
             $requests,
-            function ( $timestamp ) {
+            function ($timestamp) {
                 return $timestamp > ( time() - 60 );
             }
         );
 
-        if (count($requests) >= $this->rate_limits['requests_per_minute'] ) {
+        if (count($requests) >= $this->rate_limits['requests_per_minute']) {
             $oldest_request = min($requests);
             $wait_time      = 60 - ( time() - $oldest_request );
-            if ($wait_time > 0 ) {
+            if ($wait_time > 0) {
                 sleep($wait_time);
             }
         }
@@ -263,15 +262,15 @@ abstract class JobBoard
      *
      * @param array $response API response
      */
-    protected function handleApiError( array $response ): void
+    protected function handleApiError(array $response): void
     {
-        if (isset($response['error']) ) {
+        if (isset($response['error'])) {
             $error_msg = $response['error']['message'] ?? 'Unknown API error';
             throw new \Exception("{$this->board_name} API Error: {$error_msg}");
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
-        if ($status_code >= 400 ) {
+        if ($status_code >= 400) {
             throw new \Exception("{$this->board_name} API returned status {$status_code}");
         }
     }

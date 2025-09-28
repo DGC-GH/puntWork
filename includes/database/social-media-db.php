@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Social Media Database Setup.
  *
@@ -12,7 +13,7 @@
 namespace Puntwork;
 
 // Prevent direct access.
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -21,7 +22,6 @@ if (! defined('ABSPATH') ) {
  */
 class SocialMediaDb
 {
-
     /**
      * Database version
      */
@@ -47,7 +47,7 @@ class SocialMediaDb
     {
         $current_version = get_option(self::DB_VERSION_OPTION, '0');
 
-        if (version_compare($current_version, self::DB_VERSION, '<') ) {
+        if (version_compare($current_version, self::DB_VERSION, '<')) {
             self::create_tables();
             update_option(self::DB_VERSION_OPTION, self::DB_VERSION);
         }
@@ -119,7 +119,7 @@ class SocialMediaDb
      *
      * @param string $table Table identifier.
      */
-    public static function getTableName( string $table ): string
+    public static function getTableName(string $table): string
     {
         global $wpdb;
 

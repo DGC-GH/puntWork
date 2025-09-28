@@ -11,7 +11,7 @@
 namespace Puntwork\SocialMedia;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class SocialMediaManager
 {
-
     /**
      * Available social media platforms
      */
@@ -50,12 +49,12 @@ class SocialMediaManager
     {
         $platform_configs = get_option('puntwork_social_media', array());
 
-        foreach ( $platform_configs as $platform_id => $config ) {
-            if (isset(self::$available_platforms[ $platform_id ]) && isset($config['enabled']) && $config['enabled'] ) {
+        foreach ($platform_configs as $platform_id => $config) {
+            if (isset(self::$available_platforms[ $platform_id ]) && isset($config['enabled']) && $config['enabled']) {
                 try {
                     $platform_class                  = self::$available_platforms[ $platform_id ];
                     $this->platforms[ $platform_id ] = new $platform_class($config);
-                } catch ( \Exception $e ) {
+                } catch (\Exception $e) {
                     PuntWorkLogger::error(
                         'Failed to initialize social media platform',
                         PuntWorkLogger::CONTEXT_SOCIAL,
@@ -76,7 +75,7 @@ class SocialMediaManager
     {
         $platforms = array();
 
-        foreach ( self::$available_platforms as $platform_id => $platform_class ) {
+        foreach (self::$available_platforms as $platform_id => $platform_class) {
             $platforms[ $platform_id ] = array(
             'name'  => $platform_class::getPlatformName(),
             'class' => $platform_class,
@@ -97,7 +96,7 @@ class SocialMediaManager
     /**
      * Check if a platform is configured
      */
-    public function isPlatformConfigured( string $platform_id ): bool
+    public function isPlatformConfigured(string $platform_id): bool
     {
         return isset($this->platforms[ $platform_id ]);
     }
@@ -105,7 +104,7 @@ class SocialMediaManager
     /**
      * Get a specific platform instance
      */
-    public function getPlatform( string $platform_id ): ?SocialMediaPlatform
+    public function getPlatform(string $platform_id): ?SocialMediaPlatform
     {
         return $this->platforms[ $platform_id ] ?? null;
     }
@@ -113,12 +112,12 @@ class SocialMediaManager
     /**
      * Post content to multiple platforms
      */
-    public function postToPlatforms( array $content, array $platforms = array(), array $options = array() ): array
+    public function postToPlatforms(array $content, array $platforms = array(), array $options = array()): array
     {
         $results          = array();
         $target_platforms = empty($platforms) ? $this->platforms : array_intersect_key($this->platforms, array_flip($platforms));
 
-        foreach ( $target_platforms as $platform_id => $platform ) {
+        foreach ($target_platforms as $platform_id => $platform) {
             try {
                 $platform_options = $options[ $platform_id ] ?? $options;
                 $result           = $platform->post($content, $platform_options);
@@ -134,7 +133,7 @@ class SocialMediaManager
                     'post_id'     => $result['post_id'] ?? null,
                     )
                 );
-            } catch ( \Exception $e ) {
+            } catch (\Exception $e) {
                 PuntWorkLogger::error(
                     'Failed to post to social media platform',
                     PuntWorkLogger::CONTEXT_SOCIAL,
@@ -159,16 +158,16 @@ class SocialMediaManager
     /**
      * Post job to social media platforms with ads
      */
-    public function postJobWithAds( array $job_data, array $platforms = array(), array $ads_config = array() ): array
+    public function postJobWithAds(array $job_data, array $platforms = array(), array $ads_config = array()): array
     {
         $results          = array();
         $target_platforms = empty($platforms) ? $this->platforms : array_intersect_key($this->platforms, array_flip($platforms));
 
-        foreach ( $target_platforms as $platform_id => $platform ) {
+        foreach ($target_platforms as $platform_id => $platform) {
             try {
                 $platform_ads_config = $ads_config[ $platform_id ] ?? $ads_config;
 
-                if ($platform->supportsAds() && ! empty($platform_ads_config) ) {
+                if ($platform->supportsAds() && ! empty($platform_ads_config)) {
                     // Post with ads
                     $result = $platform->postWithAds(
                         $this->formatJobForSocialMedia($job_data, $ads_config['options'] ?? array()),
@@ -192,7 +191,7 @@ class SocialMediaManager
                     'post_id'     => $result['post_id'] ?? null,
                     )
                 );
-            } catch ( \Exception $e ) {
+            } catch (\Exception $e) {
                 PuntWorkLogger::error(
                     'Failed to post job to social media platform',
                     PuntWorkLogger::CONTEXT_SOCIAL,
@@ -217,25 +216,25 @@ class SocialMediaManager
     /**
      * Format job data for social media posting
      */
-    private function formatJobForSocialMedia( array $job_data, array $options = array() ): array
+    private function formatJobForSocialMedia(array $job_data, array $options = array()): array
     {
         $template = $options['template'] ?? 'default';
 
-        switch ( $template ) {
-        case 'concise':
-            $text = $this->createConciseJobPost($job_data);
-            break;
-        case 'detailed':
-            $text = $this->createDetailedJobPost($job_data);
-            break;
-        default:
-            $text = $this->createDefaultJobPost($job_data);
+        switch ($template) {
+            case 'concise':
+                $text = $this->createConciseJobPost($job_data);
+                break;
+            case 'detailed':
+                $text = $this->createDetailedJobPost($job_data);
+                break;
+            default:
+                $text = $this->createDefaultJobPost($job_data);
         }
 
         $content = array( 'text' => $text );
 
         // Add media if available
-        if (! empty($job_data['company_logo']) ) {
+        if (! empty($job_data['company_logo'])) {
             $content['media'] = array( $job_data['company_logo'] );
         }
 
@@ -245,7 +244,7 @@ class SocialMediaManager
     /**
      * Create default job post format
      */
-    private function createDefaultJobPost( array $job_data ): string
+    private function createDefaultJobPost(array $job_data): string
     {
         $title    = $job_data['title'] ?? '';
         $company  = $job_data['company'] ?? '';
@@ -256,7 +255,7 @@ class SocialMediaManager
         $post .= "📋 {$title}\n";
         $post .= "🏢 {$company}\n";
 
-        if ($location ) {
+        if ($location) {
             $post .= "📍 {$location}\n";
         }
 
@@ -268,7 +267,7 @@ class SocialMediaManager
     /**
      * Create concise job post format
      */
-    private function createConciseJobPost( array $job_data ): string
+    private function createConciseJobPost(array $job_data): string
     {
         $title   = $job_data['title'] ?? '';
         $company = $job_data['company'] ?? '';
@@ -280,7 +279,7 @@ class SocialMediaManager
     /**
      * Create detailed job post format
      */
-    private function createDetailedJobPost( array $job_data ): string
+    private function createDetailedJobPost(array $job_data): string
     {
         $title       = $job_data['title'] ?? '';
         $company     = $job_data['company'] ?? '';
@@ -293,15 +292,15 @@ class SocialMediaManager
         $post .= "📋 Position: {$title}\n";
         $post .= "🏢 Company: {$company}\n";
 
-        if ($location ) {
+        if ($location) {
             $post .= "📍 Location: {$location}\n";
         }
 
-        if ($salary ) {
+        if ($salary) {
             $post .= "💰 Salary: {$salary}\n";
         }
 
-        if ($description ) {
+        if ($description) {
             // Truncate description to fit within limits
             $desc_preview = wp_trim_words($description, 30, '...');
             $post        .= "\n📝 {$desc_preview}\n";
@@ -319,10 +318,10 @@ class SocialMediaManager
     {
         $limits = array();
 
-        foreach ( $this->platforms as $platform_id => $platform ) {
+        foreach ($this->platforms as $platform_id => $platform) {
             try {
                 $limits[ $platform_id ] = $platform->getLimits();
-            } catch ( \Exception $e ) {
+            } catch (\Exception $e) {
                 $limits[ $platform_id ] = array(
                 'error' => $e->getMessage(),
                 );
@@ -335,9 +334,9 @@ class SocialMediaManager
     /**
      * Configure a social media platform
      */
-    public static function configurePlatform( string $platform_id, array $config ): bool
+    public static function configurePlatform(string $platform_id, array $config): bool
     {
-        if (! isset(self::$available_platforms[ $platform_id ]) ) {
+        if (! isset(self::$available_platforms[ $platform_id ])) {
             return false;
         }
 
@@ -350,11 +349,11 @@ class SocialMediaManager
     /**
      * Remove a platform configuration
      */
-    public static function removePlatform( string $platform_id ): bool
+    public static function removePlatform(string $platform_id): bool
     {
         $platform_configs = get_option('puntwork_social_media', array());
 
-        if (isset($platform_configs[ $platform_id ]) ) {
+        if (isset($platform_configs[ $platform_id ])) {
             unset($platform_configs[ $platform_id ]);
             return update_option('puntwork_social_media', $platform_configs);
         }
@@ -365,7 +364,7 @@ class SocialMediaManager
     /**
      * Get platform configuration
      */
-    public static function getPlatformConfig( string $platform_id ): ?array
+    public static function getPlatformConfig(string $platform_id): ?array
     {
         $platform_configs = get_option('puntwork_social_media', array());
         return $platform_configs[ $platform_id ] ?? null;
@@ -382,11 +381,11 @@ class SocialMediaManager
     /**
      * Test platform configuration
      */
-    public function testPlatform( string $platform_id ): array
+    public function testPlatform(string $platform_id): array
     {
         $platform = $this->getPlatform($platform_id);
 
-        if (! $platform ) {
+        if (! $platform) {
             return array(
             'success' => false,
             'message' => 'Platform not configured',
@@ -402,7 +401,7 @@ class SocialMediaManager
             'message' => 'Platform connection successful',
             'limits'  => $limits,
             );
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             return array(
             'success' => false,
             'message' => 'Platform test failed: ' . $e->getMessage(),
@@ -413,7 +412,7 @@ class SocialMediaManager
     /**
      * Schedule social media post
      */
-    public function schedulePost( array $content, array $platforms, int $timestamp, array $options = array() ): int
+    public function schedulePost(array $content, array $platforms, int $timestamp, array $options = array()): int
     {
         $post_data = array(
         'content'        => $content,
@@ -456,10 +455,10 @@ class SocialMediaManager
             ARRAY_A
         );
 
-        foreach ( $scheduled_posts as $post ) {
+        foreach ($scheduled_posts as $post) {
             $post_data = json_decode($post['post_data'], true);
 
-            if ($post_data ) {
+            if ($post_data) {
                 $results = $this->postToPlatforms(
                     $post_data['content'],
                     $post_data['platforms'],

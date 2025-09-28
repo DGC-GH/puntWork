@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -27,11 +27,11 @@ use Puntwork\Utilities\CacheManager;
  *
  * @return array Province mappings.
  */
-if (! function_exists('GetProvinceMap') ) {
+if (! function_exists('GetProvinceMap')) {
     function GetProvinceMap(): array
     {
         $cached = CacheManager::get('province_map', CacheManager::GROUP_MAPPINGS);
-        if (false === $cached ) {
+        if (false === $cached) {
             $cached = array(
             'antwerp'                        => 'antwerpen.work',
             'antwerpen'                      => 'antwerpen.work',

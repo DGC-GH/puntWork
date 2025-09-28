@@ -9,7 +9,7 @@
  */
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -24,9 +24,9 @@ if (! defined('ABSPATH') ) {
  * @param  array $result Processing result.
  * @return array Final result.
  */
-function finalize_batch_import( $result )
+function finalize_batch_import($result)
 {
-    if (is_wp_error($result) || ! $result['success'] ) {
+    if (is_wp_error($result) || ! $result['success']) {
         return $result;
     }
 
@@ -49,7 +49,7 @@ function finalize_batch_import( $result )
     );
 
     // Ensure start_time is set properly
-    if (! isset($status['start_time']) || $status['start_time'] == 0 ) {
+    if (! isset($status['start_time']) || $status['start_time'] == 0) {
         $status['start_time'] = $result['start_time'] ?? microtime(true);
     }
 
@@ -76,7 +76,7 @@ function finalize_batch_import( $result )
     update_option('job_import_status', $status, false);
 
     // Log completed import to history
-    if ($result['complete'] && $result['success'] ) {
+    if ($result['complete'] && $result['success']) {
         $trigger_type = $status['trigger_type'] ?? 'scheduled';
         $test_mode    = $status['test_mode'] ?? false;
 
@@ -93,7 +93,7 @@ function finalize_batch_import( $result )
         );
 
         // Use the appropriate logging function based on trigger type
-        if ($trigger_type === 'manual' ) {
+        if ($trigger_type === 'manual') {
             log_manual_import_run($details);
         } else {
             log_scheduled_run($details, $test_mode, $trigger_type);
@@ -110,7 +110,7 @@ function finalize_batch_import( $result )
         );
 
         // Post new jobs to social media if enabled
-        if (get_option('puntwork_social_auto_post_jobs', false) ) {
+        if (get_option('puntwork_social_auto_post_jobs', false)) {
             post_new_jobs_to_social_media($result);
         }
     }
@@ -175,9 +175,9 @@ function get_import_status_summary()
  * @param  array $status Current import status.
  * @return float Estimated time remaining in seconds.
  */
-function calculate_estimated_time_remaining( $status )
+function calculate_estimated_time_remaining($status)
 {
-    if ($status['complete'] || $status['processed'] == 0 || $status['job_importing_time_elapsed'] == 0 ) {
+    if ($status['complete'] || $status['processed'] == 0 || $status['job_importing_time_elapsed'] == 0) {
         return 0;
     }
 
@@ -203,9 +203,9 @@ function calculate_estimated_time_remaining( $status )
  * @param  array $import_result The import result data
  * @return void
  */
-function post_new_jobs_to_social_media( $import_result )
+function post_new_jobs_to_social_media($import_result)
 {
-    if (! class_exists('SocialMedia\\SocialMediaManager') ) {
+    if (! class_exists('SocialMedia\\SocialMediaManager')) {
         return;
     }
 
@@ -213,22 +213,22 @@ function post_new_jobs_to_social_media( $import_result )
         $social_manager    = new SocialMedia\SocialMediaManager();
         $default_platforms = get_option('puntwork_social_default_platforms', array());
 
-        if (empty($default_platforms) ) {
+        if (empty($default_platforms)) {
             return;
         }
 
         // Get recently published jobs (from this import)
         $recent_jobs = get_recent_imported_jobs($import_result);
 
-        if (empty($recent_jobs) ) {
+        if (empty($recent_jobs)) {
             return;
         }
 
         $posted_count = 0;
         $max_posts    = apply_filters('puntwork_social_max_auto_posts', 5); // Limit to prevent spam
 
-        foreach ( $recent_jobs as $job ) {
-            if ($posted_count >= $max_posts ) {
+        foreach ($recent_jobs as $job) {
+            if ($posted_count >= $max_posts) {
                 break;
             }
 
@@ -244,13 +244,13 @@ function post_new_jobs_to_social_media( $import_result )
             $results = $social_manager->postJob($job_data, $default_platforms);
 
             $success_count = 0;
-            foreach ( $results as $platform => $result ) {
-                if ($result['success'] ) {
+            foreach ($results as $platform => $result) {
+                if ($result['success']) {
                     ++$success_count;
                 }
             }
 
-            if ($success_count > 0 ) {
+            if ($success_count > 0) {
                 ++$posted_count;
             }
 
@@ -266,7 +266,7 @@ function post_new_jobs_to_social_media( $import_result )
             );
         }
 
-        if ($posted_count > 0 ) {
+        if ($posted_count > 0) {
             \Puntwork\PuntWorkLogger::info(
                 'Completed auto-posting jobs to social media',
                 \Puntwork\PuntWorkLogger::CONTEXT_SOCIAL,
@@ -276,7 +276,7 @@ function post_new_jobs_to_social_media( $import_result )
                 )
             );
         }
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         \Puntwork\PuntWorkLogger::error(
             'Failed to auto-post jobs to social media',
             \Puntwork\PuntWorkLogger::CONTEXT_SOCIAL,
@@ -293,7 +293,7 @@ function post_new_jobs_to_social_media( $import_result )
  * @param  array $import_result The import result data
  * @return array Array of job post objects
  */
-function get_recent_imported_jobs( $import_result )
+function get_recent_imported_jobs($import_result)
 {
     $jobs = array();
 
@@ -313,7 +313,7 @@ function get_recent_imported_jobs( $import_result )
 
     $query = new \WP_Query($args);
 
-    if ($query->have_posts() ) {
+    if ($query->have_posts()) {
         $jobs = $query->posts;
     }
 

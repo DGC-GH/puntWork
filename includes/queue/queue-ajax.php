@@ -8,7 +8,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -18,12 +18,12 @@ if (! defined('ABSPATH') ) {
 function get_queue_stats_ajax()
 {
     // Verify nonce and permissions
-    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce') ) {
+    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
         wp_send_json_error(array( 'message' => 'Security check failed' ));
         return;
     }
 
-    if (! current_user_can('manage_options') ) {
+    if (! current_user_can('manage_options')) {
         wp_send_json_error(array( 'message' => 'Insufficient permissions' ));
         return;
     }
@@ -57,7 +57,7 @@ function get_queue_stats_ajax()
             'total'      => 0,
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         wp_send_json_error(array( 'message' => 'Failed to get queue stats: ' . $e->getMessage() ));
     }
 }
@@ -68,12 +68,12 @@ function get_queue_stats_ajax()
 function get_recent_jobs_ajax()
 {
     // Verify nonce and permissions
-    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce') ) {
+    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
         wp_send_json_error(array( 'message' => 'Security check failed' ));
         return;
     }
 
-    if (! current_user_can('manage_options') ) {
+    if (! current_user_can('manage_options')) {
         wp_send_json_error(array( 'message' => 'Insufficient permissions' ));
         return;
     }
@@ -96,7 +96,7 @@ function get_recent_jobs_ajax()
         );
 
         wp_send_json_success($jobs ?: array());
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         wp_send_json_error(array( 'message' => 'Failed to get recent jobs: ' . $e->getMessage() ));
     }
 }
@@ -107,12 +107,12 @@ function get_recent_jobs_ajax()
 function clear_completed_jobs_ajax()
 {
     // Verify nonce and permissions
-    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce') ) {
+    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
         wp_send_json_error(array( 'message' => 'Security check failed' ));
         return;
     }
 
-    if (! current_user_can('manage_options') ) {
+    if (! current_user_can('manage_options')) {
         wp_send_json_error(array( 'message' => 'Insufficient permissions' ));
         return;
     }
@@ -132,7 +132,7 @@ function clear_completed_jobs_ajax()
             'deleted' => $deleted,
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         wp_send_json_error(array( 'message' => 'Failed to clear completed jobs: ' . $e->getMessage() ));
     }
 }
@@ -143,12 +143,12 @@ function clear_completed_jobs_ajax()
 function add_test_job_ajax()
 {
     // Verify nonce and permissions
-    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce') ) {
+    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
         wp_send_json_error(array( 'message' => 'Security check failed' ));
         return;
     }
 
-    if (! current_user_can('manage_options') ) {
+    if (! current_user_can('manage_options')) {
         wp_send_json_error(array( 'message' => 'Insufficient permissions' ));
         return;
     }
@@ -175,7 +175,7 @@ function add_test_job_ajax()
             'job_id'  => $job_id,
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         wp_send_json_error(array( 'message' => 'Failed to add test job: ' . $e->getMessage() ));
     }
 }
@@ -186,12 +186,12 @@ function add_test_job_ajax()
 function manual_process_queue_ajax()
 {
     // Verify nonce and permissions
-    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce') ) {
+    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
         wp_send_json_error(array( 'message' => 'Security check failed' ));
         return;
     }
 
-    if (! current_user_can('manage_options') ) {
+    if (! current_user_can('manage_options')) {
         wp_send_json_error(array( 'message' => 'Insufficient permissions' ));
         return;
     }
@@ -204,7 +204,7 @@ function manual_process_queue_ajax()
         $queue_manager->process_queue();
 
         wp_send_json_success(array( 'message' => 'Queue processed manually' ));
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         wp_send_json_error(array( 'message' => 'Failed to process queue: ' . $e->getMessage() ));
     }
 }
@@ -227,7 +227,7 @@ function ensure_queue_table_exists()
         )
     );
 
-    if (! $table_exists ) {
+    if (! $table_exists) {
         error_log('[PUNTWORK] Queue table does not exist, creating it via AJAX');
 
         $sql = "CREATE TABLE $table_name (
@@ -252,7 +252,7 @@ function ensure_queue_table_exists()
         include_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
 
-        if ($wpdb->last_error ) {
+        if ($wpdb->last_error) {
             error_log('[PUNTWORK] Database error during queue table creation: ' . $wpdb->last_error);
         }
     }
@@ -315,7 +315,7 @@ add_action('wp_ajax_puntwork_process_queue', __NAMESPACE__ . '\\manual_process_q
 /**
  * Schedule daily cleanup
  */
-if (! wp_next_scheduled('puntwork_queue_cleanup') ) {
+if (! wp_next_scheduled('puntwork_queue_cleanup')) {
     wp_schedule_event(time(), 'daily', 'puntwork_queue_cleanup');
 }
 

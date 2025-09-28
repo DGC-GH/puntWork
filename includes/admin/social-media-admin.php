@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class PuntworkSocialMediaAdmin
 {
-
     /**
      * Social Media Manager instance
      */
@@ -58,9 +57,9 @@ class PuntworkSocialMediaAdmin
     /**
      * Enqueue admin scripts and styles
      */
-    public function enqueueScripts( $hook ): void
+    public function enqueueScripts($hook): void
     {
-        if ($hook !== 'puntwork_page_puntwork-social-media' ) {
+        if ($hook !== 'puntwork_page_puntwork-social-media') {
             return;
         }
 
@@ -129,7 +128,7 @@ class PuntworkSocialMediaAdmin
                 <div id="platforms-tab" class="tab-content active">
                     <h2><?php _e('Configure Social Media Platforms', 'puntwork'); ?></h2>
 
-        <?php foreach ( $available_platforms as $platform_id => $platform_info ) : ?>
+        <?php foreach ($available_platforms as $platform_id => $platform_info) : ?>
                         <div class="platform-config-card" data-platform="<?php echo esc_attr($platform_id); ?>">
                             <div class="platform-header">
                                 <h3><?php echo esc_html($platform_info['name']); ?></h3>
@@ -195,7 +194,7 @@ class PuntworkSocialMediaAdmin
                                 <td>
                                     <?php
                                     $default_platforms = get_option('puntwork_social_default_platforms', array());
-                                    foreach ( $available_platforms as $platform_id => $platform_info ) :
+                                    foreach ($available_platforms as $platform_id => $platform_info) :
                                         ?>
                                         <label style="display: block; margin-bottom: 5px;">
                                             <input type="checkbox"
@@ -239,7 +238,7 @@ class PuntworkSocialMediaAdmin
                         <textarea id="manual-post-content" rows="4" placeholder="<?php esc_attr_e('Enter your post content here...', 'puntwork'); ?>"></textarea>
 
                         <div class="manual-post-platforms">
-          <?php foreach ( $available_platforms as $platform_id => $platform_info ) : ?>
+          <?php foreach ($available_platforms as $platform_id => $platform_info) : ?>
                                 <label>
                                     <input type="checkbox" class="manual-post-platform" value="<?php echo esc_attr($platform_id); ?>">
                 <?php echo esc_html($platform_info['name']); ?>
@@ -366,11 +365,11 @@ class PuntworkSocialMediaAdmin
     /**
      * Render ads-specific configuration
      */
-    private function renderAdsConfig( string $platform_id, array $config ): void
+    private function renderAdsConfig(string $platform_id, array $config): void
     {
-        switch ( $platform_id ) {
-        case 'twitter':
-            ?>
+        switch ($platform_id) {
+            case 'twitter':
+                ?>
                 <table class="form-table">
                     <tr>
                         <th scope="row"><?php _e('Ads Account ID', 'puntwork'); ?></th>
@@ -404,10 +403,10 @@ class PuntworkSocialMediaAdmin
                         </td>
                     </tr>
                 </table>
-            <?php
-            break;
-        case 'facebook':
-            ?>
+                <?php
+                break;
+            case 'facebook':
+                ?>
                 <table class="form-table">
                     <tr>
                         <th scope="row"><?php _e('Ads Account ID', 'puntwork'); ?></th>
@@ -446,10 +445,10 @@ class PuntworkSocialMediaAdmin
                         </td>
                     </tr>
                 </table>
-            <?php
-            break;
-        case 'tiktok':
-            ?>
+                <?php
+                break;
+            case 'tiktok':
+                ?>
                 <table class="form-table">
                     <tr>
                         <th scope="row"><?php _e('Advertiser ID', 'puntwork'); ?></th>
@@ -489,18 +488,18 @@ class PuntworkSocialMediaAdmin
                         </td>
                     </tr>
                 </table>
-            <?php
-            break;
+                <?php
+                break;
         }
     }
     /**
      * Render platform-specific configuration
      */
-    private function renderPlatformConfig( string $platform_id, array $config ): void
+    private function renderPlatformConfig(string $platform_id, array $config): void
     {
-        switch ( $platform_id ) {
-        case 'twitter':
-            ?>
+        switch ($platform_id) {
+            case 'twitter':
+                ?>
                 <table class="form-table">
                     <tr>
                         <th scope="row"><?php _e('API Key', 'puntwork'); ?></th>
@@ -527,10 +526,10 @@ class PuntworkSocialMediaAdmin
                         </td>
                     </tr>
                 </table>
-            <?php
-            break;
-        case 'facebook':
-            ?>
+                <?php
+                break;
+            case 'facebook':
+                ?>
                 <table class="form-table">
                     <tr>
                         <th scope="row"><?php _e('App ID', 'puntwork'); ?></th>
@@ -561,10 +560,10 @@ class PuntworkSocialMediaAdmin
                         </td>
                     </tr>
                 </table>
-            <?php
-            break;
-        case 'tiktok':
-            ?>
+                <?php
+                break;
+            case 'tiktok':
+                ?>
                 <table class="form-table">
                     <tr>
                         <th scope="row"><?php _e('App ID', 'puntwork'); ?></th>
@@ -595,8 +594,8 @@ class PuntworkSocialMediaAdmin
                         </td>
                     </tr>
                 </table>
-            <?php
-            break;
+                <?php
+                break;
         }
     }
 
@@ -615,7 +614,7 @@ class PuntworkSocialMediaAdmin
             ARRAY_A
         );
 
-        if (empty($logs) ) {
+        if (empty($logs)) {
             echo '<p>' . __('No activity logs found.', 'puntwork') . '</p>';
             return;
         }
@@ -628,7 +627,7 @@ class PuntworkSocialMediaAdmin
         echo '<th>' . __('Results', 'puntwork') . '</th>';
         echo '</tr></thead><tbody>';
 
-        foreach ( $logs as $log ) {
+        foreach ($logs as $log) {
             $post_data = json_decode($log['post_data'], true);
             $results   = json_decode($log['results'] ?? '[]', true);
 
@@ -638,8 +637,8 @@ class PuntworkSocialMediaAdmin
             echo '<td>' . esc_html(ucfirst($log['status'])) . '</td>';
             echo '<td>';
 
-            if (! empty($results) ) {
-                foreach ( $results as $platform => $result ) {
+            if (! empty($results)) {
+                foreach ($results as $platform => $result) {
                     $status = $result['success'] ? '✓' : '✗';
                     echo esc_html($platform) . ': ' . $status . ' ';
                 }
@@ -659,19 +658,19 @@ class PuntworkSocialMediaAdmin
     {
         check_ajax_referer('puntwork_social_nonce', 'nonce');
 
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('Insufficient permissions', 'puntwork'));
         }
 
         $platform_id = sanitize_text_field($_POST['platform_id'] ?? '');
 
-        if (empty($platform_id) ) {
+        if (empty($platform_id)) {
             wp_send_json_error(array( 'message' => __('Platform ID required', 'puntwork') ));
         }
 
         $result = $this->social_manager->testPlatform($platform_id);
 
-        if ($result['success'] ) {
+        if ($result['success']) {
             wp_send_json_success($result);
         } else {
             wp_send_json_error($result);
@@ -685,26 +684,26 @@ class PuntworkSocialMediaAdmin
     {
         check_ajax_referer('puntwork_social_nonce', 'nonce');
 
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('Insufficient permissions', 'puntwork'));
         }
 
         $platform_id = sanitize_text_field($_POST['platform_id'] ?? '');
         $config      = $_POST['config'] ?? array();
 
-        if (empty($platform_id) ) {
+        if (empty($platform_id)) {
             wp_send_json_error(array( 'message' => __('Platform ID required', 'puntwork') ));
         }
 
         // Sanitize config data
         $sanitized_config = array();
-        foreach ( $config as $key => $value ) {
+        foreach ($config as $key => $value) {
             $sanitized_config[ $key ] = sanitize_text_field($value);
         }
 
         $success = \Puntwork\SocialMedia\SocialMediaManager::configurePlatform($platform_id, $sanitized_config);
 
-        if ($success ) {
+        if ($success) {
             wp_send_json_success(array( 'message' => __('Configuration saved successfully', 'puntwork') ));
         } else {
             wp_send_json_error(array( 'message' => __('Failed to save configuration', 'puntwork') ));
@@ -718,18 +717,18 @@ class PuntworkSocialMediaAdmin
     {
         check_ajax_referer('puntwork_social_nonce', 'nonce');
 
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('Insufficient permissions', 'puntwork'));
         }
 
         $content   = sanitize_textarea_field($_POST['content'] ?? '');
         $platforms = $_POST['platforms'] ?? array();
 
-        if (empty($content) ) {
+        if (empty($content)) {
             wp_send_json_error(array( 'message' => __('Content is required', 'puntwork') ));
         }
 
-        if (empty($platforms) ) {
+        if (empty($platforms)) {
             wp_send_json_error(array( 'message' => __('At least one platform must be selected', 'puntwork') ));
         }
 

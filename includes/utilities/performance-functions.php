@@ -9,7 +9,7 @@
  */
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -27,7 +27,7 @@ use Puntwork\Utilities\DatabasePerformanceMonitor;
  * @param  string $feed_url Feed URL
  * @return bool True if processing should proceed
  */
-function can_process_feed( string $feed_url ): bool
+function can_process_feed(string $feed_url): bool
 {
     $circuit_name = 'feed_' . md5($feed_url);
     return CircuitBreaker::canProceed($circuit_name);
@@ -38,7 +38,7 @@ function can_process_feed( string $feed_url ): bool
  *
  * @param string $feed_url Feed URL
  */
-function record_feed_success( string $feed_url ): void
+function record_feed_success(string $feed_url): void
 {
     $circuit_name = 'feed_' . md5($feed_url);
     CircuitBreaker::recordSuccess($circuit_name);
@@ -49,7 +49,7 @@ function record_feed_success( string $feed_url ): void
  *
  * @param string $feed_url Feed URL
  */
-function record_feed_failure( string $feed_url ): void
+function record_feed_failure(string $feed_url): void
 {
     $circuit_name = 'feed_' . md5($feed_url);
     CircuitBreaker::recordFailure($circuit_name);
@@ -71,7 +71,7 @@ function get_circuit_breaker_status(): array
  * @param  string $operation Operation name
  * @return string Measurement ID
  */
-function start_performance_monitoring( string $operation ): string
+function start_performance_monitoring(string $operation): string
 {
     return \Puntwork\Utilities\PerformanceMonitor::start($operation);
 }
@@ -83,7 +83,7 @@ function start_performance_monitoring( string $operation ): string
  * @param string $checkpoint Checkpoint name
  * @param array  $data       Additional data
  */
-function checkpoint_performance( string $id, string $checkpoint, array $data = array() ): void
+function checkpoint_performance(string $id, string $checkpoint, array $data = array()): void
 {
     \Puntwork\Utilities\PerformanceMonitor::checkpoint($id, $checkpoint, $data);
 }
@@ -94,7 +94,7 @@ function checkpoint_performance( string $id, string $checkpoint, array $data = a
  * @param  string $id Measurement ID
  * @return array Performance data
  */
-function end_performance_monitoring( string $id ): array
+function end_performance_monitoring(string $id): array
 {
     return \Puntwork\Utilities\PerformanceMonitor::end($id);
 }
@@ -116,7 +116,7 @@ function get_performance_snapshot(): array
  * @param  int    $days      Number of days to look back
  * @return array Performance statistics
  */
-function get_performance_statistics( ?string $operation = '', int $days = 30 ): array
+function get_performance_statistics(?string $operation = '', int $days = 30): array
 {
     return \Puntwork\Utilities\PerformanceMonitor::getStatistics($operation ?? '', $days);
 }
@@ -146,7 +146,7 @@ function end_db_performance_monitoring(): array
  * @param  float $threshold     Memory threshold
  * @return array Memory status
  */
-function check_batch_memory_usage( int $current_index, float $threshold = 0.8 ): array
+function check_batch_memory_usage(int $current_index, float $threshold = 0.8): array
 {
     return \Puntwork\Utilities\MemoryManager::checkMemoryUsage($current_index, $threshold);
 }
@@ -173,12 +173,12 @@ function reset_memory_manager(): void
 function ajax_warm_performance_caches(): void
 {
     try {
-        if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_performance_caches') ) {
+        if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_performance_caches')) {
             wp_send_json_error('Security check failed');
             return;
         }
 
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_send_json_error('Insufficient permissions');
             return;
         }
@@ -191,14 +191,14 @@ function ajax_warm_performance_caches(): void
             'timestamp' => current_time('timestamp'),
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         \Puntwork\PuntWorkLogger::error('Cache warming failed: ' . $e->getMessage(), \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM);
         wp_send_json_error('Cache warming failed: ' . $e->getMessage());
     }
 }
 
 // Only register WordPress hooks if WordPress functions are available
-if (function_exists('add_action') ) {
+if (function_exists('add_action')) {
     add_action('wp_ajax_warm_performance_caches', 'ajax_warm_performance_caches');
 }
 
@@ -208,12 +208,12 @@ if (function_exists('add_action') ) {
 function ajax_reset_cache_analytics(): void
 {
     try {
-        if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_cache_analytics') ) {
+        if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_cache_analytics')) {
             wp_send_json_error('Security check failed');
             return;
         }
 
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_send_json_error('Insufficient permissions');
             return;
         }
@@ -226,13 +226,13 @@ function ajax_reset_cache_analytics(): void
             'timestamp' => current_time('timestamp'),
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         wp_send_json_error('Analytics reset failed: ' . $e->getMessage());
     }
 }
 
 // Only register WordPress hooks if WordPress functions are available
-if (function_exists('add_action') ) {
+if (function_exists('add_action')) {
     add_action('wp_ajax_reset_cache_analytics', 'ajax_reset_cache_analytics');
 }
 
@@ -242,12 +242,12 @@ if (function_exists('add_action') ) {
 function ajax_run_memory_performance_test(): void
 {
     try {
-        if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_memory_test') ) {
+        if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_memory_test')) {
             wp_send_json_error('Security check failed');
             return;
         }
 
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_send_json_error('Insufficient permissions');
             return;
         }
@@ -257,7 +257,7 @@ function ajax_run_memory_performance_test(): void
 
         // Simulate processing different batch sizes
         $test_results = array();
-        for ( $batch_size = 100; $batch_size <= 1000; $batch_size += 200 ) {
+        for ($batch_size = 100; $batch_size <= 1000; $batch_size += 200) {
             $prediction     = \Puntwork\Utilities\AdvancedMemoryManager::predictMemoryUsage($batch_size);
             $test_results[] = array(
             'batch_size' => $batch_size,
@@ -276,13 +276,13 @@ function ajax_run_memory_performance_test(): void
             'predictions' => $test_results,
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         wp_send_json_error('Memory test failed: ' . $e->getMessage());
     }
 }
 
 // Only register WordPress hooks if WordPress functions are available
-if (function_exists('add_action') ) {
+if (function_exists('add_action')) {
     add_action('wp_ajax_run_memory_performance_test', 'ajax_run_memory_performance_test');
 }
 
@@ -292,12 +292,12 @@ if (function_exists('add_action') ) {
 function ajax_clear_memory_pool(): void
 {
     try {
-        if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_memory_pool') ) {
+        if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_memory_pool')) {
             wp_send_json_error('Security check failed');
             return;
         }
 
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_send_json_error('Insufficient permissions');
             return;
         }
@@ -310,13 +310,13 @@ function ajax_clear_memory_pool(): void
             'timestamp' => current_time('timestamp'),
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         wp_send_json_error('Memory pool clear failed: ' . $e->getMessage());
     }
 }
 
 // Only register WordPress hooks if WordPress functions are available
-if (function_exists('add_action') ) {
+if (function_exists('add_action')) {
     add_action('wp_ajax_clear_memory_pool', 'ajax_clear_memory_pool');
 }
 
@@ -326,12 +326,12 @@ if (function_exists('add_action') ) {
 function ajax_run_ml_feed_optimization(): void
 {
     try {
-        if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_ml_optimization') ) {
+        if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_ml_optimization')) {
             wp_send_json_error('Security check failed');
             return;
         }
 
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_send_json_error('Insufficient permissions');
             return;
         }
@@ -346,14 +346,14 @@ function ajax_run_ml_feed_optimization(): void
             'results'               => $results,
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         \Puntwork\PuntWorkLogger::error('ML feed optimization failed: ' . $e->getMessage(), \Puntwork\PuntWorkLogger::CONTEXT_AI);
         wp_send_json_error('ML optimization failed: ' . $e->getMessage());
     }
 }
 
 // Only register WordPress hooks if WordPress functions are available
-if (function_exists('add_action') ) {
+if (function_exists('add_action')) {
     add_action('wp_ajax_run_ml_feed_optimization', 'ajax_run_ml_feed_optimization');
 }
 
@@ -363,12 +363,12 @@ if (function_exists('add_action') ) {
 function ajax_train_ml_models(): void
 {
     try {
-        if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_train_models') ) {
+        if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_train_models')) {
             wp_send_json_error('Security check failed');
             return;
         }
 
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_send_json_error('Insufficient permissions');
             return;
         }
@@ -383,14 +383,14 @@ function ajax_train_ml_models(): void
             'results'        => $results,
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         \Puntwork\PuntWorkLogger::error('Model training failed: ' . $e->getMessage(), \Puntwork\PuntWorkLogger::CONTEXT_AI);
         wp_send_json_error('Model training failed: ' . $e->getMessage());
     }
 }
 
 // Only register WordPress hooks if WordPress functions are available
-if (function_exists('add_action') ) {
+if (function_exists('add_action')) {
     add_action('wp_ajax_train_ml_models', 'ajax_train_ml_models');
 }
 
@@ -400,12 +400,12 @@ if (function_exists('add_action') ) {
 function ajax_get_ml_insights(): void
 {
     try {
-        if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_ml_insights') ) {
+        if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_ml_insights')) {
             wp_send_json_error('Security check failed');
             return;
         }
 
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_send_json_error('Insufficient permissions');
             return;
         }
@@ -417,12 +417,12 @@ function ajax_get_ml_insights(): void
             'insights' => $insights,
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         wp_send_json_error('Failed to get ML insights: ' . $e->getMessage());
     }
 }
 
 // Only register WordPress hooks if WordPress functions are available
-if (function_exists('add_action') ) {
+if (function_exists('add_action')) {
     add_action('wp_ajax_get_ml_insights', 'ajax_get_ml_insights');
 }

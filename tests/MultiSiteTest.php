@@ -141,6 +141,8 @@ class MultiSiteTest extends TestCase
         // Test that sync data has expected structure
         $syncData = get_option('puntwork_network_sync_data', array());
 
+        $this->assertIsArray($syncData);
+
         if (! empty($syncData) ) {
             $siteData = $syncData[0];
             $this->assertArrayHasKey('site_id', $siteData);

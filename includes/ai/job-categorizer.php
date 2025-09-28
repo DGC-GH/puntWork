@@ -11,7 +11,7 @@
 namespace Puntwork\AI;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class JobCategorizer
 {
-
     /**
      * Job categories with associated keywords
      */
@@ -263,30 +262,30 @@ class JobCategorizer
      * @param  string $description Job description
      * @return string Job category
      */
-    public static function categorize( string $title, string $description = '' ): string
+    public static function categorize(string $title, string $description = ''): string
     {
         $text   = strtolower($title . ' ' . $description);
         $scores = array();
 
         // Calculate scores for each category
-        foreach ( self::CATEGORIES as $category => $keywords ) {
-            if (empty($keywords) ) {
+        foreach (self::CATEGORIES as $category => $keywords) {
+            if (empty($keywords)) {
                 continue; // Skip 'Other' category
             }
 
             $score = 0;
-            foreach ( $keywords as $keyword ) {
+            foreach ($keywords as $keyword) {
                 $count  = substr_count($text, strtolower($keyword));
                 $score += $count;
             }
 
-            if ($score > 0 ) {
+            if ($score > 0) {
                 $scores[ $category ] = $score;
             }
         }
 
         // Return category with highest score, or 'Other' if no matches
-        if (! empty($scores) ) {
+        if (! empty($scores)) {
             arsort($scores);
             return key($scores);
         }
@@ -310,7 +309,7 @@ class JobCategorizer
      * @param  string $category Category name
      * @return array List of keywords
      */
-    public static function getCategoryKeywords( string $category ): array
+    public static function getCategoryKeywords(string $category): array
     {
         return self::CATEGORIES[ $category ] ?? array();
     }

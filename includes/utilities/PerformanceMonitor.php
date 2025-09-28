@@ -11,7 +11,7 @@
 namespace Puntwork\Utilities;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class PerformanceMonitor
 {
-
     private static array $measurements = array();
     private static array $checkpoints  = array();
 
@@ -30,7 +29,7 @@ class PerformanceMonitor
      * @param  string $operation Operation name
      * @return string Measurement ID
      */
-    public static function start( string $operation ): string
+    public static function start(string $operation): string
     {
         $id                        = uniqid('perf_', true);
         self::$measurements[ $id ] = array(
@@ -49,9 +48,9 @@ class PerformanceMonitor
      * @param string $checkpoint Checkpoint name
      * @param array  $data       Additional data
      */
-    public static function checkpoint( string $id, string $checkpoint, array $data = array() ): void
+    public static function checkpoint(string $id, string $checkpoint, array $data = array()): void
     {
-        if (! isset(self::$measurements[ $id ]) ) {
+        if (! isset(self::$measurements[ $id ])) {
             return;
         }
 
@@ -74,9 +73,9 @@ class PerformanceMonitor
      * @param  string $id Measurement ID
      * @return array Performance data
      */
-    public static function end( string $id ): array
+    public static function end(string $id): array
     {
-        if (! isset(self::$measurements[ $id ]) ) {
+        if (! isset(self::$measurements[ $id ])) {
             return array();
         }
 
@@ -128,7 +127,7 @@ class PerformanceMonitor
      * @param  int    $days      Number of days to look back
      * @return array Performance statistics
      */
-    public static function getStatistics( string $operation = '', int $days = 30 ): array
+    public static function getStatistics(string $operation = '', int $days = 30): array
     {
         // For now, return mock statistics
         // In a real implementation, this would query stored performance data
@@ -147,7 +146,7 @@ class PerformanceMonitor
      * @param  int $days Days to keep
      * @return bool Success
      */
-    public static function cleanupOldLogs( int $days ): bool
+    public static function cleanupOldLogs(int $days): bool
     {
         // Mock implementation - in real implementation would clean up old logs
         return true;

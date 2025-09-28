@@ -11,7 +11,7 @@
 namespace Puntwork\SocialMedia;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class FacebookPlatform extends SocialMediaPlatform
 {
-
     /**
      * Ads manager instance
      */
@@ -34,7 +33,7 @@ class FacebookPlatform extends SocialMediaPlatform
     /**
      * Constructor
      */
-    public function __construct( array $config = array() )
+    public function __construct(array $config = array())
     {
         $this->platform_id   = 'facebook';
         $this->platform_name = 'Facebook';
@@ -46,7 +45,7 @@ class FacebookPlatform extends SocialMediaPlatform
         parent::__construct($config);
 
         // Initialize ads manager if ads credentials are provided
-        if ($this->hasAdsCredentials() ) {
+        if ($this->hasAdsCredentials()) {
             $this->ads_manager = new FacebookAdsManager($this);
         }
     }
@@ -83,15 +82,15 @@ class FacebookPlatform extends SocialMediaPlatform
     /**
      * Post content to Facebook
      */
-    public function post( array $content, array $options = array() ): array
+    public function post(array $content, array $options = array()): array
     {
-        if (! $this->isConfigured() ) {
+        if (! $this->isConfigured()) {
             throw new \Exception('Facebook integration not properly configured');
         }
 
         // Validate content
         $validation_errors = $this->validateContent($content);
-        if (! empty($validation_errors) ) {
+        if (! empty($validation_errors)) {
             throw new \Exception('Content validation failed: ' . implode(', ', $validation_errors));
         }
 
@@ -108,7 +107,7 @@ class FacebookPlatform extends SocialMediaPlatform
             'platform'  => 'facebook',
             'timestamp' => time(),
             );
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error(
                 'Facebook posting failed',
                 PuntWorkLogger::CONTEXT_SOCIAL,
@@ -130,16 +129,16 @@ class FacebookPlatform extends SocialMediaPlatform
     /**
      * Post content with ads campaign
      */
-    public function postWithAds( array $content, array $ads_config ): array
+    public function postWithAds(array $content, array $ads_config): array
     {
-        if (! $this->supportsAds() ) {
+        if (! $this->supportsAds()) {
             throw new \Exception('Facebook ads not configured. Please provide ad_account_id and access_token.');
         }
 
         // First post the regular Facebook post
         $post_result = $this->post($content);
 
-        if (! $post_result['success'] ) {
+        if (! $post_result['success']) {
             return $post_result;
         }
 
@@ -157,7 +156,7 @@ class FacebookPlatform extends SocialMediaPlatform
                 'has_ads'      => true,
                 )
             );
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error(
                 'Facebook ads creation failed',
                 PuntWorkLogger::CONTEXT_SOCIAL,
@@ -181,9 +180,9 @@ class FacebookPlatform extends SocialMediaPlatform
     /**
      * Get ads campaign metrics
      */
-    public function getAdsMetrics( string $campaign_id ): array
+    public function getAdsMetrics(string $campaign_id): array
     {
-        if (! $this->supportsAds() ) {
+        if (! $this->supportsAds()) {
             throw new \Exception('Facebook ads not configured');
         }
 
@@ -225,32 +224,32 @@ class FacebookPlatform extends SocialMediaPlatform
     /**
      * Prepare post data for Facebook API
      */
-    private function preparePostData( array $content, array $options ): array
+    private function preparePostData(array $content, array $options): array
     {
         $post_data = array();
 
         // Add text content
-        if (! empty($content['text']) ) {
+        if (! empty($content['text'])) {
             $text                 = $this->processTextContent($content['text'], $options);
             $post_data['message'] = $text;
         }
 
         // Add link if provided
-        if (! empty($content['link']) ) {
+        if (! empty($content['link'])) {
             $post_data['link'] = $content['link'];
         }
 
         // Add media if provided
-        if (! empty($content['media']) ) {
+        if (! empty($content['media'])) {
             $media_ids = $this->uploadMedia($content['media']);
-            if (! empty($media_ids) ) {
+            if (! empty($media_ids)) {
                 // Facebook handles media differently - we need to upload first
                 $post_data['attached_media'] = $media_ids;
             }
         }
 
         // Add privacy settings
-        if (isset($options['privacy']) ) {
+        if (isset($options['privacy'])) {
             $post_data['privacy'] = json_encode(array( 'value' => $options['privacy'] ));
         }
 
@@ -260,16 +259,16 @@ class FacebookPlatform extends SocialMediaPlatform
     /**
      * Process text content with URL handling
      */
-    private function processTextContent( string $text, array $options ): string
+    private function processTextContent(string $text, array $options): string
     {
         // Facebook doesn't need URL shortening as much as Twitter
         // Add hashtags if provided
-        if (! empty($options['hashtags']) ) {
+        if (! empty($options['hashtags'])) {
             $hashtags = is_array($options['hashtags']) ? $options['hashtags'] : array( $options['hashtags'] );
             $text    .= ' ' . implode(
                 ' ',
                 array_map(
-                    function ( $tag ) {
+                    function ($tag) {
                             return '#' . ltrim($tag, '#');
                     },
                     $hashtags
@@ -278,7 +277,7 @@ class FacebookPlatform extends SocialMediaPlatform
         }
 
         // Ensure text doesn't exceed limit
-        if (strlen($text) > $this->getMaxTextLength() ) {
+        if (strlen($text) > $this->getMaxTextLength()) {
             $text = substr($text, 0, $this->getMaxTextLength() - 3) . '...';
         }
 
@@ -288,16 +287,16 @@ class FacebookPlatform extends SocialMediaPlatform
     /**
      * Upload media to Facebook
      */
-    private function uploadMedia( array $media_files ): array
+    private function uploadMedia(array $media_files): array
     {
         $media_ids = array();
 
-        foreach ( $media_files as $media_file ) {
+        foreach ($media_files as $media_file) {
             try {
-                if (is_string($media_file) ) {
+                if (is_string($media_file)) {
                     // Assume it's a URL or file path
                     $file_path = $this->downloadMediaFile($media_file);
-                } elseif (is_array($media_file) && isset($media_file['tmp_name']) ) {
+                } elseif (is_array($media_file) && isset($media_file['tmp_name'])) {
                     // WordPress upload array
                     $file_path = $media_file['tmp_name'];
                 } else {
@@ -305,10 +304,10 @@ class FacebookPlatform extends SocialMediaPlatform
                 }
 
                 $media_id = $this->uploadMediaToFacebook($file_path);
-                if ($media_id ) {
+                if ($media_id) {
                     $media_ids[] = array( 'media_fbid' => $media_id );
                 }
-            } catch ( \Exception $e ) {
+            } catch (\Exception $e) {
                 PuntWorkLogger::error(
                     'Facebook media upload failed',
                     PuntWorkLogger::CONTEXT_SOCIAL,
@@ -326,15 +325,15 @@ class FacebookPlatform extends SocialMediaPlatform
     /**
      * Upload media file to Facebook
      */
-    private function uploadMediaToFacebook( string $file_path ): ?string
+    private function uploadMediaToFacebook(string $file_path): ?string
     {
-        if (! file_exists($file_path) ) {
+        if (! file_exists($file_path)) {
             return null;
         }
 
         // Check file size limits (Facebook allows up to 10GB for video, but we'll be conservative)
         $file_size = filesize($file_path);
-        if ($file_size > 100 * 1024 * 1024 ) { // 100MB limit for safety
+        if ($file_size > 100 * 1024 * 1024) { // 100MB limit for safety
             throw new \Exception('File size exceeds Facebook limits');
         }
 
@@ -346,12 +345,12 @@ class FacebookPlatform extends SocialMediaPlatform
     /**
      * Download media file from URL
      */
-    private function downloadMediaFile( string $url ): string
+    private function downloadMediaFile(string $url): string
     {
         $temp_file = wp_tempnam();
         $response  = wp_remote_get($url);
 
-        if (is_wp_error($response) ) {
+        if (is_wp_error($response)) {
             throw new \Exception('Failed to download media file');
         }
 
@@ -362,7 +361,7 @@ class FacebookPlatform extends SocialMediaPlatform
     /**
      * Execute API request
      */
-    protected function executeApiRequest( string $endpoint, array $params, string $method )
+    protected function executeApiRequest(string $endpoint, array $params, string $method)
     {
         $url = $this->api_base . '/' . $endpoint;
 
@@ -375,7 +374,7 @@ class FacebookPlatform extends SocialMediaPlatform
         'timeout' => 30,
         );
 
-        if ($method === 'GET' ) {
+        if ($method === 'GET') {
             $url .= '?' . http_build_query($params);
         } else {
             $args['body'] = json_encode($params);
@@ -387,12 +386,12 @@ class FacebookPlatform extends SocialMediaPlatform
     /**
      * Handle Facebook API errors
      */
-    protected function handleApiError( array $response ): void
+    protected function handleApiError(array $response): void
     {
-        if (isset($response['error']) ) {
+        if (isset($response['error'])) {
             $error   = $response['error'];
             $message = $error['message'] ?? 'Unknown error';
-            if (isset($error['code']) ) {
+            if (isset($error['code'])) {
                 $message .= " (Code: {$error['code']})";
             }
             throw new \Exception('Facebook API Error: ' . $message);

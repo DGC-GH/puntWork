@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,21 +20,20 @@ if (! defined('ABSPATH') ) {
  */
 class AjaxErrorHandler
 {
-
     /**
      * Send JSON error response with proper formatting
      *
      * @param string|WP_Error $error           Error message or WP_Error object
      * @param array           $additional_data Additional data to include
      */
-    public static function sendError( $error, array $additional_data = array() )
+    public static function sendError($error, array $additional_data = array())
     {
         $error_data = array(
         'success'   => false,
         'timestamp' => current_time('mysql'),
         );
 
-        if (is_wp_error($error) ) {
+        if (is_wp_error($error)) {
             $error_data['error'] = array(
             'code'    => $error->get_error_code(),
             'message' => $error->get_error_message(),
@@ -50,7 +49,7 @@ class AjaxErrorHandler
         $error_data = array_merge($error_data, $additional_data);
 
         // Log error for security monitoring
-        if (is_wp_error($error) ) {
+        if (is_wp_error($error)) {
             PuntWorkLogger::error(
                 'AJAX Error Response: ' . $error->get_error_message(),
                 PuntWorkLogger::CONTEXT_AJAX,
@@ -72,14 +71,14 @@ class AjaxErrorHandler
      * @param mixed $data            Response data
      * @param array $additional_data Additional data to include
      */
-    public static function sendSuccess( $data = null, array $additional_data = array() )
+    public static function sendSuccess($data = null, array $additional_data = array())
     {
         $response_data = array(
         'success'   => true,
         'timestamp' => current_time('mysql'),
         );
 
-        if ($data !== null ) {
+        if ($data !== null) {
             $response_data['data'] = $data;
         }
 

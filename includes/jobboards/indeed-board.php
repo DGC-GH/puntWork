@@ -11,7 +11,7 @@
 namespace Puntwork\JobBoards;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class IndeedBoard extends JobBoard
 {
-
     /**
      * Publisher ID for Indeed API
      */
@@ -29,7 +28,7 @@ class IndeedBoard extends JobBoard
     /**
      * Constructor
      */
-    public function __construct( array $config = array() )
+    public function __construct(array $config = array())
     {
         $this->board_id   = 'indeed';
         $this->board_name = 'Indeed';
@@ -41,11 +40,11 @@ class IndeedBoard extends JobBoard
     /**
      * Configure Indeed integration
      */
-    public function configure( array $config ): void
+    public function configure(array $config): void
     {
         parent::configure($config);
 
-        if (isset($config['publisher_id']) ) {
+        if (isset($config['publisher_id'])) {
             $this->publisher_id = $config['publisher_id'];
         }
     }
@@ -61,9 +60,9 @@ class IndeedBoard extends JobBoard
     /**
      * Fetch jobs from Indeed
      */
-    public function fetchJobs( array $params = array() ): array
+    public function fetchJobs(array $params = array()): array
     {
-        if (! $this->isConfigured() ) {
+        if (! $this->isConfigured()) {
             throw new \Exception('Indeed integration not properly configured');
         }
 
@@ -81,17 +80,17 @@ class IndeedBoard extends JobBoard
         try {
             $response = $this->makeApiRequest('', $search_params);
 
-            if (! isset($response['results']) ) {
+            if (! isset($response['results'])) {
                 return array();
             }
 
             $jobs = array();
-            foreach ( $response['results'] as $job_data ) {
+            foreach ($response['results'] as $job_data) {
                 $jobs[] = $this->normalizeIndeedJob($job_data);
             }
 
             return $jobs;
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error(
                 'Indeed API error',
                 PuntWorkLogger::CONTEXT_IMPORT,
@@ -107,7 +106,7 @@ class IndeedBoard extends JobBoard
     /**
      * Get job details by ID
      */
-    public function getJobDetails( string $jobId ): ?array
+    public function getJobDetails(string $jobId): ?array
     {
         // Indeed doesn't provide detailed job info via API
         // Return basic info if we have it cached, otherwise null
@@ -117,27 +116,27 @@ class IndeedBoard extends JobBoard
     /**
      * Search jobs with filters
      */
-    public function searchJobs( array $filters = array() ): array
+    public function searchJobs(array $filters = array()): array
     {
         $params = array();
 
-        if (isset($filters['keywords']) ) {
+        if (isset($filters['keywords'])) {
             $params['q'] = $filters['keywords'];
         }
 
-        if (isset($filters['location']) ) {
+        if (isset($filters['location'])) {
             $params['l'] = $filters['location'];
         }
 
-        if (isset($filters['category']) ) {
+        if (isset($filters['category'])) {
             $params['co'] = $filters['category'];
         }
 
-        if (isset($filters['job_type']) ) {
+        if (isset($filters['job_type'])) {
             $params['jt'] = $filters['job_type'];
         }
 
-        if (isset($filters['date_posted']) ) {
+        if (isset($filters['date_posted'])) {
             // Convert to Indeed's fromage parameter (days ago)
             $days_ago          = $this->calculateDaysAgo($filters['date_posted']);
             $params['fromage'] = $days_ago;
@@ -149,7 +148,7 @@ class IndeedBoard extends JobBoard
     /**
      * Normalize Indeed job data
      */
-    private function normalizeIndeedJob( array $jobData ): array
+    private function normalizeIndeedJob(array $jobData): array
     {
         return array(
         'id'          => $jobData['jobkey'] ?? uniqid('indeed_'),
@@ -170,7 +169,7 @@ class IndeedBoard extends JobBoard
     /**
      * Map Indeed job types to standard format
      */
-    private function mapJobType( string $indeedType ): string
+    private function mapJobType(string $indeedType): string
     {
         $type_map = array(
         'fulltime'   => 'full-time',
@@ -186,14 +185,14 @@ class IndeedBoard extends JobBoard
     /**
      * Parse Indeed date format
      */
-    private function parseDatePosted( string $dateString ): string
+    private function parseDatePosted(string $dateString): string
     {
-        if (empty($dateString) ) {
+        if (empty($dateString)) {
             return date('Y-m-d');
         }
 
         // Indeed returns relative dates like "1 day ago", "2 days ago"
-        if (preg_match('/(\d+)\s+days?\s+ago/i', $dateString, $matches) ) {
+        if (preg_match('/(\d+)\s+days?\s+ago/i', $dateString, $matches)) {
             $days_ago = (int) $matches[1];
             return date('Y-m-d', strtotime("-{$days_ago} days"));
         }
@@ -204,14 +203,14 @@ class IndeedBoard extends JobBoard
     /**
      * Calculate days ago from date string
      */
-    private function calculateDaysAgo( string $dateString ): int
+    private function calculateDaysAgo(string $dateString): int
     {
         try {
             $date     = new \DateTime($dateString);
             $now      = new \DateTime();
             $interval = $now->diff($date);
             return $interval->days;
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             return 30; // Default to 30 days
         }
     }

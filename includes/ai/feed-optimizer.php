@@ -11,7 +11,7 @@
 namespace Puntwork\AI;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class FeedOptimizer
 {
-
     /**
      * Optimization actions
      */
@@ -44,7 +43,7 @@ class FeedOptimizer
     public static function init(): void
     {
         // Schedule daily optimization
-        if (! wp_next_scheduled('puntwork_feed_optimization') ) {
+        if (! wp_next_scheduled('puntwork_feed_optimization')) {
             wp_schedule_event(time(), 'daily', 'puntwork_feed_optimization');
         }
 
@@ -81,7 +80,7 @@ class FeedOptimizer
                 'results'   => $results,
                 )
             );
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error('Scheduled feed optimization failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AI);
         }
     }
@@ -93,12 +92,12 @@ class FeedOptimizer
     {
         try {
             // Verify nonce and permissions
-            if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_feed_optimization') ) {
+            if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_feed_optimization')) {
                 wp_send_json_error(array( 'message' => 'Security check failed' ));
                 return;
             }
 
-            if (! current_user_can('manage_options') ) {
+            if (! current_user_can('manage_options')) {
                 wp_send_json_error(array( 'message' => 'Insufficient permissions' ));
                 return;
             }
@@ -120,7 +119,7 @@ class FeedOptimizer
                 'results' => $results,
                 )
             );
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error('Manual feed optimization failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AI);
             wp_send_json_error(array( 'message' => 'Optimization failed: ' . $e->getMessage() ));
         }
@@ -145,17 +144,17 @@ class FeedOptimizer
             $feeds                     = self::getActiveFeeds();
             $results['feeds_analyzed'] = count($feeds);
 
-            foreach ( $feeds as $feed ) {
+            foreach ($feeds as $feed) {
                 $feedKey = get_post_meta($feed->ID, 'feed_url', true);
 
-                if (empty($feedKey) ) {
+                if (empty($feedKey)) {
                     continue;
                 }
 
                 // Use machine learning for optimization
                 $mlOptimization = MachineLearningEngine::optimizeFeedAutomatically($feedKey);
 
-                if ($mlOptimization['success'] ) {
+                if ($mlOptimization['success']) {
                     $results['optimizations_applied'] += count($mlOptimization['applied_optimizations']);
                     $results['recommendations'][]      = array(
                     'feed_id'               => $feed->ID,
@@ -167,7 +166,7 @@ class FeedOptimizer
                 } else {
                     // Fallback to rule-based optimization
                     $feedOptimizations = self::optimizeFeed($feed);
-                    if (! empty($feedOptimizations) ) {
+                    if (! empty($feedOptimizations)) {
                         $results['optimizations_applied'] += count($feedOptimizations);
                         $results['recommendations'][]      = array(
                         'feed_id'         => $feed->ID,
@@ -181,7 +180,7 @@ class FeedOptimizer
 
             // Run global optimizations
             $globalOptimizations = self::runGlobalOptimizations();
-            if (! empty($globalOptimizations) ) {
+            if (! empty($globalOptimizations)) {
                 $results['optimizations_applied'] += count($globalOptimizations);
                 $results['recommendations'][]      = array(
                 'feed_id'         => 'global',
@@ -189,7 +188,7 @@ class FeedOptimizer
                 'recommendations' => $globalOptimizations,
                 );
             }
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             $results['errors'][] = 'Optimization failed: ' . $e->getMessage();
             PuntWorkLogger::error('Feed optimization error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AI);
         }
@@ -203,12 +202,12 @@ class FeedOptimizer
      * @param  \WP_Post $feed Feed post object
      * @return array Optimization actions applied
      */
-    private static function optimizeFeed( \WP_Post $feed ): array
+    private static function optimizeFeed(\WP_Post $feed): array
     {
         $optimizations = array();
         $feedKey       = get_post_meta($feed->ID, 'feed_url', true);
 
-        if (empty($feedKey) ) {
+        if (empty($feedKey)) {
             return $optimizations;
         }
 
@@ -221,25 +220,25 @@ class FeedOptimizer
 
         // 1. Adjust import frequency based on reliability and volume trends
         $frequencyOptimization = self::optimizeImportFrequency($feed, $reliabilityPrediction, $volumePrediction);
-        if ($frequencyOptimization ) {
+        if ($frequencyOptimization) {
             $optimizations[] = $frequencyOptimization;
         }
 
         // 2. Adjust batch size based on success rate and volume
         $batchOptimization = self::optimizeBatchSize($feed, $successPrediction, $volumePrediction);
-        if ($batchOptimization ) {
+        if ($batchOptimization) {
             $optimizations[] = $batchOptimization;
         }
 
         // 3. Adjust timeout based on response time predictions
         $timeoutOptimization = self::optimizeTimeout($feed, $reliabilityPrediction);
-        if ($timeoutOptimization ) {
+        if ($timeoutOptimization) {
             $optimizations[] = $timeoutOptimization;
         }
 
         // 4. Enable/disable feed based on reliability
         $statusOptimization = self::optimizeFeedStatus($feed, $reliabilityPrediction);
-        if ($statusOptimization ) {
+        if ($statusOptimization) {
             $optimizations[] = $statusOptimization;
         }
 
@@ -254,9 +253,9 @@ class FeedOptimizer
      * @param  array    $volumePrediction      Volume prediction data
      * @return array|null Optimization action
      */
-    private static function optimizeImportFrequency( \WP_Post $feed, array $reliabilityPrediction, array $volumePrediction ): ?array
+    private static function optimizeImportFrequency(\WP_Post $feed, array $reliabilityPrediction, array $volumePrediction): ?array
     {
-        if ($reliabilityPrediction['confidence'] === self::CONFIDENCE_LOW ) {
+        if ($reliabilityPrediction['confidence'] === self::CONFIDENCE_LOW) {
             return null; // Not confident enough to change frequency
         }
 
@@ -267,14 +266,14 @@ class FeedOptimizer
         $newFrequency = $currentFrequency;
 
         // If reliability is poor and volume is decreasing, reduce frequency
-        if ($reliabilityScore < 50 && $volumeTrend === 'decreasing' ) {
+        if ($reliabilityScore < 50 && $volumeTrend === 'decreasing') {
             $newFrequency = self::increaseFrequencyInterval($currentFrequency);
-        } elseif ($reliabilityScore > 80 && $volumeTrend === 'increasing' ) {
+        } elseif ($reliabilityScore > 80 && $volumeTrend === 'increasing') {
             // If reliability is good and volume is increasing, increase frequency
             $newFrequency = self::decreaseFrequencyInterval($currentFrequency);
         }
 
-        if ($newFrequency !== $currentFrequency ) {
+        if ($newFrequency !== $currentFrequency) {
             update_post_meta($feed->ID, 'import_frequency', $newFrequency);
             return array(
             'action'     => self::ACTION_ADJUST_FREQUENCY,
@@ -296,9 +295,9 @@ class FeedOptimizer
      * @param  array    $volumePrediction  Volume prediction data
      * @return array|null Optimization action
      */
-    private static function optimizeBatchSize( \WP_Post $feed, array $successPrediction, array $volumePrediction ): ?array
+    private static function optimizeBatchSize(\WP_Post $feed, array $successPrediction, array $volumePrediction): ?array
     {
-        if ($successPrediction['confidence'] === self::CONFIDENCE_LOW ) {
+        if ($successPrediction['confidence'] === self::CONFIDENCE_LOW) {
             return null;
         }
 
@@ -309,14 +308,14 @@ class FeedOptimizer
         $newBatchSize = $currentBatchSize;
 
         // If success rate is high and volume is increasing, increase batch size
-        if ($successRate > 90 && $predictedVolume > $currentBatchSize * 1.2 ) {
+        if ($successRate > 90 && $predictedVolume > $currentBatchSize * 1.2) {
             $newBatchSize = min($currentBatchSize * 2, 1000); // Max 1000
-        } elseif ($successRate < 70 ) {
+        } elseif ($successRate < 70) {
             // If success rate is low, reduce batch size
             $newBatchSize = max($currentBatchSize / 2, 10); // Min 10
         }
 
-        if ($newBatchSize != $currentBatchSize ) {
+        if ($newBatchSize != $currentBatchSize) {
             update_post_meta($feed->ID, 'batch_size', $newBatchSize);
             return array(
             'action'     => self::ACTION_ADJUST_BATCH_SIZE,
@@ -337,9 +336,9 @@ class FeedOptimizer
      * @param  array    $reliabilityPrediction Reliability prediction data
      * @return array|null Optimization action
      */
-    private static function optimizeTimeout( \WP_Post $feed, array $reliabilityPrediction ): ?array
+    private static function optimizeTimeout(\WP_Post $feed, array $reliabilityPrediction): ?array
     {
-        if ($reliabilityPrediction['confidence'] === self::CONFIDENCE_LOW ) {
+        if ($reliabilityPrediction['confidence'] === self::CONFIDENCE_LOW) {
             return null;
         }
 
@@ -353,14 +352,14 @@ class FeedOptimizer
         $newTimeout = $currentTimeout;
 
         // If average response time is much lower than timeout, reduce timeout
-        if ($avgResponseTime < $currentTimeout * 0.5 ) {
+        if ($avgResponseTime < $currentTimeout * 0.5) {
             $newTimeout = max($avgResponseTime * 2, 10); // At least 10 seconds, double the avg response
-        } elseif ($avgResponseTime > $currentTimeout * 0.8 ) {
+        } elseif ($avgResponseTime > $currentTimeout * 0.8) {
             // If response time is approaching timeout, increase timeout
             $newTimeout = min($currentTimeout * 1.5, 300); // Max 5 minutes
         }
 
-        if ($newTimeout != $currentTimeout ) {
+        if ($newTimeout != $currentTimeout) {
             update_post_meta($feed->ID, 'timeout', $newTimeout);
             return array(
             'action'     => self::ACTION_ADJUST_TIMEOUT,
@@ -381,9 +380,9 @@ class FeedOptimizer
      * @param  array    $reliabilityPrediction Reliability prediction data
      * @return array|null Optimization action
      */
-    private static function optimizeFeedStatus( \WP_Post $feed, array $reliabilityPrediction ): ?array
+    private static function optimizeFeedStatus(\WP_Post $feed, array $reliabilityPrediction): ?array
     {
-        if ($reliabilityPrediction['confidence'] === self::CONFIDENCE_LOW ) {
+        if ($reliabilityPrediction['confidence'] === self::CONFIDENCE_LOW) {
             return null;
         }
 
@@ -392,12 +391,12 @@ class FeedOptimizer
         $predictedReliability = $reliabilityPrediction['predicted_reliability'] ?? 0;
 
         // If current reliability is very poor and predicted to stay poor, disable feed
-        if (! $currentStatus && $reliabilityScore < 20 && $predictedReliability < 30 ) {
+        if (! $currentStatus && $reliabilityScore < 20 && $predictedReliability < 30) {
             // Feed is already disabled, no change needed
             return null;
         }
 
-        if ($currentStatus && $reliabilityScore < 20 && $predictedReliability < 30 ) {
+        if ($currentStatus && $reliabilityScore < 20 && $predictedReliability < 30) {
             update_post_meta($feed->ID, 'feed_enabled', '0');
             return array(
             'action'     => self::ACTION_DISABLE_FEED,
@@ -407,7 +406,7 @@ class FeedOptimizer
         }
 
         // If feed is disabled but reliability has improved significantly, re-enable
-        if (! $currentStatus && $reliabilityScore > 70 && $predictedReliability > 60 ) {
+        if (! $currentStatus && $reliabilityScore > 70 && $predictedReliability > 60) {
             update_post_meta($feed->ID, 'feed_enabled', '1');
             return array(
             'action'     => self::ACTION_ENABLE_FEED,
@@ -430,7 +429,7 @@ class FeedOptimizer
 
         // Reorder feeds based on performance
         $reorderOptimization = self::optimizeFeedOrdering();
-        if ($reorderOptimization ) {
+        if ($reorderOptimization) {
             $optimizations[] = $reorderOptimization;
         }
 
@@ -445,15 +444,15 @@ class FeedOptimizer
     private static function optimizeFeedOrdering(): ?array
     {
         $feeds = self::getActiveFeeds();
-        if (count($feeds) < 2 ) {
+        if (count($feeds) < 2) {
             return null; // Need at least 2 feeds to reorder
         }
 
         // Calculate performance scores for each feed
         $feedScores = array();
-        foreach ( $feeds as $feed ) {
+        foreach ($feeds as $feed) {
             $feedKey = get_post_meta($feed->ID, 'feed_url', true);
-            if ($feedKey ) {
+            if ($feedKey) {
                 $reliability = PredictiveAnalytics::predictFeedReliability($feedKey);
                 $success     = PredictiveAnalytics::predictImportSuccess($feedKey);
 
@@ -469,7 +468,7 @@ class FeedOptimizer
             }
         }
 
-        if (empty($feedScores) ) {
+        if (empty($feedScores)) {
             return null;
         }
 
@@ -479,15 +478,15 @@ class FeedOptimizer
         // Check if reordering is needed
         $needsReordering = false;
         $newOrder        = 0;
-        foreach ( $feedScores as $feedId => $data ) {
-            if ($data['current_order'] != $newOrder ) {
+        foreach ($feedScores as $feedId => $data) {
+            if ($data['current_order'] != $newOrder) {
                 $needsReordering = true;
                 update_post_meta($feedId, 'menu_order', $newOrder);
             }
             ++$newOrder;
         }
 
-        if ($needsReordering ) {
+        if ($needsReordering) {
             return array(
             'action'    => self::ACTION_REORDER_FEEDS,
             'reason'    => 'Reordered feeds by performance score (highest reliability/success first)',
@@ -529,7 +528,7 @@ class FeedOptimizer
      * @param  string $currentFrequency Current frequency
      * @return string New frequency
      */
-    private static function increaseFrequencyInterval( string $currentFrequency ): string
+    private static function increaseFrequencyInterval(string $currentFrequency): string
     {
         $frequencies = array(
         '5min'    => '15min',
@@ -551,7 +550,7 @@ class FeedOptimizer
      * @param  string $currentFrequency Current frequency
      * @return string New frequency
      */
-    private static function decreaseFrequencyInterval( string $currentFrequency ): string
+    private static function decreaseFrequencyInterval(string $currentFrequency): string
     {
         $frequencies = array(
         'weekly'  => 'daily',
@@ -582,9 +581,9 @@ class FeedOptimizer
         try {
             $feeds = self::getActiveFeeds();
 
-            foreach ( $feeds as $feed ) {
+            foreach ($feeds as $feed) {
                 $feedRecs = self::getFeedRecommendations($feed);
-                if (! empty($feedRecs) ) {
+                if (! empty($feedRecs)) {
                     $recommendations['feed_optimizations'][] = array(
                      'feed_id'         => $feed->ID,
                      'feed_name'       => $feed->post_title,
@@ -595,7 +594,7 @@ class FeedOptimizer
 
             $globalRecs                              = self::getGlobalRecommendations();
             $recommendations['global_optimizations'] = $globalRecs;
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error('Error getting optimization recommendations: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AI);
         }
 
@@ -608,12 +607,12 @@ class FeedOptimizer
      * @param  \WP_Post $feed Feed post object
      * @return array Recommendations
      */
-    private static function getFeedRecommendations( \WP_Post $feed ): array
+    private static function getFeedRecommendations(\WP_Post $feed): array
     {
         $recommendations = array();
         $feedKey         = get_post_meta($feed->ID, 'feed_url', true);
 
-        if (empty($feedKey) ) {
+        if (empty($feedKey)) {
             return $recommendations;
         }
 
@@ -622,9 +621,9 @@ class FeedOptimizer
         $volumePrediction      = PredictiveAnalytics::predictImportVolume();
 
         // Generate recommendations based on predictions
-        if ($reliabilityPrediction['confidence'] !== self::CONFIDENCE_LOW ) {
+        if ($reliabilityPrediction['confidence'] !== self::CONFIDENCE_LOW) {
             $reliabilityScore = $reliabilityPrediction['current_reliability'] ?? 0;
-            if ($reliabilityScore < 50 ) {
+            if ($reliabilityScore < 50) {
                 $recommendations[] = array(
                 'type'             => 'reliability',
                 'severity'         => 'high',
@@ -634,9 +633,9 @@ class FeedOptimizer
             }
         }
 
-        if ($successPrediction['confidence'] !== self::CONFIDENCE_LOW ) {
+        if ($successPrediction['confidence'] !== self::CONFIDENCE_LOW) {
             $successRate = $successPrediction['prediction'] ?? 0;
-            if ($successRate < 80 ) {
+            if ($successRate < 80) {
                 $recommendations[] = array(
                 'type'             => 'success_rate',
                 'severity'         => 'medium',
@@ -646,9 +645,9 @@ class FeedOptimizer
             }
         }
 
-        if ($volumePrediction['confidence'] !== self::CONFIDENCE_LOW ) {
+        if ($volumePrediction['confidence'] !== self::CONFIDENCE_LOW) {
             $trend = $volumePrediction['trend'] ?? 'stable';
-            if ($trend === 'decreasing' ) {
+            if ($trend === 'decreasing') {
                 $recommendations[] = array(
                 'type'             => 'volume_trend',
                 'severity'         => 'medium',
@@ -672,7 +671,7 @@ class FeedOptimizer
 
         // Check for feeds that haven't been imported recently
         $staleFeeds = self::getStaleFeeds();
-        if (! empty($staleFeeds) ) {
+        if (! empty($staleFeeds)) {
             $recommendations[] = array(
             'type'             => 'stale_feeds',
             'severity'         => 'medium',
@@ -683,7 +682,7 @@ class FeedOptimizer
 
         // Check for feeds with consistently poor performance
         $poorPerformingFeeds = self::getPoorPerformingFeeds();
-        if (! empty($poorPerformingFeeds) ) {
+        if (! empty($poorPerformingFeeds)) {
             $recommendations[] = array(
             'type'             => 'poor_performance',
             'severity'         => 'high',
@@ -730,11 +729,11 @@ class FeedOptimizer
         $feeds      = self::getActiveFeeds();
         $poor_feeds = array();
 
-        foreach ( $feeds as $feed ) {
+        foreach ($feeds as $feed) {
             $feedKey = get_post_meta($feed->ID, 'feed_url', true);
-            if ($feedKey ) {
+            if ($feedKey) {
                 $reliability = PredictiveAnalytics::predictFeedReliability($feedKey);
-                if (( $reliability['current_reliability'] ?? 100 ) < 50 ) {
+                if (( $reliability['current_reliability'] ?? 100 ) < 50) {
                     $poor_feeds[] = $feed->ID;
                 }
             }

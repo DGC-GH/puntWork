@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Import Process Debugger
  *
@@ -14,7 +15,8 @@ if (! defined('ABSPATH')) {
 /**
  * Run import process profiling
  */
-function run_import_profiling() {
+function run_import_profiling()
+{
     if (!current_user_can('manage_options')) {
         wp_die('Insufficient permissions');
     }
@@ -84,7 +86,6 @@ function run_import_profiling() {
         } else {
             wp_send_json_error('Feed processing failed: ' . ($result['message'] ?? 'Unknown error'));
         }
-
     } catch (Exception $e) {
         end_import_performance_monitoring($profile_id, 'debug_import_error', 0);
         wp_send_json_error('Profiling failed: ' . $e->getMessage());
@@ -94,7 +95,8 @@ function run_import_profiling() {
 /**
  * Get import performance recommendations
  */
-function get_import_optimization_recommendations() {
+function get_import_optimization_recommendations()
+{
     if (!current_user_can('manage_options')) {
         wp_die('Insufficient permissions');
     }
@@ -163,7 +165,8 @@ function get_import_optimization_recommendations() {
 /**
  * Apply optimization recommendations
  */
-function apply_import_optimizations() {
+function apply_import_optimizations()
+{
     if (!current_user_can('manage_options')) {
         wp_die('Insufficient permissions');
     }

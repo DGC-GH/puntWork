@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -50,7 +50,7 @@ function render_feed_config_ui(): void
 
                 <div class="puntwork-card__body">
                     <div id="feed-list" class="feed-list">
-                        <?php if (empty($feed_posts) ) : ?>
+                        <?php if (empty($feed_posts)) : ?>
                             <div class="puntwork-empty">
                                 <i class="fas fa-rss puntwork-empty__icon"></i>
                                 <div class="puntwork-empty__title">No feeds configured</div>
@@ -61,7 +61,7 @@ function render_feed_config_ui(): void
                             </div>
                         <?php else : ?>
                             <?php
-                            foreach ( $feed_posts as $post ) :
+                            foreach ($feed_posts as $post) :
                                 $feed_url     = get_post_meta($post->ID, 'feed_url', true);
                                 $is_enabled   = get_post_meta($post->ID, 'feed_enabled', true) !== '0'; // Default to enabled
                                 $last_import  = get_post_meta($post->ID, 'last_import', true);
@@ -98,7 +98,7 @@ function render_feed_config_ui(): void
                                                 <i class="fas fa-chart-line"></i>
                                 <?php echo number_format($import_count); ?> imports
                                             </span>
-                                <?php if ($last_import ) : ?>
+                                <?php if ($last_import) : ?>
                                                 <span class="feed-meta-item">
                                                     <i class="fas fa-clock"></i>
                                                     Last import: <?php echo esc_html(date('M j, Y H:i', strtotime($last_import))); ?>
@@ -115,7 +115,7 @@ function render_feed_config_ui(): void
                         <?php endif; ?>
                     </div>
 
-                    <?php if (! empty($feed_posts) ) : ?>
+                    <?php if (! empty($feed_posts)) : ?>
                         <div class="feed-actions" style="margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--color-gray-200);">
                             <button id="add-new-feed" class="puntwork-btn puntwork-btn--primary">
                                 <i class="fas fa-plus puntwork-btn__icon"></i>Add New Feed
@@ -153,8 +153,8 @@ function render_feed_config_ui(): void
                             <div class="puntwork-stat__value">
                                 <?php
                                 $enabled_count = 0;
-                                foreach ( $feed_posts as $post ) {
-                                    if (get_post_meta($post->ID, 'feed_enabled', true) !== '0' ) {
+                                foreach ($feed_posts as $post) {
+                                    if (get_post_meta($post->ID, 'feed_enabled', true) !== '0') {
                                         ++$enabled_count;
                                     }
                                 }
@@ -171,7 +171,7 @@ function render_feed_config_ui(): void
                             <div class="puntwork-stat__value">
                                 <?php
                                 $total_imports = 0;
-                                foreach ( $feed_posts as $post ) {
+                                foreach ($feed_posts as $post) {
                                     $total_imports += (int) get_post_meta($post->ID, 'import_count', true);
                                 }
                                 echo number_format($total_imports);
@@ -187,13 +187,13 @@ function render_feed_config_ui(): void
                             <div class="puntwork-stat__value">
                                 <?php
                                 $last_import_times = array();
-                                foreach ( $feed_posts as $post ) {
+                                foreach ($feed_posts as $post) {
                                     $last_import = get_post_meta($post->ID, 'last_import', true);
-                                    if ($last_import ) {
+                                    if ($last_import) {
                                         $last_import_times[] = strtotime($last_import);
                                     }
                                 }
-                                if (! empty($last_import_times) ) {
+                                if (! empty($last_import_times)) {
                                     $most_recent = max($last_import_times);
                                     echo esc_html(date('M j', $most_recent));
                                 } else {

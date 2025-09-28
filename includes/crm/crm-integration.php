@@ -11,7 +11,7 @@
 namespace Puntwork\CRM;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 abstract class CRMIntegration
 {
-
     /**
      * CRM platform identifier
      */
@@ -48,7 +47,7 @@ abstract class CRMIntegration
     /**
      * Constructor
      */
-    public function __construct( array $config = array() )
+    public function __construct(array $config = array())
     {
         $this->config = $config;
         $this->initialize();
@@ -72,22 +71,22 @@ abstract class CRMIntegration
     /**
      * Create or update a contact/lead
      */
-    abstract public function createContact( array $contact_data ): array;
+    abstract public function createContact(array $contact_data): array;
 
     /**
      * Update existing contact
      */
-    abstract public function updateContact( string $contact_id, array $contact_data ): array;
+    abstract public function updateContact(string $contact_id, array $contact_data): array;
 
     /**
      * Find contact by email
      */
-    abstract public function findContactByEmail( string $email ): ?array;
+    abstract public function findContactByEmail(string $email): ?array;
 
     /**
      * Create a deal/opportunity
      */
-    abstract public function createDeal( array $deal_data ): array;
+    abstract public function createDeal(array $deal_data): array;
 
     /**
      * Get platform identifier
@@ -113,7 +112,7 @@ abstract class CRMIntegration
     /**
      * Update configuration
      */
-    public function updateConfig( array $config ): void
+    public function updateConfig(array $config): void
     {
         $this->config = array_merge($this->config, $config);
     }
@@ -128,15 +127,15 @@ abstract class CRMIntegration
         $requests_hour   = get_transient($transient_key . '_hour_' . date('Y-m-d-H')) ?: 0;
         $requests_minute = get_transient($transient_key . '_minute_' . date('Y-m-d-H-i')) ?: 0;
 
-        if ($requests_today >= $this->rate_limits['requests_per_day'] ) {
+        if ($requests_today >= $this->rate_limits['requests_per_day']) {
             throw new \Exception('Daily rate limit exceeded for ' . $this->platform_name);
         }
 
-        if ($requests_hour >= $this->rate_limits['requests_per_hour'] ) {
+        if ($requests_hour >= $this->rate_limits['requests_per_hour']) {
             throw new \Exception('Hourly rate limit exceeded for ' . $this->platform_name);
         }
 
-        if ($requests_minute >= $this->rate_limits['requests_per_minute'] ) {
+        if ($requests_minute >= $this->rate_limits['requests_per_minute']) {
             throw new \Exception('Minute rate limit exceeded for ' . $this->platform_name);
         }
 
@@ -168,7 +167,7 @@ abstract class CRMIntegration
     /**
      * Make API request with error handling
      */
-    protected function makeApiRequest( string $endpoint, array $params = array(), string $method = 'GET', array $headers = array() ): array
+    protected function makeApiRequest(string $endpoint, array $params = array(), string $method = 'GET', array $headers = array()): array
     {
         $this->checkRateLimit();
 
@@ -180,7 +179,7 @@ abstract class CRMIntegration
         'timeout' => 30,
         );
 
-        if ($method === 'GET' ) {
+        if ($method === 'GET') {
             $url .= '?' . http_build_query($params);
         } else {
             $args['body'] = json_encode($params);
@@ -190,14 +189,14 @@ abstract class CRMIntegration
 
         $this->recordRequest();
 
-        if (is_wp_error($response) ) {
+        if (is_wp_error($response)) {
             throw new \Exception('API request failed: ' . $response->get_error_message());
         }
 
         $body = wp_remote_retrieve_body($response);
         $data = json_decode($body, true);
 
-        if (json_last_error() !== JSON_ERROR_NONE ) {
+        if (json_last_error() !== JSON_ERROR_NONE) {
             throw new \Exception('Invalid JSON response from CRM API');
         }
 
@@ -219,12 +218,12 @@ abstract class CRMIntegration
     /**
      * Handle API-specific errors
      */
-    abstract protected function handleApiError( array $response ): void;
+    abstract protected function handleApiError(array $response): void;
 
     /**
      * Standardize contact data format
      */
-    protected function standardizeContactData( array $contact_data ): array
+    protected function standardizeContactData(array $contact_data): array
     {
         return array(
         'first_name'    => $contact_data['first_name'] ?? '',
@@ -248,7 +247,7 @@ abstract class CRMIntegration
     /**
      * Standardize deal data format
      */
-    protected function standardizeDealData( array $deal_data ): array
+    protected function standardizeDealData(array $deal_data): array
     {
         return array(
         'title'               => $deal_data['title'] ?? '',

@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -27,11 +27,11 @@ use Puntwork\Utilities\CacheManager;
  *
  * @return array Icon mappings by category.
  */
-if (! function_exists('GetIconMap') ) {
+if (! function_exists('GetIconMap')) {
     function GetIconMap()
     {
         $cached = CacheManager::get('icon_map', CacheManager::GROUP_MAPPINGS);
-        if (false === $cached ) {
+        if (false === $cached) {
             $cached = array(
             'Accounting'                            => 'fa-calculator-alt',
             'Comptabilité'                          => 'fa-file-invoice-dollar',

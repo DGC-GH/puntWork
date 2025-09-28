@@ -11,7 +11,7 @@
 namespace Puntwork\Utilities;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class DatabasePerformanceMonitor
 {
-
     private static array $query_log  = array();
     private static float $start_time = 0.0;
 
@@ -49,7 +48,7 @@ class DatabasePerformanceMonitor
      * @param  string $query The SQL query
      * @return string The query (unchanged)
      */
-    public static function logQuery( string $query ): string
+    public static function logQuery(string $query): string
     {
         $query_start = microtime(true);
         $backtrace   = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5);
@@ -87,7 +86,7 @@ class DatabasePerformanceMonitor
         error_log('[PUNTWORK] DatabasePerformanceMonitor: Filters removed successfully');
 
         $query_count  = count(self::$query_log);
-        $slow_queries = array_filter(self::$query_log, fn( $q ) => ( $q['start_time'] ?? 0 ) > 0.1); // Queries > 100ms
+        $slow_queries = array_filter(self::$query_log, fn($q) => ( $q['start_time'] ?? 0 ) > 0.1); // Queries > 100ms
 
         return array(
         'total_queries'      => $query_count,
@@ -102,19 +101,19 @@ class DatabasePerformanceMonitor
     /**
      * Get query type from SQL
      */
-    private static function getQueryType( string $query ): string
+    private static function getQueryType(string $query): string
     {
         $query = strtoupper(trim($query));
-        if (strpos($query, 'SELECT') === 0 ) {
+        if (strpos($query, 'SELECT') === 0) {
             return 'SELECT';
         }
-        if (strpos($query, 'INSERT') === 0 ) {
+        if (strpos($query, 'INSERT') === 0) {
             return 'INSERT';
         }
-        if (strpos($query, 'UPDATE') === 0 ) {
+        if (strpos($query, 'UPDATE') === 0) {
             return 'UPDATE';
         }
-        if (strpos($query, 'DELETE') === 0 ) {
+        if (strpos($query, 'DELETE') === 0) {
             return 'DELETE';
         }
         return 'OTHER';
@@ -126,7 +125,7 @@ class DatabasePerformanceMonitor
     private static function analyzeQueryTypes(): array
     {
         $types = array();
-        foreach ( self::$query_log as $query ) {
+        foreach (self::$query_log as $query) {
             $type           = $query['query_type'];
             $types[ $type ] = ( $types[ $type ] ?? 0 ) + 1;
         }

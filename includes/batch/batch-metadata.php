@@ -11,19 +11,19 @@
 declare(strict_types=1);
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
 /**
  * Prepare metadata for batch processing.
  */
-function prepare_batch_metadata( array $post_ids_by_guid ): array
+function prepare_batch_metadata(array $post_ids_by_guid): array
 {
     global $wpdb;
 
     $post_ids = array_values($post_ids_by_guid);
-    if (empty($post_ids) ) {
+    if (empty($post_ids)) {
         return array(
         'last_updates'   => array(),
         'hashes_by_post' => array(),
@@ -48,7 +48,7 @@ function prepare_batch_metadata( array $post_ids_by_guid ): array
 /**
  * Get cached last updates for posts.
  */
-function get_cached_last_updates( array $post_ids, array $post_id_chunks ): array
+function get_cached_last_updates(array $post_ids, array $post_id_chunks): array
 {
     global $wpdb;
 
@@ -56,7 +56,7 @@ function get_cached_last_updates( array $post_ids, array $post_id_chunks ): arra
     $cache_key = 'batch_last_updates_' . md5(implode(',', $post_ids));
     $cached    = \Puntwork\Utilities\CacheManager::get($cache_key, \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS);
 
-    if ($cached !== false ) {
+    if ($cached !== false) {
         error_log('[PUNTWORK] [DB-DEBUG] Returning cached last updates for ' . count($post_ids) . ' posts');
         return $cached;
     }
@@ -64,8 +64,8 @@ function get_cached_last_updates( array $post_ids, array $post_id_chunks ): arra
     error_log('[PUNTWORK] [DB-DEBUG] Cache miss, querying last updates for ' . count($post_ids) . ' posts');
 
     $last_updates = array();
-    foreach ( $post_id_chunks as $chunk ) {
-        if (empty($chunk) ) {
+    foreach ($post_id_chunks as $chunk) {
+        if (empty($chunk)) {
             continue;
         }
         $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
@@ -95,14 +95,14 @@ function get_cached_last_updates( array $post_ids, array $post_id_chunks ): arra
 /**
  * Get cached import hashes for posts.
  */
-function get_cached_import_hashes( array $post_ids, array $post_id_chunks ): array
+function get_cached_import_hashes(array $post_ids, array $post_id_chunks): array
 {
     global $wpdb;
 
     $cache_key = 'batch_import_hashes_' . md5(implode(',', $post_ids));
     $cached    = \Puntwork\Utilities\CacheManager::get($cache_key, \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS);
 
-    if ($cached !== false ) {
+    if ($cached !== false) {
         error_log('[PUNTWORK] [DB-DEBUG] Returning cached import hashes for ' . count($post_ids) . ' posts');
         return $cached;
     }
@@ -110,8 +110,8 @@ function get_cached_import_hashes( array $post_ids, array $post_id_chunks ): arr
     error_log('[PUNTWORK] [DB-DEBUG] Cache miss, querying import hashes for ' . count($post_ids) . ' posts');
 
     $hashes_by_post = array();
-    foreach ( $post_id_chunks as $chunk ) {
-        if (empty($chunk) ) {
+    foreach ($post_id_chunks as $chunk) {
+        if (empty($chunk)) {
             continue;
         }
         $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
@@ -128,7 +128,7 @@ function get_cached_import_hashes( array $post_ids, array $post_id_chunks ): arr
 
         error_log('[PUNTWORK] [DB-DEBUG] Import hashes query returned ' . count($chunk_hashes) . ' results in ' . number_format($query_time, 4) . ' seconds');
 
-        foreach ( $chunk_hashes as $id => $obj ) {
+        foreach ($chunk_hashes as $id => $obj) {
             $hashes_by_post[ $id ] = $obj->meta_value;
         }
     }

@@ -11,7 +11,7 @@
 namespace Puntwork\SocialMedia;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class TwitterAdsManager
 {
-
     /**
      * Twitter Platform instance
      */
@@ -34,7 +33,7 @@ class TwitterAdsManager
     /**
      * Constructor
      */
-    public function __construct( TwitterPlatform $twitter_platform )
+    public function __construct(TwitterPlatform $twitter_platform)
     {
         $this->twitter_platform = $twitter_platform;
     }
@@ -42,11 +41,11 @@ class TwitterAdsManager
     /**
      * Create a Twitter Ads campaign
      */
-    public function createCampaign( array $campaign_data ): array
+    public function createCampaign(array $campaign_data): array
     {
         $required_fields = array( 'name', 'account_id', 'objective', 'budget', 'start_time', 'end_time' );
-        foreach ( $required_fields as $field ) {
-            if (! isset($campaign_data[ $field ]) ) {
+        foreach ($required_fields as $field) {
+            if (! isset($campaign_data[ $field ])) {
                 throw new \Exception("Missing required field: {$field}");
             }
         }
@@ -73,7 +72,7 @@ class TwitterAdsManager
     /**
      * Create a promoted tweet
      */
-    public function createPromotedTweet( string $tweet_id, array $options ): array
+    public function createPromotedTweet(string $tweet_id, array $options): array
     {
         $params = array(
         'tweet_id' => $tweet_id,
@@ -92,24 +91,24 @@ class TwitterAdsManager
     /**
      * Create targeting criteria for ads
      */
-    public function createTargeting( array $targeting_data ): array
+    public function createTargeting(array $targeting_data): array
     {
         $params = array();
 
         // Location targeting
-        if (! empty($targeting_data['locations']) ) {
+        if (! empty($targeting_data['locations'])) {
             $params['location'] = $targeting_data['locations'];
         }
 
         // Interest targeting
-        if (! empty($targeting_data['interests']) ) {
+        if (! empty($targeting_data['interests'])) {
             $params['interest'] = $targeting_data['interests'];
         }
 
         // Keyword targeting
-        if (! empty($targeting_data['keywords']) ) {
+        if (! empty($targeting_data['keywords'])) {
             $params['phrase_keyword'] = array_map(
-                function ( $keyword ) {
+                function ($keyword) {
                     return array( 'phrase' => $keyword );
                 },
                 $targeting_data['keywords']
@@ -117,7 +116,7 @@ class TwitterAdsManager
         }
 
         // Age targeting
-        if (! empty($targeting_data['age_min']) || ! empty($targeting_data['age_max']) ) {
+        if (! empty($targeting_data['age_min']) || ! empty($targeting_data['age_max'])) {
             $params['age'] = array(
             'min' => $targeting_data['age_min'] ?? 18,
             'max' => $targeting_data['age_max'] ?? 65,
@@ -136,7 +135,7 @@ class TwitterAdsManager
     /**
      * Post job with ads campaign
      */
-    public function postJobWithAds( array $job_data, array $ads_config ): array
+    public function postJobWithAds(array $job_data, array $ads_config): array
     {
         // First post the tweet
         $tweet_result = $this->twitter_platform->post(
@@ -146,7 +145,7 @@ class TwitterAdsManager
             )
         );
 
-        if (! $tweet_result['success'] ) {
+        if (! $tweet_result['success']) {
             return $tweet_result;
         }
 
@@ -180,7 +179,7 @@ class TwitterAdsManager
             'targeting_ids'     => $targeting_result['targeting_ids'],
             'total_cost'        => $ads_config['campaign']['budget'],
             );
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             // If ads creation fails, the tweet still exists
             PuntWorkLogger::error(
                 'Twitter ads creation failed',
@@ -202,7 +201,7 @@ class TwitterAdsManager
     /**
      * Create compelling ad text for job posting
      */
-    private function createJobAdText( array $job_data ): string
+    private function createJobAdText(array $job_data): string
     {
         $title    = $job_data['title'] ?? '';
         $company  = $job_data['company'] ?? '';
@@ -214,11 +213,11 @@ class TwitterAdsManager
         $text .= "💼 {$title}\n";
         $text .= "🏢 {$company}\n";
 
-        if ($location ) {
+        if ($location) {
             $text .= "📍 {$location}\n";
         }
 
-        if ($salary ) {
+        if ($salary) {
             $text .= "💰 {$salary}\n";
         }
 
@@ -231,7 +230,7 @@ class TwitterAdsManager
     /**
      * Get campaign performance metrics
      */
-    public function getCampaignMetrics( string $campaign_id, string $account_id ): array
+    public function getCampaignMetrics(string $campaign_id, string $account_id): array
     {
         $response = $this->makeAdsApiRequest(
             "accounts/{$account_id}/campaigns/{$campaign_id}/stats",
@@ -251,7 +250,7 @@ class TwitterAdsManager
     /**
      * Convert currency to micro units
      */
-    private function convertToMicro( float $amount ): int
+    private function convertToMicro(float $amount): int
     {
         return (int) ( $amount * 1000000 );
     }
@@ -259,7 +258,7 @@ class TwitterAdsManager
     /**
      * Make Ads API request
      */
-    private function makeAdsApiRequest( string $endpoint, array $params, string $method )
+    private function makeAdsApiRequest(string $endpoint, array $params, string $method)
     {
         $url = $this->ads_api_base . '/' . $endpoint;
 
@@ -273,7 +272,7 @@ class TwitterAdsManager
         'timeout' => 30,
         );
 
-        if ($method === 'GET' ) {
+        if ($method === 'GET') {
             $url .= '?' . http_build_query($params);
         } else {
             $args['body'] = json_encode($params);
@@ -281,13 +280,13 @@ class TwitterAdsManager
 
         $response = wp_remote_request($url, $args);
 
-        if (is_wp_error($response) ) {
+        if (is_wp_error($response)) {
             throw new \Exception('Ads API request failed: ' . $response->get_error_message());
         }
 
         $body = json_decode(wp_remote_retrieve_body($response), true);
 
-        if (wp_remote_retrieve_response_code($response) >= 400 ) {
+        if (wp_remote_retrieve_response_code($response) >= 400) {
             throw new \Exception('Ads API error: ' . ( $body['errors'][0]['message'] ?? 'Unknown error' ));
         }
 

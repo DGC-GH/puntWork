@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -48,7 +48,7 @@ function enqueue_job_import_scripts()
     );
     $should_load    = in_array($current_page, $puntwork_pages);
 
-    if ($should_load ) {
+    if ($should_load) {
         // Modern admin styles
         wp_enqueue_style(
             'puntwork-admin-modern',
@@ -538,7 +538,7 @@ function enqueue_job_import_scripts()
 
         // Enqueue queue management styles and scripts only on relevant pages
         $queue_pages = array( 'puntwork-dashboard', 'puntwork-monitoring', 'job-feed-dashboard' );
-        if (in_array($current_page, $queue_pages) ) {
+        if (in_array($current_page, $queue_pages)) {
             wp_enqueue_style(
                 'puntwork-queue',
                 PUNTWORK_URL . 'assets/css/queue-interface.css',
@@ -589,7 +589,7 @@ function add_pwa_manifest_link()
     $current_page   = isset($_GET['page']) ? $_GET['page'] : '';
     $puntwork_pages = array( 'puntwork-dashboard', 'puntwork-analytics', 'puntwork-api-settings', 'puntwork-feed-health', 'puntwork-scheduling' );
 
-    if (in_array($current_page, $puntwork_pages) ) {
+    if (in_array($current_page, $puntwork_pages)) {
         echo '<link rel="manifest" href="' . esc_url(PUNTWORK_URL . 'puntwork-admin.webmanifest') . '">' . "\n";
         echo '<meta name="theme-color" content="#007aff">' . "\n";
         echo '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n";

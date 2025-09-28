@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,12 +20,12 @@ if (! defined('ABSPATH') ) {
 add_action(
     'wp',
     function () {
-        if (! wp_next_scheduled('fetch_combined_jobs_json') ) {
+        if (! wp_next_scheduled('fetch_combined_jobs_json')) {
             // Use WordPress configured timezone
             $wp_timezone = wp_timezone();
             $now         = new \DateTime('now', $wp_timezone);
             $target      = new \DateTime('today 03:33', $wp_timezone);
-            if ($now > $target ) {
+            if ($now > $target) {
                 $target->modify('+1 day');
             }
             wp_schedule_event($target->getTimestamp(), 'daily', 'fetch_combined_jobs_json');
@@ -43,18 +43,18 @@ add_action(
 
         // Check if an import is already running or paused
         $import_status = get_option('job_import_status', array());
-        if (isset($import_status['complete']) && ! $import_status['complete'] && ! isset($import_status['paused']) ) {
+        if (isset($import_status['complete']) && ! $import_status['complete'] && ! isset($import_status['paused'])) {
             error_log('[PUNTWORK] Scheduled import cron skipped - import already running');
             return;
         }
 
         // If import is paused, continue it instead of starting new
-        if (isset($import_status['paused']) && $import_status['paused'] ) {
+        if (isset($import_status['paused']) && $import_status['paused']) {
             error_log('[PUNTWORK] Scheduled import cron continuing paused import');
             try {
                 continue_paused_import();
                 return;
-            } catch ( \Exception $e ) {
+            } catch (\Exception $e) {
                 error_log('[PUNTWORK] Failed to continue paused import: ' . $e->getMessage());
                 return;
             }
@@ -63,12 +63,12 @@ add_action(
         try {
             $result = run_scheduled_import();
 
-            if ($result['success'] ) {
+            if ($result['success']) {
                 error_log('[PUNTWORK] Scheduled import cron completed successfully');
             } else {
                 error_log('[PUNTWORK] Scheduled import cron failed: ' . ( $result['message'] ?? 'Unknown error' ));
             }
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             error_log('[PUNTWORK] Scheduled import cron exception: ' . $e->getMessage());
         }
     }

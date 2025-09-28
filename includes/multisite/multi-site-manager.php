@@ -13,7 +13,7 @@
 namespace Puntwork\MultiSite;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -22,7 +22,6 @@ if (! defined('ABSPATH') ) {
  */
 class MultiSiteManager
 {
-
     /**
      * Network sites cache
      */
@@ -46,7 +45,7 @@ class MultiSiteManager
      */
     public static function init(): void
     {
-        if (! is_multisite() ) {
+        if (! is_multisite()) {
             return;
         }
 
@@ -56,7 +55,7 @@ class MultiSiteManager
         add_action('wp_ajax_distributeJobsNetwork', array( self::class, 'ajaxDistributeJobsNetwork' ));
 
         // Schedule network sync
-        if (! wp_next_scheduled('puntwork_network_sync') ) {
+        if (! wp_next_scheduled('puntwork_network_sync')) {
             wp_schedule_event(time(), 'hourly', 'puntwork_network_sync');
         }
         add_action('puntwork_network_sync', array( self::class, 'syncNetworkData' ));
@@ -78,7 +77,7 @@ class MultiSiteManager
     {
         global $wpdb;
 
-        if (! is_multisite() ) {
+        if (! is_multisite()) {
             return;
         }
 
@@ -142,7 +141,7 @@ class MultiSiteManager
     /**
      * Sanitize distribution strategy
      */
-    public static function sanitizeDistributionStrategy( string $strategy ): string
+    public static function sanitizeDistributionStrategy(string $strategy): string
     {
         $valid_strategies = array(
         self::STRATEGY_ROUND_ROBIN,
@@ -159,11 +158,11 @@ class MultiSiteManager
      */
     public static function getNetworkSites(): array
     {
-        if (! empty(self::$networkSites) ) {
+        if (! empty(self::$networkSites)) {
             return self::$networkSites;
         }
 
-        if (! is_multisite() ) {
+        if (! is_multisite()) {
             return array();
         }
 
@@ -175,10 +174,10 @@ class MultiSiteManager
         );
 
         $capable_sites = array();
-        foreach ( $sites as $site ) {
+        foreach ($sites as $site) {
             switch_to_blog($site->blog_id);
 
-            if (self::siteHasPuntworkCapability($site->blog_id) ) {
+            if (self::siteHasPuntworkCapability($site->blog_id)) {
                 $capable_sites[] = array(
                  'id'           => $site->blog_id,
                  'name'         => get_bloginfo('name'),
@@ -198,10 +197,11 @@ class MultiSiteManager
     /**
      * Check if site has puntwork capability
      */
-    private static function siteHasPuntworkCapability( int $site_id ): bool
+    private static function siteHasPuntworkCapability(int $site_id): bool
     {
         // Check if puntwork plugin is active
-        if (! is_plugin_active_for_network('puntwork/puntwork.php')
+        if (
+            ! is_plugin_active_for_network('puntwork/puntwork.php')
             && ! is_plugin_active('puntwork/puntwork.php')
         ) {
             return false;
@@ -215,9 +215,9 @@ class MultiSiteManager
     /**
      * Get site capabilities
      */
-    private static function getSiteCapabilities( int $site_id ): array
+    private static function getSiteCapabilities(int $site_id): array
     {
-        if (isset(self::$siteCapabilities[ $site_id ]) ) {
+        if (isset(self::$siteCapabilities[ $site_id ])) {
             return self::$siteCapabilities[ $site_id ];
         }
 
@@ -236,7 +236,7 @@ class MultiSiteManager
     /**
      * Get site statistics
      */
-    private static function getSiteStats( int $site_id ): array
+    private static function getSiteStats(int $site_id): array
     {
         global $wpdb;
 
@@ -273,7 +273,7 @@ class MultiSiteManager
 
             // Calculate current load (simplified)
             $stats['current_load'] = self::calculateSiteLoad($site_id);
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             \Puntwork\PuntWorkLogger::error('Failed to get site stats for site ' . $site_id . ': ' . $e->getMessage());
         }
 
@@ -283,7 +283,7 @@ class MultiSiteManager
     /**
      * Calculate site load
      */
-    private static function calculateSiteLoad( int $site_id ): float
+    private static function calculateSiteLoad(int $site_id): float
     {
         // Simplified load calculation based on recent activity
         global $wpdb;
@@ -304,14 +304,14 @@ class MultiSiteManager
     /**
      * Distribute jobs across network using specified strategy
      */
-    public static function distributeJobsNetwork( array $jobs, ?string $strategy = null ): array
+    public static function distributeJobsNetwork(array $jobs, ?string $strategy = null): array
     {
-        if (! $strategy ) {
+        if (! $strategy) {
             $strategy = get_option('puntwork_network_distribution_strategy', self::STRATEGY_LOAD_BALANCED);
         }
 
         $sites = self::getNetworkSites();
-        if (empty($sites) ) {
+        if (empty($sites)) {
             return array(
             'distributed' => array(),
             'errors'      => array( 'No capable sites found in network' ),
@@ -321,21 +321,21 @@ class MultiSiteManager
         $distributed = array();
         $errors      = array();
 
-        switch ( $strategy ) {
-        case self::STRATEGY_ROUND_ROBIN:
-            $distributed = self::distributeRoundRobin($jobs, $sites);
-            break;
-        case self::STRATEGY_LOAD_BALANCED:
-            $distributed = self::distributeLoadBalanced($jobs, $sites);
-            break;
-        case self::STRATEGY_CAPABILITY_BASED:
-            $distributed = self::distributeCapabilityBased($jobs, $sites);
-            break;
-        case self::STRATEGY_GEOGRAPHIC:
-            $distributed = self::distributeGeographic($jobs, $sites);
-            break;
-        default:
-            $errors[] = 'Unknown distribution strategy: ' . $strategy;
+        switch ($strategy) {
+            case self::STRATEGY_ROUND_ROBIN:
+                $distributed = self::distributeRoundRobin($jobs, $sites);
+                break;
+            case self::STRATEGY_LOAD_BALANCED:
+                $distributed = self::distributeLoadBalanced($jobs, $sites);
+                break;
+            case self::STRATEGY_CAPABILITY_BASED:
+                $distributed = self::distributeCapabilityBased($jobs, $sites);
+                break;
+            case self::STRATEGY_GEOGRAPHIC:
+                $distributed = self::distributeGeographic($jobs, $sites);
+                break;
+            default:
+                $errors[] = 'Unknown distribution strategy: ' . $strategy;
         }
 
         return array(
@@ -347,13 +347,13 @@ class MultiSiteManager
     /**
      * Round-robin distribution
      */
-    private static function distributeRoundRobin( array $jobs, array $sites ): array
+    private static function distributeRoundRobin(array $jobs, array $sites): array
     {
         $distributed = array();
         $site_count  = count($sites);
         $site_index  = 0;
 
-        foreach ( $jobs as $job ) {
+        foreach ($jobs as $job) {
             $site                         = $sites[ $site_index % $site_count ];
             $distributed[ $site['id'] ][] = $job;
             ++$site_index;
@@ -365,31 +365,31 @@ class MultiSiteManager
     /**
      * Load-balanced distribution
      */
-    private static function distributeLoadBalanced( array $jobs, array $sites ): array
+    private static function distributeLoadBalanced(array $jobs, array $sites): array
     {
         $distributed = array();
 
         // Sort sites by current load (ascending)
         usort(
             $sites,
-            function ( $a, $b ) {
+            function ($a, $b) {
                 return $a['stats']['current_load'] <=> $b['stats']['current_load'];
             }
         );
 
-        foreach ( $jobs as $job ) {
+        foreach ($jobs as $job) {
             // Find least loaded site
             $target_site = null;
             $min_load    = PHP_FLOAT_MAX;
 
-            foreach ( $sites as $site ) {
-                if ($site['stats']['current_load'] < $min_load ) {
+            foreach ($sites as $site) {
+                if ($site['stats']['current_load'] < $min_load) {
                     $min_load    = $site['stats']['current_load'];
                     $target_site = $site;
                 }
             }
 
-            if ($target_site ) {
+            if ($target_site) {
                 $distributed[ $target_site['id'] ][] = $job;
                 // Simulate load increase
                 $target_site['stats']['current_load'] += 1;
@@ -402,23 +402,23 @@ class MultiSiteManager
     /**
      * Capability-based distribution
      */
-    private static function distributeCapabilityBased( array $jobs, array $sites ): array
+    private static function distributeCapabilityBased(array $jobs, array $sites): array
     {
         $distributed = array();
 
-        foreach ( $jobs as $job ) {
+        foreach ($jobs as $job) {
             $best_site  = null;
             $best_score = -1;
 
-            foreach ( $sites as $site ) {
+            foreach ($sites as $site) {
                 $score = self::calculateCapabilityScore($job, $site);
-                if ($score > $best_score ) {
+                if ($score > $best_score) {
                     $best_score = $score;
                     $best_site  = $site;
                 }
             }
 
-            if ($best_site ) {
+            if ($best_site) {
                 $distributed[ $best_site['id'] ][] = $job;
             }
         }
@@ -429,25 +429,25 @@ class MultiSiteManager
     /**
      * Geographic distribution
      */
-    private static function distributeGeographic( array $jobs, array $sites ): array
+    private static function distributeGeographic(array $jobs, array $sites): array
     {
         $distributed = array();
 
         // Group sites by region
         $sites_by_region = array();
-        foreach ( $sites as $site ) {
+        foreach ($sites as $site) {
             $region                       = $site['capabilities']['geographic_region'] ?? 'global';
             $sites_by_region[ $region ][] = $site;
         }
 
-        foreach ( $jobs as $job ) {
+        foreach ($jobs as $job) {
             $job_region   = $job['region'] ?? 'global';
             $region_sites = $sites_by_region[ $job_region ] ?? $sites_by_region['global'] ?? $sites;
 
-            if (! empty($region_sites) ) {
+            if (! empty($region_sites)) {
                 // Use round-robin within region
                 static $region_index = array();
-                if (! isset($region_index[ $job_region ]) ) {
+                if (! isset($region_index[ $job_region ])) {
                     $region_index[ $job_region ] = 0;
                 }
 
@@ -463,19 +463,19 @@ class MultiSiteManager
     /**
      * Calculate capability score for job-site matching
      */
-    private static function calculateCapabilityScore( array $job, array $site ): float
+    private static function calculateCapabilityScore(array $job, array $site): float
     {
         $score = 0;
 
         // Format compatibility
         $job_format = $job['format'] ?? 'json';
-        if (in_array($job_format, $site['capabilities']['supported_formats']) ) {
+        if (in_array($job_format, $site['capabilities']['supported_formats'])) {
             $score += 50;
         }
 
         // Processing power match
         $job_complexity = $job['complexity'] ?? 'standard';
-        if ($site['capabilities']['processing_power'] === $job_complexity ) {
+        if ($site['capabilities']['processing_power'] === $job_complexity) {
             $score += 30;
         }
 
@@ -495,14 +495,14 @@ class MultiSiteManager
      */
     public static function syncNetworkData(): void
     {
-        if (! is_multisite() || ! get_option('puntwork_network_sync_enabled', true) ) {
+        if (! is_multisite() || ! get_option('puntwork_network_sync_enabled', true)) {
             return;
         }
 
         $sites     = self::getNetworkSites();
         $sync_data = array();
 
-        foreach ( $sites as $site ) {
+        foreach ($sites as $site) {
             try {
                 switch_to_blog($site['id']);
 
@@ -518,7 +518,7 @@ class MultiSiteManager
                 $sync_data[] = $site_data;
 
                 restore_current_blog();
-            } catch ( \Exception $e ) {
+            } catch (\Exception $e) {
                 restore_current_blog();
                 \Puntwork\PuntWorkLogger::error('Network sync failed for site ' . $site['id'] . ': ' . $e->getMessage());
             }
@@ -546,7 +546,7 @@ class MultiSiteManager
             )
         );
 
-        foreach ( $template_posts as $template ) {
+        foreach ($template_posts as $template) {
             $templates[] = array(
             'id'      => $template->ID,
             'title'   => $template->post_title,
@@ -573,7 +573,7 @@ class MultiSiteManager
             )
         );
 
-        foreach ( $feed_posts as $feed ) {
+        foreach ($feed_posts as $feed) {
             $configs[] = array(
             'id'       => $feed->ID,
             'title'    => $feed->post_title,
@@ -616,12 +616,12 @@ class MultiSiteManager
     public static function ajaxSyncNetworkJobs(): void
     {
         try {
-            if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_network_sync') ) {
+            if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_network_sync')) {
                 wp_send_json_error('Security check failed');
                 return;
             }
 
-            if (! current_user_can('manage_options') ) {
+            if (! current_user_can('manage_options')) {
                 wp_send_json_error('Insufficient permissions');
                 return;
             }
@@ -634,7 +634,7 @@ class MultiSiteManager
                 'last_sync' => current_time('timestamp'),
                 )
             );
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             \Puntwork\PuntWorkLogger::error('Network sync failed: ' . $e->getMessage());
             wp_send_json_error('Network sync failed: ' . $e->getMessage());
         }
@@ -646,12 +646,12 @@ class MultiSiteManager
     public static function ajaxGetNetworkStats(): void
     {
         try {
-            if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_network_stats') ) {
+            if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_network_stats')) {
                 wp_send_json_error('Security check failed');
                 return;
             }
 
-            if (! current_user_can('manage_options') ) {
+            if (! current_user_can('manage_options')) {
                 wp_send_json_error('Insufficient permissions');
                 return;
             }
@@ -659,14 +659,14 @@ class MultiSiteManager
             $sites         = self::getNetworkSites();
             $network_stats = array(
             'total_sites'      => count($sites),
-            'active_sites'     => count(array_filter($sites, fn( $s ) => $s['stats']['active_feeds'] > 0)),
+            'active_sites'     => count(array_filter($sites, fn($s) => $s['stats']['active_feeds'] > 0)),
             'total_jobs'       => array_sum(array_column(array_column($sites, 'stats'), 'total_jobs')),
             'avg_success_rate' => round(array_sum(array_column(array_column($sites, 'stats'), 'success_rate')) / count($sites), 1),
             'sites'            => $sites,
             );
 
             wp_send_json_success($network_stats);
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             wp_send_json_error('Failed to get network stats: ' . $e->getMessage());
         }
     }
@@ -677,12 +677,12 @@ class MultiSiteManager
     public static function ajaxDistributeJobsNetwork(): void
     {
         try {
-            if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_network_distribute') ) {
+            if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_network_distribute')) {
                 wp_send_json_error('Security check failed');
                 return;
             }
 
-            if (! current_user_can('manage_options') ) {
+            if (! current_user_can('manage_options')) {
                 wp_send_json_error('Insufficient permissions');
                 return;
             }
@@ -690,7 +690,7 @@ class MultiSiteManager
             $jobs     = json_decode(stripslashes($_POST['jobs'] ?? '[]'), true);
             $strategy = sanitize_text_field($_POST['strategy'] ?? '');
 
-            if (empty($jobs) ) {
+            if (empty($jobs)) {
                 wp_send_json_error('No jobs provided for distribution');
                 return;
             }
@@ -703,7 +703,7 @@ class MultiSiteManager
                 'distribution' => $result,
                 )
             );
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             \Puntwork\PuntWorkLogger::error('Network job distribution failed: ' . $e->getMessage());
             wp_send_json_error('Network distribution failed: ' . $e->getMessage());
         }

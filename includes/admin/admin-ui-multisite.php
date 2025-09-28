@@ -13,7 +13,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -22,13 +22,12 @@ if (! defined('ABSPATH') ) {
  */
 class MultiSiteAdminUI
 {
-
     /**
      * Initialize admin interface
      */
     public static function init(): void
     {
-        if (! is_multisite() ) {
+        if (! is_multisite()) {
             return;
         }
 
@@ -55,9 +54,9 @@ class MultiSiteAdminUI
     /**
      * Enqueue admin scripts and styles
      */
-    public static function enqueueScripts( string $hook ): void
+    public static function enqueueScripts(string $hook): void
     {
-        if ($hook !== 'puntwork_page_puntwork-network' ) {
+        if ($hook !== 'puntwork_page_puntwork-network') {
             return;
         }
 
@@ -93,7 +92,7 @@ class MultiSiteAdminUI
      */
     public static function renderAdminPage(): void
     {
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.'));
         }
 
@@ -699,7 +698,7 @@ class MultiSiteAdminUI
         try {
             $site_id = intval($_POST['site_id'] ?? 0);
 
-            if (! $site_id ) {
+            if (! $site_id) {
                 wp_send_json_error('Invalid site ID');
                 return;
             }
@@ -708,23 +707,23 @@ class MultiSiteAdminUI
             $connection_test = false;
 
             switch_to_blog($site_id);
-            if (function_exists('wp_count_posts') && wp_count_posts('job') !== false ) {
+            if (function_exists('wp_count_posts') && wp_count_posts('job') !== false) {
                 $connection_test = true;
             }
             restore_current_blog();
 
-            if ($connection_test ) {
+            if ($connection_test) {
                 wp_send_json_success(array( 'message' => 'Connection successful' ));
             } else {
                 wp_send_json_error('Connection failed');
             }
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             wp_send_json_error('Connection test failed: ' . $e->getMessage());
         }
     }
 }
 
 // Initialize if multisite
-if (is_multisite() ) {
+if (is_multisite()) {
     MultiSiteAdminUI::init();
 }

@@ -11,7 +11,7 @@
 namespace Puntwork\Admin;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class PuntworkCrmAdmin
 {
-
     /**
      * CRM Manager instance
      */
@@ -59,9 +58,9 @@ class PuntworkCrmAdmin
     /**
      * Enqueue admin scripts and styles
      */
-    public function enqueueScripts( string $hook ): void
+    public function enqueueScripts(string $hook): void
     {
-        if ($hook !== 'puntwork_page_puntwork-crm' ) {
+        if ($hook !== 'puntwork_page_puntwork-crm') {
             return;
         }
 
@@ -94,7 +93,7 @@ class PuntworkCrmAdmin
      */
     public function renderAdminPage(): void
     {
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.'));
         }
 
@@ -134,16 +133,16 @@ class PuntworkCrmAdmin
                 <div class="crm-platforms-section">
                     <h2><?php _e('CRM Platform Configuration', 'puntwork'); ?></h2>
 
-        <?php foreach ( $available_platforms as $platform_id => $platform_info ) : ?>
+        <?php foreach ($available_platforms as $platform_id => $platform_info) : ?>
                         <div class="crm-platform-card" data-platform="<?php echo esc_attr($platform_id); ?>">
                             <div class="platform-header">
                                 <h3><?php echo esc_html($platform_info['name']); ?></h3>
                                 <div class="platform-status">
-            <?php if (in_array($platform_id, $configured_platforms) ) : ?>
+            <?php if (in_array($platform_id, $configured_platforms)) : ?>
                                         <span class="status-badge status-active"><?php _e('Active', 'puntwork'); ?></span>
-                                    <?php else : ?>
+            <?php else : ?>
                                         <span class="status-badge status-inactive"><?php _e('Not Configured', 'puntwork'); ?></span>
-                                    <?php endif; ?>
+            <?php endif; ?>
                                 </div>
                             </div>
 
@@ -162,7 +161,7 @@ class PuntworkCrmAdmin
                                     <button type="button" class="puntwork-btn puntwork-btn--primary save-config" data-platform="<?php echo esc_attr($platform_id); ?>">
             <?php _e('Save Configuration', 'puntwork'); ?>
                                     </button>
-            <?php if (in_array($platform_id, $configured_platforms) ) : ?>
+            <?php if (in_array($platform_id, $configured_platforms)) : ?>
                                         <button type="button" class="puntwork-btn puntwork-btn--secondary sync-test" data-platform="<?php echo esc_attr($platform_id); ?>">
                 <?php _e('Test Sync', 'puntwork'); ?>
                                         </button>
@@ -198,7 +197,7 @@ class PuntworkCrmAdmin
                                 <td>
             <?php
             $sync_platforms = get_option('puntwork_crm_sync_platforms', array());
-            foreach ( $available_platforms as $platform_id => $platform_info ) :
+            foreach ($available_platforms as $platform_id => $platform_info) :
                 ?>
                                         <label style="display: block; margin-bottom: 5px;">
                                             <input type="checkbox" name="puntwork_crm_sync_platforms[]" value="<?php echo esc_attr($platform_id); ?>" <?php checked(in_array($platform_id, $sync_platforms)); ?> />
@@ -232,42 +231,42 @@ class PuntworkCrmAdmin
     /**
      * Render platform configuration form
      */
-    private function renderPlatformConfigForm( string $platform_id, array $required_config, array $current_config ): void
+    private function renderPlatformConfigForm(string $platform_id, array $required_config, array $current_config): void
     {
         ?>
         <div class="config-fields">
-        <?php foreach ( $required_config as $field => $field_config ) : ?>
+        <?php foreach ($required_config as $field => $field_config) : ?>
                 <div class="config-field">
                     <label for="<?php echo esc_attr("{$platform_id}_{$field}"); ?>">
             <?php echo esc_html($field_config['label']); ?>
-            <?php if (! empty($field_config['required']) ) : ?>
+            <?php if (! empty($field_config['required'])) : ?>
                             <span class="required">*</span>
             <?php endif; ?>
                     </label>
 
-            <?php if ($field_config['type'] === 'password' ) : ?>
+            <?php if ($field_config['type'] === 'password') : ?>
                         <input type="password"
                                 id="<?php echo esc_attr("{$platform_id}_{$field}"); ?>"
                                 name="<?php echo esc_attr($field); ?>"
                                 value="<?php echo esc_attr($current_config[ $field ] ?? ''); ?>"
                                 class="regular-text"
                 <?php echo ! empty($field_config['required']) ? 'required' : ''; ?> />
-                    <?php elseif ($field_config['type'] === 'textarea' ) : ?>
+            <?php elseif ($field_config['type'] === 'textarea') : ?>
                         <textarea id="<?php echo esc_attr("{$platform_id}_{$field}"); ?>"
                                     name="<?php echo esc_attr($field); ?>"
                                     class="large-text"
                                     rows="3"
                                     <?php echo ! empty($field_config['required']) ? 'required' : ''; ?>><?php echo esc_textarea($current_config[ $field ] ?? ''); ?></textarea>
-                    <?php else : ?>
+            <?php else : ?>
                         <input type="text"
                                 id="<?php echo esc_attr("{$platform_id}_{$field}"); ?>"
                                 name="<?php echo esc_attr($field); ?>"
                                 value="<?php echo esc_attr($current_config[ $field ] ?? ''); ?>"
                                 class="regular-text"
                         <?php echo ! empty($field_config['required']) ? 'required' : ''; ?> />
-                    <?php endif; ?>
+            <?php endif; ?>
 
-            <?php if (! empty($field_config['description']) ) : ?>
+            <?php if (! empty($field_config['description'])) : ?>
                         <p class="description"><?php echo esc_html($field_config['description']); ?></p>
             <?php endif; ?>
                 </div>
@@ -290,26 +289,26 @@ class PuntworkCrmAdmin
     {
         check_ajax_referer('puntwork_crm_nonce', 'nonce');
 
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_send_json_error(array( 'message' => __('Insufficient permissions', 'puntwork') ));
         }
 
         $platform_id = sanitize_text_field($_POST['platform_id'] ?? '');
         $config      = $_POST['config'] ?? array();
 
-        if (empty($platform_id) ) {
+        if (empty($platform_id)) {
             wp_send_json_error(array( 'message' => __('Platform ID is required', 'puntwork') ));
         }
 
         // Sanitize config data
         $sanitized_config = array();
-        foreach ( $config as $key => $value ) {
+        foreach ($config as $key => $value) {
             $sanitized_config[ $key ] = sanitize_text_field($value);
         }
 
         $result = $this->crm_manager->testConnection($platform_id, $sanitized_config);
 
-        if ($result['success'] ) {
+        if ($result['success']) {
             wp_send_json_success($result);
         } else {
             wp_send_json_error($result);
@@ -323,26 +322,26 @@ class PuntworkCrmAdmin
     {
         check_ajax_referer('puntwork_crm_nonce', 'nonce');
 
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_send_json_error(array( 'message' => __('Insufficient permissions', 'puntwork') ));
         }
 
         $platform_id = sanitize_text_field($_POST['platform_id'] ?? '');
         $config      = $_POST['config'] ?? array();
 
-        if (empty($platform_id) ) {
+        if (empty($platform_id)) {
             wp_send_json_error(array( 'message' => __('Platform ID is required', 'puntwork') ));
         }
 
         // Sanitize config data
         $sanitized_config = array();
-        foreach ( $config as $key => $value ) {
+        foreach ($config as $key => $value) {
             $sanitized_config[ $key ] = sanitize_text_field($value);
         }
 
         $success = \Puntwork\CRM\CRMManager::configurePlatform($platform_id, $sanitized_config);
 
-        if ($success ) {
+        if ($success) {
             wp_send_json_success(array( 'message' => __('Configuration saved successfully', 'puntwork') ));
         } else {
             wp_send_json_error(array( 'message' => __('Failed to save configuration', 'puntwork') ));
@@ -356,13 +355,13 @@ class PuntworkCrmAdmin
     {
         check_ajax_referer('puntwork_crm_nonce', 'nonce');
 
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_send_json_error(array( 'message' => __('Insufficient permissions', 'puntwork') ));
         }
 
         $platform_id = sanitize_text_field($_POST['platform_id'] ?? '');
 
-        if (empty($platform_id) ) {
+        if (empty($platform_id)) {
             wp_send_json_error(array( 'message' => __('Platform ID is required', 'puntwork') ));
         }
 
@@ -382,7 +381,7 @@ class PuntworkCrmAdmin
 
         $result = $this->crm_manager->syncJobApplication($test_application, array( $platform_id ));
 
-        if (! empty($result[ $platform_id ]) && $result[ $platform_id ]['success'] ) {
+        if (! empty($result[ $platform_id ]) && $result[ $platform_id ]['success']) {
             wp_send_json_success(
                 array(
                 'message' => __('Sync test completed successfully', 'puntwork'),

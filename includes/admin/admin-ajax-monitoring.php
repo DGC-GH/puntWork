@@ -10,7 +10,7 @@
  */
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,12 +20,12 @@ if (! defined('ABSPATH') ) {
 function puntwork_get_system_metrics()
 {
     // Verify nonce for security
-    if (! wp_verify_nonce($_POST['nonce'], 'puntwork_monitoring_nonce') ) {
+    if (! wp_verify_nonce($_POST['nonce'], 'puntwork_monitoring_nonce')) {
         wp_die(__('Security check failed', 'puntwork'));
     }
 
     // Check user capabilities
-    if (! current_user_can('manage_options') ) {
+    if (! current_user_can('manage_options')) {
         wp_die(__('Insufficient permissions', 'puntwork'));
     }
 
@@ -51,12 +51,12 @@ add_action('wp_ajax_puntwork_get_system_metrics', 'puntwork_get_system_metrics')
 function puntwork_get_performance_metrics()
 {
     // Verify nonce for security
-    if (! wp_verify_nonce($_POST['nonce'], 'puntwork_monitoring_nonce') ) {
+    if (! wp_verify_nonce($_POST['nonce'], 'puntwork_monitoring_nonce')) {
         wp_die(__('Security check failed', 'puntwork'));
     }
 
     // Check user capabilities
-    if (! current_user_can('manage_options') ) {
+    if (! current_user_can('manage_options')) {
         wp_die(__('Insufficient permissions', 'puntwork'));
     }
 
@@ -82,12 +82,12 @@ add_action('wp_ajax_puntwork_get_performance_metrics', 'puntwork_get_performance
 function puntwork_get_error_logs()
 {
     // Verify nonce for security
-    if (! wp_verify_nonce($_POST['nonce'], 'puntwork_monitoring_nonce') ) {
+    if (! wp_verify_nonce($_POST['nonce'], 'puntwork_monitoring_nonce')) {
         wp_die(__('Security check failed', 'puntwork'));
     }
 
     // Check user capabilities
-    if (! current_user_can('manage_options') ) {
+    if (! current_user_can('manage_options')) {
         wp_die(__('Insufficient permissions', 'puntwork'));
     }
 
@@ -110,7 +110,7 @@ add_action('wp_ajax_puntwork_get_error_logs', 'puntwork_get_error_logs');
  */
 function puntwork_get_memory_usage()
 {
-    if (function_exists('memory_get_peak_usage') ) {
+    if (function_exists('memory_get_peak_usage')) {
         return array(
         'current' => memory_get_usage(true),
         'peak'    => memory_get_peak_usage(true),
@@ -220,7 +220,7 @@ function puntwork_get_response_time()
 /**
  * Get page load times for time range
  */
-function puntwork_get_page_load_times( $time_range )
+function puntwork_get_page_load_times($time_range)
 {
     // This would query performance logs
     return array(
@@ -242,7 +242,7 @@ function puntwork_get_page_load_times( $time_range )
 /**
  * Get API response times
  */
-function puntwork_get_api_response_times( $time_range )
+function puntwork_get_api_response_times($time_range)
 {
     // This would query API performance logs
     return array(
@@ -264,7 +264,7 @@ function puntwork_get_api_response_times( $time_range )
 /**
  * Get database query times
  */
-function puntwork_get_db_query_times( $time_range )
+function puntwork_get_db_query_times($time_range)
 {
     // This would query database performance logs
     return array(
@@ -286,7 +286,7 @@ function puntwork_get_db_query_times( $time_range )
 /**
  * Get cache hit rate
  */
-function puntwork_get_cache_hit_rate( $time_range )
+function puntwork_get_cache_hit_rate($time_range)
 {
     // This would query cache performance logs
     return array(
@@ -308,7 +308,7 @@ function puntwork_get_cache_hit_rate( $time_range )
 /**
  * Get throughput metrics
  */
-function puntwork_get_throughput( $time_range )
+function puntwork_get_throughput($time_range)
 {
     // This would query throughput logs
     return array(
@@ -333,12 +333,12 @@ function puntwork_get_throughput( $time_range )
 function puntwork_clear_old_logs()
 {
     // Verify nonce for security
-    if (! wp_verify_nonce($_POST['nonce'], 'puntwork_monitoring_nonce') ) {
+    if (! wp_verify_nonce($_POST['nonce'], 'puntwork_monitoring_nonce')) {
         wp_die(__('Security check failed', 'puntwork'));
     }
 
     // Check user capabilities
-    if (! current_user_can('manage_options') ) {
+    if (! current_user_can('manage_options')) {
         wp_die(__('Insufficient permissions', 'puntwork'));
     }
 
@@ -358,12 +358,12 @@ add_action('wp_ajax_puntwork_clear_old_logs', 'puntwork_clear_old_logs');
 function puntwork_save_alert_settings()
 {
     // Verify nonce for security
-    if (! wp_verify_nonce($_POST['nonce'], 'puntwork_monitoring_nonce') ) {
+    if (! wp_verify_nonce($_POST['nonce'], 'puntwork_monitoring_nonce')) {
         wp_die(__('Security check failed', 'puntwork'));
     }
 
     // Check user capabilities
-    if (! current_user_can('manage_options') ) {
+    if (! current_user_can('manage_options')) {
         wp_die(__('Insufficient permissions', 'puntwork'));
     }
 

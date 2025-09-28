@@ -11,7 +11,7 @@
 namespace Puntwork\Utilities;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class CacheManager
 {
-
     /**
      * Cache group for mappings
      */
@@ -40,19 +39,19 @@ class CacheManager
     {
         static $redis_available = null;
 
-        if ($redis_available === null ) {
+        if ($redis_available === null) {
             $redis_available = function_exists('wp_cache_get') && function_exists('wp_cache_set');
-            if ($redis_available ) {
+            if ($redis_available) {
                 // Test if cache is actually working
                 try {
                     $test_result = wp_cache_set('puntwork_cache_test', 'test_value', 'puntwork_test', 60);
-                    if ($test_result ) {
+                    if ($test_result) {
                         $redis_available = ( wp_cache_get('puntwork_cache_test', 'puntwork_test') === 'test_value' );
                         wp_cache_delete('puntwork_cache_test', 'puntwork_test');
                     } else {
                         $redis_available = false;
                     }
-                } catch ( \Exception $e ) {
+                } catch (\Exception $e) {
                     $redis_available = false;
                 }
             }
@@ -68,12 +67,12 @@ class CacheManager
      * @param  string $group Cache group
      * @return mixed Cached data or false
      */
-    public static function get( string $key, string $group = '' )
+    public static function get(string $key, string $group = '')
     {
         // Try Redis/Object Cache first
-        if (self::isRedisAvailable() ) {
+        if (self::isRedisAvailable()) {
             $cached = wp_cache_get($key, $group);
-            if ($cached !== false ) {
+            if ($cached !== false) {
                 return $cached;
             }
         }
@@ -92,12 +91,12 @@ class CacheManager
      * @param  int    $expiration Expiration time in seconds
      * @return bool True on success
      */
-    public static function set( string $key, $data, string $group = '', int $expiration = 3600 ): bool
+    public static function set(string $key, $data, string $group = '', int $expiration = 3600): bool
     {
         // Try Redis/Object Cache first
-        if (self::isRedisAvailable() ) {
+        if (self::isRedisAvailable()) {
             $result = wp_cache_set($key, $data, $group, $expiration);
-            if ($result ) {
+            if ($result) {
                 return true;
             }
         }
@@ -114,10 +113,10 @@ class CacheManager
      * @param  string $group Cache group
      * @return bool True on success
      */
-    public static function delete( string $key, string $group = '' ): bool
+    public static function delete(string $key, string $group = ''): bool
     {
         // Try Redis/Object Cache first
-        if (self::isRedisAvailable() ) {
+        if (self::isRedisAvailable()) {
             wp_cache_delete($key, $group);
         }
 
@@ -132,9 +131,9 @@ class CacheManager
      * @param  string $group Cache group
      * @return bool True on success
      */
-    public static function clearGroup( string $group ): bool
+    public static function clearGroup(string $group): bool
     {
-        if (self::isRedisAvailable() ) {
+        if (self::isRedisAvailable()) {
             // For Redis, we can't easily clear a group, so we'll flush the entire cache
             // This is a limitation of the WordPress object cache API
             wp_cache_flush();

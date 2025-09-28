@@ -11,16 +11,16 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
-function gzip_file( $source_path, $gz_path )
+function gzip_file($source_path, $gz_path)
 {
     // Validate file paths
     $real_source_dir = realpath(dirname($source_path));
     $real_gz_dir     = realpath(dirname($gz_path));
-    if ($real_source_dir === false || $real_gz_dir === false || $real_source_dir !== $real_gz_dir ) {
+    if ($real_source_dir === false || $real_gz_dir === false || $real_source_dir !== $real_gz_dir) {
         throw new \Exception('Invalid file paths for gzip');
     }
     $gz = gzopen($gz_path, 'w9');

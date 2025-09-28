@@ -14,21 +14,21 @@ use Puntwork\AI\JobCategorizer;
 use Puntwork\AI\ContentQualityScorer;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
-function infer_item_details( &$item, $fallback_domain, $lang, &$job_obj )
+function infer_item_details(&$item, $fallback_domain, $lang, &$job_obj)
 {
     $province      = strtolower(trim(isset($item->province) ? (string) $item->province : ''));
     $norm_province = GetProvinceMap()[ $province ] ?? $fallback_domain;
 
     $title          = isset($item->functiontitle) ? (string) $item->functiontitle : '';
     $enhanced_title = $title;
-    if (isset($item->city) ) {
+    if (isset($item->city)) {
         $enhanced_title .= ' in ' . (string) $item->city;
     }
-    if (isset($item->province) ) {
+    if (isset($item->province)) {
         $enhanced_title .= ', ' . (string) $item->province;
     }
     $enhanced_title = trim($enhanced_title);
@@ -39,20 +39,20 @@ function infer_item_details( &$item, $fallback_domain, $lang, &$job_obj )
     $fg           = strtolower(trim(isset($item->functiongroup) ? (string) $item->functiongroup : ''));
     $estimate_key = array_reduce(
         array_keys(GetSalaryEstimates()),
-        function ( $carry, $key ) use ( $fg ) {
+        function ($carry, $key) use ($fg) {
             return strpos($fg, strtolower($key)) !== false ? $key : $carry;
         },
         null
     );
 
     $salary_text = '';
-    if (isset($item->salaryfrom) && $item->salaryfrom != '0' && isset($item->salaryto) && $item->salaryto != '0' ) {
+    if (isset($item->salaryfrom) && $item->salaryfrom != '0' && isset($item->salaryto) && $item->salaryto != '0') {
         $salary_text = '€' . (string) $item->salaryfrom . ' - €' . (string) $item->salaryto;
-    } elseif (isset($item->salaryfrom) && $item->salaryfrom != '0' ) {
+    } elseif (isset($item->salaryfrom) && $item->salaryfrom != '0') {
         $salary_text = '€' . (string) $item->salaryfrom;
     } else {
         $est_prefix = ( $lang == 'nl' ? 'Geschat ' : ( $lang == 'fr' ? 'Estimé ' : 'Est. ' ) );
-        if ($estimate_key ) {
+        if ($estimate_key) {
             $low         = GetSalaryEstimates()[ $estimate_key ]['low'];
             $high        = GetSalaryEstimates()[ $estimate_key ]['high'];
             $salary_text = $est_prefix . '€' . $low . ' - €' . $high;
@@ -62,13 +62,13 @@ function infer_item_details( &$item, $fallback_domain, $lang, &$job_obj )
     }
 
     $apply_link = isset($item->applylink) ? (string) $item->applylink : '';
-    if ($apply_link ) {
+    if ($apply_link) {
         $apply_link .= '?utm_source=puntwork&utm_term=' . (string) $item->guid;
     }
 
     $icon_key = array_reduce(
         array_keys(GetIconMap()),
-        function ( $carry, $key ) use ( $fg ) {
+        function ($carry, $key) use ($fg) {
             return strpos($fg, strtolower($key)) !== false ? $key : $carry;
         },
         null
@@ -81,10 +81,10 @@ function infer_item_details( &$item, $fallback_domain, $lang, &$job_obj )
     $job_meal_vouchers = (bool) preg_match('/maaltijdcheques|chèques repas|meal vouchers/i', $all_text);
     $job_flex_hours    = (bool) preg_match('/flexibele uren|heures flexibles|flexible hours/i', $all_text);
     $job_skills        = array();
-    if (preg_match('/\bexcel\b|\bmicrosoft excel\b|\bms excel\b/i', $all_text) ) {
+    if (preg_match('/\bexcel\b|\bmicrosoft excel\b|\bms excel\b/i', $all_text)) {
         $job_skills[] = 'Excel';
     }
-    if (preg_match('/\bwinbooks\b/i', $all_text) ) {
+    if (preg_match('/\bwinbooks\b/i', $all_text)) {
         $job_skills[] = 'WinBooks';
     }
 
@@ -94,10 +94,10 @@ function infer_item_details( &$item, $fallback_domain, $lang, &$job_obj )
     $job_desc = ( $lang == 'nl' ? 'Vacature' : ( $lang == 'fr' ? 'Emploi' : 'Job' ) ) . ': ' . $enhanced_title . '. ' . ( isset($item->functiondescription) ? (string) $item->functiondescription : '' ) . ( $lang == 'nl' ? ' Bij ' : ( $lang == 'fr' ? ' Chez ' : ' At ' ) ) . ( isset($item->companydescription) ? (string) $item->companydescription : ( $lang == 'nl' ? 'bedrijf' : ( $lang == 'fr' ? 'entreprise' : 'company' ) ) ) . '. ' . ( $lang == 'nl' ? 'Voordelen: ' : ( $lang == 'fr' ? 'Avantages: ' : 'Benefits: ' ) ) . ( $job_car ? ( $lang == 'nl' ? 'Bedrijfswagen, ' : ( $lang == 'fr' ? 'Voiture de société, ' : 'Company car, ' ) ) : '' ) . ( $job_meal_vouchers ? ( $lang == 'nl' ? 'Maaltijdcheques, ' : ( $lang == 'fr' ? 'Chèques repas, ' : 'Meal vouchers, ' ) ) : '' ) . ( $job_remote ? ( $lang == 'nl' ? 'Thuiswerk, ' : ( $lang == 'fr' ? 'Télétravail, ' : 'Remote work, ' ) ) : '' ) . ( $job_flex_hours ? ( $lang == 'nl' ? 'Flexibele uren. ' : ( $lang == 'fr' ? 'Heures flexibles. ' : 'Flexible hours. ' ) ) : '' ) . ( $lang == 'nl' ? 'Salaris: ' : ( $lang == 'fr' ? 'Salaire: ' : 'Salary: ' ) ) . $salary_text . '. ' . ( $lang == 'nl' ? 'Vaardigheden: ' : ( $lang == 'fr' ? 'Compétences: ' : 'Skills: ' ) ) . implode(', ', $job_skills) . '. ' . ( $lang == 'nl' ? 'Solliciteer nu!' : ( $lang == 'fr' ? 'Postulez maintenant!' : 'Apply now!' ) );
 
     $languages = array();
-    for ( $i = 1; $i <= 3; $i++ ) {
+    for ($i = 1; $i <= 3; $i++) {
         $lang_field  = $i == 1 ? 'language' : "language$i";
         $level_field = $i == 1 ? 'languagelevel' : "languagelevel$i";
-        if (isset($item->$lang_field) && ! empty($item->$lang_field) ) {
+        if (isset($item->$lang_field) && ! empty($item->$lang_field)) {
             $lang_name   = (string) $item->$lang_field;
             $level       = isset($item->$level_field) ? (string) $item->$level_field : '';
             $level_parts = explode(' - ', $level, 2);

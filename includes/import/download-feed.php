@@ -11,11 +11,11 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
-function download_feed( $url, $feed_path, $output_dir, &$logs, &$format = null )
+function download_feed($url, $feed_path, $output_dir, &$logs, &$format = null)
 {
     error_log('[PUNTWORK] ===== download_feed START =====');
     error_log('[PUNTWORK] URL: ' . $url);
@@ -24,7 +24,7 @@ function download_feed( $url, $feed_path, $output_dir, &$logs, &$format = null )
 
     // Start tracing span for feed download (only if available)
     $span = null;
-    if (class_exists('\Puntwork\PuntworkTracing') ) {
+    if (class_exists('\Puntwork\PuntworkTracing')) {
         $span = \Puntwork\PuntworkTracing::startActiveSpan(
             'download_feed',
             array(
@@ -43,11 +43,11 @@ function download_feed( $url, $feed_path, $output_dir, &$logs, &$format = null )
         error_log('[PUNTWORK] Real feed path: ' . $real_feed_path);
         error_log('[PUNTWORK] Is writable: ' . ( is_writable($output_dir) ? 'yes' : 'no' ));
 
-        if ($real_output_dir === false || strpos($real_feed_path, $real_output_dir) !== 0 ) {
+        if ($real_output_dir === false || strpos($real_feed_path, $real_output_dir) !== 0) {
             error_log('[PUNTWORK] Invalid file path detected');
             throw new \Exception('Invalid file path: Feed path must be within output directory');
         }
-        if (! is_writable($output_dir) ) {
+        if (! is_writable($output_dir)) {
             error_log('[PUNTWORK] Output directory not writable');
             throw new \Exception('Output directory is not writable');
         }
@@ -55,11 +55,11 @@ function download_feed( $url, $feed_path, $output_dir, &$logs, &$format = null )
         try {
             error_log('[PUNTWORK] Starting download...');
             // Download the feed
-            if (function_exists('curl_init') ) {
+            if (function_exists('curl_init')) {
                 error_log('[PUNTWORK] Using cURL for download');
                 $ch = curl_init($url);
                 $fp = fopen($feed_path, 'w');
-                if (! $fp ) {
+                if (! $fp) {
                     error_log('[PUNTWORK] Failed to open file for writing: ' . $feed_path);
                     throw new \Exception("Can't open $feed_path for write");
                 }
@@ -76,20 +76,20 @@ function download_feed( $url, $feed_path, $output_dir, &$logs, &$format = null )
                 error_log('[PUNTWORK] HTTP code: ' . $http_code);
                 error_log('[PUNTWORK] File size: ' . filesize($feed_path));
 
-                if (! $success || $http_code !== 200 || filesize($feed_path) < 10 ) {
+                if (! $success || $http_code !== 200 || filesize($feed_path) < 10) {
                     error_log('[PUNTWORK] cURL download failed');
                     throw new \Exception("cURL download failed (HTTP $http_code, size: " . filesize($feed_path) . ')');
                 }
             } else {
                 error_log('[PUNTWORK] Using wp_remote_get for download');
                 $response = wp_remote_get($url, array( 'timeout' => 300 ));
-                if (is_wp_error($response) ) {
+                if (is_wp_error($response)) {
                     error_log('[PUNTWORK] wp_remote_get error: ' . $response->get_error_message());
                     throw new \Exception($response->get_error_message());
                 }
                 $body = wp_remote_retrieve_body($response);
                 error_log('[PUNTWORK] Response body length: ' . strlen($body));
-                if (empty($body) || strlen($body) < 10 ) {
+                if (empty($body) || strlen($body) < 10) {
                     error_log('[PUNTWORK] Empty or small response');
                     throw new \Exception('Empty or small response');
                 }
@@ -109,7 +109,7 @@ function download_feed( $url, $feed_path, $output_dir, &$logs, &$format = null )
             error_log("Downloaded feed ($format): " . filesize($feed_path) . ' bytes');
             @chmod($feed_path, 0644);
 
-            if ($span ) {
+            if ($span) {
                 $span->setAttribute('feed.size', filesize($feed_path));
                 $span->setAttribute('feed.format', $format);
                 $span->end();
@@ -117,12 +117,12 @@ function download_feed( $url, $feed_path, $output_dir, &$logs, &$format = null )
 
             error_log('[PUNTWORK] ===== download_feed SUCCESS =====');
             return true;
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             error_log('[PUNTWORK] ===== download_feed ERROR =====');
             error_log('[PUNTWORK] Exception: ' . $e->getMessage());
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Download error: ' . $e->getMessage();
 
-            if ($span ) {
+            if ($span) {
                 $span->recordException($e);
                 $span->setStatus(\OpenTelemetry\API\Trace\StatusCode::STATUS_ERROR, $e->getMessage());
                 $span->end();
@@ -131,11 +131,11 @@ function download_feed( $url, $feed_path, $output_dir, &$logs, &$format = null )
             return false;
         }
         // Close outer try block
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         error_log('[PUNTWORK] ===== download_feed OUTER ERROR =====');
         error_log('[PUNTWORK] Outer exception: ' . $e->getMessage());
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Outer download error: ' . $e->getMessage();
-        if ($span ) {
+        if ($span) {
             $span->recordException($e);
             $span->setStatus(\OpenTelemetry\API\Trace\StatusCode::STATUS_ERROR, $e->getMessage());
             $span->end();

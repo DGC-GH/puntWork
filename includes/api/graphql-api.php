@@ -11,7 +11,7 @@
 namespace Puntwork\API;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class GraphQLAPI
 {
-
     private static array $schema = array();
 
     /**
@@ -62,12 +61,12 @@ class GraphQLAPI
     /**
      * Check API permissions
      */
-    public static function checkPermissions( \WP_REST_Request $request ): bool
+    public static function checkPermissions(\WP_REST_Request $request): bool
     {
         // Check API key authentication
         $apiKey = $request->get_header('X-API-Key') ?: $request->get_param('api_key');
 
-        if (empty($apiKey) ) {
+        if (empty($apiKey)) {
             return false;
         }
 
@@ -78,7 +77,7 @@ class GraphQLAPI
     /**
      * Handle GraphQL request
      */
-    public static function handleGraphQLRequest( \WP_REST_Request $request ): \WP_REST_Response
+    public static function handleGraphQLRequest(\WP_REST_Request $request): \WP_REST_Response
     {
         $query     = $request->get_param('query');
         $variables = $request->get_param('variables') ?: array();
@@ -86,7 +85,7 @@ class GraphQLAPI
         try {
             $result = self::executeQuery($query, $variables);
             return new \WP_REST_Response($result, 200);
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             return new \WP_REST_Response(
                 array(
                 'errors' => array(
@@ -104,16 +103,16 @@ class GraphQLAPI
     /**
      * Execute GraphQL query
      */
-    private static function executeQuery( string $query, array $variables = array() ): array
+    private static function executeQuery(string $query, array $variables = array()): array
     {
         // Parse query (simplified implementation)
         $parsed = self::parseGraphQLQuery($query);
 
         $data = array();
 
-        foreach ( $parsed['fields'] as $field ) {
+        foreach ($parsed['fields'] as $field) {
             $resolver = self::getFieldResolver($field['name']);
-            if ($resolver ) {
+            if ($resolver) {
                 $args                   = array_merge($field['args'], $variables);
                 $data[ $field['name'] ] = call_user_func($resolver, $args, $field['selections']);
             }
@@ -125,35 +124,35 @@ class GraphQLAPI
     /**
      * Parse GraphQL query (basic implementation)
      */
-    private static function parseGraphQLQuery( string $query ): array
+    private static function parseGraphQLQuery(string $query): array
     {
         // This is a simplified parser - in production, use a proper GraphQL library
         $fields = array();
 
         // Extract query content
-        if (preg_match('/query\s*\{([^}]+)\}/s', $query, $matches) ) {
+        if (preg_match('/query\s*\{([^}]+)\}/s', $query, $matches)) {
             $queryContent = trim($matches[1]);
 
             // Split by field declarations
             $fieldDeclarations = preg_split('/(\w+)\s*(\([^)]*\))?\s*\{/', $queryContent, -1, PREG_SPLIT_DELIM_CAPTURE);
 
-            for ( $i = 1; $i < count($fieldDeclarations); $i += 3 ) {
+            for ($i = 1; $i < count($fieldDeclarations); $i += 3) {
                 $fieldName  = $fieldDeclarations[ $i ];
                 $args       = $fieldDeclarations[ $i + 1 ] ?? '';
                 $selections = $fieldDeclarations[ $i + 2 ] ?? '';
 
                 // Parse arguments
                 $parsedArgs = array();
-                if (! empty($args) ) {
+                if (! empty($args)) {
                     preg_match_all('/(\w+):\s*([^,)]+)/', $args, $argMatches, PREG_SET_ORDER);
-                    foreach ( $argMatches as $arg ) {
+                    foreach ($argMatches as $arg) {
                         $parsedArgs[ $arg[1] ] = trim($arg[2], '"\'');
                     }
                 }
 
                 // Parse selections
                 $parsedSelections = array();
-                if (! empty($selections) ) {
+                if (! empty($selections)) {
                     preg_match_all('/(\w+)/', $selections, $selMatches);
                     $parsedSelections = $selMatches[1];
                 }
@@ -172,7 +171,7 @@ class GraphQLAPI
     /**
      * Get field resolver
      */
-    private static function getFieldResolver( string $fieldName ): ?callable
+    private static function getFieldResolver(string $fieldName): ?callable
     {
         $resolvers = array(
         'jobs'         => array( __CLASS__, 'resolveJobs' ),
@@ -188,7 +187,7 @@ class GraphQLAPI
     /**
      * Resolve jobs query
      */
-    public static function resolveJobs( array $args, array $selections ): array
+    public static function resolveJobs(array $args, array $selections): array
     {
         $query = new \WP_Query(
             array(
@@ -200,7 +199,7 @@ class GraphQLAPI
         );
 
         $jobs = array();
-        while ( $query->have_posts() ) {
+        while ($query->have_posts()) {
             $query->the_post();
             $jobId  = get_the_ID();
             $jobs[] = self::formatJobData($jobId, $selections);
@@ -216,14 +215,14 @@ class GraphQLAPI
     /**
      * Resolve single job query
      */
-    public static function resolveJob( array $args, array $selections ): ?array
+    public static function resolveJob(array $args, array $selections): ?array
     {
-        if (empty($args['id']) ) {
+        if (empty($args['id'])) {
             return null;
         }
 
         $job = get_post($args['id']);
-        if (! $job || $job->post_type !== 'job-feed' ) {
+        if (! $job || $job->post_type !== 'job-feed') {
             return null;
         }
 
@@ -233,7 +232,7 @@ class GraphQLAPI
     /**
      * Resolve import status query
      */
-    public static function resolveImportStatus( array $args, array $selections ): array
+    public static function resolveImportStatus(array $args, array $selections): array
     {
         $status = get_option('job_import_status', array());
 
@@ -249,11 +248,11 @@ class GraphQLAPI
     /**
      * Resolve analytics query
      */
-    public static function resolveAnalytics( array $args, array $selections ): array
+    public static function resolveAnalytics(array $args, array $selections): array
     {
         $period = $args['period'] ?? '30d';
 
-        if (class_exists('\Puntwork\ImportAnalytics') ) {
+        if (class_exists('\Puntwork\ImportAnalytics')) {
             $data = \Puntwork\ImportAnalytics::get_analytics_data($period);
             return array(
             'period'                => $period,
@@ -271,12 +270,12 @@ class GraphQLAPI
     /**
      * Resolve feeds query
      */
-    public static function resolveFeeds( array $args, array $selections ): array
+    public static function resolveFeeds(array $args, array $selections): array
     {
         $feeds = get_option('job_feed_url', array());
 
         $feedList = array();
-        foreach ( $feeds as $slug => $url ) {
+        foreach ($feeds as $slug => $url) {
             $feedList[] = array(
             'slug'       => $slug,
             'url'        => $url,
@@ -295,7 +294,7 @@ class GraphQLAPI
     /**
      * Format job data for GraphQL response
      */
-    private static function formatJobData( int $jobId, array $selections ): array
+    private static function formatJobData(int $jobId, array $selections): array
     {
         $job  = get_post($jobId);
         $data = array(
@@ -308,19 +307,19 @@ class GraphQLAPI
         );
 
         // Add selected meta fields
-        if (in_array('category', $selections) ) {
+        if (in_array('category', $selections)) {
             $data['category'] = get_post_meta($jobId, 'job_category', true);
         }
 
-        if (in_array('location', $selections) ) {
+        if (in_array('location', $selections)) {
             $data['location'] = get_post_meta($jobId, 'job_location', true);
         }
 
-        if (in_array('salary', $selections) ) {
+        if (in_array('salary', $selections)) {
             $data['salary'] = get_post_meta($jobId, 'job_salary', true);
         }
 
-        if (in_array('qualityScore', $selections) ) {
+        if (in_array('qualityScore', $selections)) {
             $data['qualityScore'] = get_post_meta($jobId, 'job_quality_score', true);
         }
 

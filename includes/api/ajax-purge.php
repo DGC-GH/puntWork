@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -27,7 +27,7 @@ function job_import_cleanup_duplicates_ajax()
 
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('job_import_cleanup_duplicates', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -68,7 +68,7 @@ function job_import_cleanup_duplicates_ajax()
         );
 
         // Initialize progress tracking for first batch
-        if (! $is_continue ) {
+        if (! $is_continue) {
             update_option(
                 'job_import_cleanup_progress',
                 array(
@@ -100,15 +100,15 @@ function job_import_cleanup_duplicates_ajax()
         );
 
         // Use dynamic batch size from progress if continuing
-        if ($is_continue && isset($progress['batch_size']) ) {
+        if ($is_continue && isset($progress['batch_size'])) {
             $batch_size = $progress['batch_size'];
         }
 
         // Set lock for this batch
         $lock_start = microtime(true);
-        while ( get_transient('job_import_cleanup_lock') ) {
+        while (get_transient('job_import_cleanup_lock')) {
             usleep(50000);
-            if (microtime(true) - $lock_start > 30 ) {
+            if (microtime(true) - $lock_start > 30) {
                 PuntWorkLogger::error('Cleanup lock timeout', PuntWorkLogger::CONTEXT_PURGE);
                 AjaxErrorHandler::sendError('Cleanup lock timeout');
                 return;
@@ -121,7 +121,7 @@ function job_import_cleanup_duplicates_ajax()
         $batch_start_time = microtime(true);
 
         // Get total count for progress calculation (only on first batch)
-        if (! $is_continue ) {
+        if (! $is_continue) {
             $total_jobs             = $wpdb->get_var(
                 "
                 SELECT COUNT(*) FROM {$wpdb->posts} p
@@ -134,7 +134,7 @@ function job_import_cleanup_duplicates_ajax()
         }
 
         // Get total count for progress calculation (only on first batch)
-        if (! $is_continue ) {
+        if (! $is_continue) {
             $total_jobs             = $wpdb->get_var(
                 "
                 SELECT COUNT(*) FROM {$wpdb->posts} p
@@ -162,7 +162,7 @@ function job_import_cleanup_duplicates_ajax()
             )
         );
 
-        if (empty($batch_jobs) ) {
+        if (empty($batch_jobs)) {
             // No more jobs to process
             $progress['complete']     = true;
             $progress['end_time']     = microtime(true);
@@ -198,9 +198,9 @@ function job_import_cleanup_duplicates_ajax()
         }
 
         // Process this batch
-        foreach ( $batch_jobs as $job ) {
+        foreach ($batch_jobs as $job) {
             $result = wp_delete_post($job->ID, true); // Force delete
-            if ($result ) {
+            if ($result) {
                 ++$deleted_count;
                 $log_entry = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Permanently deleted ' . $job->post_status . ' job ID: ' . $job->ID . ' - ' . $job->post_title;
                 $logs[]    = $log_entry;
@@ -232,7 +232,7 @@ function job_import_cleanup_duplicates_ajax()
         $progress['last_batch_time'] = $batch_processing_time;
 
         // Dynamic batch size adjustment (only for continuation batches)
-        if ($is_continue ) {
+        if ($is_continue) {
             $new_batch_size         = job_import_adjust_cleanup_batch_size($batch_size, $batch_processing_time, count($batch_jobs));
             $progress['batch_size'] = $new_batch_size;
             PuntWorkLogger::info(
@@ -282,7 +282,7 @@ function job_import_cleanup_duplicates_ajax()
             'logs'                => array_slice($logs, -20),
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         delete_transient('job_import_cleanup_lock');
         PuntWorkLogger::error('Cleanup failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_PURGE);
 
@@ -298,7 +298,7 @@ function job_import_purge_ajax()
 
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('job_import_purge', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -339,7 +339,7 @@ function job_import_purge_ajax()
         );
 
         // Initialize progress tracking for first batch
-        if (! $is_continue ) {
+        if (! $is_continue) {
             update_option(
                 'job_import_purge_progress',
                 array(
@@ -368,9 +368,9 @@ function job_import_purge_ajax()
 
         // Set lock for this batch
         $lock_start = microtime(true);
-        while ( get_transient('job_import_purge_lock') ) {
+        while (get_transient('job_import_purge_lock')) {
             usleep(50000);
-            if (microtime(true) - $lock_start > 10 ) {
+            if (microtime(true) - $lock_start > 10) {
                 PuntWorkLogger::error('Purge lock timeout', PuntWorkLogger::CONTEXT_PURGE);
                 AjaxErrorHandler::sendError('Purge lock timeout');
                 return;
@@ -382,7 +382,7 @@ function job_import_purge_ajax()
         $logs            = $progress['logs'];
 
         // Check if import is complete (only on first batch)
-        if (! $is_continue ) {
+        if (! $is_continue) {
             $import_progress = get_option('job_import_status') ?: array(
             'total'     => 0,
             'processed' => 0,
@@ -393,7 +393,7 @@ function job_import_purge_ajax()
             $processed_guids    = get_option('job_import_processed_guids') ?: array();
             $has_processed_data = ! empty($processed_guids) || $import_progress['total'] > 0;
 
-            if (! $has_processed_data ) {
+            if (! $has_processed_data) {
                 delete_transient('job_import_purge_lock');
                 PuntWorkLogger::error('Purge skipped: no processed data found', PuntWorkLogger::CONTEXT_PURGE);
                 AjaxErrorHandler::sendError('No import data found. Please run an import first before purging.');
@@ -439,7 +439,7 @@ function job_import_purge_ajax()
             )
         );
 
-        if (empty($batch_jobs) ) {
+        if (empty($batch_jobs)) {
             // No more jobs to process
             $progress['complete']     = true;
             $progress['end_time']     = microtime(true);
@@ -480,11 +480,11 @@ function job_import_purge_ajax()
 
         // Process this batch
         $deleted_count = 0;
-        foreach ( $batch_jobs as $job ) {
-            if (! in_array($job->guid, $processed_guids) ) {
+        foreach ($batch_jobs as $job) {
+            if (! in_array($job->guid, $processed_guids)) {
                 // This job is no longer in the feed, delete it
                 $result = wp_delete_post($job->ID, true); // true = force delete, skip trash
-                if ($result ) {
+                if ($result) {
                     ++$deleted_count;
                     $log_entry = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Permanently deleted ID: ' . $job->ID . ' GUID: ' . $job->guid . ' - No longer in feed';
                     $logs[]    = $log_entry;
@@ -551,7 +551,7 @@ function job_import_purge_ajax()
             'logs'                => array_slice($logs, -20),
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         delete_transient('job_import_purge_lock');
         PuntWorkLogger::error('Purge failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_PURGE);
 
@@ -567,14 +567,14 @@ function job_import_cleanup_continue_ajax()
 
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('job_import_cleanup_continue', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
 
     try {
         $progress = get_option('job_import_cleanup_progress');
-        if (! $progress || $progress['complete'] ) {
+        if (! $progress || $progress['complete']) {
             PuntWorkLogger::error('No active cleanup operation found', PuntWorkLogger::CONTEXT_PURGE);
             AjaxErrorHandler::sendError('No active cleanup operation found');
             return;
@@ -607,7 +607,7 @@ function job_import_cleanup_continue_ajax()
         $_POST['is_continue'] = true;
 
         job_import_cleanup_duplicates_ajax();
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Cleanup continue failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_PURGE);
         AjaxErrorHandler::sendError('Cleanup continue failed: ' . $e->getMessage());
     }
@@ -621,14 +621,14 @@ function job_import_cleanup_continue_ajax()
  * @param  int   $items_processed    Number of items processed in this batch
  * @return int New batch size
  */
-function job_import_adjust_cleanup_batch_size( $current_batch_size, $processing_time, $items_processed )
+function job_import_adjust_cleanup_batch_size($current_batch_size, $processing_time, $items_processed)
 {
     $target_time    = 8.0; // Target processing time per batch (seconds)
     $min_batch_size = 5;  // Minimum batch size
     $max_batch_size = 100; // Maximum batch size
 
     // If no items were processed, keep current batch size
-    if ($items_processed == 0 ) {
+    if ($items_processed == 0) {
         return $current_batch_size;
     }
 
@@ -636,7 +636,7 @@ function job_import_adjust_cleanup_batch_size( $current_batch_size, $processing_
     $time_per_item = $processing_time / $items_processed;
 
     // If processing time is too long, reduce batch size
-    if ($processing_time > $target_time * 1.2 ) { // 20% over target
+    if ($processing_time > $target_time * 1.2) { // 20% over target
         $new_batch_size = max($min_batch_size, (int) ( $current_batch_size * 0.8 )); // Reduce by 20%
         PuntWorkLogger::debug(
             'Reducing batch size due to slow processing',
@@ -652,7 +652,7 @@ function job_import_adjust_cleanup_batch_size( $current_batch_size, $processing_
     }
 
     // If processing time is comfortably under target, increase batch size
-    if ($processing_time < $target_time * 0.6 ) { // Less than 60% of target
+    if ($processing_time < $target_time * 0.6) { // Less than 60% of target
         $new_batch_size = min($max_batch_size, (int) ( $current_batch_size * 1.2 )); // Increase by 20%
         PuntWorkLogger::debug(
             'Increasing batch size due to fast processing',

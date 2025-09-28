@@ -11,7 +11,7 @@
 namespace Puntwork\CRM;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class ZohoIntegration extends CRMIntegration
 {
-
     /**
      * API base URL
      */
@@ -39,7 +38,7 @@ class ZohoIntegration extends CRMIntegration
     /**
      * Constructor
      */
-    public function __construct( array $config = array() )
+    public function __construct(array $config = array())
     {
         $this->platform_id   = 'zoho';
         $this->platform_name = 'Zoho CRM';
@@ -57,7 +56,7 @@ class ZohoIntegration extends CRMIntegration
      */
     protected function initialize(): void
     {
-        if ($this->isConfigured() ) {
+        if ($this->isConfigured()) {
             $this->ensureValidToken();
         }
     }
@@ -77,7 +76,7 @@ class ZohoIntegration extends CRMIntegration
      */
     private function ensureValidToken(): bool
     {
-        if (empty($this->access_token) || time() >= $this->token_expiry ) {
+        if (empty($this->access_token) || time() >= $this->token_expiry) {
             return $this->refreshAccessToken();
         }
         return true;
@@ -102,18 +101,18 @@ class ZohoIntegration extends CRMIntegration
                 )
             );
 
-            if (is_wp_error($response) ) {
+            if (is_wp_error($response)) {
                    throw new \Exception('Token refresh request failed: ' . $response->get_error_message());
             }
 
             $body = wp_remote_retrieve_body($response);
             $data = json_decode($body, true);
 
-            if (json_last_error() !== JSON_ERROR_NONE ) {
+            if (json_last_error() !== JSON_ERROR_NONE) {
                 throw new \Exception('Invalid JSON response from Zoho token refresh');
             }
 
-            if (isset($data['error']) ) {
+            if (isset($data['error'])) {
                 throw new \Exception('Zoho token refresh error: ' . $data['error']);
             }
 
@@ -121,7 +120,7 @@ class ZohoIntegration extends CRMIntegration
             $this->token_expiry = time() + ( $data['expires_in'] ?? 3600 ) - 300; // 5 minutes buffer
 
             return true;
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error(
                 'Zoho token refresh failed',
                 PuntWorkLogger::CONTEXT_CRM,
@@ -138,7 +137,7 @@ class ZohoIntegration extends CRMIntegration
      */
     public function testConnection(): array
     {
-        if (! $this->isConfigured() ) {
+        if (! $this->isConfigured()) {
             return array(
             'success' => false,
             'message' => 'Zoho credentials not configured',
@@ -146,7 +145,7 @@ class ZohoIntegration extends CRMIntegration
         }
 
         try {
-            if (! $this->ensureValidToken() ) {
+            if (! $this->ensureValidToken()) {
                 return array(
                 'success' => false,
                 'message' => 'Failed to obtain access token',
@@ -160,7 +159,7 @@ class ZohoIntegration extends CRMIntegration
             'success' => true,
             'message' => 'Zoho CRM connection successful',
             );
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             return array(
             'success' => false,
             'message' => 'Zoho CRM connection failed: ' . $e->getMessage(),
@@ -171,7 +170,7 @@ class ZohoIntegration extends CRMIntegration
     /**
      * Create or update a contact
      */
-    public function createContact( array $contact_data ): array
+    public function createContact(array $contact_data): array
     {
         $standardized_data = $this->standardizeContactData($contact_data);
 
@@ -180,7 +179,7 @@ class ZohoIntegration extends CRMIntegration
         try {
             $response = $this->makeApiRequest('crm/v2/Contacts', array( 'data' => array( $zoho_contact ) ), 'POST');
 
-            if (! empty($response['data'][0]['code']) && $response['data'][0]['code'] === 'SUCCESS' ) {
+            if (! empty($response['data'][0]['code']) && $response['data'][0]['code'] === 'SUCCESS') {
                 return array(
                  'success'    => true,
                  'contact_id' => $response['data'][0]['details']['id'],
@@ -190,7 +189,7 @@ class ZohoIntegration extends CRMIntegration
             }
 
             throw new \Exception('Contact creation failed');
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error(
                 'Zoho contact creation failed',
                 PuntWorkLogger::CONTEXT_CRM,
@@ -212,7 +211,7 @@ class ZohoIntegration extends CRMIntegration
     /**
      * Update existing contact
      */
-    public function updateContact( string $contact_id, array $contact_data ): array
+    public function updateContact(string $contact_id, array $contact_data): array
     {
         $standardized_data = $this->standardizeContactData($contact_data);
 
@@ -221,7 +220,7 @@ class ZohoIntegration extends CRMIntegration
         try {
             $response = $this->makeApiRequest("crm/v2/Contacts/{$contact_id}", array( 'data' => array( $zoho_contact ) ), 'PUT');
 
-            if (! empty($response['data'][0]['code']) && $response['data'][0]['code'] === 'SUCCESS' ) {
+            if (! empty($response['data'][0]['code']) && $response['data'][0]['code'] === 'SUCCESS') {
                 return array(
                  'success'    => true,
                  'contact_id' => $contact_id,
@@ -231,7 +230,7 @@ class ZohoIntegration extends CRMIntegration
             }
 
             throw new \Exception('Contact update failed');
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error(
                 'Zoho contact update failed',
                 PuntWorkLogger::CONTEXT_CRM,
@@ -253,7 +252,7 @@ class ZohoIntegration extends CRMIntegration
     /**
      * Find contact by email
      */
-    public function findContactByEmail( string $email ): ?array
+    public function findContactByEmail(string $email): ?array
     {
         try {
             $response = $this->makeApiRequest(
@@ -264,7 +263,7 @@ class ZohoIntegration extends CRMIntegration
                 'GET'
             );
 
-            if (! empty($response['data']) ) {
+            if (! empty($response['data'])) {
                    return array(
                     'id'         => $response['data'][0]['id'],
                     'properties' => $response['data'][0],
@@ -272,7 +271,7 @@ class ZohoIntegration extends CRMIntegration
             }
 
             return null;
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error(
                 'Zoho contact search failed',
                 PuntWorkLogger::CONTEXT_CRM,
@@ -289,7 +288,7 @@ class ZohoIntegration extends CRMIntegration
     /**
      * Create a deal
      */
-    public function createDeal( array $deal_data ): array
+    public function createDeal(array $deal_data): array
     {
         $standardized_data = $this->standardizeDealData($deal_data);
 
@@ -305,11 +304,11 @@ class ZohoIntegration extends CRMIntegration
         try {
             $response = $this->makeApiRequest('crm/v2/Deals', array( 'data' => array( $zoho_deal ) ), 'POST');
 
-            if (! empty($response['data'][0]['code']) && $response['data'][0]['code'] === 'SUCCESS' ) {
+            if (! empty($response['data'][0]['code']) && $response['data'][0]['code'] === 'SUCCESS') {
                 $deal_id = $response['data'][0]['details']['id'];
 
                 // Associate deal with contact if contact_id provided
-                if (! empty($standardized_data['contact_id']) ) {
+                if (! empty($standardized_data['contact_id'])) {
                     $this->associateDealWithContact($deal_id, $standardized_data['contact_id']);
                 }
 
@@ -322,7 +321,7 @@ class ZohoIntegration extends CRMIntegration
             }
 
             throw new \Exception('Deal creation failed');
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error(
                 'Zoho deal creation failed',
                 PuntWorkLogger::CONTEXT_CRM,
@@ -344,65 +343,65 @@ class ZohoIntegration extends CRMIntegration
     /**
      * Format contact data for Zoho API
      */
-    private function formatContactData( array $contact_data ): array
+    private function formatContactData(array $contact_data): array
     {
         $zoho_contact = array();
 
-        if (! empty($contact_data['first_name']) ) {
+        if (! empty($contact_data['first_name'])) {
             $zoho_contact['First_Name'] = $contact_data['first_name'];
         }
 
-        if (! empty($contact_data['last_name']) ) {
+        if (! empty($contact_data['last_name'])) {
             $zoho_contact['Last_Name'] = $contact_data['last_name'];
         }
 
-        if (! empty($contact_data['email']) ) {
+        if (! empty($contact_data['email'])) {
             $zoho_contact['Email'] = $contact_data['email'];
         }
 
-        if (! empty($contact_data['phone']) ) {
+        if (! empty($contact_data['phone'])) {
             $zoho_contact['Phone'] = $contact_data['phone'];
         }
 
-        if (! empty($contact_data['company']) ) {
+        if (! empty($contact_data['company'])) {
             $zoho_contact['Company'] = $contact_data['company'];
         }
 
-        if (! empty($contact_data['job_title']) ) {
+        if (! empty($contact_data['job_title'])) {
             $zoho_contact['Designation'] = $contact_data['job_title'];
         }
 
-        if (! empty($contact_data['address']) ) {
+        if (! empty($contact_data['address'])) {
             $zoho_contact['Street'] = $contact_data['address'];
         }
 
-        if (! empty($contact_data['city']) ) {
+        if (! empty($contact_data['city'])) {
             $zoho_contact['City'] = $contact_data['city'];
         }
 
-        if (! empty($contact_data['state']) ) {
+        if (! empty($contact_data['state'])) {
             $zoho_contact['State'] = $contact_data['state'];
         }
 
-        if (! empty($contact_data['zip']) ) {
+        if (! empty($contact_data['zip'])) {
             $zoho_contact['Zip_Code'] = $contact_data['zip'];
         }
 
-        if (! empty($contact_data['country']) ) {
+        if (! empty($contact_data['country'])) {
             $zoho_contact['Country'] = $contact_data['country'];
         }
 
-        if (! empty($contact_data['website']) ) {
+        if (! empty($contact_data['website'])) {
             $zoho_contact['Website'] = $contact_data['website'];
         }
 
-        if (! empty($contact_data['notes']) ) {
+        if (! empty($contact_data['notes'])) {
             $zoho_contact['Description'] = $contact_data['notes'];
         }
 
         // Add custom fields
-        if (! empty($contact_data['custom_fields']) ) {
-            foreach ( $contact_data['custom_fields'] as $key => $value ) {
+        if (! empty($contact_data['custom_fields'])) {
+            foreach ($contact_data['custom_fields'] as $key => $value) {
                 $zoho_contact[ $key ] = $value;
             }
         }
@@ -413,7 +412,7 @@ class ZohoIntegration extends CRMIntegration
     /**
      * Map deal stage to Zoho CRM stages
      */
-    private function mapDealStage( string $stage ): string
+    private function mapDealStage(string $stage): string
     {
         $stage_mapping = array(
         'lead'                 => 'Qualification',
@@ -431,11 +430,11 @@ class ZohoIntegration extends CRMIntegration
     /**
      * Associate deal with contact
      */
-    private function associateDealWithContact( string $deal_id, string $contact_id ): void
+    private function associateDealWithContact(string $deal_id, string $contact_id): void
     {
         try {
             $this->makeApiRequest("crm/v2/Deals/{$deal_id}/Contacts/{$contact_id}", array(), 'PUT');
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error(
                 'Zoho deal-contact association failed',
                 PuntWorkLogger::CONTEXT_CRM,
@@ -470,14 +469,14 @@ class ZohoIntegration extends CRMIntegration
     /**
      * Handle Zoho API errors
      */
-    protected function handleApiError( array $response ): void
+    protected function handleApiError(array $response): void
     {
-        if (isset($response['data'][0]['code']) && $response['data'][0]['code'] !== 'SUCCESS' ) {
+        if (isset($response['data'][0]['code']) && $response['data'][0]['code'] !== 'SUCCESS') {
             $message = $response['data'][0]['message'] ?? 'Unknown error';
             throw new \Exception('Zoho API Error: ' . $message);
         }
 
-        if (isset($response['status']) && isset($response['code']) ) {
+        if (isset($response['status']) && isset($response['code'])) {
             $message = $response['message'] ?? 'Unknown error';
             throw new \Exception('Zoho API Error: ' . $message);
         }

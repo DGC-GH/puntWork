@@ -9,7 +9,7 @@
  */
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -21,7 +21,7 @@ if (! defined('ABSPATH') ) {
  * Handles field configurations and zero/empty field definitions
  */
 
-if (! function_exists('get_acf_fields') ) {
+if (! function_exists('get_acf_fields')) {
     function get_acf_fields()
     {
         // Temporarily disable caching to test if CacheManager is causing issues
@@ -161,7 +161,7 @@ if (! function_exists('get_acf_fields') ) {
     }
 }
 
-if (! function_exists('get_zero_empty_fields') ) {
+if (! function_exists('get_zero_empty_fields')) {
     function get_zero_empty_fields()
     {
         // Temporarily disable caching to test if CacheManager is causing issues

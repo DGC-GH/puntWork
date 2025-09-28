@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -23,7 +23,6 @@ use Puntwork\Utilities\CacheManager;
  */
 class ImportAnalytics
 {
-
     public const TABLE_NAME        = 'puntwork_import_analytics';
     public const METRICS_TRANSIENT = 'puntwork_import_metrics';
 
@@ -85,7 +84,7 @@ class ImportAnalytics
      */
     public static function scheduleAnalyticsCleanup()
     {
-        if (! wp_next_scheduled('puntwork_analytics_cleanup') ) {
+        if (! wp_next_scheduled('puntwork_analytics_cleanup')) {
             // Run cleanup weekly
             wp_schedule_event(time(), 'weekly', 'puntwork_analytics_cleanup');
         }
@@ -94,7 +93,7 @@ class ImportAnalytics
     /**
      * Record import metrics when an import completes
      */
-    public static function recordImportMetrics( $import_data )
+    public static function recordImportMetrics($import_data)
     {
         global $wpdb;
 
@@ -108,7 +107,7 @@ class ImportAnalytics
         $end_time   = isset($import_data['end_time']) ? $import_data['end_time'] : microtime(true);
 
         $duration = null;
-        if ($start_time && $end_time ) {
+        if ($start_time && $end_time) {
             $duration = round($end_time - $start_time, 2);
         }
 
@@ -120,7 +119,7 @@ class ImportAnalytics
         $duplicate_jobs = $import_data['duplicates_drafted'] ?? 0;
 
         $success_rate = null;
-        if ($total_jobs > 0 ) {
+        if ($total_jobs > 0) {
             $success_rate = round(( $processed_jobs / $total_jobs ) * 100, 2);
         }
 
@@ -185,10 +184,11 @@ class ImportAnalytics
         // Get recent health data to estimate response times
         $health_status = FeedHealthMonitor::get_feed_health_status();
 
-        foreach ( $feeds as $feed_key => $feed_url ) {
-            if (isset($health_status[ $feed_key ]) ) {
+        foreach ($feeds as $feed_key => $feed_url) {
+            if (isset($health_status[ $feed_key ])) {
                 $status = $health_status[ $feed_key ];
-                if ($status['status'] === FeedHealthMonitor::STATUS_HEALTHY
+                if (
+                    $status['status'] === FeedHealthMonitor::STATUS_HEALTHY
                     || $status['status'] === FeedHealthMonitor::STATUS_WARNING
                 ) {
                     ++$successful;
@@ -196,7 +196,7 @@ class ImportAnalytics
                     ++$failed;
                 }
 
-                if ($status['response_time'] ) {
+                if ($status['response_time']) {
                     $total_response_time += $status['response_time'];
                 }
             } else {
@@ -218,12 +218,12 @@ class ImportAnalytics
     /**
      * Get comprehensive analytics data
      */
-    public static function getAnalyticsData( $period = '30days' )
+    public static function getAnalyticsData($period = '30days')
     {
         $cache_key   = 'analytics_data_' . $period;
         $cached_data = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
 
-        if ($cached_data !== false ) {
+        if ($cached_data !== false) {
             return $cached_data;
         }
 
@@ -245,7 +245,7 @@ class ImportAnalytics
     /**
      * Get overview metrics
      */
-    private static function getOverviewMetrics( $period )
+    private static function getOverviewMetrics($period)
     {
         global $wpdb;
 
@@ -286,7 +286,7 @@ class ImportAnalytics
     /**
      * Get performance metrics
      */
-    private static function getPerformanceMetrics( $period )
+    private static function getPerformanceMetrics($period)
     {
         global $wpdb;
 
@@ -312,7 +312,7 @@ class ImportAnalytics
         $results = $wpdb->get_results($sql, ARRAY_A);
 
         $performance = array();
-        foreach ( $results as $row ) {
+        foreach ($results as $row) {
             $performance[ $row['trigger_type'] ] = array(
             'count'            => (int) $row['count'],
             'avg_duration'     => round($row['avg_duration'] ?? 0, 2),
@@ -327,7 +327,7 @@ class ImportAnalytics
     /**
      * Get trends data for charts
      */
-    private static function getTrendsData( $period )
+    private static function getTrendsData($period)
     {
         global $wpdb;
 
@@ -379,7 +379,7 @@ class ImportAnalytics
     /**
      * Get feed statistics
      */
-    private static function getFeedStatistics( $period )
+    private static function getFeedStatistics($period)
     {
         global $wpdb;
 
@@ -412,7 +412,7 @@ class ImportAnalytics
     /**
      * Get error summary
      */
-    private static function getErrorSummary( $period )
+    private static function getErrorSummary($period)
     {
         global $wpdb;
 
@@ -441,10 +441,10 @@ class ImportAnalytics
     /**
      * Get predictive analytics data
      */
-    private static function getPredictiveAnalytics( $period )
+    private static function getPredictiveAnalytics($period)
     {
         // Import the PredictiveAnalytics class
-        if (! class_exists('\Puntwork\AI\PredictiveAnalytics') ) {
+        if (! class_exists('\Puntwork\AI\PredictiveAnalytics')) {
             include_once plugin_dir_path(dirname(__DIR__, 1)) . 'includes/ai/predictive-analytics.php';
         }
 
@@ -468,7 +468,7 @@ class ImportAnalytics
 
             // Get feed reliability predictions for top feeds
             $predictions['feed_reliability'] = self::getFeedReliabilityPredictions();
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error(
                 'Error generating predictive analytics',
                 PuntWorkLogger::CONTEXT_ANALYTICS,
@@ -493,14 +493,14 @@ class ImportAnalytics
         $feeds       = get_feeds();
         $predictions = array();
 
-        if (! class_exists('AI\PredictiveAnalytics') ) {
+        if (! class_exists('AI\PredictiveAnalytics')) {
             include_once plugin_dir_path(dirname(__DIR__, 1)) . 'includes/ai/predictive-analytics.php';
         }
 
-        foreach ( array_keys($feeds) as $feed_key ) {
+        foreach (array_keys($feeds) as $feed_key) {
             try {
                 $predictions[ $feed_key ] = AI\PredictiveAnalytics::predictFeedReliability($feed_key);
-            } catch ( \Exception $e ) {
+            } catch (\Exception $e) {
                 // Skip feeds with prediction errors
                 continue;
             }
@@ -512,36 +512,36 @@ class ImportAnalytics
     /**
      * Convert period string to days for predictive analytics
      */
-    private static function getPeriodDays( $period )
+    private static function getPeriodDays($period)
     {
-        switch ( $period ) {
-        case '7days':
-            return 7;
-        case '30days':
-            return 30;
-        case '90days':
-            return 90;
-        default:
-            return 30;
+        switch ($period) {
+            case '7days':
+                return 7;
+            case '30days':
+                return 30;
+            case '90days':
+                return 90;
+            default:
+                return 30;
         }
     }
 
     /**
      * Get date filter for SQL queries
      */
-    private static function getDateFilter( $period )
+    private static function getDateFilter($period)
     {
         $now = current_time('timestamp');
 
-        switch ( $period ) {
-        case '7days':
-            return date('Y-m-d H:i:s', strtotime('-7 days', $now));
-        case '30days':
-            return date('Y-m-d H:i:s', strtotime('-30 days', $now));
-        case '90days':
-            return date('Y-m-d H:i:s', strtotime('-90 days', $now));
-        default:
-            return date('Y-m-d H:i:s', strtotime('-30 days', $now));
+        switch ($period) {
+            case '7days':
+                return date('Y-m-d H:i:s', strtotime('-7 days', $now));
+            case '30days':
+                return date('Y-m-d H:i:s', strtotime('-30 days', $now));
+            case '90days':
+                return date('Y-m-d H:i:s', strtotime('-90 days', $now));
+            default:
+                return date('Y-m-d H:i:s', strtotime('-30 days', $now));
         }
     }
 
@@ -578,7 +578,7 @@ class ImportAnalytics
     /**
      * Export analytics data as CSV
      */
-    public static function exportAnalyticsCsv( $period = '30days' )
+    public static function exportAnalyticsCsv($period = '30days')
     {
         global $wpdb;
 
@@ -596,14 +596,14 @@ class ImportAnalytics
 
         $results = $wpdb->get_results($sql, ARRAY_A);
 
-        if (empty($results) ) {
+        if (empty($results)) {
             return false;
         }
 
         // Create CSV content
         $csv_content = "Import ID,Start Time,End Time,Duration,Trigger Type,Total Jobs,Processed Jobs,Published Jobs,Updated Jobs,Skipped Jobs,Duplicate Jobs,Failed Jobs,Memory Peak,Feeds Processed,Feeds Successful,Feeds Failed,Avg Response Time,Success Rate,Error Message\n";
 
-        foreach ( $results as $row ) {
+        foreach ($results as $row) {
             $csv_content .= sprintf(
                 "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,\"%s\"\n",
                 $row['import_id'],
@@ -636,14 +636,14 @@ class ImportAnalytics
      *
      * @param array $batch_data Batch processing data
      */
-    public static function recordBatchMetrics( array $batch_data ): void
+    public static function recordBatchMetrics(array $batch_data): void
     {
         global $wpdb;
 
         $table_name = $wpdb->prefix . self::TABLE_NAME;
 
         // Only record if we have meaningful data
-        if (empty($batch_data['processed']) || $batch_data['processed'] <= 0 ) {
+        if (empty($batch_data['processed']) || $batch_data['processed'] <= 0) {
             return;
         }
 
@@ -673,13 +673,13 @@ class ImportAnalytics
 
         // Update transient cache
         $metrics = get_transient(self::METRICS_TRANSIENT);
-        if ($metrics === false ) {
+        if ($metrics === false) {
             $metrics = array();
         }
 
         $metrics[] = $data;
         // Keep only last 100 batch metrics
-        if (count($metrics) > 100 ) {
+        if (count($metrics) > 100) {
             $metrics = array_slice($metrics, -100);
         }
 

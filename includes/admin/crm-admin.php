@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class PuntworkCrmAdmin
 {
-
     /**
      * CRM Manager instance
      */
@@ -58,9 +57,9 @@ class PuntworkCrmAdmin
     /**
      * Enqueue admin scripts and styles
      */
-    public function enqueueScripts( $hook ): void
+    public function enqueueScripts($hook): void
     {
-        if ($hook !== 'puntwork_page_puntwork-crm' ) {
+        if ($hook !== 'puntwork_page_puntwork-crm') {
             return;
         }
 
@@ -159,7 +158,7 @@ class PuntworkCrmAdmin
                 <div id="platforms-tab" class="tab-content active">
                     <h2><?php _e('Configure CRM Platforms', 'puntwork'); ?></h2>
 
-        <?php foreach ( $available_platforms as $platform_id => $platform_info ) : ?>
+        <?php foreach ($available_platforms as $platform_id => $platform_info) : ?>
                         <div class="platform-config-card" data-platform="<?php echo esc_attr($platform_id); ?>">
                             <div class="platform-header">
                                 <h3><?php echo esc_html($platform_info['name']); ?></h3>
@@ -233,7 +232,7 @@ class PuntworkCrmAdmin
                                 <td>
             <?php
             $default_platforms = get_option('puntwork_crm_default_platforms', array());
-            foreach ( $available_platforms as $platform_id => $platform_info ) :
+            foreach ($available_platforms as $platform_id => $platform_info) :
                 ?>
                                         <label style="display: block; margin-bottom: 5px;">
                                             <input type="checkbox"
@@ -283,7 +282,7 @@ class PuntworkCrmAdmin
                             <input type="text" id="application_id" placeholder="Enter application ID">
 
                             <div class="sync-platforms">
-           <?php foreach ( $available_platforms as $platform_id => $platform_info ) : ?>
+           <?php foreach ($available_platforms as $platform_id => $platform_info) : ?>
                                     <label>
                                         <input type="checkbox" class="sync-platform" value="<?php echo esc_attr($platform_id); ?>">
                 <?php echo esc_html($platform_info['name']); ?>
@@ -455,11 +454,11 @@ class PuntworkCrmAdmin
     /**
      * Render platform-specific configuration
      */
-    private function renderPlatformConfig( string $platform_id, array $config ): void
+    private function renderPlatformConfig(string $platform_id, array $config): void
     {
-        switch ( $platform_id ) {
-        case 'hubspot':
-            ?>
+        switch ($platform_id) {
+            case 'hubspot':
+                ?>
                 <table class="form-table">
                     <tr>
                         <th scope="row"><?php _e('Access Token', 'puntwork'); ?></th>
@@ -476,8 +475,8 @@ class PuntworkCrmAdmin
                         </td>
                     </tr>
                 </table>
-            <?php
-            break;
+                <?php
+                break;
         }
     }
 
@@ -496,7 +495,7 @@ class PuntworkCrmAdmin
             ARRAY_A
         );
 
-        if (empty($logs) ) {
+        if (empty($logs)) {
             echo '<p>' . __('No sync logs found.', 'puntwork') . '</p>';
             return;
         }
@@ -510,7 +509,7 @@ class PuntworkCrmAdmin
         echo '<th>' . __('Details', 'puntwork') . '</th>';
         echo '</tr></thead><tbody>';
 
-        foreach ( $logs as $log ) {
+        foreach ($logs as $log) {
             $data   = json_decode($log['data'], true);
             $status = $log['success'] ? '✅ Success' : '❌ Failed';
             $color  = $log['success'] ? 'green' : 'red';
@@ -522,14 +521,14 @@ class PuntworkCrmAdmin
             echo '<td><span style="color: ' . $color . ';">' . $status . '</span></td>';
             echo '<td>';
 
-            if (! empty($data) ) {
-                if (isset($data['contact_id']) ) {
+            if (! empty($data)) {
+                if (isset($data['contact_id'])) {
                     echo 'Contact ID: ' . esc_html($data['contact_id']);
                 }
-                if (isset($data['deal_id']) ) {
+                if (isset($data['deal_id'])) {
                     echo ' Deal ID: ' . esc_html($data['deal_id']);
                 }
-                if (isset($data['error']) ) {
+                if (isset($data['error'])) {
                     echo ' Error: ' . esc_html($data['error']);
                 }
             }
@@ -548,19 +547,19 @@ class PuntworkCrmAdmin
     {
         check_ajax_referer('puntwork_crm_nonce', 'nonce');
 
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('Insufficient permissions', 'puntwork'));
         }
 
         $platform_id = sanitize_text_field($_POST['platform_id'] ?? '');
 
-        if (empty($platform_id) ) {
+        if (empty($platform_id)) {
             wp_send_json_error(array( 'message' => __('Platform ID required', 'puntwork') ));
         }
 
         $result = $this->crm_manager->testPlatform($platform_id);
 
-        if ($result['success'] ) {
+        if ($result['success']) {
             wp_send_json_success($result);
         } else {
             wp_send_json_error($result);
@@ -574,26 +573,26 @@ class PuntworkCrmAdmin
     {
         check_ajax_referer('puntwork_crm_nonce', 'nonce');
 
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('Insufficient permissions', 'puntwork'));
         }
 
         $platform_id = sanitize_text_field($_POST['platform_id'] ?? '');
         $config      = $_POST['config'] ?? array();
 
-        if (empty($platform_id) ) {
+        if (empty($platform_id)) {
             wp_send_json_error(array( 'message' => __('Platform ID required', 'puntwork') ));
         }
 
         // Sanitize config data
         $sanitized_config = array();
-        foreach ( $config as $key => $value ) {
+        foreach ($config as $key => $value) {
             $sanitized_config[ $key ] = sanitize_text_field($value);
         }
 
         $success = CRM\CRMManager::configurePlatform($platform_id, $sanitized_config);
 
-        if ($success ) {
+        if ($success) {
             wp_send_json_success(array( 'message' => __('Configuration saved successfully', 'puntwork') ));
         } else {
             wp_send_json_error(array( 'message' => __('Failed to save configuration', 'puntwork') ));
@@ -607,18 +606,18 @@ class PuntworkCrmAdmin
     {
         check_ajax_referer('puntwork_crm_nonce', 'nonce');
 
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('Insufficient permissions', 'puntwork'));
         }
 
         $application_id = sanitize_text_field($_POST['application_id'] ?? '');
         $platforms      = $_POST['platforms'] ?? array();
 
-        if (empty($application_id) ) {
+        if (empty($application_id)) {
             wp_send_json_error(array( 'message' => __('Application ID is required', 'puntwork') ));
         }
 
-        if (empty($platforms) ) {
+        if (empty($platforms)) {
             wp_send_json_error(array( 'message' => __('At least one platform must be selected', 'puntwork') ));
         }
 

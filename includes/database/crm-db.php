@@ -9,7 +9,7 @@
  */
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -80,7 +80,7 @@ function drop_crm_tables()
     $wpdb->prefix . 'puntwork_crm_contact_mapping',
     );
 
-    foreach ( $tables as $table ) {
+    foreach ($tables as $table) {
         $wpdb->query("DROP TABLE IF EXISTS $table");
     }
 
@@ -103,7 +103,7 @@ function update_crm_schema()
     // Future schema updates can be added here
     $current_version = get_option('puntwork_crm_db_version', '1.0');
 
-    if (version_compare($current_version, '0.0.4', '<') ) {
+    if (version_compare($current_version, '0.0.4', '<')) {
         // Add new columns or tables for version 0.0.4
         update_option('puntwork_crm_db_version', '0.0.4');
     }
@@ -117,7 +117,7 @@ register_deactivation_hook(
     __FILE__,
     function () {
         // Only drop tables in development/testing
-        if (defined('WP_DEBUG') && WP_DEBUG ) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
             drop_crm_tables();
         }
     }

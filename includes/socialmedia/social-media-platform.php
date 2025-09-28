@@ -11,7 +11,7 @@
 namespace Puntwork\SocialMedia;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 abstract class SocialMediaPlatform
 {
-
     /**
      * Platform identifier
      */
@@ -47,7 +46,7 @@ abstract class SocialMediaPlatform
     /**
      * Constructor
      */
-    public function __construct( array $config = array() )
+    public function __construct(array $config = array())
     {
         $this->configure($config);
     }
@@ -55,13 +54,13 @@ abstract class SocialMediaPlatform
     /**
      * Configure the platform
      */
-    public function configure( array $config ): void
+    public function configure(array $config): void
     {
-        if (isset($config['credentials']) ) {
+        if (isset($config['credentials'])) {
             $this->credentials = $config['credentials'];
         }
 
-        if (isset($config['rate_limits']) ) {
+        if (isset($config['rate_limits'])) {
             $this->rate_limits = array_merge($this->rate_limits, $config['rate_limits']);
         }
     }
@@ -93,7 +92,7 @@ abstract class SocialMediaPlatform
     /**
      * Post content to the platform
      */
-    abstract public function post( array $content, array $options = array() ): array;
+    abstract public function post(array $content, array $options = array()): array;
 
     /**
      * Get posting limits and remaining quota
@@ -103,15 +102,15 @@ abstract class SocialMediaPlatform
     /**
      * Validate content for platform requirements
      */
-    public function validateContent( array $content ): array
+    public function validateContent(array $content): array
     {
         $errors = array();
 
-        if (empty($content['text']) && empty($content['media']) ) {
+        if (empty($content['text']) && empty($content['media'])) {
             $errors[] = 'Content must include text or media';
         }
 
-        if (isset($content['text']) && strlen($content['text']) > $this->getMaxTextLength() ) {
+        if (isset($content['text']) && strlen($content['text']) > $this->getMaxTextLength()) {
             $errors[] = 'Text exceeds maximum length of ' . $this->getMaxTextLength() . ' characters';
         }
 
@@ -134,7 +133,7 @@ abstract class SocialMediaPlatform
         $transient_key = 'socialmedia_ratelimit_' . $this->platform_id;
         $posts_today   = get_transient($transient_key) ?: 0;
 
-        if ($posts_today >= $this->rate_limits['posts_per_day'] ) {
+        if ($posts_today >= $this->rate_limits['posts_per_day']) {
             return false;
         }
 
@@ -142,7 +141,7 @@ abstract class SocialMediaPlatform
         $hourly_key = $transient_key . '_hour_' . date('Y-m-d-H');
         $posts_hour = get_transient($hourly_key) ?: 0;
 
-        if ($posts_hour >= $this->rate_limits['posts_per_hour'] ) {
+        if ($posts_hour >= $this->rate_limits['posts_per_hour']) {
             return false;
         }
 
@@ -166,23 +165,23 @@ abstract class SocialMediaPlatform
     /**
      * Make API request with error handling
      */
-    protected function makeApiRequest( string $endpoint, array $params = array(), string $method = 'POST' ): array
+    protected function makeApiRequest(string $endpoint, array $params = array(), string $method = 'POST'): array
     {
         // Rate limiting check
-        if (! $this->checkRateLimit() ) {
+        if (! $this->checkRateLimit()) {
             throw new \Exception("Rate limit exceeded for {$this->platform_name}");
         }
 
         $response = $this->executeApiRequest($endpoint, $params, $method);
 
-        if (is_wp_error($response) ) {
+        if (is_wp_error($response)) {
             throw new \Exception('API request failed: ' . $response->get_error_message());
         }
 
         $body = wp_remote_retrieve_body($response);
         $data = json_decode($body, true);
 
-        if (json_last_error() !== JSON_ERROR_NONE ) {
+        if (json_last_error() !== JSON_ERROR_NONE) {
             throw new \Exception('Invalid JSON response from API');
         }
 
@@ -194,10 +193,10 @@ abstract class SocialMediaPlatform
     /**
      * Execute the actual API request (to be implemented by subclasses)
      */
-    abstract protected function executeApiRequest( string $endpoint, array $params, string $method );
+    abstract protected function executeApiRequest(string $endpoint, array $params, string $method);
 
     /**
      * Handle API-specific errors
      */
-    abstract protected function handleApiError( array $response ): void;
+    abstract protected function handleApiError(array $response): void;
 }

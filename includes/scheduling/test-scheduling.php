@@ -8,12 +8,12 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
 // Only run if explicitly requested
-if (! isset($_GET['test_scheduling']) ) {
+if (! isset($_GET['test_scheduling'])) {
     return;
 }
 
@@ -44,20 +44,20 @@ echo '<p><a href="?page=job-feed-dashboard&test_scheduling=1&action=run_test" cl
 echo '<p><a href="?page=job-feed-dashboard&test_scheduling=1&action=clear_schedule" class="button">Clear Schedule</a></p>';
 
 // Handle test actions
-if (isset($_GET['action']) ) {
-    switch ( $_GET['action'] ) {
-    case 'run_test':
-        echo '<h3>Test Import Result:</h3>';
-        $result = run_scheduled_import(true);
-        echo '<pre>' . print_r($result, true) . '</pre>';
-        break;
+if (isset($_GET['action'])) {
+    switch ($_GET['action']) {
+        case 'run_test':
+            echo '<h3>Test Import Result:</h3>';
+            $result = run_scheduled_import(true);
+            echo '<pre>' . print_r($result, true) . '</pre>';
+            break;
 
-    case 'clear_schedule':
-        wp_clear_scheduled_hook('puntwork_scheduled_import');
-        delete_option('puntwork_import_schedule');
-        delete_option('puntwork_last_import_run');
-        delete_option('puntwork_last_import_details');
-        echo '<p>Schedule cleared!</p>';
-        break;
+        case 'clear_schedule':
+            wp_clear_scheduled_hook('puntwork_scheduled_import');
+            delete_option('puntwork_import_schedule');
+            delete_option('puntwork_last_import_run');
+            delete_option('puntwork_last_import_details');
+            echo '<p>Schedule cleared!</p>';
+            break;
     }
 }

@@ -12,7 +12,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -41,7 +41,7 @@ function run_job_import_batch_ajax()
         PuntWorkLogger::logAjaxRequest('run_job_import_batch', $_POST);
 
         // Ensure required functions are loaded for AJAX calls
-        if (! function_exists('import_jobs_from_json') ) {
+        if (! function_exists('import_jobs_from_json')) {
             error_log('[PUNTWORK] AJAX: import_jobs_from_json function not found, attempting to load import files');
 
             // Explicitly load required import files for AJAX calls
@@ -53,15 +53,15 @@ function run_job_import_batch_ajax()
             __DIR__ . '/../import/import-batch.php',
             );
 
-            foreach ( $import_files as $file ) {
-                if (file_exists($file) ) {
+            foreach ($import_files as $file) {
+                if (file_exists($file)) {
                     error_log('[PUNTWORK] AJAX: Attempting to load file: ' . basename($file));
                     try {
                         $load_result = include_once $file;
                         error_log('[PUNTWORK] AJAX: Loaded import file: ' . basename($file) . ', result: ' . ( $load_result ? 'true' : 'false' ));
-                    } catch ( \Exception $e ) {
+                    } catch (\Exception $e) {
                         error_log('[PUNTWORK] AJAX: Exception loading ' . basename($file) . ': ' . $e->getMessage());
-                    } catch ( \Error $e ) {
+                    } catch (\Error $e) {
                         error_log('[PUNTWORK] AJAX: Fatal error loading ' . basename($file) . ': ' . $e->getMessage());
                     }
                 } else {
@@ -70,13 +70,13 @@ function run_job_import_batch_ajax()
             }
 
             // Check again after loading
-            if (! function_exists('import_jobs_from_json') ) {
+            if (! function_exists('import_jobs_from_json')) {
                 error_log('[PUNTWORK] AJAX: import_jobs_from_json function still not found after loading files');
                 // List all functions that start with 'import_' to see what's available
                 $all_functions    = get_defined_functions();
                 $import_functions = array_filter(
                     $all_functions['user'],
-                    function ( $func ) {
+                    function ($func) {
                         return strpos($func, 'import_') === 0;
                     }
                 );
@@ -104,7 +104,7 @@ function run_job_import_batch_ajax()
         );
         error_log('[PUNTWORK] AJAX: Security validation completed');
 
-        if (is_wp_error($validation) ) {
+        if (is_wp_error($validation)) {
             error_log('[PUNTWORK] AJAX: Security validation failed: ' . $validation->get_error_message());
             AjaxErrorHandler::sendError($validation);
             return;
@@ -112,7 +112,7 @@ function run_job_import_batch_ajax()
         error_log('[PUNTWORK] AJAX: Security validation passed');
 
         // Check for concurrent import lock
-        if (get_transient('puntwork_import_lock') ) {
+        if (get_transient('puntwork_import_lock')) {
             error_log('[PUNTWORK] AJAX: Import already running, rejecting request');
             AjaxErrorHandler::sendError('Import already running');
             return;
@@ -128,17 +128,17 @@ function run_job_import_batch_ajax()
             error_log('[PUNTWORK] AJAX: About to call import_jobs_from_json with start=' . $start);
 
             // Check if required functions exist before calling
-            if (! function_exists('prepare_import_setup') ) {
+            if (! function_exists('prepare_import_setup')) {
                 error_log('[PUNTWORK] AJAX: prepare_import_setup function not found');
                 AjaxErrorHandler::sendError('prepare_import_setup function not available');
                 return;
             }
-            if (! function_exists('process_batch_items_logic') ) {
+            if (! function_exists('process_batch_items_logic')) {
                 error_log('[PUNTWORK] AJAX: process_batch_items_logic function not found');
                 AjaxErrorHandler::sendError('process_batch_items_logic function not available');
                 return;
             }
-            if (! function_exists('finalize_batch_import') ) {
+            if (! function_exists('finalize_batch_import')) {
                 error_log('[PUNTWORK] AJAX: finalize_batch_import function not found');
                 AjaxErrorHandler::sendError('finalize_batch_import function not available');
                 return;
@@ -152,12 +152,12 @@ function run_job_import_batch_ajax()
                 error_log('[PUNTWORK] AJAX: import_jobs_from_json returned successfully');
                 error_log('[PUNTWORK] AJAX: import_jobs_from_json result keys: ' . implode(', ', array_keys($result)));
                 error_log('[PUNTWORK] AJAX: import_jobs_from_json result: ' . json_encode($result));
-            } catch ( \Exception $e ) {
+            } catch (\Exception $e) {
                 error_log('[PUNTWORK] AJAX: Exception in import_jobs_from_json: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
                 error_log('[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString());
                 AjaxErrorHandler::sendError('Import failed with exception: ' . $e->getMessage());
                 return;
-            } catch ( \Throwable $e ) {
+            } catch (\Throwable $e) {
                 error_log('[PUNTWORK] AJAX: Fatal error in import_jobs_from_json: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
                 error_log('[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString());
                 AjaxErrorHandler::sendError('Import failed with fatal error: ' . $e->getMessage());
@@ -177,13 +177,13 @@ function run_job_import_batch_ajax()
 
             PuntWorkLogger::logAjaxResponse('run_job_import_batch', $log_summary, isset($result['success']) && $result['success']);
             AjaxErrorHandler::sendSuccess($result);
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error('Batch import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
             error_log('[PUNTWORK] AJAX: Batch import exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
             error_log('[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString());
             AjaxErrorHandler::sendError('Batch import failed: ' . $e->getMessage());
         }
-    } catch ( \Throwable $e ) {
+    } catch (\Throwable $e) {
         error_log('[PUNTWORK] AJAX: Fatal error in run_job_import_batch_ajax: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
         error_log('[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString());
         wp_die('Internal server error', '500 Internal Server Error', array( 'response' => 500 ));
@@ -197,7 +197,7 @@ function cancel_job_import_ajax()
 
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('cancel_job_import', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -211,7 +211,7 @@ function cancel_job_import_ajax()
 
         PuntWorkLogger::logAjaxResponse('cancel_job_import', array( 'message' => 'Import cancelled' ));
         AjaxErrorHandler::sendSuccess(null, array( 'message' => 'Import cancelled' ));
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Cancel import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to cancel import: ' . $e->getMessage());
     }
@@ -224,7 +224,7 @@ function clear_import_cancel_ajax()
 
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('clear_import_cancel', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -235,7 +235,7 @@ function clear_import_cancel_ajax()
 
         PuntWorkLogger::logAjaxResponse('clear_import_cancel', array( 'message' => 'Cancellation cleared' ));
         AjaxErrorHandler::sendSuccess(null, array( 'message' => 'Cancellation cleared' ));
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Clear import cancel error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to clear cancellation: ' . $e->getMessage());
     }
@@ -249,7 +249,7 @@ function reset_job_import_status_ajax()
 
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('reset_job_import_status', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -265,12 +265,12 @@ function reset_job_import_status_ajax()
         delete_option('job_import_batch_size');
         delete_option('job_import_consecutive_small_batches');
         delete_transient('import_cancel');
-        
+
         PuntWorkLogger::info('Import status and progress completely reset', PuntWorkLogger::CONTEXT_BATCH);
 
         PuntWorkLogger::logAjaxResponse('reset_job_import_status', array( 'message' => 'Import status reset' ));
         AjaxErrorHandler::sendSuccess(null, array( 'message' => 'Import status reset' ));
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Reset import status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to reset import status: ' . $e->getMessage());
     }
@@ -283,7 +283,7 @@ function get_job_import_status_ajax()
 
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('get_job_import_status', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -321,15 +321,15 @@ function get_job_import_status_ajax()
         );
 
         // Check for stuck or stale imports and clear them
-        if (isset($progress['complete']) && ! $progress['complete'] && isset($progress['total']) && $progress['total'] > 0 ) {
+        if (isset($progress['complete']) && ! $progress['complete'] && isset($progress['total']) && $progress['total'] > 0) {
             $current_time           = time();
             $time_elapsed           = 0;
             $last_update            = isset($progress['last_update']) ? $progress['last_update'] : 0;
             $time_since_last_update = $current_time - $last_update;
 
-            if (isset($progress['start_time']) && $progress['start_time'] > 0 ) {
+            if (isset($progress['start_time']) && $progress['start_time'] > 0) {
                 $time_elapsed = microtime(true) - $progress['start_time'];
-            } elseif (isset($progress['time_elapsed']) ) {
+            } elseif (isset($progress['time_elapsed'])) {
                 $time_elapsed = $progress['time_elapsed'];
             }
 
@@ -340,18 +340,18 @@ function get_job_import_status_ajax()
             $is_stuck     = false;
             $stuck_reason = '';
 
-            if ($progress['processed'] == 0 && $time_elapsed > 300 ) {
+            if ($progress['processed'] == 0 && $time_elapsed > 300) {
                 $is_stuck     = true;
                 $stuck_reason = 'no progress for 5+ minutes';
-            } elseif ($time_elapsed > 7200 ) { // 2 hours
+            } elseif ($time_elapsed > 7200) { // 2 hours
                 $is_stuck     = true;
                 $stuck_reason = 'running for more than 2 hours';
-            } elseif ($time_since_last_update > 600 ) { // 10 minutes since last update
+            } elseif ($time_since_last_update > 600) { // 10 minutes since last update
                 $is_stuck     = true;
                 $stuck_reason = 'no status update for 10+ minutes';
             }
 
-            if ($is_stuck ) {
+            if ($is_stuck) {
                 PuntWorkLogger::info(
                     'Detected stuck import in status check, clearing status',
                     PuntWorkLogger::CONTEXT_BATCH,
@@ -396,18 +396,18 @@ function get_job_import_status_ajax()
             }
         }
 
-        if (! isset($progress['start_time']) ) {
+        if (! isset($progress['start_time'])) {
             $progress['start_time'] = microtime(true);
         }
         // Calculate elapsed time properly - if we have a start time, use it
-        if (isset($progress['start_time']) && $progress['start_time'] > 0 ) {
+        if (isset($progress['start_time']) && $progress['start_time'] > 0) {
             $current_time             = microtime(true);
             $progress['time_elapsed'] = $current_time - $progress['start_time'];
         } else {
             $progress['time_elapsed'] = $progress['time_elapsed'] ?? 0;
         }
         // Only recalculate complete status if it's not already marked as complete
-        if (! isset($progress['complete']) || ! $progress['complete'] ) {
+        if (! isset($progress['complete']) || ! $progress['complete']) {
             $progress['complete'] = ( $progress['processed'] >= $progress['total'] && $progress['total'] > 0 );
         }
 
@@ -415,7 +415,7 @@ function get_job_import_status_ajax()
         $progress['resume_progress'] = (int) get_option('job_import_progress', 0);
 
         // Track job importing start time
-        if ($progress['total'] > 1 && ! isset($progress['job_import_start_time']) ) {
+        if ($progress['total'] > 1 && ! isset($progress['job_import_start_time'])) {
             $progress['job_import_start_time'] = microtime(true);
             update_option('job_import_status', $progress);
         }
@@ -450,7 +450,7 @@ function get_job_import_status_ajax()
 
         PuntWorkLogger::logAjaxResponse('get_job_import_status', $log_summary);
         AjaxErrorHandler::sendSuccess($progress);
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Get import status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to get import status: ' . $e->getMessage());
     }
@@ -503,7 +503,7 @@ function log_manual_import_run_ajax()
         )
     );
 
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -540,7 +540,7 @@ function log_manual_import_run_ajax()
 
         PuntWorkLogger::logAjaxResponse('log_manual_import_run', array( 'message' => 'Manual import run logged' ));
         AjaxErrorHandler::sendSuccess(null, array( 'message' => 'Manual import run logged to history' ));
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Log manual import run error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to log manual import run: ' . $e->getMessage());
     }
@@ -553,7 +553,7 @@ function test_single_job_import_ajax()
 
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('test_single_job_import', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -705,7 +705,7 @@ function test_single_job_import_ajax()
             )
         );
 
-        if (! empty($existing_post) ) {
+        if (! empty($existing_post)) {
             PuntWorkLogger::warn(
                 'Test job already exists',
                 PuntWorkLogger::CONTEXT_AJAX,
@@ -730,7 +730,7 @@ function test_single_job_import_ajax()
         // Insert the job post
         $post_id = wp_insert_post($job_data);
 
-        if (is_wp_error($post_id) ) {
+        if (is_wp_error($post_id)) {
             PuntWorkLogger::error(
                 'Failed to create test job post',
                 PuntWorkLogger::CONTEXT_AJAX,
@@ -761,7 +761,7 @@ function test_single_job_import_ajax()
         update_post_meta($post_id, '_job_expires', $test_job['validtill'] ?? '');
 
         // Add ACF fields if available
-        if (function_exists('update_field') ) {
+        if (function_exists('update_field')) {
             update_field('job_description', $test_job['job_description'] ?? '', $post_id);
             update_field('job_requirements', $test_job['requirementsdescription'] ?? '', $post_id);
             update_field('company_description', $test_job['companydescription'] ?? '', $post_id);
@@ -770,7 +770,7 @@ function test_single_job_import_ajax()
 
         // Verify the job was created and has all metadata
         $verify_post = get_post($post_id);
-        if (! $verify_post ) {
+        if (! $verify_post) {
             PuntWorkLogger::error(
                 'Test job creation verification failed',
                 PuntWorkLogger::CONTEXT_AJAX,
@@ -805,7 +805,7 @@ function test_single_job_import_ajax()
         $verification_logs[] = '  • Company: ' . ( ! empty($company_meta) ? '✅' : '❌' ) . ' (' . $company_meta . ')';
 
         // Check ACF fields if available
-        if (function_exists('get_field') ) {
+        if (function_exists('get_field')) {
             $acf_description  = get_field('job_description', $post_id);
             $acf_requirements = get_field('job_requirements', $post_id);
             $acf_company_desc = get_field('company_description', $post_id);
@@ -829,7 +829,7 @@ function test_single_job_import_ajax()
             )
         );
 
-        if (empty($final_check) ) {
+        if (empty($final_check)) {
             PuntWorkLogger::error(
                 'Final verification failed - job not found in database',
                 PuntWorkLogger::CONTEXT_AJAX,
@@ -874,7 +874,7 @@ function test_single_job_import_ajax()
             'verification_complete' => true,
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Test single job import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Test single job import failed: ' . $e->getMessage());
     }
@@ -887,7 +887,7 @@ function clear_rate_limits_ajax()
 
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('clear_rate_limits', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -902,7 +902,7 @@ function clear_rate_limits_ajax()
 
         PuntWorkLogger::logAjaxResponse('clear_rate_limits', array( 'message' => 'Rate limits cleared', 'cleared_count' => $cleared ));
         AjaxErrorHandler::sendSuccess(null, array( 'message' => "Cleared {$cleared} rate limit entries" ));
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Clear rate limits error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to clear rate limits: ' . $e->getMessage());
     }
@@ -915,7 +915,7 @@ function get_rate_limit_status_ajax()
 
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('get_rate_limit_status', 'puntwork_rate_limits');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -929,7 +929,7 @@ function get_rate_limit_status_ajax()
             $key = "rate_limit_{$action}_{$user_id}";
             $requests = get_transient($key);
 
-            if (! $requests ) {
+            if (! $requests) {
                 $requests = array();
             }
 
@@ -937,7 +937,7 @@ function get_rate_limit_status_ajax()
             $current_time = time();
             $requests = array_filter(
                 $requests,
-                function ( $timestamp ) use ( $current_time, $config ) {
+                function ($timestamp) use ($current_time, $config) {
                     return ( $current_time - $timestamp ) < $config['time_window'];
                 }
             );
@@ -951,7 +951,7 @@ function get_rate_limit_status_ajax()
 
         PuntWorkLogger::logAjaxResponse('get_rate_limit_status', array( 'status_count' => count($status) ));
         AjaxErrorHandler::sendSuccess($status);
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Get rate limit status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to get rate limit status: ' . $e->getMessage());
     }
@@ -964,7 +964,7 @@ function get_api_key_ajax()
 
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('get_api_key', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -972,7 +972,7 @@ function get_api_key_ajax()
     try {
         $api_key = get_option('puntwork_api_key');
 
-        if (empty($api_key) ) {
+        if (empty($api_key)) {
             PuntWorkLogger::warn('API key requested but not configured', PuntWorkLogger::CONTEXT_AJAX);
             AjaxErrorHandler::sendError('API key not configured');
             return;
@@ -980,7 +980,7 @@ function get_api_key_ajax()
 
         PuntWorkLogger::logAjaxResponse('get_api_key', array( 'message' => 'API key retrieved' ));
         AjaxErrorHandler::sendSuccess(array( 'api_key' => $api_key ));
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Get API key error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to get API key: ' . $e->getMessage());
     }

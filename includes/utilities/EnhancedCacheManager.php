@@ -11,7 +11,7 @@
 namespace Puntwork\Utilities;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,26 +20,25 @@ if (! defined('ABSPATH') ) {
  */
 class EnhancedCacheManager extends CacheManager
 {
-
     /**
      * Cache warming for frequently accessed data
      */
     public static function warmCommonCaches(): void
     {
         // Warm up ACF fields cache
-        if (function_exists('get_acf_fields') ) {
+        if (function_exists('get_acf_fields')) {
             $acf_fields = get_acf_fields();
             self::set('acf_fields_warmed', $acf_fields, self::GROUP_MAPPINGS, HOUR_IN_SECONDS);
         }
 
         // Warm up field mappings
-        if (function_exists('get_field_mappings') ) {
+        if (function_exists('get_field_mappings')) {
             $mappings = get_field_mappings();
             self::set('field_mappings_warmed', $mappings, self::GROUP_MAPPINGS, HOUR_IN_SECONDS);
         }
 
         // Warm up geographic mappings
-        if (function_exists('get_geographic_mappings') ) {
+        if (function_exists('get_geographic_mappings')) {
             $geo_mappings = get_geographic_mappings();
             self::set('geographic_mappings_warmed', $geo_mappings, self::GROUP_MAPPINGS, HOUR_IN_SECONDS);
         }
@@ -56,7 +55,7 @@ class EnhancedCacheManager extends CacheManager
     ) {
         $cached = self::get($key, $group);
 
-        if ($cached === false && $fallback ) {
+        if ($cached === false && $fallback) {
             // Cache miss - execute fallback and cache result
             $cached = $fallback();
             self::set($key, $cached, $group, $warmup_threshold);
@@ -68,15 +67,15 @@ class EnhancedCacheManager extends CacheManager
     /**
      * Batch cache operations for better performance
      */
-    public static function getMultiple( array $keys, string $group = '' ): array
+    public static function getMultiple(array $keys, string $group = ''): array
     {
         $results      = array();
         $missing_keys = array();
 
         // First pass - get from cache
-        foreach ( $keys as $key ) {
+        foreach ($keys as $key) {
             $cached = self::get($key, $group);
-            if ($cached !== false ) {
+            if ($cached !== false) {
                 $results[ $key ] = $cached;
             } else {
                 $missing_keys[] = $key;
@@ -89,11 +88,11 @@ class EnhancedCacheManager extends CacheManager
     /**
      * Set multiple cache entries at once
      */
-    public static function setMultiple( array $data, string $group = '', int $expiration = 3600 ): bool
+    public static function setMultiple(array $data, string $group = '', int $expiration = 3600): bool
     {
         $success = true;
-        foreach ( $data as $key => $value ) {
-            if (! self::set($key, $value, $group, $expiration) ) {
+        foreach ($data as $key => $value) {
+            if (! self::set($key, $value, $group, $expiration)) {
                 $success = false;
             }
         }
@@ -103,7 +102,7 @@ class EnhancedCacheManager extends CacheManager
     /**
      * Intelligent cache invalidation based on patterns
      */
-    public static function invalidatePattern( string $pattern, string $group = '' ): int
+    public static function invalidatePattern(string $pattern, string $group = ''): int
     {
         global $wpdb;
 
@@ -118,9 +117,9 @@ class EnhancedCacheManager extends CacheManager
             )
         );
 
-        foreach ( $transients as $transient ) {
+        foreach ($transients as $transient) {
             $key = str_replace('_transient_', '', $transient);
-            if ($group ) {
+            if ($group) {
                 $key = str_replace($group . '_', '', $key);
             }
             delete_transient($key);
@@ -128,7 +127,7 @@ class EnhancedCacheManager extends CacheManager
         }
 
         // For Redis/Object Cache - we can't pattern match, so we clear the group
-        if (self::isRedisAvailable() ) {
+        if (self::isRedisAvailable()) {
             self::clearGroup($group);
         }
 
@@ -161,11 +160,11 @@ class EnhancedCacheManager extends CacheManager
     /**
      * Override get method to track analytics
      */
-    public static function get( string $key, string $group = '' )
+    public static function get(string $key, string $group = '')
     {
         $result = parent::get($key, $group);
 
-        if ($result !== false ) {
+        if ($result !== false) {
             ++self::$cache_stats['hits'];
         } else {
             ++self::$cache_stats['misses'];
@@ -177,11 +176,11 @@ class EnhancedCacheManager extends CacheManager
     /**
      * Override set method to track analytics
      */
-    public static function set( string $key, $data, string $group = '', int $expiration = 3600 ): bool
+    public static function set(string $key, $data, string $group = '', int $expiration = 3600): bool
     {
         $result = parent::set($key, $data, $group, $expiration);
 
-        if ($result ) {
+        if ($result) {
             ++self::$cache_stats['sets'];
         }
 

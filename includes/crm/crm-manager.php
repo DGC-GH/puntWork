@@ -11,7 +11,7 @@
 namespace Puntwork\CRM;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class CRMManager
 {
-
     /**
      * Available CRM platforms
      */
@@ -131,12 +130,12 @@ class CRMManager
     {
         $platform_configs = get_option('puntwork_crm_platforms', array());
 
-        foreach ( $platform_configs as $platform_id => $config ) {
-            if (isset(self::$available_platforms[ $platform_id ]) && isset($config['enabled']) && $config['enabled'] ) {
+        foreach ($platform_configs as $platform_id => $config) {
+            if (isset(self::$available_platforms[ $platform_id ]) && isset($config['enabled']) && $config['enabled']) {
                 try {
                     $platform_class                  = self::$available_platforms[ $platform_id ];
                     $this->platforms[ $platform_id ] = new $platform_class($config);
-                } catch ( \Exception $e ) {
+                } catch (\Exception $e) {
                     PuntWorkLogger::error(
                         'Failed to initialize CRM platform',
                         PuntWorkLogger::CONTEXT_CRM,
@@ -157,7 +156,7 @@ class CRMManager
     {
         $platforms = array();
 
-        foreach ( self::$available_platforms as $platform_id => $platform_class ) {
+        foreach (self::$available_platforms as $platform_id => $platform_class) {
             $platforms[ $platform_id ] = array(
             'name'            => $platform_class::getPlatformName(),
             'class'           => $platform_class,
@@ -179,7 +178,7 @@ class CRMManager
     /**
      * Check if a platform is configured
      */
-    public function isPlatformConfigured( string $platform_id ): bool
+    public function isPlatformConfigured(string $platform_id): bool
     {
         return isset($this->platforms[ $platform_id ]);
     }
@@ -187,7 +186,7 @@ class CRMManager
     /**
      * Get a specific platform instance
      */
-    public function getPlatform( string $platform_id ): ?CRMIntegration
+    public function getPlatform(string $platform_id): ?CRMIntegration
     {
         return $this->platforms[ $platform_id ] ?? null;
     }
@@ -195,12 +194,12 @@ class CRMManager
     /**
      * Sync job application data to CRM platforms
      */
-    public function syncJobApplication( array $application_data, array $platforms = array() ): array
+    public function syncJobApplication(array $application_data, array $platforms = array()): array
     {
         $results          = array();
         $target_platforms = empty($platforms) ? $this->platforms : array_intersect_key($this->platforms, array_flip($platforms));
 
-        foreach ( $target_platforms as $platform_id => $platform ) {
+        foreach ($target_platforms as $platform_id => $platform) {
             try {
                 $result                  = $this->syncApplicationToPlatform($platform, $application_data);
                 $results[ $platform_id ] = $result;
@@ -214,7 +213,7 @@ class CRMManager
                     'success'        => $result['success'],
                     )
                 );
-            } catch ( \Exception $e ) {
+            } catch (\Exception $e) {
                 PuntWorkLogger::error(
                     'Failed to sync job application to CRM platform',
                     PuntWorkLogger::CONTEXT_CRM,
@@ -239,19 +238,19 @@ class CRMManager
     /**
      * Sync application data to a specific CRM platform
      */
-    private function syncApplicationToPlatform( CRMIntegration $platform, array $application_data ): array
+    private function syncApplicationToPlatform(CRMIntegration $platform, array $application_data): array
     {
         // Create or update contact
         $contact_data   = $this->formatApplicationAsContact($application_data);
         $contact_result = $this->syncContact($platform, $contact_data);
 
-        if (! $contact_result['success'] ) {
+        if (! $contact_result['success']) {
             return $contact_result;
         }
 
         // Create deal/opportunity if configured
         $deal_result = array( 'success' => true );
-        if ($this->shouldCreateDeal($application_data) ) {
+        if ($this->shouldCreateDeal($application_data)) {
             $deal_data   = $this->formatApplicationAsDeal($application_data, $contact_result['contact_id']);
             $deal_result = $platform->createDeal($deal_data);
         }
@@ -268,12 +267,12 @@ class CRMManager
     /**
      * Sync contact data
      */
-    private function syncContact( CRMIntegration $platform, array $contact_data ): array
+    private function syncContact(CRMIntegration $platform, array $contact_data): array
     {
         // Check if contact already exists
         $existing_contact = $platform->findContactByEmail($contact_data['email']);
 
-        if ($existing_contact ) {
+        if ($existing_contact) {
             // Update existing contact
             return $platform->updateContact($existing_contact['id'], $contact_data);
         } else {
@@ -285,7 +284,7 @@ class CRMManager
     /**
      * Format job application data as CRM contact
      */
-    private function formatApplicationAsContact( array $application_data ): array
+    private function formatApplicationAsContact(array $application_data): array
     {
         return array(
         'first_name'    => $application_data['first_name'] ?? '',
@@ -319,7 +318,7 @@ class CRMManager
     /**
      * Format job application data as CRM deal
      */
-    private function formatApplicationAsDeal( array $application_data, string $contact_id ): array
+    private function formatApplicationAsDeal(array $application_data, string $contact_id): array
     {
         return array(
         'title'               => 'Job Application: ' . ( $application_data['job_title'] ?? 'Unknown Position' ),
@@ -337,7 +336,7 @@ class CRMManager
     /**
      * Determine if a deal should be created for this application
      */
-    private function shouldCreateDeal( array $application_data ): bool
+    private function shouldCreateDeal(array $application_data): bool
     {
         // Create deals for applications that seem promising or have specific criteria
         return true; // For now, create deals for all applications
@@ -346,9 +345,9 @@ class CRMManager
     /**
      * Configure a CRM platform
      */
-    public static function configurePlatform( string $platform_id, array $config ): bool
+    public static function configurePlatform(string $platform_id, array $config): bool
     {
-        if (! isset(self::$available_platforms[ $platform_id ]) ) {
+        if (! isset(self::$available_platforms[ $platform_id ])) {
             return false;
         }
 
@@ -361,11 +360,11 @@ class CRMManager
     /**
      * Remove a platform configuration
      */
-    public static function removePlatform( string $platform_id ): bool
+    public static function removePlatform(string $platform_id): bool
     {
         $platform_configs = get_option('puntwork_crm_platforms', array());
 
-        if (isset($platform_configs[ $platform_id ]) ) {
+        if (isset($platform_configs[ $platform_id ])) {
             unset($platform_configs[ $platform_id ]);
             return update_option('puntwork_crm_platforms', $platform_configs);
         }
@@ -376,7 +375,7 @@ class CRMManager
     /**
      * Get platform configuration
      */
-    public static function getPlatformConfig( string $platform_id ): ?array
+    public static function getPlatformConfig(string $platform_id): ?array
     {
         $platform_configs = get_option('puntwork_crm_platforms', array());
         return $platform_configs[ $platform_id ] ?? null;
@@ -393,11 +392,11 @@ class CRMManager
     /**
      * Test platform configuration
      */
-    public function testPlatform( string $platform_id ): array
+    public function testPlatform(string $platform_id): array
     {
         $platform = $this->getPlatform($platform_id);
 
-        if (! $platform ) {
+        if (! $platform) {
             return array(
             'success' => false,
             'message' => 'Platform not configured',
@@ -406,7 +405,7 @@ class CRMManager
 
         try {
             return $platform->testConnection();
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             return array(
             'success' => false,
             'message' => 'Platform test failed: ' . $e->getMessage(),
@@ -447,7 +446,7 @@ class CRMManager
     /**
      * Log CRM sync operation
      */
-    public function logSyncOperation( string $platform_id, string $operation, bool $success, array $data = array() ): void
+    public function logSyncOperation(string $platform_id, string $operation, bool $success, array $data = array()): void
     {
         global $wpdb;
         $table_name = $wpdb->prefix . 'puntwork_crm_sync_log';

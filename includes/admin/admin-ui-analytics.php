@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Admin UI for Import Analytics Dashboard
  *
@@ -10,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access.
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -26,11 +27,11 @@ function import_analytics_page()
     wp_enqueue_script('chart-js', 'https://cdn.jsdelivr.net/npm/chart.js', array(), 'latest', true);
 
     // Handle CSV export.
-    if (isset($_POST['export_csv']) && check_admin_referer('analytics_export_nonce') ) {
+    if (isset($_POST['export_csv']) && check_admin_referer('analytics_export_nonce')) {
         $period = sanitize_text_field(wp_unslash($_POST['export_period'] ?? '30days'));
         $csv_content    = ImportAnalytics::export_analytics_csv($period);
 
-        if ($csv_content ) {
+        if ($csv_content) {
             $filename = 'puntwork-analytics-' . $period . '-' . gmdate('Y-m-d') . '.csv';
             header('Content-Type: text/csv');
             header('Content-Disposition: attachment; filename="' . $filename . '"');
@@ -86,7 +87,7 @@ function import_analytics_page()
 
     // Check if this is an AJAX request for lazy loading.
 	// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda
-    if (isset($_GET['ajax']) && $_GET['ajax'] === '1' ) {
+    if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
         $analytics_data = ImportAnalytics::get_analytics_data($period);
         wp_send_json(
             array(

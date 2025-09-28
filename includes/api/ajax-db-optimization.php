@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -25,7 +25,7 @@ function ajax_get_db_optimization_status()
 {
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('get_db_optimization_status', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -50,7 +50,7 @@ function ajax_get_db_optimization_status()
         'idx_postmeta_feed_url'    => 'Feed URL Index (postmeta)',
         );
 
-        foreach ( $index_names as $index => $name ) {
+        foreach ($index_names as $index => $name) {
             $exists      = $status['missing_indexes'] ? ! in_array($index, $status['missing_indexes']) : true;
             $color       = $exists ? '#34c759' : '#ff3b30';
             $icon        = $exists ? 'check-circle' : 'times-circle';
@@ -65,10 +65,10 @@ function ajax_get_db_optimization_status()
         $response['indexes_html'] .= '</div>';
 
         // Set badge status
-        if ($status['optimization_complete'] ) {
+        if ($status['optimization_complete']) {
             $response['badge_class'] = 'success';
             $response['badge_text']  = 'Optimized';
-        } elseif ($status['indexes_created'] > 0 ) {
+        } elseif ($status['indexes_created'] > 0) {
             $response['badge_class'] = 'warning';
             $response['badge_text']  = 'Partial';
         } else {
@@ -77,7 +77,7 @@ function ajax_get_db_optimization_status()
         }
 
         AjaxErrorHandler::sendSuccess($response);
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         \Puntwork\PuntWorkLogger::error('Database optimization status error: ' . $e->getMessage(), \Puntwork\PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to get database optimization status: ' . $e->getMessage());
     }
@@ -99,7 +99,7 @@ function ajax_save_async_settings()
         )
     );
 
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -112,7 +112,7 @@ function ajax_save_async_settings()
         $status = get_async_processing_status();
 
         AjaxErrorHandler::sendSuccess($status, array( 'message' => 'Async settings saved successfully' ));
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Save async settings error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to save async settings: ' . $e->getMessage());
     }
@@ -126,7 +126,7 @@ function ajax_get_async_status()
 {
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('get_async_status', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -134,7 +134,7 @@ function ajax_get_async_status()
     try {
         $status = get_async_processing_status();
         AjaxErrorHandler::sendSuccess($status);
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Get async status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to get async status: ' . $e->getMessage());
     }
@@ -148,7 +148,7 @@ function ajax_get_performance_status()
 {
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('get_performance_status', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
@@ -163,7 +163,7 @@ function ajax_get_performance_status()
             'snapshot' => $snapshot,
             )
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Get performance status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to get performance status: ' . $e->getMessage());
     }
@@ -177,14 +177,14 @@ function ajax_clear_performance_logs()
 {
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('clear_performance_logs', 'job_import_nonce');
-    if (is_wp_error($validation) ) {
+    if (is_wp_error($validation)) {
         AjaxErrorHandler::sendError($validation);
         return;
     }
 
     try {
         // Import the cleanup function
-        if (class_exists('\Puntwork\Utilities\PerformanceMonitor') ) {
+        if (class_exists('\Puntwork\Utilities\PerformanceMonitor')) {
             \Puntwork\Utilities\PerformanceMonitor::cleanupOldLogs(30); // Keep 30 days
             $message = 'Performance logs older than 30 days have been cleared.';
         } else {
@@ -192,7 +192,7 @@ function ajax_clear_performance_logs()
         }
 
         AjaxErrorHandler::sendSuccess(null, array( 'message' => $message ));
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error('Clear performance logs error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to clear performance logs: ' . $e->getMessage());
     }

@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -21,7 +21,7 @@ if (! defined('ABSPATH') ) {
 function system_monitoring_page()
 {
     // Check user capabilities
-    if (! current_user_can('manage_options') ) {
+    if (! current_user_can('manage_options')) {
         wp_die(__('You do not have sufficient permissions to access this page.'));
     }
 

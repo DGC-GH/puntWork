@@ -11,15 +11,15 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
-function clean_item_fields( &$item )
+function clean_item_fields(&$item)
 {
     $html_fields = array( 'description', 'functiondescription', 'offerdescription', 'requirementsdescription', 'companydescription' );
-    foreach ( $html_fields as $field ) {
-        if (isset($item->$field) ) {
+    foreach ($html_fields as $field) {
+        if (isset($item->$field)) {
             $content = (string) $item->$field;
             // Decode HTML entities first (handle double-encoding)
             $content      = html_entity_decode($content, ENT_QUOTES | ENT_HTML5);
@@ -32,8 +32,8 @@ function clean_item_fields( &$item )
         }
     }
     $title_fields = array( 'functiontitle' );
-    foreach ( $title_fields as $field ) {
-        if (isset($item->$field) ) {
+    foreach ($title_fields as $field) {
+        if (isset($item->$field)) {
             $content = (string) $item->$field;
             // Also decode HTML entities in titles
             $content      = html_entity_decode($content, ENT_QUOTES | ENT_HTML5);

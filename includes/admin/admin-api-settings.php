@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -24,7 +24,7 @@ function api_settings_page()
     wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION);
 
     // Handle form submissions
-    if (isset($_POST['regenerate_api_key']) && check_admin_referer('puntwork_api_settings') ) {
+    if (isset($_POST['regenerate_api_key']) && check_admin_referer('puntwork_api_settings')) {
         $new_key = regenerate_api_key();
         echo '<div class="notice notice-success"><p>' . __('API key regenerated successfully!', 'puntwork') . '</p></div>';
     }
@@ -102,7 +102,7 @@ function api_settings_page()
 
                 <?php
                 // Handle rate limit form submissions
-                if (isset($_POST['update_rate_limits']) && check_admin_referer('puntwork_rate_limits') ) {
+                if (isset($_POST['update_rate_limits']) && check_admin_referer('puntwork_rate_limits')) {
                     $rate_limits = array();
                     if (isset($_POST['rate_limits']) && is_array($_POST['rate_limits'])) {
                         foreach ($_POST['rate_limits'] as $action => $config) {
@@ -125,7 +125,7 @@ function api_settings_page()
                     }
                 }
 
-                if (isset($_POST['reset_rate_limits']) && check_admin_referer('puntwork_rate_limits') ) {
+                if (isset($_POST['reset_rate_limits']) && check_admin_referer('puntwork_rate_limits')) {
                     if (delete_option('puntwork_rate_limits')) {
                         echo '<div class="notice notice-success"><p>' . __('Rate limits reset to defaults!', 'puntwork') . '</p></div>';
                     } else {
@@ -162,7 +162,7 @@ function api_settings_page()
 
                             foreach ($rate_limit_configs as $action => $config) :
                                 $is_custom = isset(get_option('puntwork_rate_limits', array())[$action]);
-                            ?>
+                                ?>
                             <tr>
                                 <td>
                                     <strong><?php echo esc_html($action); ?></strong>

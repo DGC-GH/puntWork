@@ -11,7 +11,7 @@
 namespace Puntwork\AI;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class PredictiveAnalytics
 {
-
     /**
      * Prediction confidence levels
      */
@@ -43,11 +42,11 @@ class PredictiveAnalytics
      * @param  int    $daysHistory Number of days of historical data to analyze
      * @return array Prediction results
      */
-    public static function predictImportSuccess( string $feedKey, int $daysHistory = 30 ): array
+    public static function predictImportSuccess(string $feedKey, int $daysHistory = 30): array
     {
         $historicalData = self::getHistoricalImportData($feedKey, $daysHistory);
 
-        if (empty($historicalData) ) {
+        if (empty($historicalData)) {
             return array(
             'prediction' => null,
             'confidence' => self::CONFIDENCE_LOW,
@@ -80,11 +79,11 @@ class PredictiveAnalytics
      * @param  string $feedKey Feed identifier
      * @return array Reliability prediction
      */
-    public static function predictFeedReliability( string $feedKey ): array
+    public static function predictFeedReliability(string $feedKey): array
     {
         $healthData = self::getFeedHealthData($feedKey, 30); // 30 days
 
-        if (empty($healthData) ) {
+        if (empty($healthData)) {
             return array(
             'reliability_score' => null,
             'confidence'        => self::CONFIDENCE_LOW,
@@ -134,11 +133,11 @@ class PredictiveAnalytics
      * @param  int $daysHistory Number of days to analyze
      * @return array Quality trend prediction
      */
-    public static function predictContentQualityTrends( int $daysHistory = 30 ): array
+    public static function predictContentQualityTrends(int $daysHistory = 30): array
     {
         $qualityData = self::getContentQualityData($daysHistory);
 
-        if (empty($qualityData) ) {
+        if (empty($qualityData)) {
             return array(
             'trend'      => null,
             'confidence' => self::CONFIDENCE_LOW,
@@ -155,10 +154,10 @@ class PredictiveAnalytics
         $confidence = self::calculateConfidence($scores, $trend);
 
         // Analyze quality distribution
-        $excellent = count(array_filter($scores, fn( $s ) => $s >= 90));
-        $good      = count(array_filter($scores, fn( $s ) => $s >= 70 && $s < 90));
-        $fair      = count(array_filter($scores, fn( $s ) => $s >= 50 && $s < 70));
-        $poor      = count(array_filter($scores, fn( $s ) => $s < 50));
+        $excellent = count(array_filter($scores, fn($s) => $s >= 90));
+        $good      = count(array_filter($scores, fn($s) => $s >= 70 && $s < 90));
+        $fair      = count(array_filter($scores, fn($s) => $s >= 50 && $s < 70));
+        $poor      = count(array_filter($scores, fn($s) => $s < 50));
 
         $total        = count($scores);
         $distribution = array(
@@ -184,11 +183,11 @@ class PredictiveAnalytics
      * @param  int $daysHistory Number of days to analyze
      * @return array Duplicate pattern prediction
      */
-    public static function predictDuplicatePatterns( int $daysHistory = 30 ): array
+    public static function predictDuplicatePatterns(int $daysHistory = 30): array
     {
         $duplicateData = self::getDuplicateData($daysHistory);
 
-        if (empty($duplicateData) ) {
+        if (empty($duplicateData)) {
             return array(
             'trend'      => null,
             'confidence' => self::CONFIDENCE_LOW,
@@ -223,11 +222,11 @@ class PredictiveAnalytics
      * @param  string $period Prediction period (hour, day, week, month)
      * @return array Volume prediction
      */
-    public static function predictImportVolume( string $period = self::PERIOD_DAY ): array
+    public static function predictImportVolume(string $period = self::PERIOD_DAY): array
     {
         $volumeData = self::getImportVolumeData($period, 30); // 30 periods of data
 
-        if (empty($volumeData) ) {
+        if (empty($volumeData)) {
             return array(
             'prediction' => null,
             'confidence' => self::CONFIDENCE_LOW,
@@ -263,16 +262,16 @@ class PredictiveAnalytics
      * @param  array $data Array of numerical values
      * @return float Trend slope
      */
-    private static function calculateTrend( array $data ): float
+    private static function calculateTrend(array $data): float
     {
         $n = count($data);
-        if ($n < 2 ) {
+        if ($n < 2) {
             return 0;
         }
 
         $sumX = $sumY = $sumXY = $sumXX = 0;
 
-        for ( $i = 0; $i < $n; $i++ ) {
+        for ($i = 0; $i < $n; $i++) {
             $sumX  += $i;
             $sumY  += $data[ $i ];
             $sumXY += $i * $data[ $i ];
@@ -290,7 +289,7 @@ class PredictiveAnalytics
      * @param  float $trend Calculated trend
      * @return float Predicted next value
      */
-    private static function predictNextValue( array $data, float $trend ): float
+    private static function predictNextValue(array $data, float $trend): float
     {
         $lastValue = end($data);
         $nextIndex = count($data);
@@ -306,10 +305,10 @@ class PredictiveAnalytics
      * @param  float $trend Trend slope
      * @return string Confidence level
      */
-    private static function calculateConfidence( array $data, float $trend ): string
+    private static function calculateConfidence(array $data, float $trend): string
     {
         $n = count($data);
-        if ($n < 3 ) {
+        if ($n < 3) {
             return self::CONFIDENCE_LOW;
         }
 
@@ -317,7 +316,7 @@ class PredictiveAnalytics
         $mean  = array_sum($data) / $n;
         $ssRes = $ssTot = 0;
 
-        for ( $i = 0; $i < $n; $i++ ) {
+        for ($i = 0; $i < $n; $i++) {
             $predicted = $mean + ( $trend * ( $i - $n / 2 ) ); // Center the trend
             $ssRes    += pow($data[ $i ] - $predicted, 2);
             $ssTot    += pow($data[ $i ] - $mean, 2);
@@ -325,10 +324,10 @@ class PredictiveAnalytics
 
         $rSquared = $ssTot > 0 ? 1 - ( $ssRes / $ssTot ) : 0;
 
-        if ($rSquared > 0.8 ) {
+        if ($rSquared > 0.8) {
             return self::CONFIDENCE_HIGH;
         }
-        if ($rSquared > 0.5 ) {
+        if ($rSquared > 0.5) {
             return self::CONFIDENCE_MEDIUM;
         }
         return self::CONFIDENCE_LOW;
@@ -340,19 +339,19 @@ class PredictiveAnalytics
      * @param  array $data Data points
      * @return float Volatility percentage
      */
-    private static function calculateVolatility( array $data ): float
+    private static function calculateVolatility(array $data): float
     {
-        if (empty($data) ) {
+        if (empty($data)) {
             return 0;
         }
 
         $mean = array_sum($data) / count($data);
-        if ($mean == 0 ) {
+        if ($mean == 0) {
             return 0;
         }
 
         $variance = 0;
-        foreach ( $data as $value ) {
+        foreach ($data as $value) {
             $variance += pow($value - $mean, 2);
         }
         $variance /= count($data);
@@ -367,21 +366,21 @@ class PredictiveAnalytics
      * @param  array $data Time series data
      * @return array|null Seasonal pattern analysis
      */
-    private static function detectSeasonalPattern( array $data ): ?array
+    private static function detectSeasonalPattern(array $data): ?array
     {
         $n = count($data);
-        if ($n < 14 ) {
+        if ($n < 14) {
             return null; // Need at least 2 weeks
         }
 
         // Simple day-of-week pattern detection (assuming daily data)
         $dayPatterns = array();
-        for ( $i = 0; $i < 7; $i++ ) {
+        for ($i = 0; $i < 7; $i++) {
             $dayValues = array();
-            for ( $j = $i; $j < $n; $j += 7 ) {
+            for ($j = $i; $j < $n; $j += 7) {
                 $dayValues[] = $data[ $j ];
             }
-            if (! empty($dayValues) ) {
+            if (! empty($dayValues)) {
                 $dayPatterns[ $i ] = array_sum($dayValues) / count($dayValues);
             }
         }
@@ -405,17 +404,17 @@ class PredictiveAnalytics
      * @param  array $duplicateData Duplicate data with timestamps
      * @return array Peak analysis
      */
-    private static function analyzeDuplicatePeaks( array $duplicateData ): array
+    private static function analyzeDuplicatePeaks(array $duplicateData): array
     {
-        if (empty($duplicateData) ) {
+        if (empty($duplicateData)) {
             return array();
         }
 
         $peaks     = array();
         $threshold = ( array_sum(array_column($duplicateData, 'duplicate_rate')) / count($duplicateData) ) * 1.5;
 
-        foreach ( $duplicateData as $data ) {
-            if ($data['duplicate_rate'] > $threshold ) {
+        foreach ($duplicateData as $data) {
+            if ($data['duplicate_rate'] > $threshold) {
                 $peaks[] = array(
                 'date'   => $data['date'],
                 'rate'   => round($data['duplicate_rate'] * 100, 2) . '%',
@@ -434,19 +433,19 @@ class PredictiveAnalytics
      * @param  float $currentRate Current duplicate rate
      * @return array Recommendations
      */
-    private static function generateDuplicateRecommendations( float $trend, float $currentRate ): array
+    private static function generateDuplicateRecommendations(float $trend, float $currentRate): array
     {
         $recommendations = array();
 
-        if ($trend > 0.01 ) {
+        if ($trend > 0.01) {
             $recommendations[] = 'Duplicate rates are increasing - review feed sources for overlapping content';
         }
 
-        if ($currentRate > 0.1 ) { // >10%
+        if ($currentRate > 0.1) { // >10%
             $recommendations[] = 'High duplicate rate detected - consider implementing stricter deduplication rules';
         }
 
-        if ($currentRate < 0.02 ) { // <2%
+        if ($currentRate < 0.02) { // <2%
             $recommendations[] = 'Duplicate rate is low - current deduplication is effective';
         }
 
@@ -455,7 +454,7 @@ class PredictiveAnalytics
 
     // Data retrieval methods using real database data
 
-    private static function getHistoricalImportData( string $feedKey, int $days ): array
+    private static function getHistoricalImportData(string $feedKey, int $days): array
     {
         global $wpdb;
 
@@ -483,7 +482,7 @@ class PredictiveAnalytics
         return $results ?: array();
     }
 
-    private static function getFeedHealthData( string $feedKey, int $days ): array
+    private static function getFeedHealthData(string $feedKey, int $days): array
     {
         global $wpdb;
 
@@ -511,7 +510,7 @@ class PredictiveAnalytics
         return $results ?: array();
     }
 
-    private static function getContentQualityData( int $days ): array
+    private static function getContentQualityData(int $days): array
     {
         global $wpdb;
 
@@ -539,7 +538,7 @@ class PredictiveAnalytics
         return $results ?: array();
     }
 
-    private static function getDuplicateData( int $days ): array
+    private static function getDuplicateData(int $days): array
     {
         global $wpdb;
 
@@ -565,7 +564,7 @@ class PredictiveAnalytics
         return $results ?: array();
     }
 
-    private static function getImportVolumeData( string $period, int $periods ): array
+    private static function getImportVolumeData(string $period, int $periods): array
     {
         global $wpdb;
 
@@ -577,21 +576,21 @@ class PredictiveAnalytics
 
         // Group by the appropriate time period
         $groupBy = '';
-        switch ( $period ) {
-        case self::PERIOD_HOUR:
-            $groupBy = "DATE_FORMAT(end_time, '%Y-%m-%d %H:00:00')";
-            break;
-        case self::PERIOD_DAY:
-            $groupBy = 'DATE(end_time)';
-            break;
-        case self::PERIOD_WEEK:
-            $groupBy = 'DATE_SUB(end_time, INTERVAL WEEKDAY(end_time) DAY)';
-            break;
-        case self::PERIOD_MONTH:
-            $groupBy = "DATE_FORMAT(end_time, '%Y-%m-01')";
-            break;
-        default:
-            $groupBy = 'DATE(end_time)';
+        switch ($period) {
+            case self::PERIOD_HOUR:
+                $groupBy = "DATE_FORMAT(end_time, '%Y-%m-%d %H:00:00')";
+                break;
+            case self::PERIOD_DAY:
+                $groupBy = 'DATE(end_time)';
+                break;
+            case self::PERIOD_WEEK:
+                $groupBy = 'DATE_SUB(end_time, INTERVAL WEEKDAY(end_time) DAY)';
+                break;
+            case self::PERIOD_MONTH:
+                $groupBy = "DATE_FORMAT(end_time, '%Y-%m-01')";
+                break;
+            default:
+                $groupBy = 'DATE(end_time)';
         }
 
         $sql = $wpdb->prepare(

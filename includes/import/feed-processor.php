@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class FeedProcessor
 {
-
     public const FORMAT_XML       = 'xml';
     public const FORMAT_JSON      = 'json';
     public const FORMAT_CSV       = 'csv';
@@ -33,31 +32,31 @@ class FeedProcessor
      * @param  string|null $content Optional content to analyze
      * @return string Detected format (xml, json, csv, or job_board)
      */
-    public static function detectFormat( string $url, ?string $content = null ): string
+    public static function detectFormat(string $url, ?string $content = null): string
     {
         // Check if it's a job board URL
-        if (self::isJobBoardUrl($url) ) {
+        if (self::isJobBoardUrl($url)) {
             return self::FORMAT_JOB_BOARD;
         }
 
         // Check URL extension first
         $extension = strtolower(pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION));
 
-        switch ( $extension ) {
-        case 'xml':
-            return self::FORMAT_XML;
-        case 'json':
-            return self::FORMAT_JSON;
-        case 'csv':
-            return self::FORMAT_CSV;
+        switch ($extension) {
+            case 'xml':
+                return self::FORMAT_XML;
+            case 'json':
+                return self::FORMAT_JSON;
+            case 'csv':
+                return self::FORMAT_CSV;
         }
 
         // If no extension or unknown, try content analysis
-        if ($content !== null ) {
+        if ($content !== null) {
             $content = trim($content);
 
             // Check for XML
-            if (strpos($content, '<?xml') === 0 || strpos($content, '<') === 0 ) {
+            if (strpos($content, '<?xml') === 0 || strpos($content, '<') === 0) {
                 error_log(
                     '[PUNTWORK] detectFormat: Detected XML from content starting with: ' .
                     substr($content, 0, 50)
@@ -66,9 +65,9 @@ class FeedProcessor
             }
 
             // Check for JSON
-            if (( strpos($content, '{') === 0 || strpos($content, '[') === 0 ) ) {
+            if (( strpos($content, '{') === 0 || strpos($content, '[') === 0 )) {
                 json_decode($content);
-                if (json_last_error() === JSON_ERROR_NONE ) {
+                if (json_last_error() === JSON_ERROR_NONE) {
                     error_log(
                         '[PUNTWORK] detectFormat: Detected JSON from content starting with: ' .
                         substr($content, 0, 50)
@@ -84,12 +83,12 @@ class FeedProcessor
 
             // Check for CSV (look for comma-separated values with headers)
             $lines = explode("\n", $content);
-            if (count($lines) > 1 ) {
+            if (count($lines) > 1) {
                 $first_line  = trim($lines[0]);
                 $second_line = trim($lines[1] ?? '');
 
                 // Simple heuristic: if first line has commas and second line exists
-                if (strpos($first_line, ',') !== false && ! empty($second_line) ) {
+                if (strpos($first_line, ',') !== false && ! empty($second_line)) {
                     error_log('[PUNTWORK] detectFormat: Detected CSV from content');
                     return self::FORMAT_CSV;
                 }
@@ -107,7 +106,7 @@ class FeedProcessor
      * @param  string $url URL to check
      * @return bool True if it's a job board URL
      */
-    private static function isJobBoardUrl( string $url ): bool
+    private static function isJobBoardUrl(string $url): bool
     {
         $job_board_patterns = array(
         'job_board://',  // Custom protocol for job boards
@@ -116,8 +115,8 @@ class FeedProcessor
         'glassdoor://',
         );
 
-        foreach ( $job_board_patterns as $pattern ) {
-            if (strpos($url, $pattern) === 0 ) {
+        foreach ($job_board_patterns as $pattern) {
+            if (strpos($url, $pattern) === 0) {
                 return true;
             }
         }
@@ -149,17 +148,17 @@ class FeedProcessor
         int &$total_items,
         array &$logs
     ): int {
-        switch ( $format ) {
-        case self::FORMAT_XML:
-            return self::processXmlFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
-        case self::FORMAT_JSON:
-            return self::processJsonFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
-        case self::FORMAT_CSV:
-            return self::processCsvFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
-        case self::FORMAT_JOB_BOARD:
-            return self::processJobBoardFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
-        default:
-            throw new \Exception("Unsupported feed format: $format");
+        switch ($format) {
+            case self::FORMAT_XML:
+                return self::processXmlFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+            case self::FORMAT_JSON:
+                return self::processJsonFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+            case self::FORMAT_CSV:
+                return self::processCsvFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+            case self::FORMAT_JOB_BOARD:
+                return self::processJobBoardFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+            default:
+                throw new \Exception("Unsupported feed format: $format");
         }
     }
 
@@ -185,12 +184,12 @@ class FeedProcessor
      * @param  object $item Job item object
      * @return string Detected language code (en, fr, nl)
      */
-    private static function detectLanguage( object $item ): string
+    private static function detectLanguage(object $item): string
     {
         $lang = isset($item->languagecode) ? strtolower((string) $item->languagecode) : 'en';
-        if (strpos($lang, 'fr') !== false ) {
+        if (strpos($lang, 'fr') !== false) {
             return 'fr';
-        } elseif (strpos($lang, 'nl') !== false ) {
+        } elseif (strpos($lang, 'nl') !== false) {
             return 'nl';
         }
         return 'en';
@@ -225,20 +224,20 @@ class FeedProcessor
 
         try {
             $content = file_get_contents($json_path);
-            if ($content === false ) {
+            if ($content === false) {
                 throw new \Exception("Could not read JSON file: $json_path");
             }
 
             $data = json_decode($content, true);
-            if (json_last_error() !== JSON_ERROR_NONE ) {
+            if (json_last_error() !== JSON_ERROR_NONE) {
                 throw new \Exception('Invalid JSON: ' . json_last_error_msg());
             }
 
             // Handle different JSON structures
             $items = self::extractJsonItems($data);
 
-            foreach ( $items as $item_data ) {
-                if (! is_array($item_data) && ! is_object($item_data) ) {
+            foreach ($items as $item_data) {
+                if (! is_array($item_data) && ! is_object($item_data)) {
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key item skipped: Invalid item structure";
                     continue;
                 }
@@ -248,30 +247,30 @@ class FeedProcessor
 
                 // Normalize field names to lowercase
                 $normalized_item = new \stdClass();
-                foreach ( $item as $key => $value ) {
+                foreach ($item as $key => $value) {
                     $normalized_key                   = strtolower($key);
                     $normalized_item->$normalized_key = $value;
                 }
                 $item = $normalized_item;
 
                 // Generate GUID if missing
-                if (! isset($item->guid) || empty($item->guid) ) {
+                if (! isset($item->guid) || empty($item->guid)) {
                     // Generate GUID from title, company, and location if available
                     $guid_source = '';
-                    if (isset($item->functiontitle) ) {
+                    if (isset($item->functiontitle)) {
                         $guid_source .= (string) $item->functiontitle;
                     }
-                    if (isset($item->company) ) {
+                    if (isset($item->company)) {
                         $guid_source .= (string) $item->company;
                     }
-                    if (isset($item->location) ) {
+                    if (isset($item->location)) {
                         $guid_source .= (string) $item->location;
                     }
-                    if (isset($item->url) ) {
+                    if (isset($item->url)) {
                         $guid_source .= (string) $item->url;
                     }
 
-                    if (! empty($guid_source) ) {
+                    if (! empty($guid_source)) {
                         $item->guid = md5($guid_source);
                         $logs[]     = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key: Generated GUID for item: " . $item->guid;
                     } else {
@@ -281,7 +280,7 @@ class FeedProcessor
                 }
 
                 // Skip empty items
-                if (empty((array) $item) ) {
+                if (empty((array) $item)) {
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key item skipped: No fields collected";
                     continue;
                 }
@@ -302,7 +301,7 @@ class FeedProcessor
                 ++$feed_item_count;
 
                 // Process in batches
-                if (count($batch) >= $batch_size ) {
+                if (count($batch) >= $batch_size) {
                     fwrite($handle, implode('', $batch));
                     $batch        = array();
                     $total_items += $batch_size;
@@ -310,13 +309,13 @@ class FeedProcessor
             }
 
             // Write remaining items
-            if (! empty($batch) ) {
+            if (! empty($batch)) {
                 fwrite($handle, implode('', $batch));
                 $total_items += count($batch);
             }
 
             return $feed_item_count;
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key JSON processing error: " . $e->getMessage();
             throw $e;
         }
@@ -350,12 +349,12 @@ class FeedProcessor
         $batch           = array();
 
         try {
-            if (! file_exists($csv_path) ) {
+            if (! file_exists($csv_path)) {
                 throw new \Exception("CSV file not found: $csv_path");
             }
 
             $handle_resource = fopen($csv_path, 'r');
-            if ($handle_resource === false ) {
+            if ($handle_resource === false) {
                 throw new \Exception("Could not open CSV file: $csv_path");
             }
 
@@ -363,27 +362,27 @@ class FeedProcessor
             $delimiter = self::detectCsvDelimiter($csv_path);
             $headers   = fgetcsv($handle_resource, 0, $delimiter);
 
-            if (! $headers || count($headers) < 2 ) {
+            if (! $headers || count($headers) < 2) {
                 throw new \Exception('Invalid CSV format or no headers found');
             }
 
             // Normalize headers to lowercase
             $headers = array_map('strtolower', $headers);
 
-            while ( ( $row = fgetcsv($handle_resource, 0, $delimiter) ) !== false ) {
-                if (count($row) !== count($headers) ) {
+            while (( $row = fgetcsv($handle_resource, 0, $delimiter) ) !== false) {
+                if (count($row) !== count($headers)) {
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key row skipped: Column count mismatch";
                     continue;
                 }
 
                 // Convert row to object
                 $item = new \stdClass();
-                foreach ( $headers as $index => $header ) {
+                foreach ($headers as $index => $header) {
                     $item->$header = $row[ $index ] ?? '';
                 }
 
                 // Skip empty items
-                if (empty((array) $item) ) {
+                if (empty((array) $item)) {
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key item skipped: No fields collected";
                     continue;
                 }
@@ -391,23 +390,23 @@ class FeedProcessor
                 clean_item_fields($item);
 
                 // Generate GUID if missing
-                if (! isset($item->guid) || empty($item->guid) ) {
+                if (! isset($item->guid) || empty($item->guid)) {
                     // Generate GUID from title, company, and location if available
                     $guid_source = '';
-                    if (isset($item->functiontitle) ) {
+                    if (isset($item->functiontitle)) {
                         $guid_source .= (string) $item->functiontitle;
                     }
-                    if (isset($item->company) ) {
+                    if (isset($item->company)) {
                         $guid_source .= (string) $item->company;
                     }
-                    if (isset($item->location) ) {
+                    if (isset($item->location)) {
                         $guid_source .= (string) $item->location;
                     }
-                    if (isset($item->url) ) {
+                    if (isset($item->url)) {
                         $guid_source .= (string) $item->url;
                     }
 
-                    if (! empty($guid_source) ) {
+                    if (! empty($guid_source)) {
                         $item->guid = md5($guid_source);
                         $logs[]     = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key: Generated GUID for item: " . $item->guid;
                     } else {
@@ -426,7 +425,7 @@ class FeedProcessor
                 ++$feed_item_count;
 
                 // Process in batches
-                if (count($batch) >= $batch_size ) {
+                if (count($batch) >= $batch_size) {
                     fwrite($handle, implode('', $batch));
                     $batch        = array();
                     $total_items += $batch_size;
@@ -434,15 +433,15 @@ class FeedProcessor
             }
 
             // Write remaining items
-            if (! empty($batch) ) {
+            if (! empty($batch)) {
                 fwrite($handle, implode('', $batch));
                 $total_items += count($batch);
             }
 
             fclose($handle_resource);
             return $feed_item_count;
-        } catch ( \Exception $e ) {
-            if (isset($handle_resource) && is_resource($handle_resource) ) {
+        } catch (\Exception $e) {
+            if (isset($handle_resource) && is_resource($handle_resource)) {
                 fclose($handle_resource);
             }
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key CSV processing error: " . $e->getMessage();
@@ -484,7 +483,7 @@ class FeedProcessor
 
             // Parse query parameters
             $params = array();
-            if (isset($url_parts['query']) ) {
+            if (isset($url_parts['query'])) {
                 parse_str($url_parts['query'], $params);
             }
 
@@ -493,19 +492,19 @@ class FeedProcessor
 
             $board_manager = new JobBoards\JobBoardManager();
 
-            if (! $board_manager->isBoardConfigured($board_id) ) {
+            if (! $board_manager->isBoardConfigured($board_id)) {
                 throw new \Exception("Job board '$board_id' is not configured");
             }
 
             // Fetch jobs from the job board
             $jobs = $board_manager->fetchAllJobs($params, array( $board_id ));
 
-            foreach ( $jobs as $job_data ) {
+            foreach ($jobs as $job_data) {
                 // Convert job board data to standard job format
                 $item = self::convertJobBoardDataToItem($job_data, $board_id);
 
                 // Skip empty items
-                if (empty((array) $item) ) {
+                if (empty((array) $item)) {
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key job skipped: No fields collected";
                     continue;
                 }
@@ -513,23 +512,23 @@ class FeedProcessor
                 clean_item_fields($item);
 
                 // Generate GUID if missing
-                if (! isset($item->guid) || empty($item->guid) ) {
+                if (! isset($item->guid) || empty($item->guid)) {
                     // Generate GUID from title, company, and location if available
                     $guid_source = '';
-                    if (isset($item->title) ) {
+                    if (isset($item->title)) {
                         $guid_source .= (string) $item->title;
                     }
-                    if (isset($item->company) ) {
+                    if (isset($item->company)) {
                         $guid_source .= (string) $item->company;
                     }
-                    if (isset($item->location) ) {
+                    if (isset($item->location)) {
                         $guid_source .= (string) $item->location;
                     }
-                    if (isset($item->url) ) {
+                    if (isset($item->url)) {
                         $guid_source .= (string) $item->url;
                     }
 
-                    if (! empty($guid_source) ) {
+                    if (! empty($guid_source)) {
                         $item->guid = md5($guid_source);
                         $logs[]     = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key: Generated GUID for job: " . $item->guid;
                     } else {
@@ -548,7 +547,7 @@ class FeedProcessor
                 ++$feed_item_count;
 
                 // Process in batches
-                if (count($batch) >= $batch_size ) {
+                if (count($batch) >= $batch_size) {
                     fwrite($handle, implode('', $batch));
                     $batch        = array();
                     $total_items += $batch_size;
@@ -556,13 +555,13 @@ class FeedProcessor
             }
 
             // Write remaining items
-            if (! empty($batch) ) {
+            if (! empty($batch)) {
                 fwrite($handle, implode('', $batch));
                 $total_items += count($batch);
             }
 
             return $feed_item_count;
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key job board processing error: " . $e->getMessage();
             throw $e;
         }
@@ -575,7 +574,7 @@ class FeedProcessor
      * @param  string $board_id Job board identifier
      * @return object Standardized job item
      */
-    private static function convertJobBoardDataToItem( array $job_data, string $board_id ): object
+    private static function convertJobBoardDataToItem(array $job_data, string $board_id): object
     {
         $item = new \stdClass();
 
@@ -597,9 +596,9 @@ class FeedProcessor
         $item->source_type = 'job_board';
 
         // Add any additional fields from raw data
-        if (isset($job_data['raw_data']) && is_array($job_data['raw_data']) ) {
-            foreach ( $job_data['raw_data'] as $key => $value ) {
-                if (! isset($item->$key) ) {
+        if (isset($job_data['raw_data']) && is_array($job_data['raw_data'])) {
+            foreach ($job_data['raw_data'] as $key => $value) {
+                if (! isset($item->$key)) {
                     $item->$key = $value;
                 }
             }
@@ -614,26 +613,26 @@ class FeedProcessor
      * @param  mixed $data JSON data structure
      * @return array Extracted items array
      */
-    private static function extractJsonItems( $data ): array
+    private static function extractJsonItems($data): array
     {
         // If it's an array of objects, return as is
-        if (is_array($data) && ! empty($data) && ( is_array($data[0]) || is_object($data[0]) ) ) {
+        if (is_array($data) && ! empty($data) && ( is_array($data[0]) || is_object($data[0]) )) {
             return $data;
         }
 
         // If it's an object with a common items array
-        if (is_object($data) || is_array($data) ) {
+        if (is_object($data) || is_array($data)) {
             $possible_keys = array( 'jobs', 'items', 'data', 'results', 'feed', 'entries' );
 
-            foreach ( $possible_keys as $key ) {
-                if (isset($data[ $key ]) && is_array($data[ $key ]) ) {
+            foreach ($possible_keys as $key) {
+                if (isset($data[ $key ]) && is_array($data[ $key ])) {
                     return $data[ $key ];
                 }
             }
         }
 
         // If it's a single object, wrap in array
-        if (is_object($data) || is_array($data) ) {
+        if (is_object($data) || is_array($data)) {
             return array( $data );
         }
 
@@ -646,15 +645,15 @@ class FeedProcessor
      * @param  string $file_path Path to CSV file
      * @return string Detected delimiter character
      */
-    private static function detectCsvDelimiter( string $file_path ): string
+    private static function detectCsvDelimiter(string $file_path): string
     {
         $handle     = fopen($file_path, 'r');
         $delimiters = array( ',', ';', '\t', '|' );
         $counts     = array_fill_keys($delimiters, 0);
 
         // Read first 5 lines to analyze
-        for ( $i = 0; $i < 5 && ( $line = fgets($handle) ); $i++ ) {
-            foreach ( $delimiters as $delimiter ) {
+        for ($i = 0; $i < 5 && ( $line = fgets($handle) ); $i++) {
+            foreach ($delimiters as $delimiter) {
                 $counts[ $delimiter ] += substr_count($line, $delimiter);
             }
         }

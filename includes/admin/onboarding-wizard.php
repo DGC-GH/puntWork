@@ -9,7 +9,6 @@ namespace Puntwork;
 
 class PuntworkOnboardingWizard
 {
-
     public function __construct()
     {
         $this->init();
@@ -47,7 +46,7 @@ class PuntworkOnboardingWizard
     public function completeOnboarding()
     {
         // Verify nonce
-        if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_onboarding_nonce') ) {
+        if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_onboarding_nonce')) {
             wp_send_json_error(array( 'message' => __('Security check failed.', 'puntwork') ));
             return;
         }
@@ -69,11 +68,11 @@ class PuntworkOnboardingWizard
 }
 
 // Initialize onboarding wizard only when WordPress is loaded and not in testing
-if (! defined('PHPUNIT_RUNNING') && function_exists('add_action') ) {
+if (! defined('PHPUNIT_RUNNING') && function_exists('add_action')) {
     add_action(
         'init',
         function () {
-            if (class_exists('PuntworkOnboardingWizard') ) {
+            if (class_exists('PuntworkOnboardingWizard')) {
                 new PuntworkOnboardingWizard();
             }
         }

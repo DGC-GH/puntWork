@@ -12,7 +12,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -378,7 +378,7 @@ function render_onboarding_modal()
     $onboarding_completed = get_option('puntwork_onboarding_completed', false);
 
     // Only show if not completed
-    if ($onboarding_completed ) {
+    if ($onboarding_completed) {
         return;
     }
 

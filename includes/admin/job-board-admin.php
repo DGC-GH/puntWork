@@ -11,7 +11,7 @@
 namespace Puntwork\Admin;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class JobBoardAdmin
 {
-
     /**
      * Initialize the admin page
      */
@@ -50,9 +49,9 @@ class JobBoardAdmin
     /**
      * Enqueue admin scripts and styles
      */
-    public static function enqueueScripts( $hook ): void
+    public static function enqueueScripts($hook): void
     {
-        if ($hook !== 'puntwork_page_puntwork-job-boards' ) {
+        if ($hook !== 'puntwork_page_puntwork-job-boards') {
             return;
         }
 
@@ -82,7 +81,7 @@ class JobBoardAdmin
      */
     public static function renderAdminPage(): void
     {
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.'));
         }
 
@@ -102,7 +101,7 @@ class JobBoardAdmin
                 </div>
 
                 <div class="puntwork-job-boards-grid">
-        <?php foreach ( $available_boards as $board_id => $board_info ) : ?>
+        <?php foreach ($available_boards as $board_id => $board_info) : ?>
             <?php
             $config     = $board_configs[ $board_id ] ?? array();
             $is_enabled = isset($config['enabled']) && $config['enabled'];
@@ -149,31 +148,31 @@ class JobBoardAdmin
     /**
      * Render configuration fields for a specific job board
      */
-    private static function renderBoardConfigFields( string $board_id, array $config ): void
+    private static function renderBoardConfigFields(string $board_id, array $config): void
     {
-        switch ( $board_id ) {
-        case 'indeed':
-            ?>
+        switch ($board_id) {
+            case 'indeed':
+                ?>
                 <div class="puntwork-form-field">
                     <label for="indeed_publisher_id"><?php _e('Publisher ID', 'puntwork'); ?></label>
                     <input type="text" id="indeed_publisher_id" name="publisher_id" value="<?php echo esc_attr($config['publisher_id'] ?? ''); ?>" required>
                     <p class="description"><?php _e('Your Indeed Publisher ID', 'puntwork'); ?></p>
                 </div>
-            <?php
-            break;
+                <?php
+                break;
 
-        case 'linkedin':
-            ?>
+            case 'linkedin':
+                ?>
                 <div class="puntwork-form-field">
                     <label for="linkedin_access_token"><?php _e('Access Token', 'puntwork'); ?></label>
                     <input type="password" id="linkedin_access_token" name="access_token" value="<?php echo esc_attr($config['access_token'] ?? ''); ?>" required>
                     <p class="description"><?php _e('LinkedIn OAuth 2.0 access token', 'puntwork'); ?></p>
                 </div>
-            <?php
-            break;
+                <?php
+                break;
 
-        case 'glassdoor':
-            ?>
+            case 'glassdoor':
+                ?>
                 <div class="puntwork-form-field">
                     <label for="glassdoor_partner_id"><?php _e('Partner ID', 'puntwork'); ?></label>
                     <input type="text" id="glassdoor_partner_id" name="partner_id" value="<?php echo esc_attr($config['partner_id'] ?? ''); ?>" required>
@@ -183,8 +182,8 @@ class JobBoardAdmin
                     <input type="password" id="glassdoor_partner_key" name="partner_key" value="<?php echo esc_attr($config['partner_key'] ?? ''); ?>" required>
                     <p class="description"><?php _e('Your Glassdoor API credentials', 'puntwork'); ?></p>
                 </div>
-            <?php
-            break;
+                <?php
+                break;
         }
     }
 
@@ -195,14 +194,14 @@ class JobBoardAdmin
     {
         check_ajax_referer('puntwork_job_boards', 'nonce');
 
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('Insufficient permissions'));
         }
 
         $board_id = sanitize_text_field($_POST['board_id'] ?? '');
         $config   = $_POST['config'] ?? array();
 
-        if (empty($board_id) ) {
+        if (empty($board_id)) {
             wp_send_json_error(array( 'message' => 'Board ID is required' ));
         }
 
@@ -215,7 +214,7 @@ class JobBoardAdmin
             // Create a temporary board instance for testing
             $available_boards = \Puntwork\JobBoards\JobBoardManager::getAvailableBoards();
 
-            if (! isset($available_boards[ $board_id ]) ) {
+            if (! isset($available_boards[ $board_id ])) {
                 wp_send_json_error(array( 'message' => 'Invalid board ID' ));
             }
 
@@ -227,7 +226,7 @@ class JobBoardAdmin
             'configured' => $board->isConfigured(),
             );
 
-            if ($board->isConfigured() ) {
+            if ($board->isConfigured()) {
                 // Try a test request
                 $test_jobs                = $board->fetchJobs(array( 'limit' => 1 ));
                 $test_result['success']   = true;
@@ -239,7 +238,7 @@ class JobBoardAdmin
             }
 
             wp_send_json_success($test_result);
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             wp_send_json_error(
                 array(
                 'message'  => $e->getMessage(),
@@ -256,7 +255,7 @@ class JobBoardAdmin
     {
         check_ajax_referer('puntwork_job_boards', 'nonce');
 
-        if (! current_user_can('manage_options') ) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('Insufficient permissions'));
         }
 
@@ -264,7 +263,7 @@ class JobBoardAdmin
         $config   = $_POST['config'] ?? array();
         $enabled  = isset($_POST['enabled']) && $_POST['enabled'] === 'true';
 
-        if (empty($board_id) ) {
+        if (empty($board_id)) {
             wp_send_json_error(array( 'message' => 'Board ID is required' ));
         }
 
@@ -277,7 +276,7 @@ class JobBoardAdmin
 
             $success = \Puntwork\JobBoards\JobBoardManager::configureBoard($board_id, $config);
 
-            if ($success ) {
+            if ($success) {
                 wp_send_json_success(
                     array(
                     'message'  => __('Settings saved successfully!', 'puntwork'),
@@ -287,7 +286,7 @@ class JobBoardAdmin
             } else {
                 wp_send_json_error(array( 'message' => __('Failed to save settings.', 'puntwork') ));
             }
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             wp_send_json_error(
                 array(
                 'message'  => $e->getMessage(),
@@ -300,14 +299,14 @@ class JobBoardAdmin
     /**
      * Sanitize board configuration data
      */
-    private static function sanitizeBoardConfig( string $board_id, array $config ): array
+    private static function sanitizeBoardConfig(string $board_id, array $config): array
     {
         $sanitized = array();
 
-        foreach ( $config as $key => $value ) {
-            if (is_string($value) ) {
+        foreach ($config as $key => $value) {
+            if (is_string($value)) {
                 $sanitized[ $key ] = sanitize_text_field($value);
-            } elseif (is_array($value) ) {
+            } elseif (is_array($value)) {
                 $sanitized[ $key ] = array_map('sanitize_text_field', $value);
             } else {
                 $sanitized[ $key ] = $value;

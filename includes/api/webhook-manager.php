@@ -11,7 +11,7 @@
 namespace Puntwork\API;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class WebhookManager
 {
-
     public const TABLE_NAME     = 'puntwork_webhooks';
     public const LOG_TABLE_NAME = 'puntwork_webhook_logs';
 
@@ -89,7 +88,7 @@ class WebhookManager
     /**
      * Register a webhook
      */
-    public static function registerWebhook( array $config ): int
+    public static function registerWebhook(array $config): int
     {
         global $wpdb;
 
@@ -112,32 +111,32 @@ class WebhookManager
     /**
      * Update webhook
      */
-    public static function updateWebhook( int $webhookId, array $config ): bool
+    public static function updateWebhook(int $webhookId, array $config): bool
     {
         global $wpdb;
 
         $table = $wpdb->prefix . self::TABLE_NAME;
 
         $data = array();
-        if (isset($config['name']) ) {
+        if (isset($config['name'])) {
             $data['name'] = sanitize_text_field($config['name']);
         }
-        if (isset($config['url']) ) {
+        if (isset($config['url'])) {
             $data['url'] = esc_url_raw($config['url']);
         }
-        if (isset($config['method']) ) {
+        if (isset($config['method'])) {
             $data['method'] = strtoupper($config['method']);
         }
-        if (isset($config['events']) ) {
+        if (isset($config['events'])) {
             $data['events'] = json_encode($config['events']);
         }
-        if (isset($config['headers']) ) {
+        if (isset($config['headers'])) {
             $data['headers'] = json_encode($config['headers']);
         }
-        if (isset($config['secret']) ) {
+        if (isset($config['secret'])) {
             $data['secret'] = $config['secret'];
         }
-        if (isset($config['is_active']) ) {
+        if (isset($config['is_active'])) {
             $data['is_active'] = (bool) $config['is_active'];
         }
 
@@ -147,7 +146,7 @@ class WebhookManager
     /**
      * Delete webhook
      */
-    public static function deleteWebhook( int $webhookId ): bool
+    public static function deleteWebhook(int $webhookId): bool
     {
         global $wpdb;
 
@@ -158,7 +157,7 @@ class WebhookManager
     /**
      * Get webhooks for event
      */
-    private static function getWebhooksForEvent( string $event ): array
+    private static function getWebhooksForEvent(string $event): array
     {
         global $wpdb;
 
@@ -176,7 +175,7 @@ class WebhookManager
         );
 
         $webhooks = array();
-        foreach ( $results as $row ) {
+        foreach ($results as $row) {
             $webhooks[] = array(
             'id'      => (int) $row->id,
             'name'    => $row->name,
@@ -194,7 +193,7 @@ class WebhookManager
     /**
      * Trigger webhooks for import completion
      */
-    public static function triggerImportWebhooks( array $importData ): void
+    public static function triggerImportWebhooks(array $importData): void
     {
         $webhooks = self::getWebhooksForEvent('import.completed');
 
@@ -211,7 +210,7 @@ class WebhookManager
         ),
         );
 
-        foreach ( $webhooks as $webhook ) {
+        foreach ($webhooks as $webhook) {
             self::sendWebhook($webhook, $payload);
         }
     }
@@ -219,7 +218,7 @@ class WebhookManager
     /**
      * Trigger webhooks for import failure
      */
-    public static function triggerFailureWebhooks( array $errorData ): void
+    public static function triggerFailureWebhooks(array $errorData): void
     {
         $webhooks = self::getWebhooksForEvent('import.failed');
 
@@ -233,7 +232,7 @@ class WebhookManager
         ),
         );
 
-        foreach ( $webhooks as $webhook ) {
+        foreach ($webhooks as $webhook) {
             self::sendWebhook($webhook, $payload);
         }
     }
@@ -241,7 +240,7 @@ class WebhookManager
     /**
      * Trigger webhooks for job creation/update
      */
-    public static function triggerJobWebhooks( array $jobData ): void
+    public static function triggerJobWebhooks(array $jobData): void
     {
         $webhooks = self::getWebhooksForEvent('job.created');
 
@@ -257,7 +256,7 @@ class WebhookManager
         ),
         );
 
-        foreach ( $webhooks as $webhook ) {
+        foreach ($webhooks as $webhook) {
             self::sendWebhook($webhook, $payload);
         }
     }
@@ -265,10 +264,10 @@ class WebhookManager
     /**
      * Send webhook request
      */
-    private static function sendWebhook( array $webhook, array $payload ): void
+    private static function sendWebhook(array $webhook, array $payload): void
     {
         // Sign payload if secret is provided
-        if (! empty($webhook['secret']) ) {
+        if (! empty($webhook['secret'])) {
             $payload['signature'] = hash_hmac('sha256', json_encode($payload), $webhook['secret']);
         }
 
@@ -283,7 +282,7 @@ class WebhookManager
         );
 
         // Add custom headers
-        if (! empty($webhook['headers']) ) {
+        if (! empty($webhook['headers'])) {
             $args['headers'] = array_merge($args['headers'], $webhook['headers']);
         }
 
@@ -297,7 +296,7 @@ class WebhookManager
     /**
      * Log webhook attempt
      */
-    private static function logWebhookAttempt( int $webhookId, string $event, array $payload, ?int $responseCode, ?string $responseBody, bool $success, ?string $error = null ): void
+    private static function logWebhookAttempt(int $webhookId, string $event, array $payload, ?int $responseCode, ?string $responseBody, bool $success, ?string $error = null): void
     {
         global $wpdb;
 
@@ -339,7 +338,7 @@ class WebhookManager
     /**
      * Get webhook logs
      */
-    public static function getWebhookLogs( int $webhookId, int $limit = 50 ): array
+    public static function getWebhookLogs(int $webhookId, int $limit = 50): array
     {
         global $wpdb;
 
@@ -363,14 +362,14 @@ class WebhookManager
     /**
      * Test webhook
      */
-    public static function testWebhook( int $webhookId ): array
+    public static function testWebhook(int $webhookId): array
     {
         global $wpdb;
 
         $table   = $wpdb->prefix . self::TABLE_NAME;
         $webhook = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $webhookId), ARRAY_A);
 
-        if (! $webhook ) {
+        if (! $webhook) {
             return array(
             'success' => false,
             'message' => 'Webhook not found',
@@ -394,7 +393,7 @@ class WebhookManager
         'timeout' => 10,
         );
 
-        if (! empty($webhook['headers']) ) {
+        if (! empty($webhook['headers'])) {
             $args['headers'] = array_merge($args['headers'], json_decode($webhook['headers'], true));
         }
 

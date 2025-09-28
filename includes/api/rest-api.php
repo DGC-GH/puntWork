@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -288,11 +288,11 @@ function register_import_api_routes()
 /**
  * Verify API key for authentication with enhanced security
  */
-function verify_api_key( $request )
+function verify_api_key($request)
 {
     $api_key = $request->get_param('api_key');
 
-    if (empty($api_key) ) {
+    if (empty($api_key)) {
         SecurityUtils::logSecurityEvent(
             'api_key_missing',
             array(
@@ -308,7 +308,7 @@ function verify_api_key( $request )
     $rate_limit_key = 'api_key_attempts_' . SecurityUtils::getClientIp();
     $attempts       = get_transient($rate_limit_key) ?: 0;
 
-    if ($attempts >= 6 ) {
+    if ($attempts >= 6) {
         SecurityUtils::logSecurityEvent(
             'api_rate_limit_exceeded',
             array(
@@ -321,7 +321,7 @@ function verify_api_key( $request )
 
     $stored_key = get_option('puntwork_api_key');
 
-    if (empty($stored_key) ) {
+    if (empty($stored_key)) {
         SecurityUtils::logSecurityEvent(
             'api_not_configured',
             array(
@@ -332,7 +332,7 @@ function verify_api_key( $request )
         return new \WP_Error('api_not_configured', 'API key not configured', array( 'status' => 403 ));
     }
 
-    if (! hash_equals($stored_key, $api_key) ) {
+    if (! hash_equals($stored_key, $api_key)) {
         set_transient($rate_limit_key, $attempts + 1, 300); // 5 minutes
         SecurityUtils::logSecurityEvent(
             'api_key_invalid',
@@ -353,7 +353,7 @@ function verify_api_key( $request )
 /**
  * Handle trigger import request
  */
-function handle_trigger_import( $request )
+function handle_trigger_import($request)
 {
     $force     = $request->get_param('force');
     $test_mode = $request->get_param('test_mode');
@@ -372,7 +372,7 @@ function handle_trigger_import( $request )
     $import_status = get_option('job_import_status', array());
     $is_running    = isset($import_status['complete']) && ! $import_status['complete'] && ! isset($import_status['paused']);
 
-    if ($is_running && ! $force ) {
+    if ($is_running && ! $force) {
         PuntWorkLogger::info('Import already running, skipping trigger', PuntWorkLogger::CONTEXT_API);
         return new \WP_REST_Response(
             array(
@@ -386,7 +386,7 @@ function handle_trigger_import( $request )
     }
 
     // If forcing, cancel current import
-    if ($is_running && $force ) {
+    if ($is_running && $force) {
         set_transient('import_cancel', true, 3600);
         delete_option('job_import_status');
         delete_option('job_import_progress');
@@ -401,14 +401,14 @@ function handle_trigger_import( $request )
 
     try {
         // Set test mode if requested
-        if ($test_mode ) {
+        if ($test_mode) {
             update_option('puntwork_test_mode', true);
         }
 
         // Get total items count for proper status initialization
         $json_path   = ABSPATH . 'feeds/combined-jobs.jsonl';
         $total_items = 0;
-        if (file_exists($json_path) ) {
+        if (file_exists($json_path)) {
             $total_items = get_json_item_count($json_path);
         }
 
@@ -451,25 +451,25 @@ function handle_trigger_import( $request )
         $use_async = false;
 
         // Check if async processing is enabled and available
-        if (is_async_processing_enabled() ) {
+        if (is_async_processing_enabled()) {
             // Get estimated item count to determine if async is beneficial
             $jsonl_path = ABSPATH . 'feeds/combined-jobs.jsonl';
-            if (file_exists($jsonl_path) ) {
+            if (file_exists($jsonl_path)) {
                 $estimated_count = get_json_item_count($jsonl_path);
                 // Use async for imports larger than 500 items or when explicitly requested
                 $use_async = ( $estimated_count > 500 ) || isset($_GET['async']);
             }
         }
 
-        if ($use_async ) {
+        if ($use_async) {
             // Use new async batch processing system
-            if (! defined('PUNTWORK_TESTING') || ! PUNTWORK_TESTING ) {
+            if (! defined('PUNTWORK_TESTING') || ! PUNTWORK_TESTING) {
                 error_log('[PUNTWORK] API: Using async batch processing');
             }
 
             $result = trigger_async_import($test_mode, 'api');
 
-            if ($result['success'] ) {
+            if ($result['success']) {
                 PuntWorkLogger::info('Remote import trigger initiated asynchronously', PuntWorkLogger::CONTEXT_API);
                 return new \WP_REST_Response(
                     array(
@@ -483,20 +483,20 @@ function handle_trigger_import( $request )
                 );
             } else {
                 // Fallback to sync if async fails
-                if (! defined('PUNTWORK_TESTING') || ! PUNTWORK_TESTING ) {
+                if (! defined('PUNTWORK_TESTING') || ! PUNTWORK_TESTING) {
                     error_log('[PUNTWORK] API: Async failed, falling back to sync: ' . $result['message']);
                 }
                 $use_async = false;
             }
         }
 
-        if (! $use_async ) {
+        if (! $use_async) {
             // Force synchronous execution
-            if (! defined('PUNTWORK_TESTING') || ! PUNTWORK_TESTING ) {
+            if (! defined('PUNTWORK_TESTING') || ! PUNTWORK_TESTING) {
                 error_log('[PUNTWORK] API: Using synchronous execution');
             }
-            if (! function_exists('run_scheduled_import') ) {
-                if (! defined('PUNTWORK_TESTING') || ! PUNTWORK_TESTING ) {
+            if (! function_exists('run_scheduled_import')) {
+                if (! defined('PUNTWORK_TESTING') || ! PUNTWORK_TESTING) {
                     error_log('[PUNTWORK] API: run_scheduled_import function not found');
                 }
                 return new \WP_REST_Response(
@@ -510,12 +510,12 @@ function handle_trigger_import( $request )
             }
 
             $result = run_scheduled_import($test_mode, 'api');
-            if (! defined('PUNTWORK_TESTING') || ! PUNTWORK_TESTING ) {
+            if (! defined('PUNTWORK_TESTING') || ! PUNTWORK_TESTING) {
                 error_log('[PUNTWORK] API: run_scheduled_import returned: ' . json_encode($result));
             }
 
             // Clear test mode
-            if ($test_mode ) {
+            if ($test_mode) {
                 delete_option('puntwork_test_mode');
             }
 
@@ -529,8 +529,8 @@ function handle_trigger_import( $request )
             'wp_abspath'     => ABSPATH,
             );
 
-            if ($result['success'] ) {
-                if (! defined('PUNTWORK_TESTING') || ! PUNTWORK_TESTING ) {
+            if ($result['success']) {
+                if (! defined('PUNTWORK_TESTING') || ! PUNTWORK_TESTING) {
                     error_log('[PUNTWORK] API: About to return sync success response');
                 }
                 PuntWorkLogger::info(
@@ -554,7 +554,7 @@ function handle_trigger_import( $request )
                 );
             } else {
                 $error_msg = $result['message'] ?? 'Unknown error occurred';
-                if (! defined('PUNTWORK_TESTING') || ! PUNTWORK_TESTING ) {
+                if (! defined('PUNTWORK_TESTING') || ! PUNTWORK_TESTING) {
                     error_log('[PUNTWORK] API: About to return sync error response: ' . $error_msg);
                 }
                 PuntWorkLogger::error(
@@ -577,7 +577,7 @@ function handle_trigger_import( $request )
                 );
             }
         }
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error(
             'Remote import trigger exception',
             PuntWorkLogger::CONTEXT_API,
@@ -600,10 +600,10 @@ function handle_trigger_import( $request )
 /**
  * Handle get import status request
  */
-function handle_get_import_status( $request )
+function handle_get_import_status($request)
 {
     // Return mock response for testing
-    if (defined('PUNTWORK_TESTING') && PUNTWORK_TESTING ) {
+    if (defined('PUNTWORK_TESTING') && PUNTWORK_TESTING) {
         return new \WP_REST_Response(
             array(
             'success' => true,
@@ -621,7 +621,7 @@ function handle_get_import_status( $request )
         $next_scheduled  = get_next_scheduled_time();
 
         // Calculate time elapsed if import is running
-        if (isset($import_status['start_time']) && ! $import_status['complete'] ) {
+        if (isset($import_status['start_time']) && ! $import_status['complete']) {
             $import_status['time_elapsed'] = microtime(true) - $import_status['start_time'];
         }
 
@@ -648,7 +648,7 @@ function handle_get_import_status( $request )
             ),
             200
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error(
             'Import status API error',
             PuntWorkLogger::CONTEXT_API,
@@ -670,7 +670,7 @@ function handle_get_import_status( $request )
 /**
  * Handle get analytics request
  */
-function handle_get_analytics( $request )
+function handle_get_analytics($request)
 {
     $period = $request->get_param('period');
 
@@ -687,7 +687,7 @@ function handle_get_analytics( $request )
             ),
             200
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error(
             'Analytics API error',
             PuntWorkLogger::CONTEXT_API,
@@ -709,14 +709,14 @@ function handle_get_analytics( $request )
 /**
  * Handle get feeds request
  */
-function handle_get_feeds( $request )
+function handle_get_feeds($request)
 {
     try {
         $feeds       = get_feeds();
         $feed_health = FeedHealthMonitor::getFeedHealthStatus();
 
         $feeds_data = array();
-        foreach ( $feeds as $key => $url ) {
+        foreach ($feeds as $key => $url) {
             $health       = $feed_health[ $key ] ?? null;
             $feeds_data[] = array(
             'key'           => $key,
@@ -738,7 +738,7 @@ function handle_get_feeds( $request )
             ),
             200
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error(
             'Feeds API error',
             PuntWorkLogger::CONTEXT_API,
@@ -760,14 +760,14 @@ function handle_get_feeds( $request )
 /**
  * Handle get feed details request
  */
-function handle_get_feed_details( $request )
+function handle_get_feed_details($request)
 {
     $feed_key = $request->get_param('feed_key');
 
     try {
         $feeds = get_feeds();
 
-        if (! isset($feeds[ $feed_key ]) ) {
+        if (! isset($feeds[ $feed_key ])) {
             return new \WP_REST_Response(
                 array(
                 'success' => false,
@@ -808,7 +808,7 @@ function handle_get_feed_details( $request )
             ),
             200
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error(
             'Feed details API error',
             PuntWorkLogger::CONTEXT_API,
@@ -831,7 +831,7 @@ function handle_get_feed_details( $request )
 /**
  * Handle get performance request
  */
-function handle_get_performance( $request )
+function handle_get_performance($request)
 {
     $period    = $request->get_param('period');
     $operation = $request->get_param('operation');
@@ -859,7 +859,7 @@ function handle_get_performance( $request )
             ),
             200
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error(
             'Performance API error',
             PuntWorkLogger::CONTEXT_API,
@@ -881,7 +881,7 @@ function handle_get_performance( $request )
 /**
  * Handle get jobs request
  */
-function handle_get_jobs( $request )
+function handle_get_jobs($request)
 {
     $page     = $request->get_param('page');
     $per_page = $request->get_param('per_page');
@@ -898,14 +898,14 @@ function handle_get_jobs( $request )
         'order'          => 'DESC',
         );
 
-        if ($search ) {
+        if ($search) {
             $args['s'] = $search;
         }
 
         $query = new \WP_Query($args);
 
         $jobs = array();
-        foreach ( $query->posts as $post ) {
+        foreach ($query->posts as $post) {
             $jobs[] = array(
             'id'            => $post->ID,
             'title'         => $post->post_title,
@@ -941,7 +941,7 @@ function handle_get_jobs( $request )
             ),
             200
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error(
             'Jobs API error',
             PuntWorkLogger::CONTEXT_API,
@@ -963,14 +963,14 @@ function handle_get_jobs( $request )
 /**
  * Handle get job request
  */
-function handle_get_job( $request )
+function handle_get_job($request)
 {
     $job_id = $request->get_param('id');
 
     try {
         $post = get_post($job_id);
 
-        if (! $post || $post->post_type !== 'job' ) {
+        if (! $post || $post->post_type !== 'job') {
             return new \WP_REST_Response(
                 array(
                 'success' => false,
@@ -995,9 +995,9 @@ function handle_get_job( $request )
         );
 
         // Add ACF field data
-        foreach ( $acf_fields as $field ) {
+        foreach ($acf_fields as $field) {
             $value = get_post_meta($post->ID, $field, true);
-            if (! empty($value) ) {
+            if (! empty($value)) {
                 $job_data[ $field ] = $value;
             }
         }
@@ -1017,7 +1017,7 @@ function handle_get_job( $request )
             ),
             200
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error(
             'Job details API error',
             PuntWorkLogger::CONTEXT_API,
@@ -1040,14 +1040,14 @@ function handle_get_job( $request )
 /**
  * Handle bulk operations request
  */
-function handle_bulk_operations( $request )
+function handle_bulk_operations($request)
 {
     $operation = $request->get_param('operation');
     $job_ids   = $request->get_param('job_ids');
     $status    = $request->get_param('status');
 
     try {
-        if (empty($job_ids) || ! is_array($job_ids) ) {
+        if (empty($job_ids) || ! is_array($job_ids)) {
             return new \WP_REST_Response(
                 array(
                 'success' => false,
@@ -1061,10 +1061,10 @@ function handle_bulk_operations( $request )
         $success_count = 0;
         $error_count   = 0;
 
-        foreach ( $job_ids as $job_id ) {
+        foreach ($job_ids as $job_id) {
             try {
                 $post = get_post($job_id);
-                if (! $post || $post->post_type !== 'job' ) {
+                if (! $post || $post->post_type !== 'job') {
                     $results[] = array(
                      'id'      => $job_id,
                      'success' => false,
@@ -1074,76 +1074,76 @@ function handle_bulk_operations( $request )
                     continue;
                 }
 
-                switch ( $operation ) {
-                case 'publish':
-                    wp_publish_post($job_id);
-                    $results[] = array(
-                    'id'      => $job_id,
-                    'success' => true,
-                    'message' => 'Job published',
-                    );
-                    ++$success_count;
-                    break;
-
-                case 'unpublish':
-                    wp_update_post(
-                        array(
-                        'ID'          => $job_id,
-                        'post_status' => 'draft',
-                        )
-                    );
-                    $results[] = array(
-                    'id'      => $job_id,
-                    'success' => true,
-                    'message' => 'Job unpublished',
-                    );
-                    ++$success_count;
-                    break;
-
-                case 'delete':
-                    wp_delete_post($job_id, true);
-                    $results[] = array(
-                    'id'      => $job_id,
-                    'success' => true,
-                    'message' => 'Job deleted',
-                    );
-                    ++$success_count;
-                    break;
-
-                case 'update_status':
-                    if (! $status ) {
+                switch ($operation) {
+                    case 'publish':
+                        wp_publish_post($job_id);
                         $results[] = array(
                         'id'      => $job_id,
-                        'success' => false,
-                        'message' => 'Status parameter required for update_status operation',
+                        'success' => true,
+                        'message' => 'Job published',
                         );
-                        ++$error_count;
-                        break; // Changed from continue to break
-                    }
+                        ++$success_count;
+                        break;
 
-                    wp_update_post(
-                        array(
+                    case 'unpublish':
+                        wp_update_post(
+                            array(
+                            'ID'          => $job_id,
+                            'post_status' => 'draft',
+                            )
+                        );
+                        $results[] = array(
+                        'id'      => $job_id,
+                        'success' => true,
+                        'message' => 'Job unpublished',
+                        );
+                        ++$success_count;
+                        break;
+
+                    case 'delete':
+                        wp_delete_post($job_id, true);
+                        $results[] = array(
+                        'id'      => $job_id,
+                        'success' => true,
+                        'message' => 'Job deleted',
+                        );
+                        ++$success_count;
+                        break;
+
+                    case 'update_status':
+                        if (! $status) {
+                            $results[] = array(
+                            'id'      => $job_id,
+                            'success' => false,
+                            'message' => 'Status parameter required for update_status operation',
+                            );
+                            ++$error_count;
+                            break; // Changed from continue to break
+                        }
+
+                        wp_update_post(
+                            array(
                                 'ID'          => $job_id,
                                 'post_status' => $status,
-                        )
-                    );
-                    $results[] = array(
+                            )
+                        );
+                        $results[] = array(
                             'id'      => $job_id,
                             'success' => true,
                             'message' => 'Job status updated to ' . $status,
-                    );
-                    ++$success_count;
-                    break;
+                        );
+                        ++$success_count;
+                        break;
 
-                default:
-                    $results[] = array(
-                    'id'      => $job_id,
-                    'success' => false,
-                    'message' => 'Unknown operation: ' . $operation,
-                    );
-                    ++$error_count;
+                    default:
+                        $results[] = array(
+                        'id'      => $job_id,
+                        'success' => false,
+                        'message' => 'Unknown operation: ' . $operation,
+                        );
+                        ++$error_count;
                 }
-            } catch ( \Exception $e ) {
+            } catch (\Exception $e) {
                 $results[] = array(
                 'id'      => $job_id,
                 'success' => false,
@@ -1177,7 +1177,7 @@ function handle_bulk_operations( $request )
             ),
             200
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error(
             'Bulk operations API error',
             PuntWorkLogger::CONTEXT_API,
@@ -1200,31 +1200,31 @@ function handle_bulk_operations( $request )
 /**
  * Convert memory limit string to bytes
  */
-function convert_memory_limit_to_bytes( $memory_limit )
+function convert_memory_limit_to_bytes($memory_limit)
 {
-    if (is_numeric($memory_limit) ) {
+    if (is_numeric($memory_limit)) {
         return (int) $memory_limit;
     }
 
     $unit  = strtolower(substr($memory_limit, -1));
     $value = (int) substr($memory_limit, 0, -1);
 
-    switch ( $unit ) {
-    case 'g':
-        return $value * 1024 * 1024 * 1024;
-    case 'm':
-        return $value * 1024 * 1024;
-    case 'k':
-        return $value * 1024;
-    default:
-        return (int) $memory_limit;
+    switch ($unit) {
+        case 'g':
+            return $value * 1024 * 1024 * 1024;
+        case 'm':
+            return $value * 1024 * 1024;
+        case 'k':
+            return $value * 1024;
+        default:
+            return (int) $memory_limit;
     }
 }
 
 /**
  * Handle get health status request
  */
-function handle_get_health_status( $request )
+function handle_get_health_status($request)
 {
     try {
         $feed_health   = FeedHealthMonitor::getFeedHealthStatus();
@@ -1234,10 +1234,10 @@ function handle_get_health_status( $request )
         $health_summary = array(
         'feeds'  => array(
         'total'    => count($feed_health),
-        'healthy'  => count(array_filter($feed_health, fn( $f ) => ( $f['status'] ?? '' ) === 'healthy')),
-        'warning'  => count(array_filter($feed_health, fn( $f ) => ( $f['status'] ?? '' ) === 'warning')),
-        'critical' => count(array_filter($feed_health, fn( $f ) => ( $f['status'] ?? '' ) === 'critical')),
-        'down'     => count(array_filter($feed_health, fn( $f ) => ( $f['status'] ?? '' ) === 'down')),
+        'healthy'  => count(array_filter($feed_health, fn($f) => ( $f['status'] ?? '' ) === 'healthy')),
+        'warning'  => count(array_filter($feed_health, fn($f) => ( $f['status'] ?? '' ) === 'warning')),
+        'critical' => count(array_filter($feed_health, fn($f) => ( $f['status'] ?? '' ) === 'critical')),
+        'down'     => count(array_filter($feed_health, fn($f) => ( $f['status'] ?? '' ) === 'down')),
         ),
         'import' => array(
         'status'         => isset($import_status['complete']) && $import_status['complete'] ? 'idle' : 'running',
@@ -1254,9 +1254,9 @@ function handle_get_health_status( $request )
         );
 
         $overall_status = 'healthy';
-        if ($health_summary['feeds']['critical'] > 0 || $health_summary['feeds']['down'] > 0 ) {
+        if ($health_summary['feeds']['critical'] > 0 || $health_summary['feeds']['down'] > 0) {
             $overall_status = 'critical';
-        } elseif ($health_summary['feeds']['warning'] > 0 ) {
+        } elseif ($health_summary['feeds']['warning'] > 0) {
             $overall_status = 'warning';
         }
 
@@ -1274,7 +1274,7 @@ function handle_get_health_status( $request )
             ),
             200
         );
-    } catch ( \Exception $e ) {
+    } catch (\Exception $e) {
         PuntWorkLogger::error(
             'Health status API error',
             PuntWorkLogger::CONTEXT_API,
@@ -1308,7 +1308,7 @@ function get_or_create_api_key()
 {
     $existing_key = get_option('puntwork_api_key');
 
-    if (! $existing_key ) {
+    if (! $existing_key) {
         $new_key = generate_api_key();
         update_option('puntwork_api_key', $new_key);
         return $new_key;

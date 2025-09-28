@@ -11,7 +11,7 @@
 namespace Puntwork\SocialMedia;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,6 @@ if (! defined('ABSPATH') ) {
  */
 class FacebookAdsManager
 {
-
     /**
      * Facebook Platform instance
      */
@@ -34,7 +33,7 @@ class FacebookAdsManager
     /**
      * Constructor
      */
-    public function __construct( FacebookPlatform $facebook_platform )
+    public function __construct(FacebookPlatform $facebook_platform)
     {
         $this->facebook_platform = $facebook_platform;
     }
@@ -42,11 +41,11 @@ class FacebookAdsManager
     /**
      * Create a Facebook Ads campaign
      */
-    public function createCampaign( array $campaign_data ): array
+    public function createCampaign(array $campaign_data): array
     {
         $required_fields = array( 'name', 'account_id', 'objective', 'budget', 'start_time', 'end_time' );
-        foreach ( $required_fields as $field ) {
-            if (! isset($campaign_data[ $field ]) ) {
+        foreach ($required_fields as $field) {
+            if (! isset($campaign_data[ $field ])) {
                 throw new \Exception("Missing required field: {$field}");
             }
         }
@@ -74,11 +73,11 @@ class FacebookAdsManager
     /**
      * Create an ad set
      */
-    public function createAdSet( array $adset_data ): array
+    public function createAdSet(array $adset_data): array
     {
         $required_fields = array( 'name', 'campaign_id', 'account_id', 'budget', 'targeting' );
-        foreach ( $required_fields as $field ) {
-            if (! isset($adset_data[ $field ]) ) {
+        foreach ($required_fields as $field) {
+            if (! isset($adset_data[ $field ])) {
                 throw new \Exception("Missing required field: {$field}");
             }
         }
@@ -107,11 +106,11 @@ class FacebookAdsManager
     /**
      * Create an ad creative
      */
-    public function createAdCreative( array $creative_data ): array
+    public function createAdCreative(array $creative_data): array
     {
         $required_fields = array( 'account_id', 'page_id' );
-        foreach ( $required_fields as $field ) {
-            if (! isset($creative_data[ $field ]) ) {
+        foreach ($required_fields as $field) {
+            if (! isset($creative_data[ $field ])) {
                 throw new \Exception("Missing required field: {$field}");
             }
         }
@@ -129,7 +128,7 @@ class FacebookAdsManager
         // Remove empty fields
         $params = array_filter(
             $params,
-            function ( $value ) {
+            function ($value) {
                 return ! empty($value);
             }
         );
@@ -146,11 +145,11 @@ class FacebookAdsManager
     /**
      * Create an ad
      */
-    public function createAd( array $ad_data ): array
+    public function createAd(array $ad_data): array
     {
         $required_fields = array( 'name', 'adset_id', 'creative_id', 'account_id' );
-        foreach ( $required_fields as $field ) {
-            if (! isset($ad_data[ $field ]) ) {
+        foreach ($required_fields as $field) {
+            if (! isset($ad_data[ $field ])) {
                 throw new \Exception("Missing required field: {$field}");
             }
         }
@@ -174,12 +173,12 @@ class FacebookAdsManager
     /**
      * Post job with ads campaign
      */
-    public function postJobWithAds( array $job_data, array $ads_config ): array
+    public function postJobWithAds(array $job_data, array $ads_config): array
     {
         // First create the campaign
         $campaign_result = $this->createCampaign($ads_config['campaign']);
 
-        if (! $campaign_result['success'] ) {
+        if (! $campaign_result['success']) {
             throw new \Exception('Failed to create campaign: ' . ( $campaign_result['error'] ?? 'Unknown error' ));
         }
 
@@ -196,7 +195,7 @@ class FacebookAdsManager
 
         $adset_result = $this->createAdSet($adset_config);
 
-        if (! $adset_result['success'] ) {
+        if (! $adset_result['success']) {
             throw new \Exception('Failed to create ad set: ' . ( $adset_result['error'] ?? 'Unknown error' ));
         }
 
@@ -215,7 +214,7 @@ class FacebookAdsManager
 
         $creative_result = $this->createAdCreative($creative_config);
 
-        if (! $creative_result['success'] ) {
+        if (! $creative_result['success']) {
             throw new \Exception('Failed to create ad creative: ' . ( $creative_result['error'] ?? 'Unknown error' ));
         }
 
@@ -229,7 +228,7 @@ class FacebookAdsManager
 
         $ad_result = $this->createAd($ad_config);
 
-        if (! $ad_result['success'] ) {
+        if (! $ad_result['success']) {
             throw new \Exception('Failed to create ad: ' . ( $ad_result['error'] ?? 'Unknown error' ));
         }
 
@@ -246,12 +245,12 @@ class FacebookAdsManager
     /**
      * Create compelling ad title for job posting
      */
-    private function createJobAdTitle( array $job_data ): string
+    private function createJobAdTitle(array $job_data): string
     {
         $title   = $job_data['title'] ?? '';
         $company = $job_data['company'] ?? '';
 
-        if (strlen($title) > 40 ) {
+        if (strlen($title) > 40) {
             $title = substr($title, 0, 37) . '...';
         }
 
@@ -261,7 +260,7 @@ class FacebookAdsManager
     /**
      * Create compelling ad text for job posting
      */
-    private function createJobAdText( array $job_data ): string
+    private function createJobAdText(array $job_data): string
     {
         $title    = $job_data['title'] ?? '';
         $company  = $job_data['company'] ?? '';
@@ -272,11 +271,11 @@ class FacebookAdsManager
         $text .= "Position: {$title}\n";
         $text .= "Company: {$company}\n";
 
-        if ($location ) {
+        if ($location) {
             $text .= "Location: {$location}\n";
         }
 
-        if ($salary ) {
+        if ($salary) {
             $text .= "Salary: {$salary}\n";
         }
 
@@ -289,30 +288,30 @@ class FacebookAdsManager
     /**
      * Format targeting for Facebook API
      */
-    private function formatTargeting( array $targeting ): array
+    private function formatTargeting(array $targeting): array
     {
         $formatted = array();
 
         // Age targeting
-        if (! empty($targeting['age_min']) || ! empty($targeting['age_max']) ) {
+        if (! empty($targeting['age_min']) || ! empty($targeting['age_max'])) {
             $formatted['age_min'] = $targeting['age_min'] ?? 18;
             $formatted['age_max'] = $targeting['age_max'] ?? 65;
         }
 
         // Gender targeting
-        if (! empty($targeting['genders']) ) {
+        if (! empty($targeting['genders'])) {
             $formatted['genders'] = $targeting['genders']; // [1=male, 2=female]
         }
 
         // Location targeting
-        if (! empty($targeting['geo_locations']) ) {
+        if (! empty($targeting['geo_locations'])) {
             $formatted['geo_locations'] = $targeting['geo_locations'];
         }
 
         // Interest targeting
-        if (! empty($targeting['interests']) ) {
+        if (! empty($targeting['interests'])) {
             $formatted['interests'] = array_map(
-                function ( $interest ) {
+                function ($interest) {
                     return array(
                     'id'   => $interest,
                     'name' => $interest,
@@ -323,7 +322,7 @@ class FacebookAdsManager
         }
 
         // Job title targeting
-        if (! empty($targeting['job_titles']) ) {
+        if (! empty($targeting['job_titles'])) {
             $formatted['job_titles'] = $targeting['job_titles'];
         }
 
@@ -333,7 +332,7 @@ class FacebookAdsManager
     /**
      * Get campaign performance metrics
      */
-    public function getCampaignMetrics( string $campaign_id, string $account_id ): array
+    public function getCampaignMetrics(string $campaign_id, string $account_id): array
     {
         $response = $this->makeAdsApiRequest(
             'act_' . $account_id . '/campaigns',
@@ -368,7 +367,7 @@ class FacebookAdsManager
     /**
      * Convert currency to cents
      */
-    private function convertToCents( float $amount ): int
+    private function convertToCents(float $amount): int
     {
         return (int) ( $amount * 100 );
     }
@@ -376,7 +375,7 @@ class FacebookAdsManager
     /**
      * Make Ads API request
      */
-    private function makeAdsApiRequest( string $endpoint, array $params, string $method )
+    private function makeAdsApiRequest(string $endpoint, array $params, string $method)
     {
         $url = $this->ads_api_base . '/' . $endpoint;
 
@@ -389,7 +388,7 @@ class FacebookAdsManager
         'timeout' => 30,
         );
 
-        if ($method === 'GET' ) {
+        if ($method === 'GET') {
             $url .= '?' . http_build_query($params);
         } else {
             $args['body'] = json_encode($params);
@@ -397,13 +396,13 @@ class FacebookAdsManager
 
         $response = wp_remote_request($url, $args);
 
-        if (is_wp_error($response) ) {
+        if (is_wp_error($response)) {
             throw new \Exception('Ads API request failed: ' . $response->get_error_message());
         }
 
         $body = json_decode(wp_remote_retrieve_body($response), true);
 
-        if (isset($body['error']) ) {
+        if (isset($body['error'])) {
             throw new \Exception('Facebook Ads API error: ' . $body['error']['message']);
         }
 

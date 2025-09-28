@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -27,13 +27,13 @@ function performance_metrics_page()
     wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION);
 
     // Handle AJAX actions
-    if (isset($_POST['action']) ) {
-        switch ( $_POST['action'] ) {
-        case 'clear_performance_logs':
-            check_admin_referer('performance_metrics_nonce');
-            \Puntwork\Utilities\PerformanceMonitor::cleanupOldLogs(7); // Keep only 7 days
-            add_settings_error('performance_metrics', 'logs_cleared', 'Performance logs cleared successfully.', 'success');
-            break;
+    if (isset($_POST['action'])) {
+        switch ($_POST['action']) {
+            case 'clear_performance_logs':
+                check_admin_referer('performance_metrics_nonce');
+                \Puntwork\Utilities\PerformanceMonitor::cleanupOldLogs(7); // Keep only 7 days
+                add_settings_error('performance_metrics', 'logs_cleared', 'Performance logs cleared successfully.', 'success');
+                break;
         }
     }
 
@@ -49,7 +49,7 @@ function performance_metrics_page()
     $table_name = $wpdb->prefix . 'puntwork_performance_logs';
 
     $where_clause = 'WHERE created_at >= DATE_SUB(NOW(), INTERVAL ' . ( $period === '7days' ? 7 : ( $period === '30days' ? 30 : 90 ) ) . ' DAY)';
-    if ($operation ) {
+    if ($operation) {
         $where_clause .= $wpdb->prepare(' AND operation = %s', $operation);
     }
 
@@ -98,7 +98,7 @@ function performance_metrics_page()
                         <label for="operation-select" style="margin-right: var(--spacing-md); font-weight: var(--font-weight-medium);"><?php _e('Operation:', 'puntwork'); ?></label>
                         <select name="operation" id="operation-select" onchange="this.form.submit()" style="margin-right: var(--spacing-lg);">
                             <option value=""><?php _e('All Operations', 'puntwork'); ?></option>
-                            <?php foreach ( $operation_types as $op ) : ?>
+                            <?php foreach ($operation_types as $op) : ?>
                                 <option value="<?php echo esc_attr($op); ?>" <?php selected($operation, $op); ?>><?php echo esc_html($op); ?></option>
                             <?php endforeach; ?>
                         </select>
@@ -146,7 +146,7 @@ function performance_metrics_page()
                         <div class="status-label"><?php _e('WordPress Version', 'puntwork'); ?></div>
                     </div>
 
-                    <?php if ($current_snapshot['load_average'] ) : ?>
+                    <?php if ($current_snapshot['load_average']) : ?>
                     <div class="status-card">
                         <div class="status-value"><?php echo number_format($current_snapshot['load_average'][0], 2); ?></div>
                         <div class="status-label"><?php _e('Load Average (1m)', 'puntwork'); ?></div>
@@ -156,7 +156,7 @@ function performance_metrics_page()
             </div>
 
             <!-- Performance Overview -->
-    <?php if (! empty($performance_stats) ) : ?>
+    <?php if (! empty($performance_stats)) : ?>
             <div class="performance-section">
                 <h2><?php _e('Performance Overview', 'puntwork'); ?></h2>
                 <div class="performance-overview-grid">
@@ -182,7 +182,7 @@ function performance_metrics_page()
                         </div>
                     </div>
 
-        <?php if ($performance_stats['avg_items_per_second'] ) : ?>
+        <?php if ($performance_stats['avg_items_per_second']) : ?>
                     <div class="overview-card">
                         <div class="overview-value"><?php echo $performance_stats['avg_items_per_second']; ?>/s</div>
                         <div class="overview-label"><?php _e('Avg Processing Rate', 'puntwork'); ?></div>
@@ -212,7 +212,7 @@ function performance_metrics_page()
             <div class="performance-section">
                 <h2><?php _e('Recent Performance Logs', 'puntwork'); ?></h2>
 
-                <?php if (empty($recent_logs) ) : ?>
+                <?php if (empty($recent_logs)) : ?>
                     <div class="notice notice-info">
                         <p><?php _e('No performance logs found for the selected period.', 'puntwork'); ?></p>
                     </div>
@@ -231,7 +231,7 @@ function performance_metrics_page()
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ( $recent_logs as $log ) : ?>
+                                <?php foreach ($recent_logs as $log) : ?>
                                     <tr>
                                         <td><?php echo wp_date('M j, H:i:s', strtotime($log->created_at)); ?></td>
                                         <td><?php echo esc_html($log->operation); ?></td>
@@ -281,7 +281,7 @@ function performance_metrics_page()
                 $last_optimization = get_option('puntwork_last_optimization', array());
                 $recommendations   = array();
 
-                if (class_exists('\Puntwork\AI\FeedOptimizer') ) {
+                if (class_exists('\Puntwork\AI\FeedOptimizer')) {
                     $recommendations = \Puntwork\AI\FeedOptimizer::getOptimizationRecommendations();
                 }
                 ?>
@@ -293,7 +293,7 @@ function performance_metrics_page()
                     <span id="optimization-status"></span>
                 </div>
 
-                <?php if (! empty($last_optimization) ) : ?>
+                <?php if (! empty($last_optimization)) : ?>
                     <div class="optimization-results">
                         <h3><?php _e('Last Optimization Results', 'puntwork'); ?></h3>
                         <p class="optimization-timestamp">
@@ -312,17 +312,17 @@ function performance_metrics_page()
                     </div>
                 <?php endif; ?>
 
-                <?php if (! empty($recommendations['feed_optimizations']) ) : ?>
+                <?php if (! empty($recommendations['feed_optimizations'])) : ?>
                     <div class="optimization-recommendations">
                         <h3><?php _e('Feed Optimization Recommendations', 'puntwork'); ?></h3>
-                    <?php foreach ( $recommendations['feed_optimizations'] as $feed_rec ) : ?>
+                    <?php foreach ($recommendations['feed_optimizations'] as $feed_rec) : ?>
                             <div class="recommendation-card">
                                 <h4><?php echo esc_html($feed_rec['feed_name']); ?></h4>
-                        <?php foreach ( $feed_rec['recommendations'] as $rec ) : ?>
+                        <?php foreach ($feed_rec['recommendations'] as $rec) : ?>
                                     <div class="recommendation-item recommendation-<?php echo esc_attr($rec['severity']); ?>">
                                         <span class="recommendation-type"><?php echo esc_html(ucfirst($rec['type'])); ?>:</span>
                             <?php echo esc_html($rec['message']); ?>
-                            <?php if (! empty($rec['suggested_action']) ) : ?>
+                            <?php if (! empty($rec['suggested_action'])) : ?>
                                             <br><small><em><?php echo esc_html($rec['suggested_action']); ?></em></small>
                             <?php endif; ?>
                                     </div>
@@ -332,14 +332,14 @@ function performance_metrics_page()
                     </div>
                 <?php endif; ?>
 
-                <?php if (! empty($recommendations['global_optimizations']) ) : ?>
+                <?php if (! empty($recommendations['global_optimizations'])) : ?>
                     <div class="optimization-recommendations">
                         <h3><?php _e('Global Optimization Recommendations', 'puntwork'); ?></h3>
-                    <?php foreach ( $recommendations['global_optimizations'] as $rec ) : ?>
+                    <?php foreach ($recommendations['global_optimizations'] as $rec) : ?>
                             <div class="recommendation-item recommendation-<?php echo esc_attr($rec['severity']); ?>">
                                 <span class="recommendation-type"><?php echo esc_html(ucfirst($rec['type'])); ?>:</span>
                         <?php echo esc_html($rec['message']); ?>
-                        <?php if (! empty($rec['suggested_action']) ) : ?>
+                        <?php if (! empty($rec['suggested_action'])) : ?>
                                     <br><small><em><?php echo esc_html($rec['suggested_action']); ?></em></small>
                         <?php endif; ?>
                                     </div>
