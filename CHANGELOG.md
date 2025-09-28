@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Line length violations in crm-admin.php for PSR-12 compliance
 - Fixed CRM integration loading order to resolve class dependency issues
 - Renamed Puntwork_CRM_Admin class back to PuntworkCrmAdmin for final PascalCase compliance
+- Optimized batch import performance with exponential batch size growth (1.2x multiplier)
+- Fixed progress UI stuck in feed-processing phase by adding phase transition logic for large totals
+- Reduced logging frequency in batch processing to every 100 items to improve performance
+- Ensured all code changes including PHPCBF formatting fixes are committed in single amended commit
 
 ## [0.0.4] - 2025-09-26
 

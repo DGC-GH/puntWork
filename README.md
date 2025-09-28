@@ -254,6 +254,8 @@ Before committing code, ensure:
 3. **Syntax Check**: PHP files must have valid syntax
 4. **Documentation**: New methods/classes should have PHPDoc comments
 
+**Note on Automated Formatting**: After running `./vendor/bin/phpcbf` for auto-fixing code style issues, amend your commit to include these formatting changes in the same commit rather than creating separate formatting commits. Use `git commit --amend --no-edit` to include PHPCBF changes without duplicating commits.
+
 ### Pull Request Checklist
 - [ ] Tests pass (`./vendor/bin/phpunit`)
 - [ ] Coding standards met (`./vendor/bin/phpcs`)
