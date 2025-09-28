@@ -142,19 +142,18 @@ function process_social_media_posts()
 add_action('init', __NAMESPACE__ . '\\setup_job_import');
 function setup_job_import()
 {
-    // Prevent multiple initialization with a static flag
-    static $setup_done = false;
-    if ($setup_done) {
+    // Use WordPress transient for cross-request persistence
+    $transient_key = 'puntwork_setup_done_' . session_id();
+    if (get_transient($transient_key)) {
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[PUNTWORK] [INIT-SKIP] Setup already completed for this request, skipping...');
+            error_log('[PUNTWORK] [INIT-SKIP] Setup already completed for this session, skipping...');
         }
 
         return;
     }
-    $setup_done = true;
 
-    // Prevent multiple include loading with a separate static flag
-    static $includes_loaded = false;
+    // Set transient to expire in 1 hour (cross-request persistence)
+    set_transient($transient_key, true, HOUR_IN_SECONDS);
 
     // Increase memory limit to prevent exhaustion
     ini_set('memory_limit', '1024M');
@@ -171,7 +170,11 @@ function setup_job_import()
         error_log('[PUNTWORK] [INIT-DEBUG] Plugin path: ' . PUNTWORK_PATH);
     }
 
-    // Load includes only once ever
+    // Use WordPress option for include loading status (persistent across requests)
+    $includes_loaded_key = 'puntwork_includes_loaded';
+    $includes_loaded = get_option($includes_loaded_key, false);
+
+    // Load includes only once ever (across all requests)
     if (!$includes_loaded) {
         if ($debug_mode) {
             error_log('[PUNTWORK] [INIT-DEBUG] Loading includes...');
@@ -325,7 +328,8 @@ function setup_job_import()
             error_log('[PUNTWORK] [INIT-DEBUG] Include loading complete: ' . $loaded_count . ' loaded, ' . $failed_count . ' failed');
         }
 
-        $includes_loaded = true;
+        // Mark includes as loaded permanently
+        update_option($includes_loaded_key, true);
     }
 
     // Test database connection
