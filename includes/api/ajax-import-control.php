@@ -33,7 +33,7 @@ add_action('wp_ajax_run_job_import_batch', __NAMESPACE__ . '\\run_job_import_bat
 function run_job_import_batch_ajax()
 {
     // Verify nonce for security
-    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'puntwork_import_nonce')) {
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'job_import_nonce')) {
         wp_send_json_error(['message' => 'Security check failed']);
 
         return;

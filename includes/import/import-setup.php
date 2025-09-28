@@ -262,15 +262,13 @@ function prepare_import_setup($batch_start = 0)
     error_log('[PUNTWORK] prepare_import_setup: initial start_index calculation: max(' . (int)get_option('job_import_progress') . ', ' . $batch_start . ') = ' . $start_index);
 
     // For fresh starts (batch_start = 0), reset the status and create new start time
-    if ($batch_start == 0) {
+    // But only if there's no existing valid status (preserve_status logic)
+    $existing_status = get_option('job_import_status', []);
+    $has_valid_status = !empty($existing_status) && isset($existing_status['total']) && $existing_status['total'] > 0;
+
+    if ($batch_start == 0 && !$has_valid_status) {
         $start_index = 0;
-        error_log('[PUNTWORK] [SETUP-FRESH] Fresh start detected, setting start_index to 0');
-        // Check if existing status total matches current total
-        $existing_status = get_option('job_import_status', []);
-        if (isset($existing_status['total']) && $existing_status['total'] !== $total) {
-            error_log('[PUNTWORK] [SETUP-FRESH] Existing status total (' . $existing_status['total'] . ') does not match current file total (' . $total . ') - resetting status');
-            delete_option('job_import_status');
-        }
+        error_log('[PUNTWORK] [SETUP-FRESH] Fresh start detected (no valid existing status), setting start_index to 0');
         // Clear processed GUIDs for fresh start
         $processed_guids = [];
         // Clear existing status for fresh start
@@ -303,6 +301,10 @@ function prepare_import_setup($batch_start = 0)
         ];
         update_option('job_import_status', $initial_status, false);
         error_log('[PUNTWORK] [SETUP-FRESH] Initialized fresh import status with total=' . $total);
+    } elseif ($batch_start == 0 && $has_valid_status) {
+        // Resuming from existing status - don't reset anything
+        $start_index = $existing_status['processed'] ?? 0;
+        error_log('[PUNTWORK] [SETUP-RESUME] Resuming import from existing status, start_index=' . $start_index . ', total=' . $existing_status['total']);
     }
 
     if ($start_index >= $total) {

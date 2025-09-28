@@ -38,7 +38,9 @@
             }
 
             try {
-                var sseUrl = window.ajaxurl.replace('admin-ajax.php', 'wp-json/puntwork/v1/import-progress?api_key=' + encodeURIComponent(apiKey));
+                // Construct the correct REST API URL
+                var siteUrl = window.location.origin;
+                var sseUrl = siteUrl + '/wp-json/puntwork/v1/import-progress?api_key=' + encodeURIComponent(apiKey);
 
                 console.log('[PUNTWORK] Connecting to SSE:', sseUrl.replace(apiKey, '[REDACTED]'));
 
