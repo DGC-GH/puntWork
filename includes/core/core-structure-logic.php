@@ -26,7 +26,7 @@ function get_feeds(): array {
 	$cache_key = 'puntwork_feeds';
 	$feeds     = CacheManager::get( $cache_key, CacheManager::GROUP_MAPPINGS );
 
-	if ( $feeds == false ) {
+	if ( $feeds === false ) {
 		if ( ! defined( 'PHPUNIT_RUNNING' ) || ! PHPUNIT_RUNNING ) {
 			error_log( '[PUNTWORK] [DEBUG] get_feeds: Cache miss, building feeds array' );
 		}
