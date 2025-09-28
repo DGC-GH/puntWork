@@ -222,6 +222,7 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
     error_log('[PUNTWORK] Feed key: ' . $feed_key);
     error_log('[PUNTWORK] Feed URL: ' . $url);
     error_log('[PUNTWORK] Output dir: ' . $output_dir);
+    error_log('[PUNTWORK] Fallback domain: ' . $fallback_domain);
 
     $json_filename = $feed_key . '.jsonl';
     $json_path = $output_dir . $json_filename;
@@ -230,12 +231,38 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
     error_log('[PUNTWORK] JSON path: ' . $json_path);
     error_log('[PUNTWORK] GZ JSON path: ' . $gz_json_path);
 
+    // Check if output directory exists and is writable
+    if (!is_dir($output_dir)) {
+        error_log('[PUNTWORK] Output directory does not exist: ' . $output_dir);
+        throw new \Exception('Output directory does not exist: ' . $output_dir);
+    }
+    if (!is_writable($output_dir)) {
+        error_log('[PUNTWORK] Output directory not writable: ' . $output_dir);
+        throw new \Exception('Output directory not writable: ' . $output_dir);
+    }
+    error_log('[PUNTWORK] Output directory exists and is writable');
+
     // Download the feed
     $feed_file_path = $output_dir . $feed_key . '.xml'; // Temporary file for downloaded feed
     error_log('[PUNTWORK] Feed file path: ' . $feed_file_path);
+    error_log('[PUNTWORK] Starting feed download...');
+    $download_start = microtime(true);
     if (!download_feed($url, $feed_file_path, $output_dir, $logs)) {
-        error_log('[PUNTWORK] Feed download failed for ' . $feed_key);
+        error_log('[PUNTWORK] Feed download failed for ' . $feed_key . ' after ' . (microtime(true) - $download_start) . ' seconds');
+        return 0;
+    }
+    $download_time = microtime(true) - $download_start;
+    error_log('[PUNTWORK] Feed download completed in ' . round($download_time, 3) . ' seconds');
 
+    // Check if downloaded file exists and has content
+    if (!file_exists($feed_file_path)) {
+        error_log('[PUNTWORK] Downloaded feed file does not exist: ' . $feed_file_path);
+        return 0;
+    }
+    $feed_file_size = filesize($feed_file_path);
+    error_log('[PUNTWORK] Downloaded feed file size: ' . $feed_file_size . ' bytes');
+    if ($feed_file_size === 0) {
+        error_log('[PUNTWORK] Downloaded feed file is empty');
         return 0;
     }
 
@@ -243,9 +270,11 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
     $content = file_get_contents($feed_file_path);
     if ($content === false) {
         error_log('[PUNTWORK] Failed to read downloaded feed file: ' . $feed_file_path);
-
         return 0;
     }
+    $content_length = strlen($content);
+    error_log('[PUNTWORK] Feed content length: ' . $content_length . ' characters');
+    error_log('[PUNTWORK] Feed content preview: ' . substr($content, 0, 500) . ($content_length > 500 ? '...[truncated]' : ''));
 
     $format = \Puntwork\FeedProcessor::detectFormat($url, $content);
     error_log('[PUNTWORK] Detected format: ' . $format);
@@ -253,7 +282,6 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
     $handle = fopen($json_path, 'w');
     if (!$handle) {
         error_log('[PUNTWORK] Failed to open JSON file: ' . $json_path);
-
         throw new \Exception("Can't open $json_path");
     }
     error_log('[PUNTWORK] JSON file opened successfully');
@@ -261,7 +289,7 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
     $batch_size = 500;
     $total_items = 0;
 
-    error_log('[PUNTWORK] About to call FeedProcessor::processFeed');
+    error_log('[PUNTWORK] About to call FeedProcessor::processFeed with batch_size=' . $batch_size);
 
     try {
         // Process feed using FeedProcessor
@@ -274,12 +302,31 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
         error_log('[PUNTWORK] ERROR file: ' . $e->getFile() . ':' . $e->getLine());
         error_log('[PUNTWORK] ERROR trace: ' . $e->getTraceAsString());
         fclose($handle);
-
         throw $e; // Re-throw to maintain existing behavior
     }
 
     fclose($handle);
     @chmod($json_path, 0644);
+
+    // Check final JSONL file
+    if (file_exists($json_path)) {
+        $jsonl_size = filesize($json_path);
+        error_log('[PUNTWORK] Final JSONL file size: ' . $jsonl_size . ' bytes');
+        if ($jsonl_size > 0) {
+            // Check first line
+            $first_line = '';
+            $check_handle = fopen($json_path, 'r');
+            if ($check_handle) {
+                $first_line = fgets($check_handle);
+                fclose($check_handle);
+                error_log('[PUNTWORK] JSONL first line preview: ' . substr($first_line, 0, 200));
+            }
+        } else {
+            error_log('[PUNTWORK] WARNING: JSONL file was created but is empty');
+        }
+    } else {
+        error_log('[PUNTWORK] ERROR: JSONL file was not created');
+    }
 
     error_log('[PUNTWORK] About to gzip file');
     gzip_file($json_path, $gz_json_path);

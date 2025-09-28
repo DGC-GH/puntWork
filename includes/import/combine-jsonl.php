@@ -15,22 +15,49 @@ if (!defined('ABSPATH')) {
 
 function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs)
 {
+    error_log('[PUNTWORK] [JSONL-COMBINE] Starting combine_jsonl_files with ' . count($feeds) . ' feeds, total_items=' . $total_items);
+
     // Use advanced JSONL processor for better performance
     $combined_json_path = $output_dir . 'combined-jobs.jsonl';
+    error_log('[PUNTWORK] [JSONL-COMBINE] Combined JSONL path: ' . $combined_json_path);
 
     // Determine processing mode based on feed count and system capabilities
     $feed_files = [];
     foreach ($feeds as $feed_key => $url) {
-        $feed_files[] = $output_dir . $feed_key . '.jsonl';
+        $feed_file = $output_dir . $feed_key . '.jsonl';
+        $feed_files[] = $feed_file;
+        error_log('[PUNTWORK] [JSONL-COMBINE] Feed file for ' . $feed_key . ': ' . $feed_file . ' (exists: ' . (file_exists($feed_file) ? 'yes' : 'no') . ')');
+        if (file_exists($feed_file)) {
+            $size = filesize($feed_file);
+            error_log('[PUNTWORK] [JSONL-COMBINE]   - Size: ' . $size . ' bytes');
+        }
     }
 
     // Filter to existing files only
     $existing_feeds = array_filter($feed_files, 'file_exists');
+    error_log('[PUNTWORK] [JSONL-COMBINE] Found ' . count($existing_feeds) . ' existing feed files out of ' . count($feed_files));
 
     if (empty($existing_feeds)) {
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'No feed files found to combine';
+        error_log('[PUNTWORK] [JSONL-COMBINE] No feed files found to combine');
 
         return;
+    }
+
+    // Log details of existing files
+    foreach ($existing_feeds as $feed_file) {
+        $size = filesize($feed_file);
+        $basename = basename($feed_file);
+        error_log('[PUNTWORK] [JSONL-COMBINE] Will process: ' . $basename . ' (' . $size . ' bytes)');
+        if ($size > 0) {
+            // Check first line
+            $handle = fopen($feed_file, 'r');
+            if ($handle) {
+                $first_line = fgets($handle);
+                fclose($handle);
+                error_log('[PUNTWORK] [JSONL-COMBINE]   First line: ' . substr(trim($first_line), 0, 100) . (strlen($first_line) > 100 ? '...[truncated]' : ''));
+            }
+        }
     }
 
     // Choose processing strategy
@@ -40,21 +67,27 @@ function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs)
 
     $processing_stats = [];
 
+    error_log('[PUNTWORK] [JSONL-COMBINE] Processing strategy: feed_count=' . $feed_count . ', use_parallel=' . ($use_parallel ? 'true' : 'false') . ', use_progressive=' . ($use_progressive ? 'true' : 'false'));
+
     if ($use_parallel) {
+        error_log('[PUNTWORK] [JSONL-COMBINE] Using parallel processing');
         $success = \Puntwork\Utilities\AdvancedJsonlProcessor::combineJsonlParallel($existing_feeds, $combined_json_path, $processing_stats);
         $method = 'parallel';
     } elseif ($use_progressive) {
+        error_log('[PUNTWORK] [JSONL-COMBINE] Using progressive processing');
         $success = \Puntwork\Utilities\AdvancedJsonlProcessor::combineJsonlProgressive($existing_feeds, $combined_json_path, $processing_stats);
         $method = 'progressive';
     } else {
+        error_log('[PUNTWORK] [JSONL-COMBINE] Using streaming processing');
         $success = \Puntwork\Utilities\AdvancedJsonlProcessor::combineJsonlStreaming($existing_feeds, $combined_json_path, $processing_stats);
         $method = 'streaming';
     }
 
-    if (!$success) {
-        // Fallback to original method if advanced processing fails
-        error_log('[PUNTWORK] [JSONL-COMBINE] Advanced processing failed, falling back to original method');
+    error_log('[PUNTWORK] [JSONL-COMBINE] Processing completed with success=' . ($success ? 'true' : 'false'));
 
+    if (!$success) {
+        error_log('[PUNTWORK] [JSONL-COMBINE] Advanced processing failed, falling back to original method');
+        // Fallback to original method if advanced processing fails
         return combine_jsonl_files_fallback($feeds, $output_dir, $total_items, $logs);
     }
 
@@ -68,6 +101,8 @@ function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs)
         $processing_stats['processing_time'] ?? 0
     );
 
+    error_log('[PUNTWORK] [JSONL-COMBINE] Results: files=' . ($processing_stats['total_files'] ?? count($existing_feeds)) . ', unique=' . ($processing_stats['unique_items'] ?? 0) . ', duplicates=' . ($processing_stats['duplicates_removed'] ?? 0) . ', time=' . ($processing_stats['processing_time'] ?? 0));
+
     PuntWorkLogger::info('Advanced JSONL combination completed', PuntWorkLogger::CONTEXT_FEED, [
         'method' => $method,
         'files_processed' => count($existing_feeds),
@@ -76,6 +111,14 @@ function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs)
         'processing_time' => $processing_stats['processing_time'] ?? 0,
         'memory_peak_mb' => $processing_stats['memory_peak_mb'] ?? 0,
     ]);
+
+    // Check if combined file was created
+    if (file_exists($combined_json_path)) {
+        $combined_size = filesize($combined_json_path);
+        error_log('[PUNTWORK] [JSONL-COMBINE] Combined file created: ' . $combined_size . ' bytes');
+    } else {
+        error_log('[PUNTWORK] [JSONL-COMBINE] ERROR: Combined file was not created');
+    }
 
     // Compress the final file
     gzip_file($combined_json_path, $combined_json_path . '.gz');
@@ -115,6 +158,12 @@ function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs)
     } else {
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'JSONL optimization failed, using unoptimized version';
         error_log('[PUNTWORK] [JSONL-COMBINE] JSONL optimization failed, proceeding with unoptimized file');
+    }
+
+    // Final check
+    if (file_exists($combined_json_path)) {
+        $final_size = filesize($combined_json_path);
+        error_log('[PUNTWORK] [JSONL-COMBINE] Final combined file size: ' . $final_size . ' bytes');
     }
 }
 

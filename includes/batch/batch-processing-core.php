@@ -42,6 +42,22 @@ function process_batch_items_logic(array $setup): array
         if ($debug_mode) {
             error_log('[PUNTWORK] JSON file check: exists=' . (file_exists($setup['json_path']) ? 'yes' : 'no') . ', readable=' . (is_readable($setup['json_path']) ? 'yes' : 'no') . ', size=' . (file_exists($setup['json_path']) ? filesize($setup['json_path']) : 'N/A'));
         }
+        if (!file_exists($setup['json_path'])) {
+            error_log('[PUNTWORK] [BATCH-ERROR] JSON file does not exist: ' . $setup['json_path']);
+            return [
+                'success' => false,
+                'message' => 'JSON file not found: ' . basename($setup['json_path']),
+                'logs' => ['JSON file not found - feeds may need to be processed first'],
+            ];
+        }
+        if (!is_readable($setup['json_path'])) {
+            error_log('[PUNTWORK] [BATCH-ERROR] JSON file not readable: ' . $setup['json_path']);
+            return [
+                'success' => false,
+                'message' => 'JSON file not readable: ' . basename($setup['json_path']),
+                'logs' => ['JSON file not readable - check file permissions'],
+            ];
+        }
     }
 
     // Start tracing span for batch processing (only if available)
