@@ -158,6 +158,12 @@ class PuntworkHorizontalScalingManager
             return;
         }
 
+        // Check if we've already verified the table exists in this session
+        $table_verified = get_transient('puntwork_instances_table_verified');
+        if ($table_verified) {
+            return; // Table already verified, skip
+        }
+
         global $wpdb;
 
         $table_name      = $wpdb->prefix . self::INSTANCE_TABLE;
@@ -181,16 +187,13 @@ class PuntworkHorizontalScalingManager
             );
 
             if ($primary_key_exists > 0) {
-                // Only log once per hour to reduce spam
-                $last_log = get_transient('puntwork_instances_table_log');
-                if (! $last_log) {
-                    error_log('[PUNTWORK] Instances table already exists with primary key, skipping creation');
-                    set_transient('puntwork_instances_table_log', time(), 3600); // 1 hour
-                }
+                // Table exists and is properly structured - mark as verified for 24 hours
+                set_transient('puntwork_instances_table_verified', true, 86400); // 24 hours
                 return;
             }
         }
 
+        // Table doesn't exist or is malformed - create it
         $sql = "CREATE TABLE $table_name (
             instance_id varchar(100) NOT NULL,
             server_name varchar(100) NOT NULL,
@@ -208,9 +211,10 @@ class PuntworkHorizontalScalingManager
 
         include_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
-    }
 
-    /**
+        // Mark table as verified after creation
+        set_transient('puntwork_instances_table_verified', true, 86400);
+    }    /**
      * Register this instance
      */
     private function registerInstance()
