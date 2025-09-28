@@ -23,6 +23,8 @@ class PuntworkHorizontalScalingManager {
 	private const INSTANCE_TIMEOUT      = 300; // 5 minutes
 	private const MAX_INSTANCES         = 10;
 
+	private static $table_checked = false;
+
 	private $instance_id;
 	private $instance_role;
 	private $last_health_check;
@@ -146,9 +148,11 @@ class PuntworkHorizontalScalingManager {
 	 * Create instances table
 	 */
 	private function createInstanceTable() {
-		if ( ! $this->isWordpressEnvironment() ) {
+		if ( self::$table_checked || ! $this->isWordpressEnvironment() ) {
 			return;
 		}
+
+		self::$table_checked = true;
 
 		// Check if we've already verified the table exists in this session
 		$table_verified = get_transient( 'puntwork_instances_table_verified' );
@@ -181,13 +185,6 @@ class PuntworkHorizontalScalingManager {
 			if ( $primary_key_exists > 0 ) {
 				// Table exists and is properly structured - mark as verified for 24 hours
 				set_transient( 'puntwork_instances_table_verified', true, 86400 ); // 24 hours
-
-				// Only log once per hour to reduce spam
-				$last_log = get_transient( 'puntwork_instances_table_log' );
-				if ( ! $last_log ) {
-					error_log( '[PUNTWORK] Instances table already exists with primary key, skipping creation' );
-					set_transient( 'puntwork_instances_table_log', time(), 3600 ); // 1 hour
-				}
 				return;
 			}
 
