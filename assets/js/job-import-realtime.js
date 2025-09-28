@@ -58,6 +58,7 @@
                 // Handle connection errors
                 this.eventSource.onerror = function(event) {
                     console.error('[PUNTWORK] SSE connection error:', event);
+                    console.error('[PUNTWORK] SSE readyState:', event.target.readyState, 'URL:', event.target.url);
                     JobImportRealtime.isConnected = false;
                     JobImportRealtime.updateConnectionStatus('error');
 
@@ -132,9 +133,15 @@
 
                 // Handle errors
                 this.eventSource.addEventListener('error', function(event) {
+                    // If not connected, this might be a spurious event from connection closure
+                    if (!JobImportRealtime.isConnected) {
+                        console.log('[PUNTWORK] Ignoring error event while disconnected');
+                        return;
+                    }
+
                     try {
                         if (!event.data || typeof event.data === 'undefined' || event.data.trim() === '') {
-                            console.error('[PUNTWORK] SSE error event: empty or undefined data');
+                            console.log('[PUNTWORK] SSE error event: empty or undefined data');
                             return;
                         }
                         var data = JSON.parse(event.data);

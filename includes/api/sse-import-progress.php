@@ -95,7 +95,7 @@ function register_sse_import_progress_route()
 function handle_import_progress_sse( $request )
 {
     try {
-        error_log('[PUNTWORK] SSE: handle_import_progress_sse called');
+        error_log('[PUNTWORK] SSE: handle_import_progress_sse called at ' . date('Y-m-d H:i:s'));
 
         $api_key = $request->get_param('api_key');
         error_log('[PUNTWORK] SSE: API key from request: ' . ( empty($api_key) ? 'empty' : 'provided' ));
