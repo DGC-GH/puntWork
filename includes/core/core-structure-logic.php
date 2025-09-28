@@ -263,6 +263,7 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
     $total_items = 0;
 
     error_log('[PUNTWORK] About to call FeedProcessor::processFeed');
+
     try {
         // Process feed using FeedProcessor
         $count = \Puntwork\FeedProcessor::processFeed($feed_path, $format, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
@@ -274,6 +275,7 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
         error_log('[PUNTWORK] ERROR file: ' . $e->getFile() . ':' . $e->getLine());
         error_log('[PUNTWORK] ERROR trace: ' . $e->getTraceAsString());
         fclose($handle);
+
         throw $e; // Re-throw to maintain existing behavior
     }
 
@@ -290,6 +292,8 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
 }
 /**
  * Process a feed that has already been downloaded.
+ *
+ * @param  string $feed_key        Unique identifier for the feed
  * @param  string $feed_path       Path to the downloaded feed file
  * @param  string $output_dir      Directory to store processed files
  * @param  string $fallback_domain Fallback domain for job URLs
@@ -340,6 +344,7 @@ function process_downloaded_feed(string $feed_key, string $feed_path, string $ou
     $total_items = 0;
 
     error_log('[PUNTWORK] About to call FeedProcessor::processFeed');
+
     try {
         // Process feed using FeedProcessor
         $count = \Puntwork\FeedProcessor::processFeed($feed_path, $format, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
@@ -351,6 +356,7 @@ function process_downloaded_feed(string $feed_key, string $feed_path, string $ou
         error_log('[PUNTWORK] ERROR file: ' . $e->getFile() . ':' . $e->getLine());
         error_log('[PUNTWORK] ERROR trace: ' . $e->getTraceAsString());
         fclose($handle);
+
         throw $e; // Re-throw to maintain existing behavior
     }
 
