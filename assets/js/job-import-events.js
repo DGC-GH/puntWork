@@ -615,6 +615,21 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             JobImportEvents.completeDetectedCount = 0;
                         }
                     } else {
+                        // Handle rate limit errors specifically
+                        if (response.error && response.error.code === 'rate_limit') {
+                            console.log('[PUNTWORK] Rate limit exceeded, slowing down polling:', response.error.message);
+                            PuntWorkJSLogger.warn('Rate limit exceeded, slowing down polling', 'EVENTS', response.error);
+                            
+                            // Slow down polling significantly when rate limited
+                            JobImportEvents.adjustPollingInterval(30000); // 30 seconds
+                            
+                            // Update status message to inform user
+                            $('#status-message').text('Rate limited - waiting before retry...');
+                            
+                            // Don't stop polling, just slow it down
+                            return;
+                        }
+                        
                         console.log('[PUNTWORK] Status polling failed:', response);
                         PuntWorkJSLogger.warn('Status polling failed', 'EVENTS', response);
                     }

@@ -135,7 +135,7 @@ class SecurityUtils
                 'time_window' => 300,
             ),
             'get_job_import_status' => array(
-                'max_requests' => 30,
+                'max_requests' => 60,
                 'time_window' => 60,
             ),
             'process_feed' => array(
