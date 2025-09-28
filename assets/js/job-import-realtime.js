@@ -71,6 +71,10 @@
                 // Handle connected event
                 this.eventSource.addEventListener('connected', function(event) {
                     try {
+                        if (event.data === 'undefined') {
+                            console.log('[PUNTWORK] SSE connected event: received "undefined" string, skipping');
+                            return;
+                        }
                         if (!event.data || typeof event.data === 'undefined' || event.data.trim() === '') {
                             console.log('[PUNTWORK] SSE connected event: empty data');
                             return;
@@ -87,6 +91,10 @@
                 this.eventSource.addEventListener('progress', function(event) {
                     console.log('[PUNTWORK] SSE progress event raw data:', '"' + event.data + '"');
                     try {
+                        if (event.data === 'undefined') {
+                            console.log('[PUNTWORK] SSE progress event: received "undefined" string, skipping');
+                            return;
+                        }
                         if (!event.data || typeof event.data === 'undefined' || event.data.trim() === '') {
                             console.log('[PUNTWORK] SSE progress event: empty data');
                             return;
@@ -107,6 +115,10 @@
                 // Handle completion
                 this.eventSource.addEventListener('complete', function(event) {
                     try {
+                        if (event.data === 'undefined') {
+                            console.log('[PUNTWORK] SSE complete event: received "undefined" string, skipping');
+                            return;
+                        }
                         if (!event.data || typeof event.data === 'undefined' || event.data.trim() === '') {
                             console.log('[PUNTWORK] SSE complete event: empty data');
                             return;
@@ -143,6 +155,10 @@
                     }
 
                     try {
+                        if (event.data === 'undefined') {
+                            console.log('[PUNTWORK] SSE error event: received "undefined" string, skipping');
+                            return;
+                        }
                         if (!event.data || typeof event.data === 'undefined' || event.data.trim() === '') {
                             console.log('[PUNTWORK] SSE error event: empty or undefined data');
                             return;

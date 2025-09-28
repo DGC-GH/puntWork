@@ -158,7 +158,7 @@ if (!function_exists('import_jobs_from_json')) {
             }
 
             // Set import lock
-            set_transient($import_lock_key, true, 600); // 10 minutes timeout
+            set_transient($import_lock_key, true, 1200); // 20 minutes timeout
             error_log('[PUNTWORK] [IMPORT-LOCK] Import lock set successfully');
 
             error_log('== PUNTWORK IMPORT DEBUG: import_jobs_from_json STARTED ===');
@@ -277,7 +277,7 @@ if (!function_exists('import_all_jobs_from_json')) {
         }
 
         // Set import lock
-        set_transient($import_lock_key, true, 600); // 10 minutes timeout
+        set_transient($import_lock_key, true, 1200); // 20 minutes timeout
         error_log('[PUNTWORK] Import lock set for import_all_jobs_from_json');
 
         error_log(

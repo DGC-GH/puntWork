@@ -186,6 +186,10 @@ function bulk_update_acf_fields(array $post_ids, array $acf_data): void
 
     $start_time = microtime(true);
 
+    // Temporarily disable ACF post data sync for performance
+    $original_sync = acf_get_setting('enable_post_data_sync');
+    acf_update_setting('enable_post_data_sync', false);
+
     foreach ($post_ids as $index => $post_id) {
         if (!isset($acf_data[$index])) {
             continue;
@@ -222,6 +226,9 @@ function bulk_update_acf_fields(array $post_ids, array $acf_data): void
 
     $total_time = microtime(true) - $start_time;
     error_log('[PUNTWORK] [ACF-DEBUG] bulk_update_acf_fields completed in ' . number_format($total_time, 4) . ' seconds total (' . number_format($total_time / count($post_ids), 4) . ' seconds per post)');
+
+    // Restore ACF post data sync setting
+    acf_update_setting('enable_post_data_sync', $original_sync);
 }
 
 /**
