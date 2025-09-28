@@ -125,11 +125,11 @@ function process_social_media_posts()
 add_action('init', __NAMESPACE__ . '\\setup_job_import');
 function setup_job_import()
 {
-    static $initialized = false;
-    if ($initialized) {
+    global $puntwork_initialized;
+    if (isset($puntwork_initialized) && $puntwork_initialized) {
         return;
     }
-    $initialized = true;
+    $puntwork_initialized = true;
 
     $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
 
