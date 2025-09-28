@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Protocol update: Always check debug.log for new errors before running tests
 
 ### Fixed
+- Fixed feed download path issue causing "Invalid file path" errors by correcting download_feed function call to pass full file path
+- Added debug logs to SSE endpoint to track data serialization and detect "undefined" responses causing JSON parse errors
+- Enhanced import locking mechanism with detailed debug logs to diagnose and prevent "Import already running" false positives
 - Changed default feed format detection from XML to JSON to properly handle modern API feeds
 - Fixed job board configuration issues for API-based feeds
 - Fixed undefined function load_and_prepare_batch_items by adding namespace prefix \Puntwork\
