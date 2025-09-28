@@ -23,5 +23,19 @@ wp-content/
 tests/performance-results-*.json
 tests/*-results-*.json
 
+# FTP scripts and credentials
+ftp_script.txt
+*.ftp
+ftp-*.txt
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# VS Code settings (may contain sensitive connection info)
+.vscode/sftp.json
+.vscode/settings.json
+
 # Production deployment files (keep development version in git)
 composer.json.production
