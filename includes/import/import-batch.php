@@ -13,10 +13,11 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-error_log(
-    '[PUNTWORK] import-batch.php loaded - is_admin: ' . ( is_admin() ? 'true' : 'false' ) .
-    ', DOING_AJAX: ' . ( defined('DOING_AJAX') && DOING_AJAX ? 'true' : 'false' )
-);
+// Temporarily disable spam logging - uncomment for debugging
+// error_log(
+//     '[PUNTWORK] import-batch.php loaded - is_admin: ' . ( is_admin() ? 'true' : 'false' ) .
+//     ', DOING_AJAX: ' . ( defined('DOING_AJAX') && DOING_AJAX ? 'true' : 'false' )
+// );
 
 /**
  * Main import batch processing file
@@ -49,18 +50,18 @@ function import_time_exceeded(): bool
     $current_time = microtime(true);
     $elapsed_time = $current_time - $start_time;
 
-    // Debug logging
-    error_log(
-        sprintf(
-            '[PUNTWORK] [TIME-DEBUG] import_time_exceeded check: start_time=%.6f, current_time=%.6f, ' .
-            'elapsed=%.2fs, limit=%ds, exceeded=%s',
-            $start_time,
-            $current_time,
-            $elapsed_time,
-            $time_limit,
-            ( $elapsed_time >= $time_limit ? 'YES' : 'NO' )
-        )
-    );
+    // Debug logging - temporarily disabled to reduce spam
+    // error_log(
+    //     sprintf(
+    //         '[PUNTWORK] [TIME-DEBUG] import_time_exceeded check: start_time=%.6f, current_time=%.6f, ' .
+    //         'elapsed=%.2fs, limit=%ds, exceeded=%s',
+    //         $start_time,
+    //         $current_time,
+    //         $elapsed_time,
+    //         $time_limit,
+    //         ( $elapsed_time >= $time_limit ? 'YES' : 'NO' )
+    //     )
+    // );
 
     if ($elapsed_time >= $time_limit) {
         error_log(
@@ -73,18 +74,18 @@ function import_time_exceeded(): bool
         return true;
     }
 
-    // Log remaining time for debugging
-    $remaining_time = $time_limit - $elapsed_time;
-    if ($remaining_time <= 30) { // Log when less than 30 seconds remaining
-        error_log(
-            sprintf(
-                '[PUNTWORK] [TIME-WARNING] Import time limit approaching: %.1fs remaining (elapsed: %.2fs, limit: %ds)',
-                $remaining_time,
-                $elapsed_time,
-                $time_limit
-            )
-        );
-    }
+    // Log remaining time for debugging - temporarily disabled to reduce spam
+    // $remaining_time = $time_limit - $elapsed_time;
+    // if ($remaining_time <= 30) { // Log when less than 30 seconds remaining
+    //     error_log(
+    //         sprintf(
+    //             '[PUNTWORK] [TIME-WARNING] Import time limit approaching: %.1fs remaining (elapsed: %.2fs, limit: %ds)',
+    //             $remaining_time,
+    //             $elapsed_time,
+    //             $time_limit
+    //         )
+    //     );
+    // }
 
     return apply_filters('puntwork_import_time_exceeded', false);
 }
@@ -129,7 +130,8 @@ function should_continue_batch_processing(): bool
 }
 
 if (! function_exists('import_jobs_from_json')) {
-    error_log('[PUNTWORK] Defining import_jobs_from_json function');
+    // Temporarily disable spam logging
+    // error_log('[PUNTWORK] Defining import_jobs_from_json function');
     /**
      * Import jobs from JSONL file in batches.
      *
@@ -324,15 +326,16 @@ if (! function_exists('import_all_jobs_from_json')) {
             update_option('job_import_start_time', $start_time, false);
 
             while (true) {
-                error_log('[PUNTWORK] [LOOP-DEBUG] Main import loop iteration starting - batch_count=' . $batch_count);
+                // Temporarily disable spam logging
+                // error_log('[PUNTWORK] [LOOP-DEBUG] Main import loop iteration starting - batch_count=' . $batch_count);
 
                 // Check if we should continue processing (time/memory limits)
-                error_log('[PUNTWORK] [LOOP-DEBUG] Checking if should continue batch processing...');
+                // error_log('[PUNTWORK] [LOOP-DEBUG] Checking if should continue batch processing...');
                 if (! should_continue_batch_processing()) {
-                    error_log(
-                        '[PUNTWORK] [LOOP-DEBUG] should_continue_batch_processing returned false - ' .
-                        'pausing import'
-                    );
+                    // error_log(
+                    //     '[PUNTWORK] [LOOP-DEBUG] should_continue_batch_processing returned false - ' .
+                    //     'pausing import'
+                    // );
                     // Pause processing and schedule continuation
                     $current_status                 = get_option('job_import_status', array());
                     $current_status['paused']       = true;
@@ -362,27 +365,27 @@ if (! function_exists('import_all_jobs_from_json')) {
                         'message'            => 'Import paused due to time limits - will continue automatically in background',
                     );
                 }
-                error_log('[PUNTWORK] [LOOP-DEBUG] should_continue_batch_processing returned true - continuing');
+                // error_log('[PUNTWORK] [LOOP-DEBUG] should_continue_batch_processing returned true - continuing');
 
                 $batch_start = (int) get_option('job_import_progress', 0);
-                error_log(
-                    '[PUNTWORK] [LOOP-DEBUG] import_all_jobs_from_json: batch_start=' . $batch_start .
-                    ', total_items=' . $total_items
-                );
+                // error_log(
+                //     '[PUNTWORK] [LOOP-DEBUG] import_all_jobs_from_json: batch_start=' . $batch_start .
+                //     ', total_items=' . $total_items
+                // );
 
                 // Prepare setup for this batch
-                error_log('[PUNTWORK] [LOOP-DEBUG] Calling prepare_import_setup with batch_start=' . $batch_start);
+                // error_log('[PUNTWORK] [LOOP-DEBUG] Calling prepare_import_setup with batch_start=' . $batch_start);
                 $setup = prepare_import_setup($batch_start);
                 if (is_wp_error($setup)) {
                     $error_msg = 'Setup failed: ' . $setup->get_error_message();
-                    error_log('[PUNTWORK] [LOOP-DEBUG] prepare_import_setup returned WP_Error: ' . $error_msg);
+                    // error_log('[PUNTWORK] [LOOP-DEBUG] prepare_import_setup returned WP_Error: ' . $error_msg);
                     return array(
                         'success' => false,
                         'message' => $error_msg,
                         'logs'    => array( $error_msg ),
                     );
                 }
-                error_log('[PUNTWORK] [LOOP-DEBUG] prepare_import_setup completed successfully');
+                // error_log('[PUNTWORK] [LOOP-DEBUG] prepare_import_setup completed successfully');
 
                 // Capture total items from first setup
                 if ($batch_count === 0) {
