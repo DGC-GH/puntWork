@@ -94,7 +94,6 @@ function process_batch_items_logic( array $setup ): array
         // Re-align start_index with new batch_size to avoid skips
         // Removed to prevent stuck imports when batch_size changes
 
-        $end_index          = min($setup['start_index'] + $batch_size, $setup['total']);
         $published          = 0;
         $updated            = 0;
         $skipped            = 0;
@@ -104,7 +103,7 @@ function process_batch_items_logic( array $setup ): array
         $schema_generated   = 0;
 
         try {
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Starting batch from {$setup['start_index']} to $end_index (size $batch_size)";
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Starting batch from {$setup['start_index']} to $end_index (size $batch_size, lines_read $lines_read)";
 
             // Checkpoint: Batch setup complete
             checkpoint_performance(
@@ -122,7 +121,9 @@ function process_batch_items_logic( array $setup ): array
             $batch_load_info = load_and_prepare_batch_items($json_path, $setup['start_index'], $batch_size, $batch_size_info['threshold'], $logs);
             $batch_items     = $batch_load_info['batch_items'];
             $batch_guids     = $batch_load_info['batch_guids'];
-            error_log('[PUNTWORK] [BATCH-DEBUG] load_and_prepare_batch_items completed, loaded ' . count($batch_guids) . ' GUIDs');
+            $lines_read      = $batch_load_info['lines_read'] ?? $batch_size;
+            $end_index       = $setup['start_index'] + $lines_read;
+            error_log('[PUNTWORK] [BATCH-DEBUG] load_and_prepare_batch_items completed, loaded ' . count($batch_guids) . ' GUIDs, lines_read=' . $lines_read . ', end_index=' . $end_index);
 
             // Checkpoint: Batch items loaded
             checkpoint_performance(

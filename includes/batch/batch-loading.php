@@ -126,8 +126,10 @@ function load_and_prepare_batch_items( string $json_path, int $start_index, int 
         )
     );
 
-    $batch_json_items = load_json_batch($json_path, $start_index, $batch_size);
-    error_log('[PUNTWORK] load_and_prepare_batch_items: load_json_batch returned ' . count($batch_json_items) . ' items');
+    $batch_json_result = load_json_batch($json_path, $start_index, $batch_size);
+    $batch_json_items = $batch_json_result['items'] ?? $batch_json_result; // fallback for array
+    $lines_read = $batch_json_result['lines_read'] ?? count($batch_json_items);
+    error_log('[PUNTWORK] load_and_prepare_batch_items: load_json_batch returned ' . count($batch_json_items) . ' items, lines_read=' . $lines_read);
 
     $batch_items  = array();
     $batch_guids  = array();
@@ -143,7 +145,8 @@ function load_and_prepare_batch_items( string $json_path, int $start_index, int 
         'batch_items' => $batch_items,
         'batch_guids' => $batch_guids,
         'cancelled'   => false,
-        );
+        'lines_read'  => $lines_read,
+    );
     }
 
     $valid_items   = 0;
@@ -160,6 +163,7 @@ function load_and_prepare_batch_items( string $json_path, int $start_index, int 
             return array(
             'cancelled' => true,
             'logs'      => $logs,
+            'lines_read' => 0,
             );
         }
 
@@ -204,10 +208,11 @@ function load_and_prepare_batch_items( string $json_path, int $start_index, int 
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Prepared $valid_items valid items for processing (skipped $skipped_items items, $missing_guids missing GUIDs)";
 
     error_log('[PUNTWORK] Prepared ' . $valid_items . ' valid items for processing (skipped: ' . $skipped_items . ', missing GUIDs: ' . $missing_guids . ')');
-    return array(
-    'batch_items' => $batch_items,
-    'batch_guids' => $batch_guids,
-    'cancelled'   => false,
+        return array(
+        'batch_items' => $batch_items,
+        'batch_guids' => $batch_guids,
+        'cancelled'   => false,
+        'lines_read'  => $lines_read,
     );
 }
 
@@ -305,5 +310,8 @@ function load_json_batch( $json_path, $start_index, $batch_size )
             fclose($debug_handle);
         }
     }
-    return $items;
+    return array(
+        'items'      => $items,
+        'lines_read' => $lines_read,
+    );
 }
