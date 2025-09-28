@@ -116,6 +116,8 @@ function bulk_update_post_meta( int $post_id, array $meta_data ): void
         return;
     }
 
+    error_log('[PUNTWORK] [DB-DEBUG] bulk_update_post_meta called for post ' . $post_id . ' with ' . count($meta_data) . ' fields');
+
     $values       = array();
     $placeholders = array();
 
@@ -135,7 +137,11 @@ function bulk_update_post_meta( int $post_id, array $meta_data ): void
         $values
     );
 
+    $start_time = microtime(true);
     $wpdb->query($query);
+    $query_time = microtime(true) - $start_time;
+
+    error_log('[PUNTWORK] [DB-DEBUG] bulk_update_post_meta completed in ' . number_format($query_time, 4) . ' seconds');
 }
 
 /**
