@@ -20,12 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auto-fixed 56527 additional PHPCS violations across 124 files for PSR-12 compliance, reducing errors to 0 with only warnings remaining
 - Renamed Puntwork_CRM_Admin class back to PuntworkCrmAdmin for final PascalCase compliance
 - Fixed undefined function load_and_prepare_batch_items by adding namespace prefix \Puntwork\
-- Reduced debug log spam for instances table creation by logging only once per hour
+- Optimized instances table creation check with transient caching to eliminate repetitive database queries and logging
 - Improved accessibility error handling for non-array menu parameters
 - Added missing disable_expensive_plugins() and enable_expensive_plugins() functions to prevent fatal errors during batch processing
 - Added missing CacheManager.php include to resolve "Class not found" error for EnhancedCacheManager
 - Fixed namespace declaration in JsonlIterator class (batch-loading.php) for PSR-12 compliance
-- Added caching to instances table creation check to reduce repetitive database queries and logging
 - Reduced verbose logging in instance registration to only log errors and new registrations
 - Added nonce verification to AJAX import control handlers for improved security
 
