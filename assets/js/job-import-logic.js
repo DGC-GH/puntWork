@@ -351,7 +351,7 @@ console.info("=== Job Import Logic Script Loaded ===");
                 console.log('[PUNTWORK] [DEBUG-IMPORT] isImporting:', this.isImporting);
                 console.log('[PUNTWORK] [DEBUG-IMPORT] startTime:', this.startTime);
                 console.log('[PUNTWORK] [DEBUG-IMPORT] elapsed time:', this.getElapsedTime());
-                console.log('[PUNTWORK] [DEBUG-IMPORT] Checking if we should force reset...');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Checking server status to verify if import is actually running...');
 
                 PuntWorkJSLogger.warn('Import already in progress - blocking start', 'LOGIC', {
                     isImporting: this.isImporting,
@@ -359,16 +359,49 @@ console.info("=== Job Import Logic Script Loaded ===");
                     elapsed: this.getElapsedTime()
                 });
 
-                // Force reset the flag if it's been too long (stuck import)
-                if (this.startTime && (Date.now() - this.startTime) > 300000) { // 5 minutes
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] Import has been running for >5 minutes, forcing reset');
+                // Check server status to see if import is actually running
+                try {
+                    const statusResponse = await JobImportAPI.getImportStatus();
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Server status check response:', statusResponse);
+                    
+                    if (statusResponse.success && statusResponse.data) {
+                        const serverData = JobImportUI.normalizeResponseData(statusResponse);
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] Server status - total:', serverData.total, 'processed:', serverData.processed, 'complete:', serverData.complete);
+                        
+                        // If server shows import is complete or not started, force reset the client flag
+                        if (serverData.complete || (serverData.total === 0 && serverData.processed === 0)) {
+                            console.log('[PUNTWORK] [DEBUG-IMPORT] Server shows import is not running, forcing client reset');
+                            this.isImporting = false;
+                            this.startTime = null;
+                            PuntWorkJSLogger.warn('Forced client reset - server shows import not running', 'LOGIC');
+                            console.log('[PUNTWORK] [DEBUG-IMPORT] Client reset complete, continuing with import');
+                        } else {
+                            // Force reset the flag if it's been too long (stuck import)
+                            if (this.startTime && (Date.now() - this.startTime) > 300000) { // 5 minutes
+                                console.log('[PUNTWORK] [DEBUG-IMPORT] Import has been running for >5 minutes, forcing reset');
+                                this.isImporting = false;
+                                this.startTime = null;
+                                PuntWorkJSLogger.warn('Forcing import flag reset due to timeout', 'LOGIC');
+                                console.log('[PUNTWORK] [DEBUG-IMPORT] Forced reset complete, continuing with import');
+                            } else {
+                                console.log('[PUNTWORK] [DEBUG-IMPORT] Import appears to be genuinely running, blocking start');
+                                return;
+                            }
+                        }
+                    } else {
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] Could not get server status, assuming import is stuck and forcing reset');
+                        this.isImporting = false;
+                        this.startTime = null;
+                        PuntWorkJSLogger.warn('Forced reset due to server status check failure', 'LOGIC');
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] Forced reset complete, continuing with import');
+                    }
+                } catch (statusError) {
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Error checking server status:', statusError);
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Assuming import is stuck and forcing reset');
                     this.isImporting = false;
                     this.startTime = null;
-                    PuntWorkJSLogger.warn('Forcing import flag reset due to timeout', 'LOGIC');
+                    PuntWorkJSLogger.warn('Forced reset due to status check error', 'LOGIC');
                     console.log('[PUNTWORK] [DEBUG-IMPORT] Forced reset complete, continuing with import');
-                } else {
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] Not forcing reset, returning early');
-                    return;
                 }
             }
 
@@ -736,6 +769,7 @@ console.info("=== Job Import Logic Script Loaded ===");
 
             // Stop any ongoing import
             this.isImporting = false;
+            this.startTime = null; // Also clear start time
 
             // Stop status polling
             if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
