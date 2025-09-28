@@ -475,7 +475,7 @@ function log_manual_import_run_ajax() {
 				'type' => 'float',
 				'min'  => 0,
 			),
-			'success'       => array( 'type' => 'bool' ),
+			'success'       => array( 'type' => 'string' ),
 			'processed'     => array(
 				'type' => 'int',
 				'min'  => 0,
@@ -512,7 +512,7 @@ function log_manual_import_run_ajax() {
 		$details = array(
 			'timestamp'     => $_POST['timestamp'],
 			'duration'      => $_POST['duration'],
-			'success'       => $_POST['success'],
+			'success'       => filter_var( $_POST['success'], FILTER_VALIDATE_BOOLEAN ),
 			'processed'     => $_POST['processed'],
 			'total'         => $_POST['total'],
 			'published'     => $_POST['published'],

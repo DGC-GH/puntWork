@@ -379,6 +379,7 @@ class PuntworkLoadBalancer {
 
 		if ( $existing ) {
 			// Update last seen without logging every time
+			$wpdb->flush();
 			$result = $wpdb->update(
 				$table_name,
 				array( 'last_seen' => current_time( 'mysql' ) ),

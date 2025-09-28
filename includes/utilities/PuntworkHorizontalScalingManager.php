@@ -410,6 +410,8 @@ class PuntworkHorizontalScalingManager {
 
 		$table_name = $wpdb->prefix . self::INSTANCE_TABLE;
 
+		$wpdb->flush();
+
 		$wpdb->update(
 			$table_name,
 			array( 'status' => 'inactive' ),

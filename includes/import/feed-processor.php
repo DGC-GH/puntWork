@@ -485,7 +485,7 @@ class FeedProcessor {
 			}
 
 			// Include the JobBoardManager
-			include_once plugin_dir_path( dirname( __DIR__, 1 ) ) . 'jobboards/jobboard-manager.php';
+			include_once dirname( dirname( __DIR__ ) ) . '/includes/jobboards/jobboard-manager.php';
 
 			$board_manager = new JobBoards\JobBoardManager();
 
