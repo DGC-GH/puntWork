@@ -603,10 +603,6 @@ add_action('puntwork_analytics_cleanup', [__NAMESPACE__ . '\\ImportAnalytics', '
 /**
  * Run scheduled import asynchronously (non-blocking).
  */
-
-/**
- * Run scheduled import asynchronously (non-blocking).
- */
 function run_scheduled_import_async()
 {
     error_log('[PUNTWORK] === ASYNC FUNCTION STARTED ===');
@@ -667,34 +663,206 @@ function run_scheduled_import_async()
 }
 
 /**
- * Handle manual import cron job
- * Modified to handle resumable imports.
+ * Run the complete scheduled import process: feed processing -> combination -> import
  */
-function run_manual_import_cron()
+function run_scheduled_import(bool $test_mode = false, string $trigger_type = 'scheduled'): array
 {
-    error_log('[PUNTWORK] Manual import cron started');
+    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+    $start_time = microtime(true);
 
-    // Check if an import is already running
-    $import_status = get_option('job_import_status', []);
-    if (
-        isset($import_status['complete']) && $import_status['complete'] == false
-        && isset($import_status['processed']) && $import_status['processed'] > 0
-    ) {
-        error_log('[PUNTWORK] Manual import cron skipped - import already running and has processed items');
-
-        return;
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [SCHEDULED-IMPORT] ===== STARTING SCHEDULED IMPORT =====');
+        error_log('[PUNTWORK] [SCHEDULED-IMPORT] Test mode: ' . ($test_mode ? 'true' : 'false'));
+        error_log('[PUNTWORK] [SCHEDULED-IMPORT] Trigger type: ' . $trigger_type);
+        error_log('[PUNTWORK] [SCHEDULED-IMPORT] Start time: ' . date('Y-m-d H:i:s'));
     }
 
     try {
-        $result = run_scheduled_import();
-
-        // Import runs to completion without pausing
-        if ($result['success']) {
-            error_log('[PUNTWORK] Manual import cron completed successfully');
-        } else {
-            error_log('[PUNTWORK] Manual import cron failed: ' . ($result['message'] ?? 'Unknown error'));
+        // Step 1: Get all configured feeds
+        $feeds = get_feeds();
+        if (empty($feeds)) {
+            $error_msg = 'No feeds configured for import';
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [SCHEDULED-IMPORT] ERROR: ' . $error_msg);
+            }
+            return [
+                'success' => false,
+                'message' => $error_msg,
+                'logs' => [$error_msg],
+            ];
         }
+
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SCHEDULED-IMPORT] Found ' . count($feeds) . ' feeds to process: ' . json_encode(array_keys($feeds)));
+        }
+
+        // Step 2: Process all feeds (download and convert to JSONL)
+        $output_dir = ABSPATH . 'feeds/';
+        $fallback_domain = 'belgiumjobs.work';
+        $total_items = 0;
+        $all_logs = [];
+
+        // Ensure output directory exists
+        if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
+            $error_msg = 'Feeds directory not writable: ' . $output_dir;
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [SCHEDULED-IMPORT] ERROR: ' . $error_msg);
+            }
+            return [
+                'success' => false,
+                'message' => $error_msg,
+                'logs' => [$error_msg],
+            ];
+        }
+
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SCHEDULED-IMPORT] Output directory ready: ' . $output_dir);
+        }
+
+        // Load required functions
+        if (!function_exists('process_one_feed')) {
+            require_once __DIR__ . '/../core/core-structure-logic.php';
+        }
+
+        foreach ($feeds as $feed_key => $feed_url) {
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [SCHEDULED-IMPORT] Processing feed: ' . $feed_key . ' -> ' . $feed_url);
+            }
+
+            $logs = [];
+            $item_count = process_one_feed($feed_key, $feed_url, $output_dir, $fallback_domain, $logs);
+            $total_items += $item_count;
+
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [SCHEDULED-IMPORT] Feed ' . $feed_key . ' processed, items: ' . $item_count);
+                error_log('[PUNTWORK] [SCHEDULED-IMPORT] Feed logs: ' . json_encode($logs));
+            }
+
+            $all_logs = array_merge($all_logs, $logs);
+        }
+
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SCHEDULED-IMPORT] All feeds processed, total items: ' . $total_items);
+        }
+
+        // Step 3: Combine JSONL files
+        if (!function_exists('combine_jsonl_files')) {
+            require_once __DIR__ . '/../import/combine-jsonl.php';
+        }
+
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SCHEDULED-IMPORT] Combining JSONL files...');
+        }
+
+        $combine_logs = [];
+        combine_jsonl_files($feeds, $output_dir, $total_items, $combine_logs);
+        $all_logs = array_merge($all_logs, $combine_logs);
+
+        // Check if combined file was created
+        $combined_file = $output_dir . 'combined-jobs.jsonl';
+        if (!file_exists($combined_file)) {
+            $error_msg = 'Combined JSONL file was not created';
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [SCHEDULED-IMPORT] ERROR: ' . $error_msg);
+            }
+            return [
+                'success' => false,
+                'message' => $error_msg,
+                'logs' => $all_logs,
+            ];
+        }
+
+        $file_size = filesize($combined_file);
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SCHEDULED-IMPORT] Combined file created: ' . $combined_file . ' (' . $file_size . ' bytes)');
+        }
+
+        if ($file_size == 0) {
+            $error_msg = 'Combined JSONL file is empty';
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [SCHEDULED-IMPORT] ERROR: ' . $error_msg);
+            }
+            return [
+                'success' => false,
+                'message' => $error_msg,
+                'logs' => $all_logs,
+            ];
+        }
+
+        // Step 4: Run the import
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SCHEDULED-IMPORT] Starting import process...');
+        }
+
+        $import_result = import_all_jobs_from_json();
+
+        $total_duration = microtime(true) - $start_time;
+
+        if ($import_result['success']) {
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [SCHEDULED-IMPORT] Scheduled import completed successfully in ' . $total_duration . ' seconds');
+            }
+
+            // Log the successful run
+            include_once __DIR__ . '/../scheduling/scheduling-history.php';
+            if (function_exists('log_manual_import_run')) {
+                log_manual_import_run([
+                    'timestamp' => time(),
+                    'duration' => $total_duration,
+                    'success' => true,
+                    'processed' => $import_result['processed'] ?? 0,
+                    'total' => $import_result['total'] ?? 0,
+                    'published' => $import_result['published'] ?? 0,
+                    'updated' => $import_result['updated'] ?? 0,
+                    'skipped' => $import_result['skipped'] ?? 0,
+                    'error_message' => '',
+                ]);
+            }
+
+            return array_merge($import_result, [
+                'logs' => array_merge($all_logs, $import_result['logs'] ?? []),
+                'feed_processing_time' => $total_duration - ($import_result['time_elapsed'] ?? 0),
+            ]);
+        } else {
+            $error_msg = $import_result['message'] ?? 'Import failed';
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [SCHEDULED-IMPORT] Scheduled import failed: ' . $error_msg);
+            }
+
+            // Log the failed run
+            include_once __DIR__ . '/../scheduling/scheduling-history.php';
+            if (function_exists('log_manual_import_run')) {
+                log_manual_import_run([
+                    'timestamp' => time(),
+                    'duration' => $total_duration,
+                    'success' => false,
+                    'processed' => $import_result['processed'] ?? 0,
+                    'total' => $import_result['total'] ?? 0,
+                    'published' => $import_result['published'] ?? 0,
+                    'updated' => $import_result['updated'] ?? 0,
+                    'skipped' => $import_result['skipped'] ?? 0,
+                    'error_message' => $error_msg,
+                ]);
+            }
+
+            return [
+                'success' => false,
+                'message' => $error_msg,
+                'logs' => array_merge($all_logs, $import_result['logs'] ?? []),
+            ];
+        }
+
     } catch (\Exception $e) {
-        error_log('[PUNTWORK] Manual import cron exception: ' . $e->getMessage());
+        $error_msg = 'Scheduled import failed: ' . $e->getMessage();
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SCHEDULED-IMPORT] Exception: ' . $error_msg);
+            error_log('[PUNTWORK] [SCHEDULED-IMPORT] Stack trace: ' . $e->getTraceAsString());
+        }
+
+        return [
+            'success' => false,
+            'message' => $error_msg,
+            'logs' => $all_logs ?? [],
+        ];
     }
 }
