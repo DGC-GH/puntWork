@@ -294,6 +294,7 @@ function reset_job_import_status_ajax()
 }
 
 add_action('wp_ajax_get_job_import_status', __NAMESPACE__ . '\\get_job_import_status_ajax');
+add_action('wp_ajax_get_import_status', __NAMESPACE__ . '\\get_job_import_status_ajax'); // Alias for compatibility
 function get_job_import_status_ajax()
 {
     PuntWorkLogger::logAjaxRequest('get_job_import_status', $_POST);

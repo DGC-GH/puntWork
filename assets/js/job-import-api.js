@@ -431,6 +431,27 @@ console.log('[PUNTWORK] job-import-api.js loaded');
                 type: 'POST',
                 data: { action: 'clear_rate_limits_ajax', nonce: jobImportData.nonce }
             });
+        },
+
+        /**
+         * Get current import status
+         * @returns {Promise} AJAX promise
+         */
+        getImportStatus: function() {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'get_import_status',
+                    nonce: jobImportData.nonce
+                },
+                success: function(response) {
+                    PuntWorkJSLogger.debug('Get import status response', 'API', response);
+                },
+                error: function(xhr, status, error) {
+                    PuntWorkJSLogger.error('Get import status error: ' + error, 'API');
+                }
+            });
         }
     };
 
