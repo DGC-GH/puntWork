@@ -148,13 +148,30 @@ if (!function_exists('import_jobs_from_json')) {
             // Check for concurrent import lock
             $import_lock_key = 'puntwork_import_lock';
             if (get_transient($import_lock_key)) {
-                error_log('[PUNTWORK] [IMPORT-LOCK] Import already running - rejecting concurrent import');
-
-                return [
-                    'success' => false,
-                    'message' => 'Import already running',
-                    'logs' => ['Import already running - concurrent imports not allowed'],
-                ];
+                // Check if the lock is stale (import status shows complete or last update > 30 minutes ago)
+                $import_status = get_option('job_import_status', []);
+                $is_stale = false;
+                
+                if (!empty($import_status)) {
+                    $last_update = $import_status['last_update'] ?? 0;
+                    $is_complete = $import_status['complete'] ?? false;
+                    $time_since_update = time() - $last_update;
+                    
+                    if ($is_complete || $time_since_update > 1800) { // 30 minutes
+                        $is_stale = true;
+                        delete_transient($import_lock_key);
+                        error_log('[PUNTWORK] [IMPORT-LOCK] Cleared stale import lock (complete: ' . ($is_complete ? 'yes' : 'no') . ', time since update: ' . $time_since_update . 's)');
+                    }
+                }
+                
+                if (!$is_stale) {
+                    error_log('[PUNTWORK] [IMPORT-LOCK] Import already running - rejecting concurrent import');
+                    return [
+                        'success' => false,
+                        'message' => 'Import already running',
+                        'logs' => ['Import already running - concurrent imports not allowed'],
+                    ];
+                }
             }
 
             // Set import lock
@@ -267,13 +284,30 @@ if (!function_exists('import_all_jobs_from_json')) {
         // Check for concurrent import lock
         $import_lock_key = 'puntwork_import_lock';
         if (get_transient($import_lock_key)) {
-            error_log('[PUNTWORK] Import already running - skipping concurrent import');
-
-            return [
-                'success' => false,
-                'message' => 'Import already running',
-                'logs' => ['Import already running - concurrent imports not allowed'],
-            ];
+            // Check if the lock is stale (import status shows complete or last update > 30 minutes ago)
+            $import_status = get_option('job_import_status', []);
+            $is_stale = false;
+            
+            if (!empty($import_status)) {
+                $last_update = $import_status['last_update'] ?? 0;
+                $is_complete = $import_status['complete'] ?? false;
+                $time_since_update = time() - $last_update;
+                
+                if ($is_complete || $time_since_update > 1800) { // 30 minutes
+                    $is_stale = true;
+                    delete_transient($import_lock_key);
+                    error_log('[PUNTWORK] [IMPORT-LOCK] Cleared stale import lock (complete: ' . ($is_complete ? 'yes' : 'no') . ', time since update: ' . $time_since_update . 's)');
+                }
+            }
+            
+            if (!$is_stale) {
+                error_log('[PUNTWORK] Import already running - skipping concurrent import');
+                return [
+                    'success' => false,
+                    'message' => 'Import already running',
+                    'logs' => ['Import already running - concurrent imports not allowed'],
+                ];
+            }
         }
 
         // Set import lock
@@ -675,9 +709,26 @@ function start_scheduled_import(): void
     // Check if import is already running
     $import_lock_key = 'puntwork_import_lock';
     if (get_transient($import_lock_key)) {
-        error_log('[PUNTWORK] Scheduled import already running - skipping');
-
-        return;
+        // Check if the lock is stale (import status shows complete or last update > 30 minutes ago)
+        $import_status = get_option('job_import_status', []);
+        $is_stale = false;
+        
+        if (!empty($import_status)) {
+            $last_update = $import_status['last_update'] ?? 0;
+            $is_complete = $import_status['complete'] ?? false;
+            $time_since_update = time() - $last_update;
+            
+            if ($is_complete || $time_since_update > 1800) { // 30 minutes
+                $is_stale = true;
+                delete_transient($import_lock_key);
+                error_log('[PUNTWORK] [IMPORT-LOCK] Cleared stale import lock (complete: ' . ($is_complete ? 'yes' : 'no') . ', time since update: ' . $time_since_update . 's)');
+            }
+        }
+        
+        if (!$is_stale) {
+            error_log('[PUNTWORK] Scheduled import already running - skipping');
+            return;
+        }
     }
 
     // Start the import
