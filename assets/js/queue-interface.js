@@ -389,6 +389,9 @@ class PuntworkQueueInterface {
     }
 
     startAutoRefresh() {
+        if (this.refreshInterval) {
+            return; // Already running
+        }
         this.refreshInterval = setInterval(() => {
             this.loadQueueStats();
             this.loadRecentJobs();
