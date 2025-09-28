@@ -216,6 +216,7 @@ class DynamicRateLimiter
     private static function getMemoryUsage(): float
     {
         $details = self::getDetailedMemoryUsage();
+
         return $details['current_percent'];
     }
 
@@ -274,7 +275,6 @@ class DynamicRateLimiter
 
         if (self::$memory_cache['limit_bytes'] === null ||
             (time() - self::$memory_cache['limit_cached_at']) > $cache_time) {
-
             $memory_limit = ini_get('memory_limit');
 
             if (preg_match('/^(\d+)(.)$/', $memory_limit, $matches)) {
@@ -284,12 +284,15 @@ class DynamicRateLimiter
                 switch ($unit) {
                     case 'g':
                         $value *= 1024 * 1024 * 1024;
+
                         break;
                     case 'm':
                         $value *= 1024 * 1024;
+
                         break;
                     case 'k':
                         $value *= 1024;
+
                         break;
                 }
 
@@ -317,18 +320,21 @@ class DynamicRateLimiter
         // Emergency cleanup at critical threshold
         if ($current_percent >= self::$cleanup_thresholds['emergency_cleanup']) {
             self::performEmergencyCleanup();
+
             return true;
         }
 
         // Cache cleanup at high threshold
         if ($current_percent >= self::$cleanup_thresholds['cache_cleanup']) {
             self::performCacheCleanup();
+
             return true;
         }
 
         // Metrics cleanup at medium threshold
         if ($current_percent >= self::$cleanup_thresholds['metrics_cleanup']) {
             self::performMetricsCleanup();
+
             return true;
         }
 

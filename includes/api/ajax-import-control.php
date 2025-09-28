@@ -962,6 +962,7 @@ function get_rate_limit_status_ajax()
         if ($cached_status !== false) {
             PuntWorkLogger::logAjaxResponse('get_rate_limit_status', ['status_count' => count($cached_status), 'cached' => true]);
             AjaxErrorHandler::sendSuccess($cached_status);
+
             return;
         }
 
@@ -1029,6 +1030,7 @@ function get_dynamic_rate_status_ajax()
                 'cached' => true,
             ]);
             AjaxErrorHandler::sendSuccess($cached_status);
+
             return;
         }
 

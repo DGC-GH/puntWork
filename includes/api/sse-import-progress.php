@@ -9,7 +9,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (! defined('ABSPATH')) {
+if (!defined('ABSPATH')) {
     exit;
 }
 
@@ -32,14 +32,14 @@ function deep_sanitize_for_json($data)
         return null;
     }
 
-    if (is_float($data) && ( is_infinite($data) || is_nan($data) )) {
+    if (is_float($data) && (is_infinite($data) || is_nan($data))) {
         error_log('[PUNTWORK] SSE: Removed infinite/NaN float from data');
 
         return null;
     }
 
     if (is_array($data)) {
-        $sanitized = array();
+        $sanitized = [];
         foreach ($data as $key => $value) {
             // Skip keys that are objects or resources
             if (is_object($key) || is_resource($key)) {
@@ -49,17 +49,17 @@ function deep_sanitize_for_json($data)
             }
 
             // Convert object/resource keys to strings
-            if (! is_string($key) && ! is_int($key)) {
-                $key = (string) $key;
+            if (!is_string($key) && !is_int($key)) {
+                $key = (string)$key;
             }
 
             // Special handling for "undefined" values
-            if ($value === 'undefined' || ( is_string($value) && strpos($value, 'undefined') !== false )) {
+            if ($value === 'undefined' || (is_string($value) && strpos($value, 'undefined') !== false)) {
                 error_log('[PUNTWORK] SSE: Found and removing "undefined" value for key: ' . $key);
                 $value = ''; // Convert to empty string
             }
 
-            $sanitized[ $key ] = deep_sanitize_for_json($value);
+            $sanitized[$key] = deep_sanitize_for_json($value);
         }
 
         return $sanitized;
@@ -82,18 +82,18 @@ function register_sse_import_progress_route()
     register_rest_route(
         'puntwork/v1',
         '/import-progress',
-        array(
-            'methods'             => 'GET',
-            'callback'            => __NAMESPACE__ . '\\handle_import_progress_sse',
+        [
+            'methods' => 'GET',
+            'callback' => __NAMESPACE__ . '\\handle_import_progress_sse',
             'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
-            'args'                => array(
-                'api_key' => array(
-                    'required'    => true,
-                    'type'        => 'string',
+            'args' => [
+                'api_key' => [
+                    'required' => true,
+                    'type' => 'string',
                     'description' => 'API key for authentication',
-                ),
-            ),
-        )
+                ],
+            ],
+        ]
     );
 }
 
@@ -106,7 +106,7 @@ function handle_import_progress_sse($request)
         error_log('[PUNTWORK] SSE: handle_import_progress_sse called at ' . date('Y-m-d H:i:s'));
 
         $api_key = $request->get_param('api_key');
-        error_log('[PUNTWORK] SSE: API key from request: ' . ( empty($api_key) ? 'empty' : 'provided' ));
+        error_log('[PUNTWORK] SSE: API key from request: ' . (empty($api_key) ? 'empty' : 'provided'));
 
         // Verify API key
         if (empty($api_key)) {
@@ -122,20 +122,20 @@ function handle_import_progress_sse($request)
             }
             echo "event: error\n";
             echo 'data: ' . json_encode(
-                array(
+                [
                     'timestamp' => time(),
-                    'error'     => 'API key is required',
-                    'code'      => 'missing_api_key',
-                )
+                    'error' => 'API key is required',
+                    'code' => 'missing_api_key',
+                ]
             ) . "\n\n";
             flush();
             exit();
         }
 
         $stored_key = get_option('puntwork_api_key');
-        error_log('[PUNTWORK] SSE: Stored API key exists: ' . ( ! empty($stored_key) ? 'yes' : 'no' ));
+        error_log('[PUNTWORK] SSE: Stored API key exists: ' . (!empty($stored_key) ? 'yes' : 'no'));
 
-        if (empty($stored_key) || ! hash_equals($stored_key, $api_key)) {
+        if (empty($stored_key) || !hash_equals($stored_key, $api_key)) {
             error_log('[PUNTWORK] SSE: Invalid API key provided');
             // Send error event instead of returning WP_Error
             header('Content-Type: text/event-stream');
@@ -148,11 +148,11 @@ function handle_import_progress_sse($request)
             }
             echo "event: error\n";
             echo 'data: ' . json_encode(
-                array(
+                [
                     'timestamp' => time(),
-                    'error'     => 'Invalid API key',
-                    'code'      => 'invalid_api_key',
-                )
+                    'error' => 'Invalid API key',
+                    'code' => 'invalid_api_key',
+                ]
             ) . "\n\n";
             flush();
             exit();
@@ -175,17 +175,17 @@ function handle_import_progress_sse($request)
         // Send initial connection event
         echo "event: connected\n";
         echo 'data: ' . json_encode(
-            array(
-                'status'    => 'connected',
+            [
+                'status' => 'connected',
                 'timestamp' => time(),
-            )
+            ]
         ) . "\n\n";
         flush();
 
         error_log('[PUNTWORK] SSE: Initial connection event sent');
 
-        $last_status         = null;
-        $last_update         = 0;
+        $last_status = null;
+        $last_update = 0;
         $client_disconnected = false;
 
         // Set up connection handling
@@ -200,7 +200,7 @@ function handle_import_progress_sse($request)
         );
 
         // Main SSE loop
-        while (! $client_disconnected && ! connection_aborted()) {
+        while (!$client_disconnected && !connection_aborted()) {
             // Check if client is still connected
             if (connection_status() !== CONNECTION_NORMAL) {
                 break;
@@ -208,13 +208,13 @@ function handle_import_progress_sse($request)
 
             try {
                 // Get current import status
-                $current_status = get_option('job_import_status', array());
+                $current_status = get_option('job_import_status', []);
                 error_log('[PUNTWORK] SSE: Raw current_status from get_option: ' . json_encode($current_status));
 
                 // Ensure current_status is an array and sanitize it
-                if (! is_array($current_status)) {
+                if (!is_array($current_status)) {
                     error_log('[PUNTWORK] SSE: current_status is not an array, resetting to empty array');
-                    $current_status = array();
+                    $current_status = [];
                 }
 
                 // Deep sanitize the status to ensure it's JSON serializable
@@ -226,7 +226,7 @@ function handle_import_progress_sse($request)
                 array_walk_recursive(
                     $current_status,
                     function ($value, $key) use (&$undefined_found) {
-                        if ($value === 'undefined' || ( is_string($value) && strpos($value, 'undefined') !== false )) {
+                        if ($value === 'undefined' || (is_string($value) && strpos($value, 'undefined') !== false)) {
                             error_log('[PUNTWORK] SSE: Found "undefined" in status[' . $key . ']: ' . var_export($value, true));
                             $undefined_found = true;
                         }
@@ -240,11 +240,11 @@ function handle_import_progress_sse($request)
                 // Check for async import status if applicable
                 $async_status = check_async_import_status();
                 if ($async_status['active']) {
-                    $async_progress = $async_status['progress'] ?? array();
+                    $async_progress = $async_status['progress'] ?? [];
                     // Deep sanitize async progress data
                     $async_progress = deep_sanitize_for_json($async_progress);
 
-                    $current_status                 = array_merge($current_status, $async_progress);
+                    $current_status = array_merge($current_status, $async_progress);
                     $current_status['async_active'] = true;
                     $current_status['async_status'] = $async_status['status'];
                 } else {
@@ -255,56 +255,56 @@ function handle_import_progress_sse($request)
 
                 // Calculate elapsed time
                 if (isset($current_status['start_time']) && $current_status['start_time'] > 0) {
-                    $current_time                   = microtime(true);
+                    $current_time = microtime(true);
                     $current_status['time_elapsed'] = $current_time - $current_status['start_time'];
                 }
 
                 // Calculate completion status
-                if (! isset($current_status['complete']) || ! $current_status['complete']) {
-                    $current_status['complete'] = ( $current_status['processed'] >= $current_status['total'] && $current_status['total'] > 0 );
+                if (!isset($current_status['complete']) || !$current_status['complete']) {
+                    $current_status['complete'] = ($current_status['processed'] >= $current_status['total'] && $current_status['total'] > 0);
                 }
 
                 // Add additional status info
-                $current_status['is_running'] = ! $current_status['complete'];
-                $current_status['last_run']   = get_option('puntwork_last_import_run');
+                $current_status['is_running'] = !$current_status['complete'];
+                $current_status['last_run'] = get_option('puntwork_last_import_run');
 
                 // Get next scheduled time and ensure it's serializable
-                $next_scheduled                   = get_next_scheduled_time();
+                $next_scheduled = get_next_scheduled_time();
                 $current_status['next_scheduled'] = is_array($next_scheduled) ?
-                    ( $next_scheduled['formatted'] ?? null ) : $next_scheduled;
+                    ($next_scheduled['formatted'] ?? null) : $next_scheduled;
 
                 // Only send update if status has changed or it's been more than 30 seconds
-                $current_time   = time();
+                $current_time = time();
                 $status_changed = $last_status == null ||
                                 json_encode($current_status) !== json_encode($last_status);
-                $should_update  = $status_changed || ( $current_time - $last_update ) > 30;
+                $should_update = $status_changed || ($current_time - $last_update) > 30;
 
                 if ($should_update) {
-                    $event_data = array(
+                    $event_data = [
                         'timestamp' => $current_time,
-                        'status'    => $current_status,
-                    );
+                        'status' => $current_status,
+                    ];
 
                     error_log('[PUNTWORK] SSE: About to send progress update');
                     error_log('[PUNTWORK] SSE: event_data status keys: ' . implode(', ', array_keys($current_status)));
-                    error_log('[PUNTWORK] SSE: event_data status processed: ' . ( $current_status['processed'] ?? 'not set' ));
-                    error_log('[PUNTWORK] SSE: event_data status total: ' . ( $current_status['total'] ?? 'not set' ));
-                    error_log('[PUNTWORK] SSE: event_data status complete: ' . ( $current_status['complete'] ?? 'not set' ));
+                    error_log('[PUNTWORK] SSE: event_data status processed: ' . ($current_status['processed'] ?? 'not set'));
+                    error_log('[PUNTWORK] SSE: event_data status total: ' . ($current_status['total'] ?? 'not set'));
+                    error_log('[PUNTWORK] SSE: event_data status complete: ' . ($current_status['complete'] ?? 'not set'));
                     $json_data = json_encode($event_data);
 
                     if ($json_data == false) {
                         error_log('[PUNTWORK] SSE: JSON encoding failed: ' . json_last_error_msg());
                         error_log('[PUNTWORK] SSE: Event data that failed: ' . print_r($event_data, true));
                         // Send error event instead with sanitized data
-                        $error_event_data = array(
-                            'timestamp'      => $current_time,
-                            'error'          => 'Failed to encode status data: ' . json_last_error_msg(),
-                            'status_summary' => array(
+                        $error_event_data = [
+                            'timestamp' => $current_time,
+                            'error' => 'Failed to encode status data: ' . json_last_error_msg(),
+                            'status_summary' => [
                                 'processed' => $current_status['processed'] ?? 0,
-                                'total'     => $current_status['total'] ?? 0,
-                                'complete'  => $current_status['complete'] ?? false,
-                            ),
-                        );
+                                'total' => $current_status['total'] ?? 0,
+                                'complete' => $current_status['complete'] ?? false,
+                            ],
+                        ];
                         echo "event: error\n";
                         echo 'data: ' . json_encode($error_event_data) . "\n\n";
                         flush();
@@ -325,18 +325,18 @@ function handle_import_progress_sse($request)
                     $last_status = $current_status;
                     $last_update = $current_time;
 
-                    error_log('[PUNTWORK] SSE: Progress update sent - processed: ' . ( $current_status['processed'] ?? 0 ) . '/' . ( $current_status['total'] ?? 0 ));
+                    error_log('[PUNTWORK] SSE: Progress update sent - processed: ' . ($current_status['processed'] ?? 0) . '/' . ($current_status['total'] ?? 0));
                 }
 
                 // If import is complete, send final update and close connection
                 if (isset($current_status['complete']) && $current_status['complete']) {
                     echo "event: complete\n";
                     echo 'data: ' . json_encode(
-                        array(
+                        [
                             'timestamp' => time(),
-                            'status'    => $current_status,
-                            'message'   => 'Import completed',
-                        )
+                            'status' => $current_status,
+                            'message' => 'Import completed',
+                        ]
                     ) . "\n\n";
                     flush();
 
@@ -348,10 +348,10 @@ function handle_import_progress_sse($request)
                 error_log('[PUNTWORK] SSE: Error in main loop: ' . $e->getMessage());
                 echo "event: error\n";
                 echo 'data: ' . json_encode(
-                    array(
+                    [
                         'timestamp' => time(),
-                        'error'     => $e->getMessage(),
-                    )
+                        'error' => $e->getMessage(),
+                    ]
                 ) . "\n\n";
                 flush();
 
@@ -368,10 +368,10 @@ function handle_import_progress_sse($request)
         error_log('[PUNTWORK] SSE: Stack trace: ' . $e->getTraceAsString());
         echo "event: error\n";
         echo 'data: ' . json_encode(
-            array(
+            [
                 'timestamp' => time(),
-                'error'     => 'SSE initialization failed: ' . $e->getMessage(),
-            )
+                'error' => 'SSE initialization failed: ' . $e->getMessage(),
+            ]
         ) . "\n\n";
         flush();
     }

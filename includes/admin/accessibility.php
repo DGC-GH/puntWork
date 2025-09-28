@@ -96,6 +96,7 @@ function enhance_admin_menu_accessibility($menu)
     // Ensure menu is an array before processing
     if (!is_array($menu)) {
         error_log('[PUNTWORK] enhance_admin_menu_accessibility received non-array menu parameter: ' . gettype($menu) . ' - returning as array');
+
         return is_array($menu) ? $menu : [];
     }
 
