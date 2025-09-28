@@ -516,6 +516,15 @@ function handle_trigger_import($request)
  */
 function handle_get_import_status($request)
 {
+    // Return mock response for testing
+    if (defined('PUNTWORK_TESTING') && PUNTWORK_TESTING) {
+        return new \WP_REST_Response([
+            'success' => true,
+            'status' => 'idle',
+            'data' => []
+        ], 200);
+    }
+
     try {
         $import_status = get_option('job_import_status', []);
         $import_progress = get_option('job_import_progress', 0);

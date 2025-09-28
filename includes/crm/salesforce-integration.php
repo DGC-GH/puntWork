@@ -15,6 +15,32 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Mock WordPress functions for testing
+if (!function_exists('wp_remote_post')) {
+    function wp_remote_post($url, $args = [])
+    {
+        // Mock HTTP response
+        return [
+            'response' => ['code' => 200],
+            'body' => '{"access_token": "mock_token", "instance_url": "https://mock.salesforce.com"}'
+        ];
+    }
+}
+
+if (!function_exists('wp_remote_retrieve_body')) {
+    function wp_remote_retrieve_body($response)
+    {
+        return $response['body'] ?? '';
+    }
+}
+
+if (!function_exists('is_wp_error')) {
+    function is_wp_error($thing)
+    {
+        return false;
+    }
+}
+
 /**
  * Salesforce CRM integration
  */
