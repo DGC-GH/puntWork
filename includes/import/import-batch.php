@@ -857,6 +857,18 @@ function start_scheduled_import(): void
     $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
 
     if ($debug_mode) {
+        error_log('[PUNTWORK] [SCHEDULED-IMPORT] ===== START_SCHEDULED_IMPORT START =====');
+        error_log('[PUNTWORK] [SCHEDULED-IMPORT] Current timestamp: ' . date('Y-m-d H:i:s T'));
+        error_log('[PUNTWORK] [SCHEDULED-IMPORT] Memory usage: ' . memory_get_usage(true) . ' bytes');
+        error_log('[PUNTWORK] [SCHEDULED-IMPORT] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
+        error_log('[PUNTWORK] [SCHEDULED-IMPORT] PHP version: ' . PHP_VERSION);
+        error_log('[PUNTWORK] [SCHEDULED-IMPORT] WordPress version: ' . get_bloginfo('version'));
+        error_log('[PUNTWORK] [SCHEDULED-IMPORT] Current user ID: ' . get_current_user_id());
+        error_log('[PUNTWORK] [SCHEDULED-IMPORT] Request method: ' . $_SERVER['REQUEST_METHOD'] ?? 'cron');
+        error_log('[PUNTWORK] [SCHEDULED-IMPORT] Server: ' . $_SERVER['SERVER_SOFTWARE'] ?? 'unknown');
+    }
+
+    if ($debug_mode) {
         error_log('[PUNTWORK] Starting scheduled import process');
     }
 
@@ -872,18 +884,22 @@ function start_scheduled_import(): void
             $is_complete = $import_status['complete'] ?? false;
             $time_since_update = time() - $last_update;
 
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [SCHEDULED-IMPORT] Import lock check - last_update: ' . $last_update . ', is_complete: ' . ($is_complete ? 'true' : 'false') . ', time_since_update: ' . $time_since_update . 's');
+            }
+
             if ($is_complete || $time_since_update > 1800) { // 30 minutes
                 $is_stale = true;
                 delete_transient($import_lock_key);
                 if ($debug_mode) {
-                    error_log('[PUNTWORK] [IMPORT-LOCK] Cleared stale import lock (complete: ' . ($is_complete ? 'yes' : 'no') . ', time since update: ' . $time_since_update . 's)');
+                    error_log('[PUNTWORK] [SCHEDULED-IMPORT] Cleared stale import lock (complete: ' . ($is_complete ? 'yes' : 'no') . ', time since update: ' . $time_since_update . 's)');
                 }
             }
         }
 
         if (!$is_stale) {
             if ($debug_mode) {
-                error_log('[PUNTWORK] Scheduled import already running - skipping');
+                error_log('[PUNTWORK] [SCHEDULED-IMPORT] Scheduled import already running - skipping');
             }
 
             return;
@@ -891,14 +907,23 @@ function start_scheduled_import(): void
     }
 
     // Start the import
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [SCHEDULED-IMPORT] About to call import_all_jobs_from_json');
+    }
     $result = import_all_jobs_from_json(true); // preserve status
 
     if ($result['success']) {
         if ($debug_mode) {
-            error_log('[PUNTWORK] Scheduled import completed successfully');
+            error_log('[PUNTWORK] [SCHEDULED-IMPORT] Scheduled import completed successfully');
+            error_log('[PUNTWORK] [SCHEDULED-IMPORT] Result summary: processed=' . ($result['processed'] ?? 0) . ', total=' . ($result['total'] ?? 0) . ', published=' . ($result['published'] ?? 0) . ', updated=' . ($result['updated'] ?? 0) . ', skipped=' . ($result['skipped'] ?? 0));
         }
     } elseif ($debug_mode) {
-        error_log('[PUNTWORK] Scheduled import failed: ' . ($result['message'] ?? 'Unknown error'));
+        error_log('[PUNTWORK] [SCHEDULED-IMPORT] Scheduled import failed: ' . ($result['message'] ?? 'Unknown error'));
+        error_log('[PUNTWORK] [SCHEDULED-IMPORT] Result details: ' . json_encode($result));
+    }
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [SCHEDULED-IMPORT] ===== START_SCHEDULED_IMPORT END =====');
     }
 }
 

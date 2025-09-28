@@ -65,6 +65,8 @@ console.log('[PUNTWORK] job-import-api.js loaded');
             console.log('[PUNTWORK] Processing feed key:', feedKey);
             console.log('[PUNTWORK] AJAX URL:', jobImportData.ajaxurl);
             console.log('[PUNTWORK] Nonce:', jobImportData.nonce);
+            console.log('[PUNTWORK] Timestamp:', new Date().toISOString());
+            console.log('[PUNTWORK] Browser info:', navigator.userAgent);
 
             const ajaxData = {
                 action: 'process_feed',
@@ -80,10 +82,13 @@ console.log('[PUNTWORK] job-import-api.js loaded');
                 timeout: 60000, // 60 seconds for feed processing
                 success: function(response) {
                     console.log('[PUNTWORK] AJAX success for processFeed:', response);
+                    console.log('[PUNTWORK] Response timestamp:', new Date().toISOString());
                     if (!response || !response.success) {
                         console.error('[PUNTWORK] ERROR: processFeed AJAX returned unsuccessful response:', response);
                     } else if (response.data && response.data.item_count === 0) {
                         console.warn('[PUNTWORK] WARNING: processFeed AJAX returned success but item_count is 0:', response);
+                    } else {
+                        console.log('[PUNTWORK] SUCCESS: processFeed processed', (response.data && response.data.item_count) || 0, 'items');
                     }
                 },
                 error: function(xhr, status, error) {
@@ -92,7 +97,8 @@ console.log('[PUNTWORK] job-import-api.js loaded');
                         status: status,
                         error: error,
                         statusCode: xhr.status,
-                        responseText: xhr.responseText
+                        responseText: xhr.responseText,
+                        timestamp: new Date().toISOString()
                     });
                 }
             });
@@ -104,10 +110,46 @@ console.log('[PUNTWORK] job-import-api.js loaded');
          * @returns {Promise} AJAX promise
          */
         combineJsonl: function(totalItems) {
+            console.log('[PUNTWORK] ===== API.combineJsonl DEBUG =====');
+            console.log('[PUNTWORK] Combining JSONL files for total items:', totalItems);
+            console.log('[PUNTWORK] AJAX URL:', jobImportData.ajaxurl);
+            console.log('[PUNTWORK] Nonce:', jobImportData.nonce);
+            console.log('[PUNTWORK] Timestamp:', new Date().toISOString());
+            console.log('[PUNTWORK] Browser info:', navigator.userAgent);
+
+            const ajaxData = {
+                action: 'combine_jsonl',
+                total_items: totalItems,
+                nonce: jobImportData.nonce
+            };
+            console.log('[PUNTWORK] AJAX data being sent:', ajaxData);
+
             return $.ajax({
                 url: jobImportData.ajaxurl,
                 type: 'POST',
-                data: { action: 'combine_jsonl', total_items: totalItems, nonce: jobImportData.nonce }
+                data: ajaxData,
+                timeout: 30000, // 30 seconds for JSONL combination
+                success: function(response) {
+                    console.log('[PUNTWORK] AJAX success for combineJsonl:', response);
+                    console.log('[PUNTWORK] Response timestamp:', new Date().toISOString());
+                    if (!response || !response.success) {
+                        console.error('[PUNTWORK] ERROR: combineJsonl AJAX returned unsuccessful response:', response);
+                    } else {
+                        console.log('[PUNTWORK] SUCCESS: combineJsonl completed');
+                        console.log('[PUNTWORK] Combined file exists:', response.data && response.data.combined_file_exists);
+                        console.log('[PUNTWORK] Combined file size:', response.data && response.data.combined_file_size);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('[PUNTWORK] AJAX error for combineJsonl:', {
+                        xhr: xhr,
+                        status: status,
+                        error: error,
+                        statusCode: xhr.status,
+                        responseText: xhr.responseText,
+                        timestamp: new Date().toISOString()
+                    });
+                }
             });
         },
 

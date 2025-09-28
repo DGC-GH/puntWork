@@ -22,7 +22,7 @@ use Puntwork\Utilities\CacheManager;
  */
 function get_feeds(): array
 {
-    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+    $debug_mode = defined('WP_DEBUG') && WP_DEBUG && (!defined('PHPUNIT_RUNNING') || !PHPUNIT_RUNNING);
 
     // Always fetch fresh feeds - no caching
     if ($debug_mode) {
@@ -30,6 +30,11 @@ function get_feeds(): array
         error_log('[PUNTWORK] [FEEDS-START] get_feeds: Always fetching fresh feeds (no caching)');
         error_log('[PUNTWORK] [FEEDS-START] Memory usage: ' . memory_get_usage(true) . ' bytes');
         error_log('[PUNTWORK] [FEEDS-START] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
+        error_log('[PUNTWORK] [FEEDS-START] Current timestamp: ' . date('Y-m-d H:i:s T'));
+        error_log('[PUNTWORK] [FEEDS-START] PHP version: ' . PHP_VERSION);
+        error_log('[PUNTWORK] [FEEDS-START] WordPress version: ' . get_bloginfo('version'));
+        error_log('[PUNTWORK] [FEEDS-START] Current user ID: ' . get_current_user_id());
+        error_log('[PUNTWORK] [FEEDS-START] Request method: ' . $_SERVER['REQUEST_METHOD'] ?? 'unknown');
     }
     $feeds = [];
 
@@ -89,6 +94,7 @@ function get_feeds(): array
 
     if ($debug_mode) {
         error_log('[PUNTWORK] [FEEDS-QUERY] get_feeds: Query found ' . $query->found_posts . ' job-feed posts');
+        error_log('[PUNTWORK] [FEEDS-QUERY] get_feeds: Query post IDs: ' . json_encode($query->posts));
     }
     if ($query->have_posts()) {
         foreach ($query->posts as $post_id) {
@@ -167,6 +173,7 @@ function get_feeds(): array
 
     if ($debug_mode) {
         error_log('[PUNTWORK] [FEEDS-FINAL] get_feeds: Final feeds array: ' . json_encode($feeds));
+        error_log('[PUNTWORK] [FEEDS-FINAL] get_feeds: Total feeds found: ' . count($feeds));
         error_log('[PUNTWORK] [FEEDS-END] ===== GET_FEEDS END =====');
     }
 

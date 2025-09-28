@@ -1193,6 +1193,15 @@ add_action('wp_ajax_process_feed', __NAMESPACE__ . '\\process_feed_ajax');
 function process_feed_ajax()
 {
     error_log('[PUNTWORK] [AJAX-ENTRY] process_feed_ajax function called with POST data: ' . json_encode($_POST));
+    error_log('[PUNTWORK] [AJAX-ENTRY] Current timestamp: ' . date('Y-m-d H:i:s T'));
+    error_log('[PUNTWORK] [AJAX-ENTRY] Memory usage: ' . memory_get_usage(true) . ' bytes');
+    error_log('[PUNTWORK] [AJAX-ENTRY] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
+    error_log('[PUNTWORK] [AJAX-ENTRY] PHP version: ' . PHP_VERSION);
+    error_log('[PUNTWORK] [AJAX-ENTRY] WordPress version: ' . get_bloginfo('version'));
+    error_log('[PUNTWORK] [AJAX-ENTRY] Current user ID: ' . get_current_user_id());
+    error_log('[PUNTWORK] [AJAX-ENTRY] Current user capabilities: ' . (current_user_can('manage_options') ? 'admin' : 'non-admin'));
+    error_log('[PUNTWORK] [AJAX-ENTRY] Request method: ' . $_SERVER['REQUEST_METHOD'] ?? 'unknown');
+    error_log('[PUNTWORK] [AJAX-ENTRY] User agent: ' . $_SERVER['HTTP_USER_AGENT'] ?? 'unknown');
 
     PuntWorkLogger::logAjaxRequest('process_feed', $_POST);
 
@@ -1316,6 +1325,15 @@ add_action('wp_ajax_combine_jsonl', __NAMESPACE__ . '\\combine_jsonl_ajax');
 function combine_jsonl_ajax()
 {
     error_log('[PUNTWORK] [AJAX-ENTRY] combine_jsonl_ajax function called with POST data: ' . json_encode($_POST));
+    error_log('[PUNTWORK] [AJAX-ENTRY] Current timestamp: ' . date('Y-m-d H:i:s T'));
+    error_log('[PUNTWORK] [AJAX-ENTRY] Memory usage: ' . memory_get_usage(true) . ' bytes');
+    error_log('[PUNTWORK] [AJAX-ENTRY] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
+    error_log('[PUNTWORK] [AJAX-ENTRY] PHP version: ' . PHP_VERSION);
+    error_log('[PUNTWORK] [AJAX-ENTRY] WordPress version: ' . get_bloginfo('version'));
+    error_log('[PUNTWORK] [AJAX-ENTRY] Current user ID: ' . get_current_user_id());
+    error_log('[PUNTWORK] [AJAX-ENTRY] Current user capabilities: ' . (current_user_can('manage_options') ? 'admin' : 'non-admin'));
+    error_log('[PUNTWORK] [AJAX-ENTRY] Request method: ' . $_SERVER['REQUEST_METHOD'] ?? 'unknown');
+    error_log('[PUNTWORK] [AJAX-ENTRY] User agent: ' . $_SERVER['HTTP_USER_AGENT'] ?? 'unknown');
 
     PuntWorkLogger::logAjaxRequest('combine_jsonl', $_POST);
 
@@ -1354,6 +1372,8 @@ function combine_jsonl_ajax()
         $output_dir = ABSPATH . 'feeds/';
 
         error_log('[PUNTWORK] [AJAX-SETUP] Combining JSONL for ' . count($feeds) . ' feeds, total_items: ' . $total_items);
+        error_log('[PUNTWORK] [AJAX-SETUP] Available feeds: ' . json_encode($feeds));
+        error_log('[PUNTWORK] [AJAX-SETUP] Output directory: ' . $output_dir);
 
         // Ensure output directory exists
         if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {

@@ -7,4 +7,4 @@
 - commit
 - output summery
 - ask to push
-- remove debug.log on the server
+- remove debug.log on the server via SSH

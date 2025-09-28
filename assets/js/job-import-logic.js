@@ -332,10 +332,16 @@ console.info("=== Job Import Logic Script Loaded ===");
         handleStartImport: async function() {
             console.log('[PUNTWORK] [JS-FLOW] ===== START IMPORT PROCESS =====');
             console.log('[PUNTWORK] [JS-FLOW] handleStartImport called');
+            console.log('[PUNTWORK] [JS-FLOW] Current timestamp: ' + new Date().toISOString());
+            console.log('[PUNTWORK] [JS-FLOW] Browser: ' + navigator.userAgent);
+            console.log('[PUNTWORK] [JS-FLOW] Window location: ' + window.location.href);
+            console.log('[PUNTWORK] [JS-FLOW] jQuery version: ' + $.fn.jquery);
             PuntWorkJSLogger.info('Start Import clicked', 'LOGIC');
             console.log('[PUNTWORK] Start Import clicked');
             console.log('[PUNTWORK] jobImportData:', jobImportData);
             console.log('[PUNTWORK] feeds:', jobImportData.feeds);
+            console.log('[PUNTWORK] nonce:', jobImportData.nonce);
+            console.log('[PUNTWORK] ajaxurl:', jobImportData.ajaxurl);
 
             if (this.isImporting) {
                 console.log('[PUNTWORK] Import already in progress');
@@ -344,12 +350,15 @@ console.info("=== Job Import Logic Script Loaded ===");
 
             // Stop any existing status polling (from scheduled imports)
             if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
+                console.log('[PUNTWORK] [JS-FLOW] Stopping existing status polling');
                 window.JobImportEvents.stopStatusPolling();
             }
 
             this.isImporting = true;
+            console.log('[PUNTWORK] [JS-FLOW] Set isImporting to true');
 
             try {
+                console.log('[PUNTWORK] [JS-FLOW] Clearing progress and setting up UI');
                 JobImportUI.clearProgress();
                 this.startTime = Date.now(); // Record start time in milliseconds
                 JobImportUI.setPhase('feed-processing');
@@ -364,26 +373,36 @@ console.info("=== Job Import Logic Script Loaded ===");
                 $('#status-message').text('Processing feeds...');
 
                 // Reset import
+                console.log('[PUNTWORK] [JS-FLOW] About to reset import');
                 const resetResponse = await JobImportAPI.resetImport();
+                console.log('[PUNTWORK] [JS-FLOW] Reset API response:', resetResponse);
                 if (resetResponse.success) {
                     console.log('[PUNTWORK] Import reset successful');
                     JobImportUI.appendLogs(['Import reset for fresh start']);
+                } else {
+                    console.warn('[PUNTWORK] [JS-FLOW] Import reset failed:', resetResponse);
+                    JobImportUI.appendLogs(['Warning: Import reset failed - ' + (resetResponse.message || 'Unknown error')]);
                 }
 
                 // Additional status reset for real-time updates
+                console.log('[PUNTWORK] [JS-FLOW] About to reset status for real-time updates');
                 const statusResetResponse = await $.ajax({
                     url: jobImportData.ajaxurl,
                     type: 'POST',
                     data: { action: 'reset_job_import_status', nonce: jobImportData.nonce }
                 });
+                console.log('[PUNTWORK] [JS-FLOW] Status reset API response:', statusResetResponse);
                 if (statusResetResponse.success) {
                     console.log('[PUNTWORK] Status reset for real-time updates successful');
                     JobImportUI.appendLogs(['Import status reset for real-time updates']);
+                } else {
+                    console.warn('[PUNTWORK] [JS-FLOW] Status reset failed:', statusResetResponse);
                 }
 
                 // Process feeds
                 const feeds = jobImportData.feeds;
                 console.log('[PUNTWORK] Processing feeds:', feeds);
+                console.log('[PUNTWORK] Number of feeds to process:', Object.keys(feeds).length);
                 let total_items = 0;
                 const total_feeds = Object.keys(feeds).length;
 
@@ -576,6 +595,7 @@ console.info("=== Job Import Logic Script Loaded ===");
             } catch (error) {
                 console.error('[PUNTWORK] ===== START IMPORT ERROR =====');
                 console.error('[PUNTWORK] Error details:', error);
+                console.error('[PUNTWORK] Error stack:', error.stack);
                 PuntWorkJSLogger.error('Start import error', 'LOGIC', error);
                 JobImportUI.appendLogs([error.message]);
                 $('#status-message').text('Error: ' + error.message);
