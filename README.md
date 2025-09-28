@@ -247,14 +247,46 @@ Configure automated imports via **WordPress Admin > puntWork > Scheduling**:
 6. Fix any auto-fixable issues: `./vendor/bin/phpcbf includes/`
 7. Commit with descriptive message
 
-### Pre-Commit Quality Checks
-Before committing code, ensure:
-1. **Tests Pass**: All PHPUnit tests must pass
-2. **Coding Standards**: No PHPCS errors (warnings acceptable for legacy code)
-3. **Syntax Check**: PHP files must have valid syntax
-4. **Documentation**: New methods/classes should have PHPDoc comments
+### Committing Changes
+The repository includes pre-commit hooks that run PHPCS, PHP-CS-Fixer, and PHPUnit to maintain code quality. However, you can bypass these checks for manual commits via VS Code or GitHub UI:
 
-**Note on Automated Formatting**: After running `./vendor/bin/phpcbf` for auto-fixing code style issues, amend your commit to include these formatting changes in the same commit rather than creating separate formatting commits. Use `git commit --amend --no-edit` to include PHPCBF changes without duplicating commits.
+#### Quick Bypass Methods:
+1. **Use the commit script**:
+   ```bash
+   ./commit.sh "Your commit message"
+   ```
+
+2. **Set environment variable**:
+   ```bash
+   SKIP_PRECOMMIT_CHECKS=true git commit -m "Your message"
+   ```
+
+3. **Use commit message patterns** (for manual commits):
+   ```bash
+   git commit -m "WIP: Your message"  # Contains "WIP"
+   git commit -m "fixup: Your message" # Contains "fixup"
+   git commit -m "skip-checks: Your message" # Contains "skip-checks"
+   ```
+
+4. **Standard Git bypass**:
+   ```bash
+   git commit --no-verify -m "Your message"
+   ```
+
+#### When to Bypass Checks:
+- **Manual commits** via VS Code/GitHub UI
+- **Work-in-progress** commits that will be rebased
+- **Documentation-only** changes
+- **Configuration** changes
+- **Emergency fixes** when checks are failing
+
+#### When to Keep Checks:
+- **Feature completion** commits
+- **Bug fixes** that should pass all tests
+- **Code refactoring** that changes logic
+- **Before pull requests**
+
+The pre-commit hooks ensure development quality while allowing flexibility for manual commits.
 
 ### Pull Request Checklist
 - [ ] Tests pass (`./vendor/bin/phpunit`)

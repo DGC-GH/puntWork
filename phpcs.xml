@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<ruleset name="PuntWork">
+    <description>PuntWork WordPress Plugin Coding Standards</description>
+
+    <!-- Use WordPress coding standards -->
+    <rule ref="WordPress"/>
+    <rule ref="WordPress-Core"/>
+    <rule ref="WordPress-Extra"/>
+
+    <!-- Set the minimum PHP version -->
+    <config name="testVersion" value="8.2-"/>
+
+    <!-- Exclude vendor directory -->
+    <exclude-pattern>vendor/*</exclude-pattern>
+    <exclude-pattern>node_modules/*</exclude-pattern>
+
+    <!-- Custom rules -->
+    <rule ref="Generic.Files.LineLength">
+        <properties>
+            <property name="lineLimit" value="120"/>
+            <property name="absoluteLineLimit" value="120"/>
+        </properties>
+    </rule>
+
+    <!-- Allow some warnings for development -->
+    <rule ref="WordPress.Files.FileName">
+        <exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
+    </rule>
+</ruleset>
