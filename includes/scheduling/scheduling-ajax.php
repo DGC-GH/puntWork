@@ -20,25 +20,9 @@ if (!defined('ABSPATH')) {
 
 // Explicitly load required utility classes for AJAX context
 require_once __DIR__ . '/../utilities/SecurityUtils.php';
-function get_import_run_history_ajax()
-{
-    PuntWorkLogger::logAjaxRequest('get_import_run_history', $_POST);
-
-    // Simple validation for debugging
-    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'job_import_nonce')) {
-        error_log('[PUNTWORK] [DEBUG-AJAX] Nonce verification failed for get_import_run_history');
-        wp_send_json_error(['message' => 'Security check failed']);
-        return;
-    }
-
-    if (!current_user_can('manage_options')) {
-        error_log('[PUNTWORK] [DEBUG-AJAX] Insufficient permissions for get_import_run_history');
-        wp_send_json_error(['message' => 'Insufficient permissions']);
-        return;
-    }
-
-    try {__DIR__ . '/../utilities/AjaxErrorHandler.php';
+require_once __DIR__ . '/../utilities/AjaxErrorHandler.php';
 require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
+
 add_action(
     'wp_ajax_debug_trigger_async',
     function () {
@@ -323,21 +307,17 @@ function get_import_run_history_ajax()
 
     PuntWorkLogger::logAjaxRequest('get_import_run_history', $_POST);
 
-    // Use comprehensive security validation
-    if ($debug_mode) {
-        error_log('[PUNTWORK] [HISTORY-AJAX-DEBUG] Starting security validation');
-    }
-    $validation = SecurityUtils::validateAjaxRequest('get_import_run_history', 'job_import_nonce');
-    if (is_wp_error($validation)) {
-        if ($debug_mode) {
-            error_log('[PUNTWORK] [HISTORY-AJAX-ERROR] Security validation failed: ' . $validation->get_error_message());
-        }
-        AjaxErrorHandler::sendError($validation);
-
+    // Simple validation for debugging
+    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'job_import_nonce')) {
+        error_log('[PUNTWORK] [DEBUG-AJAX] Nonce verification failed for get_import_run_history');
+        wp_send_json_error(['message' => 'Security check failed']);
         return;
     }
-    if ($debug_mode) {
-        error_log('[PUNTWORK] [HISTORY-AJAX-DEBUG] Security validation passed');
+
+    if (!current_user_can('manage_options')) {
+        error_log('[PUNTWORK] [DEBUG-AJAX] Insufficient permissions for get_import_run_history');
+        wp_send_json_error(['message' => 'Insufficient permissions']);
+        return;
     }
 
     try {
