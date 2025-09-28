@@ -330,7 +330,8 @@ console.info("=== Job Import Logic Script Loaded ===");
          * @returns {Promise} Start import process promise
          */
         handleStartImport: async function() {
-            console.log('[PUNTWORK] ===== START IMPORT PROCESS =====');
+            console.log('[PUNTWORK] [JS-FLOW] ===== START IMPORT PROCESS =====');
+            console.log('[PUNTWORK] [JS-FLOW] handleStartImport called');
             PuntWorkJSLogger.info('Start Import clicked', 'LOGIC');
             console.log('[PUNTWORK] Start Import clicked');
             console.log('[PUNTWORK] jobImportData:', jobImportData);
@@ -493,12 +494,13 @@ console.info("=== Job Import Logic Script Loaded ===");
                     complete: false
                 });
 
+                console.log('[PUNTWORK] [JS-FLOW] About to call JobImportAPI.combineJsonl with total_items=' + total_items);
                 const combineResponse = await JobImportAPI.combineJsonl(total_items);
-                console.log('[PUNTWORK] JSONL combination response:', combineResponse);
+                console.log('[PUNTWORK] [JS-FLOW] combineJsonl response received:', combineResponse);
                 PuntWorkJSLogger.debug('Combine JSONL response', 'LOGIC', combineResponse);
 
                 if (combineResponse.success) {
-                    console.log('[PUNTWORK] JSONL combination successful');
+                    console.log('[PUNTWORK] [JS-FLOW] JSONL combination successful - import should start automatically');
                     JobImportUI.appendLogs(combineResponse.data.logs || []);
 
                     // Update progress to show JSONL combination complete
@@ -514,13 +516,13 @@ console.info("=== Job Import Logic Script Loaded ===");
                         complete: false
                     });
                 } else {
-                    console.error('[PUNTWORK] JSONL combination failed:', combineResponse);
+                    console.error('[PUNTWORK] [JS-FLOW] JSONL combination failed:', combineResponse);
                     throw new Error('Combining JSONL failed: ' + (combineResponse.message || 'Unknown error'));
                 }
 
                 console.log('[PUNTWORK] ===== PHASE 2 COMPLETE =====');
                 console.log('[PUNTWORK] ===== PHASE 3: BATCH IMPORT =====');
-                // Start import
+                // Import will start automatically after JSONL combination
                 $('#status-message').text('Starting import...');
                 JobImportUI.appendLogs(['Starting batch import processing...']);
                 await JobImportAPI.clearImportCancel();
@@ -559,20 +561,17 @@ console.info("=== Job Import Logic Script Loaded ===");
                     PuntWorkJSLogger.warn('Real-time updates not supported in this browser', 'LOGIC');
                 }
                 
-                console.log('[PUNTWORK] Starting batch import with', total_items, 'items');
+                console.log('[PUNTWORK] [JS-FLOW] Import started automatically by server after JSONL combination - no manual handleImport(0) call needed');
+                PuntWorkJSLogger.info('Import started automatically by server after JSONL combination', 'LOGIC');
                 
-                // Start status polling for real-time UI updates before beginning batch processing
+                // Start status polling for real-time UI updates
                 if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
-                    console.log('[PUNTWORK] Starting status polling for real-time UI updates');
+                    console.log('[PUNTWORK] [JS-FLOW] Starting status polling for real-time UI updates');
                     window.JobImportEvents.startStatusPolling();
                 }
                 
-                // Add a small delay to ensure status polling is ready
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                console.log('[PUNTWORK] ===== CALLING handleImport(0) =====');
-                PuntWorkJSLogger.info('About to call handleImport(0)', 'LOGIC');
-                await this.handleImport(0);
+                // The import has been started automatically by the server
+                // Status polling will show the progress
 
             } catch (error) {
                 console.error('[PUNTWORK] ===== START IMPORT ERROR =====');

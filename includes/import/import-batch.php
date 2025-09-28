@@ -140,10 +140,12 @@ if (! function_exists('import_jobs_from_json')) {
     function import_jobs_from_json(bool $is_batch = false, int $batch_start = 0): array
     {
         try {
+            error_log('[PUNTWORK] [IMPORT-START] import_jobs_from_json called with is_batch=' . ($is_batch ? 'true' : 'false') . ', batch_start=' . $batch_start);
+            
             // Check for concurrent import lock
             $import_lock_key = 'puntwork_import_lock';
             if (get_transient($import_lock_key)) {
-                error_log('[PUNTWORK] Import already running - skipping concurrent import');
+                error_log('[PUNTWORK] [IMPORT-LOCK] Import already running - rejecting concurrent import');
                 return array(
                  'success' => false,
                  'message' => 'Import already running',
@@ -153,8 +155,8 @@ if (! function_exists('import_jobs_from_json')) {
 
             // Set import lock
             set_transient($import_lock_key, true, 600); // 10 minutes timeout
-            error_log('[PUNTWORK] Import lock set');
-
+            error_log('[PUNTWORK] [IMPORT-LOCK] Import lock set successfully');
+            
             error_log('=== PUNTWORK IMPORT DEBUG: import_jobs_from_json STARTED ===');
             error_log(
                 '[PUNTWORK] import_jobs_from_json called with is_batch=' . ( $is_batch ? 'true' : 'false' ) .

@@ -118,21 +118,21 @@ function prepare_import_setup($batch_start = 0)
     ignore_user_abort(true);
 
     global $wpdb;
-    error_log('[PUNTWORK] prepare_import_setup called with batch_start=' . $batch_start);
+    error_log('[PUNTWORK] [SETUP-START] prepare_import_setup called with batch_start=' . $batch_start);
 
     try {
         $acf_fields = get_acf_fields();
-        error_log('[PUNTWORK] Got ACF fields: ' . count($acf_fields));
+        error_log('[PUNTWORK] [SETUP-ACF] Got ACF fields: ' . count($acf_fields));
     } catch (\Exception $e) {
-        error_log('[PUNTWORK] Error getting ACF fields: ' . $e->getMessage());
+        error_log('[PUNTWORK] [SETUP-ERROR] Error getting ACF fields: ' . $e->getMessage());
         return new WP_Error('acf_error', 'Failed to get ACF fields: ' . $e->getMessage());
     }
 
     try {
         $zero_empty_fields = get_zero_empty_fields();
-        error_log('[PUNTWORK] Got zero empty fields: ' . count($zero_empty_fields));
+        error_log('[PUNTWORK] [SETUP-ZERO] Got zero empty fields: ' . count($zero_empty_fields));
     } catch (\Exception $e) {
-        error_log('[PUNTWORK] Error getting zero empty fields: ' . $e->getMessage());
+        error_log('[PUNTWORK] [SETUP-ERROR] Error getting zero empty fields: ' . $e->getMessage());
         return new WP_Error('zero_fields_error', 'Failed to get zero empty fields: ' . $e->getMessage());
     }
 
@@ -153,35 +153,35 @@ function prepare_import_setup($batch_start = 0)
     }
 
     $json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
-    error_log('[PUNTWORK] [DEBUG] prepare_import_setup: JSONL path: ' . $json_path);
-    error_log('[PUNTWORK] [DEBUG] prepare_import_setup: ABSPATH: ' . ABSPATH);
-    error_log('[PUNTWORK] [DEBUG] prepare_import_setup: feeds/ directory exists: ' . ( is_dir(ABSPATH . 'feeds/') ? 'yes' : 'no' ));
-    error_log('[PUNTWORK] [DEBUG] prepare_import_setup: feeds/ directory writable: ' . ( is_writable(ABSPATH . 'feeds/') ? 'yes' : 'no' ));
+    error_log('[PUNTWORK] [SETUP-FILE] JSONL path: ' . $json_path);
+    error_log('[PUNTWORK] [SETUP-FILE] ABSPATH: ' . ABSPATH);
+    error_log('[PUNTWORK] [SETUP-FILE] feeds/ directory exists: ' . ( is_dir(ABSPATH . 'feeds/') ? 'yes' : 'no' ));
+    error_log('[PUNTWORK] [SETUP-FILE] feeds/ directory writable: ' . ( is_writable(ABSPATH . 'feeds/') ? 'yes' : 'no' ));
     $files_in_feeds = glob(ABSPATH . 'feeds/*');
-    error_log('[PUNTWORK] [DEBUG] prepare_import_setup: Files in feeds/ directory: ' . print_r($files_in_feeds, true));
-    error_log('[PUNTWORK] [DEBUG] prepare_import_setup: File exists: ' . ( file_exists($json_path) ? 'yes' : 'no' ));
+    error_log('[PUNTWORK] [SETUP-FILE] Files in feeds/ directory: ' . print_r($files_in_feeds, true));
+    error_log('[PUNTWORK] [SETUP-FILE] File exists: ' . ( file_exists($json_path) ? 'yes' : 'no' ));
     if (file_exists($json_path)) {
-        error_log('[PUNTWORK] [DEBUG] prepare_import_setup: File size: ' . filesize($json_path) . ' bytes');
+        error_log('[PUNTWORK] [SETUP-FILE] File size: ' . filesize($json_path) . ' bytes');
         $mtime = filemtime($json_path);
-        error_log('[PUNTWORK] [DEBUG] prepare_import_setup: File mtime: ' . date('Y-m-d H:i:s', $mtime) . ', age: ' . ( time() - $mtime ) . ' seconds');
+        error_log('[PUNTWORK] [SETUP-FILE] File mtime: ' . date('Y-m-d H:i:s', $mtime) . ', age: ' . ( time() - $mtime ) . ' seconds');
         $first_line = '';
         $handle     = fopen($json_path, 'r');
         if ($handle) {
             $first_line = fgets($handle);
             fclose($handle);
-            error_log('[PUNTWORK] [DEBUG] prepare_import_setup: First line preview: ' . substr($first_line, 0, 200));
+            error_log('[PUNTWORK] [SETUP-FILE] First line preview: ' . substr($first_line, 0, 200));
         }
     }
 
     if (! file_exists($json_path)) {
-        error_log('[PUNTWORK] [DEBUG] prepare_import_setup: JSONL file not found: ' . $json_path . ' - checking if feeds need to be processed first');
+        error_log('[PUNTWORK] [SETUP-ERROR] JSONL file not found: ' . $json_path . ' - checking if feeds need to be processed first');
         // Check if there are any individual feed files
         $feed_files = glob(ABSPATH . 'feeds/*.jsonl');
-        error_log('[PUNTWORK] [DEBUG] prepare_import_setup: Individual feed files found: ' . print_r($feed_files, true));
+        error_log('[PUNTWORK] [SETUP-ERROR] Individual feed files found: ' . print_r($feed_files, true));
         if (empty($feed_files)) {
-            error_log('[PUNTWORK] [DEBUG] prepare_import_setup: No individual feed files found - feeds may not be configured or processed');
+            error_log('[PUNTWORK] [SETUP-ERROR] No individual feed files found - feeds may not be configured or processed');
         } else {
-            error_log('[PUNTWORK] [DEBUG] prepare_import_setup: Individual feeds exist but combined file missing - need to run combine_jsonl_files');
+            error_log('[PUNTWORK] [SETUP-ERROR] Individual feeds exist but combined file missing - need to run combine_jsonl_files');
         }
         return array(
         'success' => false,
@@ -191,7 +191,7 @@ function prepare_import_setup($batch_start = 0)
     }
 
     if (! is_readable($json_path)) {
-        error_log('[PUNTWORK] JSONL file not readable: ' . $json_path);
+        error_log('[PUNTWORK] [SETUP-ERROR] JSONL file not readable: ' . $json_path);
         return array(
         'success' => false,
         'message' => 'JSONL file not readable',
@@ -202,7 +202,7 @@ function prepare_import_setup($batch_start = 0)
     // Validate JSONL file integrity
     $validation = validate_jsonl_file($json_path);
     if (is_wp_error($validation)) {
-        error_log('[PUNTWORK] JSONL validation failed: ' . $validation->get_error_message());
+        error_log('[PUNTWORK] [SETUP-ERROR] JSONL validation failed: ' . $validation->get_error_message());
         return array(
         'success' => false,
         'message' => 'JSONL file validation failed: ' . $validation->get_error_message(),
@@ -212,14 +212,14 @@ function prepare_import_setup($batch_start = 0)
 
     try {
         $total = get_json_item_count($json_path);
-        error_log('[PUNTWORK] Total items in JSONL: ' . $total);
+        error_log('[PUNTWORK] [SETUP-COUNT] Total items in JSONL: ' . $total);
     } catch (\Exception $e) {
-        error_log('[PUNTWORK] Error counting JSONL items: ' . $e->getMessage());
+        error_log('[PUNTWORK] [SETUP-ERROR] Error counting JSONL items: ' . $e->getMessage());
         return new WP_Error('count_error', 'Failed to count JSONL items: ' . $e->getMessage());
     }
 
     if ($total == 0) {
-        error_log('[PUNTWORK] prepare_import_setup: EARLY RETURN - total is 0, no items to import');
+        error_log('[PUNTWORK] [SETUP-EARLY] EARLY RETURN - total is 0, no items to import');
         return array(
         'success'            => true,
         'processed'          => 0,
@@ -253,11 +253,11 @@ function prepare_import_setup($batch_start = 0)
     // For fresh starts (batch_start = 0), reset the status and create new start time
     if ($batch_start === 0) {
         $start_index = 0;
-        error_log('[PUNTWORK] prepare_import_setup: fresh start detected, setting start_index to 0');
+        error_log('[PUNTWORK] [SETUP-FRESH] Fresh start detected, setting start_index to 0');
         // Check if existing status total matches current total
         $existing_status = get_option('job_import_status', array());
         if (isset($existing_status['total']) && $existing_status['total'] != $total) {
-            error_log('[PUNTWORK] [WARNING] Existing status total (' . $existing_status['total'] . ') does not match current file total (' . $total . ') - resetting status');
+            error_log('[PUNTWORK] [SETUP-FRESH] Existing status total (' . $existing_status['total'] . ') does not match current file total (' . $total . ') - resetting status');
             delete_option('job_import_status');
         }
         // Clear processed GUIDs for fresh start
@@ -291,10 +291,11 @@ function prepare_import_setup($batch_start = 0)
         'logs'               => array( 'Manual import started - preparing to process items...' ),
         );
         update_option('job_import_status', $initial_status, false);
+        error_log('[PUNTWORK] [SETUP-FRESH] Initialized fresh import status with total=' . $total);
     }
 
     if ($start_index >= $total) {
-        error_log('[PUNTWORK] prepare_import_setup: EARLY RETURN - start_index (' . $start_index . ') >= total (' . $total . ') - import appears complete');
+        error_log('[PUNTWORK] [SETUP-EARLY] EARLY RETURN - start_index (' . $start_index . ') >= total (' . $total . ') - import appears complete');
         return array(
         'success'            => true,
         'processed'          => $total,
@@ -315,7 +316,7 @@ function prepare_import_setup($batch_start = 0)
         );
     }
 
-    error_log('[PUNTWORK] prepare_import_setup: NORMAL RETURN - start_index=' . $start_index . ', total=' . $total . ', json_path=' . $json_path);
+    error_log('[PUNTWORK] [SETUP-FINAL] NORMAL RETURN - start_index=' . $start_index . ', total=' . $total . ', json_path=' . $json_path);
     return array(
     'acf_fields'        => $acf_fields,
     'zero_empty_fields' => $zero_empty_fields,

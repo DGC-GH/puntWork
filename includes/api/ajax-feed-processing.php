@@ -163,6 +163,37 @@ function combine_jsonl_ajax()
         combine_jsonl_files($feeds, $output_dir, $total_items, $logs);
         PuntWorkLogger::info('JSONL files combined successfully', PuntWorkLogger::CONTEXT_FEED, array( 'total_items' => $total_items ));
 
+        // Automatically start the import after successful JSONL combination
+        PuntWorkLogger::info('Automatically starting import after JSONL combination', PuntWorkLogger::CONTEXT_FEED);
+        error_log('[PUNTWORK] [AUTO-IMPORT] Starting automatic import after JSONL combination for ' . $total_items . ' items');
+        
+        // Clear import cancel flag
+        delete_transient('import_cancel');
+        PuntWorkLogger::info('Import cancellation flag cleared for automatic start', PuntWorkLogger::CONTEXT_FEED);
+        error_log('[PUNTWORK] [AUTO-IMPORT] Import cancel flag cleared');
+        
+        // Start the import process
+        if (! function_exists('import_jobs_from_json')) {
+            error_log('[PUNTWORK] [AUTO-IMPORT] import_jobs_from_json function not found, attempting to load import-batch.php');
+            // Load import functions if not already loaded
+            require_once __DIR__ . '/../import/import-batch.php';
+            error_log('[PUNTWORK] [AUTO-IMPORT] import-batch.php loaded, function available: ' . (function_exists('import_jobs_from_json') ? 'yes' : 'no'));
+        }
+        
+        error_log('[PUNTWORK] [AUTO-IMPORT] About to call import_jobs_from_json(true, 0)');
+        $import_result = import_jobs_from_json(true, 0);
+        error_log('[PUNTWORK] [AUTO-IMPORT] import_jobs_from_json returned: ' . json_encode($import_result));
+        
+        if ($import_result['success']) {
+            PuntWorkLogger::info('Import started successfully after JSONL combination', PuntWorkLogger::CONTEXT_FEED);
+            $logs[] = 'Import started automatically after JSONL combination';
+            error_log('[PUNTWORK] [AUTO-IMPORT] Import started successfully - processed: ' . ($import_result['processed'] ?? 0) . ', total: ' . ($import_result['total'] ?? 0));
+        } else {
+            PuntWorkLogger::error('Failed to start import after JSONL combination: ' . ($import_result['message'] ?? 'Unknown error'), PuntWorkLogger::CONTEXT_FEED);
+            $logs[] = 'Failed to start import after JSONL combination: ' . ($import_result['message'] ?? 'Unknown error');
+            error_log('[PUNTWORK] [AUTO-IMPORT] Import failed to start: ' . ($import_result['message'] ?? 'Unknown error'));
+        }
+
         PuntWorkLogger::logAjaxResponse('combine_jsonl', array( 'logs_count' => count($logs) ));
         AjaxErrorHandler::sendSuccess(array( 'logs' => $logs ));
     } catch (\Exception $e) {
