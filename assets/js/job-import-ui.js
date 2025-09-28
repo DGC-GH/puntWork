@@ -200,6 +200,12 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             var processed = data.processed || 0;
             var percent = 0;
 
+            // Detect if we should force phase to job-importing when total changes significantly (e.g., from feeds to jobs)
+            if (this.currentPhase === 'feed-processing' && total > 10) {
+                this.setPhase('job-importing');
+                PuntWorkJSLogger.debug('Forced transition to job-importing phase due to large total (' + total + ')', 'UI');
+            }
+
             // Update success/failure state - only set to true when actually complete
             if (data.success !== null) {
                 // Only set importSuccess to true when the import is actually complete

@@ -9,16 +9,16 @@
  */
 
 // Prevent direct access
-if (! defined('ABSPATH') ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
-if (! function_exists('process_batch_items') ) {
-    function process_batch_items( $batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count )
+if (! function_exists('process_batch_items')) {
+    function process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count)
     {
         error_log('[PUNTWORK] [ITEMS-DEBUG] process_batch_items called with ' . count($batch_guids) . ' GUIDs');
         error_log('[PUNTWORK] [ITEMS-DEBUG] batch_items keys: ' . implode(', ', array_keys($batch_items)));
-        if (empty($batch_guids) ) {
+        if (empty($batch_guids)) {
             error_log('[PUNTWORK] [ITEMS-DEBUG] process_batch_items called with empty batch_guids - no items to process');
             return;
         }
@@ -45,17 +45,19 @@ if (! function_exists('process_batch_items') ) {
         $item_counter = 0;
         $intermediate_update_interval = 10; // Update status every 10 items
         $last_intermediate_update = 0;
-        
-        foreach ( $batch_guids as $guid ) {
+
+        foreach ($batch_guids as $guid) {
             // Check for cancellation at the start of each item
             if (get_transient('import_cancel')) {
                 $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch processing cancelled by user';
                 error_log('[PUNTWORK] [ITEMS-DEBUG] Batch processing cancelled by user at item ' . $item_counter);
                 break;
             }
-            
+
             ++$item_counter;
-            error_log('[PUNTWORK] [ITEMS-DEBUG] ===== STARTING ITEM ' . $item_counter . '/' . $total_to_process . ' =====');
+            if ($item_counter % 100 === 0) {
+                error_log('[PUNTWORK] [ITEMS-DEBUG] ===== STARTING ITEM ' . $item_counter . '/' . $total_to_process . ' =====');
+            }
             error_log('[PUNTWORK] [ITEMS-DEBUG] Processing GUID: ' . $guid);
             error_log('[PUNTWORK] [ITEMS-DEBUG] GUID exists in batch_items: ' . (isset($batch_items[$guid]) ? 'yes' : 'no'));
             try {
@@ -69,14 +71,14 @@ if (! function_exists('process_batch_items') ) {
                 error_log('[PUNTWORK] [ITEMS-DEBUG] Item company: "' . (isset($item['company']) ? $item['company'] : 'MISSING') . '"');
 
                 // If post exists, check if it needs updating
-                if ($post_id ) {
+                if ($post_id) {
                     error_log('[PUNTWORK] [ITEMS-DEBUG] Post exists for GUID ' . $guid . ' (ID: ' . $post_id . '), checking if update needed');
 
                     // First, ensure the job is published if it's in the feed
                     $current_post_status = $post_statuses[ $post_id ] ?? 'draft';
                     error_log('[PUNTWORK] [ITEMS-DEBUG] Current post status: ' . $current_post_status);
 
-                    if ($current_post_status !== 'publish' ) {
+                    if ($current_post_status !== 'publish') {
                         error_log('[PUNTWORK] [ITEMS-DEBUG] Republishing post ' . $post_id . ' for GUID ' . $guid . ' (was ' . $current_post_status . ')');
                         wp_update_post(
                             array(
@@ -152,7 +154,7 @@ if (! function_exists('process_batch_items') ) {
 
                     // Prepare ACF field updates for bulk operation
                     $acf_updates = array();
-                    foreach ( $acf_fields as $field ) {
+                    foreach ($acf_fields as $field) {
                         $value      = $item[ $field ] ?? '';
                         $is_special = in_array($field, $zero_empty_fields);
                         $set_value  = $is_special && $value === '0' ? '' : $value;
@@ -162,12 +164,16 @@ if (! function_exists('process_batch_items') ) {
                         $set_value_str = is_array($set_value) ? json_encode($set_value) : (string)$set_value;
 
                         $acf_updates[ $field ] = $set_value;
-                        error_log('[PUNTWORK] [ITEMS-DEBUG] ACF field ' . $field . ': "' . substr($value_str, 0, 50) . '" -> "' . substr($set_value_str, 0, 50) . '"');
+                        if ($item_counter % 100 === 0) {
+                            error_log('[PUNTWORK] [ITEMS-DEBUG] ACF field ' . $field . ': "' . substr($value_str, 0, 50) . '" -> "' . substr($set_value_str, 0, 50) . '"');
+                        }
                     }
 
                     // Use bulk update for ACF fields to avoid N+1 queries
                     bulk_update_post_meta($post_id, $acf_updates);
-                    error_log('[PUNTWORK] [ITEMS-DEBUG] ACF fields updated successfully');
+                    if ($item_counter % 100 === 0) {
+                        error_log('[PUNTWORK] [ITEMS-DEBUG] ACF fields updated successfully');
+                    }
 
                        ++$updated;
                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Updated ID: ' . $post_id . ' GUID: ' . $guid;
@@ -193,7 +199,7 @@ if (! function_exists('process_batch_items') ) {
                     );
 
                     $post_id = wp_insert_post($post_data);
-                    if (is_wp_error($post_id) ) {
+                    if (is_wp_error($post_id)) {
                         $error_msg = 'Create failed GUID: ' . $guid . ' - ' . $post_id->get_error_message();
                         $logs[]    = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
                         error_log('[PUNTWORK] [ITEMS-DEBUG] ERROR: Post creation failed for GUID ' . $guid . ': ' . $post_id->get_error_message());
@@ -210,7 +216,7 @@ if (! function_exists('process_batch_items') ) {
 
                     // Prepare ACF field updates for bulk operation
                     $acf_updates = array();
-                    foreach ( $acf_fields as $field ) {
+                    foreach ($acf_fields as $field) {
                         $value      = $item[ $field ] ?? '';
                         $is_special = in_array($field, $zero_empty_fields);
                         $set_value  = $is_special && $value === '0' ? '' : $value;
@@ -220,12 +226,16 @@ if (! function_exists('process_batch_items') ) {
                         $set_value_str = is_array($set_value) ? json_encode($set_value) : (string)$set_value;
 
                         $acf_updates[ $field ] = $set_value;
-                        error_log('[PUNTWORK] [ITEMS-DEBUG] ACF field ' . $field . ': "' . substr($value_str, 0, 50) . '" -> "' . substr($set_value_str, 0, 50) . '"');
+                        if ($item_counter % 100 === 0) {
+                            error_log('[PUNTWORK] [ITEMS-DEBUG] ACF field ' . $field . ': "' . substr($value_str, 0, 50) . '" -> "' . substr($set_value_str, 0, 50) . '"');
+                        }
                     }
 
                     // Use bulk update for ACF fields to avoid N+1 queries
                     bulk_update_post_meta($post_id, $acf_updates);
-                    error_log('[PUNTWORK] [ITEMS-DEBUG] ACF fields updated successfully for new post');
+                    if ($item_counter % 100 === 0) {
+                        error_log('[PUNTWORK] [ITEMS-DEBUG] ACF fields updated successfully for new post');
+                    }
 
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Published ID: ' . $post_id . ' GUID: ' . $guid;
                     error_log('[PUNTWORK] [ITEMS-DEBUG] ===== COMPLETED ITEM ' . $item_counter . ' - PUBLISHED =====');
@@ -244,12 +254,12 @@ if (! function_exists('process_batch_items') ) {
                     }
                 }
 
-                if ($processed_count % 5 === 0 ) {
+                if ($processed_count % 5 === 0) {
                     error_log('[PUNTWORK] [ITEMS-DEBUG] Processed ' . $processed_count . ' items so far in batch');
                     ob_flush();
                     flush();
                 }
-            } catch ( \Exception $e ) {
+            } catch (\Exception $e) {
                 $error_msg = 'Error processing GUID ' . $guid . ': ' . $e->getMessage();
                 $logs[]    = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
                 error_log('[PUNTWORK] [ITEMS-DEBUG] EXCEPTION processing GUID ' . $guid . ': ' . $e->getMessage());
