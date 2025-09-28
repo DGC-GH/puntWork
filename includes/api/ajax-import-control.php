@@ -1156,3 +1156,203 @@ function save_async_settings_ajax()
         AjaxErrorHandler::sendError('Failed to save async settings: ' . $e->getMessage());
     }
 }
+
+add_action('wp_ajax_process_feed', __NAMESPACE__ . '\\process_feed_ajax');
+function process_feed_ajax()
+{
+    error_log('[PUNTWORK] [AJAX-ENTRY] process_feed_ajax function called with POST data: ' . json_encode($_POST));
+
+    PuntWorkLogger::logAjaxRequest('process_feed', $_POST);
+
+    // Ensure required functions are loaded
+    if (!function_exists('process_one_feed')) {
+        error_log('[PUNTWORK] [AJAX-LOAD] Loading core-structure-logic.php for process_one_feed function');
+        require_once __DIR__ . '/../core/core-structure-logic.php';
+        error_log('[PUNTWORK] [AJAX-LOAD] process_one_feed function available: ' . (function_exists('process_one_feed') ? 'yes' : 'no'));
+    }
+
+    // Use comprehensive security validation with field validation
+    $validation = SecurityUtils::validateAjaxRequest(
+        'process_feed',
+        'job_import_nonce',
+        ['feed_key'], // required fields
+        [
+            'feed_key' => [
+                'type' => 'string',
+                'max_length' => 100,
+            ],
+        ]
+    );
+
+    if (is_wp_error($validation)) {
+        error_log('[PUNTWORK] [AJAX-VALIDATION] process_feed validation failed: ' . $validation->get_error_message());
+        AjaxErrorHandler::sendError($validation);
+        return;
+    }
+    error_log('[PUNTWORK] [AJAX-VALIDATION] process_feed validation passed');
+
+    try {
+        $feed_key = sanitize_text_field($_POST['feed_key']);
+        error_log('[PUNTWORK] [AJAX-PROCESS] Processing feed: ' . $feed_key);
+        
+        // Get feeds and find the URL for this feed key
+        $feeds = get_feeds();
+        error_log('[PUNTWORK] [AJAX-FEEDS] Available feeds: ' . json_encode($feeds));
+        if (!isset($feeds[$feed_key])) {
+            error_log('[PUNTWORK] [AJAX-ERROR] Feed not found: ' . $feed_key);
+            AjaxErrorHandler::sendError('Feed not found: ' . $feed_key);
+            return;
+        }
+        
+        $feed_url = $feeds[$feed_key];
+        $output_dir = ABSPATH . 'feeds/';
+        $fallback_domain = 'belgiumjobs.work';
+        
+        error_log('[PUNTWORK] [AJAX-SETUP] Feed URL: ' . $feed_url . ', Output dir: ' . $output_dir);
+        
+        // Ensure output directory exists
+        if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
+            error_log('[PUNTWORK] [AJAX-ERROR] Feeds directory not writable: ' . $output_dir);
+            AjaxErrorHandler::sendError('Feeds directory not writable');
+            return;
+        }
+        error_log('[PUNTWORK] [AJAX-SETUP] Output directory ready');
+        
+        $logs = [];
+        error_log('[PUNTWORK] [AJAX-CALL] Calling process_one_feed...');
+        $item_count = process_one_feed($feed_key, $feed_url, $output_dir, $fallback_domain, $logs);
+        error_log('[PUNTWORK] [AJAX-RESULT] process_one_feed returned item_count: ' . $item_count);
+        error_log('[PUNTWORK] [AJAX-RESULT] Logs from processing: ' . json_encode($logs));
+        
+        PuntWorkLogger::info(
+            'Feed processed via AJAX',
+            PuntWorkLogger::CONTEXT_AJAX,
+            [
+                'feed_key' => $feed_key,
+                'item_count' => $item_count,
+                'feed_url' => $feed_url,
+            ]
+        );
+
+        PuntWorkLogger::logAjaxResponse('process_feed', [
+            'feed_key' => $feed_key,
+            'item_count' => $item_count,
+            'logs' => $logs,
+        ]);
+        
+        error_log('[PUNTWORK] [AJAX-SUCCESS] process_feed_ajax completed successfully');
+        AjaxErrorHandler::sendSuccess([
+            'feed_key' => $feed_key,
+            'item_count' => $item_count,
+            'logs' => $logs,
+        ]);
+    } catch (\Exception $e) {
+        error_log('[PUNTWORK] [AJAX-EXCEPTION] process_feed_ajax exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+        error_log('[PUNTWORK] [AJAX-EXCEPTION] Stack trace: ' . $e->getTraceAsString());
+        PuntWorkLogger::error('Process feed AJAX error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        AjaxErrorHandler::sendError('Failed to process feed: ' . $e->getMessage());
+    }
+}
+
+add_action('wp_ajax_combine_jsonl', __NAMESPACE__ . '\\combine_jsonl_ajax');
+function combine_jsonl_ajax()
+{
+    error_log('[PUNTWORK] [AJAX-ENTRY] combine_jsonl_ajax function called with POST data: ' . json_encode($_POST));
+
+    PuntWorkLogger::logAjaxRequest('combine_jsonl', $_POST);
+
+    // Ensure required functions are loaded
+    if (!function_exists('combine_jsonl_files')) {
+        error_log('[PUNTWORK] [AJAX-LOAD] Loading combine-jsonl.php for combine_jsonl_files function');
+        require_once __DIR__ . '/../import/combine-jsonl.php';
+        error_log('[PUNTWORK] [AJAX-LOAD] combine_jsonl_files function available: ' . (function_exists('combine_jsonl_files') ? 'yes' : 'no'));
+    }
+
+    // Use comprehensive security validation with field validation
+    $validation = SecurityUtils::validateAjaxRequest(
+        'combine_jsonl',
+        'job_import_nonce',
+        ['total_items'], // required fields
+        [
+            'total_items' => [
+                'type' => 'int',
+                'min' => 0,
+            ],
+        ]
+    );
+
+    if (is_wp_error($validation)) {
+        error_log('[PUNTWORK] [AJAX-VALIDATION] combine_jsonl validation failed: ' . $validation->get_error_message());
+        AjaxErrorHandler::sendError($validation);
+        return;
+    }
+    error_log('[PUNTWORK] [AJAX-VALIDATION] combine_jsonl validation passed');
+
+    try {
+        $total_items = intval($_POST['total_items']);
+        $feeds = get_feeds();
+        $output_dir = ABSPATH . 'feeds/';
+        
+        error_log('[PUNTWORK] [AJAX-SETUP] Combining JSONL for ' . count($feeds) . ' feeds, total_items: ' . $total_items);
+        
+        // Ensure output directory exists
+        if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
+            error_log('[PUNTWORK] [AJAX-ERROR] Feeds directory not writable: ' . $output_dir);
+            AjaxErrorHandler::sendError('Feeds directory not writable');
+            return;
+        }
+        error_log('[PUNTWORK] [AJAX-SETUP] Output directory ready');
+        
+        $logs = [];
+        error_log('[PUNTWORK] [AJAX-CALL] Calling combine_jsonl_files...');
+        combine_jsonl_files($feeds, $output_dir, $total_items, $logs);
+        error_log('[PUNTWORK] [AJAX-RESULT] combine_jsonl_files completed, logs: ' . json_encode($logs));
+        
+        // Check if combined file was created and start import automatically
+        $combined_file = $output_dir . 'combined-jobs.jsonl';
+        if (file_exists($combined_file)) {
+            $file_size = filesize($combined_file);
+            error_log('[PUNTWORK] [AJAX-RESULT] Combined file created: ' . $combined_file . ' (' . $file_size . ' bytes)');
+            
+            // Start the import automatically after JSONL combination
+            if ($file_size > 0) {
+                // Import will start automatically via scheduled import
+                error_log('[PUNTWORK] [AJAX-SCHEDULE] Scheduling automatic import start in 5 seconds');
+                wp_schedule_single_event(time() + 5, 'puntwork_start_scheduled_import');
+                
+                PuntWorkLogger::info(
+                    'JSONL combination completed, scheduled automatic import start',
+                    PuntWorkLogger::CONTEXT_AJAX,
+                    [
+                        'total_items' => $total_items,
+                        'combined_file_size' => $file_size,
+                    ]
+                );
+            } else {
+                error_log('[PUNTWORK] [AJAX-WARNING] Combined file created but is empty');
+            }
+        } else {
+            error_log('[PUNTWORK] [AJAX-ERROR] Combined file was not created');
+        }
+        
+        PuntWorkLogger::logAjaxResponse('combine_jsonl', [
+            'total_items' => $total_items,
+            'logs' => $logs,
+            'combined_file_exists' => file_exists($combined_file),
+            'combined_file_size' => $file_size ?? 0,
+        ]);
+        
+        error_log('[PUNTWORK] [AJAX-SUCCESS] combine_jsonl_ajax completed successfully');
+        AjaxErrorHandler::sendSuccess([
+            'total_items' => $total_items,
+            'logs' => $logs,
+            'combined_file_exists' => file_exists($combined_file),
+            'combined_file_size' => $file_size ?? 0,
+        ]);
+    } catch (\Exception $e) {
+        error_log('[PUNTWORK] [AJAX-EXCEPTION] combine_jsonl_ajax exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+        error_log('[PUNTWORK] [AJAX-EXCEPTION] Stack trace: ' . $e->getTraceAsString());
+        PuntWorkLogger::error('Combine JSONL AJAX error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        AjaxErrorHandler::sendError('Failed to combine JSONL files: ' . $e->getMessage());
+    }
+}
