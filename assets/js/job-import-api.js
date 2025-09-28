@@ -131,7 +131,7 @@ console.log('[PUNTWORK] job-import-api.js loaded');
             return $.ajax({
                 url: jobImportData.ajaxurl,
                 type: 'POST',
-                data: { action: 'reset_job_import', nonce: jobImportData.nonce }
+                data: { action: 'reset_job_import_status', nonce: jobImportData.nonce }
             });
         },
 
