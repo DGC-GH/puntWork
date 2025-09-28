@@ -1,16 +1,17 @@
 <?php
-
 /**
- * Social Media Database Setup
+ * Social Media Database Setup.
  *
  * @package    Puntwork
  * @subpackage Database
  * @since      2.2.0
  */
 
+// phpcs:disable WordPress.Files.FileName,WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid
+
 namespace Puntwork;
 
-// Prevent direct access
+// Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -18,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Social Media Database Class
  */
-class PuntworkSocialMediaDb {
+class SocialMediaDb {
 
 	/**
 	 * Database version
@@ -44,7 +45,7 @@ class PuntworkSocialMediaDb {
 		$current_version = get_option( self::DB_VERSION_OPTION, '0' );
 
 		if ( version_compare( $current_version, self::DB_VERSION, '<' ) ) {
-			self::createTables();
+			self::create_tables();
 			update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
 		}
 	}
@@ -57,7 +58,7 @@ class PuntworkSocialMediaDb {
 
 		$charset_collate = $wpdb->get_charset_collate();
 
-		// Social media posts table
+		// Social media posts table.
 		$table_name = $wpdb->prefix . 'puntwork_social_posts';
 
 		$sql = "CREATE TABLE $table_name (
@@ -76,7 +77,7 @@ class PuntworkSocialMediaDb {
 		include_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
 
-		// Log successful table creation
+		// Log successful table creation.
 		PuntWorkLogger::info(
 			'Social media database tables created',
 			PuntWorkLogger::CONTEXT_SYSTEM,
@@ -95,7 +96,7 @@ class PuntworkSocialMediaDb {
 
 		$table_name = $wpdb->prefix . 'puntwork_social_posts';
 
-		$wpdb->query( "DROP TABLE IF EXISTS $table_name" );
+		$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %s', $table_name ) );
 
 		delete_option( self::DB_VERSION_OPTION );
 
@@ -110,6 +111,8 @@ class PuntworkSocialMediaDb {
 
 	/**
 	 * Get table name with prefix
+	 *
+	 * @param string $table Table identifier.
 	 */
 	public static function getTableName( string $table ): string {
 		global $wpdb;
@@ -122,5 +125,5 @@ class PuntworkSocialMediaDb {
 	}
 }
 
-// Initialize database
-PuntworkSocialMediaDb::init();
+// Initialize database.
+SocialMediaDb::init();
