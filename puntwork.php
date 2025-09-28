@@ -125,6 +125,12 @@ function process_social_media_posts()
 add_action('init', __NAMESPACE__ . '\\setup_job_import');
 function setup_job_import()
 {
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+    $initialized = true;
+
     $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
 
     if ($debug_mode) {
