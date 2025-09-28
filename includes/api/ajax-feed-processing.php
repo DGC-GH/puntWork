@@ -110,6 +110,9 @@ function process_feed_ajax() {
 		);
 	} catch ( \Exception $e ) {
 		error_log( '[PUNTWORK] Exception in process_feed_ajax: ' . $e->getMessage() );
+		error_log( '[PUNTWORK] Exception class: ' . get_class( $e ) );
+		error_log( '[PUNTWORK] Exception file: ' . $e->getFile() );
+		error_log( '[PUNTWORK] Exception line: ' . $e->getLine() );
 		error_log( '[PUNTWORK] Exception trace: ' . $e->getTraceAsString() );
 		PuntWorkLogger::logFeedProcessing( $feed_key ?? 'unknown', $url ?? '', 0, false );
 		PuntWorkLogger::error( "Feed processing failed: {$feed_key} - " . $e->getMessage(), PuntWorkLogger::CONTEXT_FEED );

@@ -231,74 +231,80 @@ class FeedProcessor {
 			$items = self::extractJsonItems( $data );
 
 			foreach ( $items as $item_data ) {
-				if ( ! is_array( $item_data ) && ! is_object( $item_data ) ) {
-					$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key item skipped: Invalid item structure";
-					continue;
-				}
-
-				// Convert to object for consistent processing
-				$item = is_object( $item_data ) ? $item_data : (object) $item_data;
-
-				// Normalize field names to lowercase
-				$normalized_item = new \stdClass();
-				foreach ( $item as $key => $value ) {
-					$normalized_key                   = strtolower( $key );
-					$normalized_item->$normalized_key = $value;
-				}
-				$item = $normalized_item;
-
-				// Generate GUID if missing
-				if ( ! isset( $item->guid ) || empty( $item->guid ) ) {
-					// Generate GUID from title, company, and location if available
-					$guid_source = '';
-					if ( isset( $item->functiontitle ) ) {
-						$guid_source .= (string) $item->functiontitle;
-					}
-					if ( isset( $item->company ) ) {
-						$guid_source .= (string) $item->company;
-					}
-					if ( isset( $item->location ) ) {
-						$guid_source .= (string) $item->location;
-					}
-					if ( isset( $item->url ) ) {
-						$guid_source .= (string) $item->url;
-					}
-
-					if ( ! empty( $guid_source ) ) {
-						$item->guid = md5( $guid_source );
-						$logs[]     = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Generated GUID for item: " . $item->guid;
-					} else {
-						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Skipping item - no unique fields for GUID generation";
+				try {
+					if ( ! is_array( $item_data ) && ! is_object( $item_data ) ) {
+						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key item skipped: Invalid item structure";
 						continue;
 					}
-				}
 
-				// Skip empty items
-				if ( empty( (array) $item ) ) {
-					$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key item skipped: No fields collected";
-					continue;
-				}
+					// Convert to object for consistent processing
+					$item = is_object( $item_data ) ? $item_data : (object) $item_data;
 
-				// Log item fields for debugging
-				$item_fields = array_keys( (array) $item );
-				$logs[]      = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Processing item with GUID {$item->guid}, fields: " . implode( ', ', $item_fields );
+					// Normalize field names to lowercase
+					$normalized_item = new \stdClass();
+					foreach ( $item as $key => $value ) {
+						$normalized_key                   = strtolower( $key );
+						$normalized_item->$normalized_key = $value;
+					}
+					$item = $normalized_item;
 
-				clean_item_fields( $item );
+					// Generate GUID if missing
+					if ( ! isset( $item->guid ) || empty( $item->guid ) ) {
+						// Generate GUID from title, company, and location if available
+						$guid_source = '';
+						if ( isset( $item->functiontitle ) ) {
+							$guid_source .= (string) $item->functiontitle;
+						}
+						if ( isset( $item->company ) ) {
+							$guid_source .= (string) $item->company;
+						}
+						if ( isset( $item->location ) ) {
+							$guid_source .= (string) $item->location;
+						}
+						if ( isset( $item->url ) ) {
+							$guid_source .= (string) $item->url;
+						}
 
-				// Language detection
-				$lang = self::detectLanguage( $item );
+						if ( ! empty( $guid_source ) ) {
+							$item->guid = md5( $guid_source );
+							$logs[]     = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Generated GUID for item: " . $item->guid;
+						} else {
+							$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Skipping item - no unique fields for GUID generation";
+							continue;
+						}
+					}
 
-				$job_obj = json_decode( json_encode( $item ), true );
-				infer_item_details( $item, $fallback_domain, $lang, $job_obj );
+					// Skip empty items
+					if ( empty( (array) $item ) ) {
+						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key item skipped: No fields collected";
+						continue;
+					}
 
-				$batch[] = json_encode( $job_obj, JSON_UNESCAPED_UNICODE ) . "\n";
-				++$feed_item_count;
+					// Log item fields for debugging
+					$item_fields = array_keys( (array) $item );
+					$logs[]      = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Processing item with GUID {$item->guid}, fields: " . implode( ', ', $item_fields );
 
-				// Process in batches
-				if ( count( $batch ) >= $batch_size ) {
-					fwrite( $handle, implode( '', $batch ) );
-					$batch        = array();
-					$total_items += $batch_size;
+					clean_item_fields( $item );
+
+					// Language detection
+					$lang = self::detectLanguage( $item );
+
+					$job_obj = json_decode( json_encode( $item ), true );
+					infer_item_details( $item, $fallback_domain, $lang, $job_obj );
+
+					$batch[] = json_encode( $job_obj, JSON_UNESCAPED_UNICODE ) . "\n";
+					++$feed_item_count;
+
+					// Process in batches
+					if ( count( $batch ) >= $batch_size ) {
+						fwrite( $handle, implode( '', $batch ) );
+						$batch        = array();
+						$total_items += $batch_size;
+					}
+				} catch ( \Exception $e ) {
+					$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Error processing JSON item: " . $e->getMessage();
+					error_log( "$feed_key: Error processing JSON item: " . $e->getMessage() );
+					// Continue with next item
 				}
 			}
 
@@ -364,65 +370,71 @@ class FeedProcessor {
 			$headers = array_map( 'strtolower', $headers );
 
 			while ( ( $row = fgetcsv( $handle_resource, 0, $delimiter ) ) !== false ) {
-				if ( count( $row ) !== count( $headers ) ) {
-					$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key row skipped: Column count mismatch";
-					continue;
-				}
-
-				// Convert row to object
-				$item = new \stdClass();
-				foreach ( $headers as $index => $header ) {
-					$item->$header = $row[ $index ] ?? '';
-				}
-
-				// Skip empty items
-				if ( empty( (array) $item ) ) {
-					$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key item skipped: No fields collected";
-					continue;
-				}
-
-				clean_item_fields( $item );
-
-				// Generate GUID if missing
-				if ( ! isset( $item->guid ) || empty( $item->guid ) ) {
-					// Generate GUID from title, company, and location if available
-					$guid_source = '';
-					if ( isset( $item->functiontitle ) ) {
-						$guid_source .= (string) $item->functiontitle;
-					}
-					if ( isset( $item->company ) ) {
-						$guid_source .= (string) $item->company;
-					}
-					if ( isset( $item->location ) ) {
-						$guid_source .= (string) $item->location;
-					}
-					if ( isset( $item->url ) ) {
-						$guid_source .= (string) $item->url;
-					}
-
-					if ( ! empty( $guid_source ) ) {
-						$item->guid = md5( $guid_source );
-						$logs[]     = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Generated GUID for item: " . $item->guid;
-					} else {
-						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Skipping item - no unique fields for GUID generation";
+				try {
+					if ( count( $row ) !== count( $headers ) ) {
+						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key row skipped: Column count mismatch";
 						continue;
 					}
-				}
 
-				// Language detection
-				$lang = self::detectLanguage( $item );
+					// Convert row to object
+					$item = new \stdClass();
+					foreach ( $headers as $index => $header ) {
+						$item->$header = $row[ $index ] ?? '';
+					}
 
-				$job_obj = json_decode( json_encode( $item ), true );
-				infer_item_details( $item, $fallback_domain, $lang, $job_obj );
+					// Skip empty items
+					if ( empty( (array) $item ) ) {
+						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key item skipped: No fields collected";
+						continue;
+					}
 
-				$batch[] = json_encode( $job_obj, JSON_UNESCAPED_UNICODE ) . "\n";
-				++$feed_item_count;
+					clean_item_fields( $item );
 
-				// Process in batches
-				if ( count( $batch ) >= $batch_size ) {
-					fwrite( $handle, implode( '', $batch ) );
-					$batch        = array();
-					$total_items += $batch_size;
+					// Generate GUID if missing
+					if ( ! isset( $item->guid ) || empty( $item->guid ) ) {
+						// Generate GUID from title, company, and location if available
+						$guid_source = '';
+						if ( isset( $item->functiontitle ) ) {
+							$guid_source .= (string) $item->functiontitle;
+						}
+						if ( isset( $item->company ) ) {
+							$guid_source .= (string) $item->company;
+						}
+						if ( isset( $item->location ) ) {
+							$guid_source .= (string) $item->location;
+						}
+						if ( isset( $item->url ) ) {
+							$guid_source .= (string) $item->url;
+						}
+
+						if ( ! empty( $guid_source ) ) {
+							$item->guid = md5( $guid_source );
+							$logs[]     = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Generated GUID for item: " . $item->guid;
+						} else {
+							$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Skipping item - no unique fields for GUID generation";
+							continue;
+						}
+					}
+
+					// Language detection
+					$lang = self::detectLanguage( $item );
+
+					$job_obj = json_decode( json_encode( $item ), true );
+					infer_item_details( $item, $fallback_domain, $lang, $job_obj );
+
+					$batch[] = json_encode( $job_obj, JSON_UNESCAPED_UNICODE ) . "\n";
+					++$feed_item_count;
+
+					// Process in batches
+					if ( count( $batch ) >= $batch_size ) {
+						fwrite( $handle, implode( '', $batch ) );
+						$batch        = array();
+						$total_items += $batch_size;
+					}
+				} catch ( \Exception $e ) {
+					$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Error processing CSV row: " . $e->getMessage();
+					error_log( "$feed_key: Error processing CSV row: " . $e->getMessage() );
+					// Continue with next row
 				}
 			}
 
@@ -494,57 +506,63 @@ class FeedProcessor {
 			$jobs = $board_manager->fetchAllJobs( $params, array( $board_id ) );
 
 			foreach ( $jobs as $job_data ) {
-				// Convert job board data to standard job format
-				$item = self::convertJobBoardDataToItem( $job_data, $board_id );
+				try {
+					// Convert job board data to standard job format
+					$item = self::convertJobBoardDataToItem( $job_data, $board_id );
 
-				// Skip empty items
-				if ( empty( (array) $item ) ) {
-					$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key job skipped: No fields collected";
-					continue;
-				}
-
-				clean_item_fields( $item );
-
-				// Generate GUID if missing
-				if ( ! isset( $item->guid ) || empty( $item->guid ) ) {
-					// Generate GUID from title, company, and location if available
-					$guid_source = '';
-					if ( isset( $item->title ) ) {
-						$guid_source .= (string) $item->title;
-					}
-					if ( isset( $item->company ) ) {
-						$guid_source .= (string) $item->company;
-					}
-					if ( isset( $item->location ) ) {
-						$guid_source .= (string) $item->location;
-					}
-					if ( isset( $item->url ) ) {
-						$guid_source .= (string) $item->url;
-					}
-
-					if ( ! empty( $guid_source ) ) {
-						$item->guid = md5( $guid_source );
-						$logs[]     = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Generated GUID for job: " . $item->guid;
-					} else {
-						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Skipping job - no unique fields for GUID generation";
+					// Skip empty items
+					if ( empty( (array) $item ) ) {
+						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key job skipped: No fields collected";
 						continue;
 					}
-				}
 
-				// Language detection
-				$lang = self::detectLanguage( $item );
+					clean_item_fields( $item );
 
-				$job_obj = json_decode( json_encode( $item ), true );
-				infer_item_details( $item, $fallback_domain, $lang, $job_obj );
+					// Generate GUID if missing
+					if ( ! isset( $item->guid ) || empty( $item->guid ) ) {
+						// Generate GUID from title, company, and location if available
+						$guid_source = '';
+						if ( isset( $item->title ) ) {
+							$guid_source .= (string) $item->title;
+						}
+						if ( isset( $item->company ) ) {
+							$guid_source .= (string) $item->company;
+						}
+						if ( isset( $item->location ) ) {
+							$guid_source .= (string) $item->location;
+						}
+						if ( isset( $item->url ) ) {
+							$guid_source .= (string) $item->url;
+						}
 
-				$batch[] = json_encode( $job_obj, JSON_UNESCAPED_UNICODE ) . "\n";
-				++$feed_item_count;
+						if ( ! empty( $guid_source ) ) {
+							$item->guid = md5( $guid_source );
+							$logs[]     = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Generated GUID for job: " . $item->guid;
+						} else {
+							$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Skipping job - no unique fields for GUID generation";
+							continue;
+						}
+					}
 
-				// Process in batches
-				if ( count( $batch ) >= $batch_size ) {
-					fwrite( $handle, implode( '', $batch ) );
-					$batch        = array();
-					$total_items += $batch_size;
+					// Language detection
+					$lang = self::detectLanguage( $item );
+
+					$job_obj = json_decode( json_encode( $item ), true );
+					infer_item_details( $item, $fallback_domain, $lang, $job_obj );
+
+					$batch[] = json_encode( $job_obj, JSON_UNESCAPED_UNICODE ) . "\n";
+					++$feed_item_count;
+
+					// Process in batches
+					if ( count( $batch ) >= $batch_size ) {
+						fwrite( $handle, implode( '', $batch ) );
+						$batch        = array();
+						$total_items += $batch_size;
+					}
+				} catch ( \Exception $e ) {
+					$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Error processing job board item: " . $e->getMessage();
+					error_log( "$feed_key: Error processing job board item: " . $e->getMessage() );
+					// Continue with next job
 				}
 			}
 
