@@ -32,6 +32,7 @@ if (! function_exists('process_batch_items') ) {
 
         $total_to_process = count($batch_guids);
         error_log('[PUNTWORK] [ITEMS-DEBUG] Starting to process ' . $total_to_process . ' items');
+        error_log('[PUNTWORK] [ITEMS-DEBUG] Current counts before processing: published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', processed_count=' . $processed_count);
 
         $item_counter = 0;
         foreach ( $batch_guids as $guid ) {
@@ -220,6 +221,6 @@ if (! function_exists('process_batch_items') ) {
             }
         }
         error_log('[PUNTWORK] [ITEMS-DEBUG] process_batch_items completed processing all ' . $total_to_process . ' items');
-        error_log('[PUNTWORK] [ITEMS-DEBUG] Batch summary: published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', processed_count=' . $processed_count);
+        error_log('[PUNTWORK] [ITEMS-DEBUG] Final counts: published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', processed_count=' . $processed_count);
     }
 }

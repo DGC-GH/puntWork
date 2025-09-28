@@ -293,7 +293,7 @@ function prepare_import_setup( $batch_start = 0 )
     }
 
     if ($start_index >= $total ) {
-        error_log('[PUNTWORK] prepare_import_setup: EARLY RETURN - start_index (' . $start_index . ') >= total (' . $total . ')');
+        error_log('[PUNTWORK] prepare_import_setup: EARLY RETURN - start_index (' . $start_index . ') >= total (' . $total . ') - import appears complete');
         return array(
         'success'            => true,
         'processed'          => $total,
@@ -304,7 +304,7 @@ function prepare_import_setup( $batch_start = 0 )
         'duplicates_drafted' => 0,
         'time_elapsed'       => 0,
         'complete'           => true,
-        'logs'               => array( 'Start index beyond total items' ),
+        'logs'               => array( 'Start index beyond total items - import appears complete' ),
         'batch_size'         => 0,
         'inferred_languages' => 0,
         'inferred_benefits'  => 0,

@@ -242,6 +242,7 @@ function clear_import_cancel_ajax()
 }
 
 add_action('wp_ajax_reset_job_import_status', __NAMESPACE__ . '\\reset_job_import_status_ajax');
+add_action('wp_ajax_reset_job_import', __NAMESPACE__ . '\\reset_job_import_status_ajax'); // Alias for compatibility
 function reset_job_import_status_ajax()
 {
     PuntWorkLogger::logAjaxRequest('reset_job_import_status', $_POST);
@@ -256,8 +257,16 @@ function reset_job_import_status_ajax()
     try {
         // Clear only the import status, not other options
         delete_option('job_import_status');
+        // Also reset progress and related options for complete reset
+        delete_option('job_import_progress');
+        delete_option('job_import_processed_guids');
+        delete_option('job_import_last_batch_time');
+        delete_option('job_import_last_batch_processed');
+        delete_option('job_import_batch_size');
+        delete_option('job_import_consecutive_small_batches');
+        delete_transient('import_cancel');
         
-        PuntWorkLogger::info('Import status completely reset', PuntWorkLogger::CONTEXT_BATCH);
+        PuntWorkLogger::info('Import status and progress completely reset', PuntWorkLogger::CONTEXT_BATCH);
 
         PuntWorkLogger::logAjaxResponse('reset_job_import_status', array( 'message' => 'Import status reset' ));
         AjaxErrorHandler::sendSuccess(null, array( 'message' => 'Import status reset' ));
