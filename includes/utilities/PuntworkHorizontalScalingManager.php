@@ -176,10 +176,13 @@ class PuntworkHorizontalScalingManager {
 		if ( $table_exists ) {
 			// Check if primary key exists
 			$primary_key_exists = $wpdb->get_var(
-				"SELECT COUNT(*) FROM information_schema.KEY_COLUMN_USAGE 
-                 WHERE TABLE_SCHEMA = DATABASE() 
-                 AND TABLE_NAME = '$table_name' 
-                 AND CONSTRAINT_NAME = 'PRIMARY'"
+				$wpdb->prepare(
+					'SELECT COUNT(*) FROM information_schema.KEY_COLUMN_USAGE 
+                     WHERE TABLE_SCHEMA = DATABASE() 
+                     AND TABLE_NAME = %s 
+                     AND CONSTRAINT_NAME = "PRIMARY"',
+					$table_name
+				)
 			);
 
 			if ( $primary_key_exists > 0 ) {
@@ -188,28 +191,30 @@ class PuntworkHorizontalScalingManager {
 				return;
 			}
 
-		// Table doesn't exist or is malformed - create it
-		$sql = "CREATE TABLE $table_name (
-            instance_id varchar(100) NOT NULL,
-            server_name varchar(100) NOT NULL,
-            ip_address varchar(45) NOT NULL,
-            role varchar(50) NOT NULL,
-            status enum('active','inactive','maintenance') DEFAULT 'active',
-            cpu_count int(11) DEFAULT 1,
-            memory_limit bigint(20) DEFAULT 0,
-            last_seen datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (instance_id),
-            KEY server_name (server_name),
-            KEY status_last_seen (status, last_seen)
-        ) $charset_collate;";
+			// Table exists but is malformed - recreate it
+			$sql = "CREATE TABLE $table_name (";
+			$sql .= "instance_id varchar(100) NOT NULL,";
+			$sql .= "server_name varchar(100) NOT NULL,";
+			$sql .= "ip_address varchar(45) NOT NULL,";
+			$sql .= "role varchar(50) NOT NULL,";
+			$sql .= "status enum('active','inactive','maintenance') DEFAULT 'active',";
+			$sql .= "cpu_count int(11) DEFAULT 1,";
+			$sql .= "memory_limit bigint(20) DEFAULT 0,";
+			$sql .= "last_seen datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,";
+			$sql .= "created_at datetime DEFAULT CURRENT_TIMESTAMP,";
+			$sql .= "PRIMARY KEY (instance_id),";
+			$sql .= "KEY server_name (server_name),";
+			$sql .= "KEY status_last_seen (status, last_seen)";
+			$sql .= ") $charset_collate;";
 
-		include_once ABSPATH . 'wp-admin/includes/upgrade.php';
-		dbDelta( $sql );
+			include_once ABSPATH . 'wp-admin/includes/upgrade.php';
+			dbDelta( $sql );
 
-		// Mark table as verified after creation
-		set_transient( 'puntwork_instances_table_verified', true, 86400 );
-	}
+			// Mark table as verified after creation
+			set_transient( 'puntwork_instances_table_verified', true, 86400 );
+		}
+
+    } // <-- Add this closing brace to end createInstanceTable()
 
 	/**
 	 * Register this instance
