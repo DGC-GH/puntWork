@@ -142,34 +142,13 @@ function process_social_media_posts()
 add_action('init', __NAMESPACE__ . '\\setup_job_import');
 function setup_job_import()
 {
-    // Prevent multiple initialization with a static flag
-    static $setup_done = false;
-    if ($setup_done) {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[PUNTWORK] [INIT-SKIP] Setup already completed for this request, skipping...');
-        }
-
-        return;
-    }
-    $setup_done = true;
-
-    // Prevent multiple include loading with a separate static flag
+    // Prevent multiple include loading with a static flag (happens only once ever)
     static $includes_loaded = false;
 
     // Increase memory limit to prevent exhaustion
     ini_set('memory_limit', '1024M');
 
     $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
-
-    if ($debug_mode) {
-        error_log('[PUNTWORK] [INIT-START] ===== SETUP_JOB_IMPORT START =====');
-        error_log('[PUNTWORK] [INIT-DEBUG] WordPress version: ' . get_bloginfo('version'));
-        error_log('[PUNTWORK] [INIT-DEBUG] PHP version: ' . PHP_VERSION);
-        error_log('[PUNTWORK] [INIT-DEBUG] Memory limit: ' . ini_get('memory_limit'));
-        error_log('[PUNTWORK] [INIT-DEBUG] Max execution time: ' . ini_get('max_execution_time'));
-        error_log('[PUNTWORK] [INIT-DEBUG] ABSPATH: ' . ABSPATH);
-        error_log('[PUNTWORK] [INIT-DEBUG] Plugin path: ' . PUNTWORK_PATH);
-    }
 
     // Load includes only once ever
     if (!$includes_loaded) {
@@ -326,6 +305,27 @@ function setup_job_import()
         }
 
         $includes_loaded = true;
+    }
+
+    // Prevent multiple initialization with a static flag (happens only once per request)
+    static $setup_done = false;
+    if ($setup_done) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [INIT-SKIP] Setup already completed for this request, skipping...');
+        }
+
+        return;
+    }
+    $setup_done = true;
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [INIT-START] ===== SETUP_JOB_IMPORT START =====');
+        error_log('[PUNTWORK] [INIT-DEBUG] WordPress version: ' . get_bloginfo('version'));
+        error_log('[PUNTWORK] [INIT-DEBUG] PHP version: ' . PHP_VERSION);
+        error_log('[PUNTWORK] [INIT-DEBUG] Memory limit: ' . ini_get('memory_limit'));
+        error_log('[PUNTWORK] [INIT-DEBUG] Max execution time: ' . ini_get('max_execution_time'));
+        error_log('[PUNTWORK] [INIT-DEBUG] ABSPATH: ' . ABSPATH);
+        error_log('[PUNTWORK] [INIT-DEBUG] Plugin path: ' . PUNTWORK_PATH);
     }
 
     // Test database connection
