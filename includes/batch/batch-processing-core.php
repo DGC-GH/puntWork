@@ -157,7 +157,7 @@ function process_batch_items_logic(array $setup): array
 
             error_log('[PUNTWORK] [BATCH-DEBUG] Calling load_and_prepare_batch_items');
             // Load and prepare batch items from JSONL
-            $batch_load_info = load_and_prepare_batch_items($json_path, $setup['start_index'], $batch_size, $batch_size_info['threshold'], $logs);
+            $batch_load_info = \Puntwork\load_and_prepare_batch_items($json_path, $setup['start_index'], $batch_size, $batch_size_info['threshold'], $logs);
             $batch_items     = $batch_load_info['batch_items'];
             $batch_guids     = $batch_load_info['batch_guids'];
             $lines_read      = $batch_load_info['lines_read'] ?? $batch_size;
