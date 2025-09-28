@@ -129,6 +129,9 @@ function setup_job_import()
     if (isset($puntwork_initialized) && $puntwork_initialized) {
         return;
     }
+    if (defined('PUNTWORK_SETUP_COMPLETED')) {
+        return;
+    }
     $puntwork_initialized = true;
 
     // Increase memory limit to prevent exhaustion
@@ -432,6 +435,8 @@ function setup_job_import()
     if ($debug_mode) {
         error_log('[PUNTWORK] [INIT-END] ===== SETUP_JOB_IMPORT COMPLETED =====');
     }
+
+    define('PUNTWORK_SETUP_COMPLETED', true);
 }
 
 // Add custom favicon
