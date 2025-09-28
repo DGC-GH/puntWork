@@ -10,8 +10,6 @@
 
 declare(strict_types=1);
 
-namespace Puntwork;
-
 // Prevent direct access
 if (! defined('ABSPATH') ) {
     exit;
@@ -277,7 +275,7 @@ function process_batch_items_logic( array $setup ): array
             'performance'        => $perf_data,
             'message'            => '',
             );
-            schedule_async_analytics_update($analytics_data);
+            \Puntwork\schedule_async_analytics_update($analytics_data);
 
             error_log('[PUNTWORK] [BATCH-DEBUG] process_batch_items_logic completed successfully');
 
