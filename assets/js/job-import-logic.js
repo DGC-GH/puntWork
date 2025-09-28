@@ -77,6 +77,7 @@ console.info("=== Job Import Logic Script Loaded ===");
             try {
                 response = await JobImportAPI.runImportBatch(initialStart);
                 PuntWorkJSLogger.debug('Import batch response', 'LOGIC', response);
+                console.log('[PUNTWORK] Import batch response:', response);
 
                 if (response.success) {
                     if ((response.data && response.data.processed === 0 && response.data.total > 0) || (response.data && response.data.total > 0 && !response.data.processed)) {
@@ -106,6 +107,7 @@ console.info("=== Job Import Logic Script Loaded ===");
                         try {
                             response = await JobImportAPI.runImportBatch(current);
                             PuntWorkJSLogger.debug('Next batch response', 'LOGIC', response);
+                            console.log('[PUNTWORK] Next batch response:', response);
 
                             if (response.success) {
                                 // Status polling handles UI updates, just update our local tracking

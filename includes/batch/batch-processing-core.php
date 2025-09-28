@@ -479,14 +479,8 @@ function process_batch_data( array $batch_guids, array $batch_items, array &$log
     if ($debug_mode) {
         error_log('[PUNTWORK] [BATCH-DEBUG] About to call process_batch_items_with_metadata');
     }
-    // Process items - either directly or via queue
-    if (class_exists('Puntwork\\PuntworkQueueManager') && isset($GLOBALS['puntwork_queue_manager'])) {
-        // Use queue for processing
-        $processed_count = queue_batch_items($batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid, $logs, $updated, $published, $skipped);
-    } else {
-        // Direct processing
-        $processed_count = process_batch_items_with_metadata($batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid, $logs, $updated, $published, $skipped);
-    }
+    // Process items - use direct processing for now
+    $processed_count = process_batch_items_with_metadata($batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid, $logs, $updated, $published, $skipped);
     if ($debug_mode) {
         error_log('[PUNTWORK] [BATCH-DEBUG] process_batch_items_with_metadata completed, processed_count=' . $processed_count);
     }

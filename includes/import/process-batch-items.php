@@ -17,6 +17,7 @@ if (! function_exists('process_batch_items') ) {
     function process_batch_items( $batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count )
     {
         error_log('[PUNTWORK] [ITEMS-DEBUG] process_batch_items called with ' . count($batch_guids) . ' GUIDs');
+        error_log('[PUNTWORK] [ITEMS-DEBUG] batch_items keys: ' . implode(', ', array_keys($batch_items)));
         if (empty($batch_guids) ) {
             error_log('[PUNTWORK] [ITEMS-DEBUG] process_batch_items called with empty batch_guids - no items to process');
             return;
@@ -39,13 +40,14 @@ if (! function_exists('process_batch_items') ) {
             ++$item_counter;
             error_log('[PUNTWORK] [ITEMS-DEBUG] ===== STARTING ITEM ' . $item_counter . '/' . $total_to_process . ' =====');
             error_log('[PUNTWORK] [ITEMS-DEBUG] Processing GUID: ' . $guid);
+            error_log('[PUNTWORK] [ITEMS-DEBUG] GUID exists in batch_items: ' . (isset($batch_items[$guid]) ? 'yes' : 'no'));
             try {
                 $item           = $batch_items[ $guid ]['item'];
                 $xml_updated    = isset($item['updated']) ? $item['updated'] : '';
                 $xml_updated_ts = strtotime($xml_updated);
                 $post_id        = isset($post_ids_by_guid[ $guid ]) ? $post_ids_by_guid[ $guid ] : null;
 
-                error_log('[PUNTWORK] [ITEMS-DEBUG] Item data: post_id=' . ( $post_id ?? 'null' ) . ', xml_updated="' . $xml_updated . '", xml_updated_ts=' . $xml_updated_ts);
+                error_log('[PUNTWORK] [ITEMS-DEBUG] Item data extracted: post_id=' . ( $post_id ?? 'null' ) . ', xml_updated="' . $xml_updated . '", xml_updated_ts=' . $xml_updated_ts);
                 error_log('[PUNTWORK] [ITEMS-DEBUG] Item title: "' . (isset($item['functiontitle']) ? $item['functiontitle'] : 'MISSING') . '"');
                 error_log('[PUNTWORK] [ITEMS-DEBUG] Item company: "' . (isset($item['company']) ? $item['company'] : 'MISSING') . '"');
 
@@ -79,15 +81,15 @@ if (! function_exists('process_batch_items') ) {
                     error_log('[PUNTWORK] [ITEMS-DEBUG]   - current_last_update: "' . $current_last_update . '" -> timestamp: ' . $current_last_ts . ' (' . date('Y-m-d H:i:s', $current_last_ts) . ')');
 
                     // Skip if no update timestamp or if current version is newer/equal
-                    if ($xml_updated_ts && $current_last_ts >= $xml_updated_ts ) {
-                        error_log('[PUNTWORK] [ITEMS-DEBUG] SKIPPING: GUID ' . $guid . ' - Not updated (current version is newer or equal)');
-                        error_log('[PUNTWORK] [ITEMS-DEBUG]   - Reason: current_ts (' . $current_last_ts . ') >= xml_ts (' . $xml_updated_ts . ')');
-                        ++$skipped;
-                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - Not updated (current: ' . date('Y-m-d H:i:s', $current_last_ts) . ', xml: ' . date('Y-m-d H:i:s', $xml_updated_ts) . ')';
-                        ++$processed_count;
-                        error_log('[PUNTWORK] [ITEMS-DEBUG] ===== COMPLETED ITEM ' . $item_counter . ' - SKIPPED (NOT UPDATED) =====');
-                        continue;
-                    }
+                    // if ($xml_updated_ts && $current_last_ts >= $xml_updated_ts ) {
+                    //     error_log('[PUNTWORK] [ITEMS-DEBUG] SKIPPING: GUID ' . $guid . ' - Not updated (current version is newer or equal)');
+                    //     error_log('[PUNTWORK] [ITEMS-DEBUG]   - Reason: current_ts (' . $current_last_ts . ') >= xml_ts (' . $xml_updated_ts . ')');
+                    //     ++$skipped;
+                    //     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - Not updated (current: ' . date('Y-m-d H:i:s', $current_last_ts) . ', xml: ' . date('Y-m-d H:i:s', $xml_updated_ts) . ')';
+                    //     ++$processed_count;
+                    //     error_log('[PUNTWORK] [ITEMS-DEBUG] ===== COMPLETED ITEM ' . $item_counter . ' - SKIPPED (NOT UPDATED) =====');
+                    //     continue;
+                    // }
 
                     $current_hash = $all_hashes_by_post[ $post_id ] ?? '';
                     $item_hash    = md5(json_encode($item));
@@ -98,14 +100,14 @@ if (! function_exists('process_batch_items') ) {
                     error_log('[PUNTWORK] [ITEMS-DEBUG]   - hash_match: ' . ($current_hash === $item_hash ? 'true' : 'false'));
 
                     // Skip if content hasn't changed
-                    if ($current_hash === $item_hash ) {
-                           error_log('[PUNTWORK] [ITEMS-DEBUG] SKIPPING: GUID ' . $guid . ' - No changes (content hash identical)');
-                           ++$skipped;
-                           $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - No changes';
-                           ++$processed_count;
-                           error_log('[PUNTWORK] [ITEMS-DEBUG] ===== COMPLETED ITEM ' . $item_counter . ' - SKIPPED (NO CHANGES) =====');
-                           continue;
-                    }
+                    // if ($current_hash === $item_hash ) {
+                    //        error_log('[PUNTWORK] [ITEMS-DEBUG] SKIPPING: GUID ' . $guid . ' - No changes (content hash identical)');
+                    //        ++$skipped;
+                    //        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - No changes';
+                    //        ++$processed_count;
+                    //        error_log('[PUNTWORK] [ITEMS-DEBUG] ===== COMPLETED ITEM ' . $item_counter . ' - SKIPPED (NO CHANGES) =====');
+                    //        continue;
+                    // }
 
                     error_log('[PUNTWORK] [ITEMS-DEBUG] UPDATING existing post ' . $post_id . ' for GUID ' . $guid);
                     // Update existing post
