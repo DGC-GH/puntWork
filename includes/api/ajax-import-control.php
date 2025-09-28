@@ -296,6 +296,7 @@ function reset_job_import_status_ajax()
     if (is_wp_error($validation)) {
         error_log('[PUNTWORK] [DEBUG-PHP] Security validation failed: ' . $validation->get_error_message());
         AjaxErrorHandler::sendError($validation);
+
         return;
     }
     error_log('[PUNTWORK] [DEBUG-PHP] Security validation passed');
@@ -1226,18 +1227,21 @@ function process_feed_ajax()
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'job_import_nonce')) {
         error_log('[PUNTWORK] [DEBUG-PHP] Nonce verification failed');
         wp_send_json_error(['message' => 'Security check failed']);
+
         return;
     }
 
     if (!current_user_can('manage_options')) {
         error_log('[PUNTWORK] [DEBUG-PHP] Insufficient permissions');
         wp_send_json_error(['message' => 'Insufficient permissions']);
+
         return;
     }
 
     if (!isset($_POST['feed_key']) || empty($_POST['feed_key'])) {
         error_log('[PUNTWORK] [DEBUG-PHP] Missing feed_key parameter');
         wp_send_json_error(['message' => 'Missing required parameter: feed_key']);
+
         return;
     }
 
@@ -1251,6 +1255,7 @@ function process_feed_ajax()
         if (!isset($feeds[$feed_key])) {
             error_log('[PUNTWORK] [DEBUG-PHP] Feed not found: ' . $feed_key);
             wp_send_json_error(['message' => 'Feed not found: ' . $feed_key]);
+
             return;
         }
 
@@ -1264,6 +1269,7 @@ function process_feed_ajax()
         if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
             error_log('[PUNTWORK] [DEBUG-PHP] Feeds directory not writable: ' . $output_dir);
             wp_send_json_error(['message' => 'Feeds directory not writable']);
+
             return;
         }
         error_log('[PUNTWORK] [DEBUG-PHP] Output directory ready');
@@ -1290,6 +1296,7 @@ function process_feed_ajax()
                 'error_line' => $e->getLine(),
             ]);
             wp_send_json_error(['message' => 'Feed processing failed: ' . $e->getMessage()]);
+
             return;
         }
         error_log('[PUNTWORK] [DEBUG-PHP] Logs from processing: ' . json_encode($logs));
@@ -1351,18 +1358,21 @@ function combine_jsonl_ajax()
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'job_import_nonce')) {
         error_log('[PUNTWORK] [DEBUG-PHP] Nonce verification failed');
         wp_send_json_error(['message' => 'Security check failed']);
+
         return;
     }
 
     if (!current_user_can('manage_options')) {
         error_log('[PUNTWORK] [DEBUG-PHP] Insufficient permissions');
         wp_send_json_error(['message' => 'Insufficient permissions']);
+
         return;
     }
 
     if (!isset($_POST['total_items']) || !is_numeric($_POST['total_items'])) {
         error_log('[PUNTWORK] [DEBUG-PHP] Missing or invalid total_items parameter');
         wp_send_json_error(['message' => 'Missing or invalid required parameter: total_items']);
+
         return;
     }
 
@@ -1379,6 +1389,7 @@ function combine_jsonl_ajax()
         if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
             error_log('[PUNTWORK] [DEBUG-PHP] Feeds directory not writable: ' . $output_dir);
             wp_send_json_error(['message' => 'Feeds directory not writable']);
+
             return;
         }
         error_log('[PUNTWORK] [DEBUG-PHP] Output directory ready');
@@ -1403,6 +1414,7 @@ function combine_jsonl_ajax()
                 'error_line' => $e->getLine(),
             ]);
             wp_send_json_error(['message' => 'JSONL combination failed: ' . $e->getMessage()]);
+
             return;
         }
         error_log('[PUNTWORK] [DEBUG-PHP] Logs from combination: ' . json_encode($logs));
