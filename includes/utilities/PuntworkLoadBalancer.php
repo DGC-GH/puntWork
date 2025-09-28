@@ -470,14 +470,14 @@ class PuntworkLoadBalancer
         $value = (int) substr($memory_limit, 0, -1);
 
         switch ($unit) {
-        case 'g':
-            return $value * 1024 * 1024 * 1024;
-        case 'm':
-            return $value * 1024 * 1024;
-        case 'k':
-            return $value * 1024;
-        default:
-            return (int) $memory_limit;
+            case 'g':
+                return $value * 1024 * 1024 * 1024;
+            case 'm':
+                return $value * 1024 * 1024;
+            case 'k':
+                return $value * 1024;
+            default:
+                return (int) $memory_limit;
         }
     }
 
@@ -551,20 +551,20 @@ class PuntworkLoadBalancer
         }
 
         switch ($this->balancing_strategy) {
-        case 'round_robin':
-            return $this->roundRobinSelection($active_instances, $job['job_type']);
+            case 'round_robin':
+                return $this->roundRobinSelection($active_instances, $job['job_type']);
 
-        case 'least_loaded':
-            return $this->leastLoadedSelection($active_instances, $job['job_type']);
+            case 'least_loaded':
+                return $this->leastLoadedSelection($active_instances, $job['job_type']);
 
-        case 'weighted':
-            return $this->weightedSelection($active_instances, $job['job_type']);
+            case 'weighted':
+                return $this->weightedSelection($active_instances, $job['job_type']);
 
-        case 'ip_hash':
-            return $this->ipHashSelection($active_instances, $job['job_type']);
+            case 'ip_hash':
+                return $this->ipHashSelection($active_instances, $job['job_type']);
 
-        default:
-            return $this->roundRobinSelection($active_instances, $job['job_type']);
+            default:
+                return $this->roundRobinSelection($active_instances, $job['job_type']);
         }
     }
 

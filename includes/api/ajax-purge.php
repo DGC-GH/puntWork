@@ -493,7 +493,8 @@ function job_import_cleanup_continue_ajax()
  * @param int $items_processed Number of items processed in this batch
  * @return int New batch size
  */
-function job_import_adjust_cleanup_batch_size($current_batch_size, $processing_time, $items_processed) {
+function job_import_adjust_cleanup_batch_size($current_batch_size, $processing_time, $items_processed)
+{
     $target_time = 8.0; // Target processing time per batch (seconds)
     $min_batch_size = 5;  // Minimum batch size
     $max_batch_size = 100; // Maximum batch size

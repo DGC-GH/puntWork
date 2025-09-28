@@ -70,15 +70,15 @@ function get_cached_last_updates(array $post_ids, array $post_id_chunks): array
             "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_last_import_update' AND post_id IN ($placeholders)",
             $chunk
         );
-        
+
         error_log('[PUNTWORK] [DB-DEBUG] Executing last updates query for chunk of ' . count($chunk) . ' posts');
-        
+
         $start_time = microtime(true);
         $chunk_last = $wpdb->get_results($query, OBJECT_K);
         $query_time = microtime(true) - $start_time;
-        
+
         error_log('[PUNTWORK] [DB-DEBUG] Last updates query returned ' . count($chunk_last) . ' results in ' . number_format($query_time, 4) . ' seconds');
-        
+
         $last_updates += (array)$chunk_last;
     }
 
@@ -116,15 +116,15 @@ function get_cached_import_hashes(array $post_ids, array $post_id_chunks): array
             "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
             $chunk
         );
-        
+
         error_log('[PUNTWORK] [DB-DEBUG] Executing import hashes query for chunk of ' . count($chunk) . ' posts');
-        
+
         $start_time = microtime(true);
         $chunk_hashes = $wpdb->get_results($query, OBJECT_K);
         $query_time = microtime(true) - $start_time;
-        
+
         error_log('[PUNTWORK] [DB-DEBUG] Import hashes query returned ' . count($chunk_hashes) . ' results in ' . number_format($query_time, 4) . ' seconds');
-        
+
         foreach ($chunk_hashes as $id => $obj) {
             $hashes_by_post[$id] = $obj->meta_value;
         }

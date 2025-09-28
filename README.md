@@ -211,6 +211,11 @@ puntwork/
 ### Authentication
 All REST API endpoints require WordPress authentication via Application Passwords or Basic Auth. Admin AJAX endpoints use WordPress nonces.
 
+**Important Note:** API keys must be passed as query parameters (`?api_key=YOUR_KEY`), not in the Authorization header. Example:
+```
+GET /wp-json/puntwork/v1/import-status?api_key=YOUR_API_KEY
+```
+
 ## Configuration
 ### API Settings
 Navigate to **WordPress Admin > puntWork > API Settings** to:

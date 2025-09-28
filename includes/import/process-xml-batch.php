@@ -24,10 +24,10 @@ function process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback
         if (!$reader->open($xml_path)) {
             throw new \Exception('Invalid XML');
         }
-        
+
         // Possible job element names in feeds
         $job_element_names = ['item', 'job', 'vacancy', 'position', 'entry', 'listing'];
-        
+
         while ($reader->read()) {
             if ($reader->nodeType == \XMLReader::ELEMENT && in_array(strtolower($reader->name), $job_element_names)) {
                 $item = new \stdClass();
@@ -55,10 +55,18 @@ function process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback
                 if (!isset($item->guid) || empty($item->guid)) {
                     // Generate GUID from title, company, and location if available
                     $guid_source = '';
-                    if (isset($item->functiontitle)) $guid_source .= (string)$item->functiontitle;
-                    if (isset($item->companydescription)) $guid_source .= (string)$item->companydescription;
-                    if (isset($item->city)) $guid_source .= (string)$item->city;
-                    if (isset($item->applylink)) $guid_source .= (string)$item->applylink;
+                    if (isset($item->functiontitle)) {
+                        $guid_source .= (string)$item->functiontitle;
+                    }
+                    if (isset($item->companydescription)) {
+                        $guid_source .= (string)$item->companydescription;
+                    }
+                    if (isset($item->city)) {
+                        $guid_source .= (string)$item->city;
+                    }
+                    if (isset($item->applylink)) {
+                        $guid_source .= (string)$item->applylink;
+                    }
 
                     if (!empty($guid_source)) {
                         $item->guid = md5($guid_source);

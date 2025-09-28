@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Field mappings for job import
  *
@@ -57,7 +58,7 @@ if (!function_exists('get_acf_fields')) {
         }
         */
 
-        return $fields;
+            return $fields;
     }
 }
 
@@ -86,6 +87,6 @@ if (!function_exists('get_zero_empty_fields')) {
         }
         */
 
-        return $fields;
+            return $fields;
     }
 }

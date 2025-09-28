@@ -249,7 +249,7 @@ if (!function_exists('import_all_jobs_from_json')) {
 
             while (true) {
                 error_log('[PUNTWORK] [LOOP-DEBUG] Main import loop iteration starting - batch_count=' . $batch_count);
-                
+
                 // Check if we should continue processing (time/memory limits)
                 error_log('[PUNTWORK] [LOOP-DEBUG] Checking if should continue batch processing...');
                 if (!should_continue_batch_processing()) {

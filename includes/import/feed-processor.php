@@ -223,11 +223,19 @@ class FeedProcessor
                 if (!isset($item->guid) || empty($item->guid)) {
                     // Generate GUID from title, company, and location if available
                     $guid_source = '';
-                    if (isset($item->functiontitle)) $guid_source .= (string)$item->functiontitle;
-                    if (isset($item->company)) $guid_source .= (string)$item->company;
-                    if (isset($item->location)) $guid_source .= (string)$item->location;
-                    if (isset($item->url)) $guid_source .= (string)$item->url;
-                    
+                    if (isset($item->functiontitle)) {
+                        $guid_source .= (string)$item->functiontitle;
+                    }
+                    if (isset($item->company)) {
+                        $guid_source .= (string)$item->company;
+                    }
+                    if (isset($item->location)) {
+                        $guid_source .= (string)$item->location;
+                    }
+                    if (isset($item->url)) {
+                        $guid_source .= (string)$item->url;
+                    }
+
                     if (!empty($guid_source)) {
                         $item->guid = md5($guid_source);
                         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key: Generated GUID for item: " . $item->guid;
@@ -343,10 +351,18 @@ class FeedProcessor
                 if (!isset($item->guid) || empty($item->guid)) {
                     // Generate GUID from title, company, and location if available
                     $guid_source = '';
-                    if (isset($item->functiontitle)) $guid_source .= (string)$item->functiontitle;
-                    if (isset($item->company)) $guid_source .= (string)$item->company;
-                    if (isset($item->location)) $guid_source .= (string)$item->location;
-                    if (isset($item->url)) $guid_source .= (string)$item->url;
+                    if (isset($item->functiontitle)) {
+                        $guid_source .= (string)$item->functiontitle;
+                    }
+                    if (isset($item->company)) {
+                        $guid_source .= (string)$item->company;
+                    }
+                    if (isset($item->location)) {
+                        $guid_source .= (string)$item->location;
+                    }
+                    if (isset($item->url)) {
+                        $guid_source .= (string)$item->url;
+                    }
 
                     if (!empty($guid_source)) {
                         $item->guid = md5($guid_source);
@@ -449,10 +465,18 @@ class FeedProcessor
                 if (!isset($item->guid) || empty($item->guid)) {
                     // Generate GUID from title, company, and location if available
                     $guid_source = '';
-                    if (isset($item->title)) $guid_source .= (string)$item->title;
-                    if (isset($item->company)) $guid_source .= (string)$item->company;
-                    if (isset($item->location)) $guid_source .= (string)$item->location;
-                    if (isset($item->url)) $guid_source .= (string)$item->url;
+                    if (isset($item->title)) {
+                        $guid_source .= (string)$item->title;
+                    }
+                    if (isset($item->company)) {
+                        $guid_source .= (string)$item->company;
+                    }
+                    if (isset($item->location)) {
+                        $guid_source .= (string)$item->location;
+                    }
+                    if (isset($item->url)) {
+                        $guid_source .= (string)$item->url;
+                    }
 
                     if (!empty($guid_source)) {
                         $item->guid = md5($guid_source);

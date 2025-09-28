@@ -44,7 +44,8 @@ function process_batch_items_logic(array $setup): array
     $span = null;
     if (class_exists('\Puntwork\PuntworkTracing')) {
         $span = \Puntwork\PuntworkTracing::startActiveSpan(
-            'process_batch_items_logic', [
+            'process_batch_items_logic',
+            [
             'batch.start_index' => $setup['start_index'] ?? 0,
             'batch.total' => $setup['total'] ?? 0,
             'batch.json_path' => $setup['json_path'] ?? ''
@@ -98,7 +99,9 @@ function process_batch_items_logic(array $setup): array
 
             // Checkpoint: Batch setup complete
             checkpoint_performance(
-                $perf_id, 'batch_setup', [
+                $perf_id,
+                'batch_setup',
+                [
                 'batch_size' => $batch_size,
                 'start_index' => $setup['start_index'],
                 'end_index' => $end_index
@@ -114,7 +117,9 @@ function process_batch_items_logic(array $setup): array
 
             // Checkpoint: Batch items loaded
             checkpoint_performance(
-                $perf_id, 'batch_loaded', [
+                $perf_id,
+                'batch_loaded',
+                [
                 'items_loaded' => count($batch_guids),
                 'memory_usage' => memory_get_usage(true)
                 ]
@@ -186,7 +191,9 @@ function process_batch_items_logic(array $setup): array
 
             // Checkpoint: Batch processing complete
             checkpoint_performance(
-                $perf_id, 'batch_processed', [
+                $perf_id,
+                'batch_processed',
+                [
                 'items_processed' => $result['processed_count'],
                 'published' => $published,
                 'updated' => $updated,
@@ -333,7 +340,7 @@ function process_batch_items_logic(array $setup): array
 function process_batch_data(array $batch_guids, array $batch_items, array &$logs, int &$published, int &$updated, int &$skipped, int &$duplicates_drafted): array
 {
     error_log('[PUNTWORK] process_batch_data called with ' . count($batch_guids) . ' GUIDs');
-    
+
     if (empty($batch_guids)) {
         error_log('[PUNTWORK] ERROR: process_batch_data called with empty batch_guids! This means load_and_prepare_batch_items failed to load valid items.');
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'ERROR: No GUIDs to process in this batch';

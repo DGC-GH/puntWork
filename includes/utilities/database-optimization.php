@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Database optimization utilities
  *
@@ -156,7 +157,7 @@ function bulk_get_post_statuses(array $post_ids): array
     $start_time = microtime(true);
     $results = $wpdb->get_results($query, OBJECT_K);
     $query_time = microtime(true) - $start_time;
-    
+
     error_log('[PUNTWORK] [DB-DEBUG] Post status query returned ' . count($results) . ' results in ' . number_format($query_time, 4) . ' seconds');
 
     $statuses = [];
@@ -216,7 +217,7 @@ function get_posts_by_guids_with_status(array $guids): array
     $start_time = microtime(true);
     $results = $wpdb->get_results($query);
     $query_time = microtime(true) - $start_time;
-    
+
     error_log('[PUNTWORK] [DB-DEBUG] Query returned ' . count($results) . ' results in ' . number_format($query_time, 4) . ' seconds');
 
     $posts_by_guid = [];

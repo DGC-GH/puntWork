@@ -84,15 +84,33 @@ class PuntworkTracing
             }
             // Return a dummy object if OpenTelemetry is not available
             return new class {
-                public function spanBuilder($name) { return new class {
-                    public function startSpan() { return new class {
-                        public function setAttribute($key, $value) { return $this; }
-                        public function activate() { return null; }
-                        public function end() {}
-                        public function recordException($e) {}
-                        public function setStatus($code, $message = '') {}
-                    }; }
-                }; }
+                public function spanBuilder($name)
+                {
+                    return new class {
+                        public function startSpan()
+                        {
+                            return new class {
+                                public function setAttribute($key, $value)
+                                {
+                                    return $this;
+                                }
+                                public function activate()
+                                {
+                                    return null;
+                                }
+                                public function end()
+                                {
+                                }
+                                public function recordException($e)
+                                {
+                                }
+                                public function setStatus($code, $message = '')
+                                {
+                                }
+                            };
+                        }
+                    };
+                }
             };
         }
         return self::$tracer;

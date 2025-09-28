@@ -48,68 +48,68 @@ function run_job_import_batch_ajax()
         PuntWorkLogger::logAjaxRequest('run_job_import_batch', $_POST);
 
     // Ensure required functions are loaded for AJAX calls
-    if (!function_exists('import_jobs_from_json')) {
-        error_log('[PUNTWORK] AJAX: import_jobs_from_json function not found, attempting to load import files');
+        if (!function_exists('import_jobs_from_json')) {
+            error_log('[PUNTWORK] AJAX: import_jobs_from_json function not found, attempting to load import files');
 
-        // Explicitly load required import files for AJAX calls
-        $import_files = [
+            // Explicitly load required import files for AJAX calls
+            $import_files = [
             __DIR__ . '/../batch/batch-size-management.php',
             __DIR__ . '/../import/import-setup.php',
             __DIR__ . '/../batch/batch-processing.php',
             __DIR__ . '/../import/import-finalization.php',
             __DIR__ . '/../import/import-batch.php'
-        ];
+            ];
 
-        foreach ($import_files as $file) {
-            if (file_exists($file)) {
-                error_log('[PUNTWORK] AJAX: Attempting to load file: ' . basename($file));
-                try {
-                    $load_result = require_once $file;
-                    error_log('[PUNTWORK] AJAX: Loaded import file: ' . basename($file) . ', result: ' . ($load_result ? 'true' : 'false'));
-                } catch (\Exception $e) {
-                    error_log('[PUNTWORK] AJAX: Exception loading ' . basename($file) . ': ' . $e->getMessage());
-                } catch (\Error $e) {
-                    error_log('[PUNTWORK] AJAX: Fatal error loading ' . basename($file) . ': ' . $e->getMessage());
+            foreach ($import_files as $file) {
+                if (file_exists($file)) {
+                    error_log('[PUNTWORK] AJAX: Attempting to load file: ' . basename($file));
+                    try {
+                        $load_result = require_once $file;
+                        error_log('[PUNTWORK] AJAX: Loaded import file: ' . basename($file) . ', result: ' . ($load_result ? 'true' : 'false'));
+                    } catch (\Exception $e) {
+                        error_log('[PUNTWORK] AJAX: Exception loading ' . basename($file) . ': ' . $e->getMessage());
+                    } catch (\Error $e) {
+                        error_log('[PUNTWORK] AJAX: Fatal error loading ' . basename($file) . ': ' . $e->getMessage());
+                    }
+                } else {
+                    error_log('[PUNTWORK] AJAX: Import file not found: ' . $file);
                 }
-            } else {
-                error_log('[PUNTWORK] AJAX: Import file not found: ' . $file);
             }
-        }
 
-        // Check again after loading
-        if (!function_exists('import_jobs_from_json')) {
-            error_log('[PUNTWORK] AJAX: import_jobs_from_json function still not found after loading files');
-            // List all functions that start with 'import_' to see what's available
-            $all_functions = get_defined_functions();
-            $import_functions = array_filter($all_functions['user'], function($func) {
-                return strpos($func, 'import_') === 0;
-            });
-            error_log('[PUNTWORK] AJAX: Available import functions: ' . implode(', ', $import_functions));
-            AjaxErrorHandler::sendError('Import function not available - files could not be loaded');
-            return;
-        }
+            // Check again after loading
+            if (!function_exists('import_jobs_from_json')) {
+                error_log('[PUNTWORK] AJAX: import_jobs_from_json function still not found after loading files');
+                // List all functions that start with 'import_' to see what's available
+                $all_functions = get_defined_functions();
+                $import_functions = array_filter($all_functions['user'], function ($func) {
+                    return strpos($func, 'import_') === 0;
+                });
+                error_log('[PUNTWORK] AJAX: Available import functions: ' . implode(', ', $import_functions));
+                AjaxErrorHandler::sendError('Import function not available - files could not be loaded');
+                return;
+            }
 
-        error_log('[PUNTWORK] AJAX: import_jobs_from_json function now available after loading files');
-    }
+            error_log('[PUNTWORK] AJAX: import_jobs_from_json function now available after loading files');
+        }
 
     // Use comprehensive security validation with field validation
-    error_log('[PUNTWORK] AJAX: About to validate AJAX request');
-    $validation = SecurityUtils::validateAjaxRequest(
-        'run_job_import_batch',
-        'job_import_nonce',
-        ['start'], // required fields
-        [
+        error_log('[PUNTWORK] AJAX: About to validate AJAX request');
+        $validation = SecurityUtils::validateAjaxRequest(
+            'run_job_import_batch',
+            'job_import_nonce',
+            ['start'], // required fields
+            [
             'start' => ['type' => 'int', 'min' => 0, 'max' => 1000000] // validation rules
-        ]
-    );
-    error_log('[PUNTWORK] AJAX: Security validation completed');
+            ]
+        );
+        error_log('[PUNTWORK] AJAX: Security validation completed');
 
-    if (is_wp_error($validation)) {
-        error_log('[PUNTWORK] AJAX: Security validation failed: ' . $validation->get_error_message());
-        AjaxErrorHandler::sendError($validation);
-        return;
-    }
-    error_log('[PUNTWORK] AJAX: Security validation passed');
+        if (is_wp_error($validation)) {
+            error_log('[PUNTWORK] AJAX: Security validation failed: ' . $validation->get_error_message());
+            AjaxErrorHandler::sendError($validation);
+            return;
+        }
+        error_log('[PUNTWORK] AJAX: Security validation passed');
 
         try {
             $start = $_POST['start'];
@@ -155,7 +155,7 @@ function run_job_import_batch_ajax()
                 AjaxErrorHandler::sendError('Import failed with fatal error: ' . $e->getMessage());
                 return;
             }        // Log summary instead of full result to prevent large debug logs
-        $log_summary = [
+            $log_summary = [
             'success' => isset($result['success']) && $result['success'],
             'processed' => $result['processed'] ?? 0,
             'total' => $result['total'] ?? 0,
@@ -165,16 +165,16 @@ function run_job_import_batch_ajax()
             'complete' => $result['complete'] ?? false,
             'logs_count' => isset($result['logs']) && is_array($result['logs']) ? count($result['logs']) : 0,
             'has_error' => !empty($result['message'])
-        ];
+            ];
 
-        PuntWorkLogger::logAjaxResponse('run_job_import_batch', $log_summary, isset($result['success']) && $result['success']);
-        AjaxErrorHandler::sendSuccess($result);
-    } catch (\Exception $e) {
-        PuntWorkLogger::error('Batch import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        error_log('[PUNTWORK] AJAX: Batch import exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
-        error_log('[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString());
-        AjaxErrorHandler::sendError('Batch import failed: ' . $e->getMessage());
-    }
+            PuntWorkLogger::logAjaxResponse('run_job_import_batch', $log_summary, isset($result['success']) && $result['success']);
+            AjaxErrorHandler::sendSuccess($result);
+        } catch (\Exception $e) {
+            PuntWorkLogger::error('Batch import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+            error_log('[PUNTWORK] AJAX: Batch import exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+            error_log('[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString());
+            AjaxErrorHandler::sendError('Batch import failed: ' . $e->getMessage());
+        }
     } catch (\Throwable $e) {
         error_log('[PUNTWORK] AJAX: Fatal error in run_job_import_batch_ajax: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
         error_log('[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString());
@@ -791,7 +791,6 @@ function test_single_job_import_ajax()
             'logs' => $verification_logs,
             'verification_complete' => true
         ]);
-
     } catch (\Exception $e) {
         PuntWorkLogger::error('Test single job import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Test single job import failed: ' . $e->getMessage());

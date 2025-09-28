@@ -46,7 +46,9 @@ function process_batch_enhanced(array $batch_guids, array $batch_items, array &$
         $processing_time = microtime(true) - $start_time;
 
         checkpoint_performance(
-            $monitor_id, 'batch_completed', [
+            $monitor_id,
+            'batch_completed',
+            [
             'processed_count' => $processed_count,
             'processing_time' => $processing_time,
             'memory_peak' => memory_get_peak_usage(true)
@@ -162,7 +164,8 @@ function get_cached_last_updates_enhanced(array $post_ids, array $post_id_chunks
             $wpdb->prepare(
                 "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_last_import_update' AND post_id IN ($placeholders)",
                 $chunk
-            ), OBJECT_K
+            ),
+            OBJECT_K
         );
         $last_updates += (array)$chunk_last;
     }
@@ -199,7 +202,8 @@ function get_cached_import_hashes_enhanced(array $post_ids, array $post_id_chunk
             $wpdb->prepare(
                 "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
                 $chunk
-            ), OBJECT_K
+            ),
+            OBJECT_K
         );
         foreach ($chunk_hashes as $id => $obj) {
             $hashes_by_post[$id] = $obj->meta_value;

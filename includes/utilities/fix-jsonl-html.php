@@ -13,7 +13,8 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-function fix_jsonl_html_encoding($jsonl_path) {
+function fix_jsonl_html_encoding($jsonl_path)
+{
     if (!file_exists($jsonl_path)) {
         return new WP_Error('file_not_found', 'JSONL file not found: ' . $jsonl_path);
     }
@@ -79,7 +80,6 @@ function fix_jsonl_html_encoding($jsonl_path) {
             if ($processed % 500 == 0) {
                 error_log("Fixed $processed jobs so far...");
             }
-
         } catch (Exception $e) {
             $errors++;
             error_log("Error processing job: " . $e->getMessage());

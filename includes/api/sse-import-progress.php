@@ -26,17 +26,18 @@ require_once __DIR__ . '/../scheduling/scheduling-core.php';
  * @param mixed $data Data to sanitize
  * @return mixed Sanitized data
  */
-function deep_sanitize_for_json($data) {
+function deep_sanitize_for_json($data)
+{
     if (is_object($data) || is_resource($data)) {
         error_log('[PUNTWORK] SSE: Removed object/resource from data');
         return null;
     }
-    
+
     if (is_float($data) && (is_infinite($data) || is_nan($data))) {
         error_log('[PUNTWORK] SSE: Removed infinite/NaN float from data');
         return null;
     }
-    
+
     if (is_array($data)) {
         $sanitized = [];
         foreach ($data as $key => $value) {
@@ -45,17 +46,17 @@ function deep_sanitize_for_json($data) {
                 error_log('[PUNTWORK] SSE: Skipped object/resource key in array');
                 continue;
             }
-            
+
             // Convert object/resource keys to strings
             if (!is_string($key) && !is_int($key)) {
                 $key = (string) $key;
             }
-            
+
             $sanitized[$key] = deep_sanitize_for_json($value);
         }
         return $sanitized;
     }
-    
+
     // For scalars and other types, return as-is
     return $data;
 }
@@ -203,7 +204,7 @@ function handle_import_progress_sse($request)
                     $async_progress = $async_status['progress'] ?? [];
                     // Deep sanitize async progress data
                     $async_progress = deep_sanitize_for_json($async_progress);
-                    
+
                     $current_status = array_merge($current_status, $async_progress);
                     $current_status['async_active'] = true;
                     $current_status['async_status'] = $async_status['status'];

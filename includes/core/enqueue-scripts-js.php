@@ -35,15 +35,15 @@ function enqueue_job_import_scripts()
 
     // Load scripts on puntwork admin pages
     $puntwork_pages = [
-        'puntwork-dashboard', 
-        'job-feed-dashboard', 
-        'jobs-dashboard', 
-        'puntwork-feed-config', 
-        'puntwork-feed-health', 
-        'puntwork-analytics', 
-        'puntwork-performance', 
-        'puntwork-api-settings', 
-        'puntwork-monitoring', 
+        'puntwork-dashboard',
+        'job-feed-dashboard',
+        'jobs-dashboard',
+        'puntwork-feed-config',
+        'puntwork-feed-health',
+        'puntwork-analytics',
+        'puntwork-performance',
+        'puntwork-api-settings',
+        'puntwork-monitoring',
         'puntwork-scheduling'
     ];
     $should_load = in_array($current_page, $puntwork_pages);

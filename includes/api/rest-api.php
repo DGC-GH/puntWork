@@ -527,16 +527,20 @@ function handle_get_import_status($request)
             $import_status['time_elapsed'] = microtime(true) - $import_status['start_time'];
         }
 
+        // Calculate if import is currently running
+        $complete = isset($import_status['complete']) ? $import_status['complete'] : true;
+        $paused = isset($import_status['paused']) ? $import_status['paused'] : false;
+        $is_running = !$complete && !$paused;
+
         // Add additional status information
         $status_data = [
             'current_status' => $import_status,
             'progress' => $import_progress,
             'last_run' => $last_run,
             'next_scheduled' => $next_scheduled,
-            'is_running' => isset($import_status['complete']) && !$import_status['complete'] && !isset($import_status['paused']),
+            'is_running' => $is_running,
             'timestamp' => current_time('timestamp')
         ];
-
         PuntWorkLogger::debug('Import status requested via API', PuntWorkLogger::CONTEXT_API);
 
         return new \WP_REST_Response([
