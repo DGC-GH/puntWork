@@ -142,8 +142,12 @@ function process_social_media_posts()
 add_action('init', __NAMESPACE__ . '\\setup_job_import');
 function setup_job_import()
 {
-    // Prevent multiple include loading with a static flag (happens only once ever)
-    static $includes_loaded = false;
+    // Prevent multiple include loading with a global flag (happens only once ever)
+    if (isset($GLOBALS['puntwork_includes_loaded']) && $GLOBALS['puntwork_includes_loaded']) {
+        // Includes already loaded
+    } else {
+        $GLOBALS['puntwork_includes_loaded'] = false;
+    }
 
     // Increase memory limit to prevent exhaustion
     ini_set('memory_limit', '1024M');
@@ -151,7 +155,7 @@ function setup_job_import()
     $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
 
     // Load includes only once ever
-    if (!$includes_loaded) {
+    if (!$GLOBALS['puntwork_includes_loaded']) {
         if ($debug_mode) {
             error_log('[PUNTWORK] [INIT-DEBUG] Loading includes...');
         }
@@ -304,19 +308,18 @@ function setup_job_import()
             error_log('[PUNTWORK] [INIT-DEBUG] Include loading complete: ' . $loaded_count . ' loaded, ' . $failed_count . ' failed');
         }
 
-        $includes_loaded = true;
+        $GLOBALS['puntwork_includes_loaded'] = true;
     }
 
-    // Prevent multiple initialization with a static flag (happens only once per request)
-    static $setup_done = false;
-    if ($setup_done) {
+    // Prevent multiple initialization with a global flag (happens only once per request)
+    if (isset($GLOBALS['puntwork_setup_done']) && $GLOBALS['puntwork_setup_done']) {
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('[PUNTWORK] [INIT-SKIP] Setup already completed for this request, skipping...');
         }
 
         return;
     }
-    $setup_done = true;
+    $GLOBALS['puntwork_setup_done'] = true;
 
     if ($debug_mode) {
         error_log('[PUNTWORK] [INIT-START] ===== SETUP_JOB_IMPORT START =====');
