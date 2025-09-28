@@ -11,6 +11,7 @@ logs/
 feeds/
 cache/
 *.log
+debug.log
 Console.txt
 .env
 .env.local
