@@ -63,6 +63,17 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
                 $new_size = $batch_size + 1; // Ensure at least +1 if multiplier doesn't change
             }
             $batch_size = min(500, $new_size);
+        } else {
+            // Times are equal - add small random adjustment to prevent stagnation
+            $random_factor = (mt_rand(-5, 5) / 100); // -0.05 to +0.05
+            $new_size = floor($batch_size * (1 + $random_factor));
+            $new_size = max(1, min(500, $new_size));
+            if ($new_size == $batch_size) {
+                // If still the same, force a small change
+                $new_size = $batch_size + (mt_rand(0, 1) ? 1 : -1);
+                $new_size = max(1, min(500, $new_size));
+            }
+            $batch_size = $new_size;
         }
         // If times are equal, keep batch size the same
     }

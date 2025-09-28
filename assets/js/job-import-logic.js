@@ -109,9 +109,14 @@ console.info("=== Job Import Logic Script Loaded ===");
                     while (current < total && this.isImporting) {
                         batchCount++;
                         console.log('[PUNTWORK] ===== STARTING BATCH', batchCount, '=====');
+                        console.log('[PUNTWORK] Batch timing - previous batch time will be compared for dynamic sizing');
                         PuntWorkJSLogger.debug('Continuing to next batch, current: ' + current + ', total: ' + total + ', batchCount: ' + batchCount, 'LOGIC');
                         try {
+                            const batchStartTime = Date.now();
                             response = await JobImportAPI.runImportBatch(current);
+                            const batchEndTime = Date.now();
+                            const batchDuration = (batchEndTime - batchStartTime) / 1000;
+                            console.log('[PUNTWORK] Batch', batchCount, 'completed in', batchDuration.toFixed(2), 'seconds');
                             console.log('[PUNTWORK] Batch', batchCount, 'response:', response);
                             PuntWorkJSLogger.debug('Next batch response', 'LOGIC', response);
                             console.log('[PUNTWORK] Next batch response:', response);

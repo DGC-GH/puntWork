@@ -1,10 +1,3 @@
-✅ COMPLETED: Added pre-commit git hooks for PHPCS and PHPUnit validation to prevent regressions.
-
-✅ COMPLETED: Implemented GitHub Actions CI/CD pipeline for automated testing and deployment.
-
-Proposed ImprovementsPLETED: Updated prompt.md with validation commands for future use.
-
-✅ COMPLETED: Added pre-commit git hooks for PHPCS and PHPUnit to prevent regressions.
 
 Proposed Improvements
 Speed Enhancements
@@ -70,8 +63,21 @@ Debug.log will need re-check after fixes.
 
 
 
+take a loog at the logs, are we missing something for debugging the rest of the import process untill completion?
 
 
 
 
+Import Progress block UI is not being updated during the import -  use "real time updated"
 
+
+optimize dynamic batch functionality analize - the logs for timings
+
+optimize the process based on logs (console and debug)
+
+disable (not remove) some debugging to minimize spam in console and debug,log size
+
+increase max batch size
+
+TO DO:
+get v3 Import metrics and settings

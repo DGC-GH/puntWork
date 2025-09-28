@@ -35,6 +35,13 @@ if (! function_exists('process_batch_items') ) {
         error_log('[PUNTWORK] [ITEMS-DEBUG] Starting to process ' . $total_to_process . ' items');
         error_log('[PUNTWORK] [ITEMS-DEBUG] Current counts before processing: published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', processed_count=' . $processed_count);
 
+        // Log batch size and timing info
+        $batch_size = count($batch_guids);
+        $previous_batch_time = get_option('job_import_previous_batch_time', 0);
+        $last_batch_time = get_option('job_import_last_batch_time', 0);
+        error_log('[PUNTWORK] [BATCH-TIMING] Processing batch of ' . $batch_size . ' items');
+        error_log('[PUNTWORK] [BATCH-TIMING] Previous batch time: ' . $previous_batch_time . 's, Last batch time: ' . $last_batch_time . 's');
+
         $item_counter = 0;
         foreach ( $batch_guids as $guid ) {
             ++$item_counter;

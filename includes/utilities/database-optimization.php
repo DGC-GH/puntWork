@@ -267,6 +267,7 @@ function get_posts_by_guids_with_status( array $guids ): array
     }
 
     error_log('[PUNTWORK] [DB-DEBUG] Processed ' . count($posts_by_guid) . ' unique GUIDs');
+    error_log('[PUNTWORK] [DB-DEBUG] Sample GUIDs found: ' . implode(', ', array_slice(array_keys($posts_by_guid), 0, 5)));
 
     // Cache for 10 minutes - GUID lookups change relatively frequently during imports
     CacheManager::set($cache_key, $posts_by_guid, CacheManager::GROUP_ANALYTICS, 10 * MINUTE_IN_SECONDS);
