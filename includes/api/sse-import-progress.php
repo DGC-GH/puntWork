@@ -263,7 +263,11 @@ function handle_import_progress_sse($request)
                         'status' => $current_status,
                     ];
 
-                    error_log('[PUNTWORK] SSE: Sending progress update, event_data keys: ' . implode(', ', array_keys($event_data)));
+                    error_log('[PUNTWORK] SSE: About to send progress update');
+                    error_log('[PUNTWORK] SSE: event_data status keys: ' . implode(', ', array_keys($current_status)));
+                    error_log('[PUNTWORK] SSE: event_data status processed: ' . ($current_status['processed'] ?? 'not set'));
+                    error_log('[PUNTWORK] SSE: event_data status total: ' . ($current_status['total'] ?? 'not set'));
+                    error_log('[PUNTWORK] SSE: event_data status complete: ' . ($current_status['complete'] ?? 'not set'));
                     $json_data = json_encode($event_data);
 
                     if ($json_data == false) {
@@ -286,9 +290,12 @@ function handle_import_progress_sse($request)
                         continue;
                     }
 
-                    error_log('[PUNTWORK] SSE: JSON encoded data length: ' . strlen($json_data));
-                    error_log('[PUNTWORK] SSE: JSON data preview: ' . substr($json_data, 0, 200) . '...');
-
+                    error_log('[PUNTWORK] SSE: JSON encoded successfully, length: ' . strlen($json_data));
+                    error_log('[PUNTWORK] SSE: JSON data starts with: ' . substr($json_data, 0, 50));
+                    if (strpos($json_data, 'undefined') !== false) {
+                        error_log('[PUNTWORK] SSE: WARNING - JSON contains "undefined" string!');
+                        error_log('[PUNTWORK] SSE: Full JSON: ' . $json_data);
+                    }
                     echo "event: progress\n";
                     echo 'data: ' . $json_data . "\n\n";
                     flush();

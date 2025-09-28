@@ -231,19 +231,18 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
     error_log('[PUNTWORK] GZ JSON path: ' . $gz_json_path);
 
     // Download the feed
-    $feed_path = download_feed($url, $feed_key, $output_dir, $logs);
-    if (!$feed_path) {
+    $feed_file_path = $output_dir . $feed_key . '.xml'; // Temporary file for downloaded feed
+    error_log('[PUNTWORK] Feed file path: ' . $feed_file_path);
+    if (!download_feed($url, $feed_file_path, $output_dir, $logs)) {
         error_log('[PUNTWORK] Feed download failed for ' . $feed_key);
 
         return 0;
     }
 
-    error_log('[PUNTWORK] Feed downloaded to: ' . $feed_path);
-
     // Detect format from file content
-    $content = file_get_contents($feed_path);
+    $content = file_get_contents($feed_file_path);
     if ($content === false) {
-        error_log('[PUNTWORK] Failed to read downloaded feed file: ' . $feed_path);
+        error_log('[PUNTWORK] Failed to read downloaded feed file: ' . $feed_file_path);
 
         return 0;
     }
@@ -266,7 +265,7 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
 
     try {
         // Process feed using FeedProcessor
-        $count = \Puntwork\FeedProcessor::processFeed($feed_path, $format, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+        $count = \Puntwork\FeedProcessor::processFeed($feed_file_path, $format, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
         error_log('[PUNTWORK] FeedProcessor::processFeed returned count: ' . $count);
         error_log('[PUNTWORK] Total items processed: ' . $total_items);
     } catch (\Exception $e) {

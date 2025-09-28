@@ -147,20 +147,28 @@ if (!function_exists('import_jobs_from_json')) {
             // Check for concurrent import lock
             $import_lock_key = 'puntwork_import_lock';
             if (get_transient($import_lock_key)) {
+                error_log('[PUNTWORK] [IMPORT-LOCK] Import lock detected: ' . $import_lock_key);
+
                 // Check if the lock is stale (import status shows complete or last update > 30 minutes ago)
                 $import_status = get_option('job_import_status', []);
+                error_log('[PUNTWORK] [IMPORT-LOCK] Current import status: ' . json_encode($import_status));
                 $is_stale = false;
 
                 if (!empty($import_status)) {
                     $last_update = $import_status['last_update'] ?? 0;
                     $is_complete = $import_status['complete'] ?? false;
                     $time_since_update = time() - $last_update;
+                    error_log('[PUNTWORK] [IMPORT-LOCK] Lock check: last_update=' . $last_update . ', is_complete=' . ($is_complete ? 'true' : 'false') . ', time_since_update=' . $time_since_update . 's');
 
                     if ($is_complete || $time_since_update > 1800) { // 30 minutes
                         $is_stale = true;
                         delete_transient($import_lock_key);
                         error_log('[PUNTWORK] [IMPORT-LOCK] Cleared stale import lock (complete: ' . ($is_complete ? 'yes' : 'no') . ', time since update: ' . $time_since_update . 's)');
                     }
+                } else {
+                    error_log('[PUNTWORK] [IMPORT-LOCK] No import status found, considering lock stale');
+                    $is_stale = true;
+                    delete_transient($import_lock_key);
                 }
 
                 if (!$is_stale) {
@@ -172,9 +180,7 @@ if (!function_exists('import_jobs_from_json')) {
                         'logs' => ['Import already running - concurrent imports not allowed'],
                     ];
                 }
-            }
-
-            // Set import lock
+            }            // Set import lock
             set_transient($import_lock_key, true, 1200); // 20 minutes timeout
             error_log('[PUNTWORK] [IMPORT-LOCK] Import lock set successfully');
 
