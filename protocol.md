@@ -1,0 +1,9 @@
+- redownload download debug.log using [text](ftp_script.txt)
+- identify problems
+- analyze code
+- fix issues
+- add comprehensive debug logs
+- commit
+- output summery
+- ask to push
+- remove debug.log on the server
