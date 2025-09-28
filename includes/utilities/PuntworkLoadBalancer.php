@@ -54,7 +54,7 @@ class PuntworkLoadBalancer
      */
     private function initHooks()
     {
-        add_action('init', [$this, 'process_load_balanced_jobs']);
+        add_action('init', [$this, 'processLoadBalancedJobs']);
         add_action('wp_ajax_puntwork_lb_health_check', [$this, 'ajaxHealthCheckAll']);
         add_action('wp_ajax_puntwork_lb_stats', [$this, 'ajaxGetStats']);
 
