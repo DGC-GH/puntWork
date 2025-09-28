@@ -1,11 +1,11 @@
 <?php
 // Define ABSPATH for WordPress compatibility
-if (!defined('ABSPATH')) {
-    define('ABSPATH', __DIR__ . '/');
+if ( ! defined( 'ABSPATH' ) ) {
+	define( 'ABSPATH', __DIR__ . '/' );
 }
 
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+error_reporting( E_ALL );
+ini_set( 'display_errors', 1 );
 
 echo "Starting test...\n";
 
@@ -22,16 +22,15 @@ echo "Required classes loaded\n";
 require_once __DIR__ . '/includes/utilities/performance-functions.php';
 echo "Performance functions loaded successfully\n";
 
-if (!function_exists('start_performance_monitoring')) {
-    echo "start_performance_monitoring function not found\n";
-    exit(1);
+if ( ! function_exists( 'start_performance_monitoring' ) ) {
+	echo "start_performance_monitoring function not found\n";
+	exit( 1 );
 }
 
-$id = start_performance_monitoring('test');
+$id = start_performance_monitoring( 'test' );
 echo 'Performance monitoring started with ID: ' . $id . "\n";
 
-$data = end_performance_monitoring($id);
+$data = end_performance_monitoring( $id );
 echo "Performance monitoring ended\n";
-echo "Duration: " . ($data['duration'] ?? 'N/A') . " seconds\n";
+echo 'Duration: ' . ( $data['duration'] ?? 'N/A' ) . " seconds\n";
 echo "Test completed successfully\n";
-?>

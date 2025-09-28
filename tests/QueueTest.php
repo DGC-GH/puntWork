@@ -11,222 +11,211 @@ namespace Puntwork;
 
 use PHPUnit\Framework\TestCase;
 
-class QueueTest extends TestCase
-{
-    protected function setUp(): void
-    {
-        parent::setUp();
-        // Mock WordPress functions
-        if (!defined('ABSPATH')) {
-            define('ABSPATH', '/tmp/wordpress/');
-        }
-    }
+class QueueTest extends TestCase {
 
-    /**
-     * Test queue job data validation
-     */
-    public function testQueueJobDataValidation()
-    {
-        // Test valid job data
-        $validJobData = [
-            'feed_id' => 123,
-            'force' => false,
-            'test_mode' => true
-        ];
+	protected function setUp(): void {
+		parent::setUp();
+		// Mock WordPress functions
+		if ( ! defined( 'ABSPATH' ) ) {
+			define( 'ABSPATH', '/tmp/wordpress/' );
+		}
+	}
 
-        $this->assertIsArray($validJobData);
-        $this->assertArrayHasKey('feed_id', $validJobData);
-        $this->assertArrayHasKey('force', $validJobData);
-        $this->assertArrayHasKey('test_mode', $validJobData);
+	/**
+	 * Test queue job data validation
+	 */
+	public function testQueueJobDataValidation() {
+		// Test valid job data
+		$validJobData = array(
+			'feed_id'   => 123,
+			'force'     => false,
+			'test_mode' => true,
+		);
 
-        // Test invalid job data
-        $invalidJobData = [
-            'invalid_field' => 'value'
-        ];
+		$this->assertIsArray( $validJobData );
+		$this->assertArrayHasKey( 'feed_id', $validJobData );
+		$this->assertArrayHasKey( 'force', $validJobData );
+		$this->assertArrayHasKey( 'test_mode', $validJobData );
 
-        $this->assertIsArray($invalidJobData);
-        $this->assertArrayNotHasKey('feed_id', $invalidJobData);
-    }
+		// Test invalid job data
+		$invalidJobData = array(
+			'invalid_field' => 'value',
+		);
 
-    /**
-     * Test queue job types
-     */
-    public function testQueueJobTypes()
-    {
-        $expectedJobTypes = [
-            'feed_import',
-            'batch_process',
-            'cleanup',
-            'notification',
-            'analytics_update'
-        ];
+		$this->assertIsArray( $invalidJobData );
+		$this->assertArrayNotHasKey( 'feed_id', $invalidJobData );
+	}
 
-        foreach ($expectedJobTypes as $jobType) {
-            $this->assertIsString($jobType);
-            $this->assertNotEmpty($jobType);
-        }
+	/**
+	 * Test queue job types
+	 */
+	public function testQueueJobTypes() {
+		$expectedJobTypes = array(
+			'feed_import',
+			'batch_process',
+			'cleanup',
+			'notification',
+			'analytics_update',
+		);
 
-        // Test that job types are unique
-        $this->assertEquals(count($expectedJobTypes), count(array_unique($expectedJobTypes)));
-    }
+		foreach ( $expectedJobTypes as $jobType ) {
+			$this->assertIsString( $jobType );
+			$this->assertNotEmpty( $jobType );
+		}
 
-    /**
-     * Test queue priority levels
-     */
-    public function testQueuePriorityLevels()
-    {
-        $priorities = [
-            'low' => 10,
-            'normal' => 5,
-            'high' => 1,
-            'critical' => 0
-        ];
+		// Test that job types are unique
+		$this->assertEquals( count( $expectedJobTypes ), count( array_unique( $expectedJobTypes ) ) );
+	}
 
-        foreach ($priorities as $level => $value) {
-            $this->assertIsInt($value);
-            $this->assertGreaterThanOrEqual(0, $value);
-            $this->assertLessThanOrEqual(10, $value);
-        }
+	/**
+	 * Test queue priority levels
+	 */
+	public function testQueuePriorityLevels() {
+		$priorities = array(
+			'low'      => 10,
+			'normal'   => 5,
+			'high'     => 1,
+			'critical' => 0,
+		);
 
-        // Test that higher priority numbers mean lower priority
-        $this->assertGreaterThan($priorities['high'], $priorities['low']);
-    }
+		foreach ( $priorities as $level => $value ) {
+			$this->assertIsInt( $value );
+			$this->assertGreaterThanOrEqual( 0, $value );
+			$this->assertLessThanOrEqual( 10, $value );
+		}
 
-    /**
-     * Test queue status values
-     */
-    public function testQueueStatusValues()
-    {
-        $validStatuses = ['pending', 'processing', 'completed', 'failed'];
+		// Test that higher priority numbers mean lower priority
+		$this->assertGreaterThan( $priorities['high'], $priorities['low'] );
+	}
 
-        foreach ($validStatuses as $status) {
-            $this->assertIsString($status);
-            $this->assertNotEmpty($status);
-            $this->assertMatchesRegularExpression('/^[a-z]+$/', $status);
-        }
+	/**
+	 * Test queue status values
+	 */
+	public function testQueueStatusValues() {
+		$validStatuses = array( 'pending', 'processing', 'completed', 'failed' );
 
-        // Test that all statuses are unique
-        $this->assertEquals(count($validStatuses), count(array_unique($validStatuses)));
-    }
+		foreach ( $validStatuses as $status ) {
+			$this->assertIsString( $status );
+			$this->assertNotEmpty( $status );
+			$this->assertMatchesRegularExpression( '/^[a-z]+$/', $status );
+		}
 
-    /**
-     * Test queue retry logic
-     */
-    public function testQueueRetryLogic()
-    {
-        $maxRetries = 3;
-        $attempts = [0, 1, 2, 3, 4];
+		// Test that all statuses are unique
+		$this->assertEquals( count( $validStatuses ), count( array_unique( $validStatuses ) ) );
+	}
 
-        foreach ($attempts as $attempt) {
-            if ($attempt < $maxRetries) {
-                $this->assertTrue($attempt < $maxRetries, "Attempt $attempt should be allowed to retry");
-            } else {
-                $this->assertFalse($attempt < $maxRetries, "Attempt $attempt should not be allowed to retry");
-            }
-        }
-    }
+	/**
+	 * Test queue retry logic
+	 */
+	public function testQueueRetryLogic() {
+		$maxRetries = 3;
+		$attempts   = array( 0, 1, 2, 3, 4 );
 
-    /**
-     * Test queue batch size limits
-     */
-    public function testQueueBatchSizeLimits()
-    {
-        $batchSizes = [1, 5, 10, 25, 50, 100];
+		foreach ( $attempts as $attempt ) {
+			if ( $attempt < $maxRetries ) {
+				$this->assertTrue( $attempt < $maxRetries, "Attempt $attempt should be allowed to retry" );
+			} else {
+				$this->assertFalse( $attempt < $maxRetries, "Attempt $attempt should not be allowed to retry" );
+			}
+		}
+	}
 
-        foreach ($batchSizes as $size) {
-            $this->assertIsInt($size);
-            $this->assertGreaterThan(0, $size);
-            $this->assertLessThanOrEqual(100, $size);
-        }
-    }
+	/**
+	 * Test queue batch size limits
+	 */
+	public function testQueueBatchSizeLimits() {
+		$batchSizes = array( 1, 5, 10, 25, 50, 100 );
 
-    /**
-     * Test queue delay functionality
-     */
-    public function testQueueDelayFunctionality()
-    {
-        $delays = [0, 60, 300, 3600, 86400]; // seconds
+		foreach ( $batchSizes as $size ) {
+			$this->assertIsInt( $size );
+			$this->assertGreaterThan( 0, $size );
+			$this->assertLessThanOrEqual( 100, $size );
+		}
+	}
 
-        foreach ($delays as $delay) {
-            $this->assertIsInt($delay);
-            $this->assertGreaterThanOrEqual(0, $delay);
+	/**
+	 * Test queue delay functionality
+	 */
+	public function testQueueDelayFunctionality() {
+		$delays = array( 0, 60, 300, 3600, 86400 ); // seconds
 
-            // Test that delay results in future or current timestamp
-            $currentTime = time();
-            $scheduledTime = $currentTime + $delay;
-            $this->assertGreaterThanOrEqual($currentTime, $scheduledTime);
-        }
-    }
+		foreach ( $delays as $delay ) {
+			$this->assertIsInt( $delay );
+			$this->assertGreaterThanOrEqual( 0, $delay );
 
-    /**
-     * Test queue cleanup operations
-     */
-    public function testQueueCleanupOperations()
-    {
-        $cleanupTypes = [
-            'old_logs',
-            'temp_files',
-            'cache',
-            'general'
-        ];
+			// Test that delay results in future or current timestamp
+			$currentTime   = time();
+			$scheduledTime = $currentTime + $delay;
+			$this->assertGreaterThanOrEqual( $currentTime, $scheduledTime );
+		}
+	}
 
-        foreach ($cleanupTypes as $type) {
-            $this->assertIsString($type);
-            $this->assertNotEmpty($type);
-            $this->assertMatchesRegularExpression('/^[a-z_]+$/', $type);
-        }
-    }
+	/**
+	 * Test queue cleanup operations
+	 */
+	public function testQueueCleanupOperations() {
+		$cleanupTypes = array(
+			'old_logs',
+			'temp_files',
+			'cache',
+			'general',
+		);
 
-    /**
-     * Test queue notification system
-     */
-    public function testQueueNotificationSystem()
-    {
-        $notificationTypes = ['email', 'webhook', 'sms'];
+		foreach ( $cleanupTypes as $type ) {
+			$this->assertIsString( $type );
+			$this->assertNotEmpty( $type );
+			$this->assertMatchesRegularExpression( '/^[a-z_]+$/', $type );
+		}
+	}
 
-        foreach ($notificationTypes as $type) {
-            $this->assertIsString($type);
-            $this->assertNotEmpty($type);
-        }
+	/**
+	 * Test queue notification system
+	 */
+	public function testQueueNotificationSystem() {
+		$notificationTypes = array( 'email', 'webhook', 'sms' );
 
-        // Test notification data structure
-        $notificationData = [
-            'type' => 'email',
-            'recipients' => ['admin@example.com'],
-            'subject' => 'Test Subject',
-            'message' => 'Test Message'
-        ];
+		foreach ( $notificationTypes as $type ) {
+			$this->assertIsString( $type );
+			$this->assertNotEmpty( $type );
+		}
 
-        $this->assertIsArray($notificationData);
-        $this->assertArrayHasKey('type', $notificationData);
-        $this->assertArrayHasKey('recipients', $notificationData);
-        $this->assertArrayHasKey('subject', $notificationData);
-        $this->assertArrayHasKey('message', $notificationData);
+		// Test notification data structure
+		$notificationData = array(
+			'type'       => 'email',
+			'recipients' => array( 'admin@example.com' ),
+			'subject'    => 'Test Subject',
+			'message'    => 'Test Message',
+		);
 
-        $this->assertIsArray($notificationData['recipients']);
-        $this->assertNotEmpty($notificationData['recipients']);
-    }
+		$this->assertIsArray( $notificationData );
+		$this->assertArrayHasKey( 'type', $notificationData );
+		$this->assertArrayHasKey( 'recipients', $notificationData );
+		$this->assertArrayHasKey( 'subject', $notificationData );
+		$this->assertArrayHasKey( 'message', $notificationData );
 
-    /**
-     * Test queue analytics integration
-     */
-    public function testQueueAnalyticsIntegration()
-    {
-        $analyticsData = [
-            'job_type' => 'feed_import',
-            'duration' => 45,
-            'items_processed' => 100,
-            'success' => true
-        ];
+		$this->assertIsArray( $notificationData['recipients'] );
+		$this->assertNotEmpty( $notificationData['recipients'] );
+	}
 
-        $this->assertIsArray($analyticsData);
-        $this->assertArrayHasKey('job_type', $analyticsData);
-        $this->assertArrayHasKey('duration', $analyticsData);
-        $this->assertArrayHasKey('items_processed', $analyticsData);
-        $this->assertArrayHasKey('success', $analyticsData);
+	/**
+	 * Test queue analytics integration
+	 */
+	public function testQueueAnalyticsIntegration() {
+		$analyticsData = array(
+			'job_type'        => 'feed_import',
+			'duration'        => 45,
+			'items_processed' => 100,
+			'success'         => true,
+		);
 
-        $this->assertIsInt($analyticsData['duration']);
-        $this->assertIsInt($analyticsData['items_processed']);
-        $this->assertIsBool($analyticsData['success']);
-    }
+		$this->assertIsArray( $analyticsData );
+		$this->assertArrayHasKey( 'job_type', $analyticsData );
+		$this->assertArrayHasKey( 'duration', $analyticsData );
+		$this->assertArrayHasKey( 'items_processed', $analyticsData );
+		$this->assertArrayHasKey( 'success', $analyticsData );
+
+		$this->assertIsInt( $analyticsData['duration'] );
+		$this->assertIsInt( $analyticsData['items_processed'] );
+		$this->assertIsBool( $analyticsData['success'] );
+	}
 }

@@ -3,7 +3,7 @@
 // Handles CPT flush, option cleanup.
 
 if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
-    exit;
+	exit;
 }
 
 // Delete options.
@@ -20,7 +20,6 @@ wp_clear_scheduled_hook( 'job_import_cron' );
 // Optional: Delete logs dir.
 $logs_dir = plugin_dir_path( __FILE__ ) . 'logs/';
 if ( file_exists( $logs_dir ) ) {
-    array_map( 'unlink', glob( $logs_dir . '*' ) );
-    rmdir( $logs_dir );
+	array_map( 'unlink', glob( $logs_dir . '*' ) );
+	rmdir( $logs_dir );
 }
-?>

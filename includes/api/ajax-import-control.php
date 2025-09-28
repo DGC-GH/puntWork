@@ -117,6 +117,14 @@ function run_job_import_batch_ajax() {
 		}
 		error_log( '[PUNTWORK] AJAX: Security validation passed' );
 
+		// Check for concurrent import lock
+		if ( get_transient( 'puntwork_import_lock' ) ) {
+			error_log( '[PUNTWORK] AJAX: Import already running, rejecting request' );
+			AjaxErrorHandler::sendError( 'Import already running' );
+			return;
+		}
+		error_log( '[PUNTWORK] AJAX: No import lock found, proceeding' );
+
 		try {
 			$start = $_POST['start'];
 			PuntWorkLogger::info( "Starting batch import at index: {$start}", PuntWorkLogger::CONTEXT_BATCH );

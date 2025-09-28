@@ -52,17 +52,19 @@ function process_batch_items_logic( array $setup ): array {
 		);
 	}
 
-	try {
-		error_log( '[PUNTWORK] [BATCH-DEBUG] Starting performance monitoring' );
-		// Start performance monitoring
-		$perf_id = start_performance_monitoring( 'batch_import' );
-		error_log( '[PUNTWORK] [BATCH-DEBUG] Performance monitoring started with ID: ' . $perf_id );
+		try {
+			error_log( '[PUNTWORK] [BATCH-DEBUG] Starting performance monitoring' );
+			// Start performance monitoring
+			$perf_id = start_performance_monitoring( 'batch_import' );
+			error_log( '[PUNTWORK] [BATCH-DEBUG] Performance monitoring started with ID: ' . $perf_id );
 
-		// Start database performance monitoring
-		start_db_performance_monitoring();
-		error_log( '[PUNTWORK] [BATCH-DEBUG] Database performance monitoring started' );
+			// Clear analytics cache to prevent memory accumulation during import
+			\Puntwork\Utilities\CacheManager::clearGroup( \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS );
+			error_log( '[PUNTWORK] [BATCH-DEBUG] Analytics cache cleared' );
 
-		// Optimize memory for large batch
+			// Start database performance monitoring
+			start_db_performance_monitoring();
+			error_log( '[PUNTWORK] [BATCH-DEBUG] Database performance monitoring started' );		// Optimize memory for large batch
 		optimize_memory_for_batch();
 		error_log( '[PUNTWORK] [BATCH-DEBUG] Memory optimization completed' );
 

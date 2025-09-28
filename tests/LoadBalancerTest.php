@@ -11,291 +11,305 @@ namespace Puntwork;
 
 use PHPUnit\Framework\TestCase;
 
-class LoadBalancerTest extends TestCase
-{
-    protected function setUp(): void
-    {
-        parent::setUp();
-        // Mock WordPress functions
-        if (!defined('ABSPATH')) {
-            define('ABSPATH', '/tmp/wordpress/');
-        }
-    }
+class LoadBalancerTest extends TestCase {
 
-    /**
-     * Test load balancing strategies
-     */
-    public function testLoadBalancingStrategies()
-    {
-        $load_balancer = new \Puntwork\PuntworkLoadBalancer();
+	protected function setUp(): void {
+		parent::setUp();
+		// Mock WordPress functions
+		if ( ! defined( 'ABSPATH' ) ) {
+			define( 'ABSPATH', '/tmp/wordpress/' );
+		}
+	}
 
-        $strategies = ['round_robin', 'least_loaded', 'weighted', 'ip_hash'];
+	/**
+	 * Test load balancing strategies
+	 */
+	public function testLoadBalancingStrategies() {
+		$load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
-        foreach ($strategies as $strategy) {
-            $this->assertIsString($strategy);
-            $this->assertNotEmpty($strategy);
-        }
+		$strategies = array( 'round_robin', 'least_loaded', 'weighted', 'ip_hash' );
 
-        // Test strategy update
-        $result = $load_balancer->updateStrategy('least_loaded');
-        $this->assertTrue($result);
+		foreach ( $strategies as $strategy ) {
+			$this->assertIsString( $strategy );
+			$this->assertNotEmpty( $strategy );
+		}
 
-        // Test invalid strategy
-        $result = $load_balancer->updateStrategy('invalid_strategy');
-        $this->assertFalse($result);
-    }
+		// Test strategy update
+		$result = $load_balancer->updateStrategy( 'least_loaded' );
+		$this->assertTrue( $result );
 
-    /**
-     * Test instance capability checking
-     */
-    public function testInstanceCapabilityChecking()
-    {
-        $load_balancer = new \Puntwork\PuntworkLoadBalancer();
+		// Test invalid strategy
+		$result = $load_balancer->updateStrategy( 'invalid_strategy' );
+		$this->assertFalse( $result );
+	}
 
-        $test_instances = [
-            [
-                'instance_id' => 'test-1',
-                'role' => 'heavy_processing',
-                'cpu_count' => 4,
-                'memory_limit' => 512 * 1024 * 1024
-            ],
-            [
-                'instance_id' => 'test-2',
-                'role' => 'light_processing',
-                'cpu_count' => 2,
-                'memory_limit' => 256 * 1024 * 1024
-            ]
-        ];
+	/**
+	 * Test instance capability checking
+	 */
+	public function testInstanceCapabilityChecking() {
+		$load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
-        $job_types = ['feed_import', 'batch_process', 'analytics_update'];
+		$test_instances = array(
+			array(
+				'instance_id'  => 'test-1',
+				'role'         => 'heavy_processing',
+				'cpu_count'    => 4,
+				'memory_limit' => 512 * 1024 * 1024,
+			),
+			array(
+				'instance_id'  => 'test-2',
+				'role'         => 'light_processing',
+				'cpu_count'    => 2,
+				'memory_limit' => 256 * 1024 * 1024,
+			),
+		);
 
-        foreach ($test_instances as $instance) {
-            foreach ($job_types as $job_type) {
-                $reflection = new \ReflectionClass($load_balancer);
-                $method = $reflection->getMethod('instanceCanHandleJob');
-                $method->setAccessible(true);
+		$job_types = array( 'feed_import', 'batch_process', 'analytics_update' );
 
-                $can_handle = $method->invoke($load_balancer, $instance, $job_type);
-                $this->assertIsBool($can_handle);
-            }
-        }
-    }
+		foreach ( $test_instances as $instance ) {
+			foreach ( $job_types as $job_type ) {
+				$reflection = new \ReflectionClass( $load_balancer );
+				$method     = $reflection->getMethod( 'instanceCanHandleJob' );
+				$method->setAccessible( true );
 
-    /**
-     * Test round robin selection
-     */
-    public function testRoundRobinSelection()
-    {
-        $load_balancer = new \Puntwork\PuntworkLoadBalancer();
+				$can_handle = $method->invoke( $load_balancer, $instance, $job_type );
+				$this->assertIsBool( $can_handle );
+			}
+		}
+	}
 
-        $instances = [
-            ['instance_id' => 'inst1', 'role' => 'heavy_processing'],
-            ['instance_id' => 'inst2', 'role' => 'standard_processing'],
-            ['instance_id' => 'inst3', 'role' => 'light_processing']
-        ];
+	/**
+	 * Test round robin selection
+	 */
+	public function testRoundRobinSelection() {
+		$load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
-        $reflection = new \ReflectionClass($load_balancer);
-        $method = $reflection->getMethod('roundRobinSelection');
-        $method->setAccessible(true);
+		$instances = array(
+			array(
+				'instance_id' => 'inst1',
+				'role'        => 'heavy_processing',
+			),
+			array(
+				'instance_id' => 'inst2',
+				'role'        => 'standard_processing',
+			),
+			array(
+				'instance_id' => 'inst3',
+				'role'        => 'light_processing',
+			),
+		);
 
-        // Test round robin distribution
-        $selections = [];
-        for ($i = 0; $i < 6; $i++) {
-            $selected = $method->invoke($load_balancer, $instances, 'feed_import');
-            if ($selected) {
-                $selections[] = $selected['instance_id'];
-            }
-        }
+		$reflection = new \ReflectionClass( $load_balancer );
+		$method     = $reflection->getMethod( 'roundRobinSelection' );
+		$method->setAccessible( true );
 
-        // Should cycle through instances
-        $this->assertContains('inst1', $selections);
-        $this->assertContains('inst2', $selections);
-        $this->assertContains('inst3', $selections);
-    }
+		// Test round robin distribution
+		$selections = array();
+		for ( $i = 0; $i < 6; $i++ ) {
+			$selected = $method->invoke( $load_balancer, $instances, 'feed_import' );
+			if ( $selected ) {
+				$selections[] = $selected['instance_id'];
+			}
+		}
 
-    /**
-     * Test weighted selection
-     */
-    public function testWeightedSelection()
-    {
-        $load_balancer = new \Puntwork\PuntworkLoadBalancer();
+		// Should cycle through instances
+		$this->assertContains( 'inst1', $selections );
+		$this->assertContains( 'inst2', $selections );
+		$this->assertContains( 'inst3', $selections );
+	}
 
-        $instances = [
-            [
-                'instance_id' => 'heavy',
-                'role' => 'heavy_processing',
-                'cpu_count' => 8,
-                'memory_limit' => 1024 * 1024 * 1024
-            ],
-            [
-                'instance_id' => 'light',
-                'role' => 'light_processing',
-                'cpu_count' => 2,
-                'memory_limit' => 256 * 1024 * 1024
-            ]
-        ];
+	/**
+	 * Test weighted selection
+	 */
+	public function testWeightedSelection() {
+		$load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
-        $reflection = new \ReflectionClass($load_balancer);
-        $method = $reflection->getMethod('weightedSelection');
-        $method->setAccessible(true);
+		$instances = array(
+			array(
+				'instance_id'  => 'heavy',
+				'role'         => 'heavy_processing',
+				'cpu_count'    => 8,
+				'memory_limit' => 1024 * 1024 * 1024,
+			),
+			array(
+				'instance_id'  => 'light',
+				'role'         => 'light_processing',
+				'cpu_count'    => 2,
+				'memory_limit' => 256 * 1024 * 1024,
+			),
+		);
 
-        // Test weighted selection
-        $selections = [];
-        for ($i = 0; $i < 20; $i++) {
-            $selected = $method->invoke($load_balancer, $instances, 'batch_process');
-            if ($selected) {
-                $selections[] = $selected['instance_id'];
-            }
-        }
+		$reflection = new \ReflectionClass( $load_balancer );
+		$method     = $reflection->getMethod( 'weightedSelection' );
+		$method->setAccessible( true );
 
-        // Heavy instance should be selected more often
-        $heavy_count = count(array_filter($selections, function ($id) {
-            return $id === 'heavy';
-        }));
-        $light_count = count(array_filter($selections, function ($id) {
-            return $id === 'light';
-        }));
+		// Test weighted selection
+		$selections = array();
+		for ( $i = 0; $i < 20; $i++ ) {
+			$selected = $method->invoke( $load_balancer, $instances, 'batch_process' );
+			if ( $selected ) {
+				$selections[] = $selected['instance_id'];
+			}
+		}
 
-        $this->assertGreaterThan($light_count, $heavy_count);
-    }
+		// Heavy instance should be selected more often
+		$heavy_count = count(
+			array_filter(
+				$selections,
+				function ( $id ) {
+					return $id === 'heavy';
+				}
+			)
+		);
+		$light_count = count(
+			array_filter(
+				$selections,
+				function ( $id ) {
+					return $id === 'light';
+				}
+			)
+		);
 
-    /**
-     * Test IP hash selection
-     */
-    public function testIpHashSelection()
-    {
-        $load_balancer = new \Puntwork\PuntworkLoadBalancer();
+		$this->assertGreaterThan( $light_count, $heavy_count );
+	}
 
-        $instances = [
-            ['instance_id' => 'inst1', 'role' => 'standard_processing'],
-            ['instance_id' => 'inst2', 'role' => 'standard_processing']
-        ];
+	/**
+	 * Test IP hash selection
+	 */
+	public function testIpHashSelection() {
+		$load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
-        $reflection = new \ReflectionClass($load_balancer);
-        $method = $reflection->getMethod('ipHashSelection');
-        $method->setAccessible(true);
+		$instances = array(
+			array(
+				'instance_id' => 'inst1',
+				'role'        => 'standard_processing',
+			),
+			array(
+				'instance_id' => 'inst2',
+				'role'        => 'standard_processing',
+			),
+		);
 
-        // Test IP hash consistency
-        $selected1 = $method->invoke($load_balancer, $instances, 'feed_import');
-        $selected2 = $method->invoke($load_balancer, $instances, 'feed_import');
+		$reflection = new \ReflectionClass( $load_balancer );
+		$method     = $reflection->getMethod( 'ipHashSelection' );
+		$method->setAccessible( true );
 
-        // Should return same instance for same "IP"
-        $this->assertEquals($selected1['instance_id'], $selected2['instance_id']);
-    }
+		// Test IP hash consistency
+		$selected1 = $method->invoke( $load_balancer, $instances, 'feed_import' );
+		$selected2 = $method->invoke( $load_balancer, $instances, 'feed_import' );
 
-    /**
-     * Test load balancer statistics
-     */
-    public function testLoadBalancerStatistics()
-    {
-        $load_balancer = new \Puntwork\PuntworkLoadBalancer();
+		// Should return same instance for same "IP"
+		$this->assertEquals( $selected1['instance_id'], $selected2['instance_id'] );
+	}
 
-        // Statistics should be available
-        $reflection = new \ReflectionClass($load_balancer);
-        $method = $reflection->getMethod('getLoadBalancerStats');
-        $method->setAccessible(true);
+	/**
+	 * Test load balancer statistics
+	 */
+	public function testLoadBalancerStatistics() {
+		$load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
-        $stats = $method->invoke($load_balancer);
+		// Statistics should be available
+		$reflection = new \ReflectionClass( $load_balancer );
+		$method     = $reflection->getMethod( 'getLoadBalancerStats' );
+		$method->setAccessible( true );
 
-        $this->assertIsArray($stats);
-        $this->assertArrayHasKey('active_instances', $stats);
-        $this->assertArrayHasKey('total_requests', $stats);
-        $this->assertArrayHasKey('successful_requests', $stats);
-        $this->assertArrayHasKey('failed_requests', $stats);
-    }
+		$stats = $method->invoke( $load_balancer );
 
-    /**
-     * Test load distribution simulation
-     */
-    public function testLoadDistributionSimulation()
-    {
-        $load_balancer = new \Puntwork\PuntworkLoadBalancer();
+		$this->assertIsArray( $stats );
+		$this->assertArrayHasKey( 'active_instances', $stats );
+		$this->assertArrayHasKey( 'total_requests', $stats );
+		$this->assertArrayHasKey( 'successful_requests', $stats );
+		$this->assertArrayHasKey( 'failed_requests', $stats );
+	}
 
-        $reflection = new \ReflectionClass($load_balancer);
-        $method = $reflection->getMethod('estimateProcessingTime');
-        $method->setAccessible(true);
+	/**
+	 * Test load distribution simulation
+	 */
+	public function testLoadDistributionSimulation() {
+		$load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
-        $instance = [
-            'instance_id' => 'test-instance',
-            'role' => 'heavy_processing',
-            'cpu_count' => 4,
-            'memory_limit' => 512 * 1024 * 1024
-        ];
+		$reflection = new \ReflectionClass( $load_balancer );
+		$method     = $reflection->getMethod( 'estimateProcessingTime' );
+		$method->setAccessible( true );
 
-        $job_types = ['feed_import', 'batch_process', 'analytics_update'];
+		$instance = array(
+			'instance_id'  => 'test-instance',
+			'role'         => 'heavy_processing',
+			'cpu_count'    => 4,
+			'memory_limit' => 512 * 1024 * 1024,
+		);
 
-        foreach ($job_types as $job_type) {
-            $time = $method->invoke($load_balancer, $job_type, [], $instance);
-            $this->assertIsFloat($time);
-            $this->assertGreaterThan(0, $time);
-        }
-    }
+		$job_types = array( 'feed_import', 'batch_process', 'analytics_update' );
 
-    /**
-     * Test load balancer admin interface
-     */
-    public function testLoadBalancerAdminInterface()
-    {
-        $load_balancer = new \Puntwork\PuntworkLoadBalancer();
+		foreach ( $job_types as $job_type ) {
+			$time = $method->invoke( $load_balancer, $job_type, array(), $instance );
+			$this->assertIsFloat( $time );
+			$this->assertGreaterThan( 0, $time );
+		}
+	}
 
-        // In test environment, hooks are not initialized, so skip WordPress specific checks
-        if (!$load_balancer->isWordpressEnvironment()) {
-            $this->assertTrue(true); // Skip WordPress checks in test environment
-            return;
-        }
+	/**
+	 * Test load balancer admin interface
+	 */
+	public function testLoadBalancerAdminInterface() {
+		$load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
-        // Admin menu should be registered
-        $this->assertTrue(has_action('admin_menu', [$load_balancer, 'addLoadBalancerMenu']));
+		// In test environment, hooks are not initialized, so skip WordPress specific checks
+		if ( ! $load_balancer->isWordpressEnvironment() ) {
+			$this->assertTrue( true ); // Skip WordPress checks in test environment
+			return;
+		}
 
-        // AJAX endpoints should be registered
-        $this->assertTrue(has_action('wp_ajax_puntwork_lb_health_check', [$load_balancer, 'ajaxHealthCheckAll']));
-        $this->assertTrue(has_action('wp_ajax_puntwork_lb_stats', [$load_balancer, 'ajaxGetStats']));
-    }
+		// Admin menu should be registered
+		$this->assertTrue( has_action( 'admin_menu', array( $load_balancer, 'addLoadBalancerMenu' ) ) );
 
-    /**
-     * Test load balancer initialization
-     */
-    public function testLoadBalancerInitialization()
-    {
-        $load_balancer = new \Puntwork\PuntworkLoadBalancer();
+		// AJAX endpoints should be registered
+		$this->assertTrue( has_action( 'wp_ajax_puntwork_lb_health_check', array( $load_balancer, 'ajaxHealthCheckAll' ) ) );
+		$this->assertTrue( has_action( 'wp_ajax_puntwork_lb_stats', array( $load_balancer, 'ajaxGetStats' ) ) );
+	}
 
-        // In test environment, hooks are not initialized, so skip WordPress specific checks
-        if (!$load_balancer->isWordpressEnvironment()) {
-            $this->assertTrue(true); // Skip WordPress checks in test environment
-            return;
-        }
+	/**
+	 * Test load balancer initialization
+	 */
+	public function testLoadBalancerInitialization() {
+		$load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
-        // Should have initialized hooks
-        $this->assertTrue(has_action('init', [$load_balancer, 'processLoadBalancedJobs']));
+		// In test environment, hooks are not initialized, so skip WordPress specific checks
+		if ( ! $load_balancer->isWordpressEnvironment() ) {
+			$this->assertTrue( true ); // Skip WordPress checks in test environment
+			return;
+		}
 
-        // Should have default strategy
-        $reflection = new \ReflectionClass($load_balancer);
-        $property = $reflection->getProperty('balancing_strategy');
-        $property->setAccessible(true);
-        $strategy = $property->getValue($load_balancer);
+		// Should have initialized hooks
+		$this->assertTrue( has_action( 'init', array( $load_balancer, 'processLoadBalancedJobs' ) ) );
 
-        $this->assertIsString($strategy);
-        $this->assertNotEmpty($strategy);
-    }
+		// Should have default strategy
+		$reflection = new \ReflectionClass( $load_balancer );
+		$property   = $reflection->getProperty( 'balancing_strategy' );
+		$property->setAccessible( true );
+		$strategy = $property->getValue( $load_balancer );
 
-    /**
-     * Test load balancer job processing
-     */
-    public function testLoadBalancerJobProcessing()
-    {
-        $load_balancer = new \Puntwork\PuntworkLoadBalancer();
+		$this->assertIsString( $strategy );
+		$this->assertNotEmpty( $strategy );
+	}
 
-        // Job processing should not throw exceptions
-        $this->expectNotToPerformAssertions();
+	/**
+	 * Test load balancer job processing
+	 */
+	public function testLoadBalancerJobProcessing() {
+		$load_balancer = new \Puntwork\PuntworkLoadBalancer();
 
-        try {
-            $reflection = new \ReflectionClass($load_balancer);
-            $method = $reflection->getMethod('processLoadBalancedJobs');
-            $method->setAccessible(true);
-            $method->invoke($load_balancer);
-        } catch (\Exception $e) {
-            // Processing might fail in test environment, which is OK
-            $this->assertInstanceOf(\Exception::class, $e);
-        }
-    }
+		// Job processing should not throw exceptions
+		$this->expectNotToPerformAssertions();
+
+		try {
+			$reflection = new \ReflectionClass( $load_balancer );
+			$method     = $reflection->getMethod( 'processLoadBalancedJobs' );
+			$method->setAccessible( true );
+			$method->invoke( $load_balancer );
+		} catch ( \Exception $e ) {
+			// Processing might fail in test environment, which is OK
+			$this->assertInstanceOf( \Exception::class, $e );
+		}
+	}
 }
