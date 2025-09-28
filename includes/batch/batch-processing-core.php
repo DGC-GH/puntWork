@@ -275,7 +275,9 @@ function process_batch_items_logic( array $setup ): array
             'performance'        => $perf_data,
             'message'            => '',
             );
-            \Puntwork\schedule_async_analytics_update($analytics_data);
+            if (is_callable('schedule_async_analytics_update')) {
+                schedule_async_analytics_update($analytics_data);
+            }
 
             error_log('[PUNTWORK] [BATCH-DEBUG] process_batch_items_logic completed successfully');
 

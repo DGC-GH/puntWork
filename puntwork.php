@@ -375,7 +375,7 @@ function handle_cors_preflight()
 }
 
 // Add analytics async processing hook
-add_action('puntwork_update_analytics_async', __NAMESPACE__ . '\\process_async_analytics_update');
+add_action('puntwork_update_analytics_async', 'process_async_analytics_update_global');
 
 // Uninstall hook (cleanup)
 register_uninstall_hook(__FILE__, __NAMESPACE__ . '\\job_import_uninstall');

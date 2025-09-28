@@ -251,6 +251,9 @@ function init_async_processing(): void
 
     // Hook for WP-Cron fallback
     add_action('puntwork_process_batch_async', __NAMESPACE__ . '\\handle_async_batch_job_cron', 10, 1);
+
+    // Hook for analytics update
+    add_action('puntwork_update_analytics_async', 'process_async_analytics_update_global', 10, 1);
 }
 
 /**
@@ -383,6 +386,7 @@ function get_async_processing_status(): array
     );
 }
 
+// Global functions for analytics
 /**
  * Schedule async analytics update after import batch
  *
@@ -393,7 +397,7 @@ function schedule_async_analytics_update( array $analytics_data ): ?string
 {
     $hook = 'puntwork_update_analytics_async';
 
-    if (is_action_scheduler_available() && function_exists('as_schedule_single_action') ) {
+    if (\Puntwork\is_action_scheduler_available() && function_exists('as_schedule_single_action') ) {
         // Use Action Scheduler if available (preferred)
         return as_schedule_single_action(time(), $hook, array( $analytics_data ), 'puntwork', false, 5); // Lower priority
     } elseif (function_exists('wp_schedule_single_event') ) {
@@ -417,9 +421,9 @@ function schedule_async_analytics_update( array $analytics_data ): ?string
  *
  * @param array $analytics_data Analytics data
  */
-function process_async_analytics_update( array $analytics_data ): void
+function process_async_analytics_update_global( array $analytics_data ): void
 {
-    if (class_exists(__NAMESPACE__ . '\\ImportAnalytics') ) {
-        ImportAnalytics::record_batch_metrics($analytics_data);
+    if (class_exists('\Puntwork\ImportAnalytics') ) {
+        \Puntwork\ImportAnalytics::record_batch_metrics($analytics_data);
     }
 }
