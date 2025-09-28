@@ -9,210 +9,200 @@
 namespace Puntwork\JobBoards;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
  * Indeed job board integration.
  */
-class IndeedBoard extends JobBoard
-{
-    /**
-     * Publisher ID for Indeed API.
-     */
-    protected string $publisher_id = '';
+class IndeedBoard extends JobBoard {
 
-    /**
-     * Constructor.
-     */
-    public function __construct(array $config = [])
-    {
-        $this->board_id = 'indeed';
-        $this->board_name = 'Indeed';
-        $this->api_url = 'https://api.indeed.com/ads/apisearch';
+	/**
+	 * Publisher ID for Indeed API.
+	 */
+	protected string $publisher_id = '';
 
-        parent::__construct($config);
-    }
+	/**
+	 * Constructor.
+	 */
+	public function __construct( array $config = array() ) {
+		$this->board_id   = 'indeed';
+		$this->board_name = 'Indeed';
+		$this->api_url    = 'https://api.indeed.com/ads/apisearch';
 
-    /**
-     * Configure Indeed integration.
-     */
-    public function configure(array $config): void
-    {
-        parent::configure($config);
+		parent::__construct( $config );
+	}
 
-        if (isset($config['publisher_id'])) {
-            $this->publisher_id = $config['publisher_id'];
-        }
-    }
+	/**
+	 * Configure Indeed integration.
+	 */
+	public function configure( array $config ): void {
+		parent::configure( $config );
 
-    /**
-     * Check if Indeed is properly configured.
-     */
-    public function isConfigured(): bool
-    {
-        return parent::isConfigured() && !empty($this->publisher_id);
-    }
+		if ( isset( $config['publisher_id'] ) ) {
+			$this->publisher_id = $config['publisher_id'];
+		}
+	}
 
-    /**
-     * Fetch jobs from Indeed.
-     */
-    public function fetchJobs(array $params = []): array
-    {
-        if (!$this->isConfigured()) {
-            throw new \Exception('Indeed integration not properly configured');
-        }
+	/**
+	 * Check if Indeed is properly configured.
+	 */
+	public function isConfigured(): bool {
+		return parent::isConfigured() && ! empty( $this->publisher_id );
+	}
 
-        $default_params = [
-            'publisher' => $this->publisher_id,
-            'v' => '2',
-            'format' => 'json',
-            'limit' => 25,
-            'fromage' => 30, // Jobs from last 30 days
-            'sort' => 'date',
-        ];
+	/**
+	 * Fetch jobs from Indeed.
+	 */
+	public function fetchJobs( array $params = array() ): array {
+		if ( ! $this->isConfigured() ) {
+			throw new \Exception( 'Indeed integration not properly configured' );
+		}
 
-        $search_params = array_merge($default_params, $params);
+		$default_params = array(
+			'publisher' => $this->publisher_id,
+			'v'         => '2',
+			'format'    => 'json',
+			'limit'     => 25,
+			'fromage'   => 30, // Jobs from last 30 days
+			'sort'      => 'date',
+		);
 
-        try {
-            $response = $this->makeApiRequest('', $search_params);
+		$search_params = array_merge( $default_params, $params );
 
-            if (!isset($response['results'])) {
-                return [];
-            }
+		try {
+			$response = $this->makeApiRequest( '', $search_params );
 
-            $jobs = [];
-            foreach ($response['results'] as $job_data) {
-                $jobs[] = $this->normalizeIndeedJob($job_data);
-            }
+			if ( ! isset( $response['results'] ) ) {
+				return array();
+			}
 
-            return $jobs;
-        } catch (\Exception $e) {
-            PuntWorkLogger::error(
-                'Indeed API error',
-                PuntWorkLogger::CONTEXT_IMPORT,
-                [
-                    'error' => $e->getMessage(),
-                    'params' => $search_params,
-                ]
-            );
+			$jobs = array();
+			foreach ( $response['results'] as $job_data ) {
+				$jobs[] = $this->normalizeIndeedJob( $job_data );
+			}
 
-            return [];
-        }
-    }
+			return $jobs;
+		} catch ( \Exception $e ) {
+			PuntWorkLogger::error(
+				'Indeed API error',
+				PuntWorkLogger::CONTEXT_IMPORT,
+				array(
+					'error'  => $e->getMessage(),
+					'params' => $search_params,
+				)
+			);
 
-    /**
-     * Get job details by ID.
-     */
-    public function getJobDetails(string $jobId): ?array
-    {
-        // Indeed doesn't provide detailed job info via API
-        // Return basic info if we have it cached, otherwise null
-        return null;
-    }
+			return array();
+		}
+	}
 
-    /**
-     * Search jobs with filters.
-     */
-    public function searchJobs(array $filters = []): array
-    {
-        $params = [];
+	/**
+	 * Get job details by ID.
+	 */
+	public function getJobDetails( string $jobId ): ?array {
+		// Indeed doesn't provide detailed job info via API
+		// Return basic info if we have it cached, otherwise null
+		return null;
+	}
 
-        if (isset($filters['keywords'])) {
-            $params['q'] = $filters['keywords'];
-        }
+	/**
+	 * Search jobs with filters.
+	 */
+	public function searchJobs( array $filters = array() ): array {
+		$params = array();
 
-        if (isset($filters['location'])) {
-            $params['l'] = $filters['location'];
-        }
+		if ( isset( $filters['keywords'] ) ) {
+			$params['q'] = $filters['keywords'];
+		}
 
-        if (isset($filters['category'])) {
-            $params['co'] = $filters['category'];
-        }
+		if ( isset( $filters['location'] ) ) {
+			$params['l'] = $filters['location'];
+		}
 
-        if (isset($filters['job_type'])) {
-            $params['jt'] = $filters['job_type'];
-        }
+		if ( isset( $filters['category'] ) ) {
+			$params['co'] = $filters['category'];
+		}
 
-        if (isset($filters['date_posted'])) {
-            // Convert to Indeed's fromage parameter (days ago)
-            $days_ago = $this->calculateDaysAgo($filters['date_posted']);
-            $params['fromage'] = $days_ago;
-        }
+		if ( isset( $filters['job_type'] ) ) {
+			$params['jt'] = $filters['job_type'];
+		}
 
-        return $this->fetchJobs($params);
-    }
+		if ( isset( $filters['date_posted'] ) ) {
+			// Convert to Indeed's fromage parameter (days ago)
+			$days_ago          = $this->calculateDaysAgo( $filters['date_posted'] );
+			$params['fromage'] = $days_ago;
+		}
 
-    /**
-     * Normalize Indeed job data.
-     */
-    private function normalizeIndeedJob(array $jobData): array
-    {
-        return [
-            'id' => $jobData['jobkey'] ?? uniqid('indeed_'),
-            'title' => $jobData['jobtitle'] ?? '',
-            'description' => $jobData['snippet'] ?? '',
-            'company' => $jobData['company'] ?? '',
-            'location' => $jobData['formattedLocation'] ?? $jobData['city'] ?? '',
-            'salary' => $jobData['formattedRelativeTime'] ?? '',
-            'job_type' => $this->mapJobType($jobData['jobtype'] ?? ''),
-            'category' => $jobData['category'] ?? '',
-            'url' => $jobData['url'] ?? '',
-            'date_posted' => $this->parseDatePosted($jobData['date'] ?? ''),
-            'source' => 'indeed',
-            'raw_data' => $jobData,
-        ];
-    }
+		return $this->fetchJobs( $params );
+	}
 
-    /**
-     * Map Indeed job types to standard format.
-     */
-    private function mapJobType(string $indeedType): string
-    {
-        $type_map = [
-            'fulltime' => 'full-time',
-            'parttime' => 'part-time',
-            'contract' => 'contract',
-            'temporary' => 'temporary',
-            'internship' => 'internship',
-        ];
+	/**
+	 * Normalize Indeed job data.
+	 */
+	private function normalizeIndeedJob( array $jobData ): array {
+		return array(
+			'id'          => $jobData['jobkey'] ?? uniqid( 'indeed_' ),
+			'title'       => $jobData['jobtitle'] ?? '',
+			'description' => $jobData['snippet'] ?? '',
+			'company'     => $jobData['company'] ?? '',
+			'location'    => $jobData['formattedLocation'] ?? $jobData['city'] ?? '',
+			'salary'      => $jobData['formattedRelativeTime'] ?? '',
+			'job_type'    => $this->mapJobType( $jobData['jobtype'] ?? '' ),
+			'category'    => $jobData['category'] ?? '',
+			'url'         => $jobData['url'] ?? '',
+			'date_posted' => $this->parseDatePosted( $jobData['date'] ?? '' ),
+			'source'      => 'indeed',
+			'raw_data'    => $jobData,
+		);
+	}
 
-        return $type_map[strtolower($indeedType)] ?? 'full-time';
-    }
+	/**
+	 * Map Indeed job types to standard format.
+	 */
+	private function mapJobType( string $indeedType ): string {
+		$type_map = array(
+			'fulltime'   => 'full-time',
+			'parttime'   => 'part-time',
+			'contract'   => 'contract',
+			'temporary'  => 'temporary',
+			'internship' => 'internship',
+		);
 
-    /**
-     * Parse Indeed date format.
-     */
-    private function parseDatePosted(string $dateString): string
-    {
-        if (empty($dateString)) {
-            return date('Y-m-d');
-        }
+		return $type_map[ strtolower( $indeedType ) ] ?? 'full-time';
+	}
 
-        // Indeed returns relative dates like "1 day ago", "2 days ago"
-        if (preg_match('/(\d+)\s+days?\s+ago/i', $dateString, $matches)) {
-            $days_ago = (int)$matches[1];
+	/**
+	 * Parse Indeed date format.
+	 */
+	private function parseDatePosted( string $dateString ): string {
+		if ( empty( $dateString ) ) {
+			return date( 'Y-m-d' );
+		}
 
-            return date('Y-m-d', strtotime("-{$days_ago} days"));
-        }
+		// Indeed returns relative dates like "1 day ago", "2 days ago"
+		if ( preg_match( '/(\d+)\s+days?\s+ago/i', $dateString, $matches ) ) {
+			$days_ago = (int) $matches[1];
 
-        return date('Y-m-d');
-    }
+			return date( 'Y-m-d', strtotime( "-{$days_ago} days" ) );
+		}
 
-    /**
-     * Calculate days ago from date string.
-     */
-    private function calculateDaysAgo(string $dateString): int
-    {
-        try {
-            $date = new \DateTime($dateString);
-            $now = new \DateTime();
-            $interval = $now->diff($date);
+		return date( 'Y-m-d' );
+	}
 
-            return $interval->days;
-        } catch (\Exception $e) {
-            return 30; // Default to 30 days
-        }
-    }
+	/**
+	 * Calculate days ago from date string.
+	 */
+	private function calculateDaysAgo( string $dateString ): int {
+		try {
+			$date     = new \DateTime( $dateString );
+			$now      = new \DateTime();
+			$interval = $now->diff( $date );
+
+			return $interval->days;
+		} catch ( \Exception $e ) {
+			return 30; // Default to 30 days
+		}
+	}
 }

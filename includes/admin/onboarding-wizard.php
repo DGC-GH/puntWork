@@ -7,75 +7,69 @@
 
 namespace Puntwork;
 
-class PuntworkOnboardingWizard
-{
-    public function __construct()
-    {
-        $this->init();
-    }
+class PuntworkOnboardingWizard {
 
-    public function init()
-    {
-        // Add AJAX handlers
-        add_action('wp_ajax_puntwork_complete_onboarding', [$this, 'completeOnboarding']);
+	public function __construct() {
+		$this->init();
+	}
 
-        // Add menu item to restart onboarding
-        add_action('admin_menu', [$this, 'addOnboardingMenuItem'], 100);
-    }
+	public function init() {
+		// Add AJAX handlers
+		add_action( 'wp_ajax_puntwork_complete_onboarding', array( $this, 'completeOnboarding' ) );
 
-    public function addOnboardingMenuItem()
-    {
-        add_submenu_page(
-            null, // Hidden page
-            __('puntWork Onboarding', 'puntwork'),
-            __('Onboarding', 'puntwork'),
-            'manage_options',
-            'puntwork-onboarding',
-            [$this, 'renderOnboardingPage']
-        );
-    }
+		// Add menu item to restart onboarding
+		add_action( 'admin_menu', array( $this, 'addOnboardingMenuItem' ), 100 );
+	}
 
-    public function renderOnboardingPage()
-    {
-        // Reset onboarding and redirect to dashboard
-        delete_option('puntwork_onboarding_completed');
-        wp_redirect(admin_url('admin.php?page=puntwork-dashboard&show_onboarding=1'));
-        exit;
-    }
+	public function addOnboardingMenuItem() {
+		add_submenu_page(
+			null, // Hidden page
+			__( 'puntWork Onboarding', 'puntwork' ),
+			__( 'Onboarding', 'puntwork' ),
+			'manage_options',
+			'puntwork-onboarding',
+			array( $this, 'renderOnboardingPage' )
+		);
+	}
 
-    public function completeOnboarding()
-    {
-        // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_onboarding_nonce')) {
-            wp_send_json_error(['message' => __('Security check failed.', 'puntwork')]);
+	public function renderOnboardingPage() {
+		// Reset onboarding and redirect to dashboard
+		delete_option( 'puntwork_onboarding_completed' );
+		wp_redirect( admin_url( 'admin.php?page=puntwork-dashboard&show_onboarding=1' ) );
+		exit;
+	}
 
-            return;
-        }
+	public function completeOnboarding() {
+		// Verify nonce
+		if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'puntwork_onboarding_nonce' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Security check failed.', 'puntwork' ) ) );
 
-        // Mark onboarding as completed
-        update_option('puntwork_onboarding_completed', true);
+			return;
+		}
 
-        wp_send_json_success(
-            [
-                'message' => __('Onboarding completed successfully!', 'puntwork'),
-            ]
-        );
-    }
+		// Mark onboarding as completed
+		update_option( 'puntwork_onboarding_completed', true );
 
-    public static function isOnboardingCompleted()
-    {
-        return get_option('puntwork_onboarding_completed', false);
-    }
+		wp_send_json_success(
+			array(
+				'message' => __( 'Onboarding completed successfully!', 'puntwork' ),
+			)
+		);
+	}
+
+	public static function isOnboardingCompleted() {
+		return get_option( 'puntwork_onboarding_completed', false );
+	}
 }
 
 // Initialize onboarding wizard only when WordPress is loaded and not in testing
-if (!defined('PHPUNIT_RUNNING') && function_exists('add_action')) {
-    add_action(
-        'init',
-        function () {
-            if (class_exists('PuntworkOnboardingWizard')) {
-                new PuntworkOnboardingWizard();
-            }
-        }
-    );
+if ( ! defined( 'PHPUNIT_RUNNING' ) && function_exists( 'add_action' ) ) {
+	add_action(
+		'init',
+		function () {
+			if ( class_exists( 'PuntworkOnboardingWizard' ) ) {
+				new PuntworkOnboardingWizard();
+			}
+		}
+	);
 }
