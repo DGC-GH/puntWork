@@ -122,7 +122,9 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
 
                     $duplicates_drafted++;
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Drafted duplicate ID: ' . $dup_id . ' GUID: ' . $guid . ' - ' . $reason;
-                    error_log('Drafted duplicate ID: ' . $dup_id . ' GUID: ' . $guid . ' - ' . $reason);
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Drafted duplicate ID: ' . $dup_id . ' GUID: ' . $guid . ' - ' . $reason);
+                    }
                 }
                 $post_ids_by_guid[$guid] = $post_to_keep;
             } else {

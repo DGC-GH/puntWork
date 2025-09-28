@@ -55,12 +55,16 @@ function get_cached_last_updates(array $post_ids, array $post_id_chunks): array
     $cached = \Puntwork\Utilities\CacheManager::get($cache_key, \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS);
 
     if ($cached !== false) {
-        error_log('[PUNTWORK] [DB-DEBUG] Returning cached last updates for ' . count($post_ids) . ' posts');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [DB-DEBUG] Returning cached last updates for ' . count($post_ids) . ' posts');
+        }
 
         return $cached;
     }
 
-    error_log('[PUNTWORK] [DB-DEBUG] Cache miss, querying last updates for ' . count($post_ids) . ' posts');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] Cache miss, querying last updates for ' . count($post_ids) . ' posts');
+    }
 
     $last_updates = [];
     foreach ($post_id_chunks as $chunk) {
@@ -73,18 +77,24 @@ function get_cached_last_updates(array $post_ids, array $post_id_chunks): array
             $chunk
         );
 
-        error_log('[PUNTWORK] [DB-DEBUG] Executing last updates query for chunk of ' . count($chunk) . ' posts');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [DB-DEBUG] Executing last updates query for chunk of ' . count($chunk) . ' posts');
+        }
 
         $start_time = microtime(true);
         $chunk_last = $wpdb->get_results($query, OBJECT_K);
         $query_time = microtime(true) - $start_time;
 
-        error_log('[PUNTWORK] [DB-DEBUG] Last updates query returned ' . count($chunk_last) . ' results in ' . number_format($query_time, 4) . ' seconds');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [DB-DEBUG] Last updates query returned ' . count($chunk_last) . ' results in ' . number_format($query_time, 4) . ' seconds');
+        }
 
         $last_updates += (array)$chunk_last;
     }
 
-    error_log('[PUNTWORK] [DB-DEBUG] Total last updates retrieved: ' . count($last_updates));
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] Total last updates retrieved: ' . count($last_updates));
+    }
 
     // Cache for 5 minutes during import processing
     \Puntwork\Utilities\CacheManager::set($cache_key, $last_updates, \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS, 5 * MINUTE_IN_SECONDS);
@@ -103,12 +113,16 @@ function get_cached_import_hashes(array $post_ids, array $post_id_chunks): array
     $cached = \Puntwork\Utilities\CacheManager::get($cache_key, \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS);
 
     if ($cached !== false) {
-        error_log('[PUNTWORK] [DB-DEBUG] Returning cached import hashes for ' . count($post_ids) . ' posts');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [DB-DEBUG] Returning cached import hashes for ' . count($post_ids) . ' posts');
+        }
 
         return $cached;
     }
 
-    error_log('[PUNTWORK] [DB-DEBUG] Cache miss, querying import hashes for ' . count($post_ids) . ' posts');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] Cache miss, querying import hashes for ' . count($post_ids) . ' posts');
+    }
 
     $hashes_by_post = [];
     foreach ($post_id_chunks as $chunk) {
@@ -121,20 +135,26 @@ function get_cached_import_hashes(array $post_ids, array $post_id_chunks): array
             $chunk
         );
 
-        error_log('[PUNTWORK] [DB-DEBUG] Executing import hashes query for chunk of ' . count($chunk) . ' posts');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [DB-DEBUG] Executing import hashes query for chunk of ' . count($chunk) . ' posts');
+        }
 
         $start_time = microtime(true);
         $chunk_hashes = $wpdb->get_results($query, OBJECT_K);
         $query_time = microtime(true) - $start_time;
 
-        error_log('[PUNTWORK] [DB-DEBUG] Import hashes query returned ' . count($chunk_hashes) . ' results in ' . number_format($query_time, 4) . ' seconds');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [DB-DEBUG] Import hashes query returned ' . count($chunk_hashes) . ' results in ' . number_format($query_time, 4) . ' seconds');
+        }
 
         foreach ($chunk_hashes as $id => $obj) {
             $hashes_by_post[$id] = $obj->meta_value;
         }
     }
 
-    error_log('[PUNTWORK] [DB-DEBUG] Total import hashes retrieved: ' . count($hashes_by_post));
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] Total import hashes retrieved: ' . count($hashes_by_post));
+    }
 
     // Cache for 5 minutes during import processing
     \Puntwork\Utilities\CacheManager::set($cache_key, $hashes_by_post, \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS, 5 * MINUTE_IN_SECONDS);

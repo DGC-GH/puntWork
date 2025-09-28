@@ -125,7 +125,9 @@ function process_async_batch_job(array $batch_data): array
 
         return $result;
     } catch (\Exception $e) {
-        error_log('[PUNTWORK] Async batch processing error: ' . $e->getMessage());
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] Async batch processing error: ' . $e->getMessage());
+        }
 
         return [
             'success' => false,

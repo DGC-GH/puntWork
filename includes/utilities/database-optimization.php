@@ -114,7 +114,9 @@ function bulk_update_post_meta($post_id, array $meta_data): void
         return;
     }
 
-    error_log('[PUNTWORK] [DB-DEBUG] bulk_update_post_meta called for post ' . (is_array($post_id) ? 'multiple posts' : $post_id) . ' with ' . count($meta_data) . ' fields');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] bulk_update_post_meta called for post ' . (is_array($post_id) ? 'multiple posts' : $post_id) . ' with ' . count($meta_data) . ' fields');
+    }
 
     $values = [];
     $placeholders = [];
@@ -165,7 +167,9 @@ function bulk_update_post_meta($post_id, array $meta_data): void
     $wpdb->query($query);
     $query_time = microtime(true) - $start_time;
 
-    error_log('[PUNTWORK] [DB-DEBUG] bulk_update_post_meta completed in ' . number_format($query_time, 4) . ' seconds');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] bulk_update_post_meta completed in ' . number_format($query_time, 4) . ' seconds');
+    }
 }
 
 /**
@@ -182,7 +186,9 @@ function bulk_update_acf_fields(array $post_ids, array $acf_data): void
         return;
     }
 
-    error_log('[PUNTWORK] [ACF-DEBUG] bulk_update_acf_fields called for ' . count($post_ids) . ' posts with ACF data');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [ACF-DEBUG] bulk_update_acf_fields called for ' . count($post_ids) . ' posts with ACF data');
+    }
 
     $start_time = microtime(true);
 
@@ -194,29 +200,39 @@ function bulk_update_acf_fields(array $post_ids, array $acf_data): void
         $post_acf_start = microtime(true);
         $fields = $acf_data[$index];
 
-        error_log('[PUNTWORK] [ACF-DEBUG] Updating ACF fields for post ' . $post_id . ' (' . count($fields) . ' fields)');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [ACF-DEBUG] Updating ACF fields for post ' . $post_id . ' (' . count($fields) . ' fields)');
+        }
 
         foreach ($fields as $field_name => $value) {
             $field_start = microtime(true);
             update_post_meta($post_id, $field_name, $value);
             $field_time = microtime(true) - $field_start;
             if ($field_time > 1.0) { // Log slow field updates
-                error_log('[PUNTWORK] [ACF-DEBUG] SLOW field update: ' . $field_name . ' took ' . number_format($field_time, 4) . ' seconds for post ' . $post_id . ' (value length: ' . strlen(is_array($value) ? json_encode($value) : $value) . ')');
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[PUNTWORK] [ACF-DEBUG] SLOW field update: ' . $field_name . ' took ' . number_format($field_time, 4) . ' seconds for post ' . $post_id . ' (value length: ' . strlen(is_array($value) ? json_encode($value) : $value) . ')');
+                }
             }
         }
 
         // Check for database errors after updates
         global $wpdb;
         if (!empty($wpdb->last_error)) {
-            error_log('[PUNTWORK] [DB-ERROR] Database error after updates for post ' . $post_id . ': ' . $wpdb->last_error);
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[PUNTWORK] [DB-ERROR] Database error after updates for post ' . $post_id . ': ' . $wpdb->last_error);
+            }
         }
 
         $post_acf_time = microtime(true) - $post_acf_start;
-        error_log('[PUNTWORK] [ACF-DEBUG] Update for post ' . $post_id . ' completed in ' . number_format($post_acf_time, 4) . ' seconds');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [ACF-DEBUG] Update for post ' . $post_id . ' completed in ' . number_format($post_acf_time, 4) . ' seconds');
+        }
     }
 
     $total_time = microtime(true) - $start_time;
-    error_log('[PUNTWORK] [ACF-DEBUG] bulk_update_acf_fields completed in ' . number_format($total_time, 4) . ' seconds total (' . number_format($total_time / count($post_ids), 4) . ' seconds per post)');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [ACF-DEBUG] bulk_update_acf_fields completed in ' . number_format($total_time, 4) . ' seconds total (' . number_format($total_time / count($post_ids), 4) . ' seconds per post)');
+    }
 }
 
 /**
@@ -233,7 +249,9 @@ function bulk_get_post_statuses(array $post_ids): array
         return [];
     }
 
-    error_log('[PUNTWORK] [DB-DEBUG] bulk_get_post_statuses called with ' . count($post_ids) . ' post IDs');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] bulk_get_post_statuses called with ' . count($post_ids) . ' post IDs');
+    }
 
     // Create cache key from sorted post IDs
     sort($post_ids);
@@ -241,12 +259,16 @@ function bulk_get_post_statuses(array $post_ids): array
     $cached_result = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
 
     if ($cached_result !== false) {
-        error_log('[PUNTWORK] [DB-DEBUG] Returning cached result for post statuses');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [DB-DEBUG] Returning cached result for post statuses');
+        }
 
         return $cached_result;
     }
 
-    error_log('[PUNTWORK] [DB-DEBUG] Cache miss, querying post statuses');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] Cache miss, querying post statuses');
+    }
 
     $placeholders = implode(',', array_fill(0, count($post_ids), '%d'));
     $query = $wpdb->prepare(
@@ -258,13 +280,17 @@ function bulk_get_post_statuses(array $post_ids): array
         $post_ids
     );
 
-    error_log('[PUNTWORK] [DB-DEBUG] Executing post status query');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] Executing post status query');
+    }
 
     $start_time = microtime(true);
     $results = $wpdb->get_results($query, OBJECT_K);
     $query_time = microtime(true) - $start_time;
 
-    error_log('[PUNTWORK] [DB-DEBUG] Post status query returned ' . count($results) . ' results in ' . number_format($query_time, 4) . ' seconds');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] Post status query returned ' . count($results) . ' results in ' . number_format($query_time, 4) . ' seconds');
+    }
 
     $statuses = [];
 
@@ -272,7 +298,9 @@ function bulk_get_post_statuses(array $post_ids): array
         $statuses[$post_id] = $post->post_status;
     }
 
-    error_log('[PUNTWORK] [DB-DEBUG] Processed ' . count($statuses) . ' post statuses');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] Processed ' . count($statuses) . ' post statuses');
+    }
 
     // Cache for 6 hours - post statuses change less frequently
     CacheManager::set($cache_key, $statuses, CacheManager::GROUP_ANALYTICS, 6 * HOUR_IN_SECONDS);
@@ -294,7 +322,9 @@ function get_posts_by_guids_with_status(array $guids): array
         return [];
     }
 
-    error_log('[PUNTWORK] [DB-DEBUG] get_posts_by_guids_with_status called with ' . count($guids) . ' GUIDs');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] get_posts_by_guids_with_status called with ' . count($guids) . ' GUIDs');
+    }
 
     // Create cache key from sorted GUIDs to ensure consistency
     sort($guids);
@@ -302,12 +332,16 @@ function get_posts_by_guids_with_status(array $guids): array
     $cached_result = CacheManager::get($cache_key, CacheManager::GROUP_ANALYTICS);
 
     if ($cached_result !== false) {
-        error_log('[PUNTWORK] [DB-DEBUG] Returning cached result for GUID lookup');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [DB-DEBUG] Returning cached result for GUID lookup');
+        }
 
         return $cached_result;
     }
 
-    error_log('[PUNTWORK] [DB-DEBUG] Cache miss, querying database');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] Cache miss, querying database');
+    }
 
     $guid_placeholders = implode(',', array_fill(0, count($guids), '%s'));
     $query = $wpdb->prepare(
@@ -322,13 +356,17 @@ function get_posts_by_guids_with_status(array $guids): array
         $guids
     );
 
-    error_log('[PUNTWORK] [DB-DEBUG] Executing query: ' . $query);
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] Executing query: ' . $query);
+    }
 
     $start_time = microtime(true);
     $results = $wpdb->get_results($query);
     $query_time = microtime(true) - $start_time;
 
-    error_log('[PUNTWORK] [DB-DEBUG] Query returned ' . count($results) . ' results in ' . number_format($query_time, 4) . ' seconds');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] Query returned ' . count($results) . ' results in ' . number_format($query_time, 4) . ' seconds');
+    }
 
     $posts_by_guid = [];
 
@@ -343,8 +381,10 @@ function get_posts_by_guids_with_status(array $guids): array
         ];
     }
 
-    error_log('[PUNTWORK] [DB-DEBUG] Processed ' . count($posts_by_guid) . ' unique GUIDs');
-    error_log('[PUNTWORK] [DB-DEBUG] Sample GUIDs found: ' . implode(', ', array_slice(array_keys($posts_by_guid), 0, 5)));
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] Processed ' . count($posts_by_guid) . ' unique GUIDs');
+        error_log('[PUNTWORK] [DB-DEBUG] Sample GUIDs found: ' . implode(', ', array_slice(array_keys($posts_by_guid), 0, 5)));
+    }
 
     // Cache for 6 hours - GUID lookups change relatively frequently during imports
     CacheManager::set($cache_key, $posts_by_guid, CacheManager::GROUP_ANALYTICS, 6 * HOUR_IN_SECONDS);
@@ -366,7 +406,9 @@ function preload_post_meta_batch(array $post_ids): array
         return [];
     }
 
-    error_log('[PUNTWORK] [DB-DEBUG] preload_post_meta_batch called with ' . count($post_ids) . ' post IDs');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] preload_post_meta_batch called with ' . count($post_ids) . ' post IDs');
+    }
 
     $placeholders = implode(',', array_fill(0, count($post_ids), '%d'));
     $query = $wpdb->prepare(
@@ -382,7 +424,9 @@ function preload_post_meta_batch(array $post_ids): array
     $results = $wpdb->get_results($query);
     $query_time = microtime(true) - $start_time;
 
-    error_log('[PUNTWORK] [DB-DEBUG] preload_post_meta_batch query returned ' . count($results) . ' meta rows in ' . number_format($query_time, 4) . ' seconds');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] preload_post_meta_batch query returned ' . count($results) . ' meta rows in ' . number_format($query_time, 4) . ' seconds');
+    }
 
     $meta_cache = [];
     foreach ($results as $row) {
@@ -392,7 +436,9 @@ function preload_post_meta_batch(array $post_ids): array
         $meta_cache[$row->post_id][$row->meta_key] = $row->meta_value;
     }
 
-    error_log('[PUNTWORK] [DB-DEBUG] Preloaded meta for ' . count($meta_cache) . ' posts');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [DB-DEBUG] Preloaded meta for ' . count($meta_cache) . ' posts');
+    }
 
     return $meta_cache;
 }
@@ -492,19 +538,21 @@ function end_import_performance_monitoring(array $monitoring_data, string $opera
     $items_per_second = $items_processed > 0 ? $items_processed / $total_time : 0;
     $queries_per_item = $items_processed > 0 ? $queries_used / $items_processed : 0;
 
-    error_log(
-        sprintf(
-            '[PUNTWORK] [PERFORMANCE] %s completed in %.3fs, %d items (%.2f items/sec), Memory: %.2fMB used, Queries: %d total (%d new, %.1f per item)',
-            $operation,
-            $total_time,
-            $items_processed,
-            $items_per_second,
-            $memory_used / 1024 / 1024,
-            $query_count_end,
-            $queries_used,
-            $queries_per_item
-        )
-    );
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log(
+            sprintf(
+                '[PUNTWORK] [PERFORMANCE] %s completed in %.3fs, %d items (%.2f items/sec), Memory: %.2fMB used, Queries: %d total (%d new, %.1f per item)',
+                $operation,
+                $total_time,
+                $items_processed,
+                $items_per_second,
+                $memory_used / 1024 / 1024,
+                $query_count_end,
+                $queries_used,
+                $queries_per_item
+            )
+        );
+    }
 
     // Store in performance logs table if it exists
     if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}puntwork_performance_logs'")) {
@@ -704,8 +752,8 @@ function safe_get_option(string $option_name, $default = false)
 
         return $value;
     } catch (\Exception $e) {
-        error_log('[PUNTWORK] [DB-ERROR] Exception in safe_get_option for ' . $option_name . ': ' . $e->getMessage());
         if ($debug_mode) {
+            error_log('[PUNTWORK] [DB-ERROR] Exception in safe_get_option for ' . $option_name . ': ' . $e->getMessage());
             error_log('[PUNTWORK] [DB-ERROR] Stack trace: ' . $e->getTraceAsString());
         }
         return $default;

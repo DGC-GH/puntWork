@@ -94,7 +94,9 @@ function process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback
                     $feed_item_count++;
                     if ($feed_item_count % 100 === 0) {
                         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Processed $feed_item_count items so far for $feed_key";
-                        error_log("Processed $feed_item_count items so far for $feed_key");
+                        if (defined('WP_DEBUG') && WP_DEBUG) {
+                            error_log("Processed $feed_item_count items so far for $feed_key");
+                        }
                     }
                     if (count($batch) >= $batch_size) {
                         fwrite($handle, implode('', $batch));
@@ -104,7 +106,9 @@ function process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback
                     unset($item, $job_obj);
                 } catch (\Exception $e) {
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "$feed_key: Error processing XML item: " . $e->getMessage() . ' at XML line ' . $reader->expand()->getLineNo();
-                    error_log("$feed_key: Error processing XML item: " . $e->getMessage() . ' at XML line ' . $reader->expand()->getLineNo());
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log("$feed_key: Error processing XML item: " . $e->getMessage() . ' at XML line ' . $reader->expand()->getLineNo());
+                    }
                     // Continue with next item
                 }
             }
@@ -114,11 +118,15 @@ function process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback
             $total_items += count($batch);
         }
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Processed $feed_item_count items for $feed_key";
-        error_log("Processed $feed_item_count items for $feed_key");
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Processed $feed_item_count items for $feed_key");
+        }
         $reader->close();
     } catch (\Exception $e) {
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Processing error for $feed_key: " . $e->getMessage();
-        error_log("Processing error for $feed_key: " . $e->getMessage());
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Processing error for $feed_key: " . $e->getMessage());
+        }
     }
 
     return $feed_item_count;

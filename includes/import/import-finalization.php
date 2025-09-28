@@ -24,10 +24,14 @@ if (!defined('ABSPATH')) {
  */
 function finalize_batch_import($result)
 {
-    error_log('[PUNTWORK] [FINALIZE-START] finalize_batch_import called with result success=' . (isset($result['success']) ? $result['success'] : 'not set') . ', complete=' . (isset($result['complete']) ? $result['complete'] : 'not set'));
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [FINALIZE-START] finalize_batch_import called with result success=' . (isset($result['success']) ? $result['success'] : 'not set') . ', complete=' . (isset($result['complete']) ? $result['complete'] : 'not set'));
+    }
 
     if (is_wp_error($result) || !$result['success']) {
-        error_log('[PUNTWORK] [FINALIZE-ERROR] finalize_batch_import returning early due to error or failure');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [FINALIZE-ERROR] finalize_batch_import returning early due to error or failure');
+        }
 
         return $result;
     }
@@ -76,11 +80,15 @@ function finalize_batch_import($result)
     $status['last_update'] = time();
 
     update_option('job_import_status', $status, false);
-    error_log('[PUNTWORK] [FINALIZE-STATUS] Updated import status: processed=' . $status['processed'] . '/' . $status['total'] . ', complete=' . ($status['complete'] ? 'true' : 'false') . ', elapsed=' . round($total_elapsed, 2) . 's');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] [FINALIZE-STATUS] Updated import status: processed=' . $status['processed'] . '/' . $status['total'] . ', complete=' . ($status['complete'] ? 'true' : 'false') . ', elapsed=' . round($total_elapsed, 2) . 's');
+    }
 
     // Log completed import to history
     if ($result['complete'] && $result['success']) {
-        error_log('[PUNTWORK] [FINALIZE-COMPLETE] Import completed successfully, logging to history');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [FINALIZE-COMPLETE] Import completed successfully, logging to history');
+        }
         $trigger_type = $status['trigger_type'] ?? 'scheduled';
         $test_mode = $status['test_mode'] ?? false;
 

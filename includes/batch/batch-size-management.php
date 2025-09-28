@@ -173,18 +173,20 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
 
     // Log batch size changes for debugging
     if ($batch_size !== $old_batch_size || !empty($reason)) {
-        error_log(
-            sprintf(
-                '[PUNTWORK] Batch size adjusted from %d to %d (reason: %s) [memory: %.2f, current_batch: %.3f, prev_batch: %.3f, adaptive_state: %s]',
-                $old_batch_size,
-                $batch_size,
-                $reason,
-                $last_memory_ratio,
-                $current_batch_time,
-                $previous_batch_time,
-                json_encode($adaptive_state)
-            )
-        );
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log(
+                sprintf(
+                    '[PUNTWORK] Batch size adjusted from %d to %d (reason: %s) [memory: %.2f, current_batch: %.3f, prev_batch: %.3f, adaptive_state: %s]',
+                    $old_batch_size,
+                    $batch_size,
+                    $reason,
+                    $last_memory_ratio,
+                    $current_batch_time,
+                    $previous_batch_time,
+                    json_encode($adaptive_state)
+                )
+            );
+        }
 
         // Return detailed reason for user logs
         return [

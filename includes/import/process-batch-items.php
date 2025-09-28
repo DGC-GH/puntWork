@@ -17,44 +17,62 @@ require_once __DIR__ . '/../utilities/database-optimization.php';
 if (!function_exists('process_batch_items')) {
     function process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count)
     {
-        error_log('[PUNTWORK] [ITEMS-DEBUG] process_batch_items called with ' . count($batch_guids) . ' GUIDs');
-        error_log('[PUNTWORK] [ITEMS-DEBUG] batch_items keys: ' . implode(', ', array_keys($batch_items)));
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [ITEMS-DEBUG] process_batch_items called with ' . count($batch_guids) . ' GUIDs');
+            error_log('[PUNTWORK] [ITEMS-DEBUG] batch_items keys: ' . implode(', ', array_keys($batch_items)));
+        }
         if (empty($batch_guids)) {
-            error_log('[PUNTWORK] [ITEMS-DEBUG] process_batch_items called with empty batch_guids - no items to process');
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[PUNTWORK] [ITEMS-DEBUG] process_batch_items called with empty batch_guids - no items to process');
+            }
 
             return;
         }
         $user_id = get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : get_current_user_id();
-        error_log('[PUNTWORK] [ITEMS-DEBUG] Got user_id: ' . $user_id);
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [ITEMS-DEBUG] Got user_id: ' . $user_id);
+        }
 
         // Bulk fetch post statuses to avoid N+1 queries
         $post_ids_for_status = array_values($post_ids_by_guid);
-        error_log('[PUNTWORK] [ITEMS-DEBUG] Post IDs for status: ' . count($post_ids_for_status));
-        error_log('[PUNTWORK] [ITEMS-DEBUG] About to call bulk_get_post_statuses');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [ITEMS-DEBUG] Post IDs for status: ' . count($post_ids_for_status));
+            error_log('[PUNTWORK] [ITEMS-DEBUG] About to call bulk_get_post_statuses');
+        }
         if (!function_exists('bulk_get_post_statuses')) {
-            error_log('[PUNTWORK] [ERROR] bulk_get_post_statuses function not found');
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[PUNTWORK] [ERROR] bulk_get_post_statuses function not found');
+            }
 
             throw new Exception('bulk_get_post_statuses function not available');
         }
         $post_statuses = bulk_get_post_statuses($post_ids_for_status);
-        error_log('[PUNTWORK] [ITEMS-DEBUG] bulk_get_post_statuses returned ' . count($post_statuses) . ' statuses');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [ITEMS-DEBUG] bulk_get_post_statuses returned ' . count($post_statuses) . ' statuses');
+        }
 
         // Preload post meta to avoid N+1 queries during ACF updates
         if (!empty($post_ids_for_status)) {
             $preloaded_meta = preload_post_meta_batch($post_ids_for_status);
-            error_log('[PUNTWORK] [ITEMS-DEBUG] Preloaded meta for ' . count($preloaded_meta) . ' posts');
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[PUNTWORK] [ITEMS-DEBUG] Preloaded meta for ' . count($preloaded_meta) . ' posts');
+            }
         }
 
         $total_to_process = count($batch_guids);
-        error_log('[PUNTWORK] [ITEMS-DEBUG] Starting to process ' . $total_to_process . ' items');
-        error_log('[PUNTWORK] [ITEMS-DEBUG] Current counts before processing: published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', processed_count=' . $processed_count);
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [ITEMS-DEBUG] Starting to process ' . $total_to_process . ' items');
+            error_log('[PUNTWORK] [ITEMS-DEBUG] Current counts before processing: published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', processed_count=' . $processed_count);
+        }
 
         // Log batch size and timing info
         $batch_size = count($batch_guids);
         $previous_batch_time = get_option('job_import_previous_batch_time', 0);
         $last_batch_time = get_option('job_import_last_batch_time', 0);
-        error_log('[PUNTWORK] [BATCH-TIMING] Processing batch of ' . $batch_size . ' items');
-        error_log('[PUNTWORK] [BATCH-TIMING] Previous batch time: ' . $previous_batch_time . 's, Last batch time: ' . $last_batch_time . 's');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [BATCH-TIMING] Processing batch of ' . $batch_size . ' items');
+            error_log('[PUNTWORK] [BATCH-TIMING] Previous batch time: ' . $previous_batch_time . 's, Last batch time: ' . $last_batch_time . 's');
+        }
 
         // Collect all ACF updates for batch processing
         $all_acf_updates = [];
@@ -68,17 +86,23 @@ if (!function_exists('process_batch_items')) {
             // Check for cancellation at the start of each item
             if (get_transient('import_cancel')) {
                 $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch processing cancelled by user';
-                error_log('[PUNTWORK] [ITEMS-DEBUG] Batch processing cancelled by user at item ' . $item_counter);
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[PUNTWORK] [ITEMS-DEBUG] Batch processing cancelled by user at item ' . $item_counter);
+                }
 
                 break;
             }
 
             $item_counter++;
             if ($item_counter % 100 == 0) {
-                error_log('[PUNTWORK] [ITEMS-DEBUG] ==== STARTING ITEM ' . $item_counter . '/' . $total_to_process . ' ===');
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[PUNTWORK] [ITEMS-DEBUG] ==== STARTING ITEM ' . $item_counter . '/' . $total_to_process . ' ===');
+                }
             }
-            error_log('[PUNTWORK] [ITEMS-DEBUG] Processing GUID: ' . $guid);
-            error_log('[PUNTWORK] [ITEMS-DEBUG] GUID exists in batch_items: ' . (isset($batch_items[$guid]) ? 'yes' : 'no'));
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[PUNTWORK] [ITEMS-DEBUG] Processing GUID: ' . $guid);
+                error_log('[PUNTWORK] [ITEMS-DEBUG] GUID exists in batch_items: ' . (isset($batch_items[$guid]) ? 'yes' : 'no'));
+            }
 
             try {
                 $item = $batch_items[$guid]['item'];
@@ -86,13 +110,17 @@ if (!function_exists('process_batch_items')) {
                 $xml_updated_ts = strtotime($xml_updated);
                 $post_id = isset($post_ids_by_guid[$guid]) ? $post_ids_by_guid[$guid] : null;
 
-                error_log('[PUNTWORK] [ITEMS-DEBUG] Item data extracted: post_id=' . ($post_id ?? 'null') . ', xml_updated="' . $xml_updated . '", xml_updated_ts=' . $xml_updated_ts);
-                error_log('[PUNTWORK] [ITEMS-DEBUG] Item title: "' . (isset($item['functiontitle']) ? $item['functiontitle'] : 'MISSING') . '"');
-                error_log('[PUNTWORK] [ITEMS-DEBUG] Item company: "' . (isset($item['company']) ? $item['company'] : 'MISSING') . '"');
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[PUNTWORK] [ITEMS-DEBUG] Item data extracted: post_id=' . ($post_id ?? 'null') . ', xml_updated="' . $xml_updated . '", xml_updated_ts=' . $xml_updated_ts);
+                    error_log('[PUNTWORK] [ITEMS-DEBUG] Item title: "' . (isset($item['functiontitle']) ? $item['functiontitle'] : 'MISSING') . '"');
+                    error_log('[PUNTWORK] [ITEMS-DEBUG] Item company: "' . (isset($item['company']) ? $item['company'] : 'MISSING') . '"');
+                }
 
                 // If post exists, check if it needs updating
                 if ($post_id) {
-                    error_log('[PUNTWORK] [ITEMS-DEBUG] Post exists for GUID ' . $guid . ' (ID: ' . $post_id . '), checking if update needed');
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('[PUNTWORK] [ITEMS-DEBUG] Post exists for GUID ' . $guid . ' (ID: ' . $post_id . '), checking if update needed');
+                    }
 
                     // First, ensure the job is published if it's in the feed
                     $current_post_status = $post_statuses[$post_id] ?? 'draft';
