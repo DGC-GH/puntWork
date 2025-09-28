@@ -61,13 +61,16 @@ function import_time_exceeded(): bool
     // );
 
     if ($elapsed_time >= $time_limit) {
-        error_log(
-            sprintf(
-                '[PUNTWORK] [TIME-LIMIT] Import time limit exceeded: %.2fs elapsed, limit was %ds',
-                $elapsed_time,
-                $time_limit
-            )
-        );
+        $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+        if ($debug_mode) {
+            error_log(
+                sprintf(
+                    '[PUNTWORK] [TIME-LIMIT] Import time limit exceeded: %.2fs elapsed, limit was %ds',
+                    $elapsed_time,
+                    $time_limit
+                )
+            );
+        }
 
         return true;
     }
@@ -115,13 +118,19 @@ function import_memory_exceeded(): bool
 function should_continue_batch_processing(): bool
 {
     if (import_time_exceeded()) {
-        error_log('[PUNTWORK] Import time limit exceeded - pausing batch processing');
+        $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+        if ($debug_mode) {
+            error_log('[PUNTWORK] Import time limit exceeded - pausing batch processing');
+        }
 
         return false;
     }
 
     if (import_memory_exceeded()) {
-        error_log('[PUNTWORK] Import memory limit exceeded - pausing batch processing');
+        $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+        if ($debug_mode) {
+            error_log('[PUNTWORK] Import memory limit exceeded - pausing batch processing');
+        }
 
         return false;
     }
@@ -141,49 +150,67 @@ if (!function_exists('import_jobs_from_json')) {
      */
     function import_jobs_from_json(bool $is_batch = false, int $batch_start = 0): array
     {
-        error_log('[PUNTWORK] [IMPORT-ENTRY] ===== IMPORT_JOBS_FROM_JSON ENTRY POINT =====');
-        error_log('[PUNTWORK] [IMPORT-ENTRY] import_jobs_from_json ENTRY POINT - is_batch=' . ($is_batch ? 'true' : 'false') . ', batch_start=' . $batch_start);
-        error_log('[PUNTWORK] [IMPORT-ENTRY] Memory usage at start: ' . memory_get_usage(true) . ' bytes');
-        error_log('[PUNTWORK] [IMPORT-ENTRY] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
-        error_log('[PUNTWORK] [IMPORT-ENTRY] PHP version: ' . PHP_VERSION);
-        error_log('[PUNTWORK] [IMPORT-ENTRY] WordPress version: ' . get_bloginfo('version'));
-        error_log('[PUNTWORK] [IMPORT-ENTRY] Current user: ' . get_current_user_id());
-        error_log('[PUNTWORK] [IMPORT-ENTRY] Server: ' . $_SERVER['SERVER_SOFTWARE'] ?? 'unknown');
-        error_log('[PUNTWORK] [IMPORT-ENTRY] Request method: ' . $_SERVER['REQUEST_METHOD'] ?? 'unknown');
-        error_log('[PUNTWORK] [IMPORT-ENTRY] Timestamp: ' . date('Y-m-d H:i:s T'));
+        $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [IMPORT-ENTRY] ===== IMPORT_JOBS_FROM_JSON ENTRY POINT =====');
+            error_log('[PUNTWORK] [IMPORT-ENTRY] import_jobs_from_json ENTRY POINT - is_batch=' . ($is_batch ? 'true' : 'false') . ', batch_start=' . $batch_start);
+            error_log('[PUNTWORK] [IMPORT-ENTRY] Memory usage at start: ' . memory_get_usage(true) . ' bytes');
+            error_log('[PUNTWORK] [IMPORT-ENTRY] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
+            error_log('[PUNTWORK] [IMPORT-ENTRY] PHP version: ' . PHP_VERSION);
+            error_log('[PUNTWORK] [IMPORT-ENTRY] WordPress version: ' . get_bloginfo('version'));
+            error_log('[PUNTWORK] [IMPORT-ENTRY] Current user: ' . get_current_user_id());
+            error_log('[PUNTWORK] [IMPORT-ENTRY] Server: ' . $_SERVER['SERVER_SOFTWARE'] ?? 'unknown');
+            error_log('[PUNTWORK] [IMPORT-ENTRY] Request method: ' . $_SERVER['REQUEST_METHOD'] ?? 'unknown');
+            error_log('[PUNTWORK] [IMPORT-ENTRY] Timestamp: ' . date('Y-m-d H:i:s T'));
+        }
 
         try {
-            error_log('[PUNTWORK] [IMPORT-START] Starting import_jobs_from_json with is_batch=' . ($is_batch ? 'true' : 'false') . ', batch_start=' . $batch_start);
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [IMPORT-START] Starting import_jobs_from_json with is_batch=' . ($is_batch ? 'true' : 'false') . ', batch_start=' . $batch_start);
+            }
 
             // Check for concurrent import lock
             $import_lock_key = 'puntwork_import_lock';
             if (get_transient($import_lock_key)) {
-                error_log('[PUNTWORK] [IMPORT-LOCK] Import lock detected: ' . $import_lock_key);
+                if ($debug_mode) {
+                    error_log('[PUNTWORK] [IMPORT-LOCK] Import lock detected: ' . $import_lock_key);
+                }
 
                 // Check if the lock is stale (import status shows complete or last update > 30 minutes ago)
                 $import_status = get_option('job_import_status', []);
-                error_log('[PUNTWORK] [IMPORT-LOCK] Current import status: ' . json_encode($import_status));
+                if ($debug_mode) {
+                    error_log('[PUNTWORK] [IMPORT-LOCK] Current import status: ' . json_encode($import_status));
+                }
                 $is_stale = false;
 
                 if (!empty($import_status)) {
                     $last_update = $import_status['last_update'] ?? 0;
                     $is_complete = $import_status['complete'] ?? false;
                     $time_since_update = time() - $last_update;
-                    error_log('[PUNTWORK] [IMPORT-LOCK] Lock check: last_update=' . $last_update . ', is_complete=' . ($is_complete ? 'true' : 'false') . ', time_since_update=' . $time_since_update . 's');
+                    if ($debug_mode) {
+                        error_log('[PUNTWORK] [IMPORT-LOCK] Lock check: last_update=' . $last_update . ', is_complete=' . ($is_complete ? 'true' : 'false') . ', time_since_update=' . $time_since_update . 's');
+                    }
 
                     if ($is_complete || $time_since_update > 1800) { // 30 minutes
                         $is_stale = true;
                         delete_transient($import_lock_key);
-                        error_log('[PUNTWORK] [IMPORT-LOCK] Cleared stale import lock (complete: ' . ($is_complete ? 'yes' : 'no') . ', time since update: ' . $time_since_update . 's)');
+                        if ($debug_mode) {
+                            error_log('[PUNTWORK] [IMPORT-LOCK] Cleared stale import lock (complete: ' . ($is_complete ? 'yes' : 'no') . ', time since update: ' . $time_since_update . 's)');
+                        }
                     }
                 } else {
-                    error_log('[PUNTWORK] [IMPORT-LOCK] No import status found, considering lock stale');
+                    if ($debug_mode) {
+                        error_log('[PUNTWORK] [IMPORT-LOCK] No import status found, considering lock stale');
+                    }
                     $is_stale = true;
                     delete_transient($import_lock_key);
                 }
 
                 if (!$is_stale) {
-                    error_log('[PUNTWORK] [IMPORT-LOCK] Import already running - rejecting concurrent import');
+                    if ($debug_mode) {
+                        error_log('[PUNTWORK] [IMPORT-LOCK] Import already running - rejecting concurrent import');
+                    }
 
                     return [
                         'success' => false,
@@ -194,24 +221,32 @@ if (!function_exists('import_jobs_from_json')) {
             }
             // Set import lock
             set_transient($import_lock_key, true, 1200); // 20 minutes timeout
-            error_log('[PUNTWORK] [IMPORT-LOCK] Import lock set successfully');
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [IMPORT-LOCK] Import lock set successfully');
+            }
 
-            error_log('[PUNTWORK] [IMPORT-DEBUG] == PUNTWORK IMPORT DEBUG: import_jobs_from_json STARTED ==');
-            error_log('[PUNTWORK] [IMPORT-DEBUG] import_jobs_from_json called with is_batch=' . ($is_batch ? 'true' : 'false') . ', batch_start=' . $batch_start);
-            error_log('[PUNTWORK] [IMPORT-SETUP] Calling prepare_import_setup...');
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [IMPORT-DEBUG] == PUNTWORK IMPORT DEBUG: import_jobs_from_json STARTED ==');
+                error_log('[PUNTWORK] [IMPORT-DEBUG] import_jobs_from_json called with is_batch=' . ($is_batch ? 'true' : 'false') . ', batch_start=' . $batch_start);
+                error_log('[PUNTWORK] [IMPORT-SETUP] Calling prepare_import_setup...');
+            }
             $setup = prepare_import_setup($batch_start);
-            error_log('[PUNTWORK] [IMPORT-SETUP] prepare_import_setup returned: ' . json_encode([
-                'success' => $setup['success'] ?? 'not set',
-                'total' => $setup['total'] ?? 'not set',
-                'start_index' => $setup['start_index'] ?? 'not set',
-                'complete' => $setup['complete'] ?? 'not set',
-                'json_path_exists' => isset($setup['json_path']) ? file_exists($setup['json_path']) : 'no json_path',
-                'json_path' => $setup['json_path'] ?? 'not set',
-            ]));
-            error_log('[PUNTWORK] [IMPORT-SETUP] prepare_import_setup completed');
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [IMPORT-SETUP] prepare_import_setup returned: ' . json_encode([
+                    'success' => $setup['success'] ?? 'not set',
+                    'total' => $setup['total'] ?? 'not set',
+                    'start_index' => $setup['start_index'] ?? 'not set',
+                    'complete' => $setup['complete'] ?? 'not set',
+                    'json_path_exists' => isset($setup['json_path']) ? file_exists($setup['json_path']) : 'no json_path',
+                    'json_path' => $setup['json_path'] ?? 'not set',
+                ]));
+                error_log('[PUNTWORK] [IMPORT-SETUP] prepare_import_setup completed');
+            }
 
             if (is_wp_error($setup)) {
-                error_log('[PUNTWORK] [IMPORT-ERROR] prepare_import_setup returned WP_Error: ' . $setup->get_error_message());
+                if ($debug_mode) {
+                    error_log('[PUNTWORK] [IMPORT-ERROR] prepare_import_setup returned WP_Error: ' . $setup->get_error_message());
+                }
 
                 return [
                     'success' => false,
@@ -221,47 +256,59 @@ if (!function_exists('import_jobs_from_json')) {
             }
 
             if (isset($setup['success'])) {
-                error_log('[PUNTWORK] [IMPORT-EARLY] EARLY RETURN - setup returned success/complete');
-                error_log('[PUNTWORK] [IMPORT-EARLY] Early return details: ' . json_encode($setup));
+                if ($debug_mode) {
+                    error_log('[PUNTWORK] [IMPORT-EARLY] EARLY RETURN - setup returned success/complete');
+                    error_log('[PUNTWORK] [IMPORT-EARLY] Early return details: ' . json_encode($setup));
+                }
 
                 return $setup; // Early return for empty or completed cases
             }
 
-            error_log('[PUNTWORK] [IMPORT-PROCESS] Setup successful, calling process_batch_items_logic...');
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [IMPORT-PROCESS] Setup successful, calling process_batch_items_logic...');
+            }
             $result = process_batch_items_logic($setup);
-            error_log('[PUNTWORK] [IMPORT-PROCESS] process_batch_items_logic completed, success=' . (isset($result['success']) ? $result['success'] : 'not set'));
-            error_log('[PUNTWORK] [IMPORT-PROCESS] process_batch_items_logic result summary: ' . json_encode([
-                'success' => $result['success'] ?? false,
-                'processed' => $result['processed'] ?? 0,
-                'total' => $result['total'] ?? 0,
-                'published' => $result['published'] ?? 0,
-                'updated' => $result['updated'] ?? 0,
-                'skipped' => $result['skipped'] ?? 0,
-                'complete' => $result['complete'] ?? false,
-                'logs_count' => isset($result['logs']) ? count($result['logs']) : 0,
-            ]));
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [IMPORT-PROCESS] process_batch_items_logic completed, success=' . (isset($result['success']) ? $result['success'] : 'not set'));
+                error_log('[PUNTWORK] [IMPORT-PROCESS] process_batch_items_logic result summary: ' . json_encode([
+                    'success' => $result['success'] ?? false,
+                    'processed' => $result['processed'] ?? 0,
+                    'total' => $result['total'] ?? 0,
+                    'published' => $result['published'] ?? 0,
+                    'updated' => $result['updated'] ?? 0,
+                    'skipped' => $result['skipped'] ?? 0,
+                    'complete' => $result['complete'] ?? false,
+                    'logs_count' => isset($result['logs']) ? count($result['logs']) : 0,
+                ]));
+            }
 
-            error_log('[PUNTWORK] [IMPORT-FINALIZE] Calling finalize_batch_import...');
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [IMPORT-FINALIZE] Calling finalize_batch_import...');
+            }
             $final_result = finalize_batch_import($result);
-            error_log('[PUNTWORK] [IMPORT-FINALIZE] finalize_batch_import completed');
-            error_log('[PUNTWORK] [IMPORT-FINALIZE] Final result summary: ' . json_encode([
-                'success' => $final_result['success'] ?? false,
-                'processed' => $final_result['processed'] ?? 0,
-                'total' => $final_result['total'] ?? 0,
-                'published' => $final_result['published'] ?? 0,
-                'updated' => $final_result['updated'] ?? 0,
-                'skipped' => $final_result['skipped'] ?? 0,
-                'complete' => $final_result['complete'] ?? false,
-            ]));
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [IMPORT-FINALIZE] finalize_batch_import completed');
+                error_log('[PUNTWORK] [IMPORT-FINALIZE] Final result summary: ' . json_encode([
+                    'success' => $final_result['success'] ?? false,
+                    'processed' => $final_result['processed'] ?? 0,
+                    'total' => $final_result['total'] ?? 0,
+                    'published' => $final_result['published'] ?? 0,
+                    'updated' => $final_result['updated'] ?? 0,
+                    'skipped' => $final_result['skipped'] ?? 0,
+                    'complete' => $final_result['complete'] ?? false,
+                ]));
 
-            error_log('[PUNTWORK] [IMPORT-COMPLETE] Import process completed successfully');
-            error_log('[PUNTWORK] [IMPORT-DEBUG] == PUNTWORK IMPORT DEBUG: import_jobs_from_json COMPLETED ==');
+                error_log('[PUNTWORK] [IMPORT-COMPLETE] Import process completed successfully');
+                error_log('[PUNTWORK] [IMPORT-DEBUG] == PUNTWORK IMPORT DEBUG: import_jobs_from_json COMPLETED ==');
+            }
 
             return $final_result;
         } catch (\Exception $e) {
-            error_log('[PUNTWORK] [IMPORT-EXCEPTION] Exception caught in import_jobs_from_json: ' . $e->getMessage());
-            error_log('[PUNTWORK] [IMPORT-EXCEPTION] Exception file: ' . $e->getFile() . ':' . $e->getLine());
-            error_log('[PUNTWORK] [IMPORT-EXCEPTION] Exception stack trace: ' . $e->getTraceAsString());
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [IMPORT-EXCEPTION] Exception caught in import_jobs_from_json: ' . $e->getMessage());
+                error_log('[PUNTWORK] [IMPORT-EXCEPTION] Exception file: ' . $e->getFile() . ':' . $e->getLine());
+                error_log('[PUNTWORK] [IMPORT-EXCEPTION] Exception stack trace: ' . $e->getTraceAsString());
+            }
 
             return [
                 'success' => false,
@@ -269,9 +316,11 @@ if (!function_exists('import_jobs_from_json')) {
                 'logs' => ['Exception: ' . $e->getMessage()],
             ];
         } catch (\Throwable $e) {
-            error_log('[PUNTWORK] [IMPORT-FATAL] Fatal error caught in import_jobs_from_json: ' . $e->getMessage());
-            error_log('[PUNTWORK] [IMPORT-FATAL] Fatal error file: ' . $e->getFile() . ':' . $e->getLine());
-            error_log('[PUNTWORK] [IMPORT-FATAL] Fatal error stack trace: ' . $e->getTraceAsString());
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [IMPORT-FATAL] Fatal error caught in import_jobs_from_json: ' . $e->getMessage());
+                error_log('[PUNTWORK] [IMPORT-FATAL] Fatal error file: ' . $e->getFile() . ':' . $e->getLine());
+                error_log('[PUNTWORK] [IMPORT-FATAL] Fatal error stack trace: ' . $e->getTraceAsString());
+            }
 
             return [
                 'success' => false,
@@ -281,7 +330,9 @@ if (!function_exists('import_jobs_from_json')) {
         } finally {
             // Release import lock
             delete_transient('puntwork_import_lock');
-            error_log('[PUNTWORK] [IMPORT-LOCK] Import lock released');
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [IMPORT-LOCK] Import lock released');
+            }
         }
     }
 }
@@ -296,6 +347,8 @@ if (!function_exists('import_all_jobs_from_json')) {
      */
     function import_all_jobs_from_json(bool $preserve_status = false): array
     {
+        $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+
         $start_time = microtime(true);
         $total_processed = 0;
         $total_published = 0;
@@ -321,12 +374,16 @@ if (!function_exists('import_all_jobs_from_json')) {
                 if ($is_complete || $time_since_update > 1800) { // 30 minutes
                     $is_stale = true;
                     delete_transient($import_lock_key);
-                    error_log('[PUNTWORK] [IMPORT-LOCK] Cleared stale import lock (complete: ' . ($is_complete ? 'yes' : 'no') . ', time since update: ' . $time_since_update . 's)');
+                    if ($debug_mode) {
+                        error_log('[PUNTWORK] [IMPORT-LOCK] Cleared stale import lock (complete: ' . ($is_complete ? 'yes' : 'no') . ', time since update: ' . $time_since_update . 's)');
+                    }
                 }
             }
 
             if (!$is_stale) {
-                error_log('[PUNTWORK] Import already running - skipping concurrent import');
+                if ($debug_mode) {
+                    error_log('[PUNTWORK] Import already running - skipping concurrent import');
+                }
 
                 return [
                     'success' => false,
@@ -338,12 +395,16 @@ if (!function_exists('import_all_jobs_from_json')) {
 
         // Set import lock
         set_transient($import_lock_key, true, 1200); // 20 minutes timeout
-        error_log('[PUNTWORK] Import lock set for import_all_jobs_from_json');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] Import lock set for import_all_jobs_from_json');
+        }
 
-        error_log(
-            '[PUNTWORK] import_all_jobs_from_json started with preserve_status=' .
-            ($preserve_status ? 'true' : 'false')
-        );
+        if ($debug_mode) {
+            error_log(
+                '[PUNTWORK] import_all_jobs_from_json started with preserve_status=' .
+                ($preserve_status ? 'true' : 'false')
+            );
+        }
 
         try {
             // Only reset status if not preserving existing status
@@ -416,7 +477,9 @@ if (!function_exists('import_all_jobs_from_json')) {
                     // Schedule continuation via WordPress cron (runs in background)
                     if (!wp_next_scheduled('puntwork_continue_import')) {
                         wp_schedule_single_event(time() + 30, 'puntwork_continue_import'); // Continue in 30 seconds
-                        error_log('[PUNTWORK] Scheduled import continuation in 30 seconds');
+                        if ($debug_mode) {
+                            error_log('[PUNTWORK] Scheduled import continuation in 30 seconds');
+                        }
                     }
 
                     return [
@@ -466,50 +529,66 @@ if (!function_exists('import_all_jobs_from_json')) {
                     if (function_exists('wp_cache_flush')) {
                         wp_cache_flush();
                     }
-                    error_log('[PUNTWORK] [LOOP-DEBUG] Set total items for import: ' . $total_items . ' (first batch)');
+                    if ($debug_mode) {
+                        error_log('[PUNTWORK] [LOOP-DEBUG] Set total items for import: ' . $total_items . ' (first batch)');
+                    }
                 }
 
-                error_log(
-                    '[PUNTWORK] [LOOP-DEBUG] import_all_jobs_from_json: batch_count=' . $batch_count .
-                    ', batch_start=' . $batch_start . ', total_items=' . $total_items .
-                    ', setup total=' . ($setup['total'] ?? 'not set') .
-                    ', setup start_index=' . ($setup['start_index'] ?? 'not set') .
-                    ', setup complete=' . (isset($setup['complete']) ? $setup['complete'] : 'not set')
-                );
+                if ($debug_mode) {
+                    error_log(
+                        '[PUNTWORK] [LOOP-DEBUG] import_all_jobs_from_json: batch_count=' . $batch_count .
+                        ', batch_start=' . $batch_start . ', total_items=' . $total_items .
+                        ', setup total=' . ($setup['total'] ?? 'not set') .
+                        ', setup start_index=' . ($setup['start_index'] ?? 'not set') .
+                        ', setup complete=' . (isset($setup['complete']) ? $setup['complete'] : 'not set')
+                    );
+                }
 
                 // Check if import is complete
                 if (isset($setup['success']) && isset($setup['complete']) && $setup['complete']) {
-                    error_log('[PUNTWORK] [LOOP-DEBUG] Import complete - setup returned complete=true');
+                    if ($debug_mode) {
+                        error_log('[PUNTWORK] [LOOP-DEBUG] Import complete - setup returned complete=true');
+                    }
 
                     break;
                 }
 
                 if ($batch_start >= $total_items) {
-                    error_log(
-                        '[PUNTWORK] [LOOP-DEBUG] Import complete - batch_start (' . $batch_start .
-                        ') >= total_items (' . $total_items . ')'
-                    );
+                    if ($debug_mode) {
+                        error_log(
+                            '[PUNTWORK] [LOOP-DEBUG] Import complete - batch_start (' . $batch_start .
+                            ') >= total_items (' . $total_items . ')'
+                        );
+                    }
 
                     break;
                 }
 
                 $batch_count++;
-                error_log(
-                    '[PUNTWORK] [LOOP-DEBUG] Processing batch ' . $batch_count .
-                    ' starting at index ' . $batch_start
-                );
+                if ($debug_mode) {
+                    error_log(
+                        '[PUNTWORK] [LOOP-DEBUG] Processing batch ' . $batch_count .
+                        ' starting at index ' . $batch_start
+                    );
+                }
 
                 // Process this batch
-                error_log('[PUNTWORK] [LOOP-DEBUG] Calling process_batch_items_logic for batch ' . $batch_count);
+                if ($debug_mode) {
+                    error_log('[PUNTWORK] [LOOP-DEBUG] Calling process_batch_items_logic for batch ' . $batch_count);
+                }
                 $result = process_batch_items_logic($setup);
-                error_log(
-                    '[PUNTWORK] [LOOP-DEBUG] process_batch_items_logic completed for batch ' .
-                    $batch_count . ', success=' . ($result['success'] ? 'true' : 'false')
-                );
+                if ($debug_mode) {
+                    error_log(
+                        '[PUNTWORK] [LOOP-DEBUG] process_batch_items_logic completed for batch ' .
+                        $batch_count . ', success=' . ($result['success'] ? 'true' : 'false')
+                    );
+                }
 
                 if (!$result['success']) {
                     $error_msg = 'Batch ' . $batch_count . ' failed: ' . ($result['message'] ?? 'Unknown error');
-                    error_log('[PUNTWORK] [LOOP-DEBUG] Batch ' . $batch_count . ' failed: ' . $error_msg);
+                    if ($debug_mode) {
+                        error_log('[PUNTWORK] [LOOP-DEBUG] Batch ' . $batch_count . ' failed: ' . $error_msg);
+                    }
 
                     return [
                         'success' => false,
@@ -519,7 +598,9 @@ if (!function_exists('import_all_jobs_from_json')) {
                 }
 
                 // Accumulate results
-                error_log('[PUNTWORK] [LOOP-DEBUG] Accumulating results for batch ' . $batch_count);
+                if ($debug_mode) {
+                    error_log('[PUNTWORK] [LOOP-DEBUG] Accumulating results for batch ' . $batch_count);
+                }
                 $total_processed = max($total_processed, $result['processed']);
                 $total_published += $result['published'] ?? 0;
                 $total_updated += $result['updated'] ?? 0;
@@ -531,7 +612,9 @@ if (!function_exists('import_all_jobs_from_json')) {
                 }
 
                 // Update import status for UI tracking
-                error_log('[PUNTWORK] [LOOP-DEBUG] Updating import status after batch ' . $batch_count);
+                if ($debug_mode) {
+                    error_log('[PUNTWORK] [LOOP-DEBUG] Updating import status after batch ' . $batch_count);
+                }
                 $current_status = get_option('job_import_status', $initial_status);
                 $current_status['processed'] = $total_processed;
                 $current_status['published'] = $total_published;
@@ -546,18 +629,22 @@ if (!function_exists('import_all_jobs_from_json')) {
                 if (function_exists('wp_cache_flush')) {
                     wp_cache_flush();
                 }
-                error_log(
-                    '[PUNTWORK] [LOOP-DEBUG] Updated import status after batch ' . $batch_count .
-                    ': processed=' . $total_processed . '/' . $total_items .
-                    ', complete=' . ($total_processed >= $total_items ? 'true' : 'false')
-                );
+                if ($debug_mode) {
+                    error_log(
+                        '[PUNTWORK] [LOOP-DEBUG] Updated import status after batch ' . $batch_count .
+                        ': processed=' . $total_processed . '/' . $total_items .
+                        ', complete=' . ($total_processed >= $total_items ? 'true' : 'false')
+                    );
+                }
 
                 // Check if this batch completed the import
                 if (isset($result['complete']) && $result['complete']) {
-                    error_log(
-                        '[PUNTWORK] [LOOP-DEBUG] Import completed in batch ' . $batch_count .
-                        ' (result complete=true)'
-                    );
+                    if ($debug_mode) {
+                        error_log(
+                            '[PUNTWORK] [LOOP-DEBUG] Import completed in batch ' . $batch_count .
+                            ' (result complete=true)'
+                        );
+                    }
 
                     break;
                 }
@@ -565,10 +652,12 @@ if (!function_exists('import_all_jobs_from_json')) {
                 // Safety check to prevent infinite loops
                 if ($batch_count > 1000) {
                     $error_msg = 'Import aborted - too many batches processed (possible infinite loop)';
-                    error_log(
-                        '[PUNTWORK] [LOOP-DEBUG] Safety check triggered: batch_count=' . $batch_count .
-                        ' > 1000'
-                    );
+                    if ($debug_mode) {
+                        error_log(
+                            '[PUNTWORK] [LOOP-DEBUG] Safety check triggered: batch_count=' . $batch_count .
+                            ' > 1000'
+                        );
+                    }
 
                     return [
                         'success' => false,
@@ -578,9 +667,13 @@ if (!function_exists('import_all_jobs_from_json')) {
                 }
 
                 // Small delay between batches to prevent overwhelming the server
-                error_log('[PUNTWORK] [LOOP-DEBUG] Sleeping for 0.1 seconds before next batch');
+                if ($debug_mode) {
+                    error_log('[PUNTWORK] [LOOP-DEBUG] Sleeping for 0.1 seconds before next batch');
+                }
                 usleep(100000); // 0.1 seconds
-                error_log('[PUNTWORK] [LOOP-DEBUG] Main import loop iteration completed - batch_count=' . $batch_count);
+                if ($debug_mode) {
+                    error_log('[PUNTWORK] [LOOP-DEBUG] Main import loop iteration completed - batch_count=' . $batch_count);
+                }
             }
 
             $end_time = microtime(true);
@@ -610,19 +703,21 @@ if (!function_exists('import_all_jobs_from_json')) {
                 ),
             ];
 
-            error_log(
-                sprintf(
-                    '[PUNTWORK] Full import completed - Duration: %.2fs, Batches: %d, Total: %d, ' .
-                    'Processed: %d, Published: %d, Updated: %d, Skipped: %d',
-                    $total_duration,
-                    $batch_count,
-                    $total_items,
-                    $total_processed,
-                    $total_published,
-                    $total_updated,
-                    $total_skipped
-                )
-            );
+            if ($debug_mode) {
+                error_log(
+                    sprintf(
+                        '[PUNTWORK] Full import completed - Duration: %.2fs, Batches: %d, Total: %d, ' .
+                        'Processed: %d, Published: %d, Updated: %d, Skipped: %d',
+                        $total_duration,
+                        $batch_count,
+                        $total_items,
+                        $total_processed,
+                        $total_published,
+                        $total_updated,
+                        $total_skipped
+                    )
+                );
+            }
 
             // Ensure final status is updated for UI
             $current_status = get_option('job_import_status', []);
@@ -649,16 +744,18 @@ if (!function_exists('import_all_jobs_from_json')) {
                 $final_status['processed'] = $final_status['total'];
             }
             update_option('job_import_status', $final_status, false);
-            error_log(
-                '[PUNTWORK] Final import status updated: ' . json_encode(
-                    [
-                        'total' => $total_items,
-                        'processed' => $total_processed,
-                        'complete' => true,
-                        'success' => true,
-                    ]
-                )
-            );
+            if ($debug_mode) {
+                error_log(
+                    '[PUNTWORK] Final import status updated: ' . json_encode(
+                        [
+                            'total' => $total_items,
+                            'processed' => $total_processed,
+                            'complete' => true,
+                            'success' => true,
+                        ]
+                    )
+                );
+            }
 
             // Ensure cache is cleared so AJAX can see the updated status
             if (function_exists('wp_cache_flush')) {
@@ -667,10 +764,14 @@ if (!function_exists('import_all_jobs_from_json')) {
 
             return finalize_batch_import($final_result);
         } catch (\Exception $e) {
-            error_log('[PUNTWORK] import_all_jobs_from_json exception: ' . $e->getMessage());
+            if ($debug_mode) {
+                error_log('[PUNTWORK] import_all_jobs_from_json exception: ' . $e->getMessage());
+            }
             // Release lock on error
             delete_transient('puntwork_import_lock');
-            error_log('[PUNTWORK] Import lock released due to exception');
+            if ($debug_mode) {
+                error_log('[PUNTWORK] Import lock released due to exception');
+            }
 
             return [
                 'success' => false,
@@ -680,7 +781,9 @@ if (!function_exists('import_all_jobs_from_json')) {
         } finally {
             // Release import lock
             delete_transient('puntwork_import_lock');
-            error_log('[PUNTWORK] Import lock released at end of import_all_jobs_from_json');
+            if ($debug_mode) {
+                error_log('[PUNTWORK] Import lock released at end of import_all_jobs_from_json');
+            }
         }
     }
 }
@@ -693,12 +796,18 @@ if (!function_exists('import_all_jobs_from_json')) {
  */
 function continue_paused_import(): void
 {
-    error_log('[PUNTWORK] Continuing paused import process');
+    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] Continuing paused import process');
+    }
 
     // Check if import is actually paused
     $status = get_option('job_import_status', []);
     if (!isset($status['paused']) || !$status['paused']) {
-        error_log('[PUNTWORK] No paused import found - skipping continuation');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] No paused import found - skipping continuation');
+        }
 
         return;
     }
@@ -716,9 +825,13 @@ function continue_paused_import(): void
     $result = import_all_jobs_from_json(true); // preserve status
 
     if ($result['success']) {
-        error_log('[PUNTWORK] Paused import continuation completed successfully');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] Paused import continuation completed successfully');
+        }
     } else {
-        error_log('[PUNTWORK] Paused import continuation failed: ' . ($result['message'] ?? 'Unknown error'));
+        if ($debug_mode) {
+            error_log('[PUNTWORK] Paused import continuation failed: ' . ($result['message'] ?? 'Unknown error'));
+        }
     }
 }
 
@@ -730,7 +843,11 @@ function continue_paused_import(): void
  */
 function start_scheduled_import(): void
 {
-    error_log('[PUNTWORK] Starting scheduled import process');
+    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] Starting scheduled import process');
+    }
 
     // Check if import is already running
     $import_lock_key = 'puntwork_import_lock';
@@ -747,12 +864,16 @@ function start_scheduled_import(): void
             if ($is_complete || $time_since_update > 1800) { // 30 minutes
                 $is_stale = true;
                 delete_transient($import_lock_key);
-                error_log('[PUNTWORK] [IMPORT-LOCK] Cleared stale import lock (complete: ' . ($is_complete ? 'yes' : 'no') . ', time since update: ' . $time_since_update . 's)');
+                if ($debug_mode) {
+                    error_log('[PUNTWORK] [IMPORT-LOCK] Cleared stale import lock (complete: ' . ($is_complete ? 'yes' : 'no') . ', time since update: ' . $time_since_update . 's)');
+                }
             }
         }
 
         if (!$is_stale) {
-            error_log('[PUNTWORK] Scheduled import already running - skipping');
+            if ($debug_mode) {
+                error_log('[PUNTWORK] Scheduled import already running - skipping');
+            }
 
             return;
         }
@@ -762,9 +883,13 @@ function start_scheduled_import(): void
     $result = import_all_jobs_from_json(true); // preserve status
 
     if ($result['success']) {
-        error_log('[PUNTWORK] Scheduled import completed successfully');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] Scheduled import completed successfully');
+        }
     } else {
-        error_log('[PUNTWORK] Scheduled import failed: ' . ($result['message'] ?? 'Unknown error'));
+        if ($debug_mode) {
+            error_log('[PUNTWORK] Scheduled import failed: ' . ($result['message'] ?? 'Unknown error'));
+        }
     }
 }
 

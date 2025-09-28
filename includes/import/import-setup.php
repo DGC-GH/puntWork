@@ -30,10 +30,17 @@ require_once __DIR__ . '/../utilities/utility-helpers.php';
  */
 function validate_jsonl_file($json_path)
 {
-    error_log('[PUNTWORK] validate_jsonl_file: Starting validation of ' . basename($json_path));
+    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [VALIDATE-START] ===== VALIDATE_JSONL_FILE START =====');
+        error_log('[PUNTWORK] [VALIDATE-START] validate_jsonl_file: Starting validation of ' . basename($json_path));
+    }
 
     if (($handle = fopen($json_path, 'r')) == false) {
-        error_log('[PUNTWORK] validate_jsonl_file: Cannot open file for validation');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [VALIDATE-ERROR] validate_jsonl_file: Cannot open file for validation');
+        }
 
         return new WP_Error('file_open_failed', 'Cannot open JSONL file for validation');
     }
@@ -47,7 +54,9 @@ function validate_jsonl_file($json_path)
     $file_size = filesize($json_path);
     $max_check = min(100, max(10, $file_size / 1000)); // Check up to 100 lines or 0.1% of file, minimum 10
 
-    error_log('[PUNTWORK] validate_jsonl_file: File size: ' . $file_size . ' bytes, checking up to ' . $max_check . ' lines');
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [VALIDATE-DEBUG] File size: ' . $file_size . ' bytes, checking up to ' . $max_check . ' lines');
+    }
 
     while ($checked_lines < $max_check && ($line = fgets($handle)) !== false) {
         $checked_lines++;
@@ -68,8 +77,10 @@ function validate_jsonl_file($json_path)
         $item = json_decode($line, true);
         if ($item == null && json_last_error() !== JSON_ERROR_NONE) {
             $invalid_lines++;
-            error_log('[PUNTWORK] validate_jsonl_file: INVALID JSON at line ' . $checked_lines . ': ' . json_last_error_msg());
-            error_log('[PUNTWORK] validate_jsonl_file: Line preview: ' . substr($original_line, 0, 100) . (strlen($original_line) > 100 ? '...[truncated]' : ''));
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [VALIDATE-ERROR] INVALID JSON at line ' . $checked_lines . ': ' . json_last_error_msg());
+                error_log('[PUNTWORK] [VALIDATE-ERROR] Line preview: ' . substr($original_line, 0, 100) . (strlen($original_line) > 100 ? '...[truncated]' : ''));
+            }
 
             continue;
         }
@@ -79,30 +90,43 @@ function validate_jsonl_file($json_path)
         // Check for required fields
         if (!isset($item['guid']) || empty($item['guid'])) {
             $missing_guids++;
-            error_log('[PUNTWORK] validate_jsonl_file: Missing or empty GUID at line ' . $checked_lines . ', item keys: ' . implode(', ', array_keys($item)));
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [VALIDATE-WARN] Missing or empty GUID at line ' . $checked_lines . ', item keys: ' . implode(', ', array_keys($item)));
+            }
         }
     }
 
     fclose($handle);
 
     $valid_percentage = $checked_lines > 0 ? round(($valid_lines / $checked_lines) * 100, 2) : 0;
-    error_log('[PUNTWORK] validate_jsonl_file: Validation complete - Checked: ' . $checked_lines . ' lines, Valid: ' . $valid_lines . ' (' . $valid_percentage . '%), Invalid: ' . $invalid_lines . ', Empty: ' . $empty_lines . ', Missing GUIDs: ' . $missing_guids);
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [VALIDATE-RESULT] Validation complete - Checked: ' . $checked_lines . ' lines, Valid: ' . $valid_lines . ' (' . $valid_percentage . '%), Invalid: ' . $invalid_lines . ', Empty: ' . $empty_lines . ', Missing GUIDs: ' . $missing_guids);
+    }
 
     if ($invalid_lines > 0) {
-        error_log('[PUNTWORK] validate_jsonl_file: WARNING - Found ' . $invalid_lines . ' invalid JSON lines in sample');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [VALIDATE-WARN] WARNING - Found ' . $invalid_lines . ' invalid JSON lines in sample');
+        }
     }
 
     if ($valid_percentage < 80) {
-        error_log('[PUNTWORK] validate_jsonl_file: CRITICAL - Only ' . $valid_percentage . '% of sampled lines are valid JSON');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [VALIDATE-ERROR] CRITICAL - Only ' . $valid_percentage . '% of sampled lines are valid JSON');
+        }
 
         return new WP_Error('low_valid_percentage', 'Only ' . $valid_percentage . '% of sampled lines contain valid JSON');
     }
 
     if ($missing_guids > 0) {
-        error_log('[PUNTWORK] validate_jsonl_file: WARNING - Found ' . $missing_guids . ' items missing GUIDs');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [VALIDATE-WARN] WARNING - Found ' . $missing_guids . ' items missing GUIDs');
+        }
     }
 
-    error_log('[PUNTWORK] validate_jsonl_file: File validation passed');
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [VALIDATE-END] File validation passed');
+        error_log('[PUNTWORK] [VALIDATE-END] ===== VALIDATE_JSONL_FILE END =====');
+    }
 
     return true;
 }
@@ -115,98 +139,143 @@ function validate_jsonl_file($json_path)
  */
 function prepare_import_setup($batch_start = 0)
 {
+    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+
     do_action('qm/cease'); // Disable Query Monitor data collection to reduce memory usage
     ini_set('memory_limit', '512M');
     set_time_limit(1800);
     ignore_user_abort(true);
 
     global $wpdb;
-    error_log('[PUNTWORK] [SETUP-START] ===== PREPARE_IMPORT_SETUP START =====');
-    error_log('[PUNTWORK] [SETUP-START] prepare_import_setup called with batch_start=' . $batch_start . ', memory_limit=' . ini_get('memory_limit') . ', time_limit=' . ini_get('max_execution_time'));
-    error_log('[PUNTWORK] [SETUP-START] Current memory usage: ' . memory_get_usage(true) . ' bytes');
-    error_log('[PUNTWORK] [SETUP-START] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [SETUP-START] ===== PREPARE_IMPORT_SETUP START =====');
+        error_log('[PUNTWORK] [SETUP-START] prepare_import_setup called with batch_start=' . $batch_start . ', memory_limit=' . ini_get('memory_limit') . ', time_limit=' . ini_get('max_execution_time'));
+        error_log('[PUNTWORK] [SETUP-START] Current memory usage: ' . memory_get_usage(true) . ' bytes');
+        error_log('[PUNTWORK] [SETUP-START] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
+        error_log('[PUNTWORK] [SETUP-START] WordPress version: ' . get_bloginfo('version'));
+        error_log('[PUNTWORK] [SETUP-START] PHP version: ' . PHP_VERSION);
+        error_log('[PUNTWORK] [SETUP-START] Database prefix: ' . $wpdb->prefix);
+    }
 
     try {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-ACF] Getting ACF fields...');
+        }
         $acf_fields = get_acf_fields();
-        error_log('[PUNTWORK] [SETUP-ACF] Got ACF fields: ' . count($acf_fields) . ' fields');
-        if (empty($acf_fields)) {
-            error_log('[PUNTWORK] [SETUP-WARNING] No ACF fields found - this may cause import issues');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-ACF] Got ACF fields: ' . count($acf_fields) . ' fields');
+            if (empty($acf_fields)) {
+                error_log('[PUNTWORK] [SETUP-WARNING] No ACF fields found - this may cause import issues');
+            }
         }
     } catch (\Exception $e) {
-        error_log('[PUNTWORK] [SETUP-ERROR] Error getting ACF fields: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-ERROR] Error getting ACF fields: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+        }
 
         return new WP_Error('acf_error', 'Failed to get ACF fields: ' . $e->getMessage());
     }
 
     try {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-ZERO] Getting zero empty fields...');
+        }
         $zero_empty_fields = get_zero_empty_fields();
-        error_log('[PUNTWORK] [SETUP-ZERO] Got zero empty fields: ' . count($zero_empty_fields) . ' fields');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-ZERO] Got zero empty fields: ' . count($zero_empty_fields) . ' fields');
+        }
     } catch (\Exception $e) {
-        error_log('[PUNTWORK] [SETUP-ERROR] Error getting zero empty fields: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-ERROR] Error getting zero empty fields: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+        }
 
         return new WP_Error('zero_fields_error', 'Failed to get zero empty fields: ' . $e->getMessage());
     }
 
     if (!defined('WP_IMPORTING')) {
         define('WP_IMPORTING', true);
-        error_log('[PUNTWORK] [SETUP-CONSTANT] Defined WP_IMPORTING constant');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-CONSTANT] Defined WP_IMPORTING constant');
+        }
     }
     wp_suspend_cache_invalidation(true);
     remove_action('post_updated', 'wp_save_post_revision');
-    error_log('[PUNTWORK] [SETUP-WP] Suspended cache invalidation and removed post revision action');
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [SETUP-WP] Suspended cache invalidation and removed post revision action');
+    }
 
     // Check if there's an existing import in progress and use its start time
-    $existing_status = get_option('job_import_status');
+    $existing_status = safe_get_option('job_import_status');
     if ($existing_status && isset($existing_status['start_time']) && $existing_status['start_time'] > 0) {
         $start_time = $existing_status['start_time'];
         \Puntwork\PuntWorkLogger::info('Using existing import start time: ' . $start_time, \Puntwork\PuntWorkLogger::CONTEXT_BATCH);
-        error_log('[PUNTWORK] [SETUP-TIME] Using existing import start time: ' . date('Y-m-d H:i:s', $start_time) . ' (' . $start_time . ')');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-TIME] Using existing import start time: ' . date('Y-m-d H:i:s', $start_time) . ' (' . $start_time . ')');
+        }
     } else {
         $start_time = microtime(true);
         \Puntwork\PuntWorkLogger::info('Starting new import with start time: ' . $start_time, \Puntwork\PuntWorkLogger::CONTEXT_BATCH);
-        error_log('[PUNTWORK] [SETUP-TIME] Starting new import with start time: ' . date('Y-m-d H:i:s', (int)$start_time) . ' (' . $start_time . ')');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-TIME] Starting new import with start time: ' . date('Y-m-d H:i:s', (int)$start_time) . ' (' . $start_time . ')');
+        }
     }
 
     $json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
-    error_log('[PUNTWORK] [SETUP-FILE] JSONL path: ' . $json_path);
-    error_log('[PUNTWORK] [SETUP-FILE] ABSPATH: ' . ABSPATH);
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [SETUP-FILE] JSONL path: ' . $json_path);
+        error_log('[PUNTWORK] [SETUP-FILE] ABSPATH: ' . ABSPATH);
+    }
 
     // Ensure feeds directory exists
     $feeds_dir = dirname($json_path);
     if (!is_dir($feeds_dir)) {
-        error_log('[PUNTWORK] [SETUP-FILE] Feeds directory does not exist, creating it...');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-FILE] Feeds directory does not exist, creating it...');
+        }
         if (!wp_mkdir_p($feeds_dir)) {
-            error_log('[PUNTWORK] [SETUP-ERROR] Failed to create feeds directory: ' . $feeds_dir);
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [SETUP-ERROR] Failed to create feeds directory: ' . $feeds_dir);
+            }
             return [
                 'success' => false,
                 'message' => 'Cannot create feeds directory',
                 'logs' => ['Failed to create feeds directory: ' . $feeds_dir],
             ];
         }
-        error_log('[PUNTWORK] [SETUP-FILE] Feeds directory created successfully');
-    }
-
-    error_log('[PUNTWORK] [SETUP-FILE] feeds/ directory exists: ' . (is_dir(ABSPATH . 'feeds/') ? 'yes' : 'no'));
-    error_log('[PUNTWORK] [SETUP-FILE] feeds/ directory writable: ' . (is_writable(ABSPATH . 'feeds/') ? 'yes' : 'no'));
-
-    $files_in_feeds = glob(ABSPATH . 'feeds/*');
-    error_log('[PUNTWORK] [SETUP-FILE] Files in feeds/ directory: ' . (is_array($files_in_feeds) ? count($files_in_feeds) : 'glob_failed') . ' files');
-    if (is_array($files_in_feeds) && !empty($files_in_feeds)) {
-        foreach ($files_in_feeds as $file) {
-            $size = file_exists($file) ? filesize($file) : 'N/A';
-            error_log('[PUNTWORK] [SETUP-FILE]   - ' . basename($file) . ' (' . $size . ' bytes)');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-FILE] Feeds directory created successfully');
         }
     }
 
-    error_log('[PUNTWORK] [SETUP-FILE] Combined JSONL file exists: ' . (file_exists($json_path) ? 'yes' : 'no'));
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [SETUP-FILE] feeds/ directory exists: ' . (is_dir(ABSPATH . 'feeds/') ? 'yes' : 'no'));
+        error_log('[PUNTWORK] [SETUP-FILE] feeds/ directory writable: ' . (is_writable(ABSPATH . 'feeds/') ? 'yes' : 'no'));
+
+        $files_in_feeds = glob(ABSPATH . 'feeds/*');
+        error_log('[PUNTWORK] [SETUP-FILE] Files in feeds/ directory: ' . (is_array($files_in_feeds) ? count($files_in_feeds) : 'glob_failed') . ' files');
+        if (is_array($files_in_feeds) && !empty($files_in_feeds)) {
+            foreach ($files_in_feeds as $file) {
+                $size = file_exists($file) ? filesize($file) : 'N/A';
+                error_log('[PUNTWORK] [SETUP-FILE]   - ' . basename($file) . ' (' . $size . ' bytes)');
+            }
+        }
+    }
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [SETUP-FILE] Combined JSONL file exists: ' . (file_exists($json_path) ? 'yes' : 'no'));
+    }
     if (file_exists($json_path)) {
         $size = filesize($json_path);
         $mtime = filemtime($json_path);
-        error_log('[PUNTWORK] [SETUP-FILE] File size: ' . $size . ' bytes');
-        error_log('[PUNTWORK] [SETUP-FILE] File mtime: ' . date('Y-m-d H:i:s', $mtime) . ', age: ' . (time() - $mtime) . ' seconds');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-FILE] File size: ' . $size . ' bytes');
+            error_log('[PUNTWORK] [SETUP-FILE] File mtime: ' . date('Y-m-d H:i:s', $mtime) . ', age: ' . (time() - $mtime) . ' seconds');
+        }
 
         if ($size === 0) {
-            error_log('[PUNTWORK] [SETUP-ERROR] JSONL file exists but is empty (0 bytes)');
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [SETUP-ERROR] JSONL file exists but is empty (0 bytes)');
+            }
             return [
                 'success' => false,
                 'message' => 'JSONL file is empty - feeds may need to be processed first',
@@ -220,31 +289,37 @@ function prepare_import_setup($batch_start = 0)
             $first_line = fgets($handle);
             fclose($handle);
             $first_line_length = strlen($first_line);
-            error_log('[PUNTWORK] [SETUP-FILE] First line length: ' . $first_line_length . ' characters');
-            if ($first_line_length > 0) {
-                error_log('[PUNTWORK] [SETUP-FILE] First line preview: ' . substr($first_line, 0, 200) . ($first_line_length > 200 ? '...[truncated]' : ''));
-            } else {
-                error_log('[PUNTWORK] [SETUP-ERROR] First line is empty - file may be corrupted');
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [SETUP-FILE] First line length: ' . $first_line_length . ' characters');
+                if ($first_line_length > 0) {
+                    error_log('[PUNTWORK] [SETUP-FILE] First line preview: ' . substr($first_line, 0, 200) . ($first_line_length > 200 ? '...[truncated]' : ''));
+                } else {
+                    error_log('[PUNTWORK] [SETUP-ERROR] First line is empty - file may be corrupted');
+                }
             }
         } else {
-            error_log('[PUNTWORK] [SETUP-ERROR] Could not open JSONL file for reading');
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [SETUP-ERROR] Could not open JSONL file for reading');
+            }
         }
     }
 
     if (!file_exists($json_path)) {
-        error_log('[PUNTWORK] [SETUP-ERROR] JSONL file not found: ' . $json_path . ' - checking if feeds need to be processed first');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-ERROR] JSONL file not found: ' . $json_path . ' - checking if feeds need to be processed first');
 
-        // Check if there are any individual feed files
-        $feed_files = glob(ABSPATH . 'feeds/*.jsonl');
-        error_log('[PUNTWORK] [SETUP-ERROR] Individual feed files found: ' . (is_array($feed_files) ? count($feed_files) : 'glob_failed'));
-        if (is_array($feed_files) && !empty($feed_files)) {
-            error_log('[PUNTWORK] [SETUP-ERROR] Individual feeds exist but combined file missing - need to run combine_jsonl_files');
-            foreach ($feed_files as $feed_file) {
-                $size = file_exists($feed_file) ? filesize($feed_file) : 'N/A';
-                error_log('[PUNTWORK] [SETUP-ERROR]   - ' . basename($feed_file) . ' (' . $size . ' bytes)');
+            // Check if there are any individual feed files
+            $feed_files = glob(ABSPATH . 'feeds/*.jsonl');
+            error_log('[PUNTWORK] [SETUP-ERROR] Individual feed files found: ' . (is_array($feed_files) ? count($feed_files) : 'glob_failed'));
+            if (is_array($feed_files) && !empty($feed_files)) {
+                error_log('[PUNTWORK] [SETUP-ERROR] Individual feeds exist but combined file missing - need to run combine_jsonl_files');
+                foreach ($feed_files as $feed_file) {
+                    $size = file_exists($feed_file) ? filesize($feed_file) : 'N/A';
+                    error_log('[PUNTWORK] [SETUP-ERROR]   - ' . basename($feed_file) . ' (' . $size . ' bytes)');
+                }
+            } else {
+                error_log('[PUNTWORK] [SETUP-ERROR] No individual feed files found - feeds may not be configured or processed');
             }
-        } else {
-            error_log('[PUNTWORK] [SETUP-ERROR] No individual feed files found - feeds may not be configured or processed');
         }
 
         return [
@@ -255,7 +330,9 @@ function prepare_import_setup($batch_start = 0)
     }
 
     if (!is_readable($json_path)) {
-        error_log('[PUNTWORK] [SETUP-ERROR] JSONL file not readable: ' . $json_path . ' - permissions issue?');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-ERROR] JSONL file not readable: ' . $json_path . ' - permissions issue?');
+        }
 
         return [
             'success' => false,
@@ -265,10 +342,14 @@ function prepare_import_setup($batch_start = 0)
     }
 
     // Validate JSONL file integrity
-    error_log('[PUNTWORK] [SETUP-VALIDATION] Starting JSONL file validation...');
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [SETUP-VALIDATION] Starting JSONL file validation...');
+    }
     $validation = validate_jsonl_file($json_path);
     if (is_wp_error($validation)) {
-        error_log('[PUNTWORK] [SETUP-ERROR] JSONL validation failed: ' . $validation->get_error_message());
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-ERROR] JSONL validation failed: ' . $validation->get_error_message());
+        }
 
         return [
             'success' => false,
@@ -276,23 +357,33 @@ function prepare_import_setup($batch_start = 0)
             'logs' => ['JSONL file validation failed: ' . $validation->get_error_message()],
         ];
     }
-    error_log('[PUNTWORK] [SETUP-VALIDATION] JSONL file validation passed');
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [SETUP-VALIDATION] JSONL file validation passed');
+    }
 
     try {
-        error_log('[PUNTWORK] [SETUP-COUNT] Starting JSONL item count...');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-COUNT] Starting JSONL item count...');
+        }
         $total = get_json_item_count($json_path);
-        error_log('[PUNTWORK] [SETUP-COUNT] Total items in JSONL: ' . $total);
-        if ($total === 0) {
-            error_log('[PUNTWORK] [SETUP-WARNING] JSONL file exists but contains 0 valid items');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-COUNT] Total items in JSONL: ' . $total);
+            if ($total === 0) {
+                error_log('[PUNTWORK] [SETUP-WARNING] JSONL file exists but contains 0 valid items');
+            }
         }
     } catch (\Exception $e) {
-        error_log('[PUNTWORK] [SETUP-ERROR] Error counting JSONL items: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-ERROR] Error counting JSONL items: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+        }
 
         return new WP_Error('count_error', 'Failed to count JSONL items: ' . $e->getMessage());
     }
 
     if ($total === 0) {
-        error_log('[PUNTWORK] [SETUP-EARLY] EARLY RETURN - total is 0, no items to import');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-EARLY] EARLY RETURN - total is 0, no items to import');
+        }
 
         return [
             'success' => true,
@@ -315,30 +406,44 @@ function prepare_import_setup($batch_start = 0)
     }
 
     // Cache existing job GUIDs if not already cached
-    error_log('[PUNTWORK] [SETUP-GUIDS] Checking existing job GUIDs cache...');
-    if (false === get_option('job_existing_guids')) {
-        error_log('[PUNTWORK] [SETUP-GUIDS] Caching existing job GUIDs...');
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [SETUP-GUIDS] Checking existing job GUIDs cache...');
+    }
+    if (false === safe_get_option('job_existing_guids')) {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-GUIDS] Caching existing job GUIDs...');
+        }
         $all_jobs = $wpdb->get_results("SELECT p.ID, pm.meta_value AS guid FROM $wpdb->posts p JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = 'job' AND pm.meta_key = 'guid'");
         update_option('job_existing_guids', $all_jobs, false);
-        error_log('[PUNTWORK] [SETUP-GUIDS] Cached ' . count($all_jobs) . ' existing job GUIDs');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-GUIDS] Cached ' . count($all_jobs) . ' existing job GUIDs');
+        }
     } else {
-        $cached_guids = get_option('job_existing_guids');
-        error_log('[PUNTWORK] [SETUP-GUIDS] Using cached GUIDs: ' . (is_array($cached_guids) ? count($cached_guids) : 'invalid') . ' jobs');
+        $cached_guids = safe_get_option('job_existing_guids');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-GUIDS] Using cached GUIDs: ' . (is_array($cached_guids) ? count($cached_guids) : 'invalid') . ' jobs');
+        }
     }
 
-    $processed_guids = get_option('job_import_processed_guids') ?: [];
-    $start_index = max((int)get_option('job_import_progress'), $batch_start);
-    error_log('[PUNTWORK] [SETUP-INDEX] Initial start_index calculation: max(' . (int)get_option('job_import_progress') . ', ' . $batch_start . ') = ' . $start_index);
+    $processed_guids = safe_get_option('job_import_processed_guids') ?: [];
+    $start_index = max((int)safe_get_option('job_import_progress'), $batch_start);
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [SETUP-INDEX] Initial start_index calculation: max(' . (int)safe_get_option('job_import_progress') . ', ' . $batch_start . ') = ' . $start_index);
+    }
 
     // For fresh starts (batch_start = 0), reset the status and create new start time
     // But only if there's no existing valid status (preserve_status logic)
-    $existing_status = get_option('job_import_status', []);
+    $existing_status = safe_get_option('job_import_status', []);
     $has_valid_status = !empty($existing_status) && isset($existing_status['total']) && $existing_status['total'] > 0;
-    error_log('[PUNTWORK] [SETUP-STATUS] Existing status check: has_valid_status=' . ($has_valid_status ? 'true' : 'false') . ', batch_start=' . $batch_start);
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [SETUP-STATUS] Existing status check: has_valid_status=' . ($has_valid_status ? 'true' : 'false') . ', batch_start=' . $batch_start);
+    }
 
     if ($batch_start == 0 && !$has_valid_status) {
         $start_index = 0;
-        error_log('[PUNTWORK] [SETUP-FRESH] Fresh start detected (no valid existing status), setting start_index to 0');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-FRESH] Fresh start detected (no valid existing status), setting start_index to 0');
+        }
         // Clear processed GUIDs for fresh start
         $processed_guids = [];
         // Clear existing status for fresh start
@@ -360,7 +465,7 @@ function prepare_import_setup($batch_start = 0)
             'complete' => false,
             'success' => false,
             'error_message' => '',
-            'batch_size' => get_option('job_import_batch_size') ?: 1,
+            'batch_size' => safe_get_option('job_import_batch_size') ?: 1,
             'inferred_languages' => 0,
             'inferred_benefits' => 0,
             'schema_generated' => 0,
@@ -370,15 +475,21 @@ function prepare_import_setup($batch_start = 0)
             'logs' => ['Manual import started - preparing to process items...'],
         ];
         update_option('job_import_status', $initial_status, false);
-        error_log('[PUNTWORK] [SETUP-FRESH] Initialized fresh import status with total=' . $total . ', batch_size=' . $initial_status['batch_size']);
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-FRESH] Initialized fresh import status with total=' . $total . ', batch_size=' . $initial_status['batch_size']);
+        }
     } elseif ($batch_start == 0 && $has_valid_status) {
         // Resuming from existing status - don't reset anything
         $start_index = $existing_status['processed'] ?? 0;
-        error_log('[PUNTWORK] [SETUP-RESUME] Resuming import from existing status, start_index=' . $start_index . ', total=' . $existing_status['total']);
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-RESUME] Resuming import from existing status, start_index=' . $start_index . ', total=' . $existing_status['total']);
+        }
     }
 
     if ($start_index >= $total) {
-        error_log('[PUNTWORK] [SETUP-EARLY] EARLY RETURN - start_index (' . $start_index . ') >= total (' . $total . ') - import appears complete');
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [SETUP-EARLY] EARLY RETURN - start_index (' . $start_index . ') >= total (' . $total . ') - import appears complete');
+        }
 
         return [
             'success' => true,
@@ -400,8 +511,10 @@ function prepare_import_setup($batch_start = 0)
         ];
     }
 
-    error_log('[PUNTWORK] [SETUP-FINAL] NORMAL RETURN - start_index=' . $start_index . ', total=' . $total . ', json_path=' . $json_path . ', processed_guids_count=' . count($processed_guids));
-    error_log('[PUNTWORK] [SETUP-END] ===== PREPARE_IMPORT_SETUP END =====');
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [SETUP-FINAL] NORMAL RETURN - start_index=' . $start_index . ', total=' . $total . ', json_path=' . $json_path . ', processed_guids_count=' . count($processed_guids));
+        error_log('[PUNTWORK] [SETUP-END] ===== PREPARE_IMPORT_SETUP END =====');
+    }
 
     return [
         'acf_fields' => $acf_fields,
