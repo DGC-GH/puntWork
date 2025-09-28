@@ -139,8 +139,13 @@ if (! function_exists('process_batch_items') ) {
                         $value      = $item[ $field ] ?? '';
                         $is_special = in_array($field, $zero_empty_fields);
                         $set_value  = $is_special && $value === '0' ? '' : $value;
+
+                        // Ensure values are strings for logging
+                        $value_str = is_array($value) ? json_encode($value) : (string)$value;
+                        $set_value_str = is_array($set_value) ? json_encode($set_value) : (string)$set_value;
+
                         $acf_updates[ $field ] = $set_value;
-                        error_log('[PUNTWORK] [ITEMS-DEBUG] ACF field ' . $field . ': "' . substr($value, 0, 50) . '" -> "' . substr($set_value, 0, 50) . '"');
+                        error_log('[PUNTWORK] [ITEMS-DEBUG] ACF field ' . $field . ': "' . substr($value_str, 0, 50) . '" -> "' . substr($set_value_str, 0, 50) . '"');
                     }
 
                     // Use bulk update for ACF fields to avoid N+1 queries
@@ -192,8 +197,13 @@ if (! function_exists('process_batch_items') ) {
                         $value      = $item[ $field ] ?? '';
                         $is_special = in_array($field, $zero_empty_fields);
                         $set_value  = $is_special && $value === '0' ? '' : $value;
+
+                        // Ensure values are strings for logging
+                        $value_str = is_array($value) ? json_encode($value) : (string)$value;
+                        $set_value_str = is_array($set_value) ? json_encode($set_value) : (string)$set_value;
+
                         $acf_updates[ $field ] = $set_value;
-                        error_log('[PUNTWORK] [ITEMS-DEBUG] ACF field ' . $field . ': "' . substr($value, 0, 50) . '" -> "' . substr($set_value, 0, 50) . '"');
+                        error_log('[PUNTWORK] [ITEMS-DEBUG] ACF field ' . $field . ': "' . substr($value_str, 0, 50) . '" -> "' . substr($set_value_str, 0, 50) . '"');
                     }
 
                     // Use bulk update for ACF fields to avoid N+1 queries

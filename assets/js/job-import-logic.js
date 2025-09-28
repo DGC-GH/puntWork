@@ -71,15 +71,19 @@ console.info("=== Job Import Logic Script Loaded ===");
          * @returns {Promise} Import process promise
          */
         handleImport: async function(initialStart) {
+            console.log('[PUNTWORK] ===== STARTING BATCH IMPORT =====');
+            console.log('[PUNTWORK] Initial start index:', initialStart);
             PuntWorkJSLogger.info('Handling import starting at: ' + initialStart, 'LOGIC');
             let response;
 
             try {
                 response = await JobImportAPI.runImportBatch(initialStart);
+                console.log('[PUNTWORK] Batch API response received:', response);
                 PuntWorkJSLogger.debug('Import batch response', 'LOGIC', response);
                 console.log('[PUNTWORK] Import batch response:', response);
 
                 if (response.success) {
+                    console.log('[PUNTWORK] Batch successful - processed:', response.data.processed, 'total:', response.data.total);
                     if ((response.data && response.data.processed === 0 && response.data.total > 0) || (response.data && response.data.total > 0 && !response.data.processed)) {
                         console.warn('[PUNTWORK] WARNING: Import batch returned success but processed 0 items out of', response.data.total, response);
                         PuntWorkJSLogger.warn('Import batch returned success but processed 0 items', 'LOGIC', response);
@@ -89,7 +93,7 @@ console.info("=== Job Import Logic Script Loaded ===");
                     const statusResponse = await JobImportAPI.getImportStatus();
                     if (statusResponse.success) {
                         var batchData = JobImportUI.normalizeResponseData(statusResponse);
-                        console.log('[PUNTWORK] Batch completed, status updated:', batchData);
+                        console.log('[PUNTWORK] Status after batch - published:', batchData.published, 'updated:', batchData.updated, 'total:', batchData.total);
                     } else {
                         console.log('[PUNTWORK] Status fetch failed after batch, continuing...', statusResponse);
                         PuntWorkJSLogger.warn('Status fetch failed after batch', 'LOGIC', statusResponse);
@@ -98,21 +102,24 @@ console.info("=== Job Import Logic Script Loaded ===");
 
                     let total = response.data.total || 0;
                     let current = response.data.processed || 0;
+                    console.log('[PUNTWORK] Continuing batch processing - current:', current, 'total:', total);
                     PuntWorkJSLogger.debug('Initial current: ' + current + ', total: ' + total, 'LOGIC');
 
                     let batchCount = 0;
                     while (current < total && this.isImporting) {
                         batchCount++;
+                        console.log('[PUNTWORK] ===== STARTING BATCH', batchCount, '=====');
                         PuntWorkJSLogger.debug('Continuing to next batch, current: ' + current + ', total: ' + total + ', batchCount: ' + batchCount, 'LOGIC');
                         try {
                             response = await JobImportAPI.runImportBatch(current);
+                            console.log('[PUNTWORK] Batch', batchCount, 'response:', response);
                             PuntWorkJSLogger.debug('Next batch response', 'LOGIC', response);
                             console.log('[PUNTWORK] Next batch response:', response);
 
                             if (response.success) {
                                 // Status polling handles UI updates, just update our local tracking
                                 current = response.data.processed || current;
-                                console.log('[PUNTWORK] Next batch completed, current processed:', current, 'batchCount:', batchCount);
+                                console.log('[PUNTWORK] Batch', batchCount, 'completed - current processed:', current, 'batchCount:', batchCount);
                                 if ((response.data && response.data.processed === 0 && response.data.total > 0) || (response.data && response.data.total > 0 && !response.data.processed)) {
                                     console.warn('[PUNTWORK] WARNING: Batch', batchCount, 'returned success but processed 0 items out of', response.data.total, response);
                                     PuntWorkJSLogger.warn('Batch ' + batchCount + ' returned success but processed 0 items', 'LOGIC', response);
@@ -123,6 +130,7 @@ console.info("=== Job Import Logic Script Loaded ===");
                                 throw new Error('Import batch failed: ' + (response.message || 'Unknown error'));
                             }
                         } catch (batchError) {
+                            console.log('[PUNTWORK] Batch', batchCount, 'error:', batchError);
                             PuntWorkJSLogger.error('Batch processing error', 'LOGIC', batchError);
                             console.error('[PUNTWORK] Batch processing error:', batchError);
                             // Check if this is a retryable error
@@ -156,6 +164,8 @@ console.info("=== Job Import Logic Script Loaded ===");
                     }
 
                     if (this.isImporting && current >= total) {
+                        console.log('[PUNTWORK] ===== IMPORT COMPLETED SUCCESSFULLY =====');
+                        console.log('[PUNTWORK] Final stats - total:', total, 'processed:', current);
                         PuntWorkJSLogger.info('Import completed successfully', 'LOGIC', {
                             total: total,
                             processed: current
@@ -175,6 +185,8 @@ console.info("=== Job Import Logic Script Loaded ===");
                     }
                 }
             } catch (e) {
+                console.error('[PUNTWORK] ===== IMPORT PROCESS ERROR =====');
+                console.error('[PUNTWORK] Error details:', e);
                 PuntWorkJSLogger.error('Handle import error', 'LOGIC', e);
                 console.error('[PUNTWORK] Handle import error:', e);
 
@@ -210,6 +222,7 @@ console.info("=== Job Import Logic Script Loaded ===");
          * Handle import completion and cleanup
          */
         handleImportCompletion: async function() {
+            console.log('[PUNTWORK] ===== IMPORT COMPLETION STARTED =====');
             JobImportUI.appendLogs(['Finalizing import...']);
 
             try {
@@ -217,11 +230,13 @@ console.info("=== Job Import Logic Script Loaded ===");
                 await new Promise(resolve => setTimeout(resolve, 500));
 
                 const finalResponse = await JobImportAPI.getImportStatus();
+                console.log('[PUNTWORK] Final status response:', finalResponse);
                 PuntWorkJSLogger.debug('Final status response', 'LOGIC', finalResponse);
 
                 if (finalResponse.success) {
                     // Handle both response formats: direct data or wrapped in .data
                     var statusData = JobImportUI.normalizeResponseData(finalResponse);
+                    console.log('[PUNTWORK] Final import stats - published:', statusData.published, 'updated:', statusData.updated, 'skipped:', statusData.skipped);
                     // Ensure success is set for completion
                     statusData.success = true;
                     PuntWorkJSLogger.info('Final import status', 'LOGIC', {
@@ -241,14 +256,17 @@ console.info("=== Job Import Logic Script Loaded ===");
                     // Log the manual import run to history
                     await this.logManualImportRun(statusData);
                 } else {
+                    console.error('[PUNTWORK] Failed to get final status:', finalResponse);
                     PuntWorkJSLogger.error('Failed to get final status', 'LOGIC', finalResponse);
                     JobImportUI.appendLogs(['Failed to get final status']);
                 }
             } catch (error) {
+                console.error('[PUNTWORK] Final status error:', error);
                 PuntWorkJSLogger.error('Final status AJAX error', 'LOGIC', error);
                 JobImportUI.appendLogs(['Final status AJAX error: ' + error]);
             }
 
+            console.log('[PUNTWORK] ===== IMPORT COMPLETION FINISHED =====');
             JobImportUI.appendLogs(['Import complete']);
             $('#status-message').text('Import Complete');
             JobImportUI.resetButtons();
@@ -266,6 +284,7 @@ console.info("=== Job Import Logic Script Loaded ===");
          * @returns {Promise} Start import process promise
          */
         handleStartImport: async function() {
+            console.log('[PUNTWORK] ===== START IMPORT PROCESS =====');
             PuntWorkJSLogger.info('Start Import clicked', 'LOGIC');
             console.log('[PUNTWORK] Start Import clicked');
             console.log('[PUNTWORK] jobImportData:', jobImportData);
@@ -293,12 +312,14 @@ console.info("=== Job Import Logic Script Loaded ===");
                 $('#reset-import').show();
                 JobImportUI.showImportUI();
 
+                console.log('[PUNTWORK] ===== PHASE 1: FEED PROCESSING =====');
                 JobImportUI.appendLogs(['Starting feed processing...']);
                 $('#status-message').text('Processing feeds...');
 
                 // Reset import
                 const resetResponse = await JobImportAPI.resetImport();
                 if (resetResponse.success) {
+                    console.log('[PUNTWORK] Import reset successful');
                     JobImportUI.appendLogs(['Import reset for fresh start']);
                 }
 
@@ -309,6 +330,7 @@ console.info("=== Job Import Logic Script Loaded ===");
                     data: { action: 'reset_job_import_status', nonce: jobImportData.nonce }
                 });
                 if (statusResetResponse.success) {
+                    console.log('[PUNTWORK] Status reset for real-time updates successful');
                     JobImportUI.appendLogs(['Import status reset for real-time updates']);
                 }
 
@@ -335,7 +357,7 @@ console.info("=== Job Import Logic Script Loaded ===");
 
                 for (let i = 0; i < Object.keys(feeds).length; i++) {
                     const feed = Object.keys(feeds)[i];
-                    console.log('[PUNTWORK] Processing feed:', feed);
+                    console.log('[PUNTWORK] Processing feed', (i + 1) + '/' + total_feeds + ':', feed);
 
                     // Update progress for current feed
                     const current_feed_num = i + 1;
@@ -375,6 +397,7 @@ console.info("=== Job Import Logic Script Loaded ===");
                             console.warn(`[PUNTWORK] WARNING: Feed ${feed} processed with success but item_count is 0!`);
                             PuntWorkJSLogger.warn(`Feed ${feed} processed with success but item_count is 0`, 'LOGIC', response);
                         }
+                        console.log('[PUNTWORK] Feed', feed, 'processed successfully - items found:', (response.data && response.data.item_count) || 0);
                         JobImportUI.appendLogs((response.data && response.data.logs) || []);
                         total_items += (response.data && response.data.item_count) || 0;
 
@@ -397,14 +420,16 @@ console.info("=== Job Import Logic Script Loaded ===");
                     }
                 }
 
+                console.log('[PUNTWORK] ===== PHASE 1 COMPLETE =====');
                 console.log('[PUNTWORK] Total items after feed processing:', total_items);
 
                 if (total_items === 0) {
                     console.error('[PUNTWORK] ERROR: No items found in feeds after processing. Feeds:', feeds);
-                    PuntWorkJSLogger.error('No items found in feeds after processing', 'LOGIC', feeds);
+                    PuntWorkLogger.error('No items found in feeds after processing', 'LOGIC', feeds);
                     throw new Error('No items found in feeds. Please check that feeds are configured and accessible.');
                 }
 
+                console.log('[PUNTWORK] ===== PHASE 2: JSONL COMBINATION =====');
                 // Combine JSONL files
                 $('#status-message').text('Combining JSONL files...');
                 JobImportUI.appendLogs(['Starting JSONL combination...']);
@@ -423,9 +448,11 @@ console.info("=== Job Import Logic Script Loaded ===");
                 });
 
                 const combineResponse = await JobImportAPI.combineJsonl(total_items);
+                console.log('[PUNTWORK] JSONL combination response:', combineResponse);
                 PuntWorkJSLogger.debug('Combine JSONL response', 'LOGIC', combineResponse);
 
                 if (combineResponse.success) {
+                    console.log('[PUNTWORK] JSONL combination successful');
                     JobImportUI.appendLogs(combineResponse.data.logs || []);
 
                     // Update progress to show JSONL combination complete
@@ -441,9 +468,12 @@ console.info("=== Job Import Logic Script Loaded ===");
                         complete: false
                     });
                 } else {
+                    console.error('[PUNTWORK] JSONL combination failed:', combineResponse);
                     throw new Error('Combining JSONL failed: ' + (combineResponse.message || 'Unknown error'));
                 }
 
+                console.log('[PUNTWORK] ===== PHASE 2 COMPLETE =====');
+                console.log('[PUNTWORK] ===== PHASE 3: BATCH IMPORT =====');
                 // Start import
                 $('#status-message').text('Starting import...');
                 JobImportUI.appendLogs(['Starting batch import processing...']);
@@ -468,20 +498,27 @@ console.info("=== Job Import Logic Script Loaded ===");
                     if (apiKey) {
                         const connected = JobImportRealtime.connect(apiKey);
                         if (connected) {
+                            console.log('[PUNTWORK] Real-time updates connected for import progress');
                             PuntWorkJSLogger.info('Real-time updates connected for import progress', 'LOGIC');
                         } else {
+                            console.warn('[PUNTWORK] Failed to connect to real-time updates');
                             PuntWorkJSLogger.warn('Failed to connect to real-time updates', 'LOGIC');
                         }
                     } else {
+                        console.warn('[PUNTWORK] No API key available for real-time updates');
                         PuntWorkJSLogger.warn('No API key available for real-time updates', 'LOGIC');
                     }
                 } else {
+                    console.warn('[PUNTWORK] Real-time updates not supported in this browser');
                     PuntWorkJSLogger.warn('Real-time updates not supported in this browser', 'LOGIC');
                 }
                 
+                console.log('[PUNTWORK] Starting batch import with', total_items, 'items');
                 await this.handleImport(0);
 
             } catch (error) {
+                console.error('[PUNTWORK] ===== START IMPORT ERROR =====');
+                console.error('[PUNTWORK] Error details:', error);
                 PuntWorkJSLogger.error('Start import error', 'LOGIC', error);
                 JobImportUI.appendLogs([error.message]);
                 $('#status-message').text('Error: ' + error.message);
