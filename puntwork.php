@@ -33,6 +33,23 @@ if (file_exists(PUNTWORK_PATH . 'vendor/autoload.php')) {
     include_once PUNTWORK_PATH . 'vendor/autoload.php';
 }
 
+// =====================================================================================
+// PLUGIN INITIALIZATION - RUNS ONCE WHEN PLUGIN LOADS
+// =====================================================================================
+
+// Increase memory limit to prevent exhaustion
+ini_set('memory_limit', '1024M');
+
+$debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+
+if ($debug_mode) {
+    error_log('[PUNTWORK] [PLUGIN-LOAD] ===== PLUGIN INITIALIZATION START =====');
+}
+
+// =====================================================================================
+// END PLUGIN INITIALIZATION
+// =====================================================================================
+
 // Activation hook
 register_activation_hook(__FILE__, __NAMESPACE__ . '\\job_import_activate');
 function job_import_activate()
@@ -128,9 +145,16 @@ function setup_job_import()
     // Prevent multiple initialization with a static flag
     static $setup_done = false;
     if ($setup_done) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] [INIT-SKIP] Setup already completed for this request, skipping...');
+        }
+
         return;
     }
     $setup_done = true;
+
+    // Prevent multiple include loading with a separate static flag
+    static $includes_loaded = false;
 
     // Increase memory limit to prevent exhaustion
     ini_set('memory_limit', '1024M');
@@ -145,7 +169,163 @@ function setup_job_import()
         error_log('[PUNTWORK] [INIT-DEBUG] Max execution time: ' . ini_get('max_execution_time'));
         error_log('[PUNTWORK] [INIT-DEBUG] ABSPATH: ' . ABSPATH);
         error_log('[PUNTWORK] [INIT-DEBUG] Plugin path: ' . PUNTWORK_PATH);
-        error_log('[PUNTWORK] [INIT-DEBUG] Testing database connection...');
+    }
+
+    // Load includes only once ever
+    if (!$includes_loaded) {
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [INIT-DEBUG] Loading includes...');
+        }
+
+        // Load function-based includes (cannot be autoloaded)
+        $includes = [
+            // Core functionality (functions)
+            'core/core-structure-logic.php',
+            'core/enqueue-scripts-js.php',
+
+            // Admin interface (functions)
+            'admin/admin-menu.php',
+            'admin/admin-page-html.php',
+            'admin/admin-ui-debug.php',
+            'admin/admin-ui-main.php',
+            'admin/admin-ui-scheduling.php',
+            'admin/admin-api-settings.php',
+            'admin/admin-ui-feed-health.php',
+            'admin/admin-ui-analytics.php',
+            'admin/admin-ui-performance.php',
+            'admin/admin-ui-multisite.php',
+            'admin/admin-ui-monitoring.php',
+            'admin/admin-ajax-monitoring.php',
+            'admin/admin-feed-config.php',
+            'admin/admin-modern-styles.php',
+            'admin/onboarding-wizard.php',
+
+            // API handlers (functions)
+            'api/ajax-feed-processing.php',
+            'api/ajax-handlers.php',
+            'api/ajax-import-control.php',
+            'api/ajax-purge.php',
+            'api/ajax-db-optimization.php',
+            'api/ajax-feed-health.php',
+            'api/rest-api.php',
+            'api/sse-import-progress.php',
+
+            // Batch processing (functions)
+            'batch/batch-core.php',
+            'batch/batch-data.php',
+            'batch/batch-loading.php',
+            'batch/batch-processing.php',
+            'batch/batch-duplicates.php',
+            'batch/batch-metadata.php',
+            'batch/batch-size-management.php',
+            'batch/batch-utils.php',
+            'utilities/async-processing.php',
+            'batch/batch-processing-core.php',
+
+            // Queue management (functions)
+            'queue/queue-manager.php',
+            'queue/queue-ajax.php',
+
+            // Import functionality (functions)
+            'import/combine-jsonl.php',
+            'import/download-feed.php',
+            'import/parallel-feed-downloader.php',
+            'import/import-batch.php',
+            'import/import-finalization.php',
+            'import/import-setup.php',
+            'import/process-batch-items.php',
+            'import/process-xml-batch.php',
+
+            // Utilities (functions - classes are autoloaded)
+            'utilities/CacheManager.php',
+            'utilities/JobDeduplicator.php',
+            'utilities/EnhancedCacheManager.php',
+            'utilities/AdaptiveResourceManager.php',
+            'utilities/BatchPrioritizer.php',
+            'utilities/AdvancedJsonlProcessor.php',
+            'utilities/IterativeLearner.php',
+            'utilities/MemoryManager.php',
+            'utilities/database-optimization.php',
+            'utilities/performance-functions.php',
+            'utilities/PuntWorkLogger.php',
+            'utilities/SecurityUtils.php',
+            'utilities/shortcode.php',
+            'utilities/PuntworkHorizontalScalingManager.php',
+            'utilities/PuntworkLoadBalancer.php',
+            'utilities/utility-helpers.php',
+            'utilities/item-cleaning.php',
+            'utilities/gzip-file.php',
+            'utilities/ImportAnalytics.php',
+            'utilities/FeedHealthMonitor.php',
+            'utilities/heartbeat-control.php',
+            'utilities/PuntworkTracing.php',
+            'utilities/AjaxErrorHandler.php',
+            'utilities/item-inference.php',
+            'utilities/handle-duplicates.php',
+
+            // Social Media (classes are autoloaded)
+            'socialmedia/social-media-platform.php',
+            'socialmedia/twitter-platform.php',
+            'socialmedia/twitter-ads-manager.php',
+            'socialmedia/facebook-platform.php',
+            'socialmedia/facebook-ads-manager.php',
+            'socialmedia/tiktok-platform.php',
+            'socialmedia/tiktok-ads-manager.php',
+            'socialmedia/social-media-manager.php',
+            'admin/social-media-admin.php',
+            'admin/social-media-test.php',
+            'database/social-media-db.php',
+
+            // CRM Integration (classes are autoloaded)
+            'crm/crm-integration.php',
+            'crm/crm-integration.php',
+            'crm/hubspot-integration.php',
+            'crm/salesforce-integration.php',
+            'crm/zoho-integration.php',
+            'crm/pipedrive-integration.php',
+            'crm/crm-manager.php',
+            'admin/crm-admin.php',
+            'database/crm-db.php',
+
+            // Mappings (functions)
+            'mappings/mappings-constants.php',
+            'mappings/mappings-fields.php',
+            'mappings/mappings-geographic.php',
+            'mappings/mappings-icons.php',
+            'mappings/mappings-salary.php',
+            'mappings/mappings-schema.php',
+
+            // Scheduling (functions)
+            'scheduling/scheduling-ajax.php',
+            'scheduling/scheduling-core.php',
+            'scheduling/scheduling-history.php',
+            'scheduling/scheduling-triggers.php',
+            'scheduling/test-scheduling.php',
+        ];
+
+        $loaded_count = 0;
+        $failed_count = 0;
+        foreach ($includes as $include) {
+            $file = PUNTWORK_PATH . 'includes/' . $include;
+            if (file_exists($file)) {
+                include_once $file;
+                $loaded_count++;
+                if ($debug_mode && $loaded_count % 10 == 0) {
+                    error_log('[PUNTWORK] [INIT-DEBUG] Loaded ' . $loaded_count . ' includes so far...');
+                }
+            } else {
+                $failed_count++;
+                if ($debug_mode) {
+                    error_log('[PUNTWORK] [INIT-WARN] Include file not found: ' . $file);
+                }
+            }
+        }
+
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [INIT-DEBUG] Include loading complete: ' . $loaded_count . ' loaded, ' . $failed_count . ' failed');
+        }
+
+        $includes_loaded = true;
     }
 
     // Test database connection
@@ -193,155 +373,6 @@ function setup_job_import()
     $job_import_batch_limit = 500;
 
     if ($debug_mode) {
-        error_log('[PUNTWORK] [INIT-DEBUG] Loading includes...');
-    }
-
-    // Load function-based includes (cannot be autoloaded)
-    $includes = [
-        // Core functionality (functions)
-        'core/core-structure-logic.php',
-        'core/enqueue-scripts-js.php',
-
-        // Admin interface (functions)
-        'admin/admin-menu.php',
-        'admin/admin-page-html.php',
-        'admin/admin-ui-debug.php',
-        'admin/admin-ui-main.php',
-        'admin/admin-ui-scheduling.php',
-        'admin/admin-api-settings.php',
-        'admin/admin-ui-feed-health.php',
-        'admin/admin-ui-analytics.php',
-        'admin/admin-ui-performance.php',
-        'admin/admin-ui-multisite.php',
-        'admin/admin-ui-monitoring.php',
-        'admin/admin-ajax-monitoring.php',
-        'admin/admin-feed-config.php',
-        'admin/admin-modern-styles.php',
-        'admin/onboarding-wizard.php',
-
-        // API handlers (functions)
-        'api/ajax-feed-processing.php',
-        'api/ajax-handlers.php',
-        'api/ajax-import-control.php',
-        'api/ajax-purge.php',
-        'api/ajax-db-optimization.php',
-        'api/ajax-feed-health.php',
-        'api/rest-api.php',
-        'api/sse-import-progress.php',
-
-        // Batch processing (functions)
-        'batch/batch-core.php',
-        'batch/batch-data.php',
-        'batch/batch-loading.php',
-        'batch/batch-processing.php',
-        'batch/batch-duplicates.php',
-        'batch/batch-metadata.php',
-        'batch/batch-size-management.php',
-        'batch/batch-utils.php',
-        'utilities/async-processing.php',
-        'batch/batch-processing-core.php',
-
-        // Queue management (functions)
-        'queue/queue-manager.php',
-        'queue/queue-ajax.php',
-
-        // Import functionality (functions)
-        'import/combine-jsonl.php',
-        'import/download-feed.php',
-        'import/parallel-feed-downloader.php',
-        'import/import-batch.php',
-        'import/import-finalization.php',
-        'import/import-setup.php',
-        'import/process-batch-items.php',
-        'import/process-xml-batch.php',
-
-        // Utilities (functions - classes are autoloaded)
-        'utilities/CacheManager.php',
-        'utilities/JobDeduplicator.php',
-        'utilities/EnhancedCacheManager.php',
-        'utilities/AdaptiveResourceManager.php',
-        'utilities/BatchPrioritizer.php',
-        'utilities/AdvancedJsonlProcessor.php',
-        'utilities/IterativeLearner.php',
-        'utilities/MemoryManager.php',
-        'utilities/database-optimization.php',
-        'utilities/performance-functions.php',
-        'utilities/PuntWorkLogger.php',
-        'utilities/SecurityUtils.php',
-        'utilities/shortcode.php',
-        'utilities/PuntworkHorizontalScalingManager.php',
-        'utilities/PuntworkLoadBalancer.php',
-        'utilities/utility-helpers.php',
-        'utilities/item-cleaning.php',
-        'utilities/gzip-file.php',
-        'utilities/ImportAnalytics.php',
-        'utilities/FeedHealthMonitor.php',
-        'utilities/heartbeat-control.php',
-        'utilities/PuntworkTracing.php',
-        'utilities/AjaxErrorHandler.php',
-        'utilities/item-inference.php',
-        'utilities/handle-duplicates.php',
-
-        // Social Media (classes are autoloaded)
-        'socialmedia/social-media-platform.php',
-        'socialmedia/twitter-platform.php',
-        'socialmedia/twitter-ads-manager.php',
-        'socialmedia/facebook-platform.php',
-        'socialmedia/facebook-ads-manager.php',
-        'socialmedia/tiktok-platform.php',
-        'socialmedia/tiktok-ads-manager.php',
-        'socialmedia/social-media-manager.php',
-        'admin/social-media-admin.php',
-        'admin/social-media-test.php',
-        'database/social-media-db.php',
-
-        // CRM Integration (classes are autoloaded)
-        'crm/crm-integration.php',
-        'crm/crm-integration.php',
-        'crm/hubspot-integration.php',
-        'crm/salesforce-integration.php',
-        'crm/zoho-integration.php',
-        'crm/pipedrive-integration.php',
-        'crm/crm-manager.php',
-        'admin/crm-admin.php',
-        'database/crm-db.php',
-
-        // Mappings (functions)
-        'mappings/mappings-constants.php',
-        'mappings/mappings-fields.php',
-        'mappings/mappings-geographic.php',
-        'mappings/mappings-icons.php',
-        'mappings/mappings-salary.php',
-        'mappings/mappings-schema.php',
-
-        // Scheduling (functions)
-        'scheduling/scheduling-ajax.php',
-        'scheduling/scheduling-core.php',
-        'scheduling/scheduling-history.php',
-        'scheduling/scheduling-triggers.php',
-        'scheduling/test-scheduling.php',
-    ];
-
-    $loaded_count = 0;
-    $failed_count = 0;
-    foreach ($includes as $include) {
-        $file = PUNTWORK_PATH . 'includes/' . $include;
-        if (file_exists($file)) {
-            include_once $file;
-            $loaded_count++;
-            if ($debug_mode && $loaded_count % 10 == 0) {
-                error_log('[PUNTWORK] [INIT-DEBUG] Loaded ' . $loaded_count . ' includes so far...');
-            }
-        } else {
-            $failed_count++;
-            if ($debug_mode) {
-                error_log('[PUNTWORK] [INIT-WARN] Include file not found: ' . $file);
-            }
-        }
-    }
-
-    if ($debug_mode) {
-        error_log('[PUNTWORK] [INIT-DEBUG] Include loading complete: ' . $loaded_count . ' loaded, ' . $failed_count . ' failed');
         error_log('[PUNTWORK] [INIT-DEBUG] Loading text domain...');
     }
 

@@ -33,12 +33,14 @@ function ajax_get_db_optimization_status()
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'job_import_nonce')) {
         error_log('[PUNTWORK] [DEBUG-AJAX] Nonce verification failed for get_db_optimization_status');
         wp_send_json_error(['message' => 'Security check failed']);
+
         return;
     }
 
     if (!current_user_can('manage_options')) {
         error_log('[PUNTWORK] [DEBUG-AJAX] Insufficient permissions for get_db_optimization_status');
         wp_send_json_error(['message' => 'Insufficient permissions']);
+
         return;
     }
 

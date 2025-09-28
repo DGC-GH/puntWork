@@ -341,12 +341,14 @@ function get_job_import_status_ajax()
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'job_import_nonce')) {
         error_log('[PUNTWORK] [DEBUG-AJAX] Nonce verification failed');
         wp_send_json_error(['message' => 'Security check failed']);
+
         return;
     }
 
     if (!current_user_can('manage_options')) {
         error_log('[PUNTWORK] [DEBUG-AJAX] Insufficient permissions');
         wp_send_json_error(['message' => 'Insufficient permissions']);
+
         return;
     }
 
@@ -1151,12 +1153,14 @@ function get_async_status_ajax()
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'job_import_nonce')) {
         error_log('[PUNTWORK] [DEBUG-AJAX] Nonce verification failed for get_async_status');
         wp_send_json_error(['message' => 'Security check failed']);
+
         return;
     }
 
     if (!current_user_can('manage_options')) {
         error_log('[PUNTWORK] [DEBUG-AJAX] Insufficient permissions for get_async_status');
         wp_send_json_error(['message' => 'Insufficient permissions']);
+
         return;
     }
 
