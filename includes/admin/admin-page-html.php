@@ -302,6 +302,115 @@ function puntwork_dashboard_page()
 			color: white; padding: 12px 20px; border-radius: 12px; text-align: center; margin-bottom: 24px;
 			font-size: 14px; font-weight: 500; box-shadow: 0 2px 8px rgba(0,122,255,0.2);">
 
+		<!-- Overview Cards -->
+		<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+			gap: 24px; margin-bottom: 40px;">
+			<!-- Feeds Card -->
+			<div style="background-color: white; border-radius: 16px; padding: 24px;
+				box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: transform 0.2s ease, box-shadow 0.2s ease;
+				cursor: pointer;" onclick="window.location.href='admin.php?page=job-feed-dashboard'">
+				<div style="display: flex; align-items: center; margin-bottom: 16px;">
+					<div style="width: 80px; height: 80px; border-radius: 20px;
+						background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
+						display: flex; align-items: center; justify-content: center; margin-right: 16px;
+						box-shadow: 0 8px 24px rgba(0, 122, 255, 0.3);">
+						<i class="fas fa-rss" style="font-size: 32px; color: white;"></i>
+					</div>
+					<div>
+						<h3 style="font-size: 20px; font-weight: 600; margin: 0;">
+							<?php _e('Job Feeds', 'puntwork'); ?>
+						</h3>
+						<p style="font-size: 14px; color: #8e8e93; margin: 4px 0 0;">
+							<?php _e('Import and manage job feeds', 'puntwork'); ?>
+						</p>
+					</div>
+				</div>
+				<div style="display: flex; justify-content: space-between; align-items: center;">
+					<span style="font-size: 14px; color: #8e8e93;"><?php _e('Manage feeds →', 'puntwork'); ?></span>
+					<span style="font-size: 18px; color: #007aff;">→</span>
+				</div>
+			</div>
+
+			<!-- Jobs Card -->
+						<!-- Jobs Card -->
+			<div style="background-color: white; border-radius: 16px; padding: 24px;
+				box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: transform 0.2s ease, box-shadow 0.2s ease;
+				cursor: pointer;" onclick="window.location.href='admin.php?page=jobs-dashboard'">
+				<div style="display: flex; align-items: center; margin-bottom: 16px;">
+					<div style="width: 80px; height: 80px; border-radius: 20px;
+						background: linear-gradient(135deg, #34c759, #30d158); display: flex;
+						align-items: center; justify-content: center; margin-right: 16px;
+						box-shadow: 0 8px 24px rgba(52, 199, 89, 0.3);">
+						<i class="fas fa-briefcase" style="font-size: 32px; color: white;"></i>
+					</div>
+					<div>
+						<h3 style="font-size: 20px; font-weight: 600; margin: 0;"><?php _e('Jobs', 'puntwork'); ?></h3>
+						<p style="font-size: 14px; color: #8e8e93; margin: 4px 0 0;">
+							<?php _e('View and manage job posts', 'puntwork'); ?>
+						</p>
+					</div>
+				</div>
+				<div style="display: flex; justify-content: space-between; align-items: center;">
+					<span style="font-size: 14px; color: #34c759;"><?php _e('Browse jobs →', 'puntwork'); ?></span>
+					<span style="font-size: 18px; color: #34c759;">→</span>
+				</div>
+			</div>
+
+			<!-- Feed Config Card -->
+			<div style="background-color: white; border-radius: 16px; padding: 24px;
+				box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: transform 0.2s ease, box-shadow 0.2s ease;
+				cursor: pointer;" onclick="window.location.href='admin.php?page=puntwork-feed-config'">
+				<div style="display: flex; align-items: center; margin-bottom: 16px;">
+					<div style="width: 80px; height: 80px; border-radius: 20px;
+						background: linear-gradient(135deg, #ff9500, #ff9f0a); display: flex;
+						align-items: center; justify-content: center; margin-right: 16px;
+						box-shadow: 0 8px 24px rgba(255, 149, 0, 0.3);">
+						<i class="fas fa-cog" style="font-size: 32px; color: white;"></i>
+					</div>
+					<div>
+						<h3 style="font-size: 20px; font-weight: 600; margin: 0;">
+							<?php _e('Feed Config', 'puntwork'); ?>
+						</h3>
+						<p style="font-size: 14px; color: #8e8e93; margin: 4px 0 0;">
+							<?php _e('Configure and reorder feeds', 'puntwork'); ?>
+						</p>
+					</div>
+				</div>
+				<div style="display: flex; justify-content: space-between; align-items: center;">
+					<span style="font-size: 14px; color: #8e8e93;"><?php _e('Configure feeds →', 'puntwork'); ?></span>
+					<span style="font-size: 18px; color: #ff9500;">→</span>
+				</div>
+			</div>
+
+			<!-- Scheduling Card -->
+			<div style="background-color: white; border-radius: 16px; padding: 24px;
+				box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: transform 0.2s ease, box-shadow 0.2s ease;
+				cursor: pointer;" onclick="window.location.href='admin.php?page=job-feed-dashboard'">
+				<div style="display: flex; align-items: center; margin-bottom: 16px;">
+					<div style="width: 80px; height: 80px; border-radius: 20px;
+						background: linear-gradient(135deg, #af52de, #c25ae7); display: flex;
+						align-items: center; justify-content: center; margin-right: 16px;
+						box-shadow: 0 8px 24px rgba(175, 82, 222, 0.3);">
+						<i class="fas fa-clock" style="font-size: 32px; color: white;"></i>
+					</div>
+					<div>
+						<h3 style="font-size: 20px; font-weight: 600; margin: 0;">
+							<?php _e('Scheduling', 'puntwork'); ?>
+						</h3>
+						<p style="font-size: 14px; color: #8e8e93; margin: 4px 0 0;">
+							<?php _e('Automated import schedules', 'puntwork'); ?>
+						</p>
+					</div>
+				</div>
+				<div style="display: flex; justify-content: space-between; align-items: center;">
+					<span style="font-size: 14px; color: #8e8e93;">
+						<?php _e('Configure schedules →', 'puntwork'); ?>
+					</span>
+					<span style="font-size: 18px; color: #af52de;">→</span>
+				</div>
+			</div>
+		</div>
+
 		<!-- Quick Stats -->
 				<div style="background-color: white; border-radius: 16px; padding: 24px;
 			box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 40px;">
@@ -381,6 +490,13 @@ function puntwork_dashboard_page()
 			}
 		});
 	</script>
+
+	<style>
+		.wrap > div:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+		}
+	</style>
 	<?php
 }
 
