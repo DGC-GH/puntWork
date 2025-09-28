@@ -11,7 +11,7 @@
 namespace Puntwork\SocialMedia;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -33,14 +33,14 @@ class TikTokPlatform extends SocialMediaPlatform
     /**
      * Constructor
      */
-    public function __construct(array $config = [])
+    public function __construct(array $config = array())
     {
-        $this->platform_id = 'tiktok';
+        $this->platform_id   = 'tiktok';
         $this->platform_name = 'TikTok';
-        $this->rate_limits = [
+        $this->rate_limits   = array(
             'posts_per_hour' => 50,  // TikTok allows ~50 posts per hour
-            'posts_per_day' => 200   // Conservative daily limit
-        ];
+            'posts_per_day'  => 200,   // Conservative daily limit
+        );
 
         parent::__construct($config);
 
@@ -56,10 +56,10 @@ class TikTokPlatform extends SocialMediaPlatform
     public function isConfigured(): bool
     {
         return parent::isConfigured() &&
-               isset($this->credentials['app_id']) &&
-               isset($this->credentials['app_secret']) &&
-               isset($this->credentials['access_token']) &&
-               isset($this->credentials['open_id']);
+                isset($this->credentials['app_id']) &&
+                isset($this->credentials['app_secret']) &&
+                isset($this->credentials['access_token']) &&
+                isset($this->credentials['open_id']);
     }
 
     /**
@@ -68,7 +68,7 @@ class TikTokPlatform extends SocialMediaPlatform
     public function hasAdsCredentials(): bool
     {
         return isset($this->credentials['advertiser_id']) &&
-               isset($this->credentials['access_token']);
+                isset($this->credentials['access_token']);
     }
 
     /**
@@ -82,15 +82,15 @@ class TikTokPlatform extends SocialMediaPlatform
     /**
      * Post content to TikTok
      */
-    public function post(array $content, array $options = []): array
+    public function post(array $content, array $options = array()): array
     {
-        if (!$this->isConfigured()) {
+        if (! $this->isConfigured()) {
             throw new \Exception('TikTok integration not properly configured');
         }
 
         // Validate content
         $validation_errors = $this->validateContent($content);
-        if (!empty($validation_errors)) {
+        if (! empty($validation_errors)) {
             throw new \Exception('Content validation failed: ' . implode(', ', $validation_errors));
         }
 
@@ -101,29 +101,33 @@ class TikTokPlatform extends SocialMediaPlatform
             }
 
             $post_data = $this->preparePostData($content, $options);
-            $response = $this->makeApiRequest('share/video/upload/', $post_data, 'POST');
+            $response  = $this->makeApiRequest('share/video/upload/', $post_data, 'POST');
 
             $this->recordPost();
 
-            return [
-                'success' => true,
-                'post_id' => $response['data']['share_id'] ?? null,
-                'url' => isset($response['data']['share_id']) ? "https://tiktok.com/@{$this->credentials['open_id']}/video/{$response['data']['share_id']}" : null,
-                'platform' => 'tiktok',
-                'timestamp' => time()
-            ];
+            return array(
+                'success'   => true,
+                'post_id'   => $response['data']['share_id'] ?? null,
+                'url'       => isset($response['data']['share_id']) ? "https://tiktok.com/@{$this->credentials['open_id']}/video/{$response['data']['share_id']}" : null,
+                'platform'  => 'tiktok',
+                'timestamp' => time(),
+            );
         } catch (\Exception $e) {
-            PuntWorkLogger::error('TikTok posting failed', PuntWorkLogger::CONTEXT_SOCIAL, [
-                'error' => $e->getMessage(),
-                'content' => $content
-            ]);
+            PuntWorkLogger::error(
+                'TikTok posting failed',
+                PuntWorkLogger::CONTEXT_SOCIAL,
+                array(
+                    'error'   => $e->getMessage(),
+                    'content' => $content,
+                )
+            );
 
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'platform' => 'tiktok',
-                'timestamp' => time()
-            ];
+            return array(
+                'success'   => false,
+                'error'     => $e->getMessage(),
+                'platform'  => 'tiktok',
+                'timestamp' => time(),
+            );
         }
     }
 
@@ -132,39 +136,49 @@ class TikTokPlatform extends SocialMediaPlatform
      */
     public function postWithAds(array $content, array $ads_config): array
     {
-        if (!$this->supportsAds()) {
+        if (! $this->supportsAds()) {
             throw new \Exception('TikTok ads not configured. Please provide advertiser_id and access_token.');
         }
 
         // First post the regular TikTok video
         $post_result = $this->post($content);
 
-        if (!$post_result['success']) {
+        if (! $post_result['success']) {
             return $post_result;
         }
 
         try {
             // Create ads campaign for the video
             $ads_result = $this->ads_manager->postJobWithAds(
-                ['video_id' => $post_result['post_id']],
+                array( 'video_id' => $post_result['post_id'] ),
                 $ads_config
             );
 
-            return array_merge($post_result, [
-                'ads_campaign' => $ads_result,
-                'has_ads' => true
-            ]);
+            return array_merge(
+                $post_result,
+                array(
+                    'ads_campaign' => $ads_result,
+                    'has_ads'      => true,
+                )
+            );
         } catch (\Exception $e) {
-            PuntWorkLogger::error('TikTok ads creation failed', PuntWorkLogger::CONTEXT_SOCIAL, [
-                'video_id' => $post_result['post_id'],
-                'error' => $e->getMessage()
-            ]);
+            PuntWorkLogger::error(
+                'TikTok ads creation failed',
+                PuntWorkLogger::CONTEXT_SOCIAL,
+                array(
+                    'video_id' => $post_result['post_id'],
+                    'error'    => $e->getMessage(),
+                )
+            );
 
             // Return the successful video post but with ads error
-            return array_merge($post_result, [
-                'ads_error' => $e->getMessage(),
-                'has_ads' => false
-            ]);
+            return array_merge(
+                $post_result,
+                array(
+                    'ads_error' => $e->getMessage(),
+                    'has_ads'   => false,
+                )
+            );
         }
     }
 
@@ -173,7 +187,7 @@ class TikTokPlatform extends SocialMediaPlatform
      */
     public function getAdsMetrics(string $campaign_id): array
     {
-        if (!$this->supportsAds()) {
+        if (! $this->supportsAds()) {
             throw new \Exception('TikTok ads not configured');
         }
 
@@ -189,19 +203,19 @@ class TikTokPlatform extends SocialMediaPlatform
     public function getLimits(): array
     {
         $transient_key = 'socialmedia_ratelimit_' . $this->platform_id;
-        $posts_today = get_transient($transient_key) ?: 0;
+        $posts_today   = get_transient($transient_key) ?: 0;
 
         $hourly_key = $transient_key . '_hour_' . date('Y-m-d-H');
         $posts_hour = get_transient($hourly_key) ?: 0;
 
-        return [
-            'posts_today' => $posts_today,
+        return array(
+            'posts_today'       => $posts_today,
             'posts_today_limit' => $this->rate_limits['posts_per_day'],
-            'posts_hour' => $posts_hour,
-            'posts_hour_limit' => $this->rate_limits['posts_per_hour'],
-            'remaining_today' => max(0, $this->rate_limits['posts_per_day'] - $posts_today),
-            'remaining_hour' => max(0, $this->rate_limits['posts_per_hour'] - $posts_hour)
-        ];
+            'posts_hour'        => $posts_hour,
+            'posts_hour_limit'  => $this->rate_limits['posts_per_hour'],
+            'remaining_today'   => max(0, $this->rate_limits['posts_per_day'] - $posts_today),
+            'remaining_hour'    => max(0, $this->rate_limits['posts_per_hour'] - $posts_hour),
+        );
     }
 
     /**
@@ -217,18 +231,18 @@ class TikTokPlatform extends SocialMediaPlatform
      */
     private function preparePostData(array $content, array $options): array
     {
-        $post_data = [];
+        $post_data = array();
 
         // Add text content
-        if (!empty($content['text'])) {
-            $text = $this->processTextContent($content['text'], $options);
+        if (! empty($content['text'])) {
+            $text               = $this->processTextContent($content['text'], $options);
             $post_data['title'] = $text;
         }
 
         // Add video content (required for TikTok)
-        if (!empty($content['media'])) {
+        if (! empty($content['media'])) {
             $video_data = $this->prepareVideoData($content['media']);
-            $post_data = array_merge($post_data, $video_data);
+            $post_data  = array_merge($post_data, $video_data);
         }
 
         // Add privacy settings
@@ -237,7 +251,7 @@ class TikTokPlatform extends SocialMediaPlatform
         }
 
         // Add music/sound if specified
-        if (!empty($options['music_id'])) {
+        if (! empty($options['music_id'])) {
             $post_data['music_id'] = $options['music_id'];
         }
 
@@ -250,11 +264,17 @@ class TikTokPlatform extends SocialMediaPlatform
     private function processTextContent(string $text, array $options): string
     {
         // Add hashtags if provided
-        if (!empty($options['hashtags'])) {
-            $hashtags = is_array($options['hashtags']) ? $options['hashtags'] : [$options['hashtags']];
-            $text .= ' ' . implode(' ', array_map(function ($tag) {
-                return '#' . ltrim($tag, '#');
-            }, $hashtags));
+        if (! empty($options['hashtags'])) {
+            $hashtags = is_array($options['hashtags']) ? $options['hashtags'] : array( $options['hashtags'] );
+            $text    .= ' ' . implode(
+                ' ',
+                array_map(
+                    function ($tag) {
+                        return '#' . ltrim($tag, '#');
+                    },
+                    $hashtags
+                )
+            );
         }
 
         // Ensure text doesn't exceed limit
@@ -270,7 +290,7 @@ class TikTokPlatform extends SocialMediaPlatform
      */
     private function prepareVideoData(array $media_files): array
     {
-        $video_data = [];
+        $video_data = array();
 
         foreach ($media_files as $media_file) {
             try {
@@ -290,10 +310,14 @@ class TikTokPlatform extends SocialMediaPlatform
                 $video_data['video'] = $file_path;
                 break; // TikTok only supports one video per post
             } catch (\Exception $e) {
-                PuntWorkLogger::error('TikTok video preparation failed', PuntWorkLogger::CONTEXT_SOCIAL, [
-                    'error' => $e->getMessage(),
-                    'media_file' => $media_file
-                ]);
+                PuntWorkLogger::error(
+                    'TikTok video preparation failed',
+                    PuntWorkLogger::CONTEXT_SOCIAL,
+                    array(
+                        'error'      => $e->getMessage(),
+                        'media_file' => $media_file,
+                    )
+                );
             }
         }
 
@@ -309,7 +333,7 @@ class TikTokPlatform extends SocialMediaPlatform
      */
     private function validateVideoFile(string $file_path): void
     {
-        if (!file_exists($file_path)) {
+        if (! file_exists($file_path)) {
             throw new \Exception('Video file does not exist');
         }
 
@@ -320,9 +344,9 @@ class TikTokPlatform extends SocialMediaPlatform
         }
 
         // Check file type
-        $mime_type = mime_content_type($file_path);
-        $allowed_types = ['video/mp4', 'video/quicktime', 'video/x-msvideo'];
-        if (!in_array($mime_type, $allowed_types)) {
+        $mime_type     = mime_content_type($file_path);
+        $allowed_types = array( 'video/mp4', 'video/quicktime', 'video/x-msvideo' );
+        if (! in_array($mime_type, $allowed_types)) {
             throw new \Exception('Video file type not supported by TikTok');
         }
 
@@ -336,7 +360,7 @@ class TikTokPlatform extends SocialMediaPlatform
     private function downloadMediaFile(string $url): string
     {
         $temp_file = wp_tempnam();
-        $response = wp_remote_get($url);
+        $response  = wp_remote_get($url);
 
         if (is_wp_error($response)) {
             throw new \Exception('Failed to download media file');
@@ -353,14 +377,14 @@ class TikTokPlatform extends SocialMediaPlatform
     {
         $url = $this->api_base . '/' . $endpoint;
 
-        $args = [
-            'method' => $method,
-            'headers' => [
-                'Authorization' => 'Bearer ' . ($this->credentials['access_token'] ?? ''),
-                'Content-Type' => 'application/json'
-            ],
-            'timeout' => 60 // TikTok uploads can take longer
-        ];
+        $args = array(
+            'method'  => $method,
+            'headers' => array(
+                'Authorization' => 'Bearer ' . ( $this->credentials['access_token'] ?? '' ),
+                'Content-Type'  => 'application/json',
+            ),
+            'timeout' => 60, // TikTok uploads can take longer
+        );
 
         if ($method === 'GET') {
             $url .= '?' . http_build_query($params);
@@ -377,7 +401,7 @@ class TikTokPlatform extends SocialMediaPlatform
     protected function handleApiError(array $response): void
     {
         if (isset($response['error'])) {
-            $error = $response['error'];
+            $error   = $response['error'];
             $message = $error['message'] ?? 'Unknown error';
             if (isset($error['code'])) {
                 $message .= " (Code: {$error['code']})";

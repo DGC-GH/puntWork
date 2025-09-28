@@ -20,31 +20,31 @@ if (! defined('ABSPATH')) {
  */
 class MemoryManager
 {
-    private static int $gc_threshold = 100; // Run GC every 100 items
+    private static int $gc_threshold    = 100; // Run GC every 100 items
     private static int $processed_count = 0;
-    private static int $last_gc_run = 0;
+    private static int $last_gc_run     = 0;
 
     /**
      * Check and manage memory usage during batch processing
      *
-     * @param int $current_index Current processing index
-     * @param float $threshold Memory threshold (0-1)
+     * @param  int   $current_index Current processing index
+     * @param  float $threshold     Memory threshold (0-1)
      * @return array Memory management actions taken
      */
     public static function checkMemoryUsage(int $current_index, float $threshold = 0.8): array
     {
-        $actions = [];
+        $actions      = array();
         $memory_usage = memory_get_usage(true);
         $memory_limit = self::getMemoryLimitBytes();
         $memory_ratio = $memory_usage / $memory_limit;
 
-        self::$processed_count++;
+        ++self::$processed_count;
 
         // Force garbage collection periodically
         if (self::$processed_count - self::$last_gc_run >= self::$gc_threshold) {
             gc_collect_cycles();
             self::$last_gc_run = self::$processed_count;
-            $actions[] = 'garbage_collection';
+            $actions[]         = 'garbage_collection';
         }
 
         // Memory pressure detected
@@ -66,12 +66,12 @@ class MemoryManager
             }
         }
 
-        return [
+        return array(
             'memory_usage_mb' => round($memory_usage / 1024 / 1024, 2),
             'memory_limit_mb' => round($memory_limit / 1024 / 1024, 2),
-            'memory_ratio' => round($memory_ratio, 3),
-            'actions_taken' => $actions
-        ];
+            'memory_ratio'    => round($memory_ratio, 3),
+            'actions_taken'   => $actions,
+        );
     }
 
     /**
@@ -83,7 +83,7 @@ class MemoryManager
         gc_mem_caches();
 
         // Disable some WordPress features that consume memory
-        if (!defined('WP_DISABLE_FATAL_ERROR_HANDLER')) {
+        if (! defined('WP_DISABLE_FATAL_ERROR_HANDLER')) {
             define('WP_DISABLE_FATAL_ERROR_HANDLER', true);
         }
 
@@ -101,7 +101,7 @@ class MemoryManager
         $limit = ini_get('memory_limit');
         if (preg_match('/^(\d+)(.)$/', $limit, $matches)) {
             $value = (int) $matches[1];
-            $unit = strtoupper($matches[2]);
+            $unit  = strtoupper($matches[2]);
             switch ($unit) {
                 case 'G':
                     return $value * 1024 * 1024 * 1024;
@@ -122,6 +122,6 @@ class MemoryManager
     public static function reset(): void
     {
         self::$processed_count = 0;
-        self::$last_gc_run = 0;
+        self::$last_gc_run     = 0;
     }
 }

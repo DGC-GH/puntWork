@@ -11,7 +11,7 @@
 namespace Puntwork\CRM;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -28,15 +28,15 @@ class PipedriveIntegration extends CRMIntegration
     /**
      * Constructor
      */
-    public function __construct(array $config = [])
+    public function __construct(array $config = array())
     {
-        $this->platform_id = 'pipedrive';
+        $this->platform_id   = 'pipedrive';
         $this->platform_name = 'Pipedrive';
-        $this->rate_limits = [
+        $this->rate_limits   = array(
             'requests_per_minute' => 60,   // Pipedrive allows 60 requests per minute
-            'requests_per_hour' => 480,    // 480 per hour for most plans
-            'requests_per_day' => 20000    // 20k per day for most plans
-        ];
+            'requests_per_hour'   => 480,    // 480 per hour for most plans
+            'requests_per_day'    => 20000,    // 20k per day for most plans
+        );
 
         parent::__construct($config);
     }
@@ -54,7 +54,7 @@ class PipedriveIntegration extends CRMIntegration
      */
     public function isConfigured(): bool
     {
-        return isset($this->config['api_token']) && !empty($this->config['api_token']);
+        return isset($this->config['api_token']) && ! empty($this->config['api_token']);
     }
 
     /**
@@ -62,27 +62,27 @@ class PipedriveIntegration extends CRMIntegration
      */
     public function testConnection(): array
     {
-        if (!$this->isConfigured()) {
-            return [
+        if (! $this->isConfigured()) {
+            return array(
                 'success' => false,
-                'message' => 'Pipedrive API token not configured'
-            ];
+                'message' => 'Pipedrive API token not configured',
+            );
         }
 
         try {
             // Test by getting user info
-            $response = $this->makeApiRequest('users/me', [], 'GET');
+            $response = $this->makeApiRequest('users/me', array(), 'GET');
 
-            return [
-                'success' => true,
-                'message' => 'Pipedrive connection successful',
-                'user_info' => $response['data']
-            ];
+            return array(
+                'success'   => true,
+                'message'   => 'Pipedrive connection successful',
+                'user_info' => $response['data'],
+            );
         } catch (\Exception $e) {
-            return [
+            return array(
                 'success' => false,
-                'message' => 'Pipedrive connection failed: ' . $e->getMessage()
-            ];
+                'message' => 'Pipedrive connection failed: ' . $e->getMessage(),
+            );
         }
     }
 
@@ -98,24 +98,28 @@ class PipedriveIntegration extends CRMIntegration
         try {
             $response = $this->makeApiRequest('persons', $pd_person, 'POST');
 
-            return [
-                'success' => true,
+            return array(
+                'success'    => true,
                 'contact_id' => $response['data']['id'],
-                'platform' => 'pipedrive',
-                'timestamp' => time()
-            ];
+                'platform'   => 'pipedrive',
+                'timestamp'  => time(),
+            );
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Pipedrive person creation failed', PuntWorkLogger::CONTEXT_CRM, [
-                'error' => $e->getMessage(),
-                'contact_data' => $contact_data
-            ]);
+            PuntWorkLogger::error(
+                'Pipedrive person creation failed',
+                PuntWorkLogger::CONTEXT_CRM,
+                array(
+                    'error'        => $e->getMessage(),
+                    'contact_data' => $contact_data,
+                )
+            );
 
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'platform' => 'pipedrive',
-                'timestamp' => time()
-            ];
+            return array(
+                'success'   => false,
+                'error'     => $e->getMessage(),
+                'platform'  => 'pipedrive',
+                'timestamp' => time(),
+            );
         }
     }
 
@@ -131,24 +135,28 @@ class PipedriveIntegration extends CRMIntegration
         try {
             $response = $this->makeApiRequest("persons/{$contact_id}", $pd_person, 'PUT');
 
-            return [
-                'success' => true,
+            return array(
+                'success'    => true,
                 'contact_id' => $contact_id,
-                'platform' => 'pipedrive',
-                'timestamp' => time()
-            ];
+                'platform'   => 'pipedrive',
+                'timestamp'  => time(),
+            );
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Pipedrive person update failed', PuntWorkLogger::CONTEXT_CRM, [
-                'contact_id' => $contact_id,
-                'error' => $e->getMessage()
-            ]);
+            PuntWorkLogger::error(
+                'Pipedrive person update failed',
+                PuntWorkLogger::CONTEXT_CRM,
+                array(
+                    'contact_id' => $contact_id,
+                    'error'      => $e->getMessage(),
+                )
+            );
 
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'platform' => 'pipedrive',
-                'timestamp' => time()
-            ];
+            return array(
+                'success'   => false,
+                'error'     => $e->getMessage(),
+                'platform'  => 'pipedrive',
+                'timestamp' => time(),
+            );
         }
     }
 
@@ -158,26 +166,34 @@ class PipedriveIntegration extends CRMIntegration
     public function findContactByEmail(string $email): ?array
     {
         try {
-            $response = $this->makeApiRequest('persons/search', [
-                'term' => $email,
-                'fields' => 'email',
-                'exact_match' => true
-            ], 'GET');
+            $response = $this->makeApiRequest(
+                'persons/search',
+                array(
+                    'term'        => $email,
+                    'fields'      => 'email',
+                    'exact_match' => true,
+                ),
+                'GET'
+            );
 
-            if (!empty($response['data']['items'])) {
+            if (! empty($response['data']['items'])) {
                 $person = $response['data']['items'][0]['item'];
-                return [
-                    'id' => $person['id'],
-                    'properties' => $person
-                ];
+                return array(
+                    'id'         => $person['id'],
+                    'properties' => $person,
+                );
             }
 
             return null;
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Pipedrive person search failed', PuntWorkLogger::CONTEXT_CRM, [
-                'email' => $email,
-                'error' => $e->getMessage()
-            ]);
+            PuntWorkLogger::error(
+                'Pipedrive person search failed',
+                PuntWorkLogger::CONTEXT_CRM,
+                array(
+                    'email' => $email,
+                    'error' => $e->getMessage(),
+                )
+            );
 
             return null;
         }
@@ -190,41 +206,45 @@ class PipedriveIntegration extends CRMIntegration
     {
         $standardized_data = $this->standardizeDealData($deal_data);
 
-        $pd_deal = [
-            'title' => $standardized_data['title'],
-            'value' => $standardized_data['value'],
-            'currency' => $standardized_data['currency'],
-            'status' => $this->mapDealStatus($standardized_data['stage']),
+        $pd_deal = array(
+            'title'               => $standardized_data['title'],
+            'value'               => $standardized_data['value'],
+            'currency'            => $standardized_data['currency'],
+            'status'              => $this->mapDealStatus($standardized_data['stage']),
             'expected_close_date' => $standardized_data['expected_close_date'] ?: date('Y-m-d', strtotime('+30 days')),
-            'user_id' => $this->config['user_id'] ?? null
-        ];
+            'user_id'             => $this->config['user_id'] ?? null,
+        );
 
         // Add contact association if contact_id provided
-        if (!empty($standardized_data['contact_id'])) {
+        if (! empty($standardized_data['contact_id'])) {
             $pd_deal['person_id'] = $standardized_data['contact_id'];
         }
 
         try {
             $response = $this->makeApiRequest('deals', $pd_deal, 'POST');
 
-            return [
-                'success' => true,
-                'deal_id' => $response['data']['id'],
-                'platform' => 'pipedrive',
-                'timestamp' => time()
-            ];
+            return array(
+                'success'   => true,
+                'deal_id'   => $response['data']['id'],
+                'platform'  => 'pipedrive',
+                'timestamp' => time(),
+            );
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Pipedrive deal creation failed', PuntWorkLogger::CONTEXT_CRM, [
-                'error' => $e->getMessage(),
-                'deal_data' => $deal_data
-            ]);
+            PuntWorkLogger::error(
+                'Pipedrive deal creation failed',
+                PuntWorkLogger::CONTEXT_CRM,
+                array(
+                    'error'     => $e->getMessage(),
+                    'deal_data' => $deal_data,
+                )
+            );
 
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'platform' => 'pipedrive',
-                'timestamp' => time()
-            ];
+            return array(
+                'success'   => false,
+                'error'     => $e->getMessage(),
+                'platform'  => 'pipedrive',
+                'timestamp' => time(),
+            );
         }
     }
 
@@ -233,49 +253,51 @@ class PipedriveIntegration extends CRMIntegration
      */
     private function formatPersonData(array $contact_data): array
     {
-        $pd_person = [];
+        $pd_person = array();
 
-        if (!empty($contact_data['first_name']) || !empty($contact_data['last_name'])) {
-            $pd_person['name'] = trim(($contact_data['first_name'] ?? '') . ' ' . ($contact_data['last_name'] ?? ''));
+        if (! empty($contact_data['first_name']) || ! empty($contact_data['last_name'])) {
+            $pd_person['name'] = trim(( $contact_data['first_name'] ?? '' ) . ' ' . ( $contact_data['last_name'] ?? '' ));
         }
 
-        if (!empty($contact_data['email'])) {
-            $pd_person['email'] = [$contact_data['email']];
+        if (! empty($contact_data['email'])) {
+            $pd_person['email'] = array( $contact_data['email'] );
         }
 
-        if (!empty($contact_data['phone'])) {
-            $pd_person['phone'] = [$contact_data['phone']];
+        if (! empty($contact_data['phone'])) {
+            $pd_person['phone'] = array( $contact_data['phone'] );
         }
 
-        if (!empty($contact_data['company'])) {
+        if (! empty($contact_data['company'])) {
             $pd_person['org_name'] = $contact_data['company'];
         }
 
         // Add address if available
-        $address_parts = array_filter([
-            $contact_data['address'] ?? '',
-            $contact_data['city'] ?? '',
-            $contact_data['state'] ?? '',
-            $contact_data['zip'] ?? '',
-            $contact_data['country'] ?? ''
-        ]);
+        $address_parts = array_filter(
+            array(
+                $contact_data['address'] ?? '',
+                $contact_data['city'] ?? '',
+                $contact_data['state'] ?? '',
+                $contact_data['zip'] ?? '',
+                $contact_data['country'] ?? '',
+            )
+        );
 
-        if (!empty($address_parts)) {
+        if (! empty($address_parts)) {
             $pd_person['address'] = implode(', ', $address_parts);
         }
 
-        if (!empty($contact_data['website'])) {
+        if (! empty($contact_data['website'])) {
             $pd_person['website'] = $contact_data['website'];
         }
 
-        if (!empty($contact_data['notes'])) {
+        if (! empty($contact_data['notes'])) {
             $pd_person['notes'] = $contact_data['notes'];
         }
 
         // Add custom fields
-        if (!empty($contact_data['custom_fields'])) {
+        if (! empty($contact_data['custom_fields'])) {
             foreach ($contact_data['custom_fields'] as $key => $value) {
-                $pd_person[$key] = $value;
+                $pd_person[ $key ] = $value;
             }
         }
 
@@ -287,17 +309,17 @@ class PipedriveIntegration extends CRMIntegration
      */
     private function mapDealStatus(string $stage): string
     {
-        $status_mapping = [
-            'lead' => 'open',
+        $status_mapping = array(
+            'lead'                 => 'open',
             'application_received' => 'open',
-            'interview_scheduled' => 'open',
-            'interviewed' => 'open',
-            'offer_made' => 'open',
-            'hired' => 'won',
-            'rejected' => 'lost'
-        ];
+            'interview_scheduled'  => 'open',
+            'interviewed'          => 'open',
+            'offer_made'           => 'open',
+            'hired'                => 'won',
+            'rejected'             => 'lost',
+        );
 
-        return $status_mapping[$stage] ?? 'open';
+        return $status_mapping[ $stage ] ?? 'open';
     }
 
     /**
@@ -313,15 +335,15 @@ class PipedriveIntegration extends CRMIntegration
      */
     protected function getDefaultHeaders(): array
     {
-        return [
-            'Content-Type' => 'application/json'
-        ];
+        return array(
+            'Content-Type' => 'application/json',
+        );
     }
 
     /**
      * Make API request with Pipedrive-specific handling
      */
-    protected function makeApiRequest(string $endpoint, array $params = [], string $method = 'GET', array $headers = []): array
+    protected function makeApiRequest(string $endpoint, array $params = array(), string $method = 'GET', array $headers = array()): array
     {
         // Add API token to query parameters
         if ($method === 'GET') {
@@ -338,7 +360,7 @@ class PipedriveIntegration extends CRMIntegration
      */
     protected function handleApiError(array $response): void
     {
-        if (isset($response['success']) && !$response['success']) {
+        if (isset($response['success']) && ! $response['success']) {
             $message = $response['error'] ?? 'Unknown error';
             throw new \Exception('Pipedrive API Error: ' . $message);
         }

@@ -11,7 +11,7 @@
 namespace Puntwork\SocialMedia;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -33,20 +33,20 @@ abstract class SocialMediaPlatform
     /**
      * API credentials
      */
-    protected array $credentials = [];
+    protected array $credentials = array();
 
     /**
      * Rate limiting settings
      */
-    protected array $rate_limits = [
+    protected array $rate_limits = array(
         'posts_per_hour' => 50,
-        'posts_per_day' => 300
-    ];
+        'posts_per_day'  => 300,
+    );
 
     /**
      * Constructor
      */
-    public function __construct(array $config = [])
+    public function __construct(array $config = array())
     {
         $this->configure($config);
     }
@@ -86,13 +86,13 @@ abstract class SocialMediaPlatform
      */
     public function isConfigured(): bool
     {
-        return !empty($this->credentials);
+        return ! empty($this->credentials);
     }
 
     /**
      * Post content to the platform
      */
-    abstract public function post(array $content, array $options = []): array;
+    abstract public function post(array $content, array $options = array()): array;
 
     /**
      * Get posting limits and remaining quota
@@ -104,7 +104,7 @@ abstract class SocialMediaPlatform
      */
     public function validateContent(array $content): array
     {
-        $errors = [];
+        $errors = array();
 
         if (empty($content['text']) && empty($content['media'])) {
             $errors[] = 'Content must include text or media';
@@ -131,7 +131,7 @@ abstract class SocialMediaPlatform
     protected function checkRateLimit(): bool
     {
         $transient_key = 'socialmedia_ratelimit_' . $this->platform_id;
-        $posts_today = get_transient($transient_key) ?: 0;
+        $posts_today   = get_transient($transient_key) ?: 0;
 
         if ($posts_today >= $this->rate_limits['posts_per_day']) {
             return false;
@@ -154,7 +154,7 @@ abstract class SocialMediaPlatform
     protected function recordPost(): void
     {
         $transient_key = 'socialmedia_ratelimit_' . $this->platform_id;
-        $posts_today = get_transient($transient_key) ?: 0;
+        $posts_today   = get_transient($transient_key) ?: 0;
         set_transient($transient_key, $posts_today + 1, DAY_IN_SECONDS);
 
         $hourly_key = $transient_key . '_hour_' . date('Y-m-d-H');
@@ -165,17 +165,17 @@ abstract class SocialMediaPlatform
     /**
      * Make API request with error handling
      */
-    protected function makeApiRequest(string $endpoint, array $params = [], string $method = 'POST'): array
+    protected function makeApiRequest(string $endpoint, array $params = array(), string $method = 'POST'): array
     {
         // Rate limiting check
-        if (!$this->checkRateLimit()) {
+        if (! $this->checkRateLimit()) {
             throw new \Exception("Rate limit exceeded for {$this->platform_name}");
         }
 
         $response = $this->executeApiRequest($endpoint, $params, $method);
 
         if (is_wp_error($response)) {
-            throw new \Exception("API request failed: " . $response->get_error_message());
+            throw new \Exception('API request failed: ' . $response->get_error_message());
         }
 
         $body = wp_remote_retrieve_body($response);

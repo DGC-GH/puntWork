@@ -11,7 +11,7 @@
 namespace Puntwork\API;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
  */
 class WebhookManager
 {
-    public const TABLE_NAME = 'puntwork_webhooks';
+    public const TABLE_NAME     = 'puntwork_webhooks';
     public const LOG_TABLE_NAME = 'puntwork_webhook_logs';
 
     /**
@@ -29,9 +29,9 @@ class WebhookManager
     public static function init(): void
     {
         self::createTables();
-        add_action('puntwork_import_completed', [__CLASS__, 'triggerImportWebhooks'], 10, 1);
-        add_action('puntwork_import_failed', [__CLASS__, 'triggerFailureWebhooks'], 10, 1);
-        add_action('puntwork_job_created', [__CLASS__, 'triggerJobWebhooks'], 10, 1);
+        add_action('puntwork_import_completed', array( __CLASS__, 'triggerImportWebhooks' ), 10, 1);
+        add_action('puntwork_import_failed', array( __CLASS__, 'triggerFailureWebhooks' ), 10, 1);
+        add_action('puntwork_job_created', array( __CLASS__, 'triggerJobWebhooks' ), 10, 1);
     }
 
     /**
@@ -42,7 +42,7 @@ class WebhookManager
         global $wpdb;
 
         $webhookTable = $wpdb->prefix . self::TABLE_NAME;
-        $logTable = $wpdb->prefix . self::LOG_TABLE_NAME;
+        $logTable     = $wpdb->prefix . self::LOG_TABLE_NAME;
 
         $charset_collate = $wpdb->get_charset_collate();
 
@@ -80,7 +80,7 @@ class WebhookManager
             KEY executed_at (executed_at)
         ) $charset_collate;";
 
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        include_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql1);
         dbDelta($sql2);
     }
@@ -94,15 +94,15 @@ class WebhookManager
 
         $table = $wpdb->prefix . self::TABLE_NAME;
 
-        $data = [
-            'name' => sanitize_text_field($config['name']),
-            'url' => esc_url_raw($config['url']),
-            'method' => strtoupper($config['method'] ?? 'POST'),
-            'events' => json_encode($config['events'] ?? []),
-            'headers' => json_encode($config['headers'] ?? []),
-            'secret' => $config['secret'] ?? wp_generate_password(32, false),
-            'is_active' => $config['is_active'] ?? true
-        ];
+        $data = array(
+            'name'      => sanitize_text_field($config['name']),
+            'url'       => esc_url_raw($config['url']),
+            'method'    => strtoupper($config['method'] ?? 'POST'),
+            'events'    => json_encode($config['events'] ?? array()),
+            'headers'   => json_encode($config['headers'] ?? array()),
+            'secret'    => $config['secret'] ?? wp_generate_password(32, false),
+            'is_active' => $config['is_active'] ?? true,
+        );
 
         $wpdb->insert($table, $data);
         return $wpdb->insert_id;
@@ -117,7 +117,7 @@ class WebhookManager
 
         $table = $wpdb->prefix . self::TABLE_NAME;
 
-        $data = [];
+        $data = array();
         if (isset($config['name'])) {
             $data['name'] = sanitize_text_field($config['name']);
         }
@@ -140,7 +140,7 @@ class WebhookManager
             $data['is_active'] = (bool) $config['is_active'];
         }
 
-        return $wpdb->update($table, $data, ['id' => $webhookId]) !== false;
+        return $wpdb->update($table, $data, array( 'id' => $webhookId )) !== false;
     }
 
     /**
@@ -151,7 +151,7 @@ class WebhookManager
         global $wpdb;
 
         $table = $wpdb->prefix . self::TABLE_NAME;
-        return $wpdb->delete($table, ['id' => $webhookId]) !== false;
+        return $wpdb->delete($table, array( 'id' => $webhookId )) !== false;
     }
 
     /**
@@ -163,23 +163,28 @@ class WebhookManager
 
         $table = $wpdb->prefix . self::TABLE_NAME;
 
-        $results = $wpdb->get_results($wpdb->prepare("
+        $results = $wpdb->get_results(
+            $wpdb->prepare(
+                "
             SELECT * FROM $table
             WHERE is_active = 1
             AND JSON_CONTAINS(events, JSON_QUOTE(%s))
-        ", $event));
+        ",
+                $event
+            )
+        );
 
-        $webhooks = [];
+        $webhooks = array();
         foreach ($results as $row) {
-            $webhooks[] = [
-                'id' => (int) $row->id,
-                'name' => $row->name,
-                'url' => $row->url,
-                'method' => $row->method,
-                'events' => json_decode($row->events, true),
+            $webhooks[] = array(
+                'id'      => (int) $row->id,
+                'name'    => $row->name,
+                'url'     => $row->url,
+                'method'  => $row->method,
+                'events'  => json_decode($row->events, true),
                 'headers' => json_decode($row->headers, true),
-                'secret' => $row->secret
-            ];
+                'secret'  => $row->secret,
+            );
         }
 
         return $webhooks;
@@ -192,18 +197,18 @@ class WebhookManager
     {
         $webhooks = self::getWebhooksForEvent('import.completed');
 
-        $payload = [
-            'event' => 'import.completed',
+        $payload = array(
+            'event'     => 'import.completed',
             'timestamp' => time(),
-            'data' => [
-                'import_id' => $importData['import_id'] ?? null,
+            'data'      => array(
+                'import_id'      => $importData['import_id'] ?? null,
                 'jobs_processed' => $importData['processed'] ?? 0,
-                'jobs_created' => $importData['published'] ?? 0,
-                'jobs_updated' => $importData['updated'] ?? 0,
-                'duration' => $importData['time_elapsed'] ?? 0,
-                'success' => $importData['success'] ?? true
-            ]
-        ];
+                'jobs_created'   => $importData['published'] ?? 0,
+                'jobs_updated'   => $importData['updated'] ?? 0,
+                'duration'       => $importData['time_elapsed'] ?? 0,
+                'success'        => $importData['success'] ?? true,
+            ),
+        );
 
         foreach ($webhooks as $webhook) {
             self::sendWebhook($webhook, $payload);
@@ -217,15 +222,15 @@ class WebhookManager
     {
         $webhooks = self::getWebhooksForEvent('import.failed');
 
-        $payload = [
-            'event' => 'import.failed',
+        $payload = array(
+            'event'     => 'import.failed',
             'timestamp' => time(),
-            'data' => [
+            'data'      => array(
                 'error_message' => $errorData['message'] ?? '',
-                'error_code' => $errorData['code'] ?? null,
-                'import_id' => $errorData['import_id'] ?? null
-            ]
-        ];
+                'error_code'    => $errorData['code'] ?? null,
+                'import_id'     => $errorData['import_id'] ?? null,
+            ),
+        );
 
         foreach ($webhooks as $webhook) {
             self::sendWebhook($webhook, $payload);
@@ -239,17 +244,17 @@ class WebhookManager
     {
         $webhooks = self::getWebhooksForEvent('job.created');
 
-        $payload = [
-            'event' => 'job.created',
+        $payload = array(
+            'event'     => 'job.created',
             'timestamp' => time(),
-            'data' => [
-                'job_id' => $jobData['id'] ?? null,
-                'title' => $jobData['title'] ?? '',
-                'category' => $jobData['category'] ?? '',
-                'location' => $jobData['location'] ?? '',
-                'quality_score' => $jobData['quality_score'] ?? null
-            ]
-        ];
+            'data'      => array(
+                'job_id'        => $jobData['id'] ?? null,
+                'title'         => $jobData['title'] ?? '',
+                'category'      => $jobData['category'] ?? '',
+                'location'      => $jobData['location'] ?? '',
+                'quality_score' => $jobData['quality_score'] ?? null,
+            ),
+        );
 
         foreach ($webhooks as $webhook) {
             self::sendWebhook($webhook, $payload);
@@ -262,22 +267,22 @@ class WebhookManager
     private static function sendWebhook(array $webhook, array $payload): void
     {
         // Sign payload if secret is provided
-        if (!empty($webhook['secret'])) {
+        if (! empty($webhook['secret'])) {
             $payload['signature'] = hash_hmac('sha256', json_encode($payload), $webhook['secret']);
         }
 
-        $args = [
-            'method' => $webhook['method'],
-            'body' => json_encode($payload),
-            'headers' => [
+        $args = array(
+            'method'  => $webhook['method'],
+            'body'    => json_encode($payload),
+            'headers' => array(
                 'Content-Type' => 'application/json',
-                'User-Agent' => 'PuntWork-Webhook/1.0'
-            ],
-            'timeout' => 30
-        ];
+                'User-Agent'   => 'PuntWork-Webhook/1.0',
+            ),
+            'timeout' => 30,
+        );
 
         // Add custom headers
-        if (!empty($webhook['headers'])) {
+        if (! empty($webhook['headers'])) {
             $args['headers'] = array_merge($args['headers'], $webhook['headers']);
         }
 
@@ -297,20 +302,22 @@ class WebhookManager
 
         $table = $wpdb->prefix . self::LOG_TABLE_NAME;
 
-        $data = [
-            'webhook_id' => $webhookId,
-            'event' => $event,
-            'payload' => json_encode($payload),
+        $data = array(
+            'webhook_id'    => $webhookId,
+            'event'         => $event,
+            'payload'       => json_encode($payload),
             'response_code' => $responseCode,
             'response_body' => $responseBody,
-            'success' => $success,
-            'error_message' => $error
-        ];
+            'success'       => $success,
+            'error_message' => $error,
+        );
 
         $wpdb->insert($table, $data);
 
         // Clean old logs (keep last 1000 entries per webhook)
-        $wpdb->query($wpdb->prepare("
+        $wpdb->query(
+            $wpdb->prepare(
+                "
             DELETE FROM $table
             WHERE webhook_id = %d
             AND id NOT IN (
@@ -321,7 +328,11 @@ class WebhookManager
                     LIMIT 1000
                 ) tmp
             )
-        ", $webhookId, $webhookId));
+        ",
+                $webhookId,
+                $webhookId
+            )
+        );
     }
 
     /**
@@ -333,12 +344,19 @@ class WebhookManager
 
         $table = $wpdb->prefix . self::LOG_TABLE_NAME;
 
-        return $wpdb->get_results($wpdb->prepare("
+        return $wpdb->get_results(
+            $wpdb->prepare(
+                "
             SELECT * FROM $table
             WHERE webhook_id = %d
             ORDER BY executed_at DESC
             LIMIT %d
-        ", $webhookId, $limit), ARRAY_A);
+        ",
+                $webhookId,
+                $limit
+            ),
+            ARRAY_A
+        );
     }
 
     /**
@@ -348,48 +366,51 @@ class WebhookManager
     {
         global $wpdb;
 
-        $table = $wpdb->prefix . self::TABLE_NAME;
+        $table   = $wpdb->prefix . self::TABLE_NAME;
         $webhook = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $webhookId), ARRAY_A);
 
-        if (!$webhook) {
-            return ['success' => false, 'message' => 'Webhook not found'];
+        if (! $webhook) {
+            return array(
+                'success' => false,
+                'message' => 'Webhook not found',
+            );
         }
 
-        $testPayload = [
-            'event' => 'test',
+        $testPayload = array(
+            'event'     => 'test',
             'timestamp' => time(),
-            'data' => ['message' => 'Test webhook from PuntWork']
-        ];
+            'data'      => array( 'message' => 'Test webhook from PuntWork' ),
+        );
 
         // Send test request
-        $args = [
-            'method' => $webhook['method'],
-            'body' => json_encode($testPayload),
-            'headers' => [
+        $args = array(
+            'method'  => $webhook['method'],
+            'body'    => json_encode($testPayload),
+            'headers' => array(
                 'Content-Type' => 'application/json',
-                'User-Agent' => 'PuntWork-Webhook-Test/1.0'
-            ],
-            'timeout' => 10
-        ];
+                'User-Agent'   => 'PuntWork-Webhook-Test/1.0',
+            ),
+            'timeout' => 10,
+        );
 
-        if (!empty($webhook['headers'])) {
+        if (! empty($webhook['headers'])) {
             $args['headers'] = array_merge($args['headers'], json_decode($webhook['headers'], true));
         }
 
         $response = wp_remote_request($webhook['url'], $args);
 
-        $success = !is_wp_error($response);
+        $success      = ! is_wp_error($response);
         $responseCode = $success ? wp_remote_retrieve_response_code($response) : null;
         $responseBody = $success ? wp_remote_retrieve_body($response) : wp_error_get_error_message($response);
 
         // Log test
         self::logWebhookAttempt($webhookId, 'test', $testPayload, $responseCode, $responseBody, $success);
 
-        return [
-            'success' => $success,
+        return array(
+            'success'       => $success,
             'response_code' => $responseCode,
             'response_body' => $responseBody,
-            'message' => $success ? 'Webhook test successful' : 'Webhook test failed'
-        ];
+            'message'       => $success ? 'Webhook test successful' : 'Webhook test failed',
+        );
     }
 }

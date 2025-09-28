@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -21,38 +21,38 @@ if (!defined('ABSPATH')) {
 class JobDeduplicator
 {
     // Similarity thresholds
-    public const EXACT_MATCH = 1.0;
-    public const HIGH_SIMILARITY = 0.85;
+    public const EXACT_MATCH       = 1.0;
+    public const HIGH_SIMILARITY   = 0.85;
     public const MEDIUM_SIMILARITY = 0.70;
-    public const LOW_SIMILARITY = 0.50;
+    public const LOW_SIMILARITY    = 0.50;
 
     // Deduplication strategies
-    public const STRATEGY_GUID = 'guid';
+    public const STRATEGY_GUID          = 'guid';
     public const STRATEGY_TITLE_COMPANY = 'title_company';
-    public const STRATEGY_CONTENT_HASH = 'content_hash';
-    public const STRATEGY_FUZZY_TITLE = 'fuzzy_title';
+    public const STRATEGY_CONTENT_HASH  = 'content_hash';
+    public const STRATEGY_FUZZY_TITLE   = 'fuzzy_title';
 
     /**
      * Configuration for deduplication rules
      */
-    private static $config = [
-        'enable_fuzzy_matching' => true,
-        'title_similarity_threshold' => 0.85,
+    private static $config = array(
+        'enable_fuzzy_matching'        => true,
+        'title_similarity_threshold'   => 0.85,
         'company_similarity_threshold' => 0.90,
-        'max_candidates' => 10,
-        'strategies' => [
+        'max_candidates'               => 10,
+        'strategies'                   => array(
             self::STRATEGY_GUID,
             self::STRATEGY_TITLE_COMPANY,
             self::STRATEGY_CONTENT_HASH,
-            self::STRATEGY_FUZZY_TITLE
-        ]
-    ];
+            self::STRATEGY_FUZZY_TITLE,
+        ),
+    );
 
     /**
      * Find potential duplicates for a job item
      *
-     * @param object $job_item Job item to check for duplicates
-     * @param array $existing_jobs Array of existing job posts
+     * @param  object $job_item      Job item to check for duplicates
+     * @param  array  $existing_jobs Array of existing job posts
      * @return array Array of potential duplicates with similarity scores
      */
     public static function findDuplicates($job_item, $existing_jobs = null)
@@ -61,25 +61,28 @@ class JobDeduplicator
             $existing_jobs = self::getExistingJobsForComparison($job_item);
         }
 
-        $duplicates = [];
+        $duplicates = array();
 
         foreach ($existing_jobs as $existing_job) {
             $similarity = self::calculateSimilarity($job_item, $existing_job);
 
             if ($similarity >= self::$config['title_similarity_threshold']) {
-                $duplicates[] = [
-                    'post_id' => $existing_job->ID,
+                $duplicates[] = array(
+                    'post_id'    => $existing_job->ID,
                     'similarity' => $similarity,
-                    'reasons' => self::getSimilarityReasons($job_item, $existing_job),
-                    'strategy' => self::determineMatchingStrategy($job_item, $existing_job)
-                ];
+                    'reasons'    => self::getSimilarityReasons($job_item, $existing_job),
+                    'strategy'   => self::determineMatchingStrategy($job_item, $existing_job),
+                );
             }
         }
 
         // Sort by similarity (highest first)
-        usort($duplicates, function ($a, $b) {
-            return $b['similarity'] <=> $a['similarity'];
-        });
+        usort(
+            $duplicates,
+            function ($a, $b) {
+                return $b['similarity'] <=> $a['similarity'];
+            }
+        );
 
         return array_slice($duplicates, 0, self::$config['max_candidates']);
     }
@@ -90,15 +93,15 @@ class JobDeduplicator
     private static function calculateSimilarity($job1, $job2)
     {
         $similarity = 0;
-        $weights = 0;
+        $weights    = 0;
 
         // Title similarity (highest weight)
-        $title_sim = self::calculateTextSimilarity(
+        $title_sim   = self::calculateTextSimilarity(
             self::normalizeText($job1->title ?? ''),
             self::normalizeText($job2->post_title ?? '')
         );
         $similarity += $title_sim * 0.4;
-        $weights += 0.4;
+        $weights    += 0.4;
 
         // Company similarity
         $company_sim = self::calculateTextSimilarity(
@@ -106,15 +109,15 @@ class JobDeduplicator
             self::normalizeText(get_post_meta($job2->ID, 'company', true) ?? '')
         );
         $similarity += $company_sim * 0.3;
-        $weights += 0.3;
+        $weights    += 0.3;
 
         // Location similarity
         $location_sim = self::calculateTextSimilarity(
             self::normalizeText($job1->location ?? $job1->city ?? ''),
             self::normalizeText(get_post_meta($job2->ID, 'location', true) ?? '')
         );
-        $similarity += $location_sim * 0.2;
-        $weights += 0.2;
+        $similarity  += $location_sim * 0.2;
+        $weights     += 0.2;
 
         // Content similarity (lower weight)
         $content_sim = self::calculateTextSimilarity(
@@ -122,7 +125,7 @@ class JobDeduplicator
             self::normalizeText($job2->post_content ?? '')
         );
         $similarity += $content_sim * 0.1;
-        $weights += 0.1;
+        $weights    += 0.1;
 
         return $weights > 0 ? $similarity / $weights : 0;
     }
@@ -144,8 +147,8 @@ class JobDeduplicator
         // Levenshtein distance for short strings
         if (strlen($text1) < 100 && strlen($text2) < 100) {
             $levenshtein = levenshtein(strtolower($text1), strtolower($text2));
-            $max_len = max(strlen($text1), strlen($text2));
-            return $max_len > 0 ? 1 - ($levenshtein / $max_len) : 0;
+            $max_len     = max(strlen($text1), strlen($text2));
+            return $max_len > 0 ? 1 - ( $levenshtein / $max_len ) : 0;
         }
 
         // Jaccard similarity for longer texts
@@ -165,7 +168,7 @@ class JobDeduplicator
         }
 
         $intersection = array_intersect($words1, $words2);
-        $union = array_unique(array_merge($words1, $words2));
+        $union        = array_unique(array_merge($words1, $words2));
 
         return count($union) > 0 ? count($intersection) / count($union) : 0;
     }
@@ -176,16 +179,19 @@ class JobDeduplicator
     private static function getWordTokens($text)
     {
         // Remove punctuation and normalize
-        $text = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $text);
-        $text = preg_replace('/\s+/', ' ', $text);
+        $text  = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $text);
+        $text  = preg_replace('/\s+/', ' ', $text);
         $words = explode(' ', strtolower(trim($text)));
 
         // Filter out common stop words and short words
-        $stop_words = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'shall'];
+        $stop_words = array( 'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'shall' );
 
-        return array_filter($words, function ($word) use ($stop_words) {
-            return strlen($word) > 2 && !in_array($word, $stop_words);
-        });
+        return array_filter(
+            $words,
+            function ($word) use ($stop_words) {
+                return strlen($word) > 2 && ! in_array($word, $stop_words);
+            }
+        );
     }
 
     /**
@@ -200,8 +206,8 @@ class JobDeduplicator
         $text = preg_replace('/\s+/', ' ', $text);
 
         // Remove common prefixes/suffixes that don't affect meaning
-        $prefixes_to_remove = ['job:', 'position:', 'vacancy:', 'opening:'];
-        $suffixes_to_remove = ['job', 'position', 'vacancy', 'opening'];
+        $prefixes_to_remove = array( 'job:', 'position:', 'vacancy:', 'opening:' );
+        $suffixes_to_remove = array( 'job', 'position', 'vacancy', 'opening' );
 
         foreach ($prefixes_to_remove as $prefix) {
             if (strpos($text, $prefix) === 0) {
@@ -225,7 +231,7 @@ class JobDeduplicator
      */
     private static function getSimilarityReasons($job1, $job2)
     {
-        $reasons = [];
+        $reasons = array();
 
         // Check title similarity
         $title_sim = self::calculateTextSimilarity(
@@ -263,7 +269,7 @@ class JobDeduplicator
     private static function determineMatchingStrategy($job1, $job2)
     {
         // Check GUID match
-        if (isset($job1->guid) && !empty($job1->guid)) {
+        if (isset($job1->guid) && ! empty($job1->guid)) {
             $existing_guid = get_post_meta($job2->ID, 'guid', true);
             if ($existing_guid === $job1->guid) {
                 return self::STRATEGY_GUID;
@@ -271,7 +277,7 @@ class JobDeduplicator
         }
 
         // Check title + company combination
-        $title_sim = self::calculate_text_similarity(
+        $title_sim   = self::calculate_text_similarity(
             self::normalize_text($job1->title ?? ''),
             self::normalize_text($job2->post_title ?? '')
         );
@@ -285,7 +291,7 @@ class JobDeduplicator
         }
 
         // Check content hash
-        $content_hash = self::generateContentHash($job1);
+        $content_hash  = self::generateContentHash($job1);
         $existing_hash = get_post_meta($job2->ID, '_import_hash', true);
         if ($content_hash === $existing_hash) {
             return self::STRATEGY_CONTENT_HASH;
@@ -299,7 +305,7 @@ class JobDeduplicator
      */
     private static function generateContentHash($job)
     {
-        $content = '';
+        $content  = '';
         $content .= $job->title ?? '';
         $content .= $job->company ?? $job->companyname ?? '';
         $content .= $job->location ?? $job->city ?? '';
@@ -314,33 +320,33 @@ class JobDeduplicator
     private static function getExistingJobsForComparison($job_item)
     {
         $cache_key = 'puntwork_dedup_jobs_' . md5($job_item->title ?? '' . $job_item->company ?? '');
-        $cached = wp_cache_get($cache_key);
+        $cached    = wp_cache_get($cache_key);
 
         if ($cached !== false) {
             return $cached;
         }
 
         // Query recent jobs that might be duplicates
-        $args = [
-            'post_type' => 'job',
-            'post_status' => ['publish', 'draft'],
+        $args = array(
+            'post_type'      => 'job',
+            'post_status'    => array( 'publish', 'draft' ),
             'posts_per_page' => 50,
-            'orderby' => 'date',
-            'order' => 'DESC',
-            'date_query' => [
-                'after' => '30 days ago'
-            ]
-        ];
+            'orderby'        => 'date',
+            'order'          => 'DESC',
+            'date_query'     => array(
+                'after' => '30 days ago',
+            ),
+        );
 
         // If we have company info, filter by company
-        if (!empty($job_item->company ?? $job_item->companyname ?? '')) {
-            $args['meta_query'] = [
-                [
-                    'key' => 'company',
-                    'value' => $job_item->company ?? $job_item->companyname ?? '',
-                    'compare' => 'LIKE'
-                ]
-            ];
+        if (! empty($job_item->company ?? $job_item->companyname ?? '')) {
+            $args['meta_query'] = array(
+                array(
+                    'key'     => 'company',
+                    'value'   => $job_item->company ?? $job_item->companyname ?? '',
+                    'compare' => 'LIKE',
+                ),
+            );
         }
 
         $jobs = get_posts($args);
@@ -373,11 +379,11 @@ class JobDeduplicator
         global $wpdb;
 
         foreach ($batch_guids as $guid) {
-            if (isset($existing_by_guid[$guid])) {
-                $posts_data = $existing_by_guid[$guid];
+            if (isset($existing_by_guid[ $guid ])) {
+                $posts_data = $existing_by_guid[ $guid ];
                 if (count($posts_data) > 1) {
                     // Extract post IDs for duplicate processing
-                    $post_ids = [];
+                    $post_ids = array();
                     foreach ($posts_data as $item) {
                         if (is_array($item) && isset($item['id'])) {
                             $post_ids[] = $item['id'];
@@ -386,20 +392,22 @@ class JobDeduplicator
                         }
                     }
 
-                    $existing = get_posts([
-                        'post_type' => 'job',
-                        'post__in' => $post_ids,
-                        'posts_per_page' => -1,
-                        'post_status' => 'any',
-                        'fields' => 'ids',
-                    ]) ?: [];
+                    $existing = get_posts(
+                        array(
+                            'post_type'      => 'job',
+                            'post__in'       => $post_ids,
+                            'posts_per_page' => -1,
+                            'post_status'    => 'any',
+                            'fields'         => 'ids',
+                        )
+                    ) ?: array();
 
-                    $post_to_keep = null;
-                    $duplicates_to_draft = [];
-                    $hashes = [];
+                    $post_to_keep        = null;
+                    $duplicates_to_draft = array();
+                    $hashes              = array();
 
                     foreach ($existing as $post_id) {
-                        $hashes[$post_id] = get_post_meta($post_id, '_import_hash', true);
+                        $hashes[ $post_id ] = get_post_meta($post_id, '_import_hash', true);
                     }
 
                     foreach ($existing as $post_id) {
@@ -407,13 +415,13 @@ class JobDeduplicator
                             $post_to_keep = $post_id;
                         } else {
                             // If hashes are identical, draft the duplicate
-                            if ($hashes[$post_to_keep] === $hashes[$post_id]) {
+                            if ($hashes[ $post_to_keep ] === $hashes[ $post_id ]) {
                                 $duplicates_to_draft[] = $post_id;
                             } else {
                                 // If hashes differ, keep the most recently modified
                                 if (strtotime(get_post_field('post_modified', $post_id)) > strtotime(get_post_field('post_modified', $post_to_keep))) {
                                     $duplicates_to_draft[] = $post_to_keep;
-                                    $post_to_keep = $post_id;
+                                    $post_to_keep          = $post_id;
                                 } else {
                                     $duplicates_to_draft[] = $post_id;
                                 }
@@ -424,25 +432,27 @@ class JobDeduplicator
                     // Draft duplicates
                     foreach ($duplicates_to_draft as $dup_id) {
                         $current_title = get_post_field('post_title', $dup_id);
-                        $reason = $hashes[$dup_id] === $hashes[$post_to_keep] ? 'Identical content' : 'Older version kept';
-                        $new_title = strpos($current_title, 'Duplicate - ') === false ?
+                        $reason        = $hashes[ $dup_id ] === $hashes[ $post_to_keep ] ? 'Identical content' : 'Older version kept';
+                        $new_title     = strpos($current_title, 'Duplicate - ') === false ?
                             $current_title . ' [Duplicate - ' . $reason . ']' : $current_title;
 
-                        wp_update_post([
-                            'ID' => $dup_id,
-                            'post_title' => $new_title,
-                            'post_status' => 'draft'
-                        ]);
+                        wp_update_post(
+                            array(
+                                'ID'          => $dup_id,
+                                'post_title'  => $new_title,
+                                'post_status' => 'draft',
+                            )
+                        );
 
-                        $duplicates_drafted++;
+                        ++$duplicates_drafted;
                         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Drafted duplicate ID: ' . $dup_id . ' GUID: ' . $guid . ' - ' . $reason;
                     }
 
-                    $post_ids_by_guid[$guid] = $post_to_keep;
+                    $post_ids_by_guid[ $guid ] = $post_to_keep;
                 } else {
                     // Single existing post for this GUID
-                    $first_item = $posts_data[0];
-                    $post_ids_by_guid[$guid] = is_array($first_item) && isset($first_item['id']) ? $first_item['id'] : $first_item;
+                    $first_item                = $posts_data[0];
+                    $post_ids_by_guid[ $guid ] = is_array($first_item) && isset($first_item['id']) ? $first_item['id'] : $first_item;
                 }
             }
         }
@@ -454,31 +464,31 @@ class JobDeduplicator
     private static function handleFuzzyDuplicates($batch_guids, &$logs, &$duplicates_drafted, &$post_ids_by_guid)
     {
         // Get all jobs in current batch that don't have exact GUID matches
-        $batch_jobs = [];
+        $batch_jobs = array();
         foreach ($batch_guids as $guid) {
-            if (!isset($post_ids_by_guid[$guid])) {
+            if (! isset($post_ids_by_guid[ $guid ])) {
                 // This GUID doesn't have an exact match, get the job data
-                $batch_jobs[$guid] = self::getJobDataByGuid($guid);
+                $batch_jobs[ $guid ] = self::getJobDataByGuid($guid);
             }
         }
 
         // Check each batch job against existing jobs
         foreach ($batch_jobs as $guid => $job_data) {
-            if (!$job_data) {
+            if (! $job_data) {
                 continue;
             }
 
             $duplicates = self::findDuplicates($job_data);
 
-            if (!empty($duplicates)) {
+            if (! empty($duplicates)) {
                 $best_match = $duplicates[0];
 
                 if ($best_match['similarity'] >= self::$config['title_similarity_threshold']) {
                     // Mark this as a duplicate of the existing job
-                    $post_ids_by_guid[$guid] = $best_match['post_id'];
+                    $post_ids_by_guid[ $guid ] = $best_match['post_id'];
 
                     $reasons = implode(', ', $best_match['reasons']);
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . sprintf(
+                    $logs[]  = '[' . date('d-M-Y H:i:s') . ' UTC] ' . sprintf(
                         'Fuzzy duplicate detected: GUID %s matches existing job ID %d (similarity: %.2f) - %s',
                         $guid,
                         $best_match['post_id'],
@@ -501,25 +511,27 @@ class JobDeduplicator
     private static function handleAiDuplicates(&$logs, &$duplicates_drafted)
     {
         // Get all published jobs for AI similarity analysis
-        $existing_jobs = get_posts([
-            'post_type' => 'job',
-            'posts_per_page' => -1,
-            'post_status' => 'publish',
-            'fields' => 'ids',
-        ]);
+        $existing_jobs = get_posts(
+            array(
+                'post_type'      => 'job',
+                'posts_per_page' => -1,
+                'post_status'    => 'publish',
+                'fields'         => 'ids',
+            )
+        );
 
         if (empty($existing_jobs) || count($existing_jobs) < 2) {
             return;
         }
 
         // Build job data array for AI similarity detection
-        $job_data = [];
+        $job_data = array();
         foreach ($existing_jobs as $post_id) {
-            $job_data[] = [
-                'job_title' => get_post_field('post_title', $post_id),
+            $job_data[] = array(
+                'job_title'       => get_post_field('post_title', $post_id),
                 'job_description' => get_post_meta($post_id, 'job_description', true) ?: '',
-                'job_company' => get_post_meta($post_id, 'company', true) ?: '',
-            ];
+                'job_company'     => get_post_meta($post_id, 'company', true) ?: '',
+            );
         }
 
         // Detect duplicate groups using AI algorithms
@@ -532,28 +544,33 @@ class JobDeduplicator
             }
 
             // Map indices back to post IDs
-            $post_ids_in_group = array_map(function ($index) use ($existing_jobs) {
-                return $existing_jobs[$index];
-            }, $group_indices);
+            $post_ids_in_group = array_map(
+                function ($index) use ($existing_jobs) {
+                    return $existing_jobs[ $index ];
+                },
+                $group_indices
+            );
 
             // Sort by post ID to keep the oldest (lowest ID)
             sort($post_ids_in_group);
-            $keep_id = $post_ids_in_group[0];
+            $keep_id    = $post_ids_in_group[0];
             $duplicates = array_slice($post_ids_in_group, 1);
 
             // Draft the AI-detected duplicates
             foreach ($duplicates as $dup_id) {
                 $current_title = get_post_field('post_title', $dup_id);
-                $new_title = strpos($current_title, 'Duplicate - ') === false ?
+                $new_title     = strpos($current_title, 'Duplicate - ') === false ?
                     $current_title . ' [Duplicate - AI Content Similarity]' : $current_title;
 
-                wp_update_post([
-                    'ID' => $dup_id,
-                    'post_title' => $new_title,
-                    'post_status' => 'draft'
-                ]);
+                wp_update_post(
+                    array(
+                        'ID'          => $dup_id,
+                        'post_title'  => $new_title,
+                        'post_status' => 'draft',
+                    )
+                );
 
-                $duplicates_drafted++;
+                ++$duplicates_drafted;
                 $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Drafted AI-detected duplicate ID: ' . $dup_id . ' - Content similarity with ID: ' . $keep_id;
             }
         }

@@ -11,7 +11,7 @@
 namespace Puntwork\SocialMedia;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -38,14 +38,14 @@ class TwitterPlatform extends SocialMediaPlatform
     /**
      * Constructor
      */
-    public function __construct(array $config = [])
+    public function __construct(array $config = array())
     {
-        $this->platform_id = 'twitter';
+        $this->platform_id   = 'twitter';
         $this->platform_name = 'Twitter/X';
-        $this->rate_limits = [
+        $this->rate_limits   = array(
             'posts_per_hour' => 300,  // Twitter allows 300 posts per 3 hours
-            'posts_per_day' => 5000   // Conservative daily limit
-        ];
+            'posts_per_day'  => 5000,   // Conservative daily limit
+        );
 
         parent::__construct($config);
 
@@ -61,10 +61,10 @@ class TwitterPlatform extends SocialMediaPlatform
     public function isConfigured(): bool
     {
         return parent::isConfigured() &&
-               isset($this->credentials['api_key']) &&
-               isset($this->credentials['api_secret']) &&
-               isset($this->credentials['access_token']) &&
-               isset($this->credentials['access_token_secret']);
+                isset($this->credentials['api_key']) &&
+                isset($this->credentials['api_secret']) &&
+                isset($this->credentials['access_token']) &&
+                isset($this->credentials['access_token_secret']);
     }
 
     /**
@@ -73,7 +73,7 @@ class TwitterPlatform extends SocialMediaPlatform
     public function hasAdsCredentials(): bool
     {
         return isset($this->credentials['ads_account_id']) &&
-               isset($this->credentials['bearer_token']);
+                isset($this->credentials['bearer_token']);
     }
 
     /**
@@ -87,43 +87,47 @@ class TwitterPlatform extends SocialMediaPlatform
     /**
      * Post content to Twitter
      */
-    public function post(array $content, array $options = []): array
+    public function post(array $content, array $options = array()): array
     {
-        if (!$this->isConfigured()) {
+        if (! $this->isConfigured()) {
             throw new \Exception('Twitter integration not properly configured');
         }
 
         // Validate content
         $validation_errors = $this->validateContent($content);
-        if (!empty($validation_errors)) {
+        if (! empty($validation_errors)) {
             throw new \Exception('Content validation failed: ' . implode(', ', $validation_errors));
         }
 
         try {
             $post_data = $this->preparePostData($content, $options);
-            $response = $this->makeApiRequest('tweets', $post_data, 'POST');
+            $response  = $this->makeApiRequest('tweets', $post_data, 'POST');
 
             $this->recordPost();
 
-            return [
-                'success' => true,
-                'post_id' => $response['data']['id'] ?? null,
-                'url' => isset($response['data']['id']) ? "https://twitter.com/i/status/{$response['data']['id']}" : null,
-                'platform' => 'twitter',
-                'timestamp' => time()
-            ];
+            return array(
+                'success'   => true,
+                'post_id'   => $response['data']['id'] ?? null,
+                'url'       => isset($response['data']['id']) ? "https://twitter.com/i/status/{$response['data']['id']}" : null,
+                'platform'  => 'twitter',
+                'timestamp' => time(),
+            );
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Twitter posting failed', PuntWorkLogger::CONTEXT_SOCIAL, [
-                'error' => $e->getMessage(),
-                'content' => $content
-            ]);
+            PuntWorkLogger::error(
+                'Twitter posting failed',
+                PuntWorkLogger::CONTEXT_SOCIAL,
+                array(
+                    'error'   => $e->getMessage(),
+                    'content' => $content,
+                )
+            );
 
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'platform' => 'twitter',
-                'timestamp' => time()
-            ];
+            return array(
+                'success'   => false,
+                'error'     => $e->getMessage(),
+                'platform'  => 'twitter',
+                'timestamp' => time(),
+            );
         }
     }
 
@@ -132,39 +136,49 @@ class TwitterPlatform extends SocialMediaPlatform
      */
     public function postWithAds(array $content, array $ads_config): array
     {
-        if (!$this->supportsAds()) {
+        if (! $this->supportsAds()) {
             throw new \Exception('Twitter ads not configured. Please provide ads_account_id and bearer_token.');
         }
 
         // First post the regular tweet
         $post_result = $this->post($content);
 
-        if (!$post_result['success']) {
+        if (! $post_result['success']) {
             return $post_result;
         }
 
         try {
             // Create ads campaign for the tweet
             $ads_result = $this->ads_manager->postJobWithAds(
-                ['tweet_id' => $post_result['post_id']],
+                array( 'tweet_id' => $post_result['post_id'] ),
                 $ads_config
             );
 
-            return array_merge($post_result, [
-                'ads_campaign' => $ads_result,
-                'has_ads' => true
-            ]);
+            return array_merge(
+                $post_result,
+                array(
+                    'ads_campaign' => $ads_result,
+                    'has_ads'      => true,
+                )
+            );
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Twitter ads creation failed', PuntWorkLogger::CONTEXT_SOCIAL, [
-                'tweet_id' => $post_result['post_id'],
-                'error' => $e->getMessage()
-            ]);
+            PuntWorkLogger::error(
+                'Twitter ads creation failed',
+                PuntWorkLogger::CONTEXT_SOCIAL,
+                array(
+                    'tweet_id' => $post_result['post_id'],
+                    'error'    => $e->getMessage(),
+                )
+            );
 
             // Return the successful tweet post but with ads error
-            return array_merge($post_result, [
-                'ads_error' => $e->getMessage(),
-                'has_ads' => false
-            ]);
+            return array_merge(
+                $post_result,
+                array(
+                    'ads_error' => $e->getMessage(),
+                    'has_ads'   => false,
+                )
+            );
         }
     }
 
@@ -173,7 +187,7 @@ class TwitterPlatform extends SocialMediaPlatform
      */
     public function getAdsMetrics(string $campaign_id): array
     {
-        if (!$this->supportsAds()) {
+        if (! $this->supportsAds()) {
             throw new \Exception('Twitter ads not configured');
         }
 
@@ -189,19 +203,19 @@ class TwitterPlatform extends SocialMediaPlatform
     public function getLimits(): array
     {
         $transient_key = 'socialmedia_ratelimit_' . $this->platform_id;
-        $posts_today = get_transient($transient_key) ?: 0;
+        $posts_today   = get_transient($transient_key) ?: 0;
 
         $hourly_key = $transient_key . '_hour_' . date('Y-m-d-H');
         $posts_hour = get_transient($hourly_key) ?: 0;
 
-        return [
-            'posts_today' => $posts_today,
+        return array(
+            'posts_today'       => $posts_today,
             'posts_today_limit' => $this->rate_limits['posts_per_day'],
-            'posts_hour' => $posts_hour,
-            'posts_hour_limit' => $this->rate_limits['posts_per_hour'],
-            'remaining_today' => max(0, $this->rate_limits['posts_per_day'] - $posts_today),
-            'remaining_hour' => max(0, $this->rate_limits['posts_per_hour'] - $posts_hour)
-        ];
+            'posts_hour'        => $posts_hour,
+            'posts_hour_limit'  => $this->rate_limits['posts_per_hour'],
+            'remaining_today'   => max(0, $this->rate_limits['posts_per_day'] - $posts_today),
+            'remaining_hour'    => max(0, $this->rate_limits['posts_per_hour'] - $posts_hour),
+        );
     }
 
     /**
@@ -217,19 +231,19 @@ class TwitterPlatform extends SocialMediaPlatform
      */
     private function preparePostData(array $content, array $options): array
     {
-        $post_data = [];
+        $post_data = array();
 
         // Add text content
-        if (!empty($content['text'])) {
-            $text = $this->processTextContent($content['text'], $options);
+        if (! empty($content['text'])) {
+            $text              = $this->processTextContent($content['text'], $options);
             $post_data['text'] = $text;
         }
 
         // Add media if provided
-        if (!empty($content['media'])) {
+        if (! empty($content['media'])) {
             $media_ids = $this->uploadMedia($content['media']);
-            if (!empty($media_ids)) {
-                $post_data['media'] = ['media_ids' => $media_ids];
+            if (! empty($media_ids)) {
+                $post_data['media'] = array( 'media_ids' => $media_ids );
             }
         }
 
@@ -239,7 +253,7 @@ class TwitterPlatform extends SocialMediaPlatform
         }
 
         // Add poll if provided
-        if (!empty($content['poll'])) {
+        if (! empty($content['poll'])) {
             $post_data['poll'] = $this->preparePoll($content['poll']);
         }
 
@@ -257,11 +271,17 @@ class TwitterPlatform extends SocialMediaPlatform
         }
 
         // Add hashtags if provided
-        if (!empty($options['hashtags'])) {
-            $hashtags = is_array($options['hashtags']) ? $options['hashtags'] : [$options['hashtags']];
-            $text .= ' ' . implode(' ', array_map(function ($tag) {
-                return '#' . ltrim($tag, '#');
-            }, $hashtags));
+        if (! empty($options['hashtags'])) {
+            $hashtags = is_array($options['hashtags']) ? $options['hashtags'] : array( $options['hashtags'] );
+            $text    .= ' ' . implode(
+                ' ',
+                array_map(
+                    function ($tag) {
+                        return '#' . ltrim($tag, '#');
+                    },
+                    $hashtags
+                )
+            );
         }
 
         // Ensure text doesn't exceed limit
@@ -277,7 +297,7 @@ class TwitterPlatform extends SocialMediaPlatform
      */
     private function uploadMedia(array $media_files): array
     {
-        $media_ids = [];
+        $media_ids = array();
 
         foreach ($media_files as $media_file) {
             try {
@@ -296,10 +316,14 @@ class TwitterPlatform extends SocialMediaPlatform
                     $media_ids[] = $media_id;
                 }
             } catch (\Exception $e) {
-                PuntWorkLogger::error('Twitter media upload failed', PuntWorkLogger::CONTEXT_SOCIAL, [
-                    'error' => $e->getMessage(),
-                    'media_file' => $media_file
-                ]);
+                PuntWorkLogger::error(
+                    'Twitter media upload failed',
+                    PuntWorkLogger::CONTEXT_SOCIAL,
+                    array(
+                        'error'      => $e->getMessage(),
+                        'media_file' => $media_file,
+                    )
+                );
             }
         }
 
@@ -311,7 +335,7 @@ class TwitterPlatform extends SocialMediaPlatform
      */
     private function uploadMediaToTwitter(string $file_path): ?string
     {
-        if (!file_exists($file_path)) {
+        if (! file_exists($file_path)) {
             return null;
         }
 
@@ -337,7 +361,7 @@ class TwitterPlatform extends SocialMediaPlatform
     private function downloadMediaFile(string $url): string
     {
         $temp_file = wp_tempnam();
-        $response = wp_remote_get($url);
+        $response  = wp_remote_get($url);
 
         if (is_wp_error($response)) {
             throw new \Exception('Failed to download media file');
@@ -352,10 +376,10 @@ class TwitterPlatform extends SocialMediaPlatform
      */
     private function preparePoll(array $poll): array
     {
-        return [
-            'options' => array_slice($poll['options'], 0, 4), // Max 4 options
-            'duration_minutes' => min(max($poll['duration_minutes'] ?? 1440, 5), 10080) // 5 min to 7 days
-        ];
+        return array(
+            'options'          => array_slice($poll['options'], 0, 4), // Max 4 options
+            'duration_minutes' => min(max($poll['duration_minutes'] ?? 1440, 5), 10080), // 5 min to 7 days
+        );
     }
 
     /**
@@ -385,15 +409,15 @@ class TwitterPlatform extends SocialMediaPlatform
 
         // In a real implementation, you'd use proper OAuth 1.0a authentication
         // For now, this is a mock implementation
-        $args = [
-            'method' => $method,
-            'headers' => [
-                'Authorization' => 'Bearer ' . ($this->credentials['bearer_token'] ?? ''),
-                'Content-Type' => 'application/json'
-            ],
-            'body' => json_encode($params),
-            'timeout' => 30
-        ];
+        $args = array(
+            'method'  => $method,
+            'headers' => array(
+                'Authorization' => 'Bearer ' . ( $this->credentials['bearer_token'] ?? '' ),
+                'Content-Type'  => 'application/json',
+            ),
+            'body'    => json_encode($params),
+            'timeout' => 30,
+        );
 
         return wp_remote_request($url, $args);
     }

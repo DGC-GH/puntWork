@@ -20,15 +20,15 @@ if (! defined('ABSPATH')) {
  */
 class CircuitBreaker
 {
-    private static array $circuits = [];
-    public const STATE_CLOSED = 'closed';     // Normal operation
-    public const STATE_OPEN = 'open';         // Failing, reject requests
-    public const STATE_HALF_OPEN = 'half_open'; // Testing if service recovered
+    private static array $circuits = array();
+    public const STATE_CLOSED      = 'closed';     // Normal operation
+    public const STATE_OPEN        = 'open';         // Failing, reject requests
+    public const STATE_HALF_OPEN   = 'half_open'; // Testing if service recovered
 
     /**
      * Check if circuit is closed (allow request)
      *
-     * @param string $circuit_name Circuit identifier
+     * @param  string $circuit_name Circuit identifier
      * @return bool True if request should proceed
      */
     public static function canProceed(string $circuit_name): bool
@@ -41,7 +41,7 @@ class CircuitBreaker
             case self::STATE_OPEN:
                 // Check if timeout has passed
                 if (time() - $circuit['last_failure'] > $circuit['timeout']) {
-                    self::$circuits[$circuit_name]['state'] = self::STATE_HALF_OPEN;
+                    self::$circuits[ $circuit_name ]['state'] = self::STATE_HALF_OPEN;
                     return true; // Allow one test request
                 }
                 return false;
@@ -59,15 +59,15 @@ class CircuitBreaker
      */
     public static function recordSuccess(string $circuit_name): void
     {
-        if (!isset(self::$circuits[$circuit_name])) {
+        if (! isset(self::$circuits[ $circuit_name ])) {
             self::initCircuit($circuit_name);
         }
 
-        $circuit = &self::$circuits[$circuit_name];
+        $circuit = &self::$circuits[ $circuit_name ];
 
         if ($circuit['state'] === self::STATE_HALF_OPEN) {
             // Service recovered, close circuit
-            $circuit['state'] = self::STATE_CLOSED;
+            $circuit['state']         = self::STATE_CLOSED;
             $circuit['failure_count'] = 0;
         }
     }
@@ -79,12 +79,12 @@ class CircuitBreaker
      */
     public static function recordFailure(string $circuit_name): void
     {
-        if (!isset(self::$circuits[$circuit_name])) {
+        if (! isset(self::$circuits[ $circuit_name ])) {
             self::initCircuit($circuit_name);
         }
 
-        $circuit = &self::$circuits[$circuit_name];
-        $circuit['failure_count']++;
+        $circuit = &self::$circuits[ $circuit_name ];
+        ++$circuit['failure_count'];
         $circuit['last_failure'] = time();
 
         // Open circuit if failure threshold reached
@@ -96,15 +96,15 @@ class CircuitBreaker
     /**
      * Get circuit state
      *
-     * @param string $circuit_name Circuit identifier
+     * @param  string $circuit_name Circuit identifier
      * @return array Circuit state data
      */
     private static function getCircuitState(string $circuit_name): array
     {
-        if (!isset(self::$circuits[$circuit_name])) {
+        if (! isset(self::$circuits[ $circuit_name ])) {
             self::initCircuit($circuit_name);
         }
-        return self::$circuits[$circuit_name];
+        return self::$circuits[ $circuit_name ];
     }
 
     /**
@@ -114,13 +114,13 @@ class CircuitBreaker
      */
     private static function initCircuit(string $circuit_name): void
     {
-        self::$circuits[$circuit_name] = [
-            'state' => self::STATE_CLOSED,
-            'failure_count' => 0,
+        self::$circuits[ $circuit_name ] = array(
+            'state'             => self::STATE_CLOSED,
+            'failure_count'     => 0,
             'failure_threshold' => 5, // Open after 5 failures
-            'timeout' => 300, // 5 minutes timeout
-            'last_failure' => 0
-        ];
+            'timeout'           => 300, // 5 minutes timeout
+            'last_failure'      => 0,
+        );
     }
 
     /**

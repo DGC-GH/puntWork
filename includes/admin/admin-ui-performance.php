@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -24,48 +24,54 @@ use Puntwork\Utilities\CacheManager;
 function performance_metrics_page()
 {
     // Enqueue admin modern styles
-    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION);
 
     // Handle AJAX actions
     if (isset($_POST['action'])) {
         switch ($_POST['action']) {
             case 'clear_performance_logs':
                 check_admin_referer('performance_metrics_nonce');
-                                \Puntwork\Utilities\PerformanceMonitor::cleanupOldLogs(7); // Keep only 7 days
+                            \Puntwork\Utilities\PerformanceMonitor::cleanupOldLogs(7); // Keep only 7 days
                 add_settings_error('performance_metrics', 'logs_cleared', 'Performance logs cleared successfully.', 'success');
                 break;
         }
     }
 
     // Get performance data
-    $period = sanitize_text_field($_GET['period'] ?? '7days');
+    $period    = sanitize_text_field($_GET['period'] ?? '7days');
     $operation = sanitize_text_field($_GET['operation'] ?? '');
 
-    $performance_stats = get_performance_statistics($operation, $period === '7days' ? 7 : ($period === '30days' ? 30 : 90));
-    $current_snapshot = get_performance_snapshot();
+    $performance_stats = get_performance_statistics($operation, $period === '7days' ? 7 : ( $period === '30days' ? 30 : 90 ));
+    $current_snapshot  = get_performance_snapshot();
 
     // Get recent performance logs
     global $wpdb;
     $table_name = $wpdb->prefix . 'puntwork_performance_logs';
 
-    $where_clause = "WHERE created_at >= DATE_SUB(NOW(), INTERVAL " . ($period === '7days' ? 7 : ($period === '30days' ? 30 : 90)) . " DAY)";
+    $where_clause = 'WHERE created_at >= DATE_SUB(NOW(), INTERVAL ' . ( $period === '7days' ? 7 : ( $period === '30days' ? 30 : 90 ) ) . ' DAY)';
     if ($operation) {
-        $where_clause .= $wpdb->prepare(" AND operation = %s", $operation);
+        $where_clause .= $wpdb->prepare(' AND operation = %s', $operation);
     }
 
-    $recent_logs = $wpdb->get_results($wpdb->prepare("
+    $recent_logs = $wpdb->get_results(
+        $wpdb->prepare(
+            "
         SELECT * FROM $table_name
         $where_clause
         ORDER BY created_at DESC
         LIMIT 50
-    "));
+    "
+        )
+    );
 
     // Get operation types for filter
-    $operation_types = $wpdb->get_col("
+    $operation_types = $wpdb->get_col(
+        "
         SELECT DISTINCT operation FROM $table_name
         WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
         ORDER BY operation
-    ");
+    "
+    );
 
     ?>
     <div class="puntwork-admin">
@@ -150,7 +156,7 @@ function performance_metrics_page()
             </div>
 
             <!-- Performance Overview -->
-            <?php if (!empty($performance_stats)) : ?>
+            <?php if (! empty($performance_stats)) : ?>
             <div class="performance-section">
                 <h2><?php _e('Performance Overview', 'puntwork'); ?></h2>
                 <div class="performance-overview-grid">
@@ -272,8 +278,8 @@ function performance_metrics_page()
             <div class="performance-section">
                 <h2><?php _e('AI Feed Optimization', 'puntwork'); ?></h2>
                 <?php
-                $last_optimization = get_option('puntwork_last_optimization', []);
-                $recommendations = [];
+                $last_optimization = get_option('puntwork_last_optimization', array());
+                $recommendations   = array();
 
                 if (class_exists('\Puntwork\AI\FeedOptimizer')) {
                     $recommendations = \Puntwork\AI\FeedOptimizer::getOptimizationRecommendations();
@@ -287,11 +293,11 @@ function performance_metrics_page()
                     <span id="optimization-status"></span>
                 </div>
 
-                <?php if (!empty($last_optimization)) : ?>
+                <?php if (! empty($last_optimization)) : ?>
                     <div class="optimization-results">
                         <h3><?php _e('Last Optimization Results', 'puntwork'); ?></h3>
                         <p class="optimization-timestamp">
-                            <?php echo sprintf(__('Last run: %s', 'puntwork'), wp_date('M j, Y H:i', $last_optimization['timestamp'])); ?>
+                            <?php printf(__('Last run: %s', 'puntwork'), wp_date('M j, Y H:i', $last_optimization['timestamp'])); ?>
                         </p>
                         <div class="optimization-stats">
                             <div class="optimization-stat">
@@ -306,7 +312,7 @@ function performance_metrics_page()
                     </div>
                 <?php endif; ?>
 
-                <?php if (!empty($recommendations['feed_optimizations'])) : ?>
+                <?php if (! empty($recommendations['feed_optimizations'])) : ?>
                     <div class="optimization-recommendations">
                         <h3><?php _e('Feed Optimization Recommendations', 'puntwork'); ?></h3>
                         <?php foreach ($recommendations['feed_optimizations'] as $feed_rec) : ?>
@@ -316,7 +322,7 @@ function performance_metrics_page()
                                     <div class="recommendation-item recommendation-<?php echo esc_attr($rec['severity']); ?>">
                                         <span class="recommendation-type"><?php echo esc_html(ucfirst($rec['type'])); ?>:</span>
                                         <?php echo esc_html($rec['message']); ?>
-                                        <?php if (!empty($rec['suggested_action'])) : ?>
+                                        <?php if (! empty($rec['suggested_action'])) : ?>
                                             <br><small><em><?php echo esc_html($rec['suggested_action']); ?></em></small>
                                         <?php endif; ?>
                                     </div>
@@ -326,14 +332,14 @@ function performance_metrics_page()
                     </div>
                 <?php endif; ?>
 
-                <?php if (!empty($recommendations['global_optimizations'])) : ?>
+                <?php if (! empty($recommendations['global_optimizations'])) : ?>
                     <div class="optimization-recommendations">
                         <h3><?php _e('Global Optimization Recommendations', 'puntwork'); ?></h3>
                         <?php foreach ($recommendations['global_optimizations'] as $rec) : ?>
                             <div class="recommendation-item recommendation-<?php echo esc_attr($rec['severity']); ?>">
                                 <span class="recommendation-type"><?php echo esc_html(ucfirst($rec['type'])); ?>:</span>
                                 <?php echo esc_html($rec['message']); ?>
-                                <?php if (!empty($rec['suggested_action'])) : ?>
+                                <?php if (! empty($rec['suggested_action'])) : ?>
                                     <br><small><em><?php echo esc_html($rec['suggested_action']); ?></em></small>
                                 <?php endif; ?>
                                     </div>
@@ -552,7 +558,7 @@ function performance_metrics_page()
 
                     const data = {
                         action: 'run_feed_optimization',
-                        nonce: '<?php echo wp_create_nonce("puntwork_feed_optimization"); ?>'
+                        nonce: '<?php echo wp_create_nonce('puntwork_feed_optimization'); ?>'
                     };
 
                     fetch(ajaxurl, {
@@ -600,7 +606,7 @@ function performance_metrics_page()
 
                     const data = {
                         action: 'warm_performance_caches',
-                        nonce: '<?php echo wp_create_nonce("puntwork_performance_caches"); ?>'
+                        nonce: '<?php echo wp_create_nonce('puntwork_performance_caches'); ?>'
                     };
 
                     fetch(ajaxurl, {
@@ -642,7 +648,7 @@ function performance_metrics_page()
 
                     const data = {
                         action: 'reset_cache_analytics',
-                        nonce: '<?php echo wp_create_nonce("puntwork_cache_analytics"); ?>'
+                        nonce: '<?php echo wp_create_nonce('puntwork_cache_analytics'); ?>'
                     };
 
                     fetch(ajaxurl, {
@@ -688,7 +694,7 @@ function performance_metrics_page()
 
                     const data = {
                         action: 'run_memory_performance_test',
-                        nonce: '<?php echo wp_create_nonce("puntwork_memory_test"); ?>'
+                        nonce: '<?php echo wp_create_nonce('puntwork_memory_test'); ?>'
                     };
 
                     fetch(ajaxurl, {
@@ -728,7 +734,7 @@ function performance_metrics_page()
 
                     const data = {
                         action: 'clear_memory_pool',
-                        nonce: '<?php echo wp_create_nonce("puntwork_memory_pool"); ?>'
+                        nonce: '<?php echo wp_create_nonce('puntwork_memory_pool'); ?>'
                     };
 
                     fetch(ajaxurl, {
@@ -772,7 +778,7 @@ function performance_metrics_page()
 
                     const data = {
                         action: 'run_ml_feed_optimization',
-                        nonce: '<?php echo wp_create_nonce("puntwork_ml_optimization"); ?>'
+                        nonce: '<?php echo wp_create_nonce('puntwork_ml_optimization'); ?>'
                     };
 
                     fetch(ajaxurl, {
@@ -817,7 +823,7 @@ function performance_metrics_page()
 
                     const data = {
                         action: 'train_ml_models',
-                        nonce: '<?php echo wp_create_nonce("puntwork_train_models"); ?>'
+                        nonce: '<?php echo wp_create_nonce('puntwork_train_models'); ?>'
                     };
 
                     fetch(ajaxurl, {
@@ -1324,10 +1330,14 @@ function performance_metrics_page()
     <?php
 
     // Localize script data for ML AJAX nonces
-    wp_localize_script('puntwork-admin-performance', 'puntwork_ml', [
-        'nonce' => wp_create_nonce('puntwork_ml_optimization'),
-        'train_nonce' => wp_create_nonce('puntwork_train_models'),
-        'insights_nonce' => wp_create_nonce('puntwork_ml_insights'),
-        'ajax_url' => admin_url('admin-ajax.php')
-    ]);
+    wp_localize_script(
+        'puntwork-admin-performance',
+        'puntwork_ml',
+        array(
+            'nonce'          => wp_create_nonce('puntwork_ml_optimization'),
+            'train_nonce'    => wp_create_nonce('puntwork_train_models'),
+            'insights_nonce' => wp_create_nonce('puntwork_ml_insights'),
+            'ajax_url'       => admin_url('admin-ajax.php'),
+        )
+    );
 }

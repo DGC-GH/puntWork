@@ -9,7 +9,7 @@
  */
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -39,7 +39,7 @@ function create_crm_tables()
         KEY created_at (created_at)
     ) $charset_collate;";
 
-    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    include_once ABSPATH . 'wp-admin/includes/upgrade.php';
     dbDelta($sql);
 
     // CRM contact mapping table (for tracking external IDs)
@@ -63,7 +63,7 @@ function create_crm_tables()
 
     // Add default options
     add_option('puntwork_crm_auto_sync_applications', false);
-    add_option('puntwork_crm_default_platforms', []);
+    add_option('puntwork_crm_default_platforms', array());
     add_option('puntwork_crm_sync_contact_fields', true);
     add_option('puntwork_crm_create_deals', true);
 }
@@ -75,10 +75,10 @@ function drop_crm_tables()
 {
     global $wpdb;
 
-    $tables = [
+    $tables = array(
         $wpdb->prefix . 'puntwork_crm_sync_log',
-        $wpdb->prefix . 'puntwork_crm_contact_mapping'
-    ];
+        $wpdb->prefix . 'puntwork_crm_contact_mapping',
+    );
 
     foreach ($tables as $table) {
         $wpdb->query("DROP TABLE IF EXISTS $table");
@@ -113,9 +113,12 @@ function update_crm_schema()
 register_activation_hook(__FILE__, 'create_crm_tables');
 
 // Hook into plugin deactivation (optional cleanup)
-register_deactivation_hook(__FILE__, function () {
-    // Only drop tables in development/testing
-    if (defined('WP_DEBUG') && WP_DEBUG) {
-        drop_crm_tables();
+register_deactivation_hook(
+    __FILE__,
+    function () {
+        // Only drop tables in development/testing
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            drop_crm_tables();
+        }
     }
-});
+);

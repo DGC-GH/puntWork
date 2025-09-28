@@ -11,7 +11,7 @@
 namespace Puntwork\JobBoards;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -33,11 +33,11 @@ class GlassdoorBoard extends JobBoard
     /**
      * Constructor
      */
-    public function __construct(array $config = [])
+    public function __construct(array $config = array())
     {
-        $this->board_id = 'glassdoor';
+        $this->board_id   = 'glassdoor';
         $this->board_name = 'Glassdoor';
-        $this->api_url = 'https://api.glassdoor.com/api';
+        $this->api_url    = 'https://api.glassdoor.com/api';
 
         parent::__construct($config);
     }
@@ -63,51 +63,55 @@ class GlassdoorBoard extends JobBoard
      */
     public function isConfigured(): bool
     {
-        return parent::isConfigured() && !empty($this->partner_id) && !empty($this->partner_key);
+        return parent::isConfigured() && ! empty($this->partner_id) && ! empty($this->partner_key);
     }
 
     /**
      * Fetch jobs from Glassdoor
      */
-    public function fetchJobs(array $params = []): array
+    public function fetchJobs(array $params = array()): array
     {
-        if (!$this->isConfigured()) {
+        if (! $this->isConfigured()) {
             throw new \Exception('Glassdoor integration not properly configured');
         }
 
-        $default_params = [
-            'v' => '1',
-            'format' => 'json',
-            'action' => 'jobs',
-            'pn' => 1, // Page number
-            'ps' => 50, // Page size
-            't.p' => $this->partner_id,
-            't.k' => $this->partner_key,
-            'userip' => $this->getUserIP(),
-            'useragent' => $this->getUserAgent()
-        ];
+        $default_params = array(
+            'v'         => '1',
+            'format'    => 'json',
+            'action'    => 'jobs',
+            'pn'        => 1, // Page number
+            'ps'        => 50, // Page size
+            't.p'       => $this->partner_id,
+            't.k'       => $this->partner_key,
+            'userip'    => $this->getUserIP(),
+            'useragent' => $this->getUserAgent(),
+        );
 
         $search_params = array_merge($default_params, $params);
 
         try {
             $response = $this->makeApiRequest('', $search_params);
 
-            if (!isset($response['response']) || !isset($response['response']['job'])) {
-                return [];
+            if (! isset($response['response']) || ! isset($response['response']['job'])) {
+                return array();
             }
 
-            $jobs = [];
+            $jobs = array();
             foreach ($response['response']['job'] as $job_data) {
                 $jobs[] = $this->normalizeGlassdoorJob($job_data);
             }
 
             return $jobs;
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Glassdoor API error', PuntWorkLogger::CONTEXT_IMPORT, [
-                'error' => $e->getMessage(),
-                'params' => $search_params
-            ]);
-            return [];
+            PuntWorkLogger::error(
+                'Glassdoor API error',
+                PuntWorkLogger::CONTEXT_IMPORT,
+                array(
+                    'error'  => $e->getMessage(),
+                    'params' => $search_params,
+                )
+            );
+            return array();
         }
     }
 
@@ -124,9 +128,9 @@ class GlassdoorBoard extends JobBoard
     /**
      * Search jobs with filters
      */
-    public function searchJobs(array $filters = []): array
+    public function searchJobs(array $filters = array()): array
     {
-        $params = [];
+        $params = array();
 
         if (isset($filters['keywords'])) {
             $params['q'] = $filters['keywords'];
@@ -152,20 +156,20 @@ class GlassdoorBoard extends JobBoard
      */
     private function normalizeGlassdoorJob(array $jobData): array
     {
-        return [
-            'id' => $jobData['id'] ?? uniqid('glassdoor_'),
-            'title' => $jobData['jobTitle'] ?? '',
+        return array(
+            'id'          => $jobData['id'] ?? uniqid('glassdoor_'),
+            'title'       => $jobData['jobTitle'] ?? '',
             'description' => $jobData['jobDescription'] ?? '',
-            'company' => $jobData['company'] ?? '',
-            'location' => $jobData['location'] ?? '',
-            'salary' => $this->formatGlassdoorSalary($jobData),
-            'job_type' => $jobData['jobType'] ?? 'full-time',
-            'category' => $jobData['category'] ?? '',
-            'url' => $jobData['jobLink'] ?? '',
+            'company'     => $jobData['company'] ?? '',
+            'location'    => $jobData['location'] ?? '',
+            'salary'      => $this->formatGlassdoorSalary($jobData),
+            'job_type'    => $jobData['jobType'] ?? 'full-time',
+            'category'    => $jobData['category'] ?? '',
+            'url'         => $jobData['jobLink'] ?? '',
             'date_posted' => $jobData['postDate'] ?? date('Y-m-d'),
-            'source' => 'glassdoor',
-            'raw_data' => $jobData
-        ];
+            'source'      => 'glassdoor',
+            'raw_data'    => $jobData,
+        );
     }
 
     /**
@@ -177,9 +181,9 @@ class GlassdoorBoard extends JobBoard
 
         if (isset($jobData['payLow']) && isset($jobData['payHigh'])) {
             $currency = $jobData['currency'] ?? 'USD';
-            $low = $jobData['payLow'];
-            $high = $jobData['payHigh'];
-            $period = $jobData['payPeriod'] ?? 'yearly';
+            $low      = $jobData['payLow'];
+            $high     = $jobData['payHigh'];
+            $period   = $jobData['payPeriod'] ?? 'yearly';
 
             $salary = "{$currency} {$low} - {$high} per {$period}";
         }
@@ -192,9 +196,9 @@ class GlassdoorBoard extends JobBoard
      */
     private function getUserIP(): string
     {
-        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+        if (! empty($_SERVER['HTTP_CLIENT_IP'])) {
             return $_SERVER['HTTP_CLIENT_IP'];
-        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        } elseif (! empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
             return $_SERVER['HTTP_X_FORWARDED_FOR'];
         } else {
             return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';

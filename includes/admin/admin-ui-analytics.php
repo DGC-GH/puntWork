@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -21,11 +21,11 @@ if (!defined('ABSPATH')) {
 function import_analytics_page()
 {
     // Enqueue admin modern styles
-    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION);
 
     // Handle CSV export
     if (isset($_POST['export_csv']) && check_admin_referer('analytics_export_nonce')) {
-        $period = sanitize_text_field($_POST['export_period'] ?? '30days');
+        $period      = sanitize_text_field($_POST['export_period'] ?? '30days');
         $csv_content = ImportAnalytics::export_analytics_csv($period);
 
         if ($csv_content) {
@@ -44,47 +44,53 @@ function import_analytics_page()
     $period = sanitize_text_field($_GET['period'] ?? '30days');
 
     // Localize script with translations
-    wp_localize_script('puntwork-analytics', 'puntworkAnalyticsL10n', array(
-        'loading' => __('Loading analytics data...', 'puntwork'),
-        'errorLoading' => __('Error loading analytics data. Please try again.', 'puntwork'),
-        'retry' => __('Retry', 'puntwork'),
-        'overview' => __('Overview', 'puntwork'),
-        'totalImports' => __('Total Imports', 'puntwork'),
-        'jobsProcessed' => __('Jobs Processed', 'puntwork'),
-        'avgSuccessRate' => __('Avg Success Rate', 'puntwork'),
-        'avgDuration' => __('Avg Duration', 'puntwork'),
-        'performanceByTrigger' => __('Performance by Trigger Type', 'puntwork'),
-        'imports' => __('Imports', 'puntwork'),
-        'count' => __('Count:', 'puntwork'),
-        'avgDurationShort' => __('Avg Duration:', 'puntwork'),
-        'successRate' => __('Success Rate:', 'puntwork'),
-        'jobsProcessedShort' => __('Jobs Processed:', 'puntwork'),
-        'importTrends' => __('Import Trends', 'puntwork'),
-        'feedPerformance' => __('Feed Performance', 'puntwork'),
-        'avgFeedsProcessed' => __('Avg Feeds Processed', 'puntwork'),
-        'avgFeedsSuccessful' => __('Avg Feeds Successful', 'puntwork'),
-        'avgFeedsFailed' => __('Avg Feeds Failed', 'puntwork'),
-        'avgResponseTime' => __('Avg Response Time', 'puntwork'),
-        'jobProcessingStats' => __('Job Processing Statistics', 'puntwork'),
-        'published' => __('Published:', 'puntwork'),
-        'updated' => __('Updated:', 'puntwork'),
-        'duplicates' => __('Duplicates:', 'puntwork'),
-        'errorSummary' => __('Error Summary', 'puntwork'),
-        'importsHadErrors' => __('imports had errors', 'puntwork'),
-        'commonErrorMessages' => __('Common Error Messages:', 'puntwork'),
-        'importActivityByHour' => __('Import Activity by Hour', 'puntwork'),
-        'numberOfImports' => __('Number of Imports', 'puntwork'),
-        'jobsProcessedLabel' => __('Jobs Processed', 'puntwork')
-    ));
+    wp_localize_script(
+        'puntwork-analytics',
+        'puntworkAnalyticsL10n',
+        array(
+            'loading'              => __('Loading analytics data...', 'puntwork'),
+            'errorLoading'         => __('Error loading analytics data. Please try again.', 'puntwork'),
+            'retry'                => __('Retry', 'puntwork'),
+            'overview'             => __('Overview', 'puntwork'),
+            'totalImports'         => __('Total Imports', 'puntwork'),
+            'jobsProcessed'        => __('Jobs Processed', 'puntwork'),
+            'avgSuccessRate'       => __('Avg Success Rate', 'puntwork'),
+            'avgDuration'          => __('Avg Duration', 'puntwork'),
+            'performanceByTrigger' => __('Performance by Trigger Type', 'puntwork'),
+            'imports'              => __('Imports', 'puntwork'),
+            'count'                => __('Count:', 'puntwork'),
+            'avgDurationShort'     => __('Avg Duration:', 'puntwork'),
+            'successRate'          => __('Success Rate:', 'puntwork'),
+            'jobsProcessedShort'   => __('Jobs Processed:', 'puntwork'),
+            'importTrends'         => __('Import Trends', 'puntwork'),
+            'feedPerformance'      => __('Feed Performance', 'puntwork'),
+            'avgFeedsProcessed'    => __('Avg Feeds Processed', 'puntwork'),
+            'avgFeedsSuccessful'   => __('Avg Feeds Successful', 'puntwork'),
+            'avgFeedsFailed'       => __('Avg Feeds Failed', 'puntwork'),
+            'avgResponseTime'      => __('Avg Response Time', 'puntwork'),
+            'jobProcessingStats'   => __('Job Processing Statistics', 'puntwork'),
+            'published'            => __('Published:', 'puntwork'),
+            'updated'              => __('Updated:', 'puntwork'),
+            'duplicates'           => __('Duplicates:', 'puntwork'),
+            'errorSummary'         => __('Error Summary', 'puntwork'),
+            'importsHadErrors'     => __('imports had errors', 'puntwork'),
+            'commonErrorMessages'  => __('Common Error Messages:', 'puntwork'),
+            'importActivityByHour' => __('Import Activity by Hour', 'puntwork'),
+            'numberOfImports'      => __('Number of Imports', 'puntwork'),
+            'jobsProcessedLabel'   => __('Jobs Processed', 'puntwork'),
+        )
+    );
 
     // Check if this is an AJAX request for lazy loading
     if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
         $analytics_data = ImportAnalytics::get_analytics_data($period);
-        wp_send_json([
-            'success' => true,
-            'data' => $analytics_data,
-            'period' => $period
-        ]);
+        wp_send_json(
+            array(
+                'success' => true,
+                'data'    => $analytics_data,
+                'period'  => $period,
+            )
+        );
     }
 
     ?>

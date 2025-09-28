@@ -32,7 +32,7 @@ function process_batch_enhanced(array $batch_guids, array $batch_items, array &$
         // Get existing posts with enhanced caching
         $existing_by_guid = get_posts_by_guids_with_status_enhanced($batch_guids);
 
-        $post_ids_by_guid = [];
+        $post_ids_by_guid = array();
 
         // Handle duplicates with circuit breaker protection
         handle_batch_duplicates_enhanced($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
@@ -48,19 +48,19 @@ function process_batch_enhanced(array $batch_guids, array $batch_items, array &$
         checkpoint_performance(
             $monitor_id,
             'batch_completed',
-            [
-            'processed_count' => $processed_count,
-            'processing_time' => $processing_time,
-            'memory_peak' => memory_get_peak_usage(true)
-            ]
+            array(
+                'processed_count' => $processed_count,
+                'processing_time' => $processing_time,
+                'memory_peak'     => memory_get_peak_usage(true),
+            )
         );
 
         end_performance_monitoring($monitor_id);
 
-        return [
+        return array(
             'processed_count' => $processed_count,
-            'processing_time' => $processing_time
-        ];
+            'processing_time' => $processing_time,
+        );
     } catch (\Exception $e) {
         end_performance_monitoring($monitor_id);
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Enhanced batch processing failed: ' . $e->getMessage();
@@ -74,12 +74,12 @@ function process_batch_enhanced(array $batch_guids, array $batch_items, array &$
 function get_posts_by_guids_with_status_enhanced(array $guids): array
 {
     if (empty($guids)) {
-        return [];
+        return array();
     }
 
     // Use enhanced caching with batch operations
     $cache_key = 'posts_by_guid_' . md5(implode(',', $guids));
-    $cached = \Puntwork\Utilities\EnhancedCacheManager::getWithWarmup(
+    $cached    = \Puntwork\Utilities\EnhancedCacheManager::getWithWarmup(
         $cache_key,
         \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS,
         function () use ($guids) {
@@ -97,7 +97,7 @@ function get_posts_by_guids_with_status_enhanced(array $guids): array
 function handle_batch_duplicates_enhanced(array $batch_guids, array $existing_by_guid, array &$logs, int &$duplicates_drafted, array &$post_ids_by_guid): void
 {
     // Check circuit breaker for duplicate processing
-    if (!can_process_feed('duplicate_processing')) {
+    if (! can_process_feed('duplicate_processing')) {
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Duplicate processing circuit breaker open, skipping advanced deduplication';
         handle_duplicates($batch_guids, $existing_by_guid, $logs, $duplicates_drafted, $post_ids_by_guid);
         return;
@@ -122,7 +122,10 @@ function prepare_batch_metadata_enhanced(array $post_ids_by_guid): array
 
     $post_ids = array_values($post_ids_by_guid);
     if (empty($post_ids)) {
-        return ['last_updates' => [], 'hashes_by_post' => []];
+        return array(
+            'last_updates'   => array(),
+            'hashes_by_post' => array(),
+        );
     }
 
     // Use larger chunks for better performance
@@ -135,10 +138,10 @@ function prepare_batch_metadata_enhanced(array $post_ids_by_guid): array
     // Get import hashes with enhanced caching
     $hashes_by_post = get_cached_import_hashes_enhanced($post_ids, $post_id_chunks);
 
-    return [
-        'last_updates' => $last_updates,
-        'hashes_by_post' => $hashes_by_post
-    ];
+    return array(
+        'last_updates'   => $last_updates,
+        'hashes_by_post' => $hashes_by_post,
+    );
 }
 
 /**
@@ -154,20 +157,20 @@ function get_cached_last_updates_enhanced(array $post_ids, array $post_id_chunks
         return $cached;
     }
 
-    $last_updates = [];
+    $last_updates = array();
     foreach ($post_id_chunks as $chunk) {
         if (empty($chunk)) {
             continue;
         }
-        $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
-        $chunk_last = $wpdb->get_results(
+        $placeholders  = implode(',', array_fill(0, count($chunk), '%d'));
+        $chunk_last    = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_last_import_update' AND post_id IN ($placeholders)",
                 $chunk
             ),
             OBJECT_K
         );
-        $last_updates += (array)$chunk_last;
+        $last_updates += (array) $chunk_last;
     }
 
     // Cache for longer period with compression for large datasets
@@ -192,7 +195,7 @@ function get_cached_import_hashes_enhanced(array $post_ids, array $post_id_chunk
         return $cached;
     }
 
-    $hashes_by_post = [];
+    $hashes_by_post = array();
     foreach ($post_id_chunks as $chunk) {
         if (empty($chunk)) {
             continue;
@@ -206,7 +209,7 @@ function get_cached_import_hashes_enhanced(array $post_ids, array $post_id_chunk
             OBJECT_K
         );
         foreach ($chunk_hashes as $id => $obj) {
-            $hashes_by_post[$id] = $obj->meta_value;
+            $hashes_by_post[ $id ] = $obj->meta_value;
         }
     }
 
@@ -226,24 +229,24 @@ function get_cached_import_hashes_enhanced(array $post_ids, array $post_id_chunk
 function process_batch_items_with_memory_management(array $batch_guids, array $batch_items, array $batch_metadata, array $post_ids_by_guid, array &$logs, int &$updated, int &$published, int &$skipped): int
 {
     $processed_count = 0;
-    $batch_size = count($batch_guids);
+    $batch_size      = count($batch_guids);
 
     // Predict memory usage and adjust batch size if needed
     $memory_prediction = \Puntwork\Utilities\AdvancedMemoryManager::predictMemoryUsage($batch_size);
 
     if ($memory_prediction['will_exceed_limit']) {
         $recommended_size = $memory_prediction['recommended_batch_size'];
-        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Predicted memory exceedance, adjusting batch size from {$batch_size} to {$recommended_size}";
+        $logs[]           = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Predicted memory exceedance, adjusting batch size from {$batch_size} to {$recommended_size}";
 
         // Process in smaller chunks
-        $chunks = array_chunk($batch_guids, $recommended_size, true);
+        $chunks          = array_chunk($batch_guids, $recommended_size, true);
         $total_processed = 0;
 
         foreach ($chunks as $chunk_guids) {
-            $chunk_items = array_intersect_key($batch_items, array_flip($chunk_guids));
+            $chunk_items    = array_intersect_key($batch_items, array_flip($chunk_guids));
             $chunk_post_ids = array_intersect_key($post_ids_by_guid, array_flip($chunk_guids));
 
-            $chunk_processed = process_batch_chunk($chunk_guids, $chunk_items, $batch_metadata, $chunk_post_ids, $logs, $updated, $published, $skipped);
+            $chunk_processed  = process_batch_chunk($chunk_guids, $chunk_items, $batch_metadata, $chunk_post_ids, $logs, $updated, $published, $skipped);
             $total_processed += $chunk_processed;
 
             // Memory cleanup between chunks
@@ -262,8 +265,8 @@ function process_batch_items_with_memory_management(array $batch_guids, array $b
  */
 function process_batch_chunk(array $batch_guids, array $batch_items, array $batch_metadata, array $post_ids_by_guid, array &$logs, int &$updated, int &$published, int &$skipped): int
 {
-    $processed_count = 0;
-    $acf_fields = get_acf_fields();
+    $processed_count   = 0;
+    $acf_fields        = get_acf_fields();
     $zero_empty_fields = get_zero_empty_fields();
 
     process_batch_items($batch_guids, $batch_items, $batch_metadata['last_updates'], $batch_metadata['hashes_by_post'], $acf_fields, $zero_empty_fields, $post_ids_by_guid, $logs, $updated, $published, $skipped, $processed_count);

@@ -32,10 +32,12 @@ require_once __DIR__ . '/../queue/queue-ajax.php';
 function feeds_dashboard_page()
 {
     // Enqueue admin modern styles
-    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION);
 
     // Add inline styles as fallback
-    wp_add_inline_style('puntwork-admin-modern', '
+    wp_add_inline_style(
+        'puntwork-admin-modern',
+        '
         .puntwork-admin { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif; color: #1d1d1f; background-color: #f9f9f9; min-height: 100vh; }
         .puntwork-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
         .puntwork-header { background: #ffffff; border-bottom: 1px solid #e5e5e7; padding: 32px 0; margin-bottom: 48px; }
@@ -53,7 +55,8 @@ function feeds_dashboard_page()
         .puntwork-btn--success { background: linear-gradient(135deg, #34c759 0%, #28a745 100%); color: #ffffff; }
         .puntwork-btn--outline { background: transparent; color: #007aff; border: 1px solid #007aff; }
         .puntwork-btn__icon { margin-right: 6px; }
-    ');
+    '
+    );
 
     // Remove debug logging for security
     wp_enqueue_script('jquery');
@@ -77,7 +80,7 @@ function feeds_dashboard_page()
 function feed_config_page()
 {
     // Enqueue admin modern styles
-    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION);
 
     // Enqueue Sortable library for drag-and-drop
     wp_enqueue_script('jquery-ui-sortable');
@@ -182,7 +185,7 @@ function render_javascript_init()
 function jobs_dashboard_page()
 {
     // Enqueue admin modern styles
-    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION);
 
     error_log('[PUNTWORK] jobs_dashboard_page() called');
     wp_enqueue_script('jquery');
@@ -200,7 +203,7 @@ function jobs_dashboard_page()
 function puntwork_dashboard_page()
 {
     // Enqueue admin modern styles
-    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION);
 
     ?>
     <div class="wrap" style="max-width: 1200px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1d1d1f; padding: 0 20px;">
@@ -346,7 +349,7 @@ function puntwork_dashboard_page()
                                 navigator.serviceWorker.getRegistrations().then(registrations => {
                                     if (registrations.length > 0) {
                                         // PWA is registered, show manual install instructions
-                                        alert('<?php echo esc_js(__("To install puntWork Admin as a PWA, click the install icon in your browser\'s address bar or use the browser menu.", "puntwork")); ?>');
+                                        alert('<?php echo esc_js(__("To install puntWork Admin as a PWA, click the install icon in your browser\'s address bar or use the browser menu.", 'puntwork')); ?>');
                                     }
                                 });
                             }

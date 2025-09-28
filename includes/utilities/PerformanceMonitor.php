@@ -20,81 +20,81 @@ if (! defined('ABSPATH')) {
  */
 class PerformanceMonitor
 {
-    private static array $measurements = [];
-    private static array $checkpoints = [];
+    private static array $measurements = array();
+    private static array $checkpoints  = array();
 
     /**
      * Start performance monitoring
      *
-     * @param string $operation Operation name
+     * @param  string $operation Operation name
      * @return string Measurement ID
      */
     public static function start(string $operation): string
     {
-        $id = uniqid('perf_', true);
-        self::$measurements[$id] = [
-            'operation' => $operation,
-            'start_time' => microtime(true),
+        $id                        = uniqid('perf_', true);
+        self::$measurements[ $id ] = array(
+            'operation'    => $operation,
+            'start_time'   => microtime(true),
             'start_memory' => memory_get_usage(true),
-            'checkpoints' => []
-        ];
+            'checkpoints'  => array(),
+        );
         return $id;
     }
 
     /**
      * Add checkpoint to performance monitoring
      *
-     * @param string $id Measurement ID
+     * @param string $id         Measurement ID
      * @param string $checkpoint Checkpoint name
-     * @param array $data Additional data
+     * @param array  $data       Additional data
      */
-    public static function checkpoint(string $id, string $checkpoint, array $data = []): void
+    public static function checkpoint(string $id, string $checkpoint, array $data = array()): void
     {
-        if (!isset(self::$measurements[$id])) {
+        if (! isset(self::$measurements[ $id ])) {
             return;
         }
 
         $timestamp = microtime(true);
-        $elapsed = $timestamp - self::$measurements[$id]['start_time'];
-        $memory = memory_get_usage(true);
+        $elapsed   = $timestamp - self::$measurements[ $id ]['start_time'];
+        $memory    = memory_get_usage(true);
 
-        self::$measurements[$id]['checkpoints'][] = [
-            'name' => $checkpoint,
-            'time' => $timestamp,
+        self::$measurements[ $id ]['checkpoints'][] = array(
+            'name'    => $checkpoint,
+            'time'    => $timestamp,
             'elapsed' => $elapsed,
-            'memory' => $memory,
-            'data' => $data
-        ];
+            'memory'  => $memory,
+            'data'    => $data,
+        );
     }
 
     /**
      * End performance monitoring
      *
-     * @param string $id Measurement ID
+     * @param  string $id Measurement ID
      * @return array Performance data
      */
     public static function end(string $id): array
     {
-        if (!isset(self::$measurements[$id])) {
-            return [];
+        if (! isset(self::$measurements[ $id ])) {
+            return array();
         }
 
-        $measurement = self::$measurements[$id];
-        $end_time = microtime(true);
-        $end_memory = memory_get_usage(true);
+        $measurement = self::$measurements[ $id ];
+        $end_time    = microtime(true);
+        $end_memory  = memory_get_usage(true);
 
-        $result = [
-            'operation' => $measurement['operation'],
-            'start_time' => $measurement['start_time'],
-            'end_time' => $end_time,
-            'duration' => $end_time - $measurement['start_time'],
+        $result = array(
+            'operation'    => $measurement['operation'],
+            'start_time'   => $measurement['start_time'],
+            'end_time'     => $end_time,
+            'duration'     => $end_time - $measurement['start_time'],
             'start_memory' => $measurement['start_memory'],
-            'end_memory' => $end_memory,
-            'memory_used' => $end_memory - $measurement['start_memory'],
-            'checkpoints' => $measurement['checkpoints']
-        ];
+            'end_memory'   => $end_memory,
+            'memory_used'  => $end_memory - $measurement['start_memory'],
+            'checkpoints'  => $measurement['checkpoints'],
+        );
 
-        unset(self::$measurements[$id]);
+        unset(self::$measurements[ $id ]);
         return $result;
     }
 
@@ -105,45 +105,45 @@ class PerformanceMonitor
      */
     public static function snapshot(): array
     {
-        return [
-            'current_memory' => memory_get_usage(true),
-            'peak_memory' => memory_get_peak_usage(true),
+        return array(
+            'current_memory'      => memory_get_usage(true),
+            'peak_memory'         => memory_get_peak_usage(true),
             'active_measurements' => count(self::$measurements),
-            'measurements' => self::$measurements,
+            'measurements'        => self::$measurements,
             // Aliases for UI compatibility
-            'memory_current' => memory_get_usage(true),
-            'memory_peak' => memory_get_peak_usage(true),
-            'memory_limit' => ini_get('memory_limit'),
-            'php_version' => PHP_VERSION,
-            'wordpress_version' => function_exists('get_bloginfo') ? get_bloginfo('version') : null,
-            'load_average' => function_exists('sys_getloadavg') ? sys_getloadavg() : null,
-        ];
+            'memory_current'      => memory_get_usage(true),
+            'memory_peak'         => memory_get_peak_usage(true),
+            'memory_limit'        => ini_get('memory_limit'),
+            'php_version'         => PHP_VERSION,
+            'wordpress_version'   => function_exists('get_bloginfo') ? get_bloginfo('version') : null,
+            'load_average'        => function_exists('sys_getloadavg') ? sys_getloadavg() : null,
+        );
     }
 
     /**
      * Get performance statistics
      *
-     * @param string $operation Operation name
-     * @param int $days Number of days to look back
+     * @param  string $operation Operation name
+     * @param  int    $days      Number of days to look back
      * @return array Performance statistics
      */
     public static function getStatistics(string $operation = '', int $days = 30): array
     {
         // For now, return mock statistics
         // In a real implementation, this would query stored performance data
-        return [
-            'operation' => $operation,
+        return array(
+            'operation'          => $operation,
             'total_measurements' => 0,
-            'avg_duration' => 0,
-            'avg_memory' => 0,
-            'period_days' => $days
-        ];
+            'avg_duration'       => 0,
+            'avg_memory'         => 0,
+            'period_days'        => $days,
+        );
     }
 
     /**
      * Clean up old performance logs
      *
-     * @param int $days Days to keep
+     * @param  int $days Days to keep
      * @return bool Success
      */
     public static function cleanupOldLogs(int $days): bool

@@ -11,7 +11,7 @@
 namespace Puntwork\JobBoards;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -38,22 +38,22 @@ abstract class JobBoard
     /**
      * Authentication credentials
      */
-    protected array $credentials = [];
+    protected array $credentials = array();
 
     /**
      * Rate limiting settings
      */
-    protected array $rate_limits = [
+    protected array $rate_limits = array(
         'requests_per_minute' => 60,
-        'requests_per_hour' => 1000
-    ];
+        'requests_per_hour'   => 1000,
+    );
 
     /**
      * Constructor
      *
      * @param array $config Configuration array
      */
-    public function __construct(array $config = [])
+    public function __construct(array $config = array())
     {
         $this->configure($config);
     }
@@ -99,21 +99,21 @@ abstract class JobBoard
      */
     public function isConfigured(): bool
     {
-        return !empty($this->api_url) && !empty($this->credentials);
+        return ! empty($this->api_url) && ! empty($this->credentials);
     }
 
     /**
      * Fetch jobs from the job board
      *
-     * @param array $params Query parameters
+     * @param  array $params Query parameters
      * @return array Array of job data
      */
-    abstract public function fetchJobs(array $params = []): array;
+    abstract public function fetchJobs(array $params = array()): array;
 
     /**
      * Get job details by ID
      *
-     * @param string $jobId Job identifier
+     * @param  string $jobId Job identifier
      * @return array|null Job details or null if not found
      */
     abstract public function getJobDetails(string $jobId): ?array;
@@ -121,17 +121,17 @@ abstract class JobBoard
     /**
      * Search jobs with filters
      *
-     * @param array $filters Search filters
+     * @param  array $filters Search filters
      * @return array Array of matching jobs
      */
-    abstract public function searchJobs(array $filters = []): array;
+    abstract public function searchJobs(array $filters = array()): array;
 
     /**
      * Get supported search filters
      */
     public function getSupportedFilters(): array
     {
-        return [
+        return array(
             'keywords',
             'location',
             'category',
@@ -140,65 +140,65 @@ abstract class JobBoard
             'salary_min',
             'salary_max',
             'job_type',
-            'experience_level'
-        ];
+            'experience_level',
+        );
     }
 
     /**
      * Normalize job data to standard format
      *
-     * @param array $jobData Raw job data from API
+     * @param  array $jobData Raw job data from API
      * @return array Normalized job data
      */
     protected function normalizeJobData(array $jobData): array
     {
-        return [
-            'id' => $jobData['id'] ?? uniqid($this->board_id . '_'),
-            'title' => $jobData['title'] ?? '',
-            'description' => $jobData['description'] ?? '',
-            'company' => $jobData['company'] ?? '',
-            'location' => $jobData['location'] ?? '',
-            'salary' => $jobData['salary'] ?? '',
-            'job_type' => $jobData['job_type'] ?? 'full-time',
-            'category' => $jobData['category'] ?? '',
-            'url' => $jobData['url'] ?? '',
-            'date_posted' => $jobData['date_posted'] ?? date('Y-m-d'),
+        return array(
+            'id'                   => $jobData['id'] ?? uniqid($this->board_id . '_'),
+            'title'                => $jobData['title'] ?? '',
+            'description'          => $jobData['description'] ?? '',
+            'company'              => $jobData['company'] ?? '',
+            'location'             => $jobData['location'] ?? '',
+            'salary'               => $jobData['salary'] ?? '',
+            'job_type'             => $jobData['job_type'] ?? 'full-time',
+            'category'             => $jobData['category'] ?? '',
+            'url'                  => $jobData['url'] ?? '',
+            'date_posted'          => $jobData['date_posted'] ?? date('Y-m-d'),
             'application_deadline' => $jobData['application_deadline'] ?? null,
-            'requirements' => $jobData['requirements'] ?? '',
-            'benefits' => $jobData['benefits'] ?? '',
-            'contact_info' => $jobData['contact_info'] ?? '',
-            'source' => $this->board_id,
-            'raw_data' => $jobData
-        ];
+            'requirements'         => $jobData['requirements'] ?? '',
+            'benefits'             => $jobData['benefits'] ?? '',
+            'contact_info'         => $jobData['contact_info'] ?? '',
+            'source'               => $this->board_id,
+            'raw_data'             => $jobData,
+        );
     }
 
     /**
      * Make API request with rate limiting
      *
-     * @param string $endpoint API endpoint
-     * @param array $params Query parameters
-     * @param string $method HTTP method
+     * @param  string $endpoint API endpoint
+     * @param  array  $params   Query parameters
+     * @param  string $method   HTTP method
      * @return array Response data
      */
-    protected function makeApiRequest(string $endpoint, array $params = [], string $method = 'GET'): array
+    protected function makeApiRequest(string $endpoint, array $params = array(), string $method = 'GET'): array
     {
         // Rate limiting check
         $this->checkRateLimit();
 
         $url = $this->api_url . $endpoint;
 
-        if ($method === 'GET' && !empty($params)) {
+        if ($method === 'GET' && ! empty($params)) {
             $url .= '?' . http_build_query($params);
         }
 
-        $args = [
-            'method' => $method,
+        $args = array(
+            'method'  => $method,
             'timeout' => 30,
-            'headers' => $this->getHeaders()
-        ];
+            'headers' => $this->getHeaders(),
+        );
 
-        if ($method === 'POST' && !empty($params)) {
-            $args['body'] = json_encode($params);
+        if ($method === 'POST' && ! empty($params)) {
+            $args['body']                    = json_encode($params);
             $args['headers']['Content-Type'] = 'application/json';
         }
 
@@ -223,10 +223,10 @@ abstract class JobBoard
      */
     protected function getHeaders(): array
     {
-        return [
+        return array(
             'User-Agent' => 'PuntWork/' . PUNTWORK_VERSION . ' (WordPress Plugin)',
-            'Accept' => 'application/json'
-        ];
+            'Accept'     => 'application/json',
+        );
     }
 
     /**
@@ -235,16 +235,19 @@ abstract class JobBoard
     protected function checkRateLimit(): void
     {
         $transient_key = 'jobboard_ratelimit_' . $this->board_id;
-        $requests = get_transient($transient_key) ?: [];
+        $requests      = get_transient($transient_key) ?: array();
 
         // Clean old requests (older than 1 minute)
-        $requests = array_filter($requests, function ($timestamp) {
-            return $timestamp > (time() - 60);
-        });
+        $requests = array_filter(
+            $requests,
+            function ($timestamp) {
+                return $timestamp > ( time() - 60 );
+            }
+        );
 
         if (count($requests) >= $this->rate_limits['requests_per_minute']) {
             $oldest_request = min($requests);
-            $wait_time = 60 - (time() - $oldest_request);
+            $wait_time      = 60 - ( time() - $oldest_request );
             if ($wait_time > 0) {
                 sleep($wait_time);
             }

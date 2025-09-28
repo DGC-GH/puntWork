@@ -8,14 +8,14 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
 class PuntworkTracing
 {
-    private static ?object $tracerProvider = null;
-    private static ?object $tracer = null;
+    private static ?object $tracerProvider       = null;
+    private static ?object $tracer               = null;
     private static bool $opentelemetry_available = false;
 
     /**
@@ -23,10 +23,10 @@ class PuntworkTracing
      */
     private static function isOpenTelemetryAvailable(): bool
     {
-        if (!self::$opentelemetry_available) {
+        if (! self::$opentelemetry_available) {
             self::$opentelemetry_available = class_exists('OpenTelemetry\API\Trace\TracerInterface') &&
-                                           class_exists('OpenTelemetry\SDK\Trace\TracerProvider') &&
-                                           class_exists('OpenTelemetry\API\Trace\NoopTracer');
+                                            class_exists('OpenTelemetry\SDK\Trace\TracerProvider') &&
+                                            class_exists('OpenTelemetry\API\Trace\NoopTracer');
         }
         return self::$opentelemetry_available;
     }
@@ -40,18 +40,18 @@ class PuntworkTracing
             return; // Already initialized
         }
 
-        if (!self::isOpenTelemetryAvailable()) {
+        if (! self::isOpenTelemetryAvailable()) {
             // OpenTelemetry not available, disable tracing
             self::$tracerProvider = null;
-            self::$tracer = null;
+            self::$tracer         = null;
             return;
         }
 
         try {
             // Create console exporter for development
             $transportFactory = new \OpenTelemetry\SDK\Common\Export\Stream\StreamTransportFactory();
-            $transport = $transportFactory->create('php://stdout', 'application/json');
-            $exporter = new \OpenTelemetry\SDK\Trace\SpanExporter\ConsoleSpanExporter($transport);
+            $transport        = $transportFactory->create('php://stdout', 'application/json');
+            $exporter         = new \OpenTelemetry\SDK\Trace\SpanExporter\ConsoleSpanExporter($transport);
 
             // Create span processor
             $spanProcessor = new \OpenTelemetry\SDK\Trace\SpanProcessor\SimpleSpanProcessor($exporter);
@@ -64,7 +64,7 @@ class PuntworkTracing
         } catch (\Throwable $e) {
             // Disable tracing if initialization fails
             self::$tracerProvider = null;
-            self::$tracer = null;
+            self::$tracer         = null;
             error_log('PuntworkTracing initialization failed: ' . $e->getMessage());
         }
     }
@@ -83,13 +83,13 @@ class PuntworkTracing
                 return \OpenTelemetry\API\Trace\NoopTracer::getInstance();
             }
             // Return a dummy object if OpenTelemetry is not available
-            return new class {
+            return new class () {
                 public function spanBuilder($name)
                 {
-                    return new class {
+                    return new class () {
                         public function startSpan()
                         {
-                            return new class {
+                            return new class () {
                                 public function setAttribute($key, $value)
                                 {
                                     return $this;
@@ -119,10 +119,10 @@ class PuntworkTracing
     /**
      * Start a new span
      */
-    public static function startSpan(string $name, array $attributes = []): object
+    public static function startSpan(string $name, array $attributes = array()): object
     {
         $tracer = self::getTracer();
-        $span = $tracer->spanBuilder($name)->startSpan();
+        $span   = $tracer->spanBuilder($name)->startSpan();
 
         foreach ($attributes as $key => $value) {
             $span->setAttribute($key, $value);
@@ -134,10 +134,10 @@ class PuntworkTracing
     /**
      * Start an active span (automatically makes it current)
      */
-    public static function startActiveSpan(string $name, array $attributes = []): object
+    public static function startActiveSpan(string $name, array $attributes = array()): object
     {
         $tracer = self::getTracer();
-        $span = $tracer->spanBuilder($name)->startSpan();
+        $span   = $tracer->spanBuilder($name)->startSpan();
 
         foreach ($attributes as $key => $value) {
             $span->setAttribute($key, $value);
@@ -152,10 +152,10 @@ class PuntworkTracing
     /**
      * Create a child span
      */
-    public static function createChildSpan(string $name, array $attributes = []): object
+    public static function createChildSpan(string $name, array $attributes = array()): object
     {
         $tracer = self::getTracer();
-        $span = $tracer->spanBuilder($name)->startSpan();
+        $span   = $tracer->spanBuilder($name)->startSpan();
 
         foreach ($attributes as $key => $value) {
             $span->setAttribute($key, $value);

@@ -25,28 +25,28 @@ class AdvancedMemoryManager extends MemoryManager
      */
     public static function processJsonlStreaming(string $filePath, callable $processor, int $chunkSize = 1000): array
     {
-        $stats = [
+        $stats = array(
             'total_processed' => 0,
-            'memory_peaks' => [],
-            'processing_time' => 0
-        ];
+            'memory_peaks'    => array(),
+            'processing_time' => 0,
+        );
 
         $startTime = microtime(true);
 
-        if (!file_exists($filePath)) {
+        if (! file_exists($filePath)) {
             throw new \Exception("File not found: $filePath");
         }
 
         $handle = fopen($filePath, 'r');
-        if (!$handle) {
+        if (! $handle) {
             throw new \Exception("Cannot open file: $filePath");
         }
 
-        $buffer = [];
+        $buffer     = array();
         $lineNumber = 0;
 
-        while (($line = fgets($handle)) !== false) {
-            $lineNumber++;
+        while (( $line = fgets($handle) ) !== false) {
+            ++$lineNumber;
             $line = trim($line);
 
             if (empty($line)) {
@@ -62,10 +62,10 @@ class AdvancedMemoryManager extends MemoryManager
 
             // Process in chunks
             if (count($buffer) >= $chunkSize) {
-                $processed = $processor($buffer);
+                $processed                 = $processor($buffer);
                 $stats['total_processed'] += $processed;
-                $stats['memory_peaks'][] = memory_get_peak_usage(true);
-                $buffer = [];
+                $stats['memory_peaks'][]   = memory_get_peak_usage(true);
+                $buffer                    = array();
 
                 // Memory check and cleanup
                 self::checkAndCleanup();
@@ -73,16 +73,16 @@ class AdvancedMemoryManager extends MemoryManager
         }
 
         // Process remaining items
-        if (!empty($buffer)) {
-            $processed = $processor($buffer);
+        if (! empty($buffer)) {
+            $processed                 = $processor($buffer);
             $stats['total_processed'] += $processed;
-            $stats['memory_peaks'][] = memory_get_peak_usage(true);
+            $stats['memory_peaks'][]   = memory_get_peak_usage(true);
         }
 
         fclose($handle);
 
-        $stats['processing_time'] = microtime(true) - $startTime;
-                $stats['avg_memory_peak'] = !empty($stats['memory_peaks'])
+        $stats['processing_time']         = microtime(true) - $startTime;
+                $stats['avg_memory_peak'] = ! empty($stats['memory_peaks'])
             ? array_sum($stats['memory_peaks']) / count($stats['memory_peaks'])
             : 0;
 
@@ -94,12 +94,12 @@ class AdvancedMemoryManager extends MemoryManager
      */
     public static function readLargeFileChunk(string $filePath, int $offset, int $length): string
     {
-        if (!function_exists('fopen')) {
+        if (! function_exists('fopen')) {
             throw new \Exception('File functions not available');
         }
 
         $handle = fopen($filePath, 'r');
-        if (!$handle) {
+        if (! $handle) {
             throw new \Exception("Cannot open file: $filePath");
         }
 
@@ -118,12 +118,12 @@ class AdvancedMemoryManager extends MemoryManager
         float $memoryUsage,
         float $targetMemoryRatio = 0.7
     ): int {
-        $memoryLimit = self::getMemoryLimitBytes();
+        $memoryLimit  = self::getMemoryLimitBytes();
         $currentRatio = $memoryUsage / $memoryLimit;
 
         if ($currentRatio > $targetMemoryRatio) {
             // Reduce batch size
-            $newSize = max(1, (int)($currentBatchSize * 0.8));
+            $newSize = max(1, (int) ( $currentBatchSize * 0.8 ));
         } elseif ($currentRatio < $targetMemoryRatio * 0.5) {
             // Can increase batch size
             $newSize = min($currentBatchSize * 2, 10000); // Cap at 10k
@@ -138,26 +138,26 @@ class AdvancedMemoryManager extends MemoryManager
     /**
      * Memory pool for reusable objects
      */
-    private static $objectPool = [];
+    private static $objectPool = array();
 
     public static function getFromPool(string $className, ...$args)
     {
         $key = $className . '_' . md5(serialize($args));
 
-        if (isset(self::$objectPool[$key])) {
-            return self::$objectPool[$key];
+        if (isset(self::$objectPool[ $key ])) {
+            return self::$objectPool[ $key ];
         }
 
         // Create new instance
-        $instance = new $className(...$args);
-        self::$objectPool[$key] = $instance;
+        $instance                 = new $className(...$args);
+        self::$objectPool[ $key ] = $instance;
 
         return $instance;
     }
 
     public static function clearPool(): void
     {
-        self::$objectPool = [];
+        self::$objectPool = array();
     }
 
     /**
@@ -167,7 +167,7 @@ class AdvancedMemoryManager extends MemoryManager
     {
         $memoryUsage = memory_get_usage(true);
         $memoryLimit = self::getMemoryLimitBytes();
-        $ratio = $memoryUsage / $memoryLimit;
+        $ratio       = $memoryUsage / $memoryLimit;
 
         if ($ratio > 0.85) {
             // Aggressive cleanup
@@ -187,21 +187,21 @@ class AdvancedMemoryManager extends MemoryManager
      */
     public static function predictMemoryUsage(int $batchSize, int $itemSizeEstimate = 1024): array
     {
-        $baseMemory = memory_get_usage(true);
+        $baseMemory           = memory_get_usage(true);
         $estimatedBatchMemory = $batchSize * $itemSizeEstimate;
-        $safetyBuffer = 50 * 1024 * 1024; // 50MB safety buffer
+        $safetyBuffer         = 50 * 1024 * 1024; // 50MB safety buffer
 
         $predictedPeak = $baseMemory + $estimatedBatchMemory + $safetyBuffer;
-        $memoryLimit = self::getMemoryLimitBytes();
+        $memoryLimit   = self::getMemoryLimitBytes();
 
-        return [
-            'predicted_peak' => $predictedPeak,
-            'memory_limit' => $memoryLimit,
-            'will_exceed_limit' => $predicted_peak > $memoryLimit,
+        return array(
+            'predicted_peak'         => $predictedPeak,
+            'memory_limit'           => $memoryLimit,
+            'will_exceed_limit'      => $predicted_peak > $memoryLimit,
             'recommended_batch_size' => $predicted_peak > $memoryLimit ?
-                max(1, (int)($batchSize * ($memoryLimit - $baseMemory - $safetyBuffer) / $estimatedBatchMemory)) :
-                $batchSize
-        ];
+                max(1, (int) ( $batchSize * ( $memoryLimit - $baseMemory - $safetyBuffer ) / $estimatedBatchMemory )) :
+                $batchSize,
+        );
     }
 
     /**

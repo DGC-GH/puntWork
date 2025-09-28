@@ -46,7 +46,7 @@ class CacheManager
                 try {
                     $test_result = wp_cache_set('puntwork_cache_test', 'test_value', 'puntwork_test', 60);
                     if ($test_result) {
-                        $redis_available = (wp_cache_get('puntwork_cache_test', 'puntwork_test') === 'test_value');
+                        $redis_available = ( wp_cache_get('puntwork_cache_test', 'puntwork_test') === 'test_value' );
                         wp_cache_delete('puntwork_cache_test', 'puntwork_test');
                     } else {
                         $redis_available = false;
@@ -63,8 +63,8 @@ class CacheManager
     /**
      * Get cached data with Redis support
      *
-     * @param string $key Cache key
-     * @param string $group Cache group
+     * @param  string $key   Cache key
+     * @param  string $group Cache group
      * @return mixed Cached data or false
      */
     public static function get(string $key, string $group = '')
@@ -85,10 +85,10 @@ class CacheManager
     /**
      * Set cached data with Redis support
      *
-     * @param string $key Cache key
-     * @param mixed $data Data to cache
-     * @param string $group Cache group
-     * @param int $expiration Expiration time in seconds
+     * @param  string $key        Cache key
+     * @param  mixed  $data       Data to cache
+     * @param  string $group      Cache group
+     * @param  int    $expiration Expiration time in seconds
      * @return bool True on success
      */
     public static function set(string $key, $data, string $group = '', int $expiration = 3600): bool
@@ -109,8 +109,8 @@ class CacheManager
     /**
      * Delete cached data
      *
-     * @param string $key Cache key
-     * @param string $group Cache group
+     * @param  string $key   Cache key
+     * @param  string $group Cache group
      * @return bool True on success
      */
     public static function delete(string $key, string $group = ''): bool
@@ -128,7 +128,7 @@ class CacheManager
     /**
      * Clear all cache in a group
      *
-     * @param string $group Cache group
+     * @param  string $group Cache group
      * @return bool True on success
      */
     public static function clearGroup(string $group): bool
@@ -142,10 +142,12 @@ class CacheManager
         // Clear transients with group prefix
         global $wpdb;
         $transient_prefix = '_transient_' . $group . '_';
-        $wpdb->query($wpdb->prepare(
-            "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
-            $transient_prefix . '%'
-        ));
+        $wpdb->query(
+            $wpdb->prepare(
+                "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+                $transient_prefix . '%'
+            )
+        );
 
         return true;
     }
@@ -157,10 +159,10 @@ class CacheManager
      */
     public static function getStats(): array
     {
-        return [
-            'redis_available' => self::isRedisAvailable(),
-            'cache_groups' => [self::GROUP_MAPPINGS, self::GROUP_ANALYTICS],
+        return array(
+            'redis_available'          => self::isRedisAvailable(),
+            'cache_groups'             => array( self::GROUP_MAPPINGS, self::GROUP_ANALYTICS ),
             'wp_cache_supports_groups' => function_exists('wp_cache_supports') ? wp_cache_supports('groups') : false,
-        ];
+        );
     }
 }

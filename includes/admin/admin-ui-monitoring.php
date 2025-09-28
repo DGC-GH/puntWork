@@ -21,20 +21,24 @@ if (! defined('ABSPATH')) {
 function system_monitoring_page()
 {
     // Check user capabilities
-    if (!current_user_can('manage_options')) {
+    if (! current_user_can('manage_options')) {
         wp_die(__('You do not have sufficient permissions to access this page.'));
     }
 
     // Enqueue monitoring scripts and styles
-    wp_enqueue_style('puntwork-monitoring', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
-    wp_enqueue_script('puntwork-monitoring', PUNTWORK_URL . 'assets/js/puntwork-logger.js', ['jquery'], PUNTWORK_VERSION, true);
-    wp_enqueue_script('chart-js', 'https://cdn.jsdelivr.net/npm/chart.js', [], '4.4.0', true);
+    wp_enqueue_style('puntwork-monitoring', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION);
+    wp_enqueue_script('puntwork-monitoring', PUNTWORK_URL . 'assets/js/puntwork-logger.js', array( 'jquery' ), PUNTWORK_VERSION, true);
+    wp_enqueue_script('chart-js', 'https://cdn.jsdelivr.net/npm/chart.js', array(), '4.4.0', true);
 
-    wp_localize_script('puntwork-monitoring', 'puntworkMonitoring', [
-        'ajaxurl' => admin_url('admin-ajax.php'),
-        'nonce' => wp_create_nonce('puntwork_monitoring_nonce'),
-        'refresh_interval' => 30000, // 30 seconds
-    ]);
+    wp_localize_script(
+        'puntwork-monitoring',
+        'puntworkMonitoring',
+        array(
+            'ajaxurl'          => admin_url('admin-ajax.php'),
+            'nonce'            => wp_create_nonce('puntwork_monitoring_nonce'),
+            'refresh_interval' => 30000, // 30 seconds
+        )
+    );
 
     ?>
     <div class="wrap puntwork-admin">

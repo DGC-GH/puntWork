@@ -21,7 +21,7 @@ if (! defined('ABSPATH')) {
 function api_settings_page()
 {
     // Enqueue admin modern styles
-    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION);
 
     // Handle form submissions
     if (isset($_POST['regenerate_api_key']) && check_admin_referer('puntwork_api_settings')) {
@@ -29,7 +29,7 @@ function api_settings_page()
         echo '<div class="notice notice-success"><p>' . __('API key regenerated successfully!', 'puntwork') . '</p></div>';
     }
 
-    $api_key = get_or_create_api_key();
+    $api_key  = get_or_create_api_key();
     $site_url = get_site_url();
 
     ?>
@@ -51,7 +51,7 @@ function api_settings_page()
                 <form method="post" style="margin-top: 20px;">
                     <?php wp_nonce_field('puntwork_api_settings'); ?>
                     <input type="submit" name="regenerate_api_key" value="<?php esc_attr_e('Regenerate API Key', 'puntwork'); ?>" class="puntwork-btn puntwork-btn--danger"
-                           onclick="return confirm('<?php esc_js(__('Are you sure? This will invalidate the current API key.', 'puntwork')); ?>');">
+                            onclick="return confirm('<?php esc_js(__('Are you sure? This will invalidate the current API key.', 'puntwork')); ?>');">
                 </form>
 
                 <h3><?php _e('API Endpoints', 'puntwork'); ?></h3>
@@ -68,9 +68,9 @@ function api_settings_page()
 
                     <h5><?php _e('Example cURL:', 'puntwork'); ?></h5>
                     <pre><code>curl -X POST "<?php echo esc_url($site_url); ?>/wp-json/puntwork/v1/trigger-import" \
-  -d "api_key=<?php echo esc_attr($api_key); ?>" \
-  -d "force=false" \
-  -d "test_mode=false"</code></pre>
+    -d "api_key=<?php echo esc_attr($api_key); ?>" \
+    -d "force=false" \
+    -d "test_mode=false"</code></pre>
 
                     <h4><?php _e('Get Import Status', 'puntwork'); ?></h4>
                     <code>GET <?php echo esc_url($site_url); ?>/wp-json/puntwork/v1/import-status</code>

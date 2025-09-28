@@ -8,12 +8,12 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
 // Only run if explicitly requested
-if (!isset($_GET['test_scheduling'])) {
+if (! isset($_GET['test_scheduling'])) {
     return;
 }
 

@@ -22,14 +22,16 @@ if (! defined('ABSPATH')) {
  */
 function render_feed_config_ui(): void
 {
-    $feeds = get_feeds();
-    $feed_posts = get_posts([
-        'post_type' => 'job-feed',
-        'post_status' => 'publish',
-        'posts_per_page' => -1,
-        'orderby' => 'menu_order',
-        'order' => 'ASC'
-    ]);
+    $feeds      = get_feeds();
+    $feed_posts = get_posts(
+        array(
+            'post_type'      => 'job-feed',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'orderby'        => 'menu_order',
+            'order'          => 'ASC',
+        )
+    );
 
     ?>
     <div class="puntwork-admin">
@@ -58,10 +60,11 @@ function render_feed_config_ui(): void
                                 </button>
                             </div>
                         <?php else : ?>
-                            <?php foreach ($feed_posts as $post) :
-                                $feed_url = get_post_meta($post->ID, 'feed_url', true);
-                                $is_enabled = get_post_meta($post->ID, 'feed_enabled', true) !== '0'; // Default to enabled
-                                $last_import = get_post_meta($post->ID, 'last_import', true);
+                            <?php
+                            foreach ($feed_posts as $post) :
+                                $feed_url     = get_post_meta($post->ID, 'feed_url', true);
+                                $is_enabled   = get_post_meta($post->ID, 'feed_enabled', true) !== '0'; // Default to enabled
+                                $last_import  = get_post_meta($post->ID, 'last_import', true);
                                 $import_count = get_post_meta($post->ID, 'import_count', true) ?: 0;
                                 ?>
                                 <div class="feed-item" data-feed-id="<?php echo esc_attr($post->ID); ?>">
@@ -112,7 +115,7 @@ function render_feed_config_ui(): void
                         <?php endif; ?>
                     </div>
 
-                    <?php if (!empty($feed_posts)) : ?>
+                    <?php if (! empty($feed_posts)) : ?>
                         <div class="feed-actions" style="margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--color-gray-200);">
                             <button id="add-new-feed" class="puntwork-btn puntwork-btn--primary">
                                 <i class="fas fa-plus puntwork-btn__icon"></i>Add New Feed
@@ -152,7 +155,7 @@ function render_feed_config_ui(): void
                                 $enabled_count = 0;
                                 foreach ($feed_posts as $post) {
                                     if (get_post_meta($post->ID, 'feed_enabled', true) !== '0') {
-                                        $enabled_count++;
+                                        ++$enabled_count;
                                     }
                                 }
                                 echo $enabled_count;
@@ -183,14 +186,14 @@ function render_feed_config_ui(): void
                             </div>
                             <div class="puntwork-stat__value">
                                 <?php
-                                $last_import_times = [];
+                                $last_import_times = array();
                                 foreach ($feed_posts as $post) {
                                     $last_import = get_post_meta($post->ID, 'last_import', true);
                                     if ($last_import) {
                                         $last_import_times[] = strtotime($last_import);
                                     }
                                 }
-                                if (!empty($last_import_times)) {
+                                if (! empty($last_import_times)) {
                                     $most_recent = max($last_import_times);
                                     echo esc_html(date('M j', $most_recent));
                                 } else {
@@ -711,7 +714,7 @@ function render_feed_config_ui(): void
                     feed_url: url,
                     feed_slug: slug,
                     feed_enabled: enabled,
-                    nonce: '<?php echo wp_create_nonce("puntwork_feed_config"); ?>'
+                    nonce: '<?php echo wp_create_nonce('puntwork_feed_config'); ?>'
                 };
 
                 // Make AJAX request
@@ -738,7 +741,7 @@ function render_feed_config_ui(): void
                     action: 'puntwork_toggle_feed',
                     feed_id: feedId,
                     enabled: enabled,
-                    nonce: '<?php echo wp_create_nonce("puntwork_feed_config"); ?>'
+                    nonce: '<?php echo wp_create_nonce('puntwork_feed_config'); ?>'
                 };
 
                 $.post(ajaxurl, data)
@@ -760,7 +763,7 @@ function render_feed_config_ui(): void
                 const data = {
                     action: 'puntwork_delete_feed',
                     feed_id: feedId,
-                    nonce: '<?php echo wp_create_nonce("puntwork_feed_config"); ?>'
+                    nonce: '<?php echo wp_create_nonce('puntwork_feed_config'); ?>'
                 };
 
                 $.post(ajaxurl, data)
@@ -790,7 +793,7 @@ function render_feed_config_ui(): void
                 const data = {
                     action: 'puntwork_save_feed_order',
                     feed_order: feedOrder,
-                    nonce: '<?php echo wp_create_nonce("puntwork_feed_config"); ?>'
+                    nonce: '<?php echo wp_create_nonce('puntwork_feed_config'); ?>'
                 };
 
                 $('#save-feed-order').prop('disabled', true).text('Saving...');

@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -35,7 +35,7 @@ class PuntworkSocialMediaDb
      */
     public static function init(): void
     {
-        add_action('admin_init', [__CLASS__, 'checkDbVersion']);
+        add_action('admin_init', array( __CLASS__, 'checkDbVersion' ));
     }
 
     /**
@@ -76,14 +76,18 @@ class PuntworkSocialMediaDb
             KEY scheduled_time (scheduled_time)
         ) $charset_collate;";
 
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        include_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
 
         // Log successful table creation
-        PuntWorkLogger::info('Social media database tables created', PuntWorkLogger::CONTEXT_SYSTEM, [
-            'table' => $table_name,
-            'version' => self::DB_VERSION
-        ]);
+        PuntWorkLogger::info(
+            'Social media database tables created',
+            PuntWorkLogger::CONTEXT_SYSTEM,
+            array(
+                'table'   => $table_name,
+                'version' => self::DB_VERSION,
+            )
+        );
     }
 
     /**
@@ -99,9 +103,13 @@ class PuntworkSocialMediaDb
 
         delete_option(self::DB_VERSION_OPTION);
 
-        PuntWorkLogger::info('Social media database tables dropped', PuntWorkLogger::CONTEXT_SYSTEM, [
-            'table' => $table_name
-        ]);
+        PuntWorkLogger::info(
+            'Social media database tables dropped',
+            PuntWorkLogger::CONTEXT_SYSTEM,
+            array(
+                'table' => $table_name,
+            )
+        );
     }
 
     /**
@@ -111,11 +119,11 @@ class PuntworkSocialMediaDb
     {
         global $wpdb;
 
-        $tables = [
-            'posts' => $wpdb->prefix . 'puntwork_social_posts'
-        ];
+        $tables = array(
+            'posts' => $wpdb->prefix . 'puntwork_social_posts',
+        );
 
-        return $tables[$table] ?? '';
+        return $tables[ $table ] ?? '';
     }
 }
 

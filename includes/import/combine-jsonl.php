@@ -18,27 +18,27 @@ if (! defined('ABSPATH')) {
 function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs)
 {
     // Ensure output directory exists
-    if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
+    if (! wp_mkdir_p($output_dir) || ! is_writable($output_dir)) {
         throw new \Exception('Feeds directory not writable');
     }
 
     $combined_json_path = $output_dir . 'combined-jobs.jsonl';
-    $combined_gz_path = $combined_json_path . '.gz';
-    $combined_handle = fopen($combined_json_path, 'w');
-    if (!$combined_handle) {
+    $combined_gz_path   = $combined_json_path . '.gz';
+    $combined_handle    = fopen($combined_json_path, 'w');
+    if (! $combined_handle) {
         throw new \Exception('Cant open combined JSONL');
     }
 
-    $seen_guids = [];
+    $seen_guids      = array();
     $duplicate_count = 0;
-    $unique_count = 0;
+    $unique_count    = 0;
 
     foreach ($feeds as $feed_key => $url) {
         $feed_json_path = $output_dir . $feed_key . '.jsonl';
         if (file_exists($feed_json_path)) {
             $feed_handle = fopen($feed_json_path, 'r');
             if ($feed_handle) {
-                while (($line = fgets($feed_handle)) !== false) {
+                while (( $line = fgets($feed_handle) ) !== false) {
                     $line = trim($line);
                     if (empty($line)) {
                         continue;
@@ -55,20 +55,20 @@ function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs)
                     if (empty($guid)) {
                         // No GUID, include but log
                         fwrite($combined_handle, $line . "\n");
-                        $unique_count++;
+                        ++$unique_count;
                         continue;
                     }
 
                     // Check for duplicates
-                    if (isset($seen_guids[$guid])) {
-                        $duplicate_count++;
+                    if (isset($seen_guids[ $guid ])) {
+                        ++$duplicate_count;
                         continue; // Skip duplicate
                     }
 
                     // New unique job
-                    $seen_guids[$guid] = true;
+                    $seen_guids[ $guid ] = true;
                     fwrite($combined_handle, $line . "\n");
-                    $unique_count++;
+                    ++$unique_count;
                 }
                 fclose($feed_handle);
             }

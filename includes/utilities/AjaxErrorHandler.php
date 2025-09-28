@@ -23,37 +23,41 @@ class AjaxErrorHandler
     /**
      * Send JSON error response with proper formatting
      *
-     * @param string|WP_Error $error Error message or WP_Error object
-     * @param array $additional_data Additional data to include
+     * @param string|WP_Error $error           Error message or WP_Error object
+     * @param array           $additional_data Additional data to include
      */
-    public static function sendError($error, array $additional_data = [])
+    public static function sendError($error, array $additional_data = array())
     {
-        $error_data = [
-            'success' => false,
-            'timestamp' => current_time('mysql')
-        ];
+        $error_data = array(
+            'success'   => false,
+            'timestamp' => current_time('mysql'),
+        );
 
         if (is_wp_error($error)) {
-            $error_data['error'] = [
-                'code' => $error->get_error_code(),
+            $error_data['error'] = array(
+                'code'    => $error->get_error_code(),
                 'message' => $error->get_error_message(),
-                'data' => $error->get_error_data()
-            ];
+                'data'    => $error->get_error_data(),
+            );
         } else {
-            $error_data['error'] = [
-                'code' => 'general_error',
-                'message' => $error
-            ];
+            $error_data['error'] = array(
+                'code'    => 'general_error',
+                'message' => $error,
+            );
         }
 
         $error_data = array_merge($error_data, $additional_data);
 
         // Log error for security monitoring
         if (is_wp_error($error)) {
-            PuntWorkLogger::error('AJAX Error Response: ' . $error->get_error_message(), PuntWorkLogger::CONTEXT_AJAX, [
-                'error_code' => $error->get_error_code(),
-                'error_data' => $error->get_error_data()
-            ]);
+            PuntWorkLogger::error(
+                'AJAX Error Response: ' . $error->get_error_message(),
+                PuntWorkLogger::CONTEXT_AJAX,
+                array(
+                    'error_code' => $error->get_error_code(),
+                    'error_data' => $error->get_error_data(),
+                )
+            );
         } else {
             PuntWorkLogger::error('AJAX Error Response: ' . $error, PuntWorkLogger::CONTEXT_AJAX);
         }
@@ -64,15 +68,15 @@ class AjaxErrorHandler
     /**
      * Send JSON success response with proper formatting
      *
-     * @param mixed $data Response data
+     * @param mixed $data            Response data
      * @param array $additional_data Additional data to include
      */
-    public static function sendSuccess($data = null, array $additional_data = [])
+    public static function sendSuccess($data = null, array $additional_data = array())
     {
-        $response_data = [
-            'success' => true,
-            'timestamp' => current_time('mysql')
-        ];
+        $response_data = array(
+            'success'   => true,
+            'timestamp' => current_time('mysql'),
+        );
 
         if ($data !== null) {
             $response_data['data'] = $data;

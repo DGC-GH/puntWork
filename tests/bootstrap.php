@@ -393,7 +393,8 @@ if (!function_exists('handle_get_import_status')) {
             'success' => true,
             'status' => 'idle',
             'data' => []
-            ], 200
+            ],
+            200
         );
     }
 }
@@ -800,7 +801,8 @@ if (!class_exists('WP_Query')) {
             global $mock_wp_posts;
             // Filter posts by args
             $posts = array_filter(
-                $mock_wp_posts, function ($post) use ($args) {
+                $mock_wp_posts,
+                function ($post) use ($args) {
                     if (isset($args['post_type']) && $post->post_type !== $args['post_type']) {
                         return false;
                     }

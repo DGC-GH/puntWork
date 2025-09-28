@@ -13,7 +13,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -27,13 +27,13 @@ class MultiSiteAdminUI
      */
     public static function init(): void
     {
-        if (!is_multisite()) {
+        if (! is_multisite()) {
             return;
         }
 
-        add_action('admin_menu', [self::class, 'addAdminMenu']);
-        add_action('admin_enqueueScripts', [self::class, 'enqueueScripts']);
-        add_action('wp_ajax_puntwork_network_test_connection', [self::class, 'ajaxTestConnection']);
+        add_action('admin_menu', array( self::class, 'addAdminMenu' ));
+        add_action('admin_enqueueScripts', array( self::class, 'enqueueScripts' ));
+        add_action('wp_ajax_puntwork_network_test_connection', array( self::class, 'ajaxTestConnection' ));
     }
 
     /**
@@ -47,7 +47,7 @@ class MultiSiteAdminUI
             __('Network', 'puntwork'),
             'manage_options',
             'puntwork-network',
-            [self::class, 'renderAdminPage']
+            array( self::class, 'renderAdminPage' )
         );
     }
 
@@ -60,27 +60,31 @@ class MultiSiteAdminUI
             return;
         }
 
-        wp_enqueue_style('puntwork-network-admin', plugins_url('assets/css/network-admin.css', dirname(__FILE__, 2)), [], '0.0.4');
-        wp_enqueue_script('puntwork-network-admin', plugins_url('assets/js/network-admin.js', dirname(__FILE__, 2)), ['jquery'], '0.0.4', true);
+        wp_enqueue_style('puntwork-network-admin', plugins_url('assets/css/network-admin.css', dirname(__DIR__, 1)), array(), '0.0.4');
+        wp_enqueue_script('puntwork-network-admin', plugins_url('assets/js/network-admin.js', dirname(__DIR__, 1)), array( 'jquery' ), '0.0.4', true);
 
-        wp_localize_script('puntwork-network-admin', 'puntworkNetwork', [
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('puntwork_network_admin'),
-            'sync_nonce' => wp_create_nonce('puntwork_network_sync'),
-            'stats_nonce' => wp_create_nonce('puntwork_network_stats'),
-            'distribute_nonce' => wp_create_nonce('puntwork_network_distribute'),
-            'strings' => [
-                'syncing' => __('Syncing network data...', 'puntwork'),
-                'sync_complete' => __('Network sync completed', 'puntwork'),
-                'sync_failed' => __('Network sync failed', 'puntwork'),
-                'testing_connection' => __('Testing connection...', 'puntwork'),
-                'connection_success' => __('Connection successful', 'puntwork'),
-                'connection_failed' => __('Connection failed', 'puntwork'),
-                'distributing' => __('Distributing jobs...', 'puntwork'),
-                'distribution_complete' => __('Jobs distributed successfully', 'puntwork'),
-                'distribution_failed' => __('Job distribution failed', 'puntwork')
-            ]
-        ]);
+        wp_localize_script(
+            'puntwork-network-admin',
+            'puntworkNetwork',
+            array(
+                'ajax_url'         => admin_url('admin-ajax.php'),
+                'nonce'            => wp_create_nonce('puntwork_network_admin'),
+                'sync_nonce'       => wp_create_nonce('puntwork_network_sync'),
+                'stats_nonce'      => wp_create_nonce('puntwork_network_stats'),
+                'distribute_nonce' => wp_create_nonce('puntwork_network_distribute'),
+                'strings'          => array(
+                    'syncing'               => __('Syncing network data...', 'puntwork'),
+                    'sync_complete'         => __('Network sync completed', 'puntwork'),
+                    'sync_failed'           => __('Network sync failed', 'puntwork'),
+                    'testing_connection'    => __('Testing connection...', 'puntwork'),
+                    'connection_success'    => __('Connection successful', 'puntwork'),
+                    'connection_failed'     => __('Connection failed', 'puntwork'),
+                    'distributing'          => __('Distributing jobs...', 'puntwork'),
+                    'distribution_complete' => __('Jobs distributed successfully', 'puntwork'),
+                    'distribution_failed'   => __('Job distribution failed', 'puntwork'),
+                ),
+            )
+        );
     }
 
     /**
@@ -88,7 +92,7 @@ class MultiSiteAdminUI
      */
     public static function renderAdminPage(): void
     {
-        if (!current_user_can('manage_options')) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.'));
         }
 
@@ -694,7 +698,7 @@ class MultiSiteAdminUI
         try {
             $site_id = intval($_POST['site_id'] ?? 0);
 
-            if (!$site_id) {
+            if (! $site_id) {
                 wp_send_json_error('Invalid site ID');
                 return;
             }
@@ -709,7 +713,7 @@ class MultiSiteAdminUI
             restore_current_blog();
 
             if ($connection_test) {
-                wp_send_json_success(['message' => 'Connection successful']);
+                wp_send_json_success(array( 'message' => 'Connection successful' ));
             } else {
                 wp_send_json_error('Connection failed');
             }

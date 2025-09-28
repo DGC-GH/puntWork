@@ -27,37 +27,37 @@ require_once __DIR__ . '/../utilities/utility-helpers.php';
 /**
  * Validate JSONL file integrity by checking a sample of lines.
  *
- * @param string $json_path Path to JSONL file.
+ * @param  string $json_path Path to JSONL file.
  * @return true|WP_Error True if valid, WP_Error if invalid.
  */
 function validate_jsonl_file($json_path)
 {
-    if (($handle = fopen($json_path, "r")) === false) {
+    if (( $handle = fopen($json_path, 'r') ) === false) {
         return new WP_Error('file_open_failed', 'Cannot open JSONL file for validation');
     }
 
-    $bom = "\xef\xbb\xbf";
+    $bom           = "\xef\xbb\xbf";
     $checked_lines = 0;
-    $max_check = min(100, filesize($json_path) / 100); // Check up to 100 lines or 1% of file
+    $max_check     = min(100, filesize($json_path) / 100); // Check up to 100 lines or 1% of file
 
-    while ($checked_lines < $max_check && ($line = fgets($handle)) !== false) {
+    while ($checked_lines < $max_check && ( $line = fgets($handle) ) !== false) {
         $line = trim($line);
         // Remove BOM if present
         if (substr($line, 0, 3) === $bom) {
             $line = substr($line, 3);
         }
-        if (!empty($line)) {
+        if (! empty($line)) {
             $item = json_decode($line, true);
             if ($item === null && json_last_error() !== JSON_ERROR_NONE) {
                 fclose($handle);
-                return new WP_Error('invalid_json', 'Invalid JSON at line ' . ($checked_lines + 1) . ': ' . json_last_error_msg());
+                return new WP_Error('invalid_json', 'Invalid JSON at line ' . ( $checked_lines + 1 ) . ': ' . json_last_error_msg());
             }
             // Check for required fields
-            if (!isset($item['guid']) || empty($item['guid'])) {
+            if (! isset($item['guid']) || empty($item['guid'])) {
                 fclose($handle);
-                return new WP_Error('missing_guid', 'Missing or empty GUID at line ' . ($checked_lines + 1));
+                return new WP_Error('missing_guid', 'Missing or empty GUID at line ' . ( $checked_lines + 1 ));
             }
-            $checked_lines++;
+            ++$checked_lines;
         }
     }
 
@@ -68,7 +68,7 @@ function validate_jsonl_file($json_path)
 /**
  * Prepare import setup and validate prerequisites.
  *
- * @param int $batch_start Starting index for batch.
+ * @param  int $batch_start Starting index for batch.
  * @return array|WP_Error Setup data or error.
  */
 function prepare_import_setup($batch_start = 0)
@@ -97,7 +97,7 @@ function prepare_import_setup($batch_start = 0)
         return new WP_Error('zero_fields_error', 'Failed to get zero empty fields: ' . $e->getMessage());
     }
 
-    if (!defined('WP_IMPORTING')) {
+    if (! defined('WP_IMPORTING')) {
         define('WP_IMPORTING', true);
     }
     wp_suspend_cache_invalidation(true);
@@ -116,17 +116,17 @@ function prepare_import_setup($batch_start = 0)
     $json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
     error_log('[PUNTWORK] [DEBUG] prepare_import_setup: JSONL path: ' . $json_path);
     error_log('[PUNTWORK] [DEBUG] prepare_import_setup: ABSPATH: ' . ABSPATH);
-    error_log('[PUNTWORK] [DEBUG] prepare_import_setup: feeds/ directory exists: ' . (is_dir(ABSPATH . 'feeds/') ? 'yes' : 'no'));
-    error_log('[PUNTWORK] [DEBUG] prepare_import_setup: feeds/ directory writable: ' . (is_writable(ABSPATH . 'feeds/') ? 'yes' : 'no'));
+    error_log('[PUNTWORK] [DEBUG] prepare_import_setup: feeds/ directory exists: ' . ( is_dir(ABSPATH . 'feeds/') ? 'yes' : 'no' ));
+    error_log('[PUNTWORK] [DEBUG] prepare_import_setup: feeds/ directory writable: ' . ( is_writable(ABSPATH . 'feeds/') ? 'yes' : 'no' ));
     $files_in_feeds = glob(ABSPATH . 'feeds/*');
     error_log('[PUNTWORK] [DEBUG] prepare_import_setup: Files in feeds/ directory: ' . print_r($files_in_feeds, true));
-    error_log('[PUNTWORK] [DEBUG] prepare_import_setup: File exists: ' . (file_exists($json_path) ? 'yes' : 'no'));
+    error_log('[PUNTWORK] [DEBUG] prepare_import_setup: File exists: ' . ( file_exists($json_path) ? 'yes' : 'no' ));
     if (file_exists($json_path)) {
         error_log('[PUNTWORK] [DEBUG] prepare_import_setup: File size: ' . filesize($json_path) . ' bytes');
         $mtime = filemtime($json_path);
-        error_log('[PUNTWORK] [DEBUG] prepare_import_setup: File mtime: ' . date('Y-m-d H:i:s', $mtime) . ', age: ' . (time() - $mtime) . ' seconds');
+        error_log('[PUNTWORK] [DEBUG] prepare_import_setup: File mtime: ' . date('Y-m-d H:i:s', $mtime) . ', age: ' . ( time() - $mtime ) . ' seconds');
         $first_line = '';
-        $handle = fopen($json_path, 'r');
+        $handle     = fopen($json_path, 'r');
         if ($handle) {
             $first_line = fgets($handle);
             fclose($handle);
@@ -134,7 +134,7 @@ function prepare_import_setup($batch_start = 0)
         }
     }
 
-    if (!file_exists($json_path)) {
+    if (! file_exists($json_path)) {
         error_log('[PUNTWORK] [DEBUG] prepare_import_setup: JSONL file not found: ' . $json_path . ' - checking if feeds need to be processed first');
         // Check if there are any individual feed files
         $feed_files = glob(ABSPATH . 'feeds/*.jsonl');
@@ -144,19 +144,31 @@ function prepare_import_setup($batch_start = 0)
         } else {
             error_log('[PUNTWORK] [DEBUG] prepare_import_setup: Individual feeds exist but combined file missing - need to run combine_jsonl_files');
         }
-        return ['success' => false, 'message' => 'JSONL file not found - feeds may need to be processed first', 'logs' => ['JSONL file not found - run feed processing first']];
+        return array(
+            'success' => false,
+            'message' => 'JSONL file not found - feeds may need to be processed first',
+            'logs'    => array( 'JSONL file not found - run feed processing first' ),
+        );
     }
 
-    if (!is_readable($json_path)) {
+    if (! is_readable($json_path)) {
         error_log('[PUNTWORK] JSONL file not readable: ' . $json_path);
-        return ['success' => false, 'message' => 'JSONL file not readable', 'logs' => ['JSONL file not readable']];
+        return array(
+            'success' => false,
+            'message' => 'JSONL file not readable',
+            'logs'    => array( 'JSONL file not readable' ),
+        );
     }
 
     // Validate JSONL file integrity
     $validation = validate_jsonl_file($json_path);
     if (is_wp_error($validation)) {
         error_log('[PUNTWORK] JSONL validation failed: ' . $validation->get_error_message());
-        return ['success' => false, 'message' => 'JSONL file validation failed: ' . $validation->get_error_message(), 'logs' => ['JSONL file validation failed: ' . $validation->get_error_message()]];
+        return array(
+            'success' => false,
+            'message' => 'JSONL file validation failed: ' . $validation->get_error_message(),
+            'logs'    => array( 'JSONL file validation failed: ' . $validation->get_error_message() ),
+        );
     }
 
     try {
@@ -168,24 +180,24 @@ function prepare_import_setup($batch_start = 0)
     }
 
     if ($total == 0) {
-        return [
-            'success' => true,
-            'processed' => 0,
-            'total' => 0,
-            'published' => 0,
-            'updated' => 0,
-            'skipped' => 0,
+        return array(
+            'success'            => true,
+            'processed'          => 0,
+            'total'              => 0,
+            'published'          => 0,
+            'updated'            => 0,
+            'skipped'            => 0,
             'duplicates_drafted' => 0,
-            'time_elapsed' => 0,
-            'complete' => true,
-            'logs' => [],
-            'batch_size' => 0,
+            'time_elapsed'       => 0,
+            'complete'           => true,
+            'logs'               => array(),
+            'batch_size'         => 0,
             'inferred_languages' => 0,
-            'inferred_benefits' => 0,
-            'schema_generated' => 0,
-            'batch_time' => 0,
-            'batch_processed' => 0
-        ];
+            'inferred_benefits'  => 0,
+            'schema_generated'   => 0,
+            'batch_time'         => 0,
+            'batch_processed'    => 0,
+        );
     }
 
     // Cache existing job GUIDs if not already cached
@@ -194,8 +206,8 @@ function prepare_import_setup($batch_start = 0)
         update_option('job_existing_guids', $all_jobs, false);
     }
 
-    $processed_guids = get_option('job_import_processed_guids') ?: [];
-    $start_index = max((int) get_option('job_import_progress'), $batch_start);
+    $processed_guids = get_option('job_import_processed_guids') ?: array();
+    $start_index     = max((int) get_option('job_import_progress'), $batch_start);
     error_log('[PUNTWORK] prepare_import_setup: initial start_index calculation: max(' . (int) get_option('job_import_progress') . ', ' . $batch_start . ') = ' . $start_index);
 
     // For fresh starts (batch_start = 0), reset the status and create new start time
@@ -203,13 +215,13 @@ function prepare_import_setup($batch_start = 0)
         $start_index = 0;
         error_log('[PUNTWORK] prepare_import_setup: fresh start detected, setting start_index to 0');
         // Check if existing status total matches current total
-        $existing_status = get_option('job_import_status', []);
+        $existing_status = get_option('job_import_status', array());
         if (isset($existing_status['total']) && $existing_status['total'] != $total) {
             error_log('[PUNTWORK] [WARNING] Existing status total (' . $existing_status['total'] . ') does not match current file total (' . $total . ') - resetting status');
             delete_option('job_import_status');
         }
         // Clear processed GUIDs for fresh start
-        $processed_guids = [];
+        $processed_guids = array();
         // Clear existing status for fresh start
         delete_option('job_import_status');
         // Clear progress for fresh start
@@ -218,58 +230,58 @@ function prepare_import_setup($batch_start = 0)
         \Puntwork\PuntWorkLogger::info('Fresh import start - resetting status and progress to 0', \Puntwork\PuntWorkLogger::CONTEXT_BATCH);
 
         // Initialize status for manual import
-        $initial_status = [
-            'total' => $total,
-            'processed' => 0,
-            'published' => 0,
-            'updated' => 0,
-            'skipped' => 0,
+        $initial_status = array(
+            'total'              => $total,
+            'processed'          => 0,
+            'published'          => 0,
+            'updated'            => 0,
+            'skipped'            => 0,
             'duplicates_drafted' => 0,
-            'time_elapsed' => 0,
-            'complete' => false,
-            'success' => false,
-            'error_message' => '',
-            'batch_size' => get_option('job_import_batch_size') ?: 1,
+            'time_elapsed'       => 0,
+            'complete'           => false,
+            'success'            => false,
+            'error_message'      => '',
+            'batch_size'         => get_option('job_import_batch_size') ?: 1,
             'inferred_languages' => 0,
-            'inferred_benefits' => 0,
-            'schema_generated' => 0,
-            'start_time' => $start_time,
-            'end_time' => null,
-            'last_update' => time(),
-            'logs' => ['Manual import started - preparing to process items...'],
-        ];
+            'inferred_benefits'  => 0,
+            'schema_generated'   => 0,
+            'start_time'         => $start_time,
+            'end_time'           => null,
+            'last_update'        => time(),
+            'logs'               => array( 'Manual import started - preparing to process items...' ),
+        );
         update_option('job_import_status', $initial_status, false);
     }
 
     if ($start_index >= $total) {
         error_log('[PUNTWORK] prepare_import_setup: EARLY RETURN - start_index (' . $start_index . ') >= total (' . $total . ')');
-        return [
-            'success' => true,
-            'processed' => $total,
-            'total' => $total,
-            'published' => 0,
-            'updated' => 0,
-            'skipped' => 0,
+        return array(
+            'success'            => true,
+            'processed'          => $total,
+            'total'              => $total,
+            'published'          => 0,
+            'updated'            => 0,
+            'skipped'            => 0,
             'duplicates_drafted' => 0,
-            'time_elapsed' => 0,
-            'complete' => true,
-            'logs' => ['Start index beyond total items'],
-            'batch_size' => 0,
+            'time_elapsed'       => 0,
+            'complete'           => true,
+            'logs'               => array( 'Start index beyond total items' ),
+            'batch_size'         => 0,
             'inferred_languages' => 0,
-            'inferred_benefits' => 0,
-            'schema_generated' => 0,
-            'batch_time' => 0,
-            'batch_processed' => 0
-        ];
+            'inferred_benefits'  => 0,
+            'schema_generated'   => 0,
+            'batch_time'         => 0,
+            'batch_processed'    => 0,
+        );
     }
 
-    return [
-        'acf_fields' => $acf_fields,
+    return array(
+        'acf_fields'        => $acf_fields,
         'zero_empty_fields' => $zero_empty_fields,
-        'start_time' => $start_time,
-        'json_path' => $json_path,
-        'total' => $total,
-        'processed_guids' => $processed_guids,
-        'start_index' => $start_index
-    ];
+        'start_time'        => $start_time,
+        'json_path'         => $json_path,
+        'total'             => $total,
+        'processed_guids'   => $processed_guids,
+        'start_index'       => $start_index,
+    );
 }

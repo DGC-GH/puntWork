@@ -8,7 +8,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -18,8 +18,8 @@ if (!defined('ABSPATH')) {
 function handle_clear_cache()
 {
     // Verify nonce
-    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_accessibility_nonce')) {
-        wp_send_json_error(['message' => __('Security check failed.', 'puntwork')]);
+    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_accessibility_nonce')) {
+        wp_send_json_error(array( 'message' => __('Security check failed.', 'puntwork') ));
         return;
     }
 
@@ -40,19 +40,23 @@ function handle_clear_cache()
         delete_option('puntwork_performance_cache');
 
         // Clear any cached feed data
-        $feed_cache_keys = get_option('puntwork_feed_cache_keys', []);
+        $feed_cache_keys = get_option('puntwork_feed_cache_keys', array());
         foreach ($feed_cache_keys as $key) {
             delete_transient($key);
         }
         delete_option('puntwork_feed_cache_keys');
 
-        wp_send_json_success([
-            'message' => __('Cache cleared successfully. Page will refresh.', 'puntwork')
-        ]);
+        wp_send_json_success(
+            array(
+                'message' => __('Cache cleared successfully. Page will refresh.', 'puntwork'),
+            )
+        );
     } catch (Exception $e) {
-        wp_send_json_error([
-            'message' => __('Error clearing cache: ', 'puntwork') . $e->getMessage()
-        ]);
+        wp_send_json_error(
+            array(
+                'message' => __('Error clearing cache: ', 'puntwork') . $e->getMessage(),
+            )
+        );
     }
 }
 add_action('wp_ajax_puntwork_clear_cache', __NAMESPACE__ . '\\handle_clear_cache');
@@ -64,15 +68,21 @@ function add_accessibility_headers()
 {
     if (is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0) {
         // Add viewport meta tag for proper mobile accessibility
-        add_action('admin_head', function () {
-            echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">' . "\n";
-        });
+        add_action(
+            'admin_head',
+            function () {
+                echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">' . "\n";
+            }
+        );
 
         // Add accessibility-related meta tags
-        add_action('admin_head', function () {
-            echo '<meta name="application-name" content="puntWork Admin">' . "\n";
-            echo '<meta name="theme-color" content="#007aff">' . "\n";
-        });
+        add_action(
+            'admin_head',
+            function () {
+                echo '<meta name="application-name" content="puntWork Admin">' . "\n";
+                echo '<meta name="theme-color" content="#007aff">' . "\n";
+            }
+        );
     }
 }
 add_action('admin_init', __NAMESPACE__ . '\\add_accessibility_headers');
@@ -86,10 +96,10 @@ function enhance_admin_menu_accessibility($menu)
         foreach ($menu as &$item) {
             if (isset($item[2]) && strpos($item[2], 'puntwork') === 0) {
                 // Add aria-label for better screen reader support
-                $item[4] = ($item[4] ?? '') . ' aria-label="' . esc_attr($item[0]) . '"';
+                $item[4] = ( $item[4] ?? '' ) . ' aria-label="' . esc_attr($item[0]) . '"';
             }
         }
-    } elseif (is_admin() && !is_array($menu)) {
+    } elseif (is_admin() && ! is_array($menu)) {
         error_log('[PUNTWORK] enhance_admin_menu_accessibility received non-array menu parameter: ' . gettype($menu));
     }
     return $menu;
@@ -102,15 +112,17 @@ add_filter('admin_menu', __NAMESPACE__ . '\\enhance_admin_menu_accessibility');
 function add_keyboard_shortcuts_help($wp_admin_bar)
 {
     if (is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0) {
-        $wp_admin_bar->add_node([
-            'id' => 'puntwork-keyboard-help',
-            'title' => '<span class="ab-icon dashicons dashicons-editor-help"></span> ' . __('Keyboard Shortcuts', 'puntwork'),
-            'href' => '#',
-            'meta' => [
-                'onclick' => 'if(window.puntworkAccessibility){window.puntworkAccessibility.showKeyboardShortcutsHelp();} return false;',
-                'title' => __('Show keyboard shortcuts help (Ctrl+H)', 'puntwork')
-            ]
-        ]);
+        $wp_admin_bar->add_node(
+            array(
+                'id'    => 'puntwork-keyboard-help',
+                'title' => '<span class="ab-icon dashicons dashicons-editor-help"></span> ' . __('Keyboard Shortcuts', 'puntwork'),
+                'href'  => '#',
+                'meta'  => array(
+                    'onclick' => 'if(window.puntworkAccessibility){window.puntworkAccessibility.showKeyboardShortcutsHelp();} return false;',
+                    'title'   => __('Show keyboard shortcuts help (Ctrl+H)', 'puntwork'),
+                ),
+            )
+        );
     }
 }
 add_action('admin_bar_menu', __NAMESPACE__ . '\\add_keyboard_shortcuts_help', 100);
@@ -122,14 +134,20 @@ function add_accessibility_notices()
 {
     if (is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0) {
         // Add live region for dynamic content updates
-        add_action('admin_footer', function () {
-            echo '<div id="puntwork-live-region" aria-live="polite" aria-atomic="true" class="screen-reader-only"></div>' . "\n";
-        });
+        add_action(
+            'admin_footer',
+            function () {
+                echo '<div id="puntwork-live-region" aria-live="polite" aria-atomic="true" class="screen-reader-only"></div>' . "\n";
+            }
+        );
 
         // Add main content landmark
-        add_action('admin_footer', function () {
-            echo '<div id="main-content" role="main" aria-label="' . esc_attr__('puntWork Main Content', 'puntwork') . '"></div>' . "\n";
-        });
+        add_action(
+            'admin_footer',
+            function () {
+                echo '<div id="main-content" role="main" aria-label="' . esc_attr__('puntWork Main Content', 'puntwork') . '"></div>' . "\n";
+            }
+        );
     }
 }
 add_action('admin_init', __NAMESPACE__ . '\\add_accessibility_notices');
@@ -141,8 +159,10 @@ function enhance_form_accessibility()
 {
     if (is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0) {
         // Add required field indicators
-        add_action('admin_footer', function () {
-            ?>
+        add_action(
+            'admin_footer',
+            function () {
+                ?>
             <script>
                 document.addEventListener('DOMContentLoaded', function() {
                     // Add aria-required to required fields
@@ -173,8 +193,9 @@ function enhance_form_accessibility()
                     });
                 });
             </script>
-            <?php
-        });
+                <?php
+            }
+        );
     }
 }
 add_action('admin_init', __NAMESPACE__ . '\\enhance_form_accessibility');
@@ -185,8 +206,10 @@ add_action('admin_init', __NAMESPACE__ . '\\enhance_form_accessibility');
 function add_accessibility_testing()
 {
     if (defined('WP_DEBUG') && WP_DEBUG && is_admin() && isset($_GET['page']) && strpos($_GET['page'], 'puntwork') === 0) {
-        add_action('admin_footer', function () {
-            ?>
+        add_action(
+            'admin_footer',
+            function () {
+                ?>
             <script>
                 // Add accessibility testing utilities
                 window.puntworkAccessibilityTest = {
@@ -241,8 +264,9 @@ function add_accessibility_testing()
                     }
                 });
             </script>
-            <?php
-        });
+                <?php
+            }
+        );
     }
 }
 add_action('admin_init', __NAMESPACE__ . '\\add_accessibility_testing');

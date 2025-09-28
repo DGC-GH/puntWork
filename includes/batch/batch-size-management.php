@@ -21,11 +21,11 @@ if (! defined('ABSPATH')) {
 /**
  * Adjust batch size based on memory and consecutive batch time metrics.
  *
- * @param int $batch_size Current batch size.
- * @param float $memory_limit_bytes Memory limit.
- * @param float $last_memory_ratio Last memory ratio.
- * @param float $current_batch_time Current batch completion time.
- * @param float $previous_batch_time Previous batch completion time.
+ * @param  int   $batch_size          Current batch size.
+ * @param  float $memory_limit_bytes  Memory limit.
+ * @param  float $last_memory_ratio   Last memory ratio.
+ * @param  float $current_batch_time  Current batch completion time.
+ * @param  float $previous_batch_time Previous batch completion time.
  * @return array Array with 'batch_size' and 'reason' keys.
  */
 function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time)
@@ -93,7 +93,7 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
     $batch_size = max(1, min(500, $batch_size));
 
     // Cast to int to ensure type compatibility
-    $batch_size = (int)$batch_size;
+    $batch_size = (int) $batch_size;
 
     // Log batch size changes for debugging
     if ($batch_size != $old_batch_size) {
@@ -138,29 +138,37 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
             $detailed_reason = 'attempting recovery from small batch size';
         }
 
-        error_log(sprintf(
-            '[PUNTWORK] Batch size adjusted from %d to %d due to %s (memory: %.2f, current_batch: %.3f, prev_batch: %.3f)',
-            $old_batch_size,
-            $batch_size,
-            $reason,
-            $last_memory_ratio,
-            $current_batch_time,
-            $previous_batch_time
-        ));
+        error_log(
+            sprintf(
+                '[PUNTWORK] Batch size adjusted from %d to %d due to %s (memory: %.2f, current_batch: %.3f, prev_batch: %.3f)',
+                $old_batch_size,
+                $batch_size,
+                $reason,
+                $last_memory_ratio,
+                $current_batch_time,
+                $previous_batch_time
+            )
+        );
 
         // Return detailed reason for user logs
-        return ['batch_size' => $batch_size, 'reason' => $detailed_reason];
+        return array(
+            'batch_size' => $batch_size,
+            'reason'     => $detailed_reason,
+        );
     }
 
-    return ['batch_size' => $batch_size, 'reason' => ''];
+    return array(
+        'batch_size' => $batch_size,
+        'reason'     => '',
+    );
 }
 
 /**
  * Update batch performance metrics.
  *
- * @param float $time_elapsed Time elapsed for batch.
- * @param int $processed_count Number of items processed.
- * @param int $batch_size Current batch size.
+ * @param  float $time_elapsed    Time elapsed for batch.
+ * @param  int   $processed_count Number of items processed.
+ * @param  int   $batch_size      Current batch size.
  * @return void
  */
 function update_batch_metrics($time_elapsed, $processed_count, $batch_size)
@@ -170,7 +178,7 @@ function update_batch_metrics($time_elapsed, $processed_count, $batch_size)
     update_option('job_import_previous_batch_time', $previous_batch_time, false);
 
     // Update stored metrics for next batch
-    $time_per_item = $processed_count > 0 ? $time_elapsed / $processed_count : 0;
+    $time_per_item      = $processed_count > 0 ? $time_elapsed / $processed_count : 0;
     $prev_time_per_item = get_option('job_import_time_per_job', 0);
     update_option('job_import_time_per_job', $time_per_item, false);
 
@@ -179,7 +187,7 @@ function update_batch_metrics($time_elapsed, $processed_count, $batch_size)
 
     // Use rolling average for time_per_item to stabilize adjustments
     $avg_time_per_item = get_option('job_import_avg_time_per_job', $time_per_item);
-    $avg_time_per_item = ($avg_time_per_item * 0.7) + ($time_per_item * 0.3);
+    $avg_time_per_item = ( $avg_time_per_item * 0.7 ) + ( $time_per_item * 0.3 );
     update_option('job_import_avg_time_per_job', $avg_time_per_item, false);
 
     update_option('job_import_batch_size', $batch_size, false);
@@ -202,26 +210,26 @@ function update_batch_metrics($time_elapsed, $processed_count, $batch_size)
 function validate_and_adjust_batch_size(array $setup): array
 {
     $memory_limit_bytes = get_memory_limit_bytes();
-    $threshold = 0.6 * $memory_limit_bytes;
-    $batch_size = get_option('job_import_batch_size') ?: 1; // Starting batch size set to 1 for conservative processing
+    $threshold          = 0.6 * $memory_limit_bytes;
+    $batch_size         = get_option('job_import_batch_size') ?: 1; // Starting batch size set to 1 for conservative processing
 
     // Ensure batch_size is at least 1
-    $batch_size = max(1, (int)$batch_size);
+    $batch_size = max(1, (int) $batch_size);
 
-    $old_batch_size = $batch_size;
+    $old_batch_size     = $batch_size;
     $prev_time_per_item = get_option('job_import_time_per_job', 0);
-    $avg_time_per_item = get_option('job_import_avg_time_per_job', $prev_time_per_item);
-    $last_peak_memory = get_option('job_import_last_peak_memory', $memory_limit_bytes);
-    $last_memory_ratio = $last_peak_memory / $memory_limit_bytes;
+    $avg_time_per_item  = get_option('job_import_avg_time_per_job', $prev_time_per_item);
+    $last_peak_memory   = get_option('job_import_last_peak_memory', $memory_limit_bytes);
+    $last_memory_ratio  = $last_peak_memory / $memory_limit_bytes;
 
-    $current_batch_time = get_option('job_import_last_batch_time', 0);
+    $current_batch_time  = get_option('job_import_last_batch_time', 0);
     $previous_batch_time = get_option('job_import_previous_batch_time', 0);
 
     $adjustment_result = adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time);
-    $batch_size = $adjustment_result['batch_size'];
-    $batch_size = max(1, (int)$batch_size); // Ensure batch_size is at least 1
+    $batch_size        = $adjustment_result['batch_size'];
+    $batch_size        = max(1, (int) $batch_size); // Ensure batch_size is at least 1
 
-    $logs = [];
+    $logs = array();
     if ($batch_size != $old_batch_size) {
         update_option('job_import_batch_size', $batch_size, false);
         $reason = '';
@@ -235,16 +243,16 @@ function validate_and_adjust_batch_size(array $setup): array
             $reason = 'current batch faster than previous';
         }
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch size adjusted to ' . $batch_size . ' due to ' . $reason;
-        if (!empty($adjustment_result['reason'])) {
+        if (! empty($adjustment_result['reason'])) {
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Reason: ' . $adjustment_result['reason'];
         }
     }
 
-    return [
+    return array(
         'batch_size' => $batch_size,
-        'threshold' => $threshold,
-        'logs' => $logs
-    ];
+        'threshold'  => $threshold,
+        'logs'       => $logs,
+    );
 }
 
 /**
@@ -258,14 +266,14 @@ function prepare_batch_processing(array $setup, int $batch_size): array
 {
     $end_index = min($setup['start_index'] + $batch_size, $setup['total']);
 
-    return [
-        'end_index' => $end_index,
-        'published' => 0,
-        'updated' => 0,
-        'skipped' => 0,
+    return array(
+        'end_index'          => $end_index,
+        'published'          => 0,
+        'updated'            => 0,
+        'skipped'            => 0,
         'duplicates_drafted' => 0,
         'inferred_languages' => 0,
-        'inferred_benefits' => 0,
-        'schema_generated' => 0
-    ];
+        'inferred_benefits'  => 0,
+        'schema_generated'   => 0,
+    );
 }

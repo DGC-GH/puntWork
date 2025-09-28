@@ -23,22 +23,22 @@ class SecurityUtils
     /**
      * Rate limiting storage
      */
-    private static $rate_limits = [];
+    private static $rate_limits = array();
 
     /**
      * Validate AJAX request with comprehensive security checks
      *
-     * @param string $action Action name for logging
-     * @param string $nonce_action Nonce action string
-     * @param array $required_fields Required POST fields
-     * @param array $validation_rules Validation rules for fields
+     * @param  string $action           Action name for logging
+     * @param  string $nonce_action     Nonce action string
+     * @param  array  $required_fields  Required POST fields
+     * @param  array  $validation_rules Validation rules for fields
      * @return array|WP_Error Validation result or error
      */
     public static function validateAjaxRequest(
         string $action,
         string $nonce_action = 'puntwork_admin_nonce',
-        array $required_fields = [],
-        array $validation_rules = []
+        array $required_fields = array(),
+        array $validation_rules = array()
     ) {
         try {
             // Check rate limiting first
@@ -49,20 +49,20 @@ class SecurityUtils
             }
 
             // Verify nonce
-            if (!wp_verify_nonce($_POST['nonce'] ?? '', $nonce_action)) {
+            if (! wp_verify_nonce($_POST['nonce'] ?? '', $nonce_action)) {
                 PuntWorkLogger::error("Nonce verification failed for action: {$action}", PuntWorkLogger::CONTEXT_SECURITY);
                 return new \WP_Error('security', 'Security check failed: invalid nonce');
             }
 
             // Check user capabilities
-            if (!current_user_can('manage_options')) {
+            if (! current_user_can('manage_options')) {
                 PuntWorkLogger::error("Permission denied for action: {$action}", PuntWorkLogger::CONTEXT_SECURITY);
                 return new \WP_Error('permissions', 'Insufficient permissions');
             }
 
             // Validate required fields
             foreach ($required_fields as $field) {
-                if (!isset($_POST[$field]) || $_POST[$field] === '') {
+                if (! isset($_POST[ $field ]) || $_POST[ $field ] === '') {
                     PuntWorkLogger::error("Missing required field: {$field} for action: {$action}", PuntWorkLogger::CONTEXT_SECURITY);
                     return new \WP_Error('validation', "Missing required field: {$field}");
                 }
@@ -70,14 +70,14 @@ class SecurityUtils
 
             // Apply validation rules
             foreach ($validation_rules as $field => $rules) {
-                if (isset($_POST[$field])) {
-                    $validation_result = self::validateField($_POST[$field], $rules, $field);
+                if (isset($_POST[ $field ])) {
+                    $validation_result = self::validateField($_POST[ $field ], $rules, $field);
                     if (is_wp_error($validation_result)) {
                         PuntWorkLogger::error("Field validation failed for {$field}: " . $validation_result->get_error_message(), PuntWorkLogger::CONTEXT_SECURITY);
                         return $validation_result;
                     }
                     // Sanitize the validated value
-                    $_POST[$field] = $validation_result;
+                    $_POST[ $field ] = $validation_result;
                 }
             }
 
@@ -92,27 +92,30 @@ class SecurityUtils
     /**
      * Check rate limiting for AJAX requests
      *
-     * @param string $action Action name
-     * @param int $max_requests Maximum requests per time window
-     * @param int $time_window Time window in seconds
+     * @param  string $action       Action name
+     * @param  int    $max_requests Maximum requests per time window
+     * @param  int    $time_window  Time window in seconds
      * @return bool|WP_Error True if allowed, WP_Error if rate limited
      */
     public static function checkRateLimit(string $action, int $max_requests = 10, int $time_window = 60)
     {
         $user_id = get_current_user_id();
-        $key = "rate_limit_{$action}_{$user_id}";
+        $key     = "rate_limit_{$action}_{$user_id}";
 
         $current_time = time();
-        $requests = get_transient($key);
+        $requests     = get_transient($key);
 
-        if (!$requests) {
-            $requests = [];
+        if (! $requests) {
+            $requests = array();
         }
 
         // Remove old requests outside the time window
-        $requests = array_filter($requests, function ($timestamp) use ($current_time, $time_window) {
-            return ($current_time - $timestamp) < $time_window;
-        });
+        $requests = array_filter(
+            $requests,
+            function ($timestamp) use ($current_time, $time_window) {
+                return ( $current_time - $timestamp ) < $time_window;
+            }
+        );
 
         // Check if rate limit exceeded
         if (count($requests) >= $max_requests) {
@@ -131,9 +134,9 @@ class SecurityUtils
     /**
      * Validate a single field against rules
      *
-     * @param mixed $value Field value
-     * @param array $rules Validation rules
-     * @param string $field_name Field name for error messages
+     * @param  mixed  $value      Field value
+     * @param  array  $rules      Validation rules
+     * @param  string $field_name Field name for error messages
      * @return mixed|WP_Error Sanitized value or error
      */
     public static function validateField($value, array $rules, string $field_name)
@@ -143,14 +146,14 @@ class SecurityUtils
             switch ($rules['type']) {
                 case 'int':
                 case 'integer':
-                    if (!is_numeric($value)) {
+                    if (! is_numeric($value)) {
                         return new \WP_Error('validation', "{$field_name} must be a number");
                     }
                     $value = intval($value);
                     break;
                 case 'float':
                 case 'double':
-                    if (!is_numeric($value)) {
+                    if (! is_numeric($value)) {
                         return new \WP_Error('validation', "{$field_name} must be a number");
                     }
                     $value = floatval($value);
@@ -176,13 +179,13 @@ class SecurityUtils
                     break;
                 case 'email':
                     $value = sanitize_email($value);
-                    if (!is_email($value)) {
+                    if (! is_email($value)) {
                         return new \WP_Error('validation', "{$field_name} must be a valid email address");
                     }
                     break;
                 case 'url':
                     $value = esc_url_raw($value);
-                    if (!filter_var($value, FILTER_VALIDATE_URL)) {
+                    if (! filter_var($value, FILTER_VALIDATE_URL)) {
                         return new \WP_Error('validation', "{$field_name} must be a valid URL");
                     }
                     break;
@@ -190,7 +193,7 @@ class SecurityUtils
                     $value = wp_kses_post($value); // Allow safe HTML
                     break;
                 case 'json':
-                    $value = strval($value);
+                    $value   = strval($value);
                     $decoded = json_decode($value, true);
                     if (json_last_error() !== JSON_ERROR_NONE) {
                         return new \WP_Error('validation', "{$field_name} must be valid JSON");
@@ -198,18 +201,18 @@ class SecurityUtils
                     $value = $decoded;
                     break;
                 case 'array':
-                    if (!is_array($value)) {
+                    if (! is_array($value)) {
                         return new \WP_Error('validation', "{$field_name} must be an array");
                     }
                     // Sanitize array elements if rules specify element validation
                     if (isset($rules['element_rules'])) {
-                        $sanitized_array = [];
+                        $sanitized_array = array();
                         foreach ($value as $key => $element) {
                             $result = self::validate_field($element, $rules['element_rules'], "{$field_name}[{$key}]");
                             if (is_wp_error($result)) {
                                 return $result;
                             }
-                            $sanitized_array[$key] = $result;
+                            $sanitized_array[ $key ] = $result;
                         }
                         $value = $sanitized_array;
                     }
@@ -249,12 +252,12 @@ class SecurityUtils
         }
 
         // Enum validation
-        if (isset($rules['enum']) && is_array($rules['enum']) && !in_array($value, $rules['enum'])) {
+        if (isset($rules['enum']) && is_array($rules['enum']) && ! in_array($value, $rules['enum'])) {
             return new \WP_Error('validation', "{$field_name} must be one of: " . implode(', ', $rules['enum']));
         }
 
         // Pattern validation
-        if (isset($rules['pattern']) && !preg_match($rules['pattern'], $value)) {
+        if (isset($rules['pattern']) && ! preg_match($rules['pattern'], $value)) {
             return new \WP_Error('validation', "{$field_name} format is invalid");
         }
 
@@ -273,21 +276,21 @@ class SecurityUtils
     /**
      * Sanitize and validate array of data recursively
      *
-     * @param array $data Data to sanitize
-     * @param array $rules Validation rules
+     * @param  array $data  Data to sanitize
+     * @param  array $rules Validation rules
      * @return array|WP_Error Sanitized data or error
      */
     public static function sanitizeDataArray(array $data, array $rules)
     {
-        $sanitized = [];
+        $sanitized = array();
 
         foreach ($rules as $field => $field_rules) {
-            if (isset($data[$field])) {
-                $result = self::validateField($data[$field], $field_rules, $field);
+            if (isset($data[ $field ])) {
+                $result = self::validateField($data[ $field ], $field_rules, $field);
                 if (is_wp_error($result)) {
                     return $result;
                 }
-                $sanitized[$field] = $result;
+                $sanitized[ $field ] = $result;
             } elseif (isset($field_rules['required']) && $field_rules['required']) {
                 return new \WP_Error('validation', "Required field missing: {$field}");
             }
@@ -299,12 +302,12 @@ class SecurityUtils
     /**
      * Sanitize all request input (GET, POST, etc.)
      *
-     * @param string $method Request method ('GET', 'POST', etc.)
+     * @param  string $method Request method ('GET', 'POST', etc.)
      * @return array Sanitized input data
      */
     public static function sanitizeRequestInput(string $method = 'POST'): array
     {
-        $input = [];
+        $input = array();
 
         switch ($method) {
             case 'GET':
@@ -317,12 +320,12 @@ class SecurityUtils
                 $input = $_REQUEST;
                 break;
             default:
-                return [];
+                return array();
         }
 
-        $sanitized = [];
+        $sanitized = array();
         foreach ($input as $key => $value) {
-            $sanitized[$key] = self::sanitizeDeep($value);
+            $sanitized[ $key ] = self::sanitizeDeep($value);
         }
 
         return $sanitized;
@@ -331,15 +334,15 @@ class SecurityUtils
     /**
      * Recursively sanitize data
      *
-     * @param mixed $data Data to sanitize
+     * @param  mixed $data Data to sanitize
      * @return mixed Sanitized data
      */
     public static function sanitizeDeep($data)
     {
         if (is_array($data)) {
-            $sanitized = [];
+            $sanitized = array();
             foreach ($data as $key => $value) {
-                $sanitized[sanitize_key($key)] = self::sanitizeDeep($value);
+                $sanitized[ sanitize_key($key) ] = self::sanitizeDeep($value);
             }
             return $sanitized;
         } elseif (is_object($data)) {
@@ -358,15 +361,15 @@ class SecurityUtils
     /**
      * Validate file upload security
      *
-     * @param array $file $_FILES array entry
-     * @param array $allowed_types Allowed MIME types
-     * @param int $max_size Maximum file size in bytes
+     * @param  array $file          $_FILES array entry
+     * @param  array $allowed_types Allowed MIME types
+     * @param  int   $max_size      Maximum file size in bytes
      * @return bool|WP_Error True if valid, WP_Error if invalid
      */
-    public static function validateFileUpload(array $file, array $allowed_types = [], int $max_size = 0)
+    public static function validateFileUpload(array $file, array $allowed_types = array(), int $max_size = 0)
     {
         // Check if file was uploaded
-        if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+        if (! isset($file['tmp_name']) || ! is_uploaded_file($file['tmp_name'])) {
             return new \WP_Error('upload_error', 'No file was uploaded');
         }
 
@@ -377,7 +380,7 @@ class SecurityUtils
 
         // Check MIME type
         $file_type = wp_check_filetype($file['name']);
-        if (!empty($allowed_types) && !in_array($file_type['type'], $allowed_types)) {
+        if (! empty($allowed_types) && ! in_array($file_type['type'], $allowed_types)) {
             return new \WP_Error('upload_error', 'File type not allowed');
         }
 
@@ -393,7 +396,7 @@ class SecurityUtils
     /**
      * Generate a secure random string
      *
-     * @param int $length Length of the string
+     * @param  int $length Length of the string
      * @return string Random string
      */
     public static function generateSecureToken(int $length = 32): string
@@ -405,16 +408,19 @@ class SecurityUtils
      * Log security event
      *
      * @param string $event Event type
-     * @param array $data Additional data
+     * @param array  $data  Additional data
      */
-    public static function logSecurityEvent(string $event, array $data = [])
+    public static function logSecurityEvent(string $event, array $data = array())
     {
-        $log_data = array_merge($data, [
-            'user_id' => get_current_user_id(),
-            'user_ip' => self::getClientIp(),
-            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
-            'timestamp' => current_time('mysql')
-        ]);
+        $log_data = array_merge(
+            $data,
+            array(
+                'user_id'    => get_current_user_id(),
+                'user_ip'    => self::getClientIp(),
+                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
+                'timestamp'  => current_time('mysql'),
+            )
+        );
 
         PuntWorkLogger::info("Security event: {$event}", PuntWorkLogger::CONTEXT_SECURITY, $log_data);
     }
@@ -426,7 +432,7 @@ class SecurityUtils
      */
     public static function getClientIp(): string
     {
-        $headers = [
+        $headers = array(
             'HTTP_CF_CONNECTING_IP',
             'HTTP_CLIENT_IP',
             'HTTP_X_FORWARDED_FOR',
@@ -434,12 +440,12 @@ class SecurityUtils
             'HTTP_X_CLUSTER_CLIENT_IP',
             'HTTP_FORWARDED_FOR',
             'HTTP_FORWARDED',
-            'REMOTE_ADDR'
-        ];
+            'REMOTE_ADDR',
+        );
 
         foreach ($headers as $header) {
-            if (!empty($_SERVER[$header])) {
-                $ip = trim(explode(',', $_SERVER[$header])[0]);
+            if (! empty($_SERVER[ $header ])) {
+                $ip = trim(explode(',', $_SERVER[ $header ])[0]);
                 if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
                     return $ip;
                 }
@@ -469,29 +475,29 @@ class SecurityUtils
     /**
      * Enhanced URL validation with security checks
      *
-     * @param string $url URL to validate
-     * @param array $allowed_schemes Allowed URL schemes
+     * @param  string $url             URL to validate
+     * @param  array  $allowed_schemes Allowed URL schemes
      * @return bool True if URL is valid and safe
      */
-    public static function validateSecureUrl(string $url, array $allowed_schemes = ['http', 'https']): bool
+    public static function validateSecureUrl(string $url, array $allowed_schemes = array( 'http', 'https' )): bool
     {
         // Basic URL validation
-        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+        if (! filter_var($url, FILTER_VALIDATE_URL)) {
             return false;
         }
 
         $parsed = parse_url($url);
-        if (!$parsed) {
+        if (! $parsed) {
             return false;
         }
 
         // Check scheme
-        if (!in_array(strtolower($parsed['scheme'] ?? ''), $allowed_schemes)) {
+        if (! in_array(strtolower($parsed['scheme'] ?? ''), $allowed_schemes)) {
             return false;
         }
 
         // Check for suspicious patterns
-        $suspicious_patterns = [
+        $suspicious_patterns = array(
             '/\.\./',  // Directory traversal
             '/localhost/i',
             '/127\.0\.0\.1/',
@@ -500,7 +506,7 @@ class SecurityUtils
             '/10\./',        // Private network
             '/172\.(1[6-9]|2[0-9]|3[0-1])\./', // Private network
             '/192\.168\./',  // Private network
-        ];
+        );
 
         foreach ($suspicious_patterns as $pattern) {
             if (preg_match($pattern, $url)) {
@@ -524,81 +530,81 @@ class SecurityUtils
     /**
      * Validate and sanitize job data
      *
-     * @param array $job_data Raw job data
+     * @param  array $job_data Raw job data
      * @return array|WP_Error Sanitized data or error
      */
     public static function validateJobData(array $job_data)
     {
-        $sanitized = [];
-        $errors = [];
+        $sanitized = array();
+        $errors    = array();
 
         // Required fields validation
-        $required_fields = ['job_title', 'job_desc'];
+        $required_fields = array( 'job_title', 'job_desc' );
         foreach ($required_fields as $field) {
-            if (empty($job_data[$field])) {
+            if (empty($job_data[ $field ])) {
                 $errors[] = "Missing required field: {$field}";
                 continue;
             }
         }
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             return new \WP_Error('validation_error', 'Job data validation failed', $errors);
         }
 
         // Sanitize text fields
-        $text_fields = ['job_title', 'job_desc', 'job_location', 'job_company', 'job_type'];
+        $text_fields = array( 'job_title', 'job_desc', 'job_location', 'job_company', 'job_type' );
         foreach ($text_fields as $field) {
-            if (isset($job_data[$field])) {
-                $sanitized[$field] = self::sanitizeText($job_data[$field]);
+            if (isset($job_data[ $field ])) {
+                $sanitized[ $field ] = self::sanitizeText($job_data[ $field ]);
             }
         }
 
         // Validate and sanitize URLs
-        $url_fields = ['job_url', 'job_apply_url', 'company_url'];
+        $url_fields = array( 'job_url', 'job_apply_url', 'company_url' );
         foreach ($url_fields as $field) {
-            if (isset($job_data[$field]) && !empty($job_data[$field])) {
-                if (!self::validateSecureUrl($job_data[$field])) {
+            if (isset($job_data[ $field ]) && ! empty($job_data[ $field ])) {
+                if (! self::validateSecureUrl($job_data[ $field ])) {
                     $errors[] = "Invalid URL in field: {$field}";
                 } else {
-                    $sanitized[$field] = esc_url_raw($job_data[$field]);
+                    $sanitized[ $field ] = esc_url_raw($job_data[ $field ]);
                 }
             }
         }
 
         // Validate salary fields
-        $salary_fields = ['job_salary_min', 'job_salary_max'];
+        $salary_fields = array( 'job_salary_min', 'job_salary_max' );
         foreach ($salary_fields as $field) {
-            if (isset($job_data[$field])) {
-                $salary = self::sanitizeNumeric($job_data[$field]);
+            if (isset($job_data[ $field ])) {
+                $salary = self::sanitizeNumeric($job_data[ $field ]);
                 if ($salary !== null) {
-                    $sanitized[$field] = $salary;
+                    $sanitized[ $field ] = $salary;
                 }
             }
         }
 
         // Validate email
-        if (isset($job_data['job_email']) && !empty($job_data['job_email'])) {
-            if (!is_email($job_data['job_email'])) {
-                $errors[] = "Invalid email address";
+        if (isset($job_data['job_email']) && ! empty($job_data['job_email'])) {
+            if (! is_email($job_data['job_email'])) {
+                $errors[] = 'Invalid email address';
             } else {
                 $sanitized['job_email'] = sanitize_email($job_data['job_email']);
             }
         }
 
         // Validate dates
-        $date_fields = ['job_date_posted', 'job_date_expires'];
+        $date_fields = array( 'job_date_posted', 'job_date_expires' );
         foreach ($date_fields as $field) {
-            if (isset($job_data[$field]) && !empty($job_data[$field])) {
-                $timestamp = strtotime($job_data[$field]);
+            if (isset($job_data[ $field ]) && ! empty($job_data[ $field ])) {
+                $timestamp = strtotime($job_data[ $field ]);
                 if ($timestamp === false) {
                     $errors[] = "Invalid date format in field: {$field}";
                 } else {
-                    $sanitized[$field] = date('Y-m-d H:i:s', $timestamp);
+                    $sanitized[ $field ] = date('Y-m-d H:i:s', $timestamp);
                 }
             }
         }
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             return new \WP_Error('validation_error', 'Job data validation failed', $errors);
         }
 
@@ -608,8 +614,8 @@ class SecurityUtils
     /**
      * Sanitize text input with length limits
      *
-     * @param string $text Text to sanitize
-     * @param int $max_length Maximum length
+     * @param  string $text       Text to sanitize
+     * @param  int    $max_length Maximum length
      * @return string Sanitized text
      */
     private static function sanitizeText(string $text, int $max_length = 10000): string
@@ -625,7 +631,7 @@ class SecurityUtils
     /**
      * Sanitize numeric input
      *
-     * @param mixed $value Value to sanitize
+     * @param  mixed $value Value to sanitize
      * @return float|null Sanitized number or null
      */
     private static function sanitizeNumeric($value): ?float
@@ -640,35 +646,35 @@ class SecurityUtils
     /**
      * Validate feed data structure
      *
-     * @param array $feed_data Feed data to validate
+     * @param  array $feed_data Feed data to validate
      * @return array|WP_Error Validated data or error
      */
     public static function validateFeedData(array $feed_data)
     {
-        $errors = [];
+        $errors = array();
 
         // Check for required feed metadata
         if (empty($feed_data['url'])) {
             $errors[] = 'Feed URL is required';
-        } elseif (!self::validateSecureUrl($feed_data['url'])) {
+        } elseif (! self::validateSecureUrl($feed_data['url'])) {
             $errors[] = 'Invalid feed URL';
         }
 
         if (empty($feed_data['format'])) {
             $errors[] = 'Feed format is required';
-        } elseif (!in_array($feed_data['format'], ['xml', 'json', 'csv'])) {
+        } elseif (! in_array($feed_data['format'], array( 'xml', 'json', 'csv' ))) {
             $errors[] = 'Unsupported feed format';
         }
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             return new \WP_Error('feed_validation_error', 'Feed validation failed', $errors);
         }
 
-        return [
-            'url' => esc_url_raw($feed_data['url']),
-            'format' => sanitize_text_field($feed_data['format']),
-            'name' => sanitize_text_field($feed_data['name'] ?? ''),
-            'description' => self::sanitizeText($feed_data['description'] ?? '', 500)
-        ];
+        return array(
+            'url'         => esc_url_raw($feed_data['url']),
+            'format'      => sanitize_text_field($feed_data['format']),
+            'name'        => sanitize_text_field($feed_data['name'] ?? ''),
+            'description' => self::sanitizeText($feed_data['description'] ?? '', 500),
+        );
     }
 }

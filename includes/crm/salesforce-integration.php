@@ -11,30 +11,30 @@
 namespace Puntwork\CRM;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
 // Mock WordPress functions for testing
-if (!function_exists('wp_remote_post')) {
-    function wp_remote_post($url, $args = [])
+if (! function_exists('wp_remote_post')) {
+    function wp_remote_post($url, $args = array())
     {
         // Mock HTTP response
-        return [
-            'response' => ['code' => 200],
-            'body' => '{"access_token": "mock_token", "instance_url": "https://mock.salesforce.com"}'
-        ];
+        return array(
+            'response' => array( 'code' => 200 ),
+            'body'     => '{"access_token": "mock_token", "instance_url": "https://mock.salesforce.com"}',
+        );
     }
 }
 
-if (!function_exists('wp_remote_retrieve_body')) {
+if (! function_exists('wp_remote_retrieve_body')) {
     function wp_remote_retrieve_body($response)
     {
         return $response['body'] ?? '';
     }
 }
 
-if (!function_exists('is_wp_error')) {
+if (! function_exists('is_wp_error')) {
     function is_wp_error($thing)
     {
         return false;
@@ -64,15 +64,15 @@ class SalesforceIntegration extends CRMIntegration
     /**
      * Constructor
      */
-    public function __construct(array $config = [])
+    public function __construct(array $config = array())
     {
-        $this->platform_id = 'salesforce';
+        $this->platform_id   = 'salesforce';
         $this->platform_name = 'Salesforce';
-        $this->rate_limits = [
+        $this->rate_limits   = array(
             'requests_per_minute' => 100,  // Conservative limit
-            'requests_per_hour' => 5000,   // Salesforce allows more, but we'll be conservative
-            'requests_per_day' => 100000   // Salesforce daily limit
-        ];
+            'requests_per_hour'   => 5000,   // Salesforce allows more, but we'll be conservative
+            'requests_per_day'    => 100000,   // Salesforce daily limit
+        );
 
         parent::__construct($config);
     }
@@ -93,8 +93,8 @@ class SalesforceIntegration extends CRMIntegration
     public function isConfigured(): bool
     {
         return isset($this->config['client_id'], $this->config['client_secret'], $this->config['username'], $this->config['password'])
-               && !empty($this->config['client_id']) && !empty($this->config['client_secret'])
-               && !empty($this->config['username']) && !empty($this->config['password']);
+                && ! empty($this->config['client_id']) && ! empty($this->config['client_secret'])
+                && ! empty($this->config['username']) && ! empty($this->config['password']);
     }
 
     /**
@@ -103,16 +103,19 @@ class SalesforceIntegration extends CRMIntegration
     private function authenticate(): bool
     {
         try {
-            $response = wp_remote_post($this->api_base . '/services/oauth2/token', [
-                'body' => [
-                    'grant_type' => 'password',
-                    'client_id' => $this->config['client_id'],
-                    'client_secret' => $this->config['client_secret'],
-                    'username' => $this->config['username'],
-                    'password' => $this->config['password'] . ($this->config['security_token'] ?? '')
-                ],
-                'timeout' => 30
-            ]);
+            $response = wp_remote_post(
+                $this->api_base . '/services/oauth2/token',
+                array(
+                    'body'    => array(
+                        'grant_type'    => 'password',
+                        'client_id'     => $this->config['client_id'],
+                        'client_secret' => $this->config['client_secret'],
+                        'username'      => $this->config['username'],
+                        'password'      => $this->config['password'] . ( $this->config['security_token'] ?? '' ),
+                    ),
+                    'timeout' => 30,
+                )
+            );
 
             if (is_wp_error($response)) {
                 throw new \Exception('Authentication request failed: ' . $response->get_error_message());
@@ -134,9 +137,13 @@ class SalesforceIntegration extends CRMIntegration
 
             return true;
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Salesforce authentication failed', PuntWorkLogger::CONTEXT_CRM, [
-                'error' => $e->getMessage()
-            ]);
+            PuntWorkLogger::error(
+                'Salesforce authentication failed',
+                PuntWorkLogger::CONTEXT_CRM,
+                array(
+                    'error' => $e->getMessage(),
+                )
+            );
             return false;
         }
     }
@@ -146,34 +153,34 @@ class SalesforceIntegration extends CRMIntegration
      */
     public function testConnection(): array
     {
-        if (!$this->isConfigured()) {
-            return [
+        if (! $this->isConfigured()) {
+            return array(
                 'success' => false,
-                'message' => 'Salesforce credentials not configured'
-            ];
+                'message' => 'Salesforce credentials not configured',
+            );
         }
 
         try {
-            if (!$this->authenticate()) {
-                return [
+            if (! $this->authenticate()) {
+                return array(
                     'success' => false,
-                    'message' => 'Salesforce authentication failed'
-                ];
+                    'message' => 'Salesforce authentication failed',
+                );
             }
 
             // Test by getting user info
-            $response = $this->makeApiRequest('sobjects/User/describe', [], 'GET');
+            $response = $this->makeApiRequest('sobjects/User/describe', array(), 'GET');
 
-            return [
-                'success' => true,
-                'message' => 'Salesforce connection successful',
-                'instance_url' => $this->instance_url
-            ];
+            return array(
+                'success'      => true,
+                'message'      => 'Salesforce connection successful',
+                'instance_url' => $this->instance_url,
+            );
         } catch (\Exception $e) {
-            return [
+            return array(
                 'success' => false,
-                'message' => 'Salesforce connection failed: ' . $e->getMessage()
-            ];
+                'message' => 'Salesforce connection failed: ' . $e->getMessage(),
+            );
         }
     }
 
@@ -189,24 +196,28 @@ class SalesforceIntegration extends CRMIntegration
         try {
             $response = $this->makeApiRequest('sobjects/Contact', $sf_contact, 'POST');
 
-            return [
-                'success' => true,
+            return array(
+                'success'    => true,
                 'contact_id' => $response['id'],
-                'platform' => 'salesforce',
-                'timestamp' => time()
-            ];
+                'platform'   => 'salesforce',
+                'timestamp'  => time(),
+            );
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Salesforce contact creation failed', PuntWorkLogger::CONTEXT_CRM, [
-                'error' => $e->getMessage(),
-                'contact_data' => $contact_data
-            ]);
+            PuntWorkLogger::error(
+                'Salesforce contact creation failed',
+                PuntWorkLogger::CONTEXT_CRM,
+                array(
+                    'error'        => $e->getMessage(),
+                    'contact_data' => $contact_data,
+                )
+            );
 
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'platform' => 'salesforce',
-                'timestamp' => time()
-            ];
+            return array(
+                'success'   => false,
+                'error'     => $e->getMessage(),
+                'platform'  => 'salesforce',
+                'timestamp' => time(),
+            );
         }
     }
 
@@ -222,24 +233,28 @@ class SalesforceIntegration extends CRMIntegration
         try {
             $response = $this->makeApiRequest("sobjects/Contact/{$contact_id}", $sf_contact, 'PATCH');
 
-            return [
-                'success' => true,
+            return array(
+                'success'    => true,
                 'contact_id' => $contact_id,
-                'platform' => 'salesforce',
-                'timestamp' => time()
-            ];
+                'platform'   => 'salesforce',
+                'timestamp'  => time(),
+            );
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Salesforce contact update failed', PuntWorkLogger::CONTEXT_CRM, [
-                'contact_id' => $contact_id,
-                'error' => $e->getMessage()
-            ]);
+            PuntWorkLogger::error(
+                'Salesforce contact update failed',
+                PuntWorkLogger::CONTEXT_CRM,
+                array(
+                    'contact_id' => $contact_id,
+                    'error'      => $e->getMessage(),
+                )
+            );
 
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'platform' => 'salesforce',
-                'timestamp' => time()
-            ];
+            return array(
+                'success'   => false,
+                'error'     => $e->getMessage(),
+                'platform'  => 'salesforce',
+                'timestamp' => time(),
+            );
         }
     }
 
@@ -249,22 +264,26 @@ class SalesforceIntegration extends CRMIntegration
     public function findContactByEmail(string $email): ?array
     {
         try {
-            $query = "SELECT Id, FirstName, LastName, Email, Phone, Account.Name FROM Contact WHERE Email = '{$email}'";
-            $response = $this->makeApiRequest('query', ['q' => $query], 'GET');
+            $query    = "SELECT Id, FirstName, LastName, Email, Phone, Account.Name FROM Contact WHERE Email = '{$email}'";
+            $response = $this->makeApiRequest('query', array( 'q' => $query ), 'GET');
 
-            if (!empty($response['records'])) {
-                return [
-                    'id' => $response['records'][0]['Id'],
-                    'properties' => $response['records'][0]
-                ];
+            if (! empty($response['records'])) {
+                return array(
+                    'id'         => $response['records'][0]['Id'],
+                    'properties' => $response['records'][0],
+                );
             }
 
             return null;
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Salesforce contact search failed', PuntWorkLogger::CONTEXT_CRM, [
-                'email' => $email,
-                'error' => $e->getMessage()
-            ]);
+            PuntWorkLogger::error(
+                'Salesforce contact search failed',
+                PuntWorkLogger::CONTEXT_CRM,
+                array(
+                    'email' => $email,
+                    'error' => $e->getMessage(),
+                )
+            );
 
             return null;
         }
@@ -277,41 +296,45 @@ class SalesforceIntegration extends CRMIntegration
     {
         $standardized_data = $this->standardizeDealData($deal_data);
 
-        $sf_opportunity = [
-            'Name' => $standardized_data['title'],
-            'StageName' => $this->mapOpportunityStage($standardized_data['stage']),
-            'Amount' => $standardized_data['value'],
-            'CloseDate' => $standardized_data['expected_close_date'] ?: date('Y-m-d', strtotime('+30 days')),
+        $sf_opportunity = array(
+            'Name'        => $standardized_data['title'],
+            'StageName'   => $this->mapOpportunityStage($standardized_data['stage']),
+            'Amount'      => $standardized_data['value'],
+            'CloseDate'   => $standardized_data['expected_close_date'] ?: date('Y-m-d', strtotime('+30 days')),
             'Description' => $standardized_data['description'],
-            'LeadSource' => $standardized_data['source']
-        ];
+            'LeadSource'  => $standardized_data['source'],
+        );
 
         try {
             $response = $this->makeApiRequest('sobjects/Opportunity', $sf_opportunity, 'POST');
 
             // Associate opportunity with contact if contact_id provided
-            if (!empty($standardized_data['contact_id'])) {
+            if (! empty($standardized_data['contact_id'])) {
                 $this->associateOpportunityWithContact($response['id'], $standardized_data['contact_id']);
             }
 
-            return [
-                'success' => true,
-                'deal_id' => $response['id'],
-                'platform' => 'salesforce',
-                'timestamp' => time()
-            ];
+            return array(
+                'success'   => true,
+                'deal_id'   => $response['id'],
+                'platform'  => 'salesforce',
+                'timestamp' => time(),
+            );
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Salesforce opportunity creation failed', PuntWorkLogger::CONTEXT_CRM, [
-                'error' => $e->getMessage(),
-                'deal_data' => $deal_data
-            ]);
+            PuntWorkLogger::error(
+                'Salesforce opportunity creation failed',
+                PuntWorkLogger::CONTEXT_CRM,
+                array(
+                    'error'     => $e->getMessage(),
+                    'deal_data' => $deal_data,
+                )
+            );
 
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'platform' => 'salesforce',
-                'timestamp' => time()
-            ];
+            return array(
+                'success'   => false,
+                'error'     => $e->getMessage(),
+                'platform'  => 'salesforce',
+                'timestamp' => time(),
+            );
         }
     }
 
@@ -320,56 +343,56 @@ class SalesforceIntegration extends CRMIntegration
      */
     private function formatContactData(array $contact_data): array
     {
-        $sf_contact = [];
+        $sf_contact = array();
 
-        if (!empty($contact_data['first_name'])) {
+        if (! empty($contact_data['first_name'])) {
             $sf_contact['FirstName'] = $contact_data['first_name'];
         }
 
-        if (!empty($contact_data['last_name'])) {
+        if (! empty($contact_data['last_name'])) {
             $sf_contact['LastName'] = $contact_data['last_name'];
         }
 
-        if (!empty($contact_data['email'])) {
+        if (! empty($contact_data['email'])) {
             $sf_contact['Email'] = $contact_data['email'];
         }
 
-        if (!empty($contact_data['phone'])) {
+        if (! empty($contact_data['phone'])) {
             $sf_contact['Phone'] = $contact_data['phone'];
         }
 
-        if (!empty($contact_data['company'])) {
-            $sf_contact['Account'] = ['Name' => $contact_data['company']];
+        if (! empty($contact_data['company'])) {
+            $sf_contact['Account'] = array( 'Name' => $contact_data['company'] );
         }
 
-        if (!empty($contact_data['job_title'])) {
+        if (! empty($contact_data['job_title'])) {
             $sf_contact['Title'] = $contact_data['job_title'];
         }
 
-        if (!empty($contact_data['address'])) {
+        if (! empty($contact_data['address'])) {
             $sf_contact['MailingStreet'] = $contact_data['address'];
         }
 
-        if (!empty($contact_data['city'])) {
+        if (! empty($contact_data['city'])) {
             $sf_contact['MailingCity'] = $contact_data['city'];
         }
 
-        if (!empty($contact_data['state'])) {
+        if (! empty($contact_data['state'])) {
             $sf_contact['MailingState'] = $contact_data['state'];
         }
 
-        if (!empty($contact_data['zip'])) {
+        if (! empty($contact_data['zip'])) {
             $sf_contact['MailingPostalCode'] = $contact_data['zip'];
         }
 
-        if (!empty($contact_data['country'])) {
+        if (! empty($contact_data['country'])) {
             $sf_contact['MailingCountry'] = $contact_data['country'];
         }
 
         // Add custom fields
-        if (!empty($contact_data['custom_fields'])) {
+        if (! empty($contact_data['custom_fields'])) {
             foreach ($contact_data['custom_fields'] as $key => $value) {
-                $sf_contact[$key] = $value;
+                $sf_contact[ $key ] = $value;
             }
         }
 
@@ -381,17 +404,17 @@ class SalesforceIntegration extends CRMIntegration
      */
     private function mapOpportunityStage(string $stage): string
     {
-        $stage_mapping = [
-            'lead' => 'Prospecting',
+        $stage_mapping = array(
+            'lead'                 => 'Prospecting',
             'application_received' => 'Qualification',
-            'interview_scheduled' => 'Needs Analysis',
-            'interviewed' => 'Value Proposition',
-            'offer_made' => 'Proposal/Price Quote',
-            'hired' => 'Closed Won',
-            'rejected' => 'Closed Lost'
-        ];
+            'interview_scheduled'  => 'Needs Analysis',
+            'interviewed'          => 'Value Proposition',
+            'offer_made'           => 'Proposal/Price Quote',
+            'hired'                => 'Closed Won',
+            'rejected'             => 'Closed Lost',
+        );
 
-        return $stage_mapping[$stage] ?? 'Prospecting';
+        return $stage_mapping[ $stage ] ?? 'Prospecting';
     }
 
     /**
@@ -401,20 +424,24 @@ class SalesforceIntegration extends CRMIntegration
     {
         try {
             // Create Opportunity Contact Role
-            $ocr_data = [
+            $ocr_data = array(
                 'OpportunityId' => $opportunity_id,
-                'ContactId' => $contact_id,
-                'Role' => 'Decision Maker',
-                'IsPrimary' => true
-            ];
+                'ContactId'     => $contact_id,
+                'Role'          => 'Decision Maker',
+                'IsPrimary'     => true,
+            );
 
             $this->makeApiRequest('sobjects/OpportunityContactRole', $ocr_data, 'POST');
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Salesforce opportunity-contact association failed', PuntWorkLogger::CONTEXT_CRM, [
-                'opportunity_id' => $opportunity_id,
-                'contact_id' => $contact_id,
-                'error' => $e->getMessage()
-            ]);
+            PuntWorkLogger::error(
+                'Salesforce opportunity-contact association failed',
+                PuntWorkLogger::CONTEXT_CRM,
+                array(
+                    'opportunity_id' => $opportunity_id,
+                    'contact_id'     => $contact_id,
+                    'error'          => $e->getMessage(),
+                )
+            );
         }
     }
 
@@ -431,10 +458,10 @@ class SalesforceIntegration extends CRMIntegration
      */
     protected function getDefaultHeaders(): array
     {
-        return [
+        return array(
             'Authorization' => 'Bearer ' . $this->access_token,
-            'Content-Type' => 'application/json'
-        ];
+            'Content-Type'  => 'application/json',
+        );
     }
 
     /**

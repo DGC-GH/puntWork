@@ -11,7 +11,7 @@
 namespace Puntwork\Admin;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -25,10 +25,10 @@ class JobBoardAdmin
      */
     public static function init(): void
     {
-        add_action('admin_menu', [self::class, 'addAdminMenu']);
-        add_action('admin_enqueueScripts', [self::class, 'enqueueScripts']);
-        add_action('wp_ajax_puntwork_test_job_board', [self::class, 'ajaxTestJobBoard']);
-        add_action('wp_ajax_puntwork_save_job_board', [self::class, 'ajaxSaveJobBoard']);
+        add_action('admin_menu', array( self::class, 'addAdminMenu' ));
+        add_action('admin_enqueueScripts', array( self::class, 'enqueueScripts' ));
+        add_action('wp_ajax_puntwork_test_job_board', array( self::class, 'ajaxTestJobBoard' ));
+        add_action('wp_ajax_puntwork_save_job_board', array( self::class, 'ajaxSaveJobBoard' ));
     }
 
     /**
@@ -42,7 +42,7 @@ class JobBoardAdmin
             __('Job Boards', 'puntwork'),
             'manage_options',
             'puntwork-job-boards',
-            [self::class, 'renderAdminPage']
+            array( self::class, 'renderAdminPage' )
         );
     }
 
@@ -55,21 +55,25 @@ class JobBoardAdmin
             return;
         }
 
-        wp_enqueue_style('puntwork-job-boards', plugin_dir_url(__FILE__) . '../../assets/css/job-boards-admin.css', [], PUNTWORK_VERSION);
-        wp_enqueue_script('puntwork-job-boards', plugin_dir_url(__FILE__) . '../../assets/js/job-boards-admin.js', ['jquery'], PUNTWORK_VERSION, true);
+        wp_enqueue_style('puntwork-job-boards', plugin_dir_url(__FILE__) . '../../assets/css/job-boards-admin.css', array(), PUNTWORK_VERSION);
+        wp_enqueue_script('puntwork-job-boards', plugin_dir_url(__FILE__) . '../../assets/js/job-boards-admin.js', array( 'jquery' ), PUNTWORK_VERSION, true);
 
-        wp_localize_script('puntwork-job-boards', 'puntworkJobBoards', [
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('puntwork_job_boards'),
-            'strings' => [
-                'testing' => __('Testing connection...', 'puntwork'),
-                'test_success' => __('Connection successful!', 'puntwork'),
-                'test_failed' => __('Connection failed!', 'puntwork'),
-                'saving' => __('Saving...', 'puntwork'),
-                'save_success' => __('Settings saved!', 'puntwork'),
-                'save_failed' => __('Save failed!', 'puntwork')
-            ]
-        ]);
+        wp_localize_script(
+            'puntwork-job-boards',
+            'puntworkJobBoards',
+            array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce'    => wp_create_nonce('puntwork_job_boards'),
+                'strings'  => array(
+                    'testing'      => __('Testing connection...', 'puntwork'),
+                    'test_success' => __('Connection successful!', 'puntwork'),
+                    'test_failed'  => __('Connection failed!', 'puntwork'),
+                    'saving'       => __('Saving...', 'puntwork'),
+                    'save_success' => __('Settings saved!', 'puntwork'),
+                    'save_failed'  => __('Save failed!', 'puntwork'),
+                ),
+            )
+        );
     }
 
     /**
@@ -77,15 +81,15 @@ class JobBoardAdmin
      */
     public static function renderAdminPage(): void
     {
-        if (!current_user_can('manage_options')) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.'));
         }
 
         // Include the JobBoardManager
-        require_once plugin_dir_path(dirname(__FILE__, 2)) . 'jobboards/jobboard-manager.php';
+        include_once plugin_dir_path(dirname(__DIR__, 1)) . 'jobboards/jobboard-manager.php';
 
         $available_boards = \Puntwork\JobBoards\JobBoardManager::getAvailableBoards();
-        $board_configs = \Puntwork\JobBoards\JobBoardManager::getAllBoardConfigs();
+        $board_configs    = \Puntwork\JobBoards\JobBoardManager::getAllBoardConfigs();
 
         ?>
         <div class="wrap">
@@ -99,7 +103,7 @@ class JobBoardAdmin
                 <div class="puntwork-job-boards-grid">
                     <?php foreach ($available_boards as $board_id => $board_info) : ?>
                         <?php
-                        $config = $board_configs[$board_id] ?? [];
+                        $config     = $board_configs[ $board_id ] ?? array();
                         $is_enabled = isset($config['enabled']) && $config['enabled'];
                         ?>
                         <div class="puntwork-job-board-card <?php echo $is_enabled ? 'enabled' : 'disabled'; ?>" data-board-id="<?php echo esc_attr($board_id); ?>">
@@ -190,44 +194,44 @@ class JobBoardAdmin
     {
         check_ajax_referer('puntwork_job_boards', 'nonce');
 
-        if (!current_user_can('manage_options')) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('Insufficient permissions'));
         }
 
         $board_id = sanitize_text_field($_POST['board_id'] ?? '');
-        $config = $_POST['config'] ?? [];
+        $config   = $_POST['config'] ?? array();
 
         if (empty($board_id)) {
-            wp_send_json_error(['message' => 'Board ID is required']);
+            wp_send_json_error(array( 'message' => 'Board ID is required' ));
         }
 
         // Sanitize config
         $config = self::sanitizeBoardConfig($board_id, $config);
 
         try {
-            require_once plugin_dir_path(dirname(__FILE__, 2)) . 'jobboards/jobboard-manager.php';
+            include_once plugin_dir_path(dirname(__DIR__, 1)) . 'jobboards/jobboard-manager.php';
 
             // Create a temporary board instance for testing
             $available_boards = \Puntwork\JobBoards\JobBoardManager::getAvailableBoards();
 
-            if (!isset($available_boards[$board_id])) {
-                wp_send_json_error(['message' => 'Invalid board ID']);
+            if (! isset($available_boards[ $board_id ])) {
+                wp_send_json_error(array( 'message' => 'Invalid board ID' ));
             }
 
-            $board_class = $available_boards[$board_id]['class'];
-            $board = new $board_class($config);
+            $board_class = $available_boards[ $board_id ]['class'];
+            $board       = new $board_class($config);
 
-            $test_result = [
-                'board_id' => $board_id,
-                'configured' => $board->isConfigured()
-            ];
+            $test_result = array(
+                'board_id'   => $board_id,
+                'configured' => $board->isConfigured(),
+            );
 
             if ($board->isConfigured()) {
                 // Try a test request
-                $test_jobs = $board->fetchJobs(['limit' => 1]);
-                $test_result['success'] = true;
+                $test_jobs                = $board->fetchJobs(array( 'limit' => 1 ));
+                $test_result['success']   = true;
                 $test_result['job_count'] = count($test_jobs);
-                $test_result['message'] = sprintf(__('Connection successful! Found %d test jobs.', 'puntwork'), count($test_jobs));
+                $test_result['message']   = sprintf(__('Connection successful! Found %d test jobs.', 'puntwork'), count($test_jobs));
             } else {
                 $test_result['success'] = false;
                 $test_result['message'] = __('Board is not properly configured.', 'puntwork');
@@ -235,10 +239,12 @@ class JobBoardAdmin
 
             wp_send_json_success($test_result);
         } catch (\Exception $e) {
-            wp_send_json_error([
-                'message' => $e->getMessage(),
-                'board_id' => $board_id
-            ]);
+            wp_send_json_error(
+                array(
+                    'message'  => $e->getMessage(),
+                    'board_id' => $board_id,
+                )
+            );
         }
     }
 
@@ -249,40 +255,44 @@ class JobBoardAdmin
     {
         check_ajax_referer('puntwork_job_boards', 'nonce');
 
-        if (!current_user_can('manage_options')) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('Insufficient permissions'));
         }
 
         $board_id = sanitize_text_field($_POST['board_id'] ?? '');
-        $config = $_POST['config'] ?? [];
-        $enabled = isset($_POST['enabled']) && $_POST['enabled'] === 'true';
+        $config   = $_POST['config'] ?? array();
+        $enabled  = isset($_POST['enabled']) && $_POST['enabled'] === 'true';
 
         if (empty($board_id)) {
-            wp_send_json_error(['message' => 'Board ID is required']);
+            wp_send_json_error(array( 'message' => 'Board ID is required' ));
         }
 
         // Sanitize config
-        $config = self::sanitizeBoardConfig($board_id, $config);
+        $config            = self::sanitizeBoardConfig($board_id, $config);
         $config['enabled'] = $enabled;
 
         try {
-            require_once plugin_dir_path(dirname(__FILE__, 2)) . 'jobboards/jobboard-manager.php';
+            include_once plugin_dir_path(dirname(__DIR__, 1)) . 'jobboards/jobboard-manager.php';
 
             $success = \Puntwork\JobBoards\JobBoardManager::configureBoard($board_id, $config);
 
             if ($success) {
-                wp_send_json_success([
-                    'message' => __('Settings saved successfully!', 'puntwork'),
-                    'board_id' => $board_id
-                ]);
+                wp_send_json_success(
+                    array(
+                        'message'  => __('Settings saved successfully!', 'puntwork'),
+                        'board_id' => $board_id,
+                    )
+                );
             } else {
-                wp_send_json_error(['message' => __('Failed to save settings.', 'puntwork')]);
+                wp_send_json_error(array( 'message' => __('Failed to save settings.', 'puntwork') ));
             }
         } catch (\Exception $e) {
-            wp_send_json_error([
-                'message' => $e->getMessage(),
-                'board_id' => $board_id
-            ]);
+            wp_send_json_error(
+                array(
+                    'message'  => $e->getMessage(),
+                    'board_id' => $board_id,
+                )
+            );
         }
     }
 
@@ -291,15 +301,15 @@ class JobBoardAdmin
      */
     private static function sanitizeBoardConfig(string $board_id, array $config): array
     {
-        $sanitized = [];
+        $sanitized = array();
 
         foreach ($config as $key => $value) {
             if (is_string($value)) {
-                $sanitized[$key] = sanitize_text_field($value);
+                $sanitized[ $key ] = sanitize_text_field($value);
             } elseif (is_array($value)) {
-                $sanitized[$key] = array_map('sanitize_text_field', $value);
+                $sanitized[ $key ] = array_map('sanitize_text_field', $value);
             } else {
-                $sanitized[$key] = $value;
+                $sanitized[ $key ] = $value;
             }
         }
 

@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 function feed_health_monitor_page()
 {
     // Enqueue admin modern styles
-    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', [], PUNTWORK_VERSION);
+    wp_enqueue_style('puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION);
 
     // Handle AJAX actions
     if (isset($_POST['action'])) {
@@ -40,17 +40,20 @@ function feed_health_monitor_page()
     }
 
     // Get current health status
-    $health_status = FeedHealthMonitor::getFeedHealthStatus();
-    $alert_settings = get_option('puntwork_feed_alerts', [
-        'email_enabled' => true,
-        'email_recipients' => get_option('admin_email'),
-        'alert_types' => [
-            FeedHealthMonitor::ALERT_FEED_DOWN => true,
-            FeedHealthMonitor::ALERT_FEED_SLOW => true,
-            FeedHealthMonitor::ALERT_FEED_EMPTY => true,
-            FeedHealthMonitor::ALERT_FEED_CHANGED => false
-        ]
-    ]);
+    $health_status  = FeedHealthMonitor::getFeedHealthStatus();
+    $alert_settings = get_option(
+        'puntwork_feed_alerts',
+        array(
+            'email_enabled'    => true,
+            'email_recipients' => get_option('admin_email'),
+            'alert_types'      => array(
+                FeedHealthMonitor::ALERT_FEED_DOWN    => true,
+                FeedHealthMonitor::ALERT_FEED_SLOW    => true,
+                FeedHealthMonitor::ALERT_FEED_EMPTY   => true,
+                FeedHealthMonitor::ALERT_FEED_CHANGED => false,
+            ),
+        )
+    );
 
     ?>
     <div class="wrap">
@@ -160,22 +163,22 @@ function feed_health_monitor_page()
                             <td>
                                 <fieldset>
                                     <label>
-                                        <input type="checkbox" name="alert_types[feed_down]" value="1" <?php checked($alert_settings['alert_types'][FeedHealthMonitor::ALERT_FEED_DOWN]); ?>>
+                                        <input type="checkbox" name="alert_types[feed_down]" value="1" <?php checked($alert_settings['alert_types'][ FeedHealthMonitor::ALERT_FEED_DOWN ]); ?>>
                                         <?php _e('Feed Down - When feeds are unreachable or return errors', 'puntwork'); ?>
                                     </label><br>
 
                                     <label>
-                                        <input type="checkbox" name="alert_types[feed_slow]" value="1" <?php checked($alert_settings['alert_types'][FeedHealthMonitor::ALERT_FEED_SLOW]); ?>>
+                                        <input type="checkbox" name="alert_types[feed_slow]" value="1" <?php checked($alert_settings['alert_types'][ FeedHealthMonitor::ALERT_FEED_SLOW ]); ?>>
                                         <?php _e('Slow Response - When feeds take longer than 10 seconds to respond', 'puntwork'); ?>
                                     </label><br>
 
                                     <label>
-                                        <input type="checkbox" name="alert_types[feed_empty]" value="1" <?php checked($alert_settings['alert_types'][FeedHealthMonitor::ALERT_FEED_EMPTY]); ?>>
+                                        <input type="checkbox" name="alert_types[feed_empty]" value="1" <?php checked($alert_settings['alert_types'][ FeedHealthMonitor::ALERT_FEED_EMPTY ]); ?>>
                                         <?php _e('Empty Feed - When feeds contain no job listings', 'puntwork'); ?>
                                     </label><br>
 
                                     <label>
-                                        <input type="checkbox" name="alert_types[feed_changed]" value="1" <?php checked($alert_settings['alert_types'][FeedHealthMonitor::ALERT_FEED_CHANGED]); ?>>
+                                        <input type="checkbox" name="alert_types[feed_changed]" value="1" <?php checked($alert_settings['alert_types'][ FeedHealthMonitor::ALERT_FEED_CHANGED ]); ?>>
                                         <?php _e('Content Changed - When feed content changes significantly', 'puntwork'); ?>
                                     </label>
                                 </fieldset>
@@ -188,7 +191,7 @@ function feed_health_monitor_page()
             </div>
 
             <!-- Health History -->
-            <?php if (!empty($health_status)) : ?>
+            <?php if (! empty($health_status)) : ?>
             <div class="health-history">
                 <h2><?php _e('Health History', 'puntwork'); ?></h2>
 
@@ -204,7 +207,8 @@ function feed_health_monitor_page()
                     <div class="feed-history-content" id="history-<?php echo esc_attr($feed_key); ?>" style="<?php echo $feed_key === array_key_first($health_status) ? '' : 'display: none;'; ?>">
                         <?php
                         $history = FeedHealthMonitor::getFeedHealthHistory($feed_key, 7);
-                        if (empty($history)) : ?>
+                        if (empty($history)) :
+                            ?>
                             <p><?php _e('No historical data available for this feed.', 'puntwork'); ?></p>
                         <?php else : ?>
                             <div class="history-chart">
@@ -234,7 +238,7 @@ function feed_health_monitor_page()
                                             <td><?php echo $record['response_time'] ? round($record['response_time'], 2) . 's' : 'N/A'; ?></td>
                                             <td><?php echo $record['http_code'] ?: 'N/A'; ?></td>
                                             <td><?php echo $record['item_count'] !== null ? number_format($record['item_count']) : 'N/A'; ?></td>
-                                            <td><?php echo $record['error_message'] ? esc_html(substr($record['error_message'], 0, 50)) . (strlen($record['error_message']) > 50 ? '...' : '') : '—'; ?></td>
+                                            <td><?php echo $record['error_message'] ? esc_html(substr($record['error_message'], 0, 50)) . ( strlen($record['error_message']) > 50 ? '...' : '' ) : '—'; ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -386,16 +390,16 @@ function feed_health_monitor_page()
  */
 function update_alert_settings()
 {
-    $alert_settings = [
-        'email_enabled' => isset($_POST['email_enabled']),
+    $alert_settings = array(
+        'email_enabled'    => isset($_POST['email_enabled']),
         'email_recipients' => sanitize_text_field($_POST['email_recipients']),
-        'alert_types' => [
-            FeedHealthMonitor::ALERT_FEED_DOWN => isset($_POST['alert_types']['feed_down']),
-            FeedHealthMonitor::ALERT_FEED_SLOW => isset($_POST['alert_types']['feed_slow']),
-            FeedHealthMonitor::ALERT_FEED_EMPTY => isset($_POST['alert_types']['feed_empty']),
-            FeedHealthMonitor::ALERT_FEED_CHANGED => isset($_POST['alert_types']['feed_changed'])
-        ]
-    ];
+        'alert_types'      => array(
+            FeedHealthMonitor::ALERT_FEED_DOWN    => isset($_POST['alert_types']['feed_down']),
+            FeedHealthMonitor::ALERT_FEED_SLOW    => isset($_POST['alert_types']['feed_slow']),
+            FeedHealthMonitor::ALERT_FEED_EMPTY   => isset($_POST['alert_types']['feed_empty']),
+            FeedHealthMonitor::ALERT_FEED_CHANGED => isset($_POST['alert_types']['feed_changed']),
+        ),
+    );
 
     update_option('puntwork_feed_alerts', $alert_settings);
     add_settings_error('feed_health_monitor', 'alerts_updated', __('Alert settings updated successfully.', 'puntwork'), 'success');

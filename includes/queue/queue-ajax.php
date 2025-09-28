@@ -8,7 +8,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -18,13 +18,13 @@ if (!defined('ABSPATH')) {
 function get_queue_stats_ajax()
 {
     // Verify nonce and permissions
-    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
-        wp_send_json_error(['message' => 'Security check failed']);
+    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
+        wp_send_json_error(array( 'message' => 'Security check failed' ));
         return;
     }
 
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error(['message' => 'Insufficient permissions']);
+    if (! current_user_can('manage_options')) {
+        wp_send_json_error(array( 'message' => 'Insufficient permissions' ));
         return;
     }
 
@@ -35,7 +35,8 @@ function get_queue_stats_ajax()
         global $wpdb;
         $table_name = $wpdb->prefix . 'puntwork_queue';
 
-        $stats = $wpdb->get_row("
+        $stats = $wpdb->get_row(
+            "
             SELECT
                 COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending,
                 COUNT(CASE WHEN status = 'processing' THEN 1 END) as processing,
@@ -43,11 +44,21 @@ function get_queue_stats_ajax()
                 COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed,
                 COUNT(*) as total
             FROM $table_name
-        ", ARRAY_A);
+        ",
+            ARRAY_A
+        );
 
-        wp_send_json_success($stats ?: ['pending' => 0, 'processing' => 0, 'completed' => 0, 'failed' => 0, 'total' => 0]);
+        wp_send_json_success(
+            $stats ?: array(
+                'pending'    => 0,
+                'processing' => 0,
+                'completed'  => 0,
+                'failed'     => 0,
+                'total'      => 0,
+            )
+        );
     } catch (\Exception $e) {
-        wp_send_json_error(['message' => 'Failed to get queue stats: ' . $e->getMessage()]);
+        wp_send_json_error(array( 'message' => 'Failed to get queue stats: ' . $e->getMessage() ));
     }
 }
 
@@ -57,13 +68,13 @@ function get_queue_stats_ajax()
 function get_recent_jobs_ajax()
 {
     // Verify nonce and permissions
-    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
-        wp_send_json_error(['message' => 'Security check failed']);
+    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
+        wp_send_json_error(array( 'message' => 'Security check failed' ));
         return;
     }
 
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error(['message' => 'Insufficient permissions']);
+    if (! current_user_can('manage_options')) {
+        wp_send_json_error(array( 'message' => 'Insufficient permissions' ));
         return;
     }
 
@@ -74,16 +85,19 @@ function get_recent_jobs_ajax()
         global $wpdb;
         $table_name = $wpdb->prefix . 'puntwork_queue';
 
-        $jobs = $wpdb->get_results("
+        $jobs = $wpdb->get_results(
+            "
             SELECT id, job_type, status, attempts, max_attempts, created_at, updated_at
             FROM $table_name
             ORDER BY updated_at DESC
             LIMIT 20
-        ", ARRAY_A);
+        ",
+            ARRAY_A
+        );
 
-        wp_send_json_success($jobs ?: []);
+        wp_send_json_success($jobs ?: array());
     } catch (\Exception $e) {
-        wp_send_json_error(['message' => 'Failed to get recent jobs: ' . $e->getMessage()]);
+        wp_send_json_error(array( 'message' => 'Failed to get recent jobs: ' . $e->getMessage() ));
     }
 }
 
@@ -93,13 +107,13 @@ function get_recent_jobs_ajax()
 function clear_completed_jobs_ajax()
 {
     // Verify nonce and permissions
-    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
-        wp_send_json_error(['message' => 'Security check failed']);
+    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
+        wp_send_json_error(array( 'message' => 'Security check failed' ));
         return;
     }
 
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error(['message' => 'Insufficient permissions']);
+    if (! current_user_can('manage_options')) {
+        wp_send_json_error(array( 'message' => 'Insufficient permissions' ));
         return;
     }
 
@@ -110,14 +124,16 @@ function clear_completed_jobs_ajax()
         global $wpdb;
         $table_name = $wpdb->prefix . 'puntwork_queue';
 
-        $deleted = $wpdb->delete($table_name, ['status' => 'completed'], ['%s']);
+        $deleted = $wpdb->delete($table_name, array( 'status' => 'completed' ), array( '%s' ));
 
-        wp_send_json_success([
-            'message' => "Cleared $deleted completed jobs",
-            'deleted' => $deleted
-        ]);
+        wp_send_json_success(
+            array(
+                'message' => "Cleared $deleted completed jobs",
+                'deleted' => $deleted,
+            )
+        );
     } catch (\Exception $e) {
-        wp_send_json_error(['message' => 'Failed to clear completed jobs: ' . $e->getMessage()]);
+        wp_send_json_error(array( 'message' => 'Failed to clear completed jobs: ' . $e->getMessage() ));
     }
 }
 
@@ -127,34 +143,40 @@ function clear_completed_jobs_ajax()
 function add_test_job_ajax()
 {
     // Verify nonce and permissions
-    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
-        wp_send_json_error(['message' => 'Security check failed']);
+    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
+        wp_send_json_error(array( 'message' => 'Security check failed' ));
         return;
     }
 
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error(['message' => 'Insufficient permissions']);
+    if (! current_user_can('manage_options')) {
+        wp_send_json_error(array( 'message' => 'Insufficient permissions' ));
         return;
     }
 
     try {
         // Load queue manager
-        require_once __DIR__ . '/queue-manager.php';
+        include_once __DIR__ . '/queue-manager.php';
 
         // Add a test cleanup job
         $queue_manager = new PuntworkQueueManager();
-        $job_id = $queue_manager->add_job('cleanup', [
-            'type' => 'general',
-            'test' => true,
-            'timestamp' => time()
-        ], 1); // High priority
+        $job_id        = $queue_manager->add_job(
+            'cleanup',
+            array(
+                'type'      => 'general',
+                'test'      => true,
+                'timestamp' => time(),
+            ),
+            1
+        ); // High priority
 
-        wp_send_json_success([
-            'message' => 'Test job added successfully',
-            'job_id' => $job_id
-        ]);
+        wp_send_json_success(
+            array(
+                'message' => 'Test job added successfully',
+                'job_id'  => $job_id,
+            )
+        );
     } catch (\Exception $e) {
-        wp_send_json_error(['message' => 'Failed to add test job: ' . $e->getMessage()]);
+        wp_send_json_error(array( 'message' => 'Failed to add test job: ' . $e->getMessage() ));
     }
 }
 
@@ -164,26 +186,26 @@ function add_test_job_ajax()
 function manual_process_queue_ajax()
 {
     // Verify nonce and permissions
-    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
-        wp_send_json_error(['message' => 'Security check failed']);
+    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_queue_nonce')) {
+        wp_send_json_error(array( 'message' => 'Security check failed' ));
         return;
     }
 
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error(['message' => 'Insufficient permissions']);
+    if (! current_user_can('manage_options')) {
+        wp_send_json_error(array( 'message' => 'Insufficient permissions' ));
         return;
     }
 
     try {
         // Load queue manager
-        require_once __DIR__ . '/queue-manager.php';
+        include_once __DIR__ . '/queue-manager.php';
 
         $queue_manager = new PuntworkQueueManager();
         $queue_manager->process_queue();
 
-        wp_send_json_success(['message' => 'Queue processed manually']);
+        wp_send_json_success(array( 'message' => 'Queue processed manually' ));
     } catch (\Exception $e) {
-        wp_send_json_error(['message' => 'Failed to process queue: ' . $e->getMessage()]);
+        wp_send_json_error(array( 'message' => 'Failed to process queue: ' . $e->getMessage() ));
     }
 }
 
@@ -194,18 +216,18 @@ function ensure_queue_table_exists()
 {
     global $wpdb;
 
-    $table_name = $wpdb->prefix . 'puntwork_queue';
+    $table_name      = $wpdb->prefix . 'puntwork_queue';
     $charset_collate = $wpdb->get_charset_collate();
 
     // Check if table exists
     $table_exists = $wpdb->get_var(
         $wpdb->prepare(
-            "SHOW TABLES LIKE %s",
+            'SHOW TABLES LIKE %s',
             $table_name
         )
     );
 
-    if (!$table_exists) {
+    if (! $table_exists) {
         error_log('[PUNTWORK] Queue table does not exist, creating it via AJAX');
 
         $sql = "CREATE TABLE $table_name (
@@ -227,7 +249,7 @@ function ensure_queue_table_exists()
             KEY status_updated (status, updated_at)
         ) $charset_collate;";
 
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        include_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
 
         if ($wpdb->last_error) {
@@ -241,13 +263,13 @@ function ensure_queue_table_exists()
  */
 function get_queue_config()
 {
-    return [
-        'max_retries' => 3,
-        'batch_size' => 10,
-        'cron_interval' => 30, // seconds
+    return array(
+        'max_retries'        => 3,
+        'batch_size'         => 10,
+        'cron_interval'      => 30, // seconds
         'max_execution_time' => 120, // seconds
-        'table_name' => 'puntwork_queue'
-    ];
+        'table_name'         => 'puntwork_queue',
+    );
 }
 
 /**
@@ -259,18 +281,26 @@ function cleanup_old_queue_entries()
     $table_name = $wpdb->prefix . 'puntwork_queue';
 
     // Delete completed jobs older than 7 days
-    $wpdb->query($wpdb->prepare("
+    $wpdb->query(
+        $wpdb->prepare(
+            "
         DELETE FROM $table_name
         WHERE status = 'completed'
         AND completed_at < DATE_SUB(NOW(), INTERVAL 7 DAY)
-    "));
+    "
+        )
+    );
 
     // Delete failed jobs older than 30 days
-    $wpdb->query($wpdb->prepare("
+    $wpdb->query(
+        $wpdb->prepare(
+            "
         DELETE FROM $table_name
         WHERE status = 'failed'
         AND updated_at < DATE_SUB(NOW(), INTERVAL 30 DAY)
-    "));
+    "
+        )
+    );
 }
 
 /**
@@ -285,7 +315,7 @@ add_action('wp_ajax_puntwork_process_queue', __NAMESPACE__ . '\\manual_process_q
 /**
  * Schedule daily cleanup
  */
-if (!wp_next_scheduled('puntwork_queue_cleanup')) {
+if (! wp_next_scheduled('puntwork_queue_cleanup')) {
     wp_schedule_event(time(), 'daily', 'puntwork_queue_cleanup');
 }
 

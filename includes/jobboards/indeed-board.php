@@ -11,7 +11,7 @@
 namespace Puntwork\JobBoards;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -28,11 +28,11 @@ class IndeedBoard extends JobBoard
     /**
      * Constructor
      */
-    public function __construct(array $config = [])
+    public function __construct(array $config = array())
     {
-        $this->board_id = 'indeed';
+        $this->board_id   = 'indeed';
         $this->board_name = 'Indeed';
-        $this->api_url = 'https://api.indeed.com/ads/apisearch';
+        $this->api_url    = 'https://api.indeed.com/ads/apisearch';
 
         parent::__construct($config);
     }
@@ -54,48 +54,52 @@ class IndeedBoard extends JobBoard
      */
     public function isConfigured(): bool
     {
-        return parent::isConfigured() && !empty($this->publisher_id);
+        return parent::isConfigured() && ! empty($this->publisher_id);
     }
 
     /**
      * Fetch jobs from Indeed
      */
-    public function fetchJobs(array $params = []): array
+    public function fetchJobs(array $params = array()): array
     {
-        if (!$this->isConfigured()) {
+        if (! $this->isConfigured()) {
             throw new \Exception('Indeed integration not properly configured');
         }
 
-        $default_params = [
+        $default_params = array(
             'publisher' => $this->publisher_id,
-            'v' => '2',
-            'format' => 'json',
-            'limit' => 25,
-            'fromage' => 30, // Jobs from last 30 days
-            'sort' => 'date'
-        ];
+            'v'         => '2',
+            'format'    => 'json',
+            'limit'     => 25,
+            'fromage'   => 30, // Jobs from last 30 days
+            'sort'      => 'date',
+        );
 
         $search_params = array_merge($default_params, $params);
 
         try {
             $response = $this->makeApiRequest('', $search_params);
 
-            if (!isset($response['results'])) {
-                return [];
+            if (! isset($response['results'])) {
+                return array();
             }
 
-            $jobs = [];
+            $jobs = array();
             foreach ($response['results'] as $job_data) {
                 $jobs[] = $this->normalizeIndeedJob($job_data);
             }
 
             return $jobs;
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Indeed API error', PuntWorkLogger::CONTEXT_IMPORT, [
-                'error' => $e->getMessage(),
-                'params' => $search_params
-            ]);
-            return [];
+            PuntWorkLogger::error(
+                'Indeed API error',
+                PuntWorkLogger::CONTEXT_IMPORT,
+                array(
+                    'error'  => $e->getMessage(),
+                    'params' => $search_params,
+                )
+            );
+            return array();
         }
     }
 
@@ -112,9 +116,9 @@ class IndeedBoard extends JobBoard
     /**
      * Search jobs with filters
      */
-    public function searchJobs(array $filters = []): array
+    public function searchJobs(array $filters = array()): array
     {
-        $params = [];
+        $params = array();
 
         if (isset($filters['keywords'])) {
             $params['q'] = $filters['keywords'];
@@ -134,7 +138,7 @@ class IndeedBoard extends JobBoard
 
         if (isset($filters['date_posted'])) {
             // Convert to Indeed's fromage parameter (days ago)
-            $days_ago = $this->calculateDaysAgo($filters['date_posted']);
+            $days_ago          = $this->calculateDaysAgo($filters['date_posted']);
             $params['fromage'] = $days_ago;
         }
 
@@ -146,20 +150,20 @@ class IndeedBoard extends JobBoard
      */
     private function normalizeIndeedJob(array $jobData): array
     {
-        return [
-            'id' => $jobData['jobkey'] ?? uniqid('indeed_'),
-            'title' => $jobData['jobtitle'] ?? '',
+        return array(
+            'id'          => $jobData['jobkey'] ?? uniqid('indeed_'),
+            'title'       => $jobData['jobtitle'] ?? '',
             'description' => $jobData['snippet'] ?? '',
-            'company' => $jobData['company'] ?? '',
-            'location' => $jobData['formattedLocation'] ?? $jobData['city'] ?? '',
-            'salary' => $jobData['formattedRelativeTime'] ?? '',
-            'job_type' => $this->mapJobType($jobData['jobtype'] ?? ''),
-            'category' => $jobData['category'] ?? '',
-            'url' => $jobData['url'] ?? '',
+            'company'     => $jobData['company'] ?? '',
+            'location'    => $jobData['formattedLocation'] ?? $jobData['city'] ?? '',
+            'salary'      => $jobData['formattedRelativeTime'] ?? '',
+            'job_type'    => $this->mapJobType($jobData['jobtype'] ?? ''),
+            'category'    => $jobData['category'] ?? '',
+            'url'         => $jobData['url'] ?? '',
             'date_posted' => $this->parseDatePosted($jobData['date'] ?? ''),
-            'source' => 'indeed',
-            'raw_data' => $jobData
-        ];
+            'source'      => 'indeed',
+            'raw_data'    => $jobData,
+        );
     }
 
     /**
@@ -167,15 +171,15 @@ class IndeedBoard extends JobBoard
      */
     private function mapJobType(string $indeedType): string
     {
-        $type_map = [
-            'fulltime' => 'full-time',
-            'parttime' => 'part-time',
-            'contract' => 'contract',
-            'temporary' => 'temporary',
-            'internship' => 'internship'
-        ];
+        $type_map = array(
+            'fulltime'   => 'full-time',
+            'parttime'   => 'part-time',
+            'contract'   => 'contract',
+            'temporary'  => 'temporary',
+            'internship' => 'internship',
+        );
 
-        return $type_map[strtolower($indeedType)] ?? 'full-time';
+        return $type_map[ strtolower($indeedType) ] ?? 'full-time';
     }
 
     /**
@@ -202,8 +206,8 @@ class IndeedBoard extends JobBoard
     private function calculateDaysAgo(string $dateString): int
     {
         try {
-            $date = new \DateTime($dateString);
-            $now = new \DateTime();
+            $date     = new \DateTime($dateString);
+            $now      = new \DateTime();
             $interval = $now->diff($date);
             return $interval->days;
         } catch (\Exception $e) {

@@ -29,10 +29,13 @@ function process_feed_ajax()
     $validation = SecurityUtils::validateAjaxRequest(
         'process_feed',
         'job_import_nonce',
-        ['feed_key'], // required fields
-        [
-            'feed_key' => ['type' => 'key', 'max_length' => 100] // validation rules
-        ]
+        array( 'feed_key' ), // required fields
+        array(
+            'feed_key' => array(
+                'type'       => 'key',
+                'max_length' => 100,
+            ), // validation rules
+        )
     );
 
     if (is_wp_error($validation)) {
@@ -42,8 +45,8 @@ function process_feed_ajax()
 
     try {
         $feed_key = $_POST['feed_key'];
-        $feeds = get_feeds();
-        $url = $feeds[$feed_key] ?? '';
+        $feeds    = get_feeds();
+        $url      = $feeds[ $feed_key ] ?? '';
 
         // DETAILED SERVER-SIDE DEBUGGING
         error_log('[PUNTWORK] [DEBUG] process_feed_ajax: ===== SERVER process_feed DEBUG =====');
@@ -52,33 +55,33 @@ function process_feed_ajax()
         error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Feed URL for key: ' . $url);
         error_log('[PUNTWORK] [DEBUG] process_feed_ajax: ABSPATH: ' . ABSPATH);
         error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Output directory: ' . ABSPATH . 'feeds/');
-        error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Output directory exists: ' . (is_dir(ABSPATH . 'feeds/') ? 'yes' : 'no'));
-        error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Output directory writable: ' . (is_writable(ABSPATH . 'feeds/') ? 'yes' : 'no'));
+        error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Output directory exists: ' . ( is_dir(ABSPATH . 'feeds/') ? 'yes' : 'no' ));
+        error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Output directory writable: ' . ( is_writable(ABSPATH . 'feeds/') ? 'yes' : 'no' ));
 
         if (empty($url)) {
             error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Feed URL is empty for key: ' . $feed_key . ' - checking if feed exists in array');
-            error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Feed key exists in feeds array: ' . (array_key_exists($feed_key, $feeds) ? 'yes' : 'no'));
+            error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Feed key exists in feeds array: ' . ( array_key_exists($feed_key, $feeds) ? 'yes' : 'no' ));
             if (array_key_exists($feed_key, $feeds)) {
-                error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Feed value is: ' . var_export($feeds[$feed_key], true));
+                error_log('[PUNTWORK] [DEBUG] process_feed_ajax: Feed value is: ' . var_export($feeds[ $feed_key ], true));
             }
             PuntWorkLogger::error("Invalid feed key: {$feed_key}", PuntWorkLogger::CONTEXT_FEED);
             AjaxErrorHandler::sendError('Invalid feed key: ' . $feed_key . ' - check feed configuration');
             return;
         }
 
-        PuntWorkLogger::info("Processing feed: {$feed_key}", PuntWorkLogger::CONTEXT_FEED, ['url' => $url]);
+        PuntWorkLogger::info("Processing feed: {$feed_key}", PuntWorkLogger::CONTEXT_FEED, array( 'url' => $url ));
 
         $output_dir = ABSPATH . 'feeds/';
 
         // Ensure output directory exists
-        if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
+        if (! wp_mkdir_p($output_dir) || ! is_writable($output_dir)) {
             PuntWorkLogger::error("Feeds directory not writable: {$output_dir}", PuntWorkLogger::CONTEXT_FEED);
             AjaxErrorHandler::sendError('Feeds directory not writable');
             return;
         }
 
         $fallback_domain = 'belgiumjobs.work';
-        $logs = [];
+        $logs            = array();
 
         error_log('[PUNTWORK] About to call process_one_feed with:');
         error_log('[PUNTWORK] - feed_key: ' . $feed_key);
@@ -93,15 +96,26 @@ function process_feed_ajax()
 
         PuntWorkLogger::logFeedProcessing($feed_key, $url, $count, true);
 
-        PuntWorkLogger::logAjaxResponse('process_feed', ['item_count' => $count, 'logs_count' => count($logs)]);
-        AjaxErrorHandler::sendSuccess(['item_count' => $count, 'logs' => $logs]);
+        PuntWorkLogger::logAjaxResponse(
+            'process_feed',
+            array(
+                'item_count' => $count,
+                'logs_count' => count($logs),
+            )
+        );
+        AjaxErrorHandler::sendSuccess(
+            array(
+                'item_count' => $count,
+                'logs'       => $logs,
+            )
+        );
     } catch (\Exception $e) {
         error_log('[PUNTWORK] Exception in process_feed_ajax: ' . $e->getMessage());
         error_log('[PUNTWORK] Exception trace: ' . $e->getTraceAsString());
         PuntWorkLogger::logFeedProcessing($feed_key ?? 'unknown', $url ?? '', 0, false);
         PuntWorkLogger::error("Feed processing failed: {$feed_key} - " . $e->getMessage(), PuntWorkLogger::CONTEXT_FEED);
 
-        PuntWorkLogger::logAjaxResponse('process_feed', ['message' => 'Process feed failed: ' . $e->getMessage()], false);
+        PuntWorkLogger::logAjaxResponse('process_feed', array( 'message' => 'Process feed failed: ' . $e->getMessage() ), false);
         AjaxErrorHandler::sendError('Process feed failed: ' . $e->getMessage());
     }
 }
@@ -115,10 +129,14 @@ function combine_jsonl_ajax()
     $validation = SecurityUtils::validateAjaxRequest(
         'combine_jsonl',
         'job_import_nonce',
-        ['total_items'], // required fields
-        [
-            'total_items' => ['type' => 'int', 'min' => 0, 'max' => 1000000] // validation rules
-        ]
+        array( 'total_items' ), // required fields
+        array(
+            'total_items' => array(
+                'type' => 'int',
+                'min'  => 0,
+                'max'  => 1000000,
+            ), // validation rules
+        )
     );
 
     if (is_wp_error($validation)) {
@@ -130,27 +148,27 @@ function combine_jsonl_ajax()
         $total_items = $_POST['total_items'];
         PuntWorkLogger::info("Combining JSONL files for {$total_items} items", PuntWorkLogger::CONTEXT_FEED);
 
-        $feeds = get_feeds();
+        $feeds      = get_feeds();
         $output_dir = ABSPATH . 'feeds/';
 
         // Ensure output directory exists
-        if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
+        if (! wp_mkdir_p($output_dir) || ! is_writable($output_dir)) {
             PuntWorkLogger::error("Feeds directory not writable: {$output_dir}", PuntWorkLogger::CONTEXT_FEED);
             AjaxErrorHandler::sendError('Feeds directory not writable');
             return;
         }
 
-        $logs = [];
+        $logs = array();
 
         combine_jsonl_files($feeds, $output_dir, $total_items, $logs);
-        PuntWorkLogger::info('JSONL files combined successfully', PuntWorkLogger::CONTEXT_FEED, ['total_items' => $total_items]);
+        PuntWorkLogger::info('JSONL files combined successfully', PuntWorkLogger::CONTEXT_FEED, array( 'total_items' => $total_items ));
 
-        PuntWorkLogger::logAjaxResponse('combine_jsonl', ['logs_count' => count($logs)]);
-        AjaxErrorHandler::sendSuccess(['logs' => $logs]);
+        PuntWorkLogger::logAjaxResponse('combine_jsonl', array( 'logs_count' => count($logs) ));
+        AjaxErrorHandler::sendSuccess(array( 'logs' => $logs ));
     } catch (\Exception $e) {
-        PuntWorkLogger::error("JSONL combination failed: " . $e->getMessage(), PuntWorkLogger::CONTEXT_FEED);
+        PuntWorkLogger::error('JSONL combination failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_FEED);
 
-        PuntWorkLogger::logAjaxResponse('combine_jsonl', ['message' => 'Combine JSONL failed: ' . $e->getMessage()], false);
+        PuntWorkLogger::logAjaxResponse('combine_jsonl', array( 'message' => 'Combine JSONL failed: ' . $e->getMessage() ), false);
         AjaxErrorHandler::sendError('Combine JSONL failed: ' . $e->getMessage());
     }
 }
@@ -173,12 +191,23 @@ function generate_json_ajax()
         $gen_logs = fetch_and_generate_combined_json();
         PuntWorkLogger::info('JSONL generation completed successfully', PuntWorkLogger::CONTEXT_FEED);
 
-        PuntWorkLogger::logAjaxResponse('generate_json', ['message' => 'JSONL generated successfully', 'logs_count' => count($gen_logs)]);
-        AjaxErrorHandler::sendSuccess(['message' => 'JSONL generated successfully', 'logs' => $gen_logs]);
+        PuntWorkLogger::logAjaxResponse(
+            'generate_json',
+            array(
+                'message'    => 'JSONL generated successfully',
+                'logs_count' => count($gen_logs),
+            )
+        );
+        AjaxErrorHandler::sendSuccess(
+            array(
+                'message' => 'JSONL generated successfully',
+                'logs'    => $gen_logs,
+            )
+        );
     } catch (\Exception $e) {
         PuntWorkLogger::error('JSONL generation failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_FEED);
 
-        PuntWorkLogger::logAjaxResponse('generate_json', ['message' => 'JSONL generation failed: ' . $e->getMessage()], false);
+        PuntWorkLogger::logAjaxResponse('generate_json', array( 'message' => 'JSONL generation failed: ' . $e->getMessage() ), false);
         AjaxErrorHandler::sendError('JSONL generation failed: ' . $e->getMessage());
     }
 }

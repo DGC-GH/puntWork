@@ -7,6 +7,8 @@
  * Run with: php tests/comprehensive-api-test.php
  */
 
+namespace Puntwork;
+
 class PuntWorkAPITestSuite
 {
     private $baseUrl;
@@ -431,8 +433,9 @@ class PuntWorkAPITestSuite
     // Checklist helper methods
     private function checkPluginUploaded()
     {
+        // Assume uploaded
         return true;
-    } // Assume uploaded
+    }
     private function checkPluginActivated()
     {
         $result = $this->makeRequest('/wp-json/puntwork/v1/import-status?api_key=invalid', 'GET', null, [], $this->wpRootUrl);

@@ -11,7 +11,7 @@
 namespace Puntwork\AI;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -28,20 +28,20 @@ class DuplicateDetector
     /**
      * Detect potential duplicates in a batch of jobs using content similarity
      *
-     * @param array $jobBatch Array of job data arrays
+     * @param  array $jobBatch Array of job data arrays
      * @return array Array of duplicate groups, each containing similar job indices
      */
     public static function detectDuplicates(array $jobBatch): array
     {
-        $duplicates = [];
-        $processed = [];
+        $duplicates = array();
+        $processed  = array();
 
         foreach ($jobBatch as $i => $job1) {
             if (in_array($i, $processed)) {
                 continue;
             }
 
-            $group = [$i];
+            $group       = array( $i );
             $processed[] = $i;
 
             foreach ($jobBatch as $j => $job2) {
@@ -52,7 +52,7 @@ class DuplicateDetector
                 $similarity = self::calculateSimilarity($job1, $job2);
 
                 if ($similarity >= self::SIMILARITY_THRESHOLD) {
-                    $group[] = $j;
+                    $group[]     = $j;
                     $processed[] = $j;
                 }
             }
@@ -68,23 +68,23 @@ class DuplicateDetector
     /**
      * Calculate similarity between two jobs using multiple algorithms
      *
-     * @param array $job1 First job data
-     * @param array $job2 Second job data
+     * @param  array $job1 First job data
+     * @param  array $job2 Second job data
      * @return float Similarity score between 0 and 1
      */
     public static function calculateSimilarity(array $job1, array $job2): float
     {
         // Extract comparable fields
-        $title1 = strtolower($job1['job_title'] ?? '');
-        $title2 = strtolower($job2['job_title'] ?? '');
-        $desc1 = strtolower($job1['job_description'] ?? '');
-        $desc2 = strtolower($job2['job_description'] ?? '');
+        $title1   = strtolower($job1['job_title'] ?? '');
+        $title2   = strtolower($job2['job_title'] ?? '');
+        $desc1    = strtolower($job1['job_description'] ?? '');
+        $desc2    = strtolower($job2['job_description'] ?? '');
         $company1 = strtolower($job1['job_company'] ?? '');
         $company2 = strtolower($job2['job_company'] ?? '');
 
         // Calculate different similarity scores
-        $titleSimilarity = self::jaccardSimilarity($title1, $title2);
-        $descSimilarity = self::jaccardSimilarity($desc1, $desc2);
+        $titleSimilarity   = self::jaccardSimilarity($title1, $title2);
+        $descSimilarity    = self::jaccardSimilarity($desc1, $desc2);
         $companySimilarity = self::levenshteinSimilarity($company1, $company2);
 
         // Weighted combination (title and description are most important)
@@ -100,8 +100,8 @@ class DuplicateDetector
     /**
      * Calculate Jaccard similarity between two strings
      *
-     * @param string $str1 First string
-     * @param string $str2 Second string
+     * @param  string $str1 First string
+     * @param  string $str2 Second string
      * @return float Similarity score between 0 and 1
      */
     private static function jaccardSimilarity(string $str1, string $str2): float
@@ -126,7 +126,7 @@ class DuplicateDetector
         $set2 = array_unique($tokens2);
 
         $intersection = array_intersect($set1, $set2);
-        $union = array_unique(array_merge($set1, $set2));
+        $union        = array_unique(array_merge($set1, $set2));
 
         return count($intersection) / count($union);
     }
@@ -134,8 +134,8 @@ class DuplicateDetector
     /**
      * Calculate Levenshtein similarity between two strings
      *
-     * @param string $str1 First string
-     * @param string $str2 Second string
+     * @param  string $str1 First string
+     * @param  string $str2 Second string
      * @return float Similarity score between 0 and 1
      */
     private static function levenshteinSimilarity(string $str1, string $str2): float
@@ -158,14 +158,14 @@ class DuplicateDetector
         }
 
         $distance = levenshtein($str1, $str2);
-        return 1 - ($distance / $maxLen);
+        return 1 - ( $distance / $maxLen );
     }
 
     /**
      * Fuzzy match two strings using multiple algorithms
      *
-     * @param string $str1 First string
-     * @param string $str2 Second string
+     * @param  string $str1 First string
+     * @param  string $str2 Second string
      * @return float Fuzzy match score between 0 and 1
      */
     public static function fuzzyMatch(string $str1, string $str2): float
@@ -178,17 +178,17 @@ class DuplicateDetector
         }
 
         // Use combination of Jaccard and Levenshtein
-        $jaccard = self::jaccardSimilarity($str1, $str2);
+        $jaccard     = self::jaccardSimilarity($str1, $str2);
         $levenshtein = self::levenshteinSimilarity($str1, $str2);
 
-        return ($jaccard * 0.6) + ($levenshtein * 0.4);
+        return ( $jaccard * 0.6 ) + ( $levenshtein * 0.4 );
     }
 
     /**
      * Check if two jobs are duplicates based on similarity
      *
-     * @param array $job1 First job data
-     * @param array $job2 Second job data
+     * @param  array $job1 First job data
+     * @param  array $job2 Second job data
      * @return bool True if jobs are considered duplicates
      */
     public static function isDuplicate(array $job1, array $job2): bool

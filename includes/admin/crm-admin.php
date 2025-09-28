@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -32,11 +32,11 @@ class PuntworkCrmAdmin
     {
         $this->crm_manager = new CRM\CRMManager();
 
-        add_action('admin_menu', [$this, 'addCrmMenu']);
-        add_action('admin_enqueueScripts', [$this, 'enqueueScripts']);
-        add_action('wp_ajax_puntwork_crm_test_platform', [$this, 'ajaxTestPlatform']);
-        add_action('wp_ajax_puntwork_crm_save_config', [$this, 'ajaxSaveConfig']);
-        add_action('wp_ajax_puntwork_crm_sync_application', [$this, 'ajaxSyncApplication']);
+        add_action('admin_menu', array( $this, 'addCrmMenu' ));
+        add_action('admin_enqueueScripts', array( $this, 'enqueueScripts' ));
+        add_action('wp_ajax_puntwork_crm_test_platform', array( $this, 'ajaxTestPlatform' ));
+        add_action('wp_ajax_puntwork_crm_save_config', array( $this, 'ajaxSaveConfig' ));
+        add_action('wp_ajax_puntwork_crm_sync_application', array( $this, 'ajaxSyncApplication' ));
     }
 
     /**
@@ -50,7 +50,7 @@ class PuntworkCrmAdmin
             __('CRM Integration', 'puntwork'),
             'manage_options',
             'puntwork-crm',
-            [$this, 'renderCrmPage']
+            array( $this, 'renderCrmPage' )
         );
     }
 
@@ -65,34 +65,38 @@ class PuntworkCrmAdmin
 
         wp_enqueue_script(
             'puntwork-crm-admin',
-            plugins_url('assets/js/crm-admin.js', dirname(__FILE__, 2)),
-            ['jquery'],
+            plugins_url('assets/js/crm-admin.js', dirname(__DIR__, 1)),
+            array( 'jquery' ),
             PUNTWORK_VERSION,
             true
         );
 
         wp_enqueue_style(
             'puntwork-crm-admin',
-            plugins_url('assets/css/crm-admin.css', dirname(__FILE__, 2)),
-            [],
+            plugins_url('assets/css/crm-admin.css', dirname(__DIR__, 1)),
+            array(),
             PUNTWORK_VERSION
         );
 
-        wp_localize_script('puntwork-crm-admin', 'puntwork_crm_ajax', [
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('puntwork_crm_nonce'),
-            'strings' => [
-                'testing' => __('Testing connection...', 'puntwork'),
-                'test_success' => __('Connection successful!', 'puntwork'),
-                'test_failed' => __('Connection failed!', 'puntwork'),
-                'saving' => __('Saving...', 'puntwork'),
-                'save_success' => __('Configuration saved!', 'puntwork'),
-                'save_failed' => __('Save failed!', 'puntwork'),
-                'syncing' => __('Syncing...', 'puntwork'),
-                'sync_success' => __('Synced successfully!', 'puntwork'),
-                'sync_failed' => __('Sync failed!', 'puntwork')
-            ]
-        ]);
+        wp_localize_script(
+            'puntwork-crm-admin',
+            'puntwork_crm_ajax',
+            array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce'    => wp_create_nonce('puntwork_crm_nonce'),
+                'strings'  => array(
+                    'testing'      => __('Testing connection...', 'puntwork'),
+                    'test_success' => __('Connection successful!', 'puntwork'),
+                    'test_failed'  => __('Connection failed!', 'puntwork'),
+                    'saving'       => __('Saving...', 'puntwork'),
+                    'save_success' => __('Configuration saved!', 'puntwork'),
+                    'save_failed'  => __('Save failed!', 'puntwork'),
+                    'syncing'      => __('Syncing...', 'puntwork'),
+                    'sync_success' => __('Synced successfully!', 'puntwork'),
+                    'sync_failed'  => __('Sync failed!', 'puntwork'),
+                ),
+            )
+        );
     }
 
     /**
@@ -101,8 +105,8 @@ class PuntworkCrmAdmin
     public function renderCrmPage(): void
     {
         $available_platforms = CRM\CRMManager::getAvailablePlatforms();
-        $platform_configs = CRM\CRMManager::getAllPlatformConfigs();
-        $statistics = $this->crm_manager->getStatistics();
+        $platform_configs    = CRM\CRMManager::getAllPlatformConfigs();
+        $statistics          = $this->crm_manager->getStatistics();
 
         ?>
         <div class="wrap">
@@ -125,9 +129,13 @@ class PuntworkCrmAdmin
                         <p><?php _e('Failed Syncs', 'puntwork'); ?></p>
                     </div>
                     <div class="stat-card">
-                        <h3><?php echo $statistics['last_sync'] ?
+                        <h3>
+                        <?php
+                        echo $statistics['last_sync'] ?
                             esc_html(human_time_diff(strtotime($statistics['last_sync']))) . ' ago' :
-                            __('Never', 'puntwork'); ?></h3>
+                            __('Never', 'puntwork');
+                        ?>
+                        </h3>
                         <p><?php _e('Last Sync', 'puntwork'); ?></p>
                     </div>
                 </div>
@@ -157,19 +165,27 @@ class PuntworkCrmAdmin
                                 <div class="platform-toggles">
                                     <label class="platform-toggle">
                                         <input type="checkbox"
-                                               class="platform-enabled"
-                                               <?php checked(isset($platform_configs[$platform_id]['enabled']) &&
-                                                             $platform_configs[$platform_id]['enabled']); ?>>
+                                                class="platform-enabled"
+                                            <?php
+                                            checked(
+                                                isset($platform_configs[ $platform_id ]['enabled']) &&
+                                                $platform_configs[ $platform_id ]['enabled']
+                                            );
+                                            ?>
+                                            >
                                         <?php _e('Enable', 'puntwork'); ?>
                                     </label>
                                 </div>
                             </div>
 
-                            <div class="platform-config" style="display: <?php
-                                echo (isset($platform_configs[$platform_id]['enabled']) &&
-                                      $platform_configs[$platform_id]['enabled']) ? 'block' : 'none'; ?>;">
+                            <div class="platform-config" style="display: 
+                            <?php
+                                echo ( isset($platform_configs[ $platform_id ]['enabled']) &&
+                                        $platform_configs[ $platform_id ]['enabled'] ) ? 'block' : 'none';
+                            ?>
+                            ;">
                                 <?php
-                                $this->renderPlatformConfig($platform_id, $platform_configs[$platform_id] ?? []);
+                                $this->renderPlatformConfig($platform_id, $platform_configs[ $platform_id ] ?? array());
                                 ?>
 
                                 <div class="platform-actions">
@@ -200,9 +216,14 @@ class PuntworkCrmAdmin
                                 <td>
                                     <label>
                                         <input type="checkbox" name="auto_sync_applications" value="1"
-                                               <?php checked(get_option('puntwork_crm_auto_sync_applications', false)); ?>>
-                                        <?php _e('Automatically sync new job applications to configured CRM ' .
-                                                  'platforms', 'puntwork'); ?>
+                                                <?php checked(get_option('puntwork_crm_auto_sync_applications', false)); ?>>
+                                        <?php
+                                        _e(
+                                            'Automatically sync new job applications to configured CRM ' .
+                                            'platforms',
+                                            'puntwork'
+                                        );
+                                        ?>
                                     </label>
                                 </td>
                             </tr>
@@ -210,14 +231,14 @@ class PuntworkCrmAdmin
                                 <th scope="row"><?php _e('Default Platforms', 'puntwork'); ?></th>
                                 <td>
                                     <?php
-                                    $default_platforms = get_option('puntwork_crm_default_platforms', []);
+                                    $default_platforms = get_option('puntwork_crm_default_platforms', array());
                                     foreach ($available_platforms as $platform_id => $platform_info) :
                                         ?>
                                         <label style="display: block; margin-bottom: 5px;">
                                             <input type="checkbox"
-                                                   name="default_platforms[]"
-                                                   value="<?php echo esc_attr($platform_id); ?>"
-                                                   <?php checked(in_array($platform_id, $default_platforms)); ?>>
+                                                    name="default_platforms[]"
+                                                    value="<?php echo esc_attr($platform_id); ?>"
+                                                    <?php checked(in_array($platform_id, $default_platforms)); ?>>
                                             <?php echo esc_html($platform_info['name']); ?>
                                         </label>
                                     <?php endforeach; ?>
@@ -228,7 +249,7 @@ class PuntworkCrmAdmin
                                 <td>
                                     <label>
                                         <input type="checkbox" name="sync_contact_fields" value="1"
-                                               <?php checked(get_option('puntwork_crm_sync_contact_fields', true)); ?>>
+                                                <?php checked(get_option('puntwork_crm_sync_contact_fields', true)); ?>>
                                         <?php _e('Include detailed contact information in sync', 'puntwork'); ?>
                                     </label>
                                 </td>
@@ -238,7 +259,7 @@ class PuntworkCrmAdmin
                                 <td>
                                     <label>
                                         <input type="checkbox" name="create_deals" value="1"
-                                               <?php checked(get_option('puntwork_crm_create_deals', true)); ?>>
+                                                <?php checked(get_option('puntwork_crm_create_deals', true)); ?>>
                                         <?php _e('Create deal/opportunity records for job applications', 'puntwork'); ?>
                                     </label>
                                 </td>
@@ -467,9 +488,12 @@ class PuntworkCrmAdmin
         global $wpdb;
         $table_name = $wpdb->prefix . 'puntwork_crm_sync_log';
 
-        $logs = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM $table_name ORDER BY created_at DESC LIMIT 50"
-        ), ARRAY_A);
+        $logs = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT * FROM $table_name ORDER BY created_at DESC LIMIT 50"
+            ),
+            ARRAY_A
+        );
 
         if (empty($logs)) {
             echo '<p>' . __('No sync logs found.', 'puntwork') . '</p>';
@@ -486,9 +510,9 @@ class PuntworkCrmAdmin
         echo '</tr></thead><tbody>';
 
         foreach ($logs as $log) {
-            $data = json_decode($log['data'], true);
+            $data   = json_decode($log['data'], true);
             $status = $log['success'] ? '✅ Success' : '❌ Failed';
-            $color = $log['success'] ? 'green' : 'red';
+            $color  = $log['success'] ? 'green' : 'red';
 
             echo '<tr>';
             echo '<td>' . esc_html($log['created_at']) . '</td>';
@@ -497,7 +521,7 @@ class PuntworkCrmAdmin
             echo '<td><span style="color: ' . $color . ';">' . $status . '</span></td>';
             echo '<td>';
 
-            if (!empty($data)) {
+            if (! empty($data)) {
                 if (isset($data['contact_id'])) {
                     echo 'Contact ID: ' . esc_html($data['contact_id']);
                 }
@@ -523,14 +547,14 @@ class PuntworkCrmAdmin
     {
         check_ajax_referer('puntwork_crm_nonce', 'nonce');
 
-        if (!current_user_can('manage_options')) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('Insufficient permissions', 'puntwork'));
         }
 
         $platform_id = sanitize_text_field($_POST['platform_id'] ?? '');
 
         if (empty($platform_id)) {
-            wp_send_json_error(['message' => __('Platform ID required', 'puntwork')]);
+            wp_send_json_error(array( 'message' => __('Platform ID required', 'puntwork') ));
         }
 
         $result = $this->crm_manager->testPlatform($platform_id);
@@ -549,29 +573,29 @@ class PuntworkCrmAdmin
     {
         check_ajax_referer('puntwork_crm_nonce', 'nonce');
 
-        if (!current_user_can('manage_options')) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('Insufficient permissions', 'puntwork'));
         }
 
         $platform_id = sanitize_text_field($_POST['platform_id'] ?? '');
-        $config = $_POST['config'] ?? [];
+        $config      = $_POST['config'] ?? array();
 
         if (empty($platform_id)) {
-            wp_send_json_error(['message' => __('Platform ID required', 'puntwork')]);
+            wp_send_json_error(array( 'message' => __('Platform ID required', 'puntwork') ));
         }
 
         // Sanitize config data
-        $sanitized_config = [];
+        $sanitized_config = array();
         foreach ($config as $key => $value) {
-            $sanitized_config[$key] = sanitize_text_field($value);
+            $sanitized_config[ $key ] = sanitize_text_field($value);
         }
 
         $success = CRM\CRMManager::configurePlatform($platform_id, $sanitized_config);
 
         if ($success) {
-            wp_send_json_success(['message' => __('Configuration saved successfully', 'puntwork')]);
+            wp_send_json_success(array( 'message' => __('Configuration saved successfully', 'puntwork') ));
         } else {
-            wp_send_json_error(['message' => __('Failed to save configuration', 'puntwork')]);
+            wp_send_json_error(array( 'message' => __('Failed to save configuration', 'puntwork') ));
         }
     }
 
@@ -582,47 +606,49 @@ class PuntworkCrmAdmin
     {
         check_ajax_referer('puntwork_crm_nonce', 'nonce');
 
-        if (!current_user_can('manage_options')) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('Insufficient permissions', 'puntwork'));
         }
 
         $application_id = sanitize_text_field($_POST['application_id'] ?? '');
-        $platforms = $_POST['platforms'] ?? [];
+        $platforms      = $_POST['platforms'] ?? array();
 
         if (empty($application_id)) {
-            wp_send_json_error(['message' => __('Application ID is required', 'puntwork')]);
+            wp_send_json_error(array( 'message' => __('Application ID is required', 'puntwork') ));
         }
 
         if (empty($platforms)) {
-            wp_send_json_error(['message' => __('At least one platform must be selected', 'puntwork')]);
+            wp_send_json_error(array( 'message' => __('At least one platform must be selected', 'puntwork') ));
         }
 
         $platforms = array_map('sanitize_text_field', $platforms);
 
         // Mock application data - in real implementation, fetch from database
-        $application_data = [
-            'id' => $application_id,
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-            'email' => 'john.doe@example.com',
-            'phone' => '+1-555-0123',
-            'job_title' => 'Software Developer',
-            'current_company' => 'Tech Corp',
-            'current_position' => 'Junior Developer',
-            'experience_years' => 3,
-            'skills' => ['PHP', 'JavaScript', 'MySQL'],
-            'education' => 'Bachelor of Computer Science',
+        $application_data = array(
+            'id'                 => $application_id,
+            'first_name'         => 'John',
+            'last_name'          => 'Doe',
+            'email'              => 'john.doe@example.com',
+            'phone'              => '+1-555-0123',
+            'job_title'          => 'Software Developer',
+            'current_company'    => 'Tech Corp',
+            'current_position'   => 'Junior Developer',
+            'experience_years'   => 3,
+            'skills'             => array( 'PHP', 'JavaScript', 'MySQL' ),
+            'education'          => 'Bachelor of Computer Science',
             'salary_expectation' => 75000,
-            'availability' => 'Immediate',
-            'source' => 'puntwork_job_board'
-        ];
+            'availability'       => 'Immediate',
+            'source'             => 'puntwork_job_board',
+        );
 
         $results = $this->crm_manager->syncJobApplication($application_data, $platforms);
 
-        wp_send_json_success([
-            'message' => __('Application synced to CRM platforms', 'puntwork'),
-            'results' => $results
-        ]);
+        wp_send_json_success(
+            array(
+                'message' => __('Application synced to CRM platforms', 'puntwork'),
+                'results' => $results,
+            )
+        );
     }
 }
 

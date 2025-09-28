@@ -11,7 +11,7 @@
 namespace Puntwork\SocialMedia;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -56,27 +56,31 @@ class TikTokAdsManager
             // Create ad
             $ad = $this->createAd($ad_group['adgroup_id'], $creative['creative_id'], $ads_config);
 
-            return [
-                'success' => true,
+            return array(
+                'success'     => true,
                 'campaign_id' => $campaign['campaign_id'],
                 'ad_group_id' => $ad_group['adgroup_id'],
                 'creative_id' => $creative['creative_id'],
-                'ad_id' => $ad['ad_id'],
-                'platform' => 'tiktok',
-                'timestamp' => time()
-            ];
+                'ad_id'       => $ad['ad_id'],
+                'platform'    => 'tiktok',
+                'timestamp'   => time(),
+            );
         } catch (\Exception $e) {
-            PuntWorkLogger::error('TikTok ads campaign creation failed', PuntWorkLogger::CONTEXT_SOCIAL, [
-                'error' => $e->getMessage(),
-                'ads_config' => $ads_config
-            ]);
+            PuntWorkLogger::error(
+                'TikTok ads campaign creation failed',
+                PuntWorkLogger::CONTEXT_SOCIAL,
+                array(
+                    'error'      => $e->getMessage(),
+                    'ads_config' => $ads_config,
+                )
+            );
 
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'platform' => 'tiktok',
-                'timestamp' => time()
-            ];
+            return array(
+                'success'   => false,
+                'error'     => $e->getMessage(),
+                'platform'  => 'tiktok',
+                'timestamp' => time(),
+            );
         }
     }
 
@@ -85,20 +89,20 @@ class TikTokAdsManager
      */
     private function createCampaign(array $ads_config): array
     {
-        $campaign_data = [
-            'advertiser_id' => $this->platform->getCredentials()['advertiser_id'],
-            'campaign_name' => $ads_config['campaign_name'] ?? 'Job Posting Campaign - ' . date('Y-m-d H:i:s'),
-            'objective_type' => $ads_config['objective'] ?? 'REACH', // REACH, TRAFFIC, APP_INSTALLS, LEAD_GENERATION, VIDEO_VIEWS
-            'budget_mode' => $ads_config['budget_mode'] ?? 'BUDGET_MODE_DAY', // BUDGET_MODE_DAY, BUDGET_MODE_TOTAL
-            'budget' => $ads_config['budget'] ?? 50.00, // Daily budget in USD
-            'operation_status' => 'ENABLE'
-        ];
+        $campaign_data = array(
+            'advertiser_id'    => $this->platform->getCredentials()['advertiser_id'],
+            'campaign_name'    => $ads_config['campaign_name'] ?? 'Job Posting Campaign - ' . date('Y-m-d H:i:s'),
+            'objective_type'   => $ads_config['objective'] ?? 'REACH', // REACH, TRAFFIC, APP_INSTALLS, LEAD_GENERATION, VIDEO_VIEWS
+            'budget_mode'      => $ads_config['budget_mode'] ?? 'BUDGET_MODE_DAY', // BUDGET_MODE_DAY, BUDGET_MODE_TOTAL
+            'budget'           => $ads_config['budget'] ?? 50.00, // Daily budget in USD
+            'operation_status' => 'ENABLE',
+        );
 
         $response = $this->makeAdsApiRequest('campaign/create/', $campaign_data, 'POST');
 
-        return [
-            'campaign_id' => $response['data']['campaign_id']
-        ];
+        return array(
+            'campaign_id' => $response['data']['campaign_id'],
+        );
     }
 
     /**
@@ -106,22 +110,22 @@ class TikTokAdsManager
      */
     private function createAdGroup(string $campaign_id, array $ads_config): array
     {
-        $ad_group_data = [
-            'advertiser_id' => $this->platform->getCredentials()['advertiser_id'],
-            'campaign_id' => $campaign_id,
-            'adgroup_name' => $ads_config['ad_group_name'] ?? 'Job Posting Ad Group - ' . date('Y-m-d H:i:s'),
-            'placement_type' => $ads_config['placement_type'] ?? 'PLACEMENT_TYPE_AUTOMATIC',
+        $ad_group_data = array(
+            'advertiser_id'     => $this->platform->getCredentials()['advertiser_id'],
+            'campaign_id'       => $campaign_id,
+            'adgroup_name'      => $ads_config['ad_group_name'] ?? 'Job Posting Ad Group - ' . date('Y-m-d H:i:s'),
+            'placement_type'    => $ads_config['placement_type'] ?? 'PLACEMENT_TYPE_AUTOMATIC',
             'optimization_goal' => $ads_config['optimization_goal'] ?? 'REACH', // REACH, CLICK, IMPRESSION, APP_INSTALL, LEAD_GENERATION
-            'billing_event' => $ads_config['billing_event'] ?? 'CPC', // CPC, CPM, CPA
-            'bid_price' => $ads_config['bid_price'] ?? 0.50,
-            'targeting' => $this->buildTargeting($ads_config['targeting'] ?? [])
-        ];
+            'billing_event'     => $ads_config['billing_event'] ?? 'CPC', // CPC, CPM, CPA
+            'bid_price'         => $ads_config['bid_price'] ?? 0.50,
+            'targeting'         => $this->buildTargeting($ads_config['targeting'] ?? array()),
+        );
 
         $response = $this->makeAdsApiRequest('adgroup/create/', $ad_group_data, 'POST');
 
-        return [
-            'adgroup_id' => $response['data']['adgroup_id']
-        ];
+        return array(
+            'adgroup_id' => $response['data']['adgroup_id'],
+        );
     }
 
     /**
@@ -129,23 +133,23 @@ class TikTokAdsManager
      */
     private function createAdCreative(string $adgroup_id, array $post_data, array $ads_config): array
     {
-        $creative_data = [
-            'advertiser_id' => $this->platform->getCredentials()['advertiser_id'],
-            'adgroup_id' => $adgroup_id,
-            'creative_name' => $ads_config['creative_name'] ?? 'Job Posting Creative - ' . date('Y-m-d H:i:s'),
+        $creative_data = array(
+            'advertiser_id'  => $this->platform->getCredentials()['advertiser_id'],
+            'adgroup_id'     => $adgroup_id,
+            'creative_name'  => $ads_config['creative_name'] ?? 'Job Posting Creative - ' . date('Y-m-d H:i:s'),
             'call_to_action' => $ads_config['call_to_action'] ?? 'LEARN_MORE',
-            'creative_type' => 'CREATIVE_TYPE_VIDEO',
-            'video_id' => $post_data['video_id'] ?? '',
-            'text' => $ads_config['ad_text'] ?? 'Check out this job opportunity!',
-            'headline' => $ads_config['headline'] ?? 'New Job Opening',
-            'description' => $ads_config['description'] ?? 'Apply now for this exciting opportunity.'
-        ];
+            'creative_type'  => 'CREATIVE_TYPE_VIDEO',
+            'video_id'       => $post_data['video_id'] ?? '',
+            'text'           => $ads_config['ad_text'] ?? 'Check out this job opportunity!',
+            'headline'       => $ads_config['headline'] ?? 'New Job Opening',
+            'description'    => $ads_config['description'] ?? 'Apply now for this exciting opportunity.',
+        );
 
         $response = $this->makeAdsApiRequest('creative/create/', $creative_data, 'POST');
 
-        return [
-            'creative_id' => $response['data']['creative_id']
-        ];
+        return array(
+            'creative_id' => $response['data']['creative_id'],
+        );
     }
 
     /**
@@ -153,19 +157,19 @@ class TikTokAdsManager
      */
     private function createAd(string $adgroup_id, string $creative_id, array $ads_config): array
     {
-        $ad_data = [
+        $ad_data = array(
             'advertiser_id' => $this->platform->getCredentials()['advertiser_id'],
-            'adgroup_id' => $adgroup_id,
-            'creative_id' => $creative_id,
-            'ad_name' => $ads_config['ad_name'] ?? 'Job Posting Ad - ' . date('Y-m-d H:i:s'),
-            'status' => 'AD_STATUS_DELIVERING'
-        ];
+            'adgroup_id'    => $adgroup_id,
+            'creative_id'   => $creative_id,
+            'ad_name'       => $ads_config['ad_name'] ?? 'Job Posting Ad - ' . date('Y-m-d H:i:s'),
+            'status'        => 'AD_STATUS_DELIVERING',
+        );
 
         $response = $this->makeAdsApiRequest('ad/create/', $ad_data, 'POST');
 
-        return [
-            'ad_id' => $response['data']['ad_id']
-        ];
+        return array(
+            'ad_id' => $response['data']['ad_id'],
+        );
     }
 
     /**
@@ -173,14 +177,14 @@ class TikTokAdsManager
      */
     private function buildTargeting(array $targeting_config): array
     {
-        $targeting = [
-            'age' => $targeting_config['age'] ?? ['18', '65'], // Age range
-            'gender' => $targeting_config['gender'] ?? 'GENDER_UNLIMITED', // GENDER_UNLIMITED, GENDER_MALE, GENDER_FEMALE
-            'location' => $targeting_config['location'] ?? [], // Array of location codes
-            'interest_category' => $targeting_config['interests'] ?? [], // Array of interest categories
-            'device_platform' => $targeting_config['platforms'] ?? ['ANDROID', 'IOS'], // Device platforms
-            'operating_system' => $targeting_config['os'] ?? [] // Operating systems
-        ];
+        $targeting = array(
+            'age'               => $targeting_config['age'] ?? array( '18', '65' ), // Age range
+            'gender'            => $targeting_config['gender'] ?? 'GENDER_UNLIMITED', // GENDER_UNLIMITED, GENDER_MALE, GENDER_FEMALE
+            'location'          => $targeting_config['location'] ?? array(), // Array of location codes
+            'interest_category' => $targeting_config['interests'] ?? array(), // Array of interest categories
+            'device_platform'   => $targeting_config['platforms'] ?? array( 'ANDROID', 'IOS' ), // Device platforms
+            'operating_system'  => $targeting_config['os'] ?? array(), // Operating systems
+        );
 
         return $targeting;
     }
@@ -190,22 +194,22 @@ class TikTokAdsManager
      */
     public function getCampaignMetrics(string $campaign_id, string $advertiser_id): array
     {
-        $params = [
+        $params = array(
             'advertiser_id' => $advertiser_id,
-            'campaign_ids' => [$campaign_id],
-            'metrics' => [
+            'campaign_ids'  => array( $campaign_id ),
+            'metrics'       => array(
                 'impressions',
                 'clicks',
                 'spend',
                 'reach',
                 'video_views',
                 'video_completions',
-                'conversions'
-            ],
-            'data_level' => 'AUCTION_CAMPAIGN',
-            'start_date' => date('Y-m-d', strtotime('-30 days')),
-            'end_date' => date('Y-m-d')
-        ];
+                'conversions',
+            ),
+            'data_level'    => 'AUCTION_CAMPAIGN',
+            'start_date'    => date('Y-m-d', strtotime('-30 days')),
+            'end_date'      => date('Y-m-d'),
+        );
 
         $response = $this->makeAdsApiRequest('report/campaign/get/', $params, 'GET');
 
@@ -213,7 +217,7 @@ class TikTokAdsManager
             return $response['data']['list'][0]['metrics'];
         }
 
-        return [];
+        return array();
     }
 
     /**
@@ -221,22 +225,22 @@ class TikTokAdsManager
      */
     public function getAdGroupMetrics(string $adgroup_id, string $advertiser_id): array
     {
-        $params = [
+        $params = array(
             'advertiser_id' => $advertiser_id,
-            'adgroup_ids' => [$adgroup_id],
-            'metrics' => [
+            'adgroup_ids'   => array( $adgroup_id ),
+            'metrics'       => array(
                 'impressions',
                 'clicks',
                 'spend',
                 'reach',
                 'video_views',
                 'video_completions',
-                'conversions'
-            ],
-            'data_level' => 'AUCTION_ADGROUP',
-            'start_date' => date('Y-m-d', strtotime('-30 days')),
-            'end_date' => date('Y-m-d')
-        ];
+                'conversions',
+            ),
+            'data_level'    => 'AUCTION_ADGROUP',
+            'start_date'    => date('Y-m-d', strtotime('-30 days')),
+            'end_date'      => date('Y-m-d'),
+        );
 
         $response = $this->makeAdsApiRequest('report/adgroup/get/', $params, 'GET');
 
@@ -244,7 +248,7 @@ class TikTokAdsManager
             return $response['data']['list'][0]['metrics'];
         }
 
-        return [];
+        return array();
     }
 
     /**
@@ -252,11 +256,11 @@ class TikTokAdsManager
      */
     public function pauseCampaign(string $campaign_id, string $advertiser_id): bool
     {
-        $data = [
-            'advertiser_id' => $advertiser_id,
-            'campaign_id' => $campaign_id,
-            'operation_status' => 'DISABLE'
-        ];
+        $data = array(
+            'advertiser_id'    => $advertiser_id,
+            'campaign_id'      => $campaign_id,
+            'operation_status' => 'DISABLE',
+        );
 
         $response = $this->makeAdsApiRequest('campaign/update/status/', $data, 'POST');
         return isset($response['code']) && $response['code'] === 0;
@@ -267,11 +271,11 @@ class TikTokAdsManager
      */
     public function resumeCampaign(string $campaign_id, string $advertiser_id): bool
     {
-        $data = [
-            'advertiser_id' => $advertiser_id,
-            'campaign_id' => $campaign_id,
-            'operation_status' => 'ENABLE'
-        ];
+        $data = array(
+            'advertiser_id'    => $advertiser_id,
+            'campaign_id'      => $campaign_id,
+            'operation_status' => 'ENABLE',
+        );
 
         $response = $this->makeAdsApiRequest('campaign/update/status/', $data, 'POST');
         return isset($response['code']) && $response['code'] === 0;
@@ -282,11 +286,11 @@ class TikTokAdsManager
      */
     public function updateCampaignBudget(string $campaign_id, string $advertiser_id, float $budget): bool
     {
-        $data = [
+        $data = array(
             'advertiser_id' => $advertiser_id,
-            'campaign_id' => $campaign_id,
-            'budget' => $budget
-        ];
+            'campaign_id'   => $campaign_id,
+            'budget'        => $budget,
+        );
 
         $response = $this->makeAdsApiRequest('campaign/update/budget/', $data, 'POST');
         return isset($response['code']) && $response['code'] === 0;
@@ -299,14 +303,14 @@ class TikTokAdsManager
     {
         $url = $this->ads_api_base . '/' . $endpoint;
 
-        $args = [
-            'method' => $method,
-            'headers' => [
+        $args = array(
+            'method'  => $method,
+            'headers' => array(
                 'Access-Token' => $this->platform->getCredentials()['access_token'],
-                'Content-Type' => 'application/json'
-            ],
-            'timeout' => 30
-        ];
+                'Content-Type' => 'application/json',
+            ),
+            'timeout' => 30,
+        );
 
         if ($method === 'GET') {
             $url .= '?' . http_build_query($params);

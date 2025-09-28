@@ -42,26 +42,34 @@ add_action('wp_ajax_puntwork_load_jobs', __NAMESPACE__ . '\\handle_load_jobs_aja
 function handle_load_jobs_ajax()
 {
     // Verify nonce
-    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_load_jobs')) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Security check failed'
-        ]));
+    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_load_jobs')) {
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Security check failed',
+                )
+            )
+        );
     }
 
     // Check permissions
-    if (!current_user_can('manage_options')) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Insufficient permissions'
-        ]));
+    if (! current_user_can('manage_options')) {
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Insufficient permissions',
+                )
+            )
+        );
     }
 
     try {
-        $page = intval($_POST['page'] ?? 1);
+        $page     = intval($_POST['page'] ?? 1);
         $per_page = intval($_POST['per_page'] ?? 20);
-        $status = sanitize_text_field($_POST['status'] ?? 'any');
-        $search = sanitize_text_field($_POST['search'] ?? '');
+        $status   = sanitize_text_field($_POST['status'] ?? 'any');
+        $search   = sanitize_text_field($_POST['search'] ?? '');
 
         // Use the existing REST API handler for consistency
         $request = new \WP_REST_Request('GET', '/puntwork/v1/jobs');
@@ -76,20 +84,32 @@ function handle_load_jobs_ajax()
             $data = $response->get_data();
             wp_die(json_encode($data));
         } else {
-            wp_die(json_encode([
-                'success' => false,
-                'message' => 'Failed to load jobs'
-            ]));
+            wp_die(
+                json_encode(
+                    array(
+                        'success' => false,
+                        'message' => 'Failed to load jobs',
+                    )
+                )
+            );
         }
     } catch (\Exception $e) {
-        PuntWorkLogger::error('AJAX load jobs error', PuntWorkLogger::CONTEXT_AJAX, [
-            'error' => $e->getMessage()
-        ]);
+        PuntWorkLogger::error(
+            'AJAX load jobs error',
+            PuntWorkLogger::CONTEXT_AJAX,
+            array(
+                'error' => $e->getMessage(),
+            )
+        );
 
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Error loading jobs: ' . $e->getMessage()
-        ]));
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Error loading jobs: ' . $e->getMessage(),
+                )
+            )
+        );
     }
 }
 
@@ -100,19 +120,27 @@ add_action('wp_ajax_puntwork_load_analytics', __NAMESPACE__ . '\\handle_load_ana
 function handle_load_analytics_ajax()
 {
     // Verify nonce
-    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_analytics_nonce')) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Security check failed'
-        ]));
+    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_analytics_nonce')) {
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Security check failed',
+                )
+            )
+        );
     }
 
     // Check permissions
-    if (!current_user_can('manage_options')) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Insufficient permissions'
-        ]));
+    if (! current_user_can('manage_options')) {
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Insufficient permissions',
+                )
+            )
+        );
     }
 
     try {
@@ -122,31 +150,47 @@ function handle_load_analytics_ajax()
         $analytics_data = ImportAnalytics::get_analytics_data($period);
 
         if ($analytics_data === false) {
-            wp_die(json_encode([
-                'success' => false,
-                'message' => 'Failed to retrieve analytics data'
-            ]));
+            wp_die(
+                json_encode(
+                    array(
+                        'success' => false,
+                        'message' => 'Failed to retrieve analytics data',
+                    )
+                )
+            );
         }
 
         // Generate HTML content for the analytics dashboard
         $html = generate_analytics_html($analytics_data, $period);
 
-        wp_die(json_encode([
-            'success' => true,
-            'data' => [
-                'html' => $html,
-                'analytics_data' => $analytics_data
-            ]
-        ]));
+        wp_die(
+            json_encode(
+                array(
+                    'success' => true,
+                    'data'    => array(
+                        'html'           => $html,
+                        'analytics_data' => $analytics_data,
+                    ),
+                )
+            )
+        );
     } catch (\Exception $e) {
-        PuntWorkLogger::error('AJAX load analytics error', PuntWorkLogger::CONTEXT_AJAX, [
-            'error' => $e->getMessage()
-        ]);
+        PuntWorkLogger::error(
+            'AJAX load analytics error',
+            PuntWorkLogger::CONTEXT_AJAX,
+            array(
+                'error' => $e->getMessage(),
+            )
+        );
 
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Error loading analytics: ' . $e->getMessage()
-        ]));
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Error loading analytics: ' . $e->getMessage(),
+                )
+            )
+        );
     }
 }
 
@@ -249,21 +293,21 @@ function generate_analytics_html($analytics_data, $period)
                 <span class="job-stat-label">Published:</span>
                 <span class="job-stat-value"><?php echo number_format($analytics_data['overview']['total_published']); ?></span>
                 <div class="job-stat-bar">
-                    <div class="job-stat-fill published" style="width: <?php echo $analytics_data['overview']['total_processed'] > 0 ? ($analytics_data['overview']['total_published'] / $analytics_data['overview']['total_processed'] * 100) : 0; ?>%;"></div>
+                    <div class="job-stat-fill published" style="width: <?php echo $analytics_data['overview']['total_processed'] > 0 ? ( $analytics_data['overview']['total_published'] / $analytics_data['overview']['total_processed'] * 100 ) : 0; ?>%;"></div>
                 </div>
             </div>
             <div class="job-stat-item">
                 <span class="job-stat-label">Updated:</span>
                 <span class="job-stat-value"><?php echo number_format($analytics_data['overview']['total_updated']); ?></span>
                 <div class="job-stat-bar">
-                    <div class="job-stat-fill updated" style="width: <?php echo $analytics_data['overview']['total_processed'] > 0 ? ($analytics_data['overview']['total_updated'] / $analytics_data['overview']['total_processed'] * 100) : 0; ?>%;"></div>
+                    <div class="job-stat-fill updated" style="width: <?php echo $analytics_data['overview']['total_processed'] > 0 ? ( $analytics_data['overview']['total_updated'] / $analytics_data['overview']['total_processed'] * 100 ) : 0; ?>%;"></div>
                 </div>
             </div>
             <div class="job-stat-item">
                 <span class="job-stat-label">Duplicates:</span>
                 <span class="job-stat-value"><?php echo number_format($analytics_data['overview']['total_duplicates']); ?></span>
                 <div class="job-stat-bar">
-                    <div class="job-stat-fill duplicates" style="width: <?php echo $analytics_data['overview']['total_processed'] > 0 ? ($analytics_data['overview']['total_duplicates'] / $analytics_data['overview']['total_processed'] * 100) : 0; ?>%;"></div>
+                    <div class="job-stat-fill duplicates" style="width: <?php echo $analytics_data['overview']['total_processed'] > 0 ? ( $analytics_data['overview']['total_duplicates'] / $analytics_data['overview']['total_processed'] * 100 ) : 0; ?>%;"></div>
                 </div>
             </div>
         </div>
@@ -311,74 +355,98 @@ add_action('wp_ajax_puntwork_save_feed', __NAMESPACE__ . '\\handle_save_feed_aja
 function handle_save_feed_ajax()
 {
     // Verify nonce
-    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_feed_config')) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Security check failed'
-        ]));
+    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_feed_config')) {
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Security check failed',
+                )
+            )
+        );
     }
 
     // Check permissions
-    if (!current_user_can('manage_options')) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Insufficient permissions'
-        ]));
+    if (! current_user_can('manage_options')) {
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Insufficient permissions',
+                )
+            )
+        );
     }
 
-    $feed_id = intval($_POST['feed_id'] ?? 0);
-    $feed_title = sanitize_text_field($_POST['feed_title'] ?? '');
-    $feed_url = esc_url_raw($_POST['feed_url'] ?? '');
-    $feed_slug = sanitize_title($_POST['feed_slug'] ?? '');
+    $feed_id      = intval($_POST['feed_id'] ?? 0);
+    $feed_title   = sanitize_text_field($_POST['feed_title'] ?? '');
+    $feed_url     = esc_url_raw($_POST['feed_url'] ?? '');
+    $feed_slug    = sanitize_title($_POST['feed_slug'] ?? '');
     $feed_enabled = isset($_POST['feed_enabled']) ? 1 : 0;
 
     // Validate required fields
     if (empty($feed_title) || empty($feed_url)) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Feed title and URL are required'
-        ]));
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Feed title and URL are required',
+                )
+            )
+        );
     }
 
     // Validate URL
-    if (!filter_var($feed_url, FILTER_VALIDATE_URL)) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Invalid feed URL'
-        ]));
+    if (! filter_var($feed_url, FILTER_VALIDATE_URL)) {
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Invalid feed URL',
+                )
+            )
+        );
     }
 
-    $post_data = [
-        'post_title' => $feed_title,
-        'post_type' => 'job-feed',
+    $post_data = array(
+        'post_title'  => $feed_title,
+        'post_type'   => 'job-feed',
         'post_status' => 'publish',
-        'post_name' => $feed_slug,
-        'meta_input' => [
-            'feed_url' => $feed_url,
+        'post_name'   => $feed_slug,
+        'meta_input'  => array(
+            'feed_url'     => $feed_url,
             'feed_enabled' => $feed_enabled,
-        ]
-    ];
+        ),
+    );
 
     if ($feed_id > 0) {
         // Update existing feed
         $post_data['ID'] = $feed_id;
-        $result = wp_update_post($post_data, true);
+        $result          = wp_update_post($post_data, true);
     } else {
         // Create new feed
         $result = wp_insert_post($post_data, true);
     }
 
     if (is_wp_error($result)) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => $result->get_error_message()
-        ]));
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => $result->get_error_message(),
+                )
+            )
+        );
     }
 
-    wp_die(json_encode([
-        'success' => true,
-        'feed_id' => $result
-    ]));
+    wp_die(
+        json_encode(
+            array(
+                'success' => true,
+                'feed_id' => $result,
+            )
+        )
+    );
 }
 
 /**
@@ -388,43 +456,63 @@ add_action('wp_ajax_puntwork_toggle_feed', __NAMESPACE__ . '\\handle_toggle_feed
 function handle_toggle_feed_ajax()
 {
     // Verify nonce
-    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_feed_config')) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Security check failed'
-        ]));
+    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_feed_config')) {
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Security check failed',
+                )
+            )
+        );
     }
 
     // Check permissions
-    if (!current_user_can('manage_options')) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Insufficient permissions'
-        ]));
+    if (! current_user_can('manage_options')) {
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Insufficient permissions',
+                )
+            )
+        );
     }
 
     $feed_id = intval($_POST['feed_id'] ?? 0);
     $enabled = isset($_POST['enabled']) ? 1 : 0;
 
-    if (!$feed_id) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Invalid feed ID'
-        ]));
+    if (! $feed_id) {
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Invalid feed ID',
+                )
+            )
+        );
     }
 
     $result = update_post_meta($feed_id, 'feed_enabled', $enabled);
 
     if ($result === false) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Failed to update feed status'
-        ]));
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Failed to update feed status',
+                )
+            )
+        );
     }
 
-    wp_die(json_encode([
-        'success' => true
-    ]));
+    wp_die(
+        json_encode(
+            array(
+                'success' => true,
+            )
+        )
+    );
 }
 
 /**
@@ -434,51 +522,75 @@ add_action('wp_ajax_puntwork_delete_feed', __NAMESPACE__ . '\\handle_delete_feed
 function handle_delete_feed_ajax()
 {
     // Verify nonce
-    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_feed_config')) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Security check failed'
-        ]));
+    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_feed_config')) {
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Security check failed',
+                )
+            )
+        );
     }
 
     // Check permissions
-    if (!current_user_can('manage_options')) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Insufficient permissions'
-        ]));
+    if (! current_user_can('manage_options')) {
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Insufficient permissions',
+                )
+            )
+        );
     }
 
     $feed_id = intval($_POST['feed_id'] ?? 0);
 
-    if (!$feed_id) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Invalid feed ID'
-        ]));
+    if (! $feed_id) {
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Invalid feed ID',
+                )
+            )
+        );
     }
 
     // Verify the post exists and is a job-feed
     $post = get_post($feed_id);
-    if (!$post || $post->post_type !== 'job-feed') {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Feed not found'
-        ]));
+    if (! $post || $post->post_type !== 'job-feed') {
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Feed not found',
+                )
+            )
+        );
     }
 
     $result = wp_delete_post($feed_id, true);
 
-    if (!$result) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Failed to delete feed'
-        ]));
+    if (! $result) {
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Failed to delete feed',
+                )
+            )
+        );
     }
 
-    wp_die(json_encode([
-        'success' => true
-    ]));
+    wp_die(
+        json_encode(
+            array(
+                'success' => true,
+            )
+        )
+    );
 }
 
 /**
@@ -488,42 +600,60 @@ add_action('wp_ajax_puntwork_save_feed_order', __NAMESPACE__ . '\\handle_save_fe
 function handle_save_feed_order_ajax()
 {
     // Verify nonce
-    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_feed_config')) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Security check failed'
-        ]));
+    if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_feed_config')) {
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Security check failed',
+                )
+            )
+        );
     }
 
     // Check permissions
-    if (!current_user_can('manage_options')) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Insufficient permissions'
-        ]));
+    if (! current_user_can('manage_options')) {
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Insufficient permissions',
+                )
+            )
+        );
     }
 
-    $feed_order = $_POST['feed_order'] ?? [];
+    $feed_order = $_POST['feed_order'] ?? array();
 
-    if (!is_array($feed_order)) {
-        wp_die(json_encode([
-            'success' => false,
-            'message' => 'Invalid feed order data'
-        ]));
+    if (! is_array($feed_order)) {
+        wp_die(
+            json_encode(
+                array(
+                    'success' => false,
+                    'message' => 'Invalid feed order data',
+                )
+            )
+        );
     }
 
     // Update menu_order for each feed
     foreach ($feed_order as $index => $feed_id) {
         $feed_id = intval($feed_id);
         if ($feed_id > 0) {
-            wp_update_post([
-                'ID' => $feed_id,
-                'menu_order' => $index
-            ]);
+            wp_update_post(
+                array(
+                    'ID'         => $feed_id,
+                    'menu_order' => $index,
+                )
+            );
         }
     }
 
-    wp_die(json_encode([
-        'success' => true
-    ]));
+    wp_die(
+        json_encode(
+            array(
+                'success' => true,
+            )
+        )
+    );
 }

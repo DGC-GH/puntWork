@@ -405,7 +405,7 @@ function render_main_import_ui(): void
                 per_page: 20,
                 status: filters.status || 'any',
                 search: filters.search || '',
-                nonce: '<?php echo wp_create_nonce("puntwork_load_jobs"); ?>'
+                nonce: '<?php echo wp_create_nonce('puntwork_load_jobs'); ?>'
             };
 
             // Make AJAX request

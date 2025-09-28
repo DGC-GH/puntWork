@@ -11,7 +11,7 @@
 namespace Puntwork\CRM;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -33,21 +33,21 @@ abstract class CRMIntegration
     /**
      * Configuration array
      */
-    protected array $config = [];
+    protected array $config = array();
 
     /**
      * API rate limits
      */
-    protected array $rate_limits = [
+    protected array $rate_limits = array(
         'requests_per_minute' => 60,
-        'requests_per_hour' => 1000,
-        'requests_per_day' => 50000
-    ];
+        'requests_per_hour'   => 1000,
+        'requests_per_day'    => 50000,
+    );
 
     /**
      * Constructor
      */
-    public function __construct(array $config = [])
+    public function __construct(array $config = array())
     {
         $this->config = $config;
         $this->initialize();
@@ -122,9 +122,9 @@ abstract class CRMIntegration
      */
     protected function checkRateLimit(): bool
     {
-        $transient_key = 'crm_ratelimit_' . $this->platform_id;
-        $requests_today = get_transient($transient_key) ?: 0;
-        $requests_hour = get_transient($transient_key . '_hour_' . date('Y-m-d-H')) ?: 0;
+        $transient_key   = 'crm_ratelimit_' . $this->platform_id;
+        $requests_today  = get_transient($transient_key) ?: 0;
+        $requests_hour   = get_transient($transient_key . '_hour_' . date('Y-m-d-H')) ?: 0;
         $requests_minute = get_transient($transient_key . '_minute_' . date('Y-m-d-H-i')) ?: 0;
 
         if ($requests_today >= $this->rate_limits['requests_per_day']) {
@@ -154,12 +154,12 @@ abstract class CRMIntegration
         set_transient($transient_key, $requests_today + 1, DAY_IN_SECONDS);
 
         // Hourly counter
-        $hour_key = $transient_key . '_hour_' . date('Y-m-d-H');
+        $hour_key      = $transient_key . '_hour_' . date('Y-m-d-H');
         $requests_hour = get_transient($hour_key) ?: 0;
         set_transient($hour_key, $requests_hour + 1, HOUR_IN_SECONDS);
 
         // Minute counter
-        $minute_key = $transient_key . '_minute_' . date('Y-m-d-H-i');
+        $minute_key      = $transient_key . '_minute_' . date('Y-m-d-H-i');
         $requests_minute = get_transient($minute_key) ?: 0;
         set_transient($minute_key, $requests_minute + 1, MINUTE_IN_SECONDS);
     }
@@ -167,17 +167,17 @@ abstract class CRMIntegration
     /**
      * Make API request with error handling
      */
-    protected function makeApiRequest(string $endpoint, array $params = [], string $method = 'GET', array $headers = []): array
+    protected function makeApiRequest(string $endpoint, array $params = array(), string $method = 'GET', array $headers = array()): array
     {
         $this->checkRateLimit();
 
         $url = $this->getApiBaseUrl() . $endpoint;
 
-        $args = [
-            'method' => $method,
+        $args = array(
+            'method'  => $method,
             'headers' => array_merge($this->getDefaultHeaders(), $headers),
-            'timeout' => 30
-        ];
+            'timeout' => 30,
+        );
 
         if ($method === 'GET') {
             $url .= '?' . http_build_query($params);
@@ -225,23 +225,23 @@ abstract class CRMIntegration
      */
     protected function standardizeContactData(array $contact_data): array
     {
-        return [
-            'first_name' => $contact_data['first_name'] ?? '',
-            'last_name' => $contact_data['last_name'] ?? '',
-            'email' => $contact_data['email'] ?? '',
-            'phone' => $contact_data['phone'] ?? '',
-            'company' => $contact_data['company'] ?? '',
-            'job_title' => $contact_data['job_title'] ?? '',
-            'address' => $contact_data['address'] ?? '',
-            'city' => $contact_data['city'] ?? '',
-            'state' => $contact_data['state'] ?? '',
-            'zip' => $contact_data['zip'] ?? '',
-            'country' => $contact_data['country'] ?? '',
-            'website' => $contact_data['website'] ?? '',
-            'notes' => $contact_data['notes'] ?? '',
-            'tags' => $contact_data['tags'] ?? [],
-            'custom_fields' => $contact_data['custom_fields'] ?? []
-        ];
+        return array(
+            'first_name'    => $contact_data['first_name'] ?? '',
+            'last_name'     => $contact_data['last_name'] ?? '',
+            'email'         => $contact_data['email'] ?? '',
+            'phone'         => $contact_data['phone'] ?? '',
+            'company'       => $contact_data['company'] ?? '',
+            'job_title'     => $contact_data['job_title'] ?? '',
+            'address'       => $contact_data['address'] ?? '',
+            'city'          => $contact_data['city'] ?? '',
+            'state'         => $contact_data['state'] ?? '',
+            'zip'           => $contact_data['zip'] ?? '',
+            'country'       => $contact_data['country'] ?? '',
+            'website'       => $contact_data['website'] ?? '',
+            'notes'         => $contact_data['notes'] ?? '',
+            'tags'          => $contact_data['tags'] ?? array(),
+            'custom_fields' => $contact_data['custom_fields'] ?? array(),
+        );
     }
 
     /**
@@ -249,16 +249,16 @@ abstract class CRMIntegration
      */
     protected function standardizeDealData(array $deal_data): array
     {
-        return [
-            'title' => $deal_data['title'] ?? '',
-            'value' => $deal_data['value'] ?? 0,
-            'currency' => $deal_data['currency'] ?? 'USD',
-            'stage' => $deal_data['stage'] ?? 'lead',
-            'contact_id' => $deal_data['contact_id'] ?? '',
+        return array(
+            'title'               => $deal_data['title'] ?? '',
+            'value'               => $deal_data['value'] ?? 0,
+            'currency'            => $deal_data['currency'] ?? 'USD',
+            'stage'               => $deal_data['stage'] ?? 'lead',
+            'contact_id'          => $deal_data['contact_id'] ?? '',
             'expected_close_date' => $deal_data['expected_close_date'] ?? '',
-            'description' => $deal_data['description'] ?? '',
-            'source' => $deal_data['source'] ?? 'puntwork',
-            'tags' => $deal_data['tags'] ?? []
-        ];
+            'description'         => $deal_data['description'] ?? '',
+            'source'              => $deal_data['source'] ?? 'puntwork',
+            'tags'                => $deal_data['tags'] ?? array(),
+        );
     }
 }

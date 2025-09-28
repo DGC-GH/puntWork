@@ -21,7 +21,7 @@ if (! defined('ABSPATH')) {
  */
 function render_debug_ui()
 {
-    if (!defined('WP_DEBUG') || !WP_DEBUG) {
+    if (! defined('WP_DEBUG') || ! WP_DEBUG) {
         return;
     }
     ?>

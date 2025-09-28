@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -23,11 +23,11 @@ function enqueue_modern_admin_styles()
     $current_page = isset($_GET['page']) ? $_GET['page'] : '';
 
     // Load styles on job import dashboard and jobs dashboard pages
-    if (in_array($current_page, ['job-feed-dashboard', 'jobs-dashboard'])) {
+    if (in_array($current_page, array( 'job-feed-dashboard', 'jobs-dashboard' ))) {
         wp_enqueue_style(
             'puntwork-admin-modern',
             PUNTWORK_URL . 'assets/css/admin-modern.css',
-            ['font-awesome'],
+            array( 'font-awesome' ),
             PUNTWORK_VERSION
         );
     }

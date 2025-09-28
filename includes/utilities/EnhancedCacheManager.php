@@ -69,20 +69,20 @@ class EnhancedCacheManager extends CacheManager
      */
     public static function getMultiple(array $keys, string $group = ''): array
     {
-        $results = [];
-        $missing_keys = [];
+        $results      = array();
+        $missing_keys = array();
 
         // First pass - get from cache
         foreach ($keys as $key) {
             $cached = self::get($key, $group);
             if ($cached !== false) {
-                $results[$key] = $cached;
+                $results[ $key ] = $cached;
             } else {
                 $missing_keys[] = $key;
             }
         }
 
-        return [$results, $missing_keys];
+        return array( $results, $missing_keys );
     }
 
     /**
@@ -92,7 +92,7 @@ class EnhancedCacheManager extends CacheManager
     {
         $success = true;
         foreach ($data as $key => $value) {
-            if (!self::set($key, $value, $group, $expiration)) {
+            if (! self::set($key, $value, $group, $expiration)) {
                 $success = false;
             }
         }
@@ -109,11 +109,13 @@ class EnhancedCacheManager extends CacheManager
         $invalidated = 0;
 
         // For transients (fallback)
-        $transient_pattern = '_transient_' . ($group ? $group . '_' : '') . $pattern;
-        $transients = $wpdb->get_col($wpdb->prepare(
-            "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s",
-            $transient_pattern . '%'
-        ));
+        $transient_pattern = '_transient_' . ( $group ? $group . '_' : '' ) . $pattern;
+        $transients        = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s",
+                $transient_pattern . '%'
+            )
+        );
 
         foreach ($transients as $transient) {
             $key = str_replace('_transient_', '', $transient);
@@ -121,7 +123,7 @@ class EnhancedCacheManager extends CacheManager
                 $key = str_replace($group . '_', '', $key);
             }
             delete_transient($key);
-            $invalidated++;
+            ++$invalidated;
         }
 
         // For Redis/Object Cache - we can't pattern match, so we clear the group
@@ -135,7 +137,11 @@ class EnhancedCacheManager extends CacheManager
     /**
      * Cache analytics and hit/miss tracking
      */
-    private static $cache_stats = ['hits' => 0, 'misses' => 0, 'sets' => 0];
+    private static $cache_stats = array(
+        'hits'   => 0,
+        'misses' => 0,
+        'sets'   => 0,
+    );
 
     public static function getAnalytics(): array
     {
@@ -144,7 +150,11 @@ class EnhancedCacheManager extends CacheManager
 
     public static function resetAnalytics(): void
     {
-        self::$cache_stats = ['hits' => 0, 'misses' => 0, 'sets' => 0];
+        self::$cache_stats = array(
+            'hits'   => 0,
+            'misses' => 0,
+            'sets'   => 0,
+        );
     }
 
     /**
@@ -155,9 +165,9 @@ class EnhancedCacheManager extends CacheManager
         $result = parent::get($key, $group);
 
         if ($result !== false) {
-            self::$cache_stats['hits']++;
+            ++self::$cache_stats['hits'];
         } else {
-            self::$cache_stats['misses']++;
+            ++self::$cache_stats['misses'];
         }
 
         return $result;
@@ -171,7 +181,7 @@ class EnhancedCacheManager extends CacheManager
         $result = parent::set($key, $data, $group, $expiration);
 
         if ($result) {
-            self::$cache_stats['sets']++;
+            ++self::$cache_stats['sets'];
         }
 
         return $result;

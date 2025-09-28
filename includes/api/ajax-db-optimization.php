@@ -33,27 +33,27 @@ function ajax_get_db_optimization_status()
     try {
         $status = get_database_optimization_status();
 
-        $response = [
-            'success' => true,
-            'status' => $status,
-            'indexes_html' => ''
-        ];
+        $response = array(
+            'success'      => true,
+            'status'       => $status,
+            'indexes_html' => '',
+        );
 
         // Build HTML for index status
         $response['indexes_html'] .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">';
 
-        $index_names = [
-            'idx_postmeta_guid' => 'GUID Index (postmeta)',
+        $index_names = array(
+            'idx_postmeta_guid'        => 'GUID Index (postmeta)',
             'idx_postmeta_import_hash' => 'Import Hash Index (postmeta)',
             'idx_postmeta_last_update' => 'Last Update Index (postmeta)',
-            'idx_posts_job_status' => 'Job Status Index (posts)',
-            'idx_postmeta_feed_url' => 'Feed URL Index (postmeta)'
-        ];
+            'idx_posts_job_status'     => 'Job Status Index (posts)',
+            'idx_postmeta_feed_url'    => 'Feed URL Index (postmeta)',
+        );
 
         foreach ($index_names as $index => $name) {
-            $exists = $status['missing_indexes'] ? !in_array($index, $status['missing_indexes']) : true;
-            $color = $exists ? '#34c759' : '#ff3b30';
-            $icon = $exists ? 'check-circle' : 'times-circle';
+            $exists      = $status['missing_indexes'] ? ! in_array($index, $status['missing_indexes']) : true;
+            $color       = $exists ? '#34c759' : '#ff3b30';
+            $icon        = $exists ? 'check-circle' : 'times-circle';
             $status_text = $exists ? 'Created' : 'Missing';
 
             $response['indexes_html'] .= '<div style="display: flex; align-items: center; padding: 6px 0;">';
@@ -67,13 +67,13 @@ function ajax_get_db_optimization_status()
         // Set badge status
         if ($status['optimization_complete']) {
             $response['badge_class'] = 'success';
-            $response['badge_text'] = 'Optimized';
+            $response['badge_text']  = 'Optimized';
         } elseif ($status['indexes_created'] > 0) {
             $response['badge_class'] = 'warning';
-            $response['badge_text'] = 'Partial';
+            $response['badge_text']  = 'Partial';
         } else {
             $response['badge_class'] = 'error';
-            $response['badge_text'] = 'Not Optimized';
+            $response['badge_text']  = 'Not Optimized';
         }
 
         AjaxErrorHandler::sendSuccess($response);
@@ -93,10 +93,10 @@ function ajax_save_async_settings()
     $validation = SecurityUtils::validateAjaxRequest(
         'save_async_settings',
         'job_import_nonce',
-        ['enabled'], // required fields
-        [
-            'enabled' => ['type' => 'bool'] // validation rules
-        ]
+        array( 'enabled' ), // required fields
+        array(
+            'enabled' => array( 'type' => 'bool' ), // validation rules
+        )
     );
 
     if (is_wp_error($validation)) {
@@ -111,7 +111,7 @@ function ajax_save_async_settings()
 
         $status = get_async_processing_status();
 
-        AjaxErrorHandler::sendSuccess($status, ['message' => 'Async settings saved successfully']);
+        AjaxErrorHandler::sendSuccess($status, array( 'message' => 'Async settings saved successfully' ));
     } catch (\Exception $e) {
         PuntWorkLogger::error('Save async settings error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to save async settings: ' . $e->getMessage());
@@ -154,13 +154,15 @@ function ajax_get_performance_status()
     }
 
     try {
-        $stats = get_performance_statistics('batch_processing', 30);
+        $stats    = get_performance_statistics('batch_processing', 30);
         $snapshot = get_performance_snapshot();
 
-        AjaxErrorHandler::sendSuccess([
-            'stats' => $stats,
-            'snapshot' => $snapshot
-        ]);
+        AjaxErrorHandler::sendSuccess(
+            array(
+                'stats'    => $stats,
+                'snapshot' => $snapshot,
+            )
+        );
     } catch (\Exception $e) {
         PuntWorkLogger::error('Get performance status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to get performance status: ' . $e->getMessage());
@@ -189,7 +191,7 @@ function ajax_clear_performance_logs()
             $message = 'Performance monitoring not available.';
         }
 
-        AjaxErrorHandler::sendSuccess(null, ['message' => $message]);
+        AjaxErrorHandler::sendSuccess(null, array( 'message' => $message ));
     } catch (\Exception $e) {
         PuntWorkLogger::error('Clear performance logs error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         AjaxErrorHandler::sendError('Failed to clear performance logs: ' . $e->getMessage());

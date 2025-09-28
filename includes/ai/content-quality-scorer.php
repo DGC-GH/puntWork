@@ -11,7 +11,7 @@
 namespace Puntwork\AI;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -24,88 +24,117 @@ class ContentQualityScorer
      * Quality score ranges
      */
     public const SCORE_EXCELLENT = 90;
-    public const SCORE_GOOD = 70;
-    public const SCORE_FAIR = 50;
-    public const SCORE_POOR = 30;
+    public const SCORE_GOOD      = 70;
+    public const SCORE_FAIR      = 50;
+    public const SCORE_POOR      = 30;
 
     /**
      * Quality factors and their weights
      */
-    private const QUALITY_FACTORS = [
-        'completeness' => 0.25,
-        'readability' => 0.20,
+    private const QUALITY_FACTORS = array(
+        'completeness'    => 0.25,
+        'readability'     => 0.20,
         'professionalism' => 0.20,
-        'structure' => 0.15,
-        'engagement' => 0.10,
-        'uniqueness' => 0.10
-    ];
+        'structure'       => 0.15,
+        'engagement'      => 0.10,
+        'uniqueness'      => 0.10,
+    );
 
     /**
      * Required elements for job descriptions
      */
-    private const REQUIRED_ELEMENTS = [
+    private const REQUIRED_ELEMENTS = array(
         'responsibilities',
         'requirements',
         'benefits',
         'company',
         'location',
-        'salary'
-    ];
+        'salary',
+    );
 
     /**
      * Professional keywords that indicate quality content
      */
-    private const PROFESSIONAL_KEYWORDS = [
-        'responsibilities', 'requirements', 'qualifications', 'benefits', 'compensation',
-        'experience', 'skills', 'education', 'opportunities', 'development', 'growth',
-        'team', 'collaborate', 'innovative', 'dynamic', 'professional', 'excellent',
-        'competitive', 'comprehensive', 'diverse', 'inclusive', 'challenging'
-    ];
+    private const PROFESSIONAL_KEYWORDS = array(
+        'responsibilities',
+        'requirements',
+        'qualifications',
+        'benefits',
+        'compensation',
+        'experience',
+        'skills',
+        'education',
+        'opportunities',
+        'development',
+        'growth',
+        'team',
+        'collaborate',
+        'innovative',
+        'dynamic',
+        'professional',
+        'excellent',
+        'competitive',
+        'comprehensive',
+        'diverse',
+        'inclusive',
+        'challenging',
+    );
 
     /**
      * Unprofessional or spammy indicators
      */
-    private const UNPROFESSIONAL_INDICATORS = [
-        'urgent', 'immediate', 'apply now', 'limited time', 'exclusive', 'confidential',
-        'top secret', 'million dollar', 'guaranteed', 'easy money', 'work from home',
-        'no experience needed', 'quick cash', 'overnight success'
-    ];
+    private const UNPROFESSIONAL_INDICATORS = array(
+        'urgent',
+        'immediate',
+        'apply now',
+        'limited time',
+        'exclusive',
+        'confidential',
+        'top secret',
+        'million dollar',
+        'guaranteed',
+        'easy money',
+        'work from home',
+        'no experience needed',
+        'quick cash',
+        'overnight success',
+    );
 
     /**
      * Score content quality for a job posting
      *
-     * @param array $jobData Job data array with title, description, etc.
+     * @param  array $jobData Job data array with title, description, etc.
      * @return array Quality score and analysis details
      */
     public static function scoreContent(array $jobData): array
     {
-        $scores = [];
+        $scores = array();
 
         // Calculate individual factor scores
-        $scores['completeness'] = self::scoreCompleteness($jobData);
-        $scores['readability'] = self::scoreReadability($jobData);
+        $scores['completeness']    = self::scoreCompleteness($jobData);
+        $scores['readability']     = self::scoreReadability($jobData);
         $scores['professionalism'] = self::scoreProfessionalism($jobData);
-        $scores['structure'] = self::scoreStructure($jobData);
-        $scores['engagement'] = self::scoreEngagement($jobData);
-        $scores['uniqueness'] = self::scoreUniqueness($jobData);
+        $scores['structure']       = self::scoreStructure($jobData);
+        $scores['engagement']      = self::scoreEngagement($jobData);
+        $scores['uniqueness']      = self::scoreUniqueness($jobData);
 
         // Calculate weighted overall score
         $overallScore = 0;
         foreach (self::QUALITY_FACTORS as $factor => $weight) {
-            $overallScore += $scores[$factor] * $weight;
+            $overallScore += $scores[ $factor ] * $weight;
         }
 
         // Determine quality level
         $qualityLevel = self::determineQualityLevel($overallScore);
 
-        return [
-            'overall_score' => round($overallScore, 1),
-            'quality_level' => $qualityLevel,
-            'factor_scores' => $scores,
+        return array(
+            'overall_score'   => round($overallScore, 1),
+            'quality_level'   => $qualityLevel,
+            'factor_scores'   => $scores,
             'recommendations' => self::generateRecommendations($scores),
-            'strengths' => self::identifyStrengths($scores),
-            'weaknesses' => self::identifyWeaknesses($scores)
-        ];
+            'strengths'       => self::identifyStrengths($scores),
+            'weaknesses'      => self::identifyWeaknesses($scores),
+        );
     }
 
     /**
@@ -113,29 +142,34 @@ class ContentQualityScorer
      */
     private static function scoreCompleteness(array $jobData): float
     {
-        $score = 0;
+        $score    = 0;
         $maxScore = count(self::REQUIRED_ELEMENTS);
 
-        $content = strtolower(implode(' ', [
-            $jobData['job_title'] ?? '',
-            $jobData['job_description'] ?? '',
-            $jobData['job_company'] ?? '',
-            $jobData['job_location'] ?? '',
-            $jobData['job_salary'] ?? ''
-        ]));
+        $content = strtolower(
+            implode(
+                ' ',
+                array(
+                    $jobData['job_title'] ?? '',
+                    $jobData['job_description'] ?? '',
+                    $jobData['job_company'] ?? '',
+                    $jobData['job_location'] ?? '',
+                    $jobData['job_salary'] ?? '',
+                )
+            )
+        );
 
         foreach (self::REQUIRED_ELEMENTS as $element) {
             if (strpos($content, $element) !== false) {
-                $score++;
+                ++$score;
             }
         }
 
         // Bonus for having contact information
-        if (!empty($jobData['job_apply'] ?? '')) {
+        if (! empty($jobData['job_apply'] ?? '')) {
             $score += 0.5;
         }
 
-        return min(100, ($score / $maxScore) * 100);
+        return min(100, ( $score / $maxScore ) * 100);
     }
 
     /**
@@ -150,8 +184,8 @@ class ContentQualityScorer
         }
 
         $sentences = preg_split('/[.!?]+/', $description, -1, PREG_SPLIT_NO_EMPTY);
-        $words = str_word_count($description);
-        $chars = strlen($description);
+        $words     = str_word_count($description);
+        $chars     = strlen($description);
 
         // Average words per sentence (ideal: 15-20)
         $avgWordsPerSentence = $words / max(1, count($sentences));
@@ -178,7 +212,7 @@ class ContentQualityScorer
             $complexityScore = 90; // Complex words are okay but not excessive
         }
 
-        return ($lengthScore * 0.4) + ($sentenceScore * 0.4) + ($complexityScore * 0.2);
+        return ( $lengthScore * 0.4 ) + ( $sentenceScore * 0.4 ) + ( $complexityScore * 0.2 );
     }
 
     /**
@@ -186,16 +220,21 @@ class ContentQualityScorer
      */
     private static function scoreProfessionalism(array $jobData): float
     {
-        $content = strtolower(implode(' ', [
-            $jobData['job_title'] ?? '',
-            $jobData['job_description'] ?? ''
-        ]));
+        $content = strtolower(
+            implode(
+                ' ',
+                array(
+                    $jobData['job_title'] ?? '',
+                    $jobData['job_description'] ?? '',
+                )
+            )
+        );
 
         if (empty($content)) {
             return 0;
         }
 
-        $professionalScore = 0;
+        $professionalScore     = 0;
         $unprofessionalPenalty = 0;
 
         // Count professional keywords
@@ -248,7 +287,7 @@ class ContentQualityScorer
         }
 
         // Check for section headers
-        $headers = ['responsibilities', 'requirements', 'benefits', 'about us', 'what we offer', 'qualifications'];
+        $headers = array( 'responsibilities', 'requirements', 'benefits', 'about us', 'what we offer', 'qualifications' );
         foreach ($headers as $header) {
             if (preg_match('/\b' . preg_quote($header, '/') . '\b/i', $description)) {
                 $score += 10;
@@ -289,7 +328,7 @@ class ContentQualityScorer
         $score = 0;
 
         // Check for action verbs
-        $actionVerbs = ['develop', 'create', 'manage', 'lead', 'design', 'implement', 'collaborate', 'innovate', 'analyze', 'optimize'];
+        $actionVerbs = array( 'develop', 'create', 'manage', 'lead', 'design', 'implement', 'collaborate', 'innovate', 'analyze', 'optimize' );
         foreach ($actionVerbs as $verb) {
             if (strpos($content, $verb) !== false) {
                 $score += 5;
@@ -297,7 +336,7 @@ class ContentQualityScorer
         }
 
         // Check for benefit-focused language
-        $benefitWords = ['opportunity', 'growth', 'development', 'learning', 'challenge', 'rewarding', 'exciting', 'dynamic'];
+        $benefitWords = array( 'opportunity', 'growth', 'development', 'learning', 'challenge', 'rewarding', 'exciting', 'dynamic' );
         foreach ($benefitWords as $word) {
             if (strpos($content, $word) !== false) {
                 $score += 5;
@@ -305,7 +344,7 @@ class ContentQualityScorer
         }
 
         // Check for inclusive language
-        $inclusiveWords = ['we', 'our', 'team', 'together', 'join', 'become', 'part of'];
+        $inclusiveWords = array( 'we', 'our', 'team', 'together', 'join', 'become', 'part of' );
         foreach ($inclusiveWords as $word) {
             if (strpos($content, $word) !== false) {
                 $score += 3;
@@ -332,9 +371,9 @@ class ContentQualityScorer
         }
 
         // Basic uniqueness check - look for repeated phrases
-        $sentences = preg_split('/[.!?]+/', $content, -1, PREG_SPLIT_NO_EMPTY);
+        $sentences       = preg_split('/[.!?]+/', $content, -1, PREG_SPLIT_NO_EMPTY);
         $uniqueSentences = count(array_unique(array_map('trim', $sentences)));
-        $totalSentences = count($sentences);
+        $totalSentences  = count($sentences);
 
         if ($totalSentences === 0) {
             return 0;
@@ -343,13 +382,13 @@ class ContentQualityScorer
         $uniquenessRatio = $uniqueSentences / $totalSentences;
 
         // Check for template-like language
-        $templateIndicators = [
+        $templateIndicators = array(
             'we are looking for',
             'the successful candidate',
             'responsibilities include',
             'requirements include',
-            'benefits include'
-        ];
+            'benefits include',
+        );
 
         $templatePenalty = 0;
         foreach ($templateIndicators as $indicator) {
@@ -358,7 +397,7 @@ class ContentQualityScorer
             }
         }
 
-        $score = ($uniquenessRatio * 100) - $templatePenalty;
+        $score = ( $uniquenessRatio * 100 ) - $templatePenalty;
 
         return max(0, min(100, $score));
     }
@@ -386,7 +425,7 @@ class ContentQualityScorer
      */
     private static function generateRecommendations(array $scores): array
     {
-        $recommendations = [];
+        $recommendations = array();
 
         if ($scores['completeness'] < 70) {
             $recommendations[] = 'Add missing job details like responsibilities, requirements, or benefits';
@@ -420,7 +459,7 @@ class ContentQualityScorer
      */
     private static function identifyStrengths(array $scores): array
     {
-        $strengths = [];
+        $strengths = array();
 
         if ($scores['completeness'] >= 80) {
             $strengths[] = 'Comprehensive job information';
@@ -454,7 +493,7 @@ class ContentQualityScorer
      */
     private static function identifyWeaknesses(array $scores): array
     {
-        $weaknesses = [];
+        $weaknesses = array();
 
         if ($scores['completeness'] < 60) {
             $weaknesses[] = 'Missing key job information';

@@ -11,7 +11,7 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -32,11 +32,11 @@ class PuntworkSocialMediaAdmin
     {
         $this->social_manager = new \Puntwork\SocialMedia\SocialMediaManager();
 
-        add_action('admin_menu', [$this, 'addSocialMediaMenu']);
-        add_action('admin_enqueueScripts', [$this, 'enqueueScripts']);
-        add_action('wp_ajax_puntwork_social_test_platform', [$this, 'ajaxTestPlatform']);
-        add_action('wp_ajax_puntwork_social_save_config', [$this, 'ajaxSaveConfig']);
-        add_action('wp_ajax_puntwork_social_post_now', [$this, 'ajaxPostNow']);
+        add_action('admin_menu', array( $this, 'addSocialMediaMenu' ));
+        add_action('admin_enqueueScripts', array( $this, 'enqueueScripts' ));
+        add_action('wp_ajax_puntwork_social_test_platform', array( $this, 'ajaxTestPlatform' ));
+        add_action('wp_ajax_puntwork_social_save_config', array( $this, 'ajaxSaveConfig' ));
+        add_action('wp_ajax_puntwork_social_post_now', array( $this, 'ajaxPostNow' ));
     }
 
     /**
@@ -50,7 +50,7 @@ class PuntworkSocialMediaAdmin
             __('Social Media', 'puntwork'),
             'manage_options',
             'puntwork-social-media',
-            [$this, 'renderSocialMediaPage']
+            array( $this, 'renderSocialMediaPage' )
         );
     }
 
@@ -65,34 +65,38 @@ class PuntworkSocialMediaAdmin
 
         wp_enqueue_script(
             'puntwork-social-media-admin',
-            plugins_url('assets/js/social-media-admin.js', dirname(__FILE__, 2)),
-            ['jquery'],
+            plugins_url('assets/js/social-media-admin.js', dirname(__DIR__, 1)),
+            array( 'jquery' ),
             PUNTWORK_VERSION,
             true
         );
 
         wp_enqueue_style(
             'puntwork-social-media-admin',
-            plugins_url('assets/js/social-media-admin.css', dirname(__FILE__, 2)),
-            [],
+            plugins_url('assets/js/social-media-admin.css', dirname(__DIR__, 1)),
+            array(),
             PUNTWORK_VERSION
         );
 
-        wp_localize_script('puntwork-social-media-admin', 'puntwork_social_ajax', [
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('puntwork_social_nonce'),
-            'strings' => [
-                'testing' => __('Testing connection...', 'puntwork'),
-                'test_success' => __('Connection successful!', 'puntwork'),
-                'test_failed' => __('Connection failed!', 'puntwork'),
-                'saving' => __('Saving...', 'puntwork'),
-                'save_success' => __('Configuration saved!', 'puntwork'),
-                'save_failed' => __('Save failed!', 'puntwork'),
-                'posting' => __('Posting...', 'puntwork'),
-                'post_success' => __('Posted successfully!', 'puntwork'),
-                'post_failed' => __('Post failed!', 'puntwork')
-            ]
-        ]);
+        wp_localize_script(
+            'puntwork-social-media-admin',
+            'puntwork_social_ajax',
+            array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce'    => wp_create_nonce('puntwork_social_nonce'),
+                'strings'  => array(
+                    'testing'      => __('Testing connection...', 'puntwork'),
+                    'test_success' => __('Connection successful!', 'puntwork'),
+                    'test_failed'  => __('Connection failed!', 'puntwork'),
+                    'saving'       => __('Saving...', 'puntwork'),
+                    'save_success' => __('Configuration saved!', 'puntwork'),
+                    'save_failed'  => __('Save failed!', 'puntwork'),
+                    'posting'      => __('Posting...', 'puntwork'),
+                    'post_success' => __('Posted successfully!', 'puntwork'),
+                    'post_failed'  => __('Post failed!', 'puntwork'),
+                ),
+            )
+        );
     }
 
     /**
@@ -101,7 +105,7 @@ class PuntworkSocialMediaAdmin
     public function renderSocialMediaPage(): void
     {
         $available_platforms = \Puntwork\SocialMedia\SocialMediaManager::getAvailablePlatforms();
-        $platform_configs = \Puntwork\SocialMedia\SocialMediaManager::getAllPlatformConfigs();
+        $platform_configs    = \Puntwork\SocialMedia\SocialMediaManager::getAllPlatformConfigs();
 
         ?>
         <div class="wrap">
@@ -131,25 +135,25 @@ class PuntworkSocialMediaAdmin
                                 <div class="platform-toggles">
                                     <label class="platform-toggle">
                                         <input type="checkbox"
-                                               class="platform-enabled"
-                                               <?php checked(isset($platform_configs[$platform_id]['enabled']) && $platform_configs[$platform_id]['enabled']); ?>>
+                                                class="platform-enabled"
+                                                <?php checked(isset($platform_configs[ $platform_id ]['enabled']) && $platform_configs[ $platform_id ]['enabled']); ?>>
                                         <?php _e('Enable', 'puntwork'); ?>
                                     </label>
                                     <label class="ads-toggle" style="margin-left: 15px;">
                                         <input type="checkbox"
-                                               class="ads-enabled"
-                                               <?php checked(isset($platform_configs[$platform_id]['ads_enabled']) && $platform_configs[$platform_id]['ads_enabled']); ?>>
+                                                class="ads-enabled"
+                                                <?php checked(isset($platform_configs[ $platform_id ]['ads_enabled']) && $platform_configs[ $platform_id ]['ads_enabled']); ?>>
                                         <?php _e('Enable Ads', 'puntwork'); ?>
                                     </label>
                                 </div>
                             </div>
 
-                            <div class="platform-config" style="display: <?php echo (isset($platform_configs[$platform_id]['enabled']) && $platform_configs[$platform_id]['enabled']) ? 'block' : 'none'; ?>;">
-                                <?php $this->renderPlatformConfig($platform_id, $platform_configs[$platform_id] ?? []); ?>
+                            <div class="platform-config" style="display: <?php echo ( isset($platform_configs[ $platform_id ]['enabled']) && $platform_configs[ $platform_id ]['enabled'] ) ? 'block' : 'none'; ?>;">
+                                <?php $this->renderPlatformConfig($platform_id, $platform_configs[ $platform_id ] ?? array()); ?>
 
-                                <div class="ads-config" style="display: <?php echo (isset($platform_configs[$platform_id]['ads_enabled']) && $platform_configs[$platform_id]['ads_enabled']) ? 'block' : 'none'; ?>;">
+                                <div class="ads-config" style="display: <?php echo ( isset($platform_configs[ $platform_id ]['ads_enabled']) && $platform_configs[ $platform_id ]['ads_enabled'] ) ? 'block' : 'none'; ?>;">
                                     <h4><?php _e('Ads Configuration', 'puntwork'); ?></h4>
-                                    <?php $this->renderAdsConfig($platform_id, $platform_configs[$platform_id] ?? []); ?>
+                                    <?php $this->renderAdsConfig($platform_id, $platform_configs[ $platform_id ] ?? array()); ?>
                                 </div>
 
                                 <div class="platform-actions">
@@ -180,7 +184,7 @@ class PuntworkSocialMediaAdmin
                                 <td>
                                     <label>
                                         <input type="checkbox" name="auto_post_jobs" value="1"
-                                               <?php checked(get_option('puntwork_social_auto_post_jobs', false)); ?>>
+                                                <?php checked(get_option('puntwork_social_auto_post_jobs', false)); ?>>
                                         <?php _e('Automatically post new jobs to configured platforms', 'puntwork'); ?>
                                     </label>
                                 </td>
@@ -189,14 +193,14 @@ class PuntworkSocialMediaAdmin
                                 <th scope="row"><?php _e('Default Platforms', 'puntwork'); ?></th>
                                 <td>
                                     <?php
-                                    $default_platforms = get_option('puntwork_social_default_platforms', []);
+                                    $default_platforms = get_option('puntwork_social_default_platforms', array());
                                     foreach ($available_platforms as $platform_id => $platform_info) :
                                         ?>
                                         <label style="display: block; margin-bottom: 5px;">
                                             <input type="checkbox"
-                                                   name="default_platforms[]"
-                                                   value="<?php echo esc_attr($platform_id); ?>"
-                                                   <?php checked(in_array($platform_id, $default_platforms)); ?>>
+                                                    name="default_platforms[]"
+                                                    value="<?php echo esc_attr($platform_id); ?>"
+                                                    <?php checked(in_array($platform_id, $default_platforms)); ?>>
                                             <?php echo esc_html($platform_info['name']); ?>
                                         </label>
                                     <?php endforeach; ?>
@@ -392,9 +396,9 @@ class PuntworkSocialMediaAdmin
                         <th scope="row"><?php _e('Campaign Objective', 'puntwork'); ?></th>
                         <td>
                             <select name="campaign_objective">
-                                <option value="ENGAGEMENT" <?php selected(($config['campaign_objective'] ?? 'ENGAGEMENT'), 'ENGAGEMENT'); ?>><?php _e('Engagement', 'puntwork'); ?></option>
-                                <option value="AWARENESS" <?php selected(($config['campaign_objective'] ?? 'ENGAGEMENT'), 'AWARENESS'); ?>><?php _e('Awareness', 'puntwork'); ?></option>
-                                <option value="TRAFFIC" <?php selected(($config['campaign_objective'] ?? 'ENGAGEMENT'), 'TRAFFIC'); ?>><?php _e('Traffic', 'puntwork'); ?></option>
+                                <option value="ENGAGEMENT" <?php selected(( $config['campaign_objective'] ?? 'ENGAGEMENT' ), 'ENGAGEMENT'); ?>><?php _e('Engagement', 'puntwork'); ?></option>
+                                <option value="AWARENESS" <?php selected(( $config['campaign_objective'] ?? 'ENGAGEMENT' ), 'AWARENESS'); ?>><?php _e('Awareness', 'puntwork'); ?></option>
+                                <option value="TRAFFIC" <?php selected(( $config['campaign_objective'] ?? 'ENGAGEMENT' ), 'TRAFFIC'); ?>><?php _e('Traffic', 'puntwork'); ?></option>
                             </select>
                         </td>
                     </tr>
@@ -422,10 +426,10 @@ class PuntworkSocialMediaAdmin
                         <th scope="row"><?php _e('Campaign Objective', 'puntwork'); ?></th>
                         <td>
                             <select name="campaign_objective">
-                                <option value="CONVERSIONS" <?php selected(($config['campaign_objective'] ?? 'TRAFFIC'), 'CONVERSIONS'); ?>><?php _e('Conversions', 'puntwork'); ?></option>
-                                <option value="TRAFFIC" <?php selected(($config['campaign_objective'] ?? 'TRAFFIC'), 'TRAFFIC'); ?>><?php _e('Traffic', 'puntwork'); ?></option>
-                                <option value="ENGAGEMENT" <?php selected(($config['campaign_objective'] ?? 'TRAFFIC'), 'ENGAGEMENT'); ?>><?php _e('Engagement', 'puntwork'); ?></option>
-                                <option value="REACH" <?php selected(($config['campaign_objective'] ?? 'TRAFFIC'), 'REACH'); ?>><?php _e('Reach', 'puntwork'); ?></option>
+                                <option value="CONVERSIONS" <?php selected(( $config['campaign_objective'] ?? 'TRAFFIC' ), 'CONVERSIONS'); ?>><?php _e('Conversions', 'puntwork'); ?></option>
+                                <option value="TRAFFIC" <?php selected(( $config['campaign_objective'] ?? 'TRAFFIC' ), 'TRAFFIC'); ?>><?php _e('Traffic', 'puntwork'); ?></option>
+                                <option value="ENGAGEMENT" <?php selected(( $config['campaign_objective'] ?? 'TRAFFIC' ), 'ENGAGEMENT'); ?>><?php _e('Engagement', 'puntwork'); ?></option>
+                                <option value="REACH" <?php selected(( $config['campaign_objective'] ?? 'TRAFFIC' ), 'REACH'); ?>><?php _e('Reach', 'puntwork'); ?></option>
                             </select>
                         </td>
                     </tr>
@@ -433,10 +437,10 @@ class PuntworkSocialMediaAdmin
                         <th scope="row"><?php _e('Optimization Goal', 'puntwork'); ?></th>
                         <td>
                             <select name="optimization_goal">
-                                <option value="REACH" <?php selected(($config['optimization_goal'] ?? 'REACH'), 'REACH'); ?>><?php _e('Reach', 'puntwork'); ?></option>
-                                <option value="IMPRESSIONS" <?php selected(($config['optimization_goal'] ?? 'REACH'), 'IMPRESSIONS'); ?>><?php _e('Impressions', 'puntwork'); ?></option>
-                                <option value="LINK_CLICKS" <?php selected(($config['optimization_goal'] ?? 'REACH'), 'LINK_CLICKS'); ?>><?php _e('Link Clicks', 'puntwork'); ?></option>
-                                <option value="LANDING_PAGE_VIEWS" <?php selected(($config['optimization_goal'] ?? 'REACH'), 'LANDING_PAGE_VIEWS'); ?>><?php _e('Landing Page Views', 'puntwork'); ?></option>
+                                <option value="REACH" <?php selected(( $config['optimization_goal'] ?? 'REACH' ), 'REACH'); ?>><?php _e('Reach', 'puntwork'); ?></option>
+                                <option value="IMPRESSIONS" <?php selected(( $config['optimization_goal'] ?? 'REACH' ), 'IMPRESSIONS'); ?>><?php _e('Impressions', 'puntwork'); ?></option>
+                                <option value="LINK_CLICKS" <?php selected(( $config['optimization_goal'] ?? 'REACH' ), 'LINK_CLICKS'); ?>><?php _e('Link Clicks', 'puntwork'); ?></option>
+                                <option value="LANDING_PAGE_VIEWS" <?php selected(( $config['optimization_goal'] ?? 'REACH' ), 'LANDING_PAGE_VIEWS'); ?>><?php _e('Landing Page Views', 'puntwork'); ?></option>
                             </select>
                         </td>
                     </tr>
@@ -464,11 +468,11 @@ class PuntworkSocialMediaAdmin
                         <th scope="row"><?php _e('Campaign Objective', 'puntwork'); ?></th>
                         <td>
                             <select name="campaign_objective">
-                                <option value="REACH" <?php selected(($config['campaign_objective'] ?? 'REACH'), 'REACH'); ?>><?php _e('Reach', 'puntwork'); ?></option>
-                                <option value="TRAFFIC" <?php selected(($config['campaign_objective'] ?? 'REACH'), 'TRAFFIC'); ?>><?php _e('Traffic', 'puntwork'); ?></option>
-                                <option value="APP_INSTALLS" <?php selected(($config['campaign_objective'] ?? 'REACH'), 'APP_INSTALLS'); ?>><?php _e('App Installs', 'puntwork'); ?></option>
-                                <option value="LEAD_GENERATION" <?php selected(($config['campaign_objective'] ?? 'REACH'), 'LEAD_GENERATION'); ?>><?php _e('Lead Generation', 'puntwork'); ?></option>
-                                <option value="VIDEO_VIEWS" <?php selected(($config['campaign_objective'] ?? 'REACH'), 'VIDEO_VIEWS'); ?>><?php _e('Video Views', 'puntwork'); ?></option>
+                                <option value="REACH" <?php selected(( $config['campaign_objective'] ?? 'REACH' ), 'REACH'); ?>><?php _e('Reach', 'puntwork'); ?></option>
+                                <option value="TRAFFIC" <?php selected(( $config['campaign_objective'] ?? 'REACH' ), 'TRAFFIC'); ?>><?php _e('Traffic', 'puntwork'); ?></option>
+                                <option value="APP_INSTALLS" <?php selected(( $config['campaign_objective'] ?? 'REACH' ), 'APP_INSTALLS'); ?>><?php _e('App Installs', 'puntwork'); ?></option>
+                                <option value="LEAD_GENERATION" <?php selected(( $config['campaign_objective'] ?? 'REACH' ), 'LEAD_GENERATION'); ?>><?php _e('Lead Generation', 'puntwork'); ?></option>
+                                <option value="VIDEO_VIEWS" <?php selected(( $config['campaign_objective'] ?? 'REACH' ), 'VIDEO_VIEWS'); ?>><?php _e('Video Views', 'puntwork'); ?></option>
                             </select>
                         </td>
                     </tr>
@@ -476,10 +480,10 @@ class PuntworkSocialMediaAdmin
                         <th scope="row"><?php _e('Optimization Goal', 'puntwork'); ?></th>
                         <td>
                             <select name="optimization_goal">
-                                <option value="REACH" <?php selected(($config['optimization_goal'] ?? 'REACH'), 'REACH'); ?>><?php _e('Reach', 'puntwork'); ?></option>
-                                <option value="CLICK" <?php selected(($config['optimization_goal'] ?? 'REACH'), 'CLICK'); ?>><?php _e('Clicks', 'puntwork'); ?></option>
-                                <option value="IMPRESSION" <?php selected(($config['optimization_goal'] ?? 'REACH'), 'IMPRESSION'); ?>><?php _e('Impressions', 'puntwork'); ?></option>
-                                <option value="APP_INSTALL" <?php selected(($config['optimization_goal'] ?? 'REACH'), 'APP_INSTALL'); ?>><?php _e('App Installs', 'puntwork'); ?></option>
+                                <option value="REACH" <?php selected(( $config['optimization_goal'] ?? 'REACH' ), 'REACH'); ?>><?php _e('Reach', 'puntwork'); ?></option>
+                                <option value="CLICK" <?php selected(( $config['optimization_goal'] ?? 'REACH' ), 'CLICK'); ?>><?php _e('Clicks', 'puntwork'); ?></option>
+                                <option value="IMPRESSION" <?php selected(( $config['optimization_goal'] ?? 'REACH' ), 'IMPRESSION'); ?>><?php _e('Impressions', 'puntwork'); ?></option>
+                                <option value="APP_INSTALL" <?php selected(( $config['optimization_goal'] ?? 'REACH' ), 'APP_INSTALL'); ?>><?php _e('App Installs', 'puntwork'); ?></option>
                             </select>
                         </td>
                     </tr>
@@ -489,8 +493,8 @@ class PuntworkSocialMediaAdmin
         }
     }
         /**
-     * Render platform-specific configuration
-     */
+         * Render platform-specific configuration
+         */
     private function renderPlatformConfig(string $platform_id, array $config): void
     {
         switch ($platform_id) {
@@ -603,9 +607,12 @@ class PuntworkSocialMediaAdmin
         global $wpdb;
         $table_name = $wpdb->prefix . 'puntwork_social_posts';
 
-        $logs = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM $table_name ORDER BY created_at DESC LIMIT 50"
-        ), ARRAY_A);
+        $logs = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT * FROM $table_name ORDER BY created_at DESC LIMIT 50"
+            ),
+            ARRAY_A
+        );
 
         if (empty($logs)) {
             echo '<p>' . __('No activity logs found.', 'puntwork') . '</p>';
@@ -622,15 +629,15 @@ class PuntworkSocialMediaAdmin
 
         foreach ($logs as $log) {
             $post_data = json_decode($log['post_data'], true);
-            $results = json_decode($log['results'] ?? '[]', true);
+            $results   = json_decode($log['results'] ?? '[]', true);
 
             echo '<tr>';
             echo '<td>' . esc_html($log['created_at']) . '</td>';
-            echo '<td>' . esc_html(implode(', ', $post_data['platforms'] ?? [])) . '</td>';
+            echo '<td>' . esc_html(implode(', ', $post_data['platforms'] ?? array())) . '</td>';
             echo '<td>' . esc_html(ucfirst($log['status'])) . '</td>';
             echo '<td>';
 
-            if (!empty($results)) {
+            if (! empty($results)) {
                 foreach ($results as $platform => $result) {
                     $status = $result['success'] ? '✓' : '✗';
                     echo esc_html($platform) . ': ' . $status . ' ';
@@ -651,14 +658,14 @@ class PuntworkSocialMediaAdmin
     {
         check_ajax_referer('puntwork_social_nonce', 'nonce');
 
-        if (!current_user_can('manage_options')) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('Insufficient permissions', 'puntwork'));
         }
 
         $platform_id = sanitize_text_field($_POST['platform_id'] ?? '');
 
         if (empty($platform_id)) {
-            wp_send_json_error(['message' => __('Platform ID required', 'puntwork')]);
+            wp_send_json_error(array( 'message' => __('Platform ID required', 'puntwork') ));
         }
 
         $result = $this->social_manager->testPlatform($platform_id);
@@ -677,29 +684,29 @@ class PuntworkSocialMediaAdmin
     {
         check_ajax_referer('puntwork_social_nonce', 'nonce');
 
-        if (!current_user_can('manage_options')) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('Insufficient permissions', 'puntwork'));
         }
 
         $platform_id = sanitize_text_field($_POST['platform_id'] ?? '');
-        $config = $_POST['config'] ?? [];
+        $config      = $_POST['config'] ?? array();
 
         if (empty($platform_id)) {
-            wp_send_json_error(['message' => __('Platform ID required', 'puntwork')]);
+            wp_send_json_error(array( 'message' => __('Platform ID required', 'puntwork') ));
         }
 
         // Sanitize config data
-        $sanitized_config = [];
+        $sanitized_config = array();
         foreach ($config as $key => $value) {
-            $sanitized_config[$key] = sanitize_text_field($value);
+            $sanitized_config[ $key ] = sanitize_text_field($value);
         }
 
         $success = \Puntwork\SocialMedia\SocialMediaManager::configurePlatform($platform_id, $sanitized_config);
 
         if ($success) {
-            wp_send_json_success(['message' => __('Configuration saved successfully', 'puntwork')]);
+            wp_send_json_success(array( 'message' => __('Configuration saved successfully', 'puntwork') ));
         } else {
-            wp_send_json_error(['message' => __('Failed to save configuration', 'puntwork')]);
+            wp_send_json_error(array( 'message' => __('Failed to save configuration', 'puntwork') ));
         }
     }
 
@@ -710,32 +717,34 @@ class PuntworkSocialMediaAdmin
     {
         check_ajax_referer('puntwork_social_nonce', 'nonce');
 
-        if (!current_user_can('manage_options')) {
+        if (! current_user_can('manage_options')) {
             wp_die(__('Insufficient permissions', 'puntwork'));
         }
 
-        $content = sanitize_textarea_field($_POST['content'] ?? '');
-        $platforms = $_POST['platforms'] ?? [];
+        $content   = sanitize_textarea_field($_POST['content'] ?? '');
+        $platforms = $_POST['platforms'] ?? array();
 
         if (empty($content)) {
-            wp_send_json_error(['message' => __('Content is required', 'puntwork')]);
+            wp_send_json_error(array( 'message' => __('Content is required', 'puntwork') ));
         }
 
         if (empty($platforms)) {
-            wp_send_json_error(['message' => __('At least one platform must be selected', 'puntwork')]);
+            wp_send_json_error(array( 'message' => __('At least one platform must be selected', 'puntwork') ));
         }
 
         $platforms = array_map('sanitize_text_field', $platforms);
 
         $results = $this->social_manager->postToPlatforms(
-            ['text' => $content],
+            array( 'text' => $content ),
             $platforms
         );
 
-        wp_send_json_success([
-            'message' => __('Post sent to platforms', 'puntwork'),
-            'results' => $results
-        ]);
+        wp_send_json_success(
+            array(
+                'message' => __('Post sent to platforms', 'puntwork'),
+                'results' => $results,
+            )
+        );
     }
 }
 

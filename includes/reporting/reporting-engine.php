@@ -13,7 +13,7 @@
 namespace Puntwork\Reporting;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -25,46 +25,46 @@ class ReportingEngine
     /**
      * Report types
      */
-    public const REPORT_TYPE_PERFORMANCE = 'performance';
-    public const REPORT_TYPE_FEED_HEALTH = 'feed_health';
+    public const REPORT_TYPE_PERFORMANCE   = 'performance';
+    public const REPORT_TYPE_FEED_HEALTH   = 'feed_health';
     public const REPORT_TYPE_JOB_ANALYTICS = 'job_analytics';
-    public const REPORT_TYPE_NETWORK = 'network';
-    public const REPORT_TYPE_ML_INSIGHTS = 'ml_insights';
+    public const REPORT_TYPE_NETWORK       = 'network';
+    public const REPORT_TYPE_ML_INSIGHTS   = 'ml_insights';
 
     /**
      * Report formats
      */
     public const FORMAT_HTML = 'html';
-    public const FORMAT_PDF = 'pdf';
-    public const FORMAT_CSV = 'csv';
+    public const FORMAT_PDF  = 'pdf';
+    public const FORMAT_CSV  = 'csv';
     public const FORMAT_JSON = 'json';
 
     /**
      * Dashboard widgets
      */
-    private static array $dashboardWidgets = [];
+    private static array $dashboardWidgets = array();
 
     /**
      * Scheduled reports
      */
-    private static array $scheduledReports = [];
+    private static array $scheduledReports = array();
 
     /**
      * Initialize reporting system
      */
     public static function init(): void
     {
-        add_action('init', [self::class, 'setupReporting']);
-        add_action('wp_dashboard_setup', [self::class, 'registerDashboardWidgets']);
-        add_action('wp_ajaxGenerateCustomReport', [self::class, 'ajaxGenerateCustomReport']);
-        add_action('wp_ajaxScheduleReport', [self::class, 'ajaxScheduleReport']);
-        add_action('wp_ajaxGetReportData', [self::class, 'ajaxGetReportData']);
+        add_action('init', array( self::class, 'setupReporting' ));
+        add_action('wp_dashboard_setup', array( self::class, 'registerDashboardWidgets' ));
+        add_action('wp_ajaxGenerateCustomReport', array( self::class, 'ajaxGenerateCustomReport' ));
+        add_action('wp_ajaxScheduleReport', array( self::class, 'ajaxScheduleReport' ));
+        add_action('wp_ajaxGetReportData', array( self::class, 'ajaxGetReportData' ));
 
         // Schedule automated reports
-        if (!wp_next_scheduled('puntwork_generateAutomatedReports')) {
+        if (! wp_next_scheduled('puntwork_generateAutomatedReports')) {
             wp_schedule_event(time(), 'daily', 'puntwork_generateAutomatedReports');
         }
-        add_action('puntwork_generateAutomatedReports', [self::class, 'generateAutomatedReports']);
+        add_action('puntwork_generateAutomatedReports', array( self::class, 'generateAutomatedReports' ));
     }
 
     /**
@@ -84,7 +84,7 @@ class ReportingEngine
     {
         global $wpdb;
 
-        $table_name = $wpdb->prefix . 'puntwork_reports';
+        $table_name      = $wpdb->prefix . 'puntwork_reports';
         $charset_collate = $wpdb->get_charset_collate();
 
         $sql = "CREATE TABLE IF NOT EXISTS $table_name (
@@ -104,7 +104,7 @@ class ReportingEngine
             KEY scheduled (scheduled)
         ) $charset_collate;";
 
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        include_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
     }
 
@@ -113,20 +113,32 @@ class ReportingEngine
      */
     private static function registerReportSettings(): void
     {
-        register_setting('puntwork_reporting', 'puntwork_automated_reports_enabled', [
-            'type' => 'boolean',
-            'default' => true
-        ]);
+        register_setting(
+            'puntwork_reporting',
+            'puntwork_automated_reports_enabled',
+            array(
+                'type'    => 'boolean',
+                'default' => true,
+            )
+        );
 
-        register_setting('puntwork_reporting', 'puntwork_report_retention_days', [
-            'type' => 'integer',
-            'default' => 90
-        ]);
+        register_setting(
+            'puntwork_reporting',
+            'puntwork_report_retention_days',
+            array(
+                'type'    => 'integer',
+                'default' => 90,
+            )
+        );
 
-        register_setting('puntwork_reporting', 'puntwork_dashboard_refresh_interval', [
-            'type' => 'integer',
-            'default' => 300 // 5 minutes
-        ]);
+        register_setting(
+            'puntwork_reporting',
+            'puntwork_dashboard_refresh_interval',
+            array(
+                'type'    => 'integer',
+                'default' => 300, // 5 minutes
+            )
+        );
     }
 
     /**
@@ -134,38 +146,38 @@ class ReportingEngine
      */
     private static function loadDashboardWidgets(): void
     {
-        self::$dashboardWidgets = [
-            'performance_overview' => [
-                'title' => __('Performance Overview', 'puntwork'),
-                'callback' => [self::class, 'renderPerformanceWidget'],
-                'context' => 'normal',
-                'priority' => 'high'
-            ],
-            'feed_health_summary' => [
-                'title' => __('Feed Health Summary', 'puntwork'),
-                'callback' => [self::class, 'renderFeedHealthWidget'],
-                'context' => 'normal',
-                'priority' => 'high'
-            ],
-            'job_analytics_chart' => [
-                'title' => __('Job Analytics', 'puntwork'),
-                'callback' => [self::class, 'renderJobAnalyticsWidget'],
-                'context' => 'normal',
-                'priority' => 'core'
-            ],
-            'ml_insights_widget' => [
-                'title' => __('ML Insights', 'puntwork'),
-                'callback' => [self::class, 'renderMlInsightsWidget'],
-                'context' => 'side',
-                'priority' => 'core'
-            ],
-            'recent_activity' => [
-                'title' => __('Recent Activity', 'puntwork'),
-                'callback' => [self::class, 'renderRecentActivityWidget'],
-                'context' => 'side',
-                'priority' => 'core'
-            ]
-        ];
+        self::$dashboardWidgets = array(
+            'performance_overview' => array(
+                'title'    => __('Performance Overview', 'puntwork'),
+                'callback' => array( self::class, 'renderPerformanceWidget' ),
+                'context'  => 'normal',
+                'priority' => 'high',
+            ),
+            'feed_health_summary'  => array(
+                'title'    => __('Feed Health Summary', 'puntwork'),
+                'callback' => array( self::class, 'renderFeedHealthWidget' ),
+                'context'  => 'normal',
+                'priority' => 'high',
+            ),
+            'job_analytics_chart'  => array(
+                'title'    => __('Job Analytics', 'puntwork'),
+                'callback' => array( self::class, 'renderJobAnalyticsWidget' ),
+                'context'  => 'normal',
+                'priority' => 'core',
+            ),
+            'ml_insights_widget'   => array(
+                'title'    => __('ML Insights', 'puntwork'),
+                'callback' => array( self::class, 'renderMlInsightsWidget' ),
+                'context'  => 'side',
+                'priority' => 'core',
+            ),
+            'recent_activity'      => array(
+                'title'    => __('Recent Activity', 'puntwork'),
+                'callback' => array( self::class, 'renderRecentActivityWidget' ),
+                'context'  => 'side',
+                'priority' => 'core',
+            ),
+        );
     }
 
     /**
@@ -189,9 +201,9 @@ class ReportingEngine
     /**
      * Generate custom report
      */
-    public static function generateReport(string $type, array $params = [], string $format = self::FORMAT_HTML): array
+    public static function generateReport(string $type, array $params = array(), string $format = self::FORMAT_HTML): array
     {
-        $report_data = [];
+        $report_data = array();
 
         switch ($type) {
             case self::REPORT_TYPE_PERFORMANCE:
@@ -210,7 +222,7 @@ class ReportingEngine
                 $report_data = self::generateMlInsightsReport($params);
                 break;
             default:
-                return ['error' => 'Unknown report type: ' . $type];
+                return array( 'error' => 'Unknown report type: ' . $type );
         }
 
         // Format the report
@@ -219,12 +231,12 @@ class ReportingEngine
         // Save report to database
         $report_id = self::saveReport($type, $report_data['title'], $formatted_report, $format);
 
-        return [
-            'success' => true,
+        return array(
+            'success'   => true,
             'report_id' => $report_id,
-            'data' => $report_data,
-            'formatted' => $formatted_report
-        ];
+            'data'      => $report_data,
+            'formatted' => $formatted_report,
+        );
     }
 
     /**
@@ -239,7 +251,9 @@ class ReportingEngine
         $analytics_table = $wpdb->prefix . 'puntwork_import_analytics';
 
         // Performance metrics
-        $performance_data = $wpdb->get_row($wpdb->prepare("
+        $performance_data = $wpdb->get_row(
+            $wpdb->prepare(
+                "
             SELECT
                 COUNT(*) as total_imports,
                 AVG(success_rate) as avg_success_rate,
@@ -251,10 +265,16 @@ class ReportingEngine
                 MAX(created_at) as latest_import
             FROM $analytics_table
             WHERE created_at >= %s
-        ", $start_date), ARRAY_A);
+        ",
+                $start_date
+            ),
+            ARRAY_A
+        );
 
         // Daily performance trends
-        $daily_trends = $wpdb->get_results($wpdb->prepare("
+        $daily_trends = $wpdb->get_results(
+            $wpdb->prepare(
+                "
             SELECT
                 DATE(created_at) as date,
                 COUNT(*) as imports_count,
@@ -265,10 +285,16 @@ class ReportingEngine
             WHERE created_at >= %s
             GROUP BY DATE(created_at)
             ORDER BY date ASC
-        ", $start_date), ARRAY_A);
+        ",
+                $start_date
+            ),
+            ARRAY_A
+        );
 
         // Top performing feeds
-        $top_feeds = $wpdb->get_results($wpdb->prepare("
+        $top_feeds = $wpdb->get_results(
+            $wpdb->prepare(
+                "
             SELECT
                 feed_url,
                 COUNT(*) as import_count,
@@ -279,27 +305,31 @@ class ReportingEngine
             GROUP BY feed_url
             ORDER BY avg_success DESC
             LIMIT 10
-        ", $start_date), ARRAY_A);
+        ",
+                $start_date
+            ),
+            ARRAY_A
+        );
 
-        return [
-            'title' => sprintf(__('Performance Report - Last %d Days', 'puntwork'), $date_range),
+        return array(
+            'title'        => sprintf(__('Performance Report - Last %d Days', 'puntwork'), $date_range),
             'generated_at' => current_time('mysql'),
-            'date_range' => $date_range,
-            'summary' => [
-                'total_imports' => (int)$performance_data->total_imports,
-                'avg_success_rate' => round($performance_data->avg_success_rate * 100, 1),
+            'date_range'   => $date_range,
+            'summary'      => array(
+                'total_imports'     => (int) $performance_data->total_imports,
+                'avg_success_rate'  => round($performance_data->avg_success_rate * 100, 1),
                 'avg_response_time' => round($performance_data->avg_response_time, 2),
-                'total_jobs' => (int)$performance_data->total_jobs,
-                'total_failed' => (int)$performance_data->total_failed,
-                'avg_batch_size' => round($performance_data->avg_batch_size, 1)
-            ],
-            'trends' => $daily_trends,
-            'top_feeds' => $top_feeds,
-            'period' => [
+                'total_jobs'        => (int) $performance_data->total_jobs,
+                'total_failed'      => (int) $performance_data->total_failed,
+                'avg_batch_size'    => round($performance_data->avg_batch_size, 1),
+            ),
+            'trends'       => $daily_trends,
+            'top_feeds'    => $top_feeds,
+            'period'       => array(
                 'start' => $start_date,
-                'end' => date('Y-m-d')
-            ]
-        ];
+                'end'   => date('Y-m-d'),
+            ),
+        );
     }
 
     /**
@@ -307,49 +337,51 @@ class ReportingEngine
      */
     private static function generateFeedHealthReport(array $params): array
     {
-        $feeds = get_posts([
-            'post_type' => 'job-feed',
-            'posts_per_page' => -1,
-            'post_status' => 'any'
-        ]);
+        $feeds = get_posts(
+            array(
+                'post_type'      => 'job-feed',
+                'posts_per_page' => -1,
+                'post_status'    => 'any',
+            )
+        );
 
-        $feed_health = [];
-        $overall_stats = [
-            'total_feeds' => count($feeds),
-            'active_feeds' => 0,
-            'healthy_feeds' => 0,
-            'warning_feeds' => 0,
-            'critical_feeds' => 0
-        ];
+        $feed_health   = array();
+        $overall_stats = array(
+            'total_feeds'    => count($feeds),
+            'active_feeds'   => 0,
+            'healthy_feeds'  => 0,
+            'warning_feeds'  => 0,
+            'critical_feeds' => 0,
+        );
 
         foreach ($feeds as $feed) {
-            $feed_data = self::analyzeFeedHealth($feed);
+            $feed_data     = self::analyzeFeedHealth($feed);
             $feed_health[] = $feed_data;
 
             if ($feed_data['status'] === 'active') {
-                $overall_stats['active_feeds']++;
+                ++$overall_stats['active_feeds'];
             }
 
             switch ($feed_data['health_score']) {
                 case 'healthy':
-                    $overall_stats['healthy_feeds']++;
+                    ++$overall_stats['healthy_feeds'];
                     break;
                 case 'warning':
-                    $overall_stats['warning_feeds']++;
+                    ++$overall_stats['warning_feeds'];
                     break;
                 case 'critical':
-                    $overall_stats['critical_feeds']++;
+                    ++$overall_stats['critical_feeds'];
                     break;
             }
         }
 
-        return [
-            'title' => __('Feed Health Report', 'puntwork'),
-            'generated_at' => current_time('mysql'),
-            'overall_stats' => $overall_stats,
-            'feeds' => $feed_health,
-            'recommendations' => self::generateHealthRecommendations($feed_health)
-        ];
+        return array(
+            'title'           => __('Feed Health Report', 'puntwork'),
+            'generated_at'    => current_time('mysql'),
+            'overall_stats'   => $overall_stats,
+            'feeds'           => $feed_health,
+            'recommendations' => self::generateHealthRecommendations($feed_health),
+        );
     }
 
     /**
@@ -357,47 +389,47 @@ class ReportingEngine
      */
     private static function analyzeFeedHealth(\WP_Post $feed): array
     {
-        $feed_id = $feed->ID;
-        $feed_url = get_post_meta($feed_id, 'feed_url', true);
-        $last_import = get_post_meta($feed_id, 'last_import_time', true);
+        $feed_id      = $feed->ID;
+        $feed_url     = get_post_meta($feed_id, 'feed_url', true);
+        $last_import  = get_post_meta($feed_id, 'last_import_time', true);
         $success_rate = get_post_meta($feed_id, 'success_rate', true) ?: 0;
-        $error_count = get_post_meta($feed_id, 'error_count', true) ?: 0;
+        $error_count  = get_post_meta($feed_id, 'error_count', true) ?: 0;
 
         // Calculate health score
         $health_score = 'healthy';
-        $issues = [];
+        $issues       = array();
 
         if ($success_rate < 0.5) {
             $health_score = 'critical';
-            $issues[] = __('Low success rate (< 50%)', 'puntwork');
+            $issues[]     = __('Low success rate (< 50%)', 'puntwork');
         } elseif ($success_rate < 0.8) {
             $health_score = 'warning';
-            $issues[] = __('Moderate success rate (50-80%)', 'puntwork');
+            $issues[]     = __('Moderate success rate (50-80%)', 'puntwork');
         }
 
         if ($error_count > 10) {
             $health_score = 'critical';
-            $issues[] = __('High error count', 'puntwork');
+            $issues[]     = __('High error count', 'puntwork');
         }
 
-        $days_since_import = $last_import ? (time() - strtotime($last_import)) / DAY_IN_SECONDS : 999;
+        $days_since_import = $last_import ? ( time() - strtotime($last_import) ) / DAY_IN_SECONDS : 999;
         if ($days_since_import > 7) {
             $health_score = 'warning';
-            $issues[] = __('No recent imports', 'puntwork');
+            $issues[]     = __('No recent imports', 'puntwork');
         }
 
-        return [
-            'id' => $feed_id,
-            'title' => $feed->post_title,
-            'url' => $feed_url,
-            'status' => $feed->post_status,
-            'last_import' => $last_import,
-            'success_rate' => round($success_rate * 100, 1),
-            'error_count' => $error_count,
-            'health_score' => $health_score,
-            'issues' => $issues,
-            'days_since_import' => round($days_since_import, 1)
-        ];
+        return array(
+            'id'                => $feed_id,
+            'title'             => $feed->post_title,
+            'url'               => $feed_url,
+            'status'            => $feed->post_status,
+            'last_import'       => $last_import,
+            'success_rate'      => round($success_rate * 100, 1),
+            'error_count'       => $error_count,
+            'health_score'      => $health_score,
+            'issues'            => $issues,
+            'days_since_import' => round($days_since_import, 1),
+        );
     }
 
     /**
@@ -405,10 +437,10 @@ class ReportingEngine
      */
     private static function generateHealthRecommendations(array $feed_health): array
     {
-        $recommendations = [];
+        $recommendations = array();
 
         $critical_count = count(array_filter($feed_health, fn($f) => $f['health_score'] === 'critical'));
-        $warning_count = count(array_filter($feed_health, fn($f) => $f['health_score'] === 'warning'));
+        $warning_count  = count(array_filter($feed_health, fn($f) => $f['health_score'] === 'warning'));
 
         if ($critical_count > 0) {
             $recommendations[] = sprintf(__('Address %d critical feed issues immediately', 'puntwork'), $critical_count);
@@ -434,24 +466,26 @@ class ReportingEngine
         $date_range = $params['date_range'] ?? 30;
 
         // Job categories distribution
-        $categories = get_terms([
-            'taxonomy' => 'job_category',
-            'hide_empty' => false
-        ]);
+        $categories = get_terms(
+            array(
+                'taxonomy'   => 'job_category',
+                'hide_empty' => false,
+            )
+        );
 
-        $category_stats = [];
+        $category_stats = array();
         foreach ($categories as $category) {
-            $jobs_count = $category->count;
-            $category_stats[] = [
-                'name' => $category->name,
-                'count' => $jobs_count,
-                'percentage' => 0 // Will be calculated below
-            ];
+            $jobs_count       = $category->count;
+            $category_stats[] = array(
+                'name'       => $category->name,
+                'count'      => $jobs_count,
+                'percentage' => 0, // Will be calculated below
+            );
         }
 
         $total_jobs = array_sum(array_column($category_stats, 'count'));
         foreach ($category_stats as &$stat) {
-            $stat['percentage'] = $total_jobs > 0 ? round(($stat['count'] / $total_jobs) * 100, 1) : 0;
+            $stat['percentage'] = $total_jobs > 0 ? round(( $stat['count'] / $total_jobs ) * 100, 1) : 0;
         }
 
         // Job posting trends
@@ -460,14 +494,14 @@ class ReportingEngine
         // Geographic distribution
         $locations = self::getJobLocationDistribution();
 
-        return [
-            'title' => sprintf(__('Job Analytics Report - Last %d Days', 'puntwork'), $date_range),
+        return array(
+            'title'        => sprintf(__('Job Analytics Report - Last %d Days', 'puntwork'), $date_range),
             'generated_at' => current_time('mysql'),
-            'total_jobs' => $total_jobs,
-            'categories' => $category_stats,
-            'trends' => $trends,
-            'locations' => $locations
-        ];
+            'total_jobs'   => $total_jobs,
+            'categories'   => $category_stats,
+            'trends'       => $trends,
+            'locations'    => $locations,
+        );
     }
 
     /**
@@ -477,7 +511,9 @@ class ReportingEngine
     {
         global $wpdb;
 
-        $trends = $wpdb->get_results($wpdb->prepare("
+        $trends = $wpdb->get_results(
+            $wpdb->prepare(
+                "
             SELECT
                 DATE(post_date) as date,
                 COUNT(*) as job_count
@@ -487,9 +523,13 @@ class ReportingEngine
             AND post_date >= DATE_SUB(NOW(), INTERVAL %d DAY)
             GROUP BY DATE(post_date)
             ORDER BY date ASC
-        ", $days), ARRAY_A);
+        ",
+                $days
+            ),
+            ARRAY_A
+        );
 
-        return $trends ?: [];
+        return $trends ?: array();
     }
 
     /**
@@ -499,7 +539,8 @@ class ReportingEngine
     {
         global $wpdb;
 
-        $locations = $wpdb->get_results("
+        $locations = $wpdb->get_results(
+            "
             SELECT
                 meta_value as location,
                 COUNT(*) as count
@@ -509,9 +550,11 @@ class ReportingEngine
             GROUP BY meta_value
             ORDER BY count DESC
             LIMIT 20
-        ", ARRAY_A);
+        ",
+            ARRAY_A
+        );
 
-        return $locations ?: [];
+        return $locations ?: array();
     }
 
     /**
@@ -519,27 +562,27 @@ class ReportingEngine
      */
     private static function generateNetworkReport(array $params): array
     {
-        if (!is_multisite()) {
-            return [
-                'title' => __('Network Report', 'puntwork'),
+        if (! is_multisite()) {
+            return array(
+                'title'        => __('Network Report', 'puntwork'),
                 'generated_at' => current_time('mysql'),
-                'error' => __('Multisite not enabled', 'puntwork')
-            ];
+                'error'        => __('Multisite not enabled', 'puntwork'),
+            );
         }
 
         // This would integrate with MultiSiteManager
-        $network_data = [
-            'total_sites' => 0,
-            'active_sites' => 0,
-            'total_jobs' => 0,
-            'network_performance' => []
-        ];
+        $network_data = array(
+            'total_sites'         => 0,
+            'active_sites'        => 0,
+            'total_jobs'          => 0,
+            'network_performance' => array(),
+        );
 
-        return [
-            'title' => __('Network Report', 'puntwork'),
+        return array(
+            'title'        => __('Network Report', 'puntwork'),
             'generated_at' => current_time('mysql'),
-            'data' => $network_data
-        ];
+            'data'         => $network_data,
+        );
     }
 
     /**
@@ -548,17 +591,17 @@ class ReportingEngine
     private static function generateMlInsightsReport(array $params): array
     {
         // This would integrate with MachineLearningEngine
-        $ml_data = [
-            'model_performance' => [],
-            'predictions' => [],
-            'feature_importance' => []
-        ];
+        $ml_data = array(
+            'model_performance'  => array(),
+            'predictions'        => array(),
+            'feature_importance' => array(),
+        );
 
-        return [
-            'title' => __('ML Insights Report', 'puntwork'),
+        return array(
+            'title'        => __('ML Insights Report', 'puntwork'),
             'generated_at' => current_time('mysql'),
-            'data' => $ml_data
-        ];
+            'data'         => $ml_data,
+        );
     }
 
     /**
@@ -694,13 +737,13 @@ class ReportingEngine
 
         // Add title
         $output .= $data['title'] . "\n";
-        $output .= "Generated on: " . $data['generated_at'] . "\n\n";
+        $output .= 'Generated on: ' . $data['generated_at'] . "\n\n";
 
         // Add summary if available
         if (isset($data['summary'])) {
             $output .= "Summary\n";
             foreach ($data['summary'] as $key => $value) {
-                $output .= ucwords(str_replace('_', ' ', $key)) . ": " . $value . "\n";
+                $output .= ucwords(str_replace('_', ' ', $key)) . ': ' . $value . "\n";
             }
             $output .= "\n";
         }
@@ -710,9 +753,9 @@ class ReportingEngine
             $output .= "Trends\n";
             $output .= "Date,Imports,Success Rate,Jobs Processed\n";
             foreach ($data['trends'] as $trend) {
-                $output .= $trend['date'] . ",";
-                $output .= $trend['imports_count'] . ",";
-                $output .= ($trend['success_rate'] * 100) . "%,";
+                $output .= $trend['date'] . ',';
+                $output .= $trend['imports_count'] . ',';
+                $output .= ( $trend['success_rate'] * 100 ) . '%,';
                 $output .= $trend['jobs_processed'] . "\n";
             }
             $output .= "\n";
@@ -730,14 +773,17 @@ class ReportingEngine
 
         $table_name = $wpdb->prefix . 'puntwork_reports';
 
-        $wpdb->insert($table_name, [
-            'report_type' => $type,
-            'report_title' => $title,
-            'report_data' => $data,
-            'format' => $format,
-            'created_by' => get_current_user_id(),
-            'last_generated' => current_time('mysql')
-        ]);
+        $wpdb->insert(
+            $table_name,
+            array(
+                'report_type'    => $type,
+                'report_title'   => $title,
+                'report_data'    => $data,
+                'format'         => $format,
+                'created_by'     => get_current_user_id(),
+                'last_generated' => current_time('mysql'),
+            )
+        );
 
         return $wpdb->insert_id;
     }
@@ -747,19 +793,19 @@ class ReportingEngine
      */
     public static function generateAutomatedReports(): void
     {
-        if (!get_option('puntwork_automated_reports_enabled', true)) {
+        if (! get_option('puntwork_automated_reports_enabled', true)) {
             return;
         }
 
-        $reports_to_generate = [
+        $reports_to_generate = array(
             self::REPORT_TYPE_PERFORMANCE,
             self::REPORT_TYPE_FEED_HEALTH,
-            self::REPORT_TYPE_JOB_ANALYTICS
-        ];
+            self::REPORT_TYPE_JOB_ANALYTICS,
+        );
 
         foreach ($reports_to_generate as $report_type) {
             try {
-                $result = self::generateReport($report_type, ['date_range' => 7], self::FORMAT_HTML);
+                $result = self::generateReport($report_type, array( 'date_range' => 7 ), self::FORMAT_HTML);
                 if ($result['success']) {
                     PuntWorkLogger::info("Automated report generated: {$report_type}", PuntWorkLogger::CONTEXT_REPORTING);
                 }
@@ -774,7 +820,7 @@ class ReportingEngine
      */
     public static function renderPerformanceWidget(): void
     {
-        $performance_data = self::generatePerformanceReport(['date_range' => 7]);
+        $performance_data = self::generatePerformanceReport(array( 'date_range' => 7 ));
         ?>
         <div class="puntwork-performance-widget">
             <div class="widget-metrics">
@@ -802,7 +848,7 @@ class ReportingEngine
 
     public static function renderFeedHealthWidget(): void
     {
-        $health_data = self::generateFeedHealthReport([]);
+        $health_data = self::generateFeedHealthReport(array());
         ?>
         <div class="puntwork-health-widget">
             <div class="health-status">
@@ -825,7 +871,7 @@ class ReportingEngine
 
     public static function renderJobAnalyticsWidget(): void
     {
-        $analytics_data = self::generateJobAnalyticsReport(['date_range' => 30]);
+        $analytics_data = self::generateJobAnalyticsReport(array( 'date_range' => 30 ));
         ?>
         <div class="puntwork-analytics-widget">
             <canvas id="job-analytics-chart" width="400" height="200"></canvas>
@@ -853,12 +899,15 @@ class ReportingEngine
         global $wpdb;
         $analytics_table = $wpdb->prefix . 'puntwork_import_analytics';
 
-        $recent_activity = $wpdb->get_results("
+        $recent_activity = $wpdb->get_results(
+            "
             SELECT feed_url, success_rate, processed_jobs, created_at
             FROM $analytics_table
             ORDER BY created_at DESC
             LIMIT 5
-        ", ARRAY_A);
+        ",
+            ARRAY_A
+        );
         ?>
         <div class="puntwork-activity-widget">
             <ul class="activity-list">
@@ -883,21 +932,21 @@ class ReportingEngine
     public static function ajaxGenerateCustomReport(): void
     {
         try {
-            if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_generateReport')) {
+            if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_generateReport')) {
                 wp_send_json_error('Security check failed');
                 return;
             }
 
-            if (!current_user_can('manage_options')) {
+            if (! current_user_can('manage_options')) {
                 wp_send_json_error('Insufficient permissions');
                 return;
             }
 
             $report_type = sanitize_text_field($_POST['report_type'] ?? '');
-            $date_range = intval($_POST['date_range'] ?? 30);
-            $format = sanitize_text_field($_POST['format'] ?? self::FORMAT_HTML);
+            $date_range  = intval($_POST['date_range'] ?? 30);
+            $format      = sanitize_text_field($_POST['format'] ?? self::FORMAT_HTML);
 
-            $result = self::generateReport($report_type, ['date_range' => $date_range], $format);
+            $result = self::generateReport($report_type, array( 'date_range' => $date_range ), $format);
 
             wp_send_json_success($result);
         } catch (\Exception $e) {
@@ -909,18 +958,18 @@ class ReportingEngine
     public static function ajaxScheduleReport(): void
     {
         try {
-            if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_schedule_report')) {
+            if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_schedule_report')) {
                 wp_send_json_error('Security check failed');
                 return;
             }
 
-            if (!current_user_can('manage_options')) {
+            if (! current_user_can('manage_options')) {
                 wp_send_json_error('Insufficient permissions');
                 return;
             }
 
             // Implementation for scheduling reports
-            wp_send_json_success(['message' => 'Report scheduling not yet implemented']);
+            wp_send_json_success(array( 'message' => 'Report scheduling not yet implemented' ));
         } catch (\Exception $e) {
             wp_send_json_error('Report scheduling failed: ' . $e->getMessage());
         }
@@ -929,19 +978,19 @@ class ReportingEngine
     public static function ajaxGetReportData(): void
     {
         try {
-            if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_get_report_data')) {
+            if (! wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_get_report_data')) {
                 wp_send_json_error('Security check failed');
                 return;
             }
 
-            if (!current_user_can('manage_options')) {
+            if (! current_user_can('manage_options')) {
                 wp_send_json_error('Insufficient permissions');
                 return;
             }
 
             $report_id = intval($_POST['report_id'] ?? 0);
 
-            if (!$report_id) {
+            if (! $report_id) {
                 wp_send_json_error('Invalid report ID');
                 return;
             }
@@ -949,19 +998,27 @@ class ReportingEngine
             global $wpdb;
             $table_name = $wpdb->prefix . 'puntwork_reports';
 
-            $report = $wpdb->get_row($wpdb->prepare("
+            $report = $wpdb->get_row(
+                $wpdb->prepare(
+                    "
                 SELECT * FROM $table_name WHERE id = %d
-            ", $report_id), ARRAY_A);
+            ",
+                    $report_id
+                ),
+                ARRAY_A
+            );
 
-            if (!$report) {
+            if (! $report) {
                 wp_send_json_error('Report not found');
                 return;
             }
 
-            wp_send_json_success([
-                'report' => $report,
-                'data' => json_decode($report['report_data'], true)
-            ]);
+            wp_send_json_success(
+                array(
+                    'report' => $report,
+                    'data'   => json_decode($report['report_data'], true),
+                )
+            );
         } catch (\Exception $e) {
             wp_send_json_error('Failed to get report data: ' . $e->getMessage());
         }
