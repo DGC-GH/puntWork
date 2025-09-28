@@ -486,10 +486,10 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             }
 
             // Initialize dynamic polling variables
-            this.currentPollingInterval = 500; // Start with 500ms for fast initial updates
+            this.currentPollingInterval = 2000; // Start with 2000ms for better performance
             this.lastProcessedCount = -1;
             this.unchangedCount = 0;
-            this.maxUnchangedBeforeSlow = 50; // After 50 unchanged polls (25 seconds), slow down
+            this.maxUnchangedBeforeSlow = 50; // After 50 unchanged polls (100 seconds), slow down
             this.completeDetectedCount = 0; // Counter for complete detections
             this.maxCompletePolls = 3; // Continue polling for 3 more polls after detecting complete
             var totalZeroCount = 0; // Counter for polls where total remains 0

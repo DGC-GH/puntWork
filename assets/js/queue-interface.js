@@ -134,7 +134,7 @@ class PuntworkQueueInterface {
     async loadQueueStats() {
         try {
             console.log('[QUEUE] Loading queue stats, ajaxurl:', puntworkQueue.ajaxurl);
-            const response = await fetch(puntworkQueue.ajaxurl, {
+            const response = await this._retryAjax({
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -143,7 +143,7 @@ class PuntworkQueueInterface {
                     action: 'puntwork_get_queue_stats',
                     nonce: puntworkQueue.nonce
                 })
-            });
+            }, 3, 1000);
 
             console.log('[QUEUE] Response status:', response.status, 'ok:', response.ok);
             const data = await response.json();
@@ -155,7 +155,7 @@ class PuntworkQueueInterface {
                 console.error('Failed to load queue stats:', data.data);
             }
         } catch (error) {
-            console.error('Error loading queue stats:', error);
+            console.error('Error loading queue stats after retries:', error);
         }
     }
 
@@ -181,10 +181,48 @@ class PuntworkQueueInterface {
         }
     }
 
+    /**
+     * Retry AJAX helper method
+     * @param {Object} options - Fetch options
+     * @param {number} maxRetries - Maximum number of retries
+     * @param {number} delay - Delay between retries in ms
+     * @returns {Promise} Fetch response
+     */
+    async _retryAjax(options, maxRetries = 3, delay = 1000) {
+        let lastError;
+
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                const response = await fetch(puntworkQueue.ajaxurl, options);
+
+                // If response is ok or it's the last attempt, return it
+                if (response.ok || attempt === maxRetries) {
+                    return response;
+                }
+
+                // If not the last attempt, wait and retry
+                if (attempt < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            } catch (error) {
+                lastError = error;
+                console.warn(`[QUEUE] Attempt ${attempt + 1} failed:`, error);
+
+                // If not the last attempt, wait and retry
+                if (attempt < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
+
+        // If we get here, all retries failed
+        throw lastError || new Error('All retry attempts failed');
+    }
+
     async loadRecentJobs() {
         try {
             console.log('[QUEUE] Loading recent jobs, ajaxurl:', puntworkQueue.ajaxurl);
-            const response = await fetch(puntworkQueue.ajaxurl, {
+            const response = await this._retryAjax({
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -193,7 +231,7 @@ class PuntworkQueueInterface {
                     action: 'puntwork_get_recent_jobs',
                     nonce: puntworkQueue.nonce
                 })
-            });
+            }, 3, 1000);
 
             console.log('[QUEUE] Recent jobs response status:', response.status, 'ok:', response.ok);
             const data = await response.json();
@@ -203,7 +241,7 @@ class PuntworkQueueInterface {
                 this.displayRecentJobs(data.data);
             }
         } catch (error) {
-            console.error('Error loading recent jobs:', error);
+            console.error('Error loading recent jobs after retries:', error);
         }
     }
 
@@ -257,7 +295,7 @@ class PuntworkQueueInterface {
         button.disabled = true;
 
         try {
-            const response = await fetch(puntworkQueue.ajaxurl, {
+            const response = await this._retryAjax({
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -266,7 +304,7 @@ class PuntworkQueueInterface {
                     action: 'puntwork_process_queue',
                     nonce: puntworkQueue.nonce
                 })
-            });
+            }, 3, 1000);
 
             const data = await response.json();
 
@@ -292,7 +330,7 @@ class PuntworkQueueInterface {
         }
 
         try {
-            const response = await fetch(puntworkQueue.ajaxurl, {
+            const response = await this._retryAjax({
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -301,7 +339,7 @@ class PuntworkQueueInterface {
                     action: 'puntwork_clear_completed_jobs',
                     nonce: puntworkQueue.nonce
                 })
-            });
+            }, 3, 1000);
 
             const data = await response.json();
 
@@ -317,7 +355,7 @@ class PuntworkQueueInterface {
 
     async addTestJob() {
         try {
-            const response = await fetch(puntworkQueue.ajaxurl, {
+            const response = await this._retryAjax({
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -326,7 +364,7 @@ class PuntworkQueueInterface {
                     action: 'puntwork_add_test_job',
                     nonce: puntworkQueue.nonce
                 })
-            });
+            }, 3, 1000);
 
             const data = await response.json();
 
