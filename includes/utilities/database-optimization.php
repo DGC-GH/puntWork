@@ -197,12 +197,23 @@ function bulk_update_acf_fields(array $post_ids, array $acf_data): void
         error_log('[PUNTWORK] [ACF-DEBUG] Updating ACF fields for post ' . $post_id . ' (' . count($fields) . ' fields)');
 
         foreach ($fields as $field_name => $value) {
+            $field_start = microtime(true);
             if (function_exists('update_field')) {
                 update_field($field_name, $value, $post_id);
             } else {
                 // Fallback to postmeta if ACF not available
                 update_post_meta($post_id, $field_name, $value);
             }
+            $field_time = microtime(true) - $field_start;
+            if ($field_time > 1.0) { // Log slow field updates
+                error_log('[PUNTWORK] [ACF-DEBUG] SLOW ACF field update: ' . $field_name . ' took ' . number_format($field_time, 4) . ' seconds for post ' . $post_id);
+            }
+        }
+
+        // Check for database errors after ACF updates
+        global $wpdb;
+        if (!empty($wpdb->last_error)) {
+            error_log('[PUNTWORK] [DB-ERROR] Database error after ACF updates for post ' . $post_id . ': ' . $wpdb->last_error);
         }
 
         $post_acf_time = microtime(true) - $post_acf_start;

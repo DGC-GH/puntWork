@@ -170,6 +170,12 @@ if (!function_exists('process_batch_items')) {
                     $post_update_time = microtime(true) - $post_update_start;
                     error_log('[PUNTWORK] [ITEMS-DEBUG] Post update completed in ' . number_format($post_update_time, 4) . ' seconds');
 
+                    // Check for database errors after wp_update_post
+                    global $wpdb;
+                    if (!empty($wpdb->last_error)) {
+                        error_log('[PUNTWORK] [DB-ERROR] Database error after wp_update_post for post ' . $post_id . ': ' . $wpdb->last_error);
+                    }
+
                     error_log('[PUNTWORK] [ITEMS-DEBUG] Post updated successfully, now updating metadata');
 
                     update_post_meta($post_id, '_last_import_update', $xml_updated);

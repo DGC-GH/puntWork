@@ -270,10 +270,19 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
     $total_items = 0;
 
     error_log('[PUNTWORK] About to call FeedProcessor::processFeed');
-    // Process feed using FeedProcessor
-    $count = \Puntwork\FeedProcessor::processFeed($feed_path, $format, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
-    error_log('[PUNTWORK] FeedProcessor::processFeed returned count: ' . $count);
-    error_log('[PUNTWORK] Total items processed: ' . $total_items);
+    try {
+        // Process feed using FeedProcessor
+        $count = \Puntwork\FeedProcessor::processFeed($feed_path, $format, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+        error_log('[PUNTWORK] FeedProcessor::processFeed returned count: ' . $count);
+        error_log('[PUNTWORK] Total items processed: ' . $total_items);
+    } catch (\Exception $e) {
+        error_log('[PUNTWORK] ERROR in FeedProcessor::processFeed: ' . $e->getMessage());
+        error_log('[PUNTWORK] ERROR class: ' . get_class($e));
+        error_log('[PUNTWORK] ERROR file: ' . $e->getFile() . ':' . $e->getLine());
+        error_log('[PUNTWORK] ERROR trace: ' . $e->getTraceAsString());
+        fclose($handle);
+        throw $e; // Re-throw to maintain existing behavior
+    }
 
     fclose($handle);
     @chmod($json_path, 0644);
@@ -341,10 +350,19 @@ function process_downloaded_feed(string $feed_key, string $feed_path, string $ou
     $total_items = 0;
 
     error_log('[PUNTWORK] About to call FeedProcessor::processFeed');
-    // Process feed using FeedProcessor
-    $count = \Puntwork\FeedProcessor::processFeed($feed_path, $format, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
-    error_log('[PUNTWORK] FeedProcessor::processFeed returned count: ' . $count);
-    error_log('[PUNTWORK] Total items processed: ' . $total_items);
+    try {
+        // Process feed using FeedProcessor
+        $count = \Puntwork\FeedProcessor::processFeed($feed_path, $format, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+        error_log('[PUNTWORK] FeedProcessor::processFeed returned count: ' . $count);
+        error_log('[PUNTWORK] Total items processed: ' . $total_items);
+    } catch (\Exception $e) {
+        error_log('[PUNTWORK] ERROR in FeedProcessor::processFeed: ' . $e->getMessage());
+        error_log('[PUNTWORK] ERROR class: ' . get_class($e));
+        error_log('[PUNTWORK] ERROR file: ' . $e->getFile() . ':' . $e->getLine());
+        error_log('[PUNTWORK] ERROR trace: ' . $e->getTraceAsString());
+        fclose($handle);
+        throw $e; // Re-throw to maintain existing behavior
+    }
 
     fclose($handle);
     @chmod($json_path, 0644);

@@ -213,6 +213,50 @@ function render_main_import_ui(): void
 				</div>
 			</div>
 
+			<!-- Cleanup Operations Section -->
+			<div class="puntwork-card" style="margin-bottom: var(--spacing-xl);">
+				<div class="puntwork-card__header">
+					<h2 class="puntwork-card__title">Cleanup Operations</h2>
+					<p class="puntwork-card__subtitle">Permanently delete all job posts that are in Draft or Trash status. This action cannot be undone.</p>
+				</div>
+
+				<!-- Cleanup Progress Section -->
+				<div id="cleanup-progress" class="puntwork-card__body"
+					style="background-color: var(--color-gray-50); border-radius: var(--radius-md);
+					margin-bottom: var(--spacing-lg); display: none;">
+					<div style="display: flex; justify-content: space-between; align-items: center;
+						margin-bottom: var(--spacing-sm);">
+						<span id="cleanup-progress-percent"
+							style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold);
+							color: var(--color-primary);">0%</span>
+						<span id="cleanup-time-elapsed"
+							style="font-size: var(--font-size-sm); color: var(--color-gray-600);">0s</span>
+					</div>
+					<div class="puntwork-progress">
+						<div id="cleanup-progress-bar" class="puntwork-progress__bar" style="width: 0%;"></div>
+					</div>
+					<div style="display: flex; justify-content: space-between; align-items: center;
+						margin-top: var(--spacing-sm);">
+						<span id="cleanup-status-message"
+							style="font-size: var(--font-size-sm); color: var(--color-gray-600);">Ready to start.</span>
+						<span id="cleanup-items-left"
+							style="font-size: var(--font-size-sm); color: var(--color-gray-600);">0 left</span>
+					</div>
+				</div>
+
+				<div class="puntwork-card__footer">
+					<div style="display: flex; gap: var(--spacing-md); align-items: center;">
+						<button id="cleanup-duplicates" class="puntwork-btn puntwork-btn--danger">
+							<i class="fas fa-trash-alt puntwork-btn__icon"></i>
+							<span id="cleanup-text">Delete Drafts & Trash</span>
+							<span id="cleanup-loading" style="display: none;">Deleting...</span>
+						</button>
+						<span id="cleanup-status"
+							style="font-size: var(--font-size-sm); color: var(--color-gray-600);"></span>
+					</div>
+				</div>
+			</div>
+
 		<!-- Import Progress Section -->
 		<div id="import-progress" class="puntwork-card" style="margin-bottom: var(--spacing-xl); display: none;">
 			<div class="puntwork-card__header">
