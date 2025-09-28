@@ -24,9 +24,9 @@ function process_batch_items_logic(array $setup): array
     $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
 
     if ($debug_mode) {
-        error_log('== PUNTWORK BATCH DEBUG: process_batch_items_logic STARTED ===');
+        error_log('[PUNTWORK] [BATCH-START] ===== PROCESS_BATCH_ITEMS_LOGIC START =====');
         error_log(
-            '[PUNTWORK] process_batch_items_logic called with setup: ' . json_encode(
+            '[PUNTWORK] [BATCH-START] process_batch_items_logic called with setup: ' . json_encode(
                 [
                     'start_index' => $setup['start_index'] ?? 'not set',
                     'total' => $setup['total'] ?? 'not set',
@@ -35,12 +35,14 @@ function process_batch_items_logic(array $setup): array
                 ]
             )
         );
+        error_log('[PUNTWORK] [BATCH-START] Memory usage at start: ' . memory_get_usage(true) . ' bytes');
+        error_log('[PUNTWORK] [BATCH-START] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
     }
 
     // Check if json_path exists and is readable
     if (isset($setup['json_path'])) {
         if ($debug_mode) {
-            error_log('[PUNTWORK] JSON file check: exists=' . (file_exists($setup['json_path']) ? 'yes' : 'no') . ', readable=' . (is_readable($setup['json_path']) ? 'yes' : 'no') . ', size=' . (file_exists($setup['json_path']) ? filesize($setup['json_path']) : 'N/A'));
+            error_log('[PUNTWORK] [BATCH-FILE] JSON file check: exists=' . (file_exists($setup['json_path']) ? 'yes' : 'no') . ', readable=' . (is_readable($setup['json_path']) ? 'yes' : 'no') . ', size=' . (file_exists($setup['json_path']) ? filesize($setup['json_path']) : 'N/A'));
         }
         if (!file_exists($setup['json_path'])) {
             error_log('[PUNTWORK] [BATCH-ERROR] JSON file does not exist: ' . $setup['json_path']);
@@ -169,7 +171,7 @@ function process_batch_items_logic(array $setup): array
                 ]
             );
 
-            error_log('[PUNTWORK] [BATCH-DEBUG] Calling load_and_prepare_batch_items');
+            error_log('[PUNTWORK] [BATCH-LOAD] Calling load_and_prepare_batch_items');
             // Load and prepare batch items from JSONL
             $batch_load_info = \Puntwork\load_and_prepare_batch_items($json_path, $setup['start_index'], $batch_size, $batch_size_info['threshold'], $logs);
             $batch_items = $batch_load_info['batch_items'];
@@ -177,7 +179,9 @@ function process_batch_items_logic(array $setup): array
             $lines_read = $batch_load_info['lines_read'] ?? $batch_size;
             $end_index = $setup['start_index'] + $lines_read;
             if ($debug_mode) {
-                error_log('[PUNTWORK] [BATCH-DEBUG] load_and_prepare_batch_items completed, loaded ' . count($batch_guids) . ' GUIDs, lines_read=' . $lines_read . ', end_index=' . $end_index);
+                error_log('[PUNTWORK] [BATCH-LOAD] load_and_prepare_batch_items completed, loaded ' . count($batch_guids) . ' GUIDs, lines_read=' . $lines_read . ', end_index=' . $end_index);
+                error_log('[PUNTWORK] [BATCH-LOAD] Batch items count: ' . count($batch_items));
+                error_log('[PUNTWORK] [BATCH-LOAD] First few GUIDs: ' . implode(', ', array_slice($batch_guids, 0, 5)));
             }
 
             // Checkpoint: Batch items loaded
@@ -192,7 +196,7 @@ function process_batch_items_logic(array $setup): array
 
             if ($batch_load_info['cancelled']) {
                 if ($debug_mode) {
-                    error_log('[PUNTWORK] [BATCH-DEBUG] Batch was cancelled, returning early');
+                    error_log('[PUNTWORK] [BATCH-CANCEL] Batch was cancelled, returning early');
                 }
                 update_option('job_import_progress', $end_index, false);
                 update_option('job_import_processed_guids', $processed_guids, false);
@@ -266,7 +270,7 @@ function process_batch_items_logic(array $setup): array
             }
 
             if ($debug_mode) {
-                error_log('[PUNTWORK] [BATCH-DEBUG] Calling process_batch_data');
+                error_log('[PUNTWORK] [BATCH-PROCESS] Calling process_batch_data');
             }
 
             // Update status to show batch processing has started
@@ -281,7 +285,8 @@ function process_batch_items_logic(array $setup): array
             // Process batch items
             $result = process_batch_data($batch_guids, $batch_items, $logs, $published, $updated, $skipped, $duplicates_drafted);
             if ($debug_mode) {
-                error_log('[PUNTWORK] [BATCH-DEBUG] process_batch_data completed, processed_count=' . $result['processed_count']);
+                error_log('[PUNTWORK] [BATCH-PROCESS] process_batch_data completed, processed_count=' . $result['processed_count']);
+                error_log('[PUNTWORK] [BATCH-PROCESS] Results: published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', duplicates_drafted=' . $duplicates_drafted);
             }
 
             // Checkpoint: Batch processing complete
@@ -382,7 +387,8 @@ function process_batch_items_logic(array $setup): array
             }
 
             if ($debug_mode) {
-                error_log('[PUNTWORK] [BATCH-DEBUG] process_batch_items_logic completed successfully');
+                error_log('[PUNTWORK] [BATCH-COMPLETE] process_batch_items_logic completed successfully');
+                error_log('[PUNTWORK] [BATCH-END] ===== PROCESS_BATCH_ITEMS_LOGIC END =====');
             }
 
             // Restore original memory limit
@@ -423,7 +429,7 @@ function process_batch_items_logic(array $setup): array
             $perf_data = end_performance_monitoring($perf_id);
 
             $error_msg = 'Batch import error: ' . $e->getMessage();
-            error_log($error_msg);
+            error_log('[PUNTWORK] [BATCH-ERROR] ' . $error_msg);
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
 
             if ($span) {

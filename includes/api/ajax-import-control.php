@@ -31,22 +31,29 @@ require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
 add_action('wp_ajax_run_job_import_batch', __NAMESPACE__ . '\\run_job_import_batch_ajax');
 function run_job_import_batch_ajax()
 {
-    // Verify nonce for security
-    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'job_import_nonce')) {
-        wp_send_json_error(['message' => 'Security check failed']);
-
-        return;
-    }
-
-    // Log that we entered the function
-    error_log('[PUNTWORK] AJAX: run_job_import_batch_ajax function called');
+    // Log the start of AJAX request processing
+    PuntWorkLogger::logAjaxRequest('run_job_import_batch', $_POST);
+    error_log('[PUNTWORK] [AJAX-START] run_job_import_batch_ajax function called at ' . date('Y-m-d H:i:s') . ' UTC');
+    error_log('[PUNTWORK] [AJAX-START] POST data: ' . json_encode($_POST));
+    error_log('[PUNTWORK] [AJAX-START] Current user: ' . get_current_user_id() . ' (' . (current_user_can('manage_options') ? 'admin' : 'non-admin') . ')');
+    error_log('[PUNTWORK] [AJAX-START] Memory usage at start: ' . memory_get_usage(true) . ' bytes');
+    error_log('[PUNTWORK] [AJAX-START] PHP version: ' . PHP_VERSION . ', WordPress: ' . get_bloginfo('version'));
 
     try {
-        PuntWorkLogger::logAjaxRequest('run_job_import_batch', $_POST);
+        // Verify nonce for security
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'job_import_nonce')) {
+            error_log('[PUNTWORK] [AJAX-ERROR] Nonce verification failed');
+            wp_send_json_error(['message' => 'Security check failed']);
+            return;
+        }
+        error_log('[PUNTWORK] [AJAX-SECURITY] Nonce verification passed');
+
+        // Log that we entered the function
+        error_log('[PUNTWORK] [AJAX-ENTRY] AJAX handler entered successfully');
 
         // Ensure required functions are loaded for AJAX calls
         if (!function_exists('import_jobs_from_json')) {
-            error_log('[PUNTWORK] AJAX: import_jobs_from_json function not found, attempting to load import files');
+            error_log('[PUNTWORK] [AJAX-LOAD] import_jobs_from_json function not found, attempting to load import files');
 
             // Explicitly load required import files for AJAX calls
             $import_files = [
@@ -59,24 +66,24 @@ function run_job_import_batch_ajax()
 
             foreach ($import_files as $file) {
                 if (file_exists($file)) {
-                    error_log('[PUNTWORK] AJAX: Attempting to load file: ' . basename($file));
+                    error_log('[PUNTWORK] [AJAX-LOAD] Attempting to load file: ' . basename($file));
 
                     try {
                         $load_result = include_once $file;
-                        error_log('[PUNTWORK] AJAX: Loaded import file: ' . basename($file) . ', result: ' . ($load_result ? 'true' : 'false'));
+                        error_log('[PUNTWORK] [AJAX-LOAD] Loaded import file: ' . basename($file) . ', result: ' . ($load_result ? 'true' : 'false'));
                     } catch (\Exception $e) {
-                        error_log('[PUNTWORK] AJAX: Exception loading ' . basename($file) . ': ' . $e->getMessage());
+                        error_log('[PUNTWORK] [AJAX-LOAD] Exception loading ' . basename($file) . ': ' . $e->getMessage());
                     } catch (\Error $e) {
-                        error_log('[PUNTWORK] AJAX: Fatal error loading ' . basename($file) . ': ' . $e->getMessage());
+                        error_log('[PUNTWORK] [AJAX-LOAD] Fatal error loading ' . basename($file) . ': ' . $e->getMessage());
                     }
                 } else {
-                    error_log('[PUNTWORK] AJAX: Import file not found: ' . $file);
+                    error_log('[PUNTWORK] [AJAX-LOAD] Import file not found: ' . $file);
                 }
             }
 
             // Check again after loading
             if (!function_exists('import_jobs_from_json')) {
-                error_log('[PUNTWORK] AJAX: import_jobs_from_json function still not found after loading files');
+                error_log('[PUNTWORK] [AJAX-LOAD] import_jobs_from_json function still not found after loading files');
                 // List all functions that start with 'import_' to see what's available
                 $all_functions = get_defined_functions();
                 $import_functions = array_filter(
@@ -85,17 +92,18 @@ function run_job_import_batch_ajax()
                         return strpos($func, 'import_') === 0;
                     }
                 );
-                error_log('[PUNTWORK] AJAX: Available import functions: ' . implode(', ', $import_functions));
+                error_log('[PUNTWORK] [AJAX-LOAD] Available import functions: ' . implode(', ', $import_functions));
                 wp_send_json_error(['message' => 'Import function not available - files could not be loaded']);
-
                 return;
             }
 
-            error_log('[PUNTWORK] AJAX: import_jobs_from_json function now available after loading files');
+            error_log('[PUNTWORK] [AJAX-LOAD] import_jobs_from_json function now available after loading files');
+        } else {
+            error_log('[PUNTWORK] [AJAX-LOAD] import_jobs_from_json function already available');
         }
 
         // Use comprehensive security validation with field validation
-        error_log('[PUNTWORK] AJAX: About to validate AJAX request');
+        error_log('[PUNTWORK] [AJAX-SECURITY] About to validate AJAX request');
         $validation = SecurityUtils::validateAjaxRequest(
             'run_job_import_batch',
             'job_import_nonce',
@@ -108,79 +116,75 @@ function run_job_import_batch_ajax()
                 ], // validation rules
             ]
         );
-        error_log('[PUNTWORK] AJAX: Security validation completed');
+        error_log('[PUNTWORK] [AJAX-SECURITY] Security validation completed');
 
         if (is_wp_error($validation)) {
-            error_log('[PUNTWORK] AJAX: Security validation failed: ' . $validation->get_error_message());
+            error_log('[PUNTWORK] [AJAX-SECURITY] Security validation failed: ' . $validation->get_error_message());
             wp_send_json_error(['message' => is_wp_error($validation) ? $validation->get_error_message() : 'Validation failed']);
-
             return;
         }
-        error_log('[PUNTWORK] AJAX: Security validation passed');
+        error_log('[PUNTWORK] [AJAX-SECURITY] Security validation passed');
 
         // Check for concurrent import lock
         if (get_transient('puntwork_import_lock')) {
-            error_log('[PUNTWORK] AJAX: Import already running, rejecting request');
+            error_log('[PUNTWORK] [AJAX-LOCK] Import already running, rejecting request');
             AjaxErrorHandler::sendError('Import already running');
-
             return;
         }
-        error_log('[PUNTWORK] AJAX: No import lock found, proceeding');
+        error_log('[PUNTWORK] [AJAX-LOCK] No import lock found, proceeding');
 
         try {
             $start = $_POST['start'];
             PuntWorkLogger::info("Starting batch import at index: {$start}", PuntWorkLogger::CONTEXT_BATCH);
+            error_log('[PUNTWORK] [AJAX-PROCESS] Starting batch import at index: ' . $start);
 
             // Add detailed logging before calling import_jobs_from_json
             PuntWorkLogger::debug("About to call import_jobs_from_json with start={$start}", PuntWorkLogger::CONTEXT_BATCH);
-            error_log('[PUNTWORK] AJAX: About to call import_jobs_from_json with start=' . $start);
+            error_log('[PUNTWORK] [AJAX-CALL] About to call import_jobs_from_json with start=' . $start);
 
             // Check if required functions exist before calling
             if (!function_exists('prepare_import_setup')) {
-                error_log('[PUNTWORK] AJAX: prepare_import_setup function not found');
+                error_log('[PUNTWORK] [AJAX-ERROR] prepare_import_setup function not found');
                 AjaxErrorHandler::sendError('prepare_import_setup function not available');
-
                 return;
             }
             if (!function_exists('process_batch_items_logic')) {
-                error_log('[PUNTWORK] AJAX: process_batch_items_logic function not found');
+                error_log('[PUNTWORK] [AJAX-ERROR] process_batch_items_logic function not found');
                 AjaxErrorHandler::sendError('process_batch_items_logic function not available');
-
                 return;
             }
             if (!function_exists('finalize_batch_import')) {
-                error_log('[PUNTWORK] AJAX: finalize_batch_import function not found');
+                error_log('[PUNTWORK] [AJAX-ERROR] finalize_batch_import function not found');
                 AjaxErrorHandler::sendError('finalize_batch_import function not available');
-
                 return;
             }
 
-            error_log('[PUNTWORK] AJAX: All required functions are available');
+            error_log('[PUNTWORK] [AJAX-CHECK] All required functions are available');
 
             try {
-                error_log('[PUNTWORK] AJAX: Starting manual import process...');
-                error_log('[PUNTWORK] AJAX: Batch start parameter: ' . ($start ?? 'null'));
-                error_log('[PUNTWORK] AJAX: Current user ID: ' . get_current_user_id());
-                error_log('[PUNTWORK] AJAX: Current user capabilities: ' . (current_user_can('manage_options') ? 'admin' : 'non-admin'));
+                error_log('[PUNTWORK] [AJAX-EXECUTE] Starting manual import process...');
+                error_log('[PUNTWORK] [AJAX-EXECUTE] Batch start parameter: ' . ($start ?? 'null'));
+                error_log('[PUNTWORK] [AJAX-EXECUTE] Current user ID: ' . get_current_user_id());
+                error_log('[PUNTWORK] [AJAX-EXECUTE] Current user capabilities: ' . (current_user_can('manage_options') ? 'admin' : 'non-admin'));
 
-                error_log('[PUNTWORK] AJAX: Calling import_jobs_from_json...');
+                error_log('[PUNTWORK] [AJAX-EXECUTE] Calling import_jobs_from_json...');
                 $result = import_jobs_from_json(true, $start);
-                error_log('[PUNTWORK] AJAX: import_jobs_from_json returned successfully');
-                error_log('[PUNTWORK] AJAX: import_jobs_from_json result keys: ' . implode(', ', array_keys($result)));
-                error_log('[PUNTWORK] AJAX: import_jobs_from_json result: ' . json_encode($result));
+                error_log('[PUNTWORK] [AJAX-EXECUTE] import_jobs_from_json returned successfully');
+                error_log('[PUNTWORK] [AJAX-EXECUTE] import_jobs_from_json result keys: ' . implode(', ', array_keys($result)));
+                error_log('[PUNTWORK] [AJAX-EXECUTE] import_jobs_from_json result: ' . json_encode($result));
             } catch (\Exception $e) {
-                error_log('[PUNTWORK] AJAX: Exception in import_jobs_from_json: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
-                error_log('[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString());
+                error_log('[PUNTWORK] [AJAX-EXECUTE] Exception in import_jobs_from_json: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+                error_log('[PUNTWORK] [AJAX-EXECUTE] Stack trace: ' . $e->getTraceAsString());
                 AjaxErrorHandler::sendError('Import failed with exception: ' . $e->getMessage());
-
                 return;
             } catch (\Throwable $e) {
-                error_log('[PUNTWORK] AJAX: Fatal error in import_jobs_from_json: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
-                error_log('[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString());
+                error_log('[PUNTWORK] [AJAX-EXECUTE] Fatal error in import_jobs_from_json: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+                error_log('[PUNTWORK] [AJAX-EXECUTE] Stack trace: ' . $e->getTraceAsString());
                 AjaxErrorHandler::sendError('Import failed with fatal error: ' . $e->getMessage());
-
                 return;
-            }        // Log summary instead of full result to prevent large debug logs
+            }
+
+            // Log summary instead of full result to prevent large debug logs
             $log_summary = [
                 'success' => isset($result['success']) && $result['success'],
                 'processed' => $result['processed'] ?? 0,

@@ -121,7 +121,10 @@ function prepare_import_setup($batch_start = 0)
     ignore_user_abort(true);
 
     global $wpdb;
+    error_log('[PUNTWORK] [SETUP-START] ===== PREPARE_IMPORT_SETUP START =====');
     error_log('[PUNTWORK] [SETUP-START] prepare_import_setup called with batch_start=' . $batch_start . ', memory_limit=' . ini_get('memory_limit') . ', time_limit=' . ini_get('max_execution_time'));
+    error_log('[PUNTWORK] [SETUP-START] Current memory usage: ' . memory_get_usage(true) . ' bytes');
+    error_log('[PUNTWORK] [SETUP-START] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
 
     try {
         $acf_fields = get_acf_fields();
@@ -398,6 +401,7 @@ function prepare_import_setup($batch_start = 0)
     }
 
     error_log('[PUNTWORK] [SETUP-FINAL] NORMAL RETURN - start_index=' . $start_index . ', total=' . $total . ', json_path=' . $json_path . ', processed_guids_count=' . count($processed_guids));
+    error_log('[PUNTWORK] [SETUP-END] ===== PREPARE_IMPORT_SETUP END =====');
 
     return [
         'acf_fields' => $acf_fields,

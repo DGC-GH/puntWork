@@ -113,23 +113,63 @@ class JsonlIterator implements \Iterator
  */
 function load_and_prepare_batch_items(string $json_path, int $start_index, int $batch_size, float $threshold, array &$logs): array
 {
-    error_log(
-        '[PUNTWORK] load_and_prepare_batch_items called with: ' . json_encode(
-            [
-                'json_path' => basename($json_path),
-                'start_index' => $start_index,
-                'batch_size' => $batch_size,
-                'file_exists' => file_exists($json_path),
-                'file_size' => file_exists($json_path) ? filesize($json_path) : 'N/A',
-                'is_readable' => is_readable($json_path),
-            ]
-        )
-    );
+    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [LOAD-START] ===== LOAD_AND_PREPARE_BATCH_ITEMS START =====');
+        error_log(
+            '[PUNTWORK] [LOAD-START] load_and_prepare_batch_items called with: ' . json_encode(
+                [
+                    'json_path' => basename($json_path),
+                    'start_index' => $start_index,
+                    'batch_size' => $batch_size,
+                    'threshold' => $threshold,
+                    'file_exists' => file_exists($json_path),
+                    'file_size' => file_exists($json_path) ? filesize($json_path) : 'N/A',
+                    'is_readable' => is_readable($json_path),
+                ]
+            )
+        );
+        error_log('[PUNTWORK] [LOAD-START] Memory usage at start: ' . memory_get_usage(true) . ' bytes');
+    }
+
+    // Check if file exists and is readable
+    if (!file_exists($json_path)) {
+        error_log('[PUNTWORK] [LOAD-ERROR] JSON file does not exist: ' . $json_path);
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'ERROR: JSON file not found: ' . basename($json_path);
+
+        return [
+            'batch_items' => [],
+            'batch_guids' => [],
+            'cancelled' => false,
+            'lines_read' => 0,
+        ];
+    }
+
+    if (!is_readable($json_path)) {
+        error_log('[PUNTWORK] [LOAD-ERROR] JSON file not readable: ' . $json_path);
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'ERROR: JSON file not readable: ' . basename($json_path);
+
+        return [
+            'batch_items' => [],
+            'batch_guids' => [],
+            'cancelled' => false,
+            'lines_read' => 0,
+        ];
+    }
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [LOAD-DEBUG] Calling load_json_batch');
+    }
 
     $batch_json_result = load_json_batch($json_path, $start_index, $batch_size);
     $batch_json_items = $batch_json_result['items'] ?? $batch_json_result; // fallback for array
     $lines_read = $batch_json_result['lines_read'] ?? count($batch_json_items);
-    error_log('[PUNTWORK] load_and_prepare_batch_items: load_json_batch returned ' . count($batch_json_items) . ' items, lines_read=' . $lines_read);
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [LOAD-DEBUG] load_json_batch returned ' . count($batch_json_items) . ' items, lines_read=' . $lines_read);
+        error_log('[PUNTWORK] [LOAD-DEBUG] Memory usage after load_json_batch: ' . memory_get_usage(true) . ' bytes');
+    }
 
     $batch_items = [];
     $batch_guids = [];
@@ -138,9 +178,13 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Loaded $loaded_count items from JSONL (batch size: $batch_size)";
 
     if ($loaded_count == 0) {
-        error_log('[PUNTWORK] load_and_prepare_batch_items: NO ITEMS LOADED FROM JSONL! This is the root cause of 0 processed items.');
-        error_log('[PUNTWORK] load_and_prepare_batch_items: json_path=' . $json_path . ', start_index=' . $start_index . ', batch_size=' . $batch_size);
+        error_log('[PUNTWORK] [LOAD-ERROR] NO ITEMS LOADED FROM JSONL! This is the root cause of 0 processed items.');
+        error_log('[PUNTWORK] [LOAD-ERROR] json_path=' . $json_path . ', start_index=' . $start_index . ', batch_size=' . $batch_size);
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'WARNING: No items loaded from JSONL file - check file integrity';
+
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [LOAD-END] ===== LOAD_AND_PREPARE_BATCH_ITEMS END (NO ITEMS) =====');
+        }
 
         return [
             'batch_items' => $batch_items,
@@ -155,12 +199,23 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
     $missing_guids = 0;
 
     $total_items = count($batch_json_items);
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [LOAD-DEBUG] Processing ' . $total_items . ' loaded items');
+    }
+
     for ($i = 0; $i < $total_items; $i++) {
         $current_index = $start_index + $i;
 
         if (get_transient('import_cancel') == true) {
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [LOAD-CANCEL] Import cancelled at index ' . $current_index);
+            }
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Import cancelled at #' . ($current_index + 1);
             update_option('job_import_progress', $current_index, false);
+
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [LOAD-END] ===== LOAD_AND_PREPARE_BATCH_ITEMS END (CANCELLED) =====');
+            }
 
             return [
                 'cancelled' => true,
@@ -174,6 +229,9 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
 
         if (empty($guid)) {
             $missing_guids++;
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [LOAD-WARN] Empty GUID at index ' . $current_index . ', item keys: ' . implode(', ', array_keys($item)));
+            }
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped #' . ($current_index + 1) . ': Empty GUID - Item keys: ' . implode(', ', array_keys($item));
 
             continue;
@@ -197,6 +255,9 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
         if (memory_get_usage(true) > $threshold) {
             $batch_size = max(1, (int)($batch_size * 0.8));
             update_option('job_import_batch_size', $batch_size, false);
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [LOAD-WARN] Memory high, reduced batch to ' . $batch_size);
+            }
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Memory high, reduced batch to ' . $batch_size;
         }
 
@@ -210,7 +271,11 @@ function load_and_prepare_batch_items(string $json_path, int $start_index, int $
 
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Prepared $valid_items valid items for processing (skipped $skipped_items items, $missing_guids missing GUIDs)";
 
-    error_log('[PUNTWORK] Prepared ' . $valid_items . ' valid items for processing (skipped: ' . $skipped_items . ', missing GUIDs: ' . $missing_guids . ')');
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [LOAD-DEBUG] Prepared ' . $valid_items . ' valid items for processing (skipped: ' . $skipped_items . ', missing GUIDs: ' . $missing_guids . ')');
+        error_log('[PUNTWORK] [LOAD-DEBUG] Final memory usage: ' . memory_get_usage(true) . ' bytes');
+        error_log('[PUNTWORK] [LOAD-END] ===== LOAD_AND_PREPARE_BATCH_ITEMS END =====');
+    }
 
     return [
         'batch_items' => $batch_items,

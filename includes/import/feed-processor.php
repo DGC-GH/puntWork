@@ -147,17 +147,51 @@ class FeedProcessor
         int &$total_items,
         array &$logs
     ): int {
-        switch ($format) {
-            case self::FORMAT_XML:
-                return self::processXmlFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
-            case self::FORMAT_JSON:
-                return self::processJsonFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
-            case self::FORMAT_CSV:
-                return self::processCsvFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
-            case self::FORMAT_JOB_BOARD:
-                return self::processJobBoardFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
-            default:
-                throw new \Exception("Unsupported feed format: $format");
+        $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+
+        if ($debug_mode) {
+            error_log('[PUNTWORK] [FEED-PROCESS-START] ===== PROCESS_FEED START =====');
+            error_log('[PUNTWORK] [FEED-PROCESS-START] feed_path: ' . $feed_path);
+            error_log('[PUNTWORK] [FEED-PROCESS-START] format: ' . $format);
+            error_log('[PUNTWORK] [FEED-PROCESS-START] feed_key: ' . $feed_key);
+            error_log('[PUNTWORK] [FEED-PROCESS-START] output_dir: ' . $output_dir);
+            error_log('[PUNTWORK] [FEED-PROCESS-START] batch_size: ' . $batch_size);
+            error_log('[PUNTWORK] [FEED-PROCESS-START] total_items before: ' . $total_items);
+            error_log('[PUNTWORK] [FEED-PROCESS-START] Memory usage at start: ' . memory_get_usage(true) . ' bytes');
+        }
+
+        try {
+            switch ($format) {
+                case self::FORMAT_XML:
+                    if ($debug_mode) {
+                        error_log('[PUNTWORK] [FEED-PROCESS-DEBUG] Processing XML feed');
+                    }
+                    return self::processXmlFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+                case self::FORMAT_JSON:
+                    if ($debug_mode) {
+                        error_log('[PUNTWORK] [FEED-PROCESS-DEBUG] Processing JSON feed');
+                    }
+                    return self::processJsonFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+                case self::FORMAT_CSV:
+                    if ($debug_mode) {
+                        error_log('[PUNTWORK] [FEED-PROCESS-DEBUG] Processing CSV feed');
+                    }
+                    return self::processCsvFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+                case self::FORMAT_JOB_BOARD:
+                    if ($debug_mode) {
+                        error_log('[PUNTWORK] [FEED-PROCESS-DEBUG] Processing job board feed');
+                    }
+                    return self::processJobBoardFeed($feed_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
+                default:
+                    error_log('[PUNTWORK] [FEED-PROCESS-ERROR] Unsupported feed format: ' . $format);
+                    throw new \Exception("Unsupported feed format: $format");
+            }
+        } catch (\Exception $e) {
+            error_log('[PUNTWORK] [FEED-PROCESS-ERROR] processFeed exception: ' . $e->getMessage());
+            if ($debug_mode) {
+                error_log('[PUNTWORK] [FEED-PROCESS-END] ===== PROCESS_FEED END (ERROR) =====');
+            }
+            throw $e;
         }
     }
 
