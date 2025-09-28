@@ -82,7 +82,7 @@ function run_job_import_batch_ajax() {
 				$import_functions = array_filter(
 					$all_functions['user'],
 					function ( $func ) {
-						return strpos( $func, 'import_' ) == 0;
+						return strpos( $func, 'import_' ) === 0;
 					}
 				);
 				error_log( '[PUNTWORK] AJAX: Available import functions: ' . implode( ', ', $import_functions ) );

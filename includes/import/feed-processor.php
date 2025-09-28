@@ -55,7 +55,7 @@ class FeedProcessor {
 			$content = trim( $content );
 
 			// Check for XML
-			if ( strpos( $content, '<?xml' ) == 0 || strpos( $content, '<' ) == 0 ) {
+			if ( strpos( $content, '<?xml' ) === 0 || strpos( $content, '<' ) === 0 ) {
 				error_log(
 					'[PUNTWORK] detectFormat: Detected XML from content starting with: ' .
 					substr( $content, 0, 50 )
@@ -64,7 +64,7 @@ class FeedProcessor {
 			}
 
 			// Check for JSON
-			if ( ( strpos( $content, '{' ) == 0 || strpos( $content, '[' ) == 0 ) ) {
+			if ( ( strpos( $content, '{' ) === 0 || strpos( $content, '[' ) === 0 ) ) {
 				json_decode( $content );
 				if ( json_last_error() === JSON_ERROR_NONE ) {
 					error_log(

@@ -662,7 +662,7 @@ class SecurityUtils {
 		$referer = wp_get_referer();
 		if ( $referer ) {
 			$site_url = get_site_url();
-			return strpos( $referer, $site_url ) == 0;
+			return strpos( $referer, $site_url ) === 0;
 		}
 
 		return false;

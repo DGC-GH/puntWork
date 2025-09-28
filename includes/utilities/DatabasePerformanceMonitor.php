@@ -100,16 +100,16 @@ class DatabasePerformanceMonitor {
 	 */
 	private static function getQueryType( string $query ): string {
 		$query = strtoupper( trim( $query ) );
-		if ( strpos( $query, 'SELECT' ) == 0 ) {
+		if ( strpos( $query, 'SELECT' ) === 0 ) {
 			return 'SELECT';
 		}
-		if ( strpos( $query, 'INSERT' ) == 0 ) {
+		if ( strpos( $query, 'INSERT' ) === 0 ) {
 			return 'INSERT';
 		}
-		if ( strpos( $query, 'UPDATE' ) == 0 ) {
+		if ( strpos( $query, 'UPDATE' ) === 0 ) {
 			return 'UPDATE';
 		}
-		if ( strpos( $query, 'DELETE' ) == 0 ) {
+		if ( strpos( $query, 'DELETE' ) === 0 ) {
 			return 'DELETE';
 		}
 		return 'OTHER';

@@ -64,7 +64,7 @@ add_action( 'wp_ajax_puntwork_clear_cache', __NAMESPACE__ . '\\handle_clear_cach
  * Add accessibility meta tags and headers
  */
 function add_accessibility_headers() {
-	if ( is_admin() && isset( $_GET['page'] ) && strpos( $_GET['page'], 'puntwork' ) == 0 ) {
+	if ( is_admin() && isset( $_GET['page'] ) && strpos( $_GET['page'], 'puntwork' ) === 0 ) {
 		// Add viewport meta tag for proper mobile accessibility
 		add_action(
 			'admin_head',
@@ -91,7 +91,7 @@ add_action( 'admin_init', __NAMESPACE__ . '\\add_accessibility_headers' );
 function enhance_admin_menu_accessibility( $menu ) {
 	if ( is_admin() && is_array( $menu ) ) {
 		foreach ( $menu as &$item ) {
-			if ( isset( $item[2] ) && strpos( $item[2], 'puntwork' ) == 0 ) {
+			if ( isset( $item[2] ) && strpos( $item[2], 'puntwork' ) === 0 ) {
 				// Add aria-label for better screen reader support
 				$item[4] = ( $item[4] ?? '' ) . ' aria-label="' . esc_attr( $item[0] ) . '"';
 			}
@@ -107,7 +107,7 @@ add_filter( 'admin_menu', __NAMESPACE__ . '\\enhance_admin_menu_accessibility' )
  * Add keyboard shortcuts help to admin bar
  */
 function add_keyboard_shortcuts_help( $wp_admin_bar ) {
-	if ( is_admin() && isset( $_GET['page'] ) && strpos( $_GET['page'], 'puntwork' ) == 0 ) {
+	if ( is_admin() && isset( $_GET['page'] ) && strpos( $_GET['page'], 'puntwork' ) === 0 ) {
 		$wp_admin_bar->add_node(
 			array(
 				'id'    => 'puntwork-keyboard-help',
@@ -127,7 +127,7 @@ add_action( 'admin_bar_menu', __NAMESPACE__ . '\\add_keyboard_shortcuts_help', 1
  * Add accessibility notices for screen readers
  */
 function add_accessibility_notices() {
-	if ( is_admin() && isset( $_GET['page'] ) && strpos( $_GET['page'], 'puntwork' ) == 0 ) {
+	if ( is_admin() && isset( $_GET['page'] ) && strpos( $_GET['page'], 'puntwork' ) === 0 ) {
 		// Add live region for dynamic content updates
 		add_action(
 			'admin_footer',
@@ -151,7 +151,7 @@ add_action( 'admin_init', __NAMESPACE__ . '\\add_accessibility_notices' );
  * Enhance form accessibility
  */
 function enhance_form_accessibility() {
-	if ( is_admin() && isset( $_GET['page'] ) && strpos( $_GET['page'], 'puntwork' ) == 0 ) {
+	if ( is_admin() && isset( $_GET['page'] ) && strpos( $_GET['page'], 'puntwork' ) === 0 ) {
 		// Add required field indicators
 		add_action(
 			'admin_footer',
@@ -198,7 +198,7 @@ add_action( 'admin_init', __NAMESPACE__ . '\\enhance_form_accessibility' );
  * Add accessibility testing utilities (for development)
  */
 function add_accessibility_testing() {
-	if ( defined( 'WP_DEBUG' ) && WP_DEBUG && is_admin() && isset( $_GET['page'] ) && strpos( $_GET['page'], 'puntwork' ) == 0 ) {
+	if ( defined( 'WP_DEBUG' ) && WP_DEBUG && is_admin() && isset( $_GET['page'] ) && strpos( $_GET['page'], 'puntwork' ) === 0 ) {
 		add_action(
 			'admin_footer',
 			function () {

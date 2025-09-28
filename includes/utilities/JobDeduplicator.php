@@ -241,7 +241,7 @@ class JobDeduplicator {
 		$suffixes_to_remove = array( 'job', 'position', 'vacancy', 'opening' );
 
 		foreach ( $prefixes_to_remove as $prefix ) {
-			if ( strpos( $text, $prefix ) == 0 ) {
+			if ( strpos( $text, $prefix ) === 0 ) {
 				$text = trim( substr( $text, strlen( $prefix ) ) );
 				break;
 			}
