@@ -109,7 +109,7 @@ Adapt the following workflow based on context. If the project differs from puntW
 
 1. **Initial Analysis**: **Always check debug.log via FTP (using credentials from .env) for recent errors and deployment issues**. Look for errors in debug.log. Scan structure, review dependencies, identify smells, analyze errors and issues, evaluate features, assess performance.  **Also verify that the previously pushed commit changes are present on the server via FTP. If not, stop and investigate the automatic GIT deploy issue on Hostinger**.
 
-2. **Propose Improvements**: Suggest errors and issues fixes and enhancements, grouped by category (e.g., speed, simplicity).
+2. **Propose Improvements**: Suggest errors and issues fixes and enhancements, grouped by category (e.g., speed, simplicity). Add or modify the debug logs to prevent the issues in the future.
 
 3. **Validation Steps**: **Always check debug.log via FTP (using credentials from .env) for new errors before running any other tests first.** Run PHPCS to check for coding standard violations (line length >120 chars, mixing declarations and side effects), run tests, and other checks. If tools unavailable, suggest manual alternatives.
    - `./vendor/bin/phpcs includes/ --standard=PSR12 --report=summary` - Check all includes for violations
