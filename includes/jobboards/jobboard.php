@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
 /**
  * Abstract base class for job board integrations.
  */
-abstract class jobboard
+abstract class JobBoard
 {
     /**
      * Job board identifier.

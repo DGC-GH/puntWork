@@ -18,9 +18,18 @@ if (!defined('ABSPATH')) {
 // Ensure required dependencies are loaded for AJAX requests
 require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
 require_once __DIR__ . '/../utilities/SecurityUtils.php';
+require_once __DIR__ . '/../utilities/DynamicRateLimiter.php';
 require_once __DIR__ . '/../utilities/AjaxErrorHandler.php';
+require_once __DIR__ . '/../utilities/CacheManager.php';
 require_once __DIR__ . '/../core/core-structure-logic.php';
 require_once __DIR__ . '/../import/feed-processor.php';
+require_once __DIR__ . '/../jobboards/jobboard.php';
+require_once __DIR__ . '/../jobboards/jobboard-manager.php';
+require_once __DIR__ . '/../jobboards/indeed-board.php';
+require_once __DIR__ . '/../jobboards/linkedin-board.php';
+require_once __DIR__ . '/../jobboards/glassdoor-board.php';
+require_once __DIR__ . '/../ai/job-categorizer.php';
+require_once __DIR__ . '/../ai/content-quality-scorer.php';
 function sanitize_import_status($status)
 {
     if (!is_array($status)) {
