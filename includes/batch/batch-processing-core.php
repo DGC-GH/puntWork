@@ -124,7 +124,10 @@ function process_batch_items_logic(array $setup): array
             error_log('[PUNTWORK] [BATCH-DEBUG] Expensive plugins disabled for batch processing');
         }
 
-        extract($setup);
+        // Extract setup variables explicitly for security
+        $start_index = $setup['start_index'] ?? 0;
+        $total = $setup['total'] ?? 0;
+        $start_time = $setup['start_time'] ?? microtime(true);
 
         $batch_start_time = microtime(true); // Record start time for this batch
 
@@ -144,7 +147,7 @@ function process_batch_items_logic(array $setup): array
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Batch size set to {$batch_size} for this import batch";
 
         // Initialize variables
-        $end_index = $setup['start_index'];
+        $end_index = $start_index;
         $lines_read = 0;
         $processed_guids = [];
 
@@ -160,7 +163,7 @@ function process_batch_items_logic(array $setup): array
         $schema_generated = 0;
 
         try {
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Starting batch from {$setup['start_index']} to $end_index (size $batch_size, lines_read $lines_read)";
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Starting batch from {$start_index} to $end_index (size $batch_size, lines_read $lines_read)";
 
             // Checkpoint: Batch setup complete
             checkpoint_performance(
@@ -168,18 +171,18 @@ function process_batch_items_logic(array $setup): array
                 'batch_setup',
                 [
                     'batch_size' => $batch_size,
-                    'start_index' => $setup['start_index'],
+                    'start_index' => $start_index,
                     'end_index' => $end_index,
                 ]
             );
 
             error_log('[PUNTWORK] [BATCH-LOAD] Calling load_and_prepare_batch_items');
             // Load and prepare batch items from JSONL
-            $batch_load_info = \Puntwork\load_and_prepare_batch_items($json_path, $setup['start_index'], $batch_size, $batch_size_info['threshold'], $logs);
+            $batch_load_info = \Puntwork\load_and_prepare_batch_items($json_path, $start_index, $batch_size, $batch_size_info['threshold'], $logs);
             $batch_items = $batch_load_info['batch_items'];
             $batch_guids = $batch_load_info['batch_guids'];
             $lines_read = $batch_load_info['lines_read'] ?? $batch_size;
-            $end_index = $setup['start_index'] + $lines_read;
+            $end_index = $start_index + $lines_read;
             if ($debug_mode) {
                 error_log('[PUNTWORK] [BATCH-LOAD] load_and_prepare_batch_items completed, loaded ' . count($batch_guids) . ' GUIDs, lines_read=' . $lines_read . ', end_index=' . $end_index);
                 error_log('[PUNTWORK] [BATCH-LOAD] Batch items count: ' . count($batch_items));
@@ -202,7 +205,7 @@ function process_batch_items_logic(array $setup): array
                 }
                 update_option('job_import_progress', $end_index, false);
                 update_option('job_import_processed_guids', $processed_guids, false);
-                $time_elapsed = microtime(true) - $setup['start_time'];
+                $time_elapsed = microtime(true) - $start_time;
                 $batch_time = microtime(true) - $batch_start_time; // Calculate actual batch processing time
 
                 // End performance monitoring
@@ -210,21 +213,21 @@ function process_batch_items_logic(array $setup): array
 
                 // Update import status for UI polling
                 $current_status = get_option('job_import_status', []);
-                $current_status['total'] = $setup['total'];
+                $current_status['total'] = $total;
                 $current_status['processed'] = $end_index;
                 $current_status['published'] = $current_status['published'] ?? 0;
                 $current_status['updated'] = $current_status['updated'] ?? 0;
                 $current_status['skipped'] = ($current_status['skipped'] ?? 0) + $skipped;
                 $current_status['duplicates_drafted'] = $current_status['duplicates_drafted'] ?? 0;
                 $current_status['time_elapsed'] = $time_elapsed;
-                $current_status['complete'] = ($end_index >= $setup['total']);
+                $current_status['complete'] = ($end_index >= $total);
                 $current_status['success'] = true;
                 $current_status['error_message'] = '';
                 $current_status['batch_size'] = $batch_size;
                 $current_status['inferred_languages'] = ($current_status['inferred_languages'] ?? 0) + $inferred_languages;
                 $current_status['inferred_benefits'] = ($current_status['inferred_benefits'] ?? 0) + $inferred_benefits;
                 $current_status['schema_generated'] = ($current_status['schema_generated'] ?? 0) + $schema_generated;
-                $current_status['start_time'] = $setup['start_time'];
+                $current_status['start_time'] = $start_time;
                 $current_status['end_time'] = $current_status['complete'] ? microtime(true) : null;
                 $current_status['last_update'] = time();
                 $current_status['logs'] = array_slice($logs, -50);
@@ -308,7 +311,7 @@ function process_batch_items_logic(array $setup): array
 
             update_option('job_import_progress', $end_index, false);
             update_option('job_import_processed_guids', $processed_guids, false);
-            $time_elapsed = microtime(true) - $setup['start_time'];
+            $time_elapsed = microtime(true) - $start_time;
             $batch_time = microtime(true) - $batch_start_time; // Calculate actual batch processing time
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Batch complete: Processed {$result['processed_count']} items (published: $published, updated: $updated, skipped: $skipped, duplicates: $duplicates_drafted)";
 
@@ -341,21 +344,21 @@ function process_batch_items_logic(array $setup): array
                 // Don't overwrite the intermediate update - let the frontend see it
                 // The intermediate update will be naturally replaced on the next batch or final completion
             } else {
-                $current_status['total'] = $setup['total'];
+                $current_status['total'] = $total;
                 $current_status['processed'] = $end_index;
                 $current_status['published'] = ($current_status['published'] ?? 0) + $published;
                 $current_status['updated'] = ($current_status['updated'] ?? 0) + $updated;
                 $current_status['skipped'] = ($current_status['skipped'] ?? 0) + $skipped;
                 $current_status['duplicates_drafted'] = ($current_status['duplicates_drafted'] ?? 0) + $duplicates_drafted;
                 $current_status['time_elapsed'] = $time_elapsed;
-                $current_status['complete'] = ($end_index >= $setup['total']);
+                $current_status['complete'] = ($end_index >= $total);
                 $current_status['success'] = true;
                 $current_status['error_message'] = '';
                 $current_status['batch_size'] = $batch_size;
                 $current_status['inferred_languages'] = ($current_status['inferred_languages'] ?? 0) + $inferred_languages;
                 $current_status['inferred_benefits'] = ($current_status['inferred_benefits'] ?? 0) + $inferred_benefits;
                 $current_status['schema_generated'] = ($current_status['schema_generated'] ?? 0) + $schema_generated;
-                $current_status['start_time'] = $setup['start_time'];
+                $current_status['start_time'] = $start_time;
                 $current_status['end_time'] = $current_status['complete'] ? microtime(true) : null;
                 $current_status['last_update'] = time();
                 $current_status['logs'] = array_slice($logs, -50); // Keep last 50 log entries
@@ -372,10 +375,10 @@ function process_batch_items_logic(array $setup): array
             }            // Schedule async analytics update for better performance
             $analytics_data = [
                 'import_id' => wp_generate_uuid4(),
-                'start_time' => $setup['start_time'],
+                'start_time' => $start_time,
                 'end_time' => microtime(true),
                 'batch_time' => $batch_time,
-                'total' => $setup['total'],
+                'total' => $total,
                 'processed' => $result['processed_count'],
                 'published' => $published,
                 'updated' => $updated,
@@ -408,13 +411,13 @@ function process_batch_items_logic(array $setup): array
             return [
                 'success' => true,
                 'processed' => $end_index,
-                'total' => $setup['total'],
+                'total' => $total,
                 'published' => $published,
                 'updated' => $updated,
                 'skipped' => $skipped,
                 'duplicates_drafted' => $duplicates_drafted,
                 'time_elapsed' => $time_elapsed,
-                'complete' => ($end_index >= $setup['total']),
+                'complete' => ($end_index >= $total),
                 'logs' => $logs,
                 'batch_size' => $batch_size,
                 'inferred_languages' => $inferred_languages,
@@ -422,7 +425,7 @@ function process_batch_items_logic(array $setup): array
                 'schema_generated' => $schema_generated,
                 'batch_time' => $batch_time,  // Time for this specific batch
                 'batch_processed' => $result['processed_count'],  // Items processed in this batch
-                'start_time' => $setup['start_time'],
+                'start_time' => $start_time,
                 'performance' => $perf_data,
                 'message' => '', // No error message for success
             ];
