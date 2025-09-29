@@ -22,6 +22,15 @@ if (!defined('ABSPATH')) {
 // Explicitly load required utility classes for AJAX context
 require_once __DIR__ . '/../utilities/SecurityUtils.php';
 require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
+require_once __DIR__ . '/../import/feed-processor.php';
+require_once __DIR__ . '/../import/download-feed.php';
+require_once __DIR__ . '/../utilities/gzip-file.php';
+require_once __DIR__ . '/../import/combine-jsonl.php';
+require_once __DIR__ . '/../jobboards/jobboard.php';
+require_once __DIR__ . '/../jobboards/jobboard-manager.php';
+require_once __DIR__ . '/../jobboards/indeed-board.php';
+require_once __DIR__ . '/../jobboards/linkedin-board.php';
+require_once __DIR__ . '/../jobboards/glassdoor-board.php';
 
 /*
  * AJAX handlers for import control operations
