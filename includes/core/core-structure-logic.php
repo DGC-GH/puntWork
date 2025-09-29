@@ -17,7 +17,7 @@ use Puntwork\Utilities\CacheManager;
 use Puntwork\Utilities\PuntWorkLogger;
 
 // Include required utility classes
-require_once __DIR__ . '/utilities/PuntWorkLogger.php';
+require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
 
 /**
  * Get all configured feeds with caching.
