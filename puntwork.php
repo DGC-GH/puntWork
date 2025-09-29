@@ -325,16 +325,17 @@ if (!function_exists(__NAMESPACE__ . '\\setup_job_import')) {
             $GLOBALS['puntwork_includes_loaded'] = true;
         }
 
-        // Prevent multiple initialization with a static flag (persists across function calls in same request)
-        static $setup_done = false;
+        // Prevent multiple initialization across requests using WordPress transient
+        $init_transient_key = 'puntwork_setup_done_' . session_id();
+        $setup_done = get_transient($init_transient_key);
         if ($setup_done) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[PUNTWORK] [INIT-SKIP] Setup already completed for this request, skipping...');
+                error_log('[PUNTWORK] [INIT-SKIP] Setup already completed for this session, skipping...');
             }
 
             return;
         }
-        $setup_done = true;
+        set_transient($init_transient_key, true, 300); // 5 minutes
 
         if ($debug_mode) {
             error_log('[PUNTWORK] [INIT-START] ===== SETUP_JOB_IMPORT START =====');
