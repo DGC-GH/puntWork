@@ -7,6 +7,20 @@
  * @param array $status The status array to sanitize
  * @return array Sanitized status array
  */
+
+namespace Puntwork;
+
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+// Ensure required dependencies are loaded for AJAX requests
+require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
+require_once __DIR__ . '/../utilities/SecurityUtils.php';
+require_once __DIR__ . '/../utilities/AjaxErrorHandler.php';
+require_once __DIR__ . '/../core/core-structure-logic.php';
+require_once __DIR__ . '/../import/feed-processor.php';
 function sanitize_import_status($status)
 {
     if (!is_array($status)) {
