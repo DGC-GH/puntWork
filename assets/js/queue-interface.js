@@ -8,6 +8,8 @@ class PuntworkQueueInterface {
         this.container = null;
         this.stats = {};
         this.refreshInterval = null;
+        this.consecutiveErrors = 0;
+        this.maxConsecutiveErrors = 3;
         this.init();
     }
 
@@ -135,27 +137,28 @@ class PuntworkQueueInterface {
         try {
             console.log('[QUEUE] Loading queue stats, ajaxurl:', puntworkQueue.ajaxurl);
             const response = await this._retryAjax({
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
+                url: puntworkQueue.ajaxurl,
+                type: 'POST',
+                data: {
                     action: 'puntwork_get_queue_stats',
                     nonce: puntworkQueue.nonce
-                })
+                }
             }, 3, 1000);
 
-            console.log('[QUEUE] Response status:', response.status, 'ok:', response.ok);
-            const data = await response.json();
+            console.log('[QUEUE] Response received');
+            const data = response;
             console.log('[QUEUE] Response data:', data);
 
             if (data.success) {
                 this.updateStats(data.data);
+                this.consecutiveErrors = 0; // Reset error count on success
             } else {
                 console.error('Failed to load queue stats:', data.data);
+                this.handleAjaxError();
             }
         } catch (error) {
             console.error('Error loading queue stats after retries:', error);
+            this.handleAjaxError();
         }
     }
 
@@ -183,27 +186,18 @@ class PuntworkQueueInterface {
 
     /**
      * Retry AJAX helper method
-     * @param {Object} options - Fetch options
+     * @param {Object} ajaxOptions - jQuery AJAX options
      * @param {number} maxRetries - Maximum number of retries
      * @param {number} delay - Delay between retries in ms
-     * @returns {Promise} Fetch response
+     * @returns {Promise} Promise that resolves with AJAX response
      */
-    async _retryAjax(options, maxRetries = 3, delay = 1000) {
+    async _retryAjax(ajaxOptions, maxRetries = 3, delay = 1000) {
         let lastError;
 
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
             try {
-                const response = await fetch(puntworkQueue.ajaxurl, options);
-
-                // If response is ok or it's the last attempt, return it
-                if (response.ok || attempt === maxRetries) {
-                    return response;
-                }
-
-                // If not the last attempt, wait and retry
-                if (attempt < maxRetries) {
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                }
+                const response = await $.ajax(ajaxOptions);
+                return response;
             } catch (error) {
                 lastError = error;
                 console.warn(`[QUEUE] Attempt ${attempt + 1} failed:`, error);
@@ -223,25 +217,27 @@ class PuntworkQueueInterface {
         try {
             console.log('[QUEUE] Loading recent jobs, ajaxurl:', puntworkQueue.ajaxurl);
             const response = await this._retryAjax({
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
+                url: puntworkQueue.ajaxurl,
+                type: 'POST',
+                data: {
                     action: 'puntwork_get_recent_jobs',
                     nonce: puntworkQueue.nonce
-                })
+                }
             }, 3, 1000);
 
-            console.log('[QUEUE] Recent jobs response status:', response.status, 'ok:', response.ok);
-            const data = await response.json();
+            console.log('[QUEUE] Recent jobs response received');
+            const data = response;
             console.log('[QUEUE] Recent jobs response data:', data);
 
             if (data.success) {
                 this.displayRecentJobs(data.data);
+                this.consecutiveErrors = 0; // Reset error count on success
+            } else {
+                this.handleAjaxError();
             }
         } catch (error) {
             console.error('Error loading recent jobs after retries:', error);
+            this.handleAjaxError();
         }
     }
 
@@ -296,17 +292,15 @@ class PuntworkQueueInterface {
 
         try {
             const response = await this._retryAjax({
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
+                url: puntworkQueue.ajaxurl,
+                type: 'POST',
+                data: {
                     action: 'puntwork_process_queue',
                     nonce: puntworkQueue.nonce
-                })
+                }
             }, 3, 1000);
 
-            const data = await response.json();
+            const data = response;
 
             if (data.success) {
                 this.showNotification('Queue processed successfully', 'success');
@@ -331,17 +325,15 @@ class PuntworkQueueInterface {
 
         try {
             const response = await this._retryAjax({
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
+                url: puntworkQueue.ajaxurl,
+                type: 'POST',
+                data: {
                     action: 'puntwork_clear_completed_jobs',
                     nonce: puntworkQueue.nonce
-                })
+                }
             }, 3, 1000);
 
-            const data = await response.json();
+            const data = response;
 
             if (data.success) {
                 this.showNotification('Completed jobs cleared', 'success');
@@ -356,17 +348,15 @@ class PuntworkQueueInterface {
     async addTestJob() {
         try {
             const response = await this._retryAjax({
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
+                url: puntworkQueue.ajaxurl,
+                type: 'POST',
+                data: {
                     action: 'puntwork_add_test_job',
                     nonce: puntworkQueue.nonce
-                })
+                }
             }, 3, 1000);
 
-            const data = await response.json();
+            const data = response;
 
             if (data.success) {
                 this.showNotification('Test job added to queue', 'success');
@@ -377,25 +367,37 @@ class PuntworkQueueInterface {
         }
     }
 
-    toggleAutoRefresh(button) {
+    handleAjaxError() {
+        this.consecutiveErrors++;
+        console.warn(`[QUEUE] Consecutive AJAX errors: ${this.consecutiveErrors}/${this.maxConsecutiveErrors}`);
+        
+        if (this.consecutiveErrors >= this.maxConsecutiveErrors) {
+            console.error('[QUEUE] Too many consecutive AJAX errors, stopping auto-refresh');
+            this.stopAutoRefresh();
+            this.showNotification('Queue monitoring stopped due to repeated errors. Please refresh the page.', 'error');
+        }
+    }
+
+    stopAutoRefresh() {
         if (this.refreshInterval) {
             clearInterval(this.refreshInterval);
             this.refreshInterval = null;
-            button.innerHTML = '<i class="fas fa-play"></i> Resume Auto-Refresh';
+            
+            // Update toggle button if it exists
+            const toggleButton = document.getElementById('queue-toggle-auto-refresh');
+            if (toggleButton) {
+                toggleButton.innerHTML = '<i class="fas fa-play"></i> Resume Auto-Refresh';
+            }
+        }
+    }
+
+    toggleAutoRefresh(button) {
+        if (this.refreshInterval) {
+            this.stopAutoRefresh();
         } else {
             this.startAutoRefresh();
             button.innerHTML = '<i class="fas fa-pause"></i> Pause Auto-Refresh';
         }
-    }
-
-    startAutoRefresh() {
-        if (this.refreshInterval) {
-            return; // Already running
-        }
-        this.refreshInterval = setInterval(() => {
-            this.loadQueueStats();
-            this.loadRecentJobs();
-        }, 10000); // Refresh every 10 seconds
     }
 
     showNotification(message, type = 'info') {
