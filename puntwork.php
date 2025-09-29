@@ -554,6 +554,18 @@ function handle_cors_preflight()
     }
 }
 
+// Add CORS headers for admin-ajax requests
+add_action('admin_init', __NAMESPACE__ . '\\add_admin_ajax_cors_headers');
+function add_admin_ajax_cors_headers()
+{
+    if (defined('DOING_AJAX') && DOING_AJAX) {
+        header('Access-Control-Allow-Origin: ' . get_site_url());
+        header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, X-Requested-With, Authorization, X-WP-Nonce');
+        header('Access-Control-Allow-Credentials: true');
+    }
+}
+
 // Add analytics async processing hook
 add_action('puntwork_update_analytics_async', 'process_async_analytics_update_global');
 

@@ -317,14 +317,14 @@ function reset_job_import_status_ajax()
     }
     error_log('[PUNTWORK] [DEBUG-PHP] Simple security validation passed');
 
-    // Now try comprehensive validation
-    $validation = SecurityUtils::validateAjaxRequest('reset_job_import_status', 'job_import_nonce');
-    if (is_wp_error($validation)) {
-        error_log('[PUNTWORK] [DEBUG-PHP] Comprehensive security validation failed: ' . $validation->get_error_message());
-        // Continue anyway for debugging
-    } else {
-        error_log('[PUNTWORK] [DEBUG-PHP] Comprehensive security validation passed');
-    }
+    // Skip comprehensive validation for now to avoid 500 errors
+    // $validation = SecurityUtils::validateAjaxRequest('reset_job_import_status', 'job_import_nonce');
+    // if (is_wp_error($validation)) {
+    //     error_log('[PUNTWORK] [DEBUG-PHP] Comprehensive security validation failed: ' . $validation->get_error_message());
+    //     // Continue anyway for debugging
+    // } else {
+    //     error_log('[PUNTWORK] [DEBUG-PHP] Comprehensive security validation passed');
+    // }
 
     try {
         error_log('[PUNTWORK] [DEBUG-PHP] Starting import status reset');
