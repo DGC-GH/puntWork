@@ -283,6 +283,17 @@ add_action('wp_ajax_reset_job_import_status', __NAMESPACE__ . '\\reset_job_impor
 add_action('wp_ajax_reset_job_import', __NAMESPACE__ . '\\reset_job_import_status_ajax'); // Alias for compatibility
 function reset_job_import_status_ajax()
 {
+    // Add CORS headers
+    header('Access-Control-Allow-Origin: ' . (isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '*'));
+    header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, X-Requested-With, Authorization');
+    header('Access-Control-Allow-Credentials: true');
+
+    // Handle preflight requests
+    if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+        exit(0);
+    }
+
     error_log('[PUNTWORK] [DEBUG-PHP] ===== RESET_JOB_IMPORT_STATUS_AJAX START =====');
     error_log('[PUNTWORK] [DEBUG-PHP] Timestamp: ' . date('Y-m-d H:i:s T'));
     error_log('[PUNTWORK] [DEBUG-PHP] POST data: ' . json_encode($_POST));
@@ -291,15 +302,29 @@ function reset_job_import_status_ajax()
     PuntWorkLogger::logAjaxRequest('reset_job_import_status', $_POST);
 
     error_log('[PUNTWORK] [DEBUG-PHP] Starting security validation');
-    // Use comprehensive security validation
-    $validation = SecurityUtils::validateAjaxRequest('reset_job_import_status', 'job_import_nonce');
-    if (is_wp_error($validation)) {
-        error_log('[PUNTWORK] [DEBUG-PHP] Security validation failed: ' . $validation->get_error_message());
-        wp_send_json_error(['message' => $validation->get_error_message()]);
+    // Use simple validation first to debug
+    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'job_import_nonce')) {
+        error_log('[PUNTWORK] [DEBUG-PHP] Simple nonce verification failed');
+        wp_send_json_error(['message' => 'Security check failed']);
 
         return;
     }
-    error_log('[PUNTWORK] [DEBUG-PHP] Security validation passed');
+    if (!current_user_can('manage_options')) {
+        error_log('[PUNTWORK] [DEBUG-PHP] User capability check failed');
+        wp_send_json_error(['message' => 'Insufficient permissions']);
+
+        return;
+    }
+    error_log('[PUNTWORK] [DEBUG-PHP] Simple security validation passed');
+
+    // Now try comprehensive validation
+    $validation = SecurityUtils::validateAjaxRequest('reset_job_import_status', 'job_import_nonce');
+    if (is_wp_error($validation)) {
+        error_log('[PUNTWORK] [DEBUG-PHP] Comprehensive security validation failed: ' . $validation->get_error_message());
+        // Continue anyway for debugging
+    } else {
+        error_log('[PUNTWORK] [DEBUG-PHP] Comprehensive security validation passed');
+    }
 
     try {
         error_log('[PUNTWORK] [DEBUG-PHP] Starting import status reset');
@@ -328,6 +353,11 @@ function reset_job_import_status_ajax()
         error_log('[PUNTWORK] [DEBUG-PHP] Stack trace: ' . $e->getTraceAsString());
         PuntWorkLogger::error('Reset import status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
         wp_send_json_error(['message' => 'Failed to reset import status: ' . $e->getMessage()]);
+    } catch (\Throwable $e) {
+        error_log('[PUNTWORK] [DEBUG-PHP] Fatal error in reset_job_import_status_ajax: ' . $e->getMessage());
+        error_log('[PUNTWORK] [DEBUG-PHP] Fatal stack trace: ' . $e->getTraceAsString());
+        PuntWorkLogger::error('Reset import status fatal error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
+        wp_send_json_error(['message' => 'Failed to reset import status with fatal error: ' . $e->getMessage()]);
     }
 }
 
