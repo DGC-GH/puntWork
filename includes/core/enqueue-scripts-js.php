@@ -535,7 +535,7 @@ function enqueue_job_import_scripts()
         );
 
         // Enqueue queue management styles and scripts only on relevant pages
-        $queue_pages = ['puntwork-dashboard', 'puntwork-monitoring', 'job-feed-dashboard'];
+        $queue_pages = ['puntwork-dashboard', 'puntwork-monitoring'];
         if (in_array($current_page, $queue_pages)) {
             wp_enqueue_style(
                 'puntwork-queue',
