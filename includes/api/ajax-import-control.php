@@ -234,7 +234,7 @@ function cancel_job_import_ajax()
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('cancel_job_import', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::sendError($validation);
+        wp_send_json_error(['message' => $validation->get_error_message()]);
 
         return;
     }
@@ -247,10 +247,10 @@ function cancel_job_import_ajax()
         PuntWorkLogger::info('Import cancelled and status cleared', PuntWorkLogger::CONTEXT_BATCH);
 
         PuntWorkLogger::logAjaxResponse('cancel_job_import', ['message' => 'Import cancelled']);
-        AjaxErrorHandler::sendSuccess(null, ['message' => 'Import cancelled']);
+        wp_send_json_success(null, ['message' => 'Import cancelled']);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Cancel import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::sendError('Failed to cancel import: ' . $e->getMessage());
+        wp_send_json_error(['message' => 'Failed to cancel import: ' . $e->getMessage()]);
     }
 }
 
@@ -262,7 +262,7 @@ function clear_import_cancel_ajax()
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('clear_import_cancel', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::sendError($validation);
+        wp_send_json_error(['message' => $validation->get_error_message()]);
 
         return;
     }
@@ -272,10 +272,10 @@ function clear_import_cancel_ajax()
         PuntWorkLogger::info('Import cancellation flag cleared', PuntWorkLogger::CONTEXT_BATCH);
 
         PuntWorkLogger::logAjaxResponse('clear_import_cancel', ['message' => 'Cancellation cleared']);
-        AjaxErrorHandler::sendSuccess(null, ['message' => 'Cancellation cleared']);
+        wp_send_json_success(null, ['message' => 'Cancellation cleared']);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Clear import cancel error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::sendError('Failed to clear cancellation: ' . $e->getMessage());
+        wp_send_json_error(['message' => 'Failed to clear cancellation: ' . $e->getMessage()]);
     }
 }
 
@@ -295,7 +295,7 @@ function reset_job_import_status_ajax()
     $validation = SecurityUtils::validateAjaxRequest('reset_job_import_status', 'job_import_nonce');
     if (is_wp_error($validation)) {
         error_log('[PUNTWORK] [DEBUG-PHP] Security validation failed: ' . $validation->get_error_message());
-        AjaxErrorHandler::sendError($validation);
+        wp_send_json_error(['message' => $validation->get_error_message()]);
 
         return;
     }
@@ -321,13 +321,13 @@ function reset_job_import_status_ajax()
 
         PuntWorkLogger::logAjaxResponse('reset_job_import_status', ['message' => 'Import status reset']);
         error_log('[PUNTWORK] [DEBUG-PHP] Sending success response');
-        AjaxErrorHandler::sendSuccess(null, ['message' => 'Import status reset']);
+        wp_send_json_success(['message' => 'Import status reset']);
         error_log('[PUNTWORK] [DEBUG-PHP] ===== RESET_JOB_IMPORT_STATUS_AJAX SUCCESS =====');
     } catch (\Exception $e) {
         error_log('[PUNTWORK] [DEBUG-PHP] Exception in reset_job_import_status_ajax: ' . $e->getMessage());
         error_log('[PUNTWORK] [DEBUG-PHP] Stack trace: ' . $e->getTraceAsString());
         PuntWorkLogger::error('Reset import status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::sendError('Failed to reset import status: ' . $e->getMessage());
+        wp_send_json_error(['message' => 'Failed to reset import status: ' . $e->getMessage()]);
     }
 }
 
@@ -513,10 +513,10 @@ function get_job_import_status_ajax()
         ];
 
         PuntWorkLogger::logAjaxResponse('get_job_import_status', $log_summary);
-        AjaxErrorHandler::sendSuccess($progress);
+        wp_send_json_success($progress);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Get import status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::sendError('Failed to get import status: ' . $e->getMessage());
+        wp_send_json_error(['message' => 'Failed to get import status: ' . $e->getMessage()]);
     }
 }
 
@@ -568,7 +568,7 @@ function log_manual_import_run_ajax()
     );
 
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::sendError($validation);
+        wp_send_json_error(['message' => $validation->get_error_message()]);
 
         return;
     }
@@ -604,10 +604,10 @@ function log_manual_import_run_ajax()
         );
 
         PuntWorkLogger::logAjaxResponse('log_manual_import_run', ['message' => 'Manual import run logged']);
-        AjaxErrorHandler::sendSuccess(null, ['message' => 'Manual import run logged to history']);
+        wp_send_json_success(null, ['message' => 'Manual import run logged to history']);
     } catch (\Exception $e) {
         PuntWorkLogger::error('Log manual import run error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::sendError('Failed to log manual import run: ' . $e->getMessage());
+        wp_send_json_error(['message' => 'Failed to log manual import run: ' . $e->getMessage()]);
     }
 }
 
@@ -619,7 +619,7 @@ function test_single_job_import_ajax()
     // Use comprehensive security validation
     $validation = SecurityUtils::validateAjaxRequest('test_single_job_import', 'job_import_nonce');
     if (is_wp_error($validation)) {
-        AjaxErrorHandler::sendError($validation);
+        wp_send_json_error(['message' => $validation->get_error_message()]);
 
         return;
     }
@@ -780,7 +780,7 @@ function test_single_job_import_ajax()
                     'existing_post_id' => $existing_post[0]->ID,
                 ]
             );
-            AjaxErrorHandler::sendError('Test job already exists with GUID: ' . $test_job['guid']);
+            wp_send_json_error(['message' => 'Test job already exists with GUID: ' . $test_job['guid']]);
 
             return;
         }
@@ -805,7 +805,7 @@ function test_single_job_import_ajax()
                     'error' => $post_id->get_error_message(),
                 ]
             );
-            AjaxErrorHandler::sendError('Failed to create test job: ' . $post_id->get_error_message());
+            wp_send_json_error(['message' => 'Failed to create test job: ' . $post_id->get_error_message()]);
 
             return;
         }
@@ -846,7 +846,7 @@ function test_single_job_import_ajax()
                     'post_id' => $post_id,
                 ]
             );
-            AjaxErrorHandler::sendError('Test job creation verification failed');
+            wp_send_json_error(['message' => 'Test job creation verification failed']);
 
             return;
         }
@@ -906,7 +906,7 @@ function test_single_job_import_ajax()
                     'post_id' => $post_id,
                 ]
             );
-            AjaxErrorHandler::sendError('Final verification failed - job not found in database');
+            wp_send_json_error(['message' => 'Final verification failed - job not found in database']);
 
             return;
         }
@@ -946,7 +946,7 @@ function test_single_job_import_ajax()
         );
     } catch (\Exception $e) {
         PuntWorkLogger::error('Test single job import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX);
-        AjaxErrorHandler::sendError('Test single job import failed: ' . $e->getMessage());
+        wp_send_json_error(['message' => 'Test single job import failed: ' . $e->getMessage()]);
     }
 }
 
