@@ -31,6 +31,7 @@ class PuntWorkLogger
     public const CONTEXT_API = 'API';
     public const CONTEXT_BATCH = 'BATCH';
     public const CONTEXT_FEED = 'FEED';
+    public const CONTEXT_FEED_PROCESSING = 'FEED_PROCESSING';
     public const CONTEXT_UI = 'UI';
     public const CONTEXT_SYSTEM = 'SYSTEM';
     public const CONTEXT_SECURITY = 'SECURITY';

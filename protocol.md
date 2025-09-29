@@ -1,4 +1,4 @@
-- redownload download debug.log using PASS in [text](.env)
+- redownload download debug.log using PASS in [text](ftp_script.txt)
 - read Console.txt if attached
 - identify problems
 - analyze code
