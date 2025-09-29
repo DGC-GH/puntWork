@@ -22,6 +22,10 @@ if (!defined('ABSPATH')) {
 // Explicitly load required utility classes for AJAX context
 require_once __DIR__ . '/../utilities/SecurityUtils.php';
 require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
+require_once __DIR__ . '/../utilities/CacheManager.php';
+require_once __DIR__ . '/../utilities/AjaxErrorHandler.php';
+require_once __DIR__ . '/../utilities/DynamicRateLimiter.php';
+require_once __DIR__ . '/../core/core-structure-logic.php';
 require_once __DIR__ . '/../import/feed-processor.php';
 require_once __DIR__ . '/../import/download-feed.php';
 require_once __DIR__ . '/../utilities/gzip-file.php';
@@ -1260,13 +1264,6 @@ function process_feed_ajax()
 
     PuntWorkLogger::logAjaxRequest('process_feed', $_POST);
 
-    // Ensure required functions are loaded
-    if (!function_exists('process_one_feed')) {
-        error_log('[PUNTWORK] [DEBUG-PHP] Loading core-structure-logic.php for process_one_feed function');
-        require_once __DIR__ . '/../core/core-structure-logic.php';
-        error_log('[PUNTWORK] [DEBUG-PHP] process_one_feed function available: ' . (function_exists('process_one_feed') ? 'yes' : 'no'));
-    }
-
     // Basic security validation
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'job_import_nonce')) {
         error_log('[PUNTWORK] [DEBUG-PHP] Nonce verification failed');
@@ -1390,13 +1387,6 @@ function combine_jsonl_ajax()
     error_log('[PUNTWORK] [DEBUG-PHP] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
 
     PuntWorkLogger::logAjaxRequest('combine_jsonl', $_POST);
-
-    // Ensure required functions are loaded
-    if (!function_exists('combine_jsonl_files')) {
-        error_log('[PUNTWORK] [DEBUG-PHP] Loading combine-jsonl.php for combine_jsonl_files function');
-        require_once __DIR__ . '/../import/combine-jsonl.php';
-        error_log('[PUNTWORK] [DEBUG-PHP] combine_jsonl_files function available: ' . (function_exists('combine_jsonl_files') ? 'yes' : 'no'));
-    }
 
     // Basic security validation
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'job_import_nonce')) {
