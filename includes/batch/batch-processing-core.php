@@ -39,6 +39,38 @@ function process_batch_items_logic(array $setup): array
         error_log('[PUNTWORK] [BATCH-START] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
     }
 
+function process_batch_items_logic(array $setup): array
+{
+    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [BATCH-START] ===== PROCESS_BATCH_ITEMS_LOGIC START =====');
+        error_log(
+            '[PUNTWORK] [BATCH-START] process_batch_items_logic called with setup: ' . json_encode(
+                [
+                    'start_index' => $setup['start_index'] ?? 'not set',
+                    'total' => $setup['total'] ?? 'not set',
+                    'json_path' => isset($setup['json_path']) ? basename($setup['json_path']) : 'not set',
+                    'json_path_full' => $setup['json_path'] ?? 'not set',
+                ]
+            )
+        );
+        error_log('[PUNTWORK] [BATCH-START] Memory usage at start: ' . memory_get_usage(true) . ' bytes');
+        error_log('[PUNTWORK] [BATCH-START] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
+    }
+
+    // Log batch processing start
+    \Puntwork\PuntWorkLogger::info(
+        'Starting batch processing',
+        \Puntwork\PuntWorkLogger::CONTEXT_BATCH,
+        [
+            'start_index' => $setup['start_index'] ?? 0,
+            'total' => $setup['total'] ?? 0,
+            'json_path' => $setup['json_path'] ?? '',
+            'timestamp' => time(),
+        ]
+    );
+
     // Check if json_path exists and is readable
     if (isset($setup['json_path'])) {
         if ($debug_mode) {
@@ -46,6 +78,14 @@ function process_batch_items_logic(array $setup): array
         }
         if (!file_exists($setup['json_path'])) {
             error_log('[PUNTWORK] [BATCH-ERROR] JSON file does not exist: ' . $setup['json_path']);
+
+            \Puntwork\PuntWorkLogger::error(
+                'JSON file does not exist',
+                \Puntwork\PuntWorkLogger::CONTEXT_BATCH,
+                [
+                    'json_path' => $setup['json_path'],
+                ]
+            );
 
             return [
                 'success' => false,
@@ -56,12 +96,29 @@ function process_batch_items_logic(array $setup): array
         if (!is_readable($setup['json_path'])) {
             error_log('[PUNTWORK] [BATCH-ERROR] JSON file not readable: ' . $setup['json_path']);
 
+            \Puntwork\PuntWorkLogger::error(
+                'JSON file not readable',
+                \Puntwork\PuntWorkLogger::CONTEXT_BATCH,
+                [
+                    'json_path' => $setup['json_path'],
+                ]
+            );
+
             return [
                 'success' => false,
                 'message' => 'JSON file not readable: ' . basename($setup['json_path']),
                 'logs' => ['JSON file not readable - check file permissions'],
             ];
         }
+
+        \Puntwork\PuntWorkLogger::debug(
+            'JSON file validation passed',
+            \Puntwork\PuntWorkLogger::CONTEXT_BATCH,
+            [
+                'json_path' => $setup['json_path'],
+                'file_size' => filesize($setup['json_path']),
+            ]
+        );
     }
 
     // Start tracing span for batch processing (only if available)
@@ -396,6 +453,20 @@ function process_batch_items_logic(array $setup): array
                 error_log('[PUNTWORK] [BATCH-END] ===== PROCESS_BATCH_ITEMS_LOGIC END =====');
             }
 
+            \Puntwork\PuntWorkLogger::info(
+                'Batch processing completed successfully',
+                \Puntwork\PuntWorkLogger::CONTEXT_BATCH,
+                [
+                    'processed' => $end_index,
+                    'total' => $total,
+                    'published' => $published,
+                    'updated' => $updated,
+                    'skipped' => $skipped,
+                    'batch_size' => $batch_size,
+                    'time_elapsed' => $time_elapsed,
+                ]
+            );
+
             // Restore original memory limit
             ini_set('memory_limit', $original_memory_limit);
             if ($debug_mode) {
@@ -436,6 +507,18 @@ function process_batch_items_logic(array $setup): array
             $error_msg = 'Batch import error: ' . $e->getMessage();
             error_log('[PUNTWORK] [BATCH-ERROR] ' . $error_msg);
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
+
+            \Puntwork\PuntWorkLogger::error(
+                'Batch processing failed',
+                \Puntwork\PuntWorkLogger::CONTEXT_BATCH,
+                [
+                    'error_message' => $e->getMessage(),
+                    'error_file' => $e->getFile(),
+                    'error_line' => $e->getLine(),
+                    'start_index' => $start_index,
+                    'batch_size' => $batch_size ?? 0,
+                ]
+            );
 
             if ($span) {
                 $span->recordException($e);

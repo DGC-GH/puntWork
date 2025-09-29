@@ -14,6 +14,10 @@ if (!defined('ABSPATH')) {
 }
 
 use Puntwork\Utilities\CacheManager;
+use Puntwork\Utilities\PuntWorkLogger;
+
+// Include required utility classes
+require_once __DIR__ . '/utilities/PuntWorkLogger.php';
 
 /**
  * Get all configured feeds with caching.
@@ -242,6 +246,19 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
         error_log('[PUNTWORK] [PROCESS-START] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
     }
 
+    // Log start of feed processing
+    PuntWorkLogger::info(
+        'Starting feed processing',
+        PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+        [
+            'feed_key' => $feed_key,
+            'feed_url' => $url,
+            'output_dir' => $output_dir,
+            'fallback_domain' => $fallback_domain,
+            'timestamp' => time(),
+        ]
+    );
+
     $json_filename = $feed_key . '.jsonl';
     $json_path = $output_dir . $json_filename;
     $gz_json_path = $json_path . '.gz';
@@ -256,6 +273,14 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
         if ($debug_mode) {
             error_log('[PUNTWORK] [PROCESS-ERROR] Output directory does not exist: ' . $output_dir);
         }
+        PuntWorkLogger::error(
+            'Output directory does not exist',
+            PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+            [
+                'feed_key' => $feed_key,
+                'output_dir' => $output_dir,
+            ]
+        );
 
         throw new \Exception('Output directory does not exist: ' . $output_dir);
     }
@@ -263,6 +288,14 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
         if ($debug_mode) {
             error_log('[PUNTWORK] [PROCESS-ERROR] Output directory not writable: ' . $output_dir);
         }
+        PuntWorkLogger::error(
+            'Output directory not writable',
+            PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+            [
+                'feed_key' => $feed_key,
+                'output_dir' => $output_dir,
+            ]
+        );
 
         throw new \Exception('Output directory not writable: ' . $output_dir);
     }
@@ -276,6 +309,17 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
         error_log('[PUNTWORK] [PROCESS-DOWNLOAD] Feed file path: ' . $feed_file_path);
         error_log('[PUNTWORK] [PROCESS-DOWNLOAD] Starting feed download...');
     }
+
+    PuntWorkLogger::debug(
+        'Starting feed download',
+        PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+        [
+            'feed_key' => $feed_key,
+            'feed_url' => $url,
+            'feed_file_path' => $feed_file_path,
+        ]
+    );
+
     $download_start = microtime(true);
     if (!download_feed($url, $feed_file_path, $output_dir, $logs)) {
         $error_msg = 'Feed download failed for ' . $feed_key . ' from URL: ' . $url;
@@ -287,6 +331,7 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
                 'feed_url' => $url,
                 'feed_file_path' => $feed_file_path,
                 'logs' => $logs,
+                'download_time' => microtime(true) - $download_start,
             ]
         );
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
@@ -318,6 +363,14 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
         if ($debug_mode) {
             error_log('[PUNTWORK] [PROCESS-ERROR] Downloaded feed file does not exist: ' . $feed_file_path);
         }
+        PuntWorkLogger::error(
+            'Downloaded feed file does not exist',
+            PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+            [
+                'feed_key' => $feed_key,
+                'feed_file_path' => $feed_file_path,
+            ]
+        );
 
         return 0;
     }
@@ -329,9 +382,28 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
         if ($debug_mode) {
             error_log('[PUNTWORK] [PROCESS-ERROR] Downloaded feed file is empty');
         }
+        PuntWorkLogger::error(
+            'Downloaded feed file is empty',
+            PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+            [
+                'feed_key' => $feed_key,
+                'feed_file_path' => $feed_file_path,
+                'file_size' => $feed_file_size,
+            ]
+        );
 
         return 0;
     }
+
+    PuntWorkLogger::debug(
+        'Feed file validation passed',
+        PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+        [
+            'feed_key' => $feed_key,
+            'feed_file_path' => $feed_file_path,
+            'file_size' => $feed_file_size,
+        ]
+    );
 
     // Detect format from file content
     $content = file_get_contents($feed_file_path);
@@ -339,6 +411,14 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
         if ($debug_mode) {
             error_log('[PUNTWORK] [PROCESS-ERROR] Failed to read downloaded feed file: ' . $feed_file_path);
         }
+        PuntWorkLogger::error(
+            'Failed to read downloaded feed file',
+            PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+            [
+                'feed_key' => $feed_key,
+                'feed_file_path' => $feed_file_path,
+            ]
+        );
 
         return 0;
     }
@@ -353,11 +433,29 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
         error_log('[PUNTWORK] [PROCESS-FORMAT] Detected format: ' . $format);
     }
 
+    PuntWorkLogger::info(
+        'Feed format detected',
+        PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+        [
+            'feed_key' => $feed_key,
+            'format' => $format,
+            'content_length' => $content_length,
+        ]
+    );
+
     $handle = fopen($json_path, 'w');
     if (!$handle) {
         if ($debug_mode) {
             error_log('[PUNTWORK] [PROCESS-ERROR] Failed to open JSON file: ' . $json_path);
         }
+        PuntWorkLogger::error(
+            'Failed to open JSON file for writing',
+            PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+            [
+                'feed_key' => $feed_key,
+                'json_path' => $json_path,
+            ]
+        );
 
         throw new \Exception("Can't open $json_path");
     }
@@ -372,6 +470,17 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
         error_log('[PUNTWORK] [PROCESS-PROCESSING] About to call FeedProcessor::processFeed with batch_size=' . $batch_size);
     }
 
+    PuntWorkLogger::debug(
+        'Starting FeedProcessor::processFeed',
+        PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+        [
+            'feed_key' => $feed_key,
+            'format' => $format,
+            'batch_size' => $batch_size,
+            'json_path' => $json_path,
+        ]
+    );
+
     try {
         // Process feed using FeedProcessor
         $count = \Puntwork\FeedProcessor::processFeed($feed_file_path, $format, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
@@ -379,6 +488,17 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
             error_log('[PUNTWORK] [PROCESS-RESULT] FeedProcessor::processFeed returned count: ' . $count);
             error_log('[PUNTWORK] [PROCESS-RESULT] Total items processed: ' . $total_items);
         }
+
+        PuntWorkLogger::info(
+            'Feed processing completed',
+            PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+            [
+                'feed_key' => $feed_key,
+                'items_processed' => $count,
+                'total_items' => $total_items,
+                'format' => $format,
+            ]
+        );
     } catch (\Exception $e) {
         if ($debug_mode) {
             error_log('[PUNTWORK] [PROCESS-EXCEPTION] ERROR in FeedProcessor::processFeed: ' . $e->getMessage());
@@ -386,6 +506,19 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
             error_log('[PUNTWORK] [PROCESS-EXCEPTION] ERROR file: ' . $e->getFile() . ':' . $e->getLine());
             error_log('[PUNTWORK] [PROCESS-EXCEPTION] ERROR trace: ' . $e->getTraceAsString());
         }
+
+        PuntWorkLogger::error(
+            'Feed processing failed with exception',
+            PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+            [
+                'feed_key' => $feed_key,
+                'error_message' => $e->getMessage(),
+                'error_class' => get_class($e),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+            ]
+        );
+
         fclose($handle);
 
         throw $e; // Re-throw to maintain existing behavior
@@ -393,6 +526,10 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
 
     fclose($handle);
     @chmod($json_path, 0644);
+
+    if ($debug_mode) {
+        error_log('[PUNTWORK] [PROCESS-FILE] JSON file handle closed');
+    }
 
     // Check final JSONL file
     if (file_exists($json_path)) {
@@ -411,21 +548,73 @@ function process_one_feed(string $feed_key, string $url, string $output_dir, str
                     error_log('[PUNTWORK] [PROCESS-FINAL] JSONL first line preview: ' . substr($first_line, 0, 200));
                 }
             }
+
+            PuntWorkLogger::info(
+                'JSONL file created successfully',
+                PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+                [
+                    'feed_key' => $feed_key,
+                    'json_path' => $json_path,
+                    'file_size' => $jsonl_size,
+                    'items_count' => $count,
+                ]
+            );
         } elseif ($debug_mode) {
             error_log('[PUNTWORK] [PROCESS-WARNING] WARNING: JSONL file was created but is empty');
+            PuntWorkLogger::warn(
+                'JSONL file created but is empty',
+                PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+                [
+                    'feed_key' => $feed_key,
+                    'json_path' => $json_path,
+                    'file_size' => $jsonl_size,
+                ]
+            );
         }
     } elseif ($debug_mode) {
         error_log('[PUNTWORK] [PROCESS-ERROR] ERROR: JSONL file was not created');
+        PuntWorkLogger::error(
+            'JSONL file was not created',
+            PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+            [
+                'feed_key' => $feed_key,
+                'json_path' => $json_path,
+            ]
+        );
     }
 
     if ($debug_mode) {
         error_log('[PUNTWORK] [PROCESS-COMPRESS] About to gzip file');
     }
+
+    PuntWorkLogger::debug(
+        'Starting file compression',
+        PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+        [
+            'feed_key' => $feed_key,
+            'json_path' => $json_path,
+            'gz_json_path' => $gz_json_path,
+        ]
+    );
+
     gzip_file($json_path, $gz_json_path);
+
     if ($debug_mode) {
         error_log('[PUNTWORK] [PROCESS-COMPRESS] Gzip completed');
         error_log('[PUNTWORK] [PROCESS-END] ===== PROCESS_ONE_FEED END =====');
     }
+
+    PuntWorkLogger::info(
+        'Feed processing completed successfully',
+        PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+        [
+            'feed_key' => $feed_key,
+            'items_processed' => $count,
+            'json_path' => $json_path,
+            'gz_json_path' => $gz_json_path,
+            'processing_time' => microtime(true) - $download_start,
+        ]
+    );
 
     return $count;
 }
@@ -549,17 +738,43 @@ function fetch_and_generate_combined_json(): array
         error_log('[PUNTWORK] ==== fetch_and_generate_combined_json START ===');
     }
 
+    PuntWorkLogger::info(
+        'Starting combined JSON generation process',
+        PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+        [
+            'timestamp' => time(),
+            'memory_limit' => ini_get('memory_limit'),
+            'time_limit' => ini_get('max_execution_time'),
+        ]
+    );
+
     // Check for concurrent import lock
     if (get_transient('puntwork_import_running')) {
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('[PUNTWORK] [CONCURRENT] Import already running, aborting');
         }
 
+        PuntWorkLogger::warn(
+            'Import already running - concurrent request blocked',
+            PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+            [
+                'transient_value' => get_transient('puntwork_import_running'),
+            ]
+        );
+
         throw new \Exception('Import already running - please wait for current import to complete');
     }
 
     // Set import lock
     set_transient('puntwork_import_running', true, 3600); // 1 hour timeout
+
+    PuntWorkLogger::debug(
+        'Import lock set successfully',
+        PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+        [
+            'lock_timeout' => 3600,
+        ]
+    );
 
     try {
         $import_logs = [];
@@ -572,20 +787,52 @@ function fetch_and_generate_combined_json(): array
                 error_log("[PUNTWORK] Directory $output_dir not writable");
             }
 
+            PuntWorkLogger::error(
+                'Feeds directory not writable',
+                PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+                [
+                    'output_dir' => $output_dir,
+                    'is_dir' => is_dir($output_dir),
+                    'is_writable' => is_writable($output_dir),
+                ]
+            );
+
             throw new \Exception('Feeds directory not writable - check Hostinger permissions');
         }
         $fallback_domain = 'belgiumjobs.work';
 
+        PuntWorkLogger::info(
+            'Feed processing setup completed',
+            PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+            [
+                'feed_count' => count($feeds),
+                'output_dir' => $output_dir,
+                'fallback_domain' => $fallback_domain,
+                'feeds' => array_keys($feeds),
+            ]
+        );
+
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('[PUNTWORK] [FRESH-PROCESSING] Deleting existing JSONL files to force fresh recreation');
         }
+
+        PuntWorkLogger::debug(
+            'Starting file cleanup for fresh processing',
+            PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+            [
+                'output_dir' => $output_dir,
+            ]
+        );
+
         // Delete existing JSONL files to force fresh recreation
         $existing_jsonl_files = glob($output_dir . '*.jsonl');
+        $deleted_files = 0;
         foreach ($existing_jsonl_files as $jsonl_file) {
             if (unlink($jsonl_file)) {
                 if (defined('WP_DEBUG') && WP_DEBUG) {
                     error_log('[PUNTWORK] [FRESH-PROCESSING] Deleted existing JSONL file: ' . basename($jsonl_file));
                 }
+                $deleted_files++;
             } elseif (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('[PUNTWORK] [FRESH-PROCESSING] Failed to delete JSONL file: ' . basename($jsonl_file));
             }
@@ -597,6 +844,7 @@ function fetch_and_generate_combined_json(): array
                 if (defined('WP_DEBUG') && WP_DEBUG) {
                     error_log('[PUNTWORK] [FRESH-PROCESSING] Deleted existing combined JSONL file');
                 }
+                $deleted_files++;
             } elseif (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('[PUNTWORK] [FRESH-PROCESSING] Failed to delete combined JSONL file');
             }
@@ -608,8 +856,18 @@ function fetch_and_generate_combined_json(): array
                 if (defined('WP_DEBUG') && WP_DEBUG) {
                     error_log('[PUNTWORK] [FRESH-PROCESSING] Deleted existing GZ file: ' . basename($gz_file));
                 }
+                $deleted_files++;
             }
         }
+
+        PuntWorkLogger::info(
+            'File cleanup completed',
+            PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+            [
+                'files_deleted' => $deleted_files,
+                'output_dir' => $output_dir,
+            ]
+        );
 
         $total_items = 0;
         libxml_use_internal_errors(true);
@@ -625,6 +883,16 @@ function fetch_and_generate_combined_json(): array
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('[PUNTWORK] Using parallel feed downloads');
             }
+
+            PuntWorkLogger::info(
+                'Using parallel feed processing',
+                PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+                [
+                    'feed_count' => count($feeds),
+                    'max_concurrent' => 5,
+                ]
+            );
+
             $download_results = \Puntwork\download_feeds_parallel($feeds, $output_dir, $import_logs, 5); // Max 5 concurrent
 
             // Process each downloaded feed
@@ -633,9 +901,29 @@ function fetch_and_generate_combined_json(): array
                     if (defined('WP_DEBUG') && WP_DEBUG) {
                         error_log('[PUNTWORK] Processing downloaded feed: ' . $feed_key);
                     }
+
+                    PuntWorkLogger::debug(
+                        'Processing downloaded feed',
+                        PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+                        [
+                            'feed_key' => $feed_key,
+                            'feed_path' => $result['path'],
+                        ]
+                    );
+
                     // Process the downloaded feed
                     $count = process_downloaded_feed($feed_key, $result['path'], $output_dir, $fallback_domain, $import_logs);
                     $total_items += $count;
+
+                    PuntWorkLogger::info(
+                        'Downloaded feed processed',
+                        PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+                        [
+                            'feed_key' => $feed_key,
+                            'items_processed' => $count,
+                            'total_items_so_far' => $total_items,
+                        ]
+                    );
 
                     if (defined('WP_DEBUG') && WP_DEBUG) {
                         // Log memory usage after each feed
@@ -650,12 +938,42 @@ function fetch_and_generate_combined_json(): array
                 // Fallback to sequential processing
                 error_log('[PUNTWORK] Falling back to sequential feed processing');
             }
+
+            PuntWorkLogger::info(
+                'Using sequential feed processing',
+                PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+                [
+                    'feed_count' => count($feeds),
+                    'reason' => 'parallel function not available',
+                ]
+            );
+
             foreach ($feeds as $feed_key => $url) {
                 if (defined('WP_DEBUG') && WP_DEBUG) {
                     error_log('[PUNTWORK] Processing feed sequentially: ' . $feed_key);
                 }
+
+                PuntWorkLogger::debug(
+                    'Processing feed sequentially',
+                    PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+                    [
+                        'feed_key' => $feed_key,
+                        'feed_url' => $url,
+                    ]
+                );
+
                 $count = process_one_feed($feed_key, $url, $output_dir, $fallback_domain, $import_logs);
                 $total_items += $count;
+
+                PuntWorkLogger::info(
+                    'Sequential feed processed',
+                    PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+                    [
+                        'feed_key' => $feed_key,
+                        'items_processed' => $count,
+                        'total_items_so_far' => $total_items,
+                    ]
+                );
 
                 if (defined('WP_DEBUG') && WP_DEBUG) {
                     // Log memory usage after each feed
@@ -666,6 +984,16 @@ function fetch_and_generate_combined_json(): array
 
         combine_jsonl_files($feeds, $output_dir, $total_items, $import_logs);
 
+        PuntWorkLogger::info(
+            'JSONL combination completed',
+            PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+            [
+                'total_items' => $total_items,
+                'feed_count' => count($feeds),
+                'output_dir' => $output_dir,
+            ]
+        );
+
         if (defined('WP_DEBUG') && WP_DEBUG) {
             // Final memory logging
             error_log('[PUNTWORK] [MEMORY] Final memory usage: ' . memory_get_usage(true) / 1024 / 1024 . ' MB');
@@ -673,9 +1001,28 @@ function fetch_and_generate_combined_json(): array
             error_log('[PUNTWORK] ==== fetch_and_generate_combined_json END ===');
         }
 
+        PuntWorkLogger::info(
+            'Combined JSON generation process completed successfully',
+            PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+            [
+                'total_items_processed' => $total_items,
+                'feeds_processed' => count($feeds),
+                'logs_count' => count($import_logs),
+                'processing_time' => microtime(true) - $start_time ?? 0,
+            ]
+        );
+
         return $import_logs;
     } finally {
         // Always clear the import lock
         delete_transient('puntwork_import_running');
+
+        PuntWorkLogger::debug(
+            'Import lock cleared',
+            PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+            [
+                'transient_deleted' => true,
+            ]
+        );
     }
 }
