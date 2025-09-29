@@ -150,6 +150,15 @@ if (!isset($GLOBALS['puntwork_init_hook_added'])) {
 if (!function_exists(__NAMESPACE__ . '\\setup_job_import')) {
     function setup_job_import()
     {
+        // Skip initialization on AJAX requests to prevent duplicate loading
+        if (defined('DOING_AJAX') && DOING_AJAX) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[PUNTWORK] [INIT-SKIP] Skipping initialization on AJAX request');
+            }
+
+            return;
+        }
+
         // Prevent multiple include loading with a global flag (happens only once ever)
         if (isset($GLOBALS['puntwork_includes_loaded']) && $GLOBALS['puntwork_includes_loaded']) {
             // Includes already loaded
