@@ -7,16 +7,12 @@ class PuntworkQueueInterface {
     constructor() {
         this.container = null;
         this.stats = {};
-        this.refreshInterval = null;
-        this.consecutiveErrors = 0;
-        this.maxConsecutiveErrors = 3;
         this.init();
     }
 
     init() {
         this.createInterface();
         this.bindEvents();
-        this.startAutoRefresh();
         this.loadQueueStats();
     }
 
@@ -94,9 +90,6 @@ class PuntworkQueueInterface {
                 <button id="queue-add-test-job" class="button button-secondary">
                     <i class="fas fa-plus"></i> Add Test Job
                 </button>
-                <button id="queue-toggle-auto-refresh" class="button button-secondary">
-                    <i class="fas fa-pause"></i> Pause Auto-Refresh
-                </button>
             </div>
         `;
 
@@ -127,10 +120,6 @@ class PuntworkQueueInterface {
         document.getElementById('queue-add-test-job')?.addEventListener('click', () => {
             this.addTestJob();
         });
-
-        document.getElementById('queue-toggle-auto-refresh')?.addEventListener('click', (e) => {
-            this.toggleAutoRefresh(e.target);
-        });
     }
 
     async loadQueueStats() {
@@ -151,14 +140,11 @@ class PuntworkQueueInterface {
 
             if (data.success) {
                 this.updateStats(data.data);
-                this.consecutiveErrors = 0; // Reset error count on success
             } else {
                 console.error('Failed to load queue stats:', data.data);
-                this.handleAjaxError();
             }
         } catch (error) {
             console.error('Error loading queue stats after retries:', error);
-            this.handleAjaxError();
         }
     }
 
@@ -231,13 +217,11 @@ class PuntworkQueueInterface {
 
             if (data.success) {
                 this.displayRecentJobs(data.data);
-                this.consecutiveErrors = 0; // Reset error count on success
             } else {
-                this.handleAjaxError();
+                console.error('Failed to load recent jobs:', data.data);
             }
         } catch (error) {
             console.error('Error loading recent jobs after retries:', error);
-            this.handleAjaxError();
         }
     }
 
@@ -367,39 +351,6 @@ class PuntworkQueueInterface {
         }
     }
 
-    handleAjaxError() {
-        this.consecutiveErrors++;
-        console.warn(`[QUEUE] Consecutive AJAX errors: ${this.consecutiveErrors}/${this.maxConsecutiveErrors}`);
-        
-        if (this.consecutiveErrors >= this.maxConsecutiveErrors) {
-            console.error('[QUEUE] Too many consecutive AJAX errors, stopping auto-refresh');
-            this.stopAutoRefresh();
-            this.showNotification('Queue monitoring stopped due to repeated errors. Please refresh the page.', 'error');
-        }
-    }
-
-    stopAutoRefresh() {
-        if (this.refreshInterval) {
-            clearInterval(this.refreshInterval);
-            this.refreshInterval = null;
-            
-            // Update toggle button if it exists
-            const toggleButton = document.getElementById('queue-toggle-auto-refresh');
-            if (toggleButton) {
-                toggleButton.innerHTML = '<i class="fas fa-play"></i> Resume Auto-Refresh';
-            }
-        }
-    }
-
-    toggleAutoRefresh(button) {
-        if (this.refreshInterval) {
-            this.stopAutoRefresh();
-        } else {
-            this.startAutoRefresh();
-            button.innerHTML = '<i class="fas fa-pause"></i> Pause Auto-Refresh';
-        }
-    }
-
     showNotification(message, type = 'info') {
         const notification = document.createElement('div');
         notification.className = `puntwork-notification ${type}`;
@@ -416,10 +367,6 @@ class PuntworkQueueInterface {
     }
 
     destroy() {
-        if (this.refreshInterval) {
-            clearInterval(this.refreshInterval);
-        }
-
         if (this.container) {
             this.container.remove();
         }
