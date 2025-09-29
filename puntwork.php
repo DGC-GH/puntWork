@@ -141,7 +141,10 @@ function process_social_media_posts()
 // Init setup - add hook only once to prevent multiple loading
 if (!isset($GLOBALS['puntwork_init_hook_added'])) {
     $GLOBALS['puntwork_init_hook_added'] = true;
+    error_log('[PUNTWORK] [HOOK-DEBUG] Registering init hook');
     add_action('init', __NAMESPACE__ . '\\setup_job_import');
+} else {
+    error_log('[PUNTWORK] [HOOK-DEBUG] Hook already registered, skipping');
 }
 
 if (!function_exists(__NAMESPACE__ . '\\setup_job_import')) {
