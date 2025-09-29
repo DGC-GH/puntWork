@@ -39,26 +39,6 @@ function process_batch_items_logic(array $setup): array
         error_log('[PUNTWORK] [BATCH-START] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
     }
 
-function process_batch_items_logic(array $setup): array
-{
-    $debug_mode = defined('WP_DEBUG') && WP_DEBUG;
-
-    if ($debug_mode) {
-        error_log('[PUNTWORK] [BATCH-START] ===== PROCESS_BATCH_ITEMS_LOGIC START =====');
-        error_log(
-            '[PUNTWORK] [BATCH-START] process_batch_items_logic called with setup: ' . json_encode(
-                [
-                    'start_index' => $setup['start_index'] ?? 'not set',
-                    'total' => $setup['total'] ?? 'not set',
-                    'json_path' => isset($setup['json_path']) ? basename($setup['json_path']) : 'not set',
-                    'json_path_full' => $setup['json_path'] ?? 'not set',
-                ]
-            )
-        );
-        error_log('[PUNTWORK] [BATCH-START] Memory usage at start: ' . memory_get_usage(true) . ' bytes');
-        error_log('[PUNTWORK] [BATCH-START] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
-    }
-
     // Log batch processing start
     \Puntwork\PuntWorkLogger::info(
         'Starting batch processing',
