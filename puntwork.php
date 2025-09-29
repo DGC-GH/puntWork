@@ -325,19 +325,19 @@ if (!function_exists(__NAMESPACE__ . '\\setup_job_import')) {
             $GLOBALS['puntwork_includes_loaded'] = true;
         }
 
-        // Prevent multiple initialization across requests using WordPress transient
-        $init_transient_key = 'puntwork_setup_done_' . session_id();
-        $setup_done = get_transient($init_transient_key);
-        error_log('[PUNTWORK] [TRANSIENT-DEBUG] Key: ' . $init_transient_key . ', Value: ' . ($setup_done ? 'true' : 'false'));
+        // Prevent multiple initialization across requests using WordPress option
+        $init_option_key = 'puntwork_setup_done';
+        $setup_done = get_option($init_option_key, false);
+        error_log('[PUNTWORK] [OPTION-DEBUG] Key: ' . $init_option_key . ', Value: ' . ($setup_done ? 'true' : 'false'));
         if ($setup_done) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[PUNTWORK] [INIT-SKIP] Setup already completed for this session, skipping...');
+                error_log('[PUNTWORK] [INIT-SKIP] Setup already completed globally, skipping...');
             }
 
             return;
         }
-        set_transient($init_transient_key, true, 300); // 5 minutes
-        error_log('[PUNTWORK] [TRANSIENT-DEBUG] Set transient for key: ' . $init_transient_key);
+        update_option($init_option_key, true);
+        error_log('[PUNTWORK] [OPTION-DEBUG] Set option for key: ' . $init_option_key);
 
         if ($debug_mode) {
             error_log('[PUNTWORK] [INIT-START] ===== SETUP_JOB_IMPORT START =====');
