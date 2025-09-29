@@ -20,11 +20,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             this.bindEvents();
             this.checkInitialStatus();
 
-            // Fallback: Re-bind events after a short delay to ensure DOM is ready
-            setTimeout(function() {
-                console.log('[PUNTWORK] Re-binding events after delay');
-                JobImportEvents.bindEvents();
-            }, 1000);
+            // Removed duplicate event binding timeout that was causing double-click issues
         },
 
         /**
@@ -49,7 +45,19 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
             $('#start-import').on('click', function(e) {
                 console.log('[PUNTWORK] Start button clicked!');
+                
+                // Prevent multiple rapid clicks
+                if ($(this).prop('disabled')) {
+                    console.log('[PUNTWORK] Start button is disabled, ignoring click');
+                    return;
+                }
+                
+                $(this).prop('disabled', true).text('Starting...');
+                
+                // Call the logic handler
                 JobImportEvents.handleStartImport();
+                
+                // Note: Button will be re-enabled by UI reset functions when import completes or fails
             });
             $('#resume-import').on('click', function(e) {
                 console.log('[PUNTWORK] Resume button clicked!');
