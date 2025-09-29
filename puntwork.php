@@ -148,6 +148,13 @@ if (!isset($GLOBALS['puntwork_init_hook_added'])) {
 if (!function_exists(__NAMESPACE__ . '\\load_puntwork_includes')) {
     function load_puntwork_includes()
     {
+        // Prevent multiple include loading with static flag (more reliable than global)
+        static $includes_loaded = false;
+        if ($includes_loaded) {
+            return;
+        }
+        $includes_loaded = true;
+
         // Prevent multiple include loading with a global flag
         if (isset($GLOBALS['puntwork_includes_loaded']) && $GLOBALS['puntwork_includes_loaded']) {
             return;
@@ -314,6 +321,12 @@ if (!function_exists(__NAMESPACE__ . '\\load_puntwork_includes')) {
 if (!function_exists(__NAMESPACE__ . '\\setup_job_import')) {
     function setup_job_import()
     {
+        // Prevent multiple initialization with static flag
+        static $setup_completed = false;
+        if ($setup_completed) {
+            return;
+        }
+
         // Skip initialization on AJAX requests to prevent duplicate loading
         if (defined('DOING_AJAX') && DOING_AJAX) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -334,6 +347,7 @@ if (!function_exists(__NAMESPACE__ . '\\setup_job_import')) {
 
             return;
         }
+        $setup_completed = true;
         update_option($init_option_key, true);
         error_log('[PUNTWORK] [OPTION-DEBUG] Set option for key: ' . $init_option_key);
 
