@@ -139,8 +139,8 @@ function process_social_media_posts()
 }
 
 // Init setup - add hook only once to prevent multiple loading
-if (!defined('PUNTWORK_INIT_HOOK_ADDED')) {
-    define('PUNTWORK_INIT_HOOK_ADDED', true);
+if (!isset($GLOBALS['puntwork_init_hook_added'])) {
+    $GLOBALS['puntwork_init_hook_added'] = true;
     add_action('init', __NAMESPACE__ . '\\setup_job_import');
 }
 
@@ -322,6 +322,7 @@ if (!function_exists(__NAMESPACE__ . '\\setup_job_import')) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('[PUNTWORK] [INIT-SKIP] Setup already completed for this request, skipping...');
             }
+
             return;
         }
         $setup_done = true;
