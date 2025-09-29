@@ -1,4 +1,4 @@
-- redownload download debug.log using [text](ftp_script.txt)
+- redownload download debug.log using PASS in [text](.env)
 - read Console.txt if attached
 - identify problems
 - analyze code
@@ -7,4 +7,4 @@
 - commit
 - output summery
 - ask to push
-- remove debug.log on the server via SSH
+- remove debug.log on the server via SSH using PASS in [text](.env)

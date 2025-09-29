@@ -49,7 +49,8 @@ function sanitize_import_status($status)
     return $sanitized;
 }
 
-add_action('wp_ajax_process_feed', __NAMESPACE__ . '\\process_feed_ajax');
+// Duplicate action removed - handled in ajax-import-control.php
+// add_action('wp_ajax_process_feed', __NAMESPACE__ . '\\process_feed_ajax');
 function process_feed_ajax()
 {
     PuntWorkLogger::logAjaxRequest('process_feed', $_POST);
@@ -155,7 +156,8 @@ function process_feed_ajax()
     }
 }
 
-add_action('wp_ajax_combine_jsonl', __NAMESPACE__ . '\\combine_jsonl_ajax');
+// Duplicate action removed - handled in ajax-import-control.php
+// add_action('wp_ajax_combine_jsonl', __NAMESPACE__ . '\\combine_jsonl_ajax');
 function combine_jsonl_ajax()
 {
     PuntWorkLogger::logAjaxRequest('combine_jsonl', $_POST);
