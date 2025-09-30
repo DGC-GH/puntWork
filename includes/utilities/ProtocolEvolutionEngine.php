@@ -118,37 +118,59 @@ class ProtocolEvolutionEngine {
 	 * Apply a successful protocol variation.
 	 */
 	public static function applyProtocolVariation( array $variation ): bool {
+		// protocol.md is the main prompt file for GROK CODE FAST 1 COPILOT AGENT
+		// Apply AI-specific improvements instead of random mutations
+		return self::applyAIPromptImprovements( $variation );
+	}
+
+	/**
+	 * Apply AI prompt improvements based on evolution analysis.
+	 */
+	private static function applyAIPromptImprovements( array $variation ): bool {
 		try {
 			$protocolFile = __DIR__ . '/../../protocol.md';
 
-			// protocol.md is the main prompt file for GROK CODE FAST 1 COPILOT AGENT
-			// Apply AI-specific improvements instead of random mutations
-			return self::applyAIPromptImprovements( $variation );
+			if ( ! file_exists( $protocolFile ) ) {
+				throw new \Exception( 'Protocol file not found' );
+			}
 
-			// Backup current protocol
+			$currentContent = file_get_contents( $protocolFile );
+
+			// Load evolution data for analysis
+			$data       = self::loadEvolutionData();
+			$executions = $data['executions'] ?? array();
+
+			// Analyze patterns and learnings
+			$patterns  = self::analyzeSuccessfulPatterns( $executions );
+			$learnings = self::extractAILearnings( $executions );
+
+			// Generate improved content
+			$improvedContent = self::generateImprovedPrompt( $currentContent, $patterns, $learnings );
+
+			// Create backup
 			$backupPath = __DIR__ . '/../../protocol.md.backup.' . time();
 			if ( ! copy( $protocolFile, $backupPath ) ) {
 				throw new \Exception( 'Failed to create protocol backup' );
 			}
 
-			// Apply variation
-			$newProtocol = self::formatProtocolForFile( $variation['variation'] );
-			if ( file_put_contents( $protocolFile, $newProtocol ) === false ) {
-				throw new \Exception( 'Failed to write new protocol' );
+			// Write improved content
+			if ( file_put_contents( $protocolFile, $improvedContent ) === false ) {
+				throw new \Exception( 'Failed to write improved protocol' );
 			}
 
-			// Record the change
-			$data                         = self::loadEvolutionData();
-			$data['applied_variations'][] = array(
-				'variation'   => $variation,
-				'applied_at'  => time(),
-				'backup_file' => basename( $backupPath ),
+			// Record the improvement
+			$data['applied_improvements'][] = array(
+				'variation'    => $variation,
+				'applied_at'   => time(),
+				'backup_file'  => basename( $backupPath ),
+				'patterns'     => $patterns,
+				'learnings'    => $learnings,
 			);
 			self::saveEvolutionData( $data );
 
 			return true;
 		} catch ( \Exception $e ) {
-			error_log( '[PROTOCOL-EVOLUTION] Failed to apply variation: ' . $e->getMessage() );
+			error_log( '[PROTOCOL-EVOLUTION] Failed to apply AI prompt improvements: ' . $e->getMessage() );
 
 			return false;
 		}

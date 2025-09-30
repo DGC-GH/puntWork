@@ -229,7 +229,6 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 					'admin/admin-ui-feed-health.php',
 					'admin/admin-ui-analytics.php',
 					'admin/admin-ui-performance.php',
-					'admin/admin-ui-multisite.php',
 					'admin/admin-ui-monitoring.php',
 					'admin/admin-ajax-monitoring.php',
 					'admin/admin-feed-config.php',
@@ -552,22 +551,6 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 		// Initialize Feed Optimizer
 		if ( class_exists( __NAMESPACE__ . '\\AI\\FeedOptimizer' ) ) {
 			call_user_func( array( __NAMESPACE__ . '\\AI\\FeedOptimizer', 'init' ) );
-		}
-
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] Initializing Multi-Site Support...' );
-		}
-		// Initialize Multi-Site Support
-		if ( is_multisite() && class_exists( __NAMESPACE__ . '\\MultiSite\\MultiSiteManager' ) ) {
-			call_user_func( array( __NAMESPACE__ . '\\MultiSite\\MultiSiteManager', 'init' ) );
-		}
-
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] Initializing Multi-Site Admin UI...' );
-		}
-		// Initialize Multi-Site Admin UI
-		if ( is_multisite() && class_exists( __NAMESPACE__ . '\\MultiSiteAdminUI' ) ) {
-			call_user_func( array( __NAMESPACE__ . '\\MultiSiteAdminUI', 'init' ) );
 		}
 
 		if ( $debug_mode ) {
