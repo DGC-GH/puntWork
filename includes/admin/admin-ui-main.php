@@ -172,6 +172,11 @@ function render_main_import_ui(): void
     error_log('[PUNTWORK] [UI-RENDER] render_main_import_ui() called at ' . date('Y-m-d H:i:s T'));
     error_log('[PUNTWORK] [UI-RENDER] Rendering main import UI elements');
 
+    // Check if combined JSONL file exists
+    $jsonl_path = '/Users/dg/Documents/GitHub/puntWork/feeds/combined-jobs.jsonl';
+    $jsonl_exists = file_exists($jsonl_path);
+    $jsonl_size = $jsonl_exists ? filesize($jsonl_path) : 0;
+
     ?>
 	<div class="puntwork-admin">
 		<div class="puntwork-container">
@@ -187,9 +192,27 @@ function render_main_import_ui(): void
 					<p class="puntwork-card__subtitle">Start, pause, or resume job imports from configured feeds.</p>
 				</div>
 
+				<?php if (!$jsonl_exists || $jsonl_size === 0): ?>
+				<!-- No Data Available Notice -->
+				<div class="puntwork-card__body" style="background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: var(--radius-md); padding: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
+					<div style="display: flex; align-items: flex-start; gap: var(--spacing-md);">
+						<i class="fas fa-exclamation-triangle" style="color: #f59e0b; font-size: var(--font-size-xl); margin-top: var(--spacing-xs);"></i>
+						<div>
+							<h3 style="font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); color: #92400e; margin: 0 0 var(--spacing-sm) 0;">No Import Data Available</h3>
+							<p style="font-size: var(--font-size-sm); color: #92400e; margin: 0 0 var(--spacing-md) 0;">
+								Job feeds need to be processed before you can run imports. The combined data file is missing or empty.
+							</p>
+							<p style="font-size: var(--font-size-sm); color: #92400e; margin: 0;">
+								<strong>Solution:</strong> Go to the <a href="<?php echo admin_url('admin.php?page=puntwork-scheduling'); ?>" style="color: #dc2626; text-decoration: underline;">Scheduling section</a> and click "Run Now" to process feeds and start a complete import.
+							</p>
+						</div>
+					</div>
+				</div>
+				<?php endif; ?>
+
 				<div class="puntwork-card__footer">
 					<div style="display: flex; gap: var(--spacing-md); align-items: center; flex-wrap: wrap;">
-						<button id="start-import" class="puntwork-btn puntwork-btn--primary">
+						<button id="start-import" class="puntwork-btn puntwork-btn--primary" <?php echo (!$jsonl_exists || $jsonl_size === 0) ? 'disabled title="No import data available - use Scheduling > Run Now instead"' : ''; ?>>
 							<i class="fas fa-play puntwork-btn__icon"></i>
 							<span id="start-text">Start Import</span>
 							<span id="start-loading" style="display: none;">Starting...</span>
