@@ -43,3 +43,6 @@ composer.json.production
 
 # PHP CS Fixer cache
 .php-cs-fixer.cache
+
+# Protocol backup files
+protocol.md.backup.*
