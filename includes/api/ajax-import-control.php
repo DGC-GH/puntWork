@@ -815,7 +815,7 @@ function test_single_job_import_ajax()
         // Check if job already exists
         $existing_post = get_posts(
             [
-                'post_type' => 'job_listing',
+                'post_type' => 'job',
                 'meta_key' => '_guid',
                 'meta_value' => $test_job['guid'],
                 'posts_per_page' => 1,
@@ -841,7 +841,7 @@ function test_single_job_import_ajax()
             'post_title' => $test_job['title'] ?? 'Untitled Job',
             'post_content' => $test_job['description'] ?? '',
             'post_status' => 'publish',
-            'post_type' => 'job_listing',
+            'post_type' => 'job',
             'post_author' => get_current_user_id(),
         ];
 
@@ -943,7 +943,7 @@ function test_single_job_import_ajax()
         // Final verification - check if post exists in database
         $final_check = get_posts(
             [
-                'post_type' => 'job_listing',
+                'post_type' => 'job',
                 'p' => $post_id,
                 'posts_per_page' => 1,
             ]

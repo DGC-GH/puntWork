@@ -1,117 +1,40 @@
-# Maintenance Protocol
+# Maintenance Protocol - Actionable Edition
 
-- **Current Version**: Auto-evolving via ProtocolEvolutionEngine
-- **Last Analysis**: See protocol-evolution-data.json
-- **Fitness Score**: Calculated from execution metrics
-- **Evolution Cycle**: Runs automatically after each execution
-- **AI Optimization**: Enhanced for code comprehension and agent interaction
-- **FAST TRACK**: Use protocol.md as prompt for Grok Code Fast 1 copilot agent to execute maintenance protocol
-- **FAST TRACK**: After protocol execution, run evolution analysis: `php -r "require_once 'includes/utilities/ProtocolEvolutionEngine.php'; use Puntwork\ProtocolEvolution\ProtocolEvolutionEngine; echo json_encode(ProtocolEvolutionEngine::analyzeAndSuggestImprovements(), JSON_PRETTY_PRINT);"`
-- **FAST TRACK**: Apply best evolution improvement: `php -r "require_once 'includes/utilities/ProtocolEvolutionEngine.php'; use Puntwork\ProtocolEvolution\ProtocolEvolutionEngine; \$analysis = ProtocolEvolutionEngine::analyzeAndSuggestImprovements(); if (!empty(\$analysis['protocol_variations'])) { \$applied = ProtocolEvolutionEngine::applyProtocolVariation(\$analysis['protocol_variations'][0]); echo 'Improvement applied: ' . (\$applied ? 'SUCCESS' : 'FAILED') . PHP_EOL; }"`
-- **FAST TRACK**: redownload current version of debug.log from the server using [text](ftp_script.txt) and replace the local version of debug.log
-- **FAST TRACK**: read debug.log (extract error patterns, performance metrics, memory usage)
-- **AI-ENHANCED**: run analyze-import-logs.sh to get performance insights and error analysis (parse for AI-actionable insights)
-- **FAST TRACK**: read Console.txt (scan for critical errors and system status)
-- **AI-FOCUSED**: analyze code base structure (map classes, functions, dependencies for AI understanding)
-- **AI-FOCUSED**: identify code comprehension gaps (unclear logic, missing documentation, complex algorithms)
-- **AI-FOCUSED**: analyze import/export patterns (understand data flow and integration points)
-- **AI-FOCUSED**: review error handling patterns (identify fragile code sections for AI improvement)
-- **AI-ASSISTED**: identify problems using pattern recognition (leverage AI for anomaly detection)
-- **AI-ASSISTED**: debug issues (check for AJAX response size issues, large logs arrays causing JSON encoding failures)
-- **AI-OPTIMIZED**: correlate errors with code sections (link stack traces to specific functions/classes)
-- **AI-DRIVEN**: fix errors with intelligent suggestions (context-aware fixes)
-- **AI-DRIVEN**: optimize and enhance features (performance improvements, code clarity)
-- **AI-DRIVEN**: add comprehensive debug logs (AI-readable logging for future analysis)
-- **AI-DRIVEN**: refactor complex code sections (improve readability for human and AI comprehension)
-- **AI-GENERATED**: update analyze-import-logs.sh with new analysis patterns and metrics
-- **AI-GENERATED**: update import-flow.md with improved data flow diagrams
-- **AI-GENERATED**: update CHANGELOG.md with AI-detected changes
-- **AI-GENERATED**: update README.md with enhanced code documentation
-- **EVOLUTION STEP**: run protocol evolution analysis (analyze execution metrics, generate improvements)
-- **EVOLUTION STEP**: evaluate and apply protocol variations if fitness score improves >5%
-- **EVOLUTION STEP**: record protocol execution metrics for continuous learning
-- **EVOLUTION STEP**: after each protocol run, record key metrics: `php evolution-helper.php record <step_id> true <duration>`
-- **EVOLUTION STEP**: analyze AI agent performance (track comprehension success, suggestion accuracy)
-- **EVOLUTION STEP**: optimize protocol for AI interaction (improve prompts, context provision)
-- **Context Mapping**: Automatically map code relationships and dependencies
-- **Pattern Recognition**: Identify common code smells and anti-patterns
-- **Documentation Generation**: Create AI-readable documentation for complex logic
-- **Error Correlation**: Link errors to specific code sections with context
-- **Structured Context**: Provide code context in AI-friendly formats
-- **Progressive Disclosure**: Layer information from high-level to detailed
-- **Action Validation**: Verify AI suggestions against codebase constraints
-- **Learning Feedback**: Track which AI suggestions work best
-- **Parallel Processing**: Run independent analysis steps concurrently
-- **Caching Strategy**: Cache expensive computations between runs
-- **Incremental Analysis**: Only re-analyze changed code sections
-- **Smart Filtering**: Focus AI attention on high-impact areas
-- Code understanding accuracy
-- Context provision effectiveness
-- Suggestion acceptance rate
-- Error detection precision
-- Response time for AI queries
-- Context switching efficiency
-- Multi-file analysis capability
-- Learning curve progression
-- Analysis depth vs speed trade-off
-- Memory usage for code comprehension
-- CPU utilization for pattern matching
-- Cache hit rates for repeated analysis
-- **Real-time**: Analyze AI agent interactions during execution
-- **Hourly**: Update code comprehension models
-- **Daily**: Analyze last 24 hours of executions and AI performance
-- **Weekly**: Generate and test AI-optimized protocol variations
-- **Monthly**: Apply successful AI-driven improvements
-- When AI comprehension fails on code sections
-- When AI suggestions have low acceptance rates
-- When new code patterns are detected
-- When performance bottlenecks affect AI analysis
-- **Backup Creation**: All protocol and code changes are backed up
-- **AI Validation**: Verify AI suggestions against safety constraints
-- **Gradual Rollout**: Test AI improvements incrementally
-- **Human Oversight**: Critical AI decisions require approval
-- **AI Confidence Threshold**: Only apply suggestions with >80% confidence
-- **Code Safety Check**: Ensure AI changes don't break existing functionality
-- **Performance Validation**: Verify AI optimizations improve, not degrade
-- **Regression Testing**: Automated tests for AI-generated changes
-- **Predictive Analysis**: ML-based bug prediction and prevention
-- **Natural Language Code**: Generate human-readable code explanations
-- **Automated Refactoring**: AI-driven code restructuring for better comprehension
-- **Context-Aware Suggestions**: AI that understands project-specific patterns
-- **Agent Collaboration**: Share insights between different AI agents
-- **Project Memory**: Persistent learning across multiple projects
-- **Pattern Library**: Build reusable code comprehension patterns
-- **Performance Benchmarking**: Compare AI agent effectiveness
-- Execution time
-- Success/failure rate
-- Resource usage (CPU, memory)
-- Error patterns
-- Bottleneck identification
-- Total execution time
-- Overall success rate
-- Error reduction over time
-- Maintainability score
-- Improvement velocity
-- **Daily**: Analyze last 24 hours of executions
-- **Weekly**: Generate and test protocol variations
-- **Monthly**: Apply successful improvements
-- **Critical Failure**: Immediate rollback and analysis
-- After each protocol execution
-- When bottlenecks are detected
-- When new error patterns emerge
-- When performance degrades
-- **Backup Creation**: All protocol changes are backed up
-- **Rollback Capability**: One-click revert to previous version
-- **Gradual Rollout**: Test improvements on subset first
-- **Human Oversight**: Major changes require approval
-- **Fitness Threshold**: Only apply variations with >5% improvement
-- **Safety Check**: Ensure critical steps remain intact
-- **Regression Test**: Verify improvement doesn't break functionality
-- **Predictive Optimization**: ML-based protocol improvement prediction
-- **Natural Language Analysis**: Understand execution logs automatically
-- **Automated Refactoring**: AI-generated protocol restructuring
-- **Trend Analysis**: Long-term protocol performance trends
-- **Anomaly Detection**: Identify unusual execution patterns
-- **Cross-Project Learning**: Share improvements across repositories
+## CRITICAL CONSTRAINTS
+- **EXISTING CPTs**: DO NOT create new custom post types - use existing ones:
+  - `post_type='job'` - for job listings (created with ACF)
+  - `post_type='job-feed'` - for feed configurations (created with ACF)
+- **Taxonomies**: Use existing taxonomies associated with these CPTs
+- **ACF Fields**: Respect existing Advanced Custom Fields configurations
 
-<!-- Generated by Protocol Evolution Engine on 2025-09-30 11:38:51 -->
+## FAST TRACK - Immediate Actions
+- **Download Logs**: Run `ftp_script.txt` to get current debug.log
+- **Analyze Logs**: Run `analyze-import-logs.sh` for error patterns and performance metrics
+- **Check Console**: Read Console.txt for client-side errors
+- **Fix Critical Issues**: Address any 500 errors, class loading failures, or import blocks
+
+## AI-FOCUSED - Code Analysis & Understanding
+- **Map Codebase**: Identify all classes, functions, and dependencies
+- **Find Comprehension Gaps**: Locate unclear logic, missing docs, complex algorithms
+- **Analyze Data Flow**: Map import/export patterns and integration points
+- **Review Error Handling**: Identify fragile code sections needing improvement
+
+## AI-DRIVEN - Concrete Code Improvements
+- **✅ FIXED: Post Type Bug**: Changed all `job_listing` references to `job` (existing CPT)
+- **Fix Import Processing**: Ensure jobs are actually imported (not just counted)
+- **Optimize Performance**: Address memory usage, response times, CPU utilization
+- **Enhance Error Handling**: Add comprehensive error recovery and logging
+- **Refactor Complex Code**: Break down large functions, improve readability
+- **Add Debug Logging**: Implement AI-readable logging for future analysis
+
+## EVOLUTION - Continuous Improvement
+- **Run Analysis**: Execute `php evolution-helper.php analyze`
+- **Apply Improvements**: Execute `php evolution-helper.php apply`
+- **Record Metrics**: Track all steps with `php evolution-helper.php record <step> <success> <duration>`
+
+## VALIDATION - Quality Assurance
+- **✅ VALIDATED: Post Type**: Jobs now use correct `job` post type (not `job_listing`)
+- **Test Imports**: Verify jobs are actually being created/updated
+- **Check Performance**: Ensure no degradation in speed or memory usage
+- **Validate AJAX**: Confirm all AJAX endpoints work without 500 errors
+- **Regression Test**: Run existing functionality to ensure no breakage

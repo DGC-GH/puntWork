@@ -304,7 +304,7 @@ function mobile_api_get_jobs($request)
     // Add category filter
     if ($category) {
         $args['tax_query'][] = [
-            'taxonomy' => 'job_listing_category',
+            'taxonomy' => 'job_category',
             'field' => 'slug',
             'terms' => $category,
         ];
@@ -343,7 +343,7 @@ function mobile_api_get_job($request)
 
     $post = get_post($job_id);
 
-    if (!$post || $post->post_type !== 'job_listing') {
+    if (!$post || $post->post_type !== 'job') {
         return new WP_Error('job_not_found', __('Job not found', 'puntwork'), ['status' => 404]);
     }
 
@@ -386,7 +386,7 @@ function mobile_api_create_application($request)
 
     // Validate job exists
     $job = get_post($job_id);
-    if (!$job || $job->post_type !== 'job_listing') {
+    if (!$job || $job->post_type !== 'job') {
         return new WP_Error('invalid_job', __('Invalid job ID', 'puntwork'), ['status' => 400]);
     }
 
@@ -425,7 +425,7 @@ function mobile_api_create_application($request)
 function mobile_api_get_dashboard_stats($request)
 {
     // Get job statistics
-    $total_jobs = wp_count_posts('job_listing')->publish;
+    $total_jobs = wp_count_posts('job')->publish;
 
     // Get application statistics (mock data - implement based on your system)
     $total_applications = 0;
@@ -585,8 +585,8 @@ function mobile_format_job_data($post, $detailed = false)
     }
 
     // Add categories and tags
-    $job_data['categories'] = wp_get_post_terms($post->ID, 'job_listing_category', ['fields' => 'names']);
-    $job_data['tags'] = wp_get_post_terms($post->ID, 'job_listing_tag', ['fields' => 'names']);
+    $job_data['categories'] = wp_get_post_terms($post->ID, 'job_category', ['fields' => 'names']);
+    $job_data['tags'] = wp_get_post_terms($post->ID, 'job_tag', ['fields' => 'names']);
 
     if ($detailed) {
         // Add additional detailed information

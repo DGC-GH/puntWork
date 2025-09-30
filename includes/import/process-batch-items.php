@@ -244,7 +244,7 @@ if (!function_exists('process_batch_items')) {
                     error_log('[PUNTWORK] [ITEMS-DEBUG] Creating new post with: title="' . $xml_title . '", validfrom="' . $xml_validfrom . '", modified="' . $post_modified . '"');
 
                     $post_data = [
-                        'post_type' => 'job',
+                        'post_type' => 'job',  // Use existing CPT created with ACF
                         'post_title' => $xml_title,
                         'post_name' => sanitize_title($xml_title . '-' . $guid),
                         'post_status' => 'publish',

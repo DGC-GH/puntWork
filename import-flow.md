@@ -650,7 +650,7 @@ if (import_time_exceeded()) {
 ### Database Operations
 ```php
 $existing_posts = get_posts([
-    `post_type` => `job_listing`,
+    `post_type` => `job`,
     `meta_key` => `_guid`,
     `meta_value` => $guid
 ]);
