@@ -365,6 +365,17 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 				++$processed_count;
 				unset( $batch_items[ $guid ] );
 
+				// Clear cache periodically to prevent memory accumulation during large batch processing
+				if ( $processed_count % 10 === 0 ) {
+					if ( function_exists( 'wp_cache_flush' ) ) {
+						wp_cache_flush();
+					}
+					\Puntwork\Utilities\CacheManager::clearGroup( \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS );
+					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+						error_log( '[PUNTWORK] [MEMORY-MGMT] Cache cleared after processing ' . $processed_count . ' items' );
+					}
+				}
+
 				// Update intermediate status every N items to keep UI responsive
 				if ( $processed_count % $intermediate_update_interval == 0 || $processed_count >= $total_to_process ) {
 					$current_time = microtime( true );
@@ -416,6 +427,15 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 			}
 			$total_acf_time = microtime( true ) - $total_acf_start;
 			error_log( '[PUNTWORK] [ITEMS-DEBUG] Bulk ACF updates completed in ' . number_format( $total_acf_time, 4 ) . ' seconds total (' . number_format( $total_acf_time / count( $all_acf_updates ), 4 ) . ' seconds per post)' );
+		}
+
+		// Final cache clear after all processing to ensure clean state
+		if ( function_exists( 'wp_cache_flush' ) ) {
+			wp_cache_flush();
+		}
+		\Puntwork\Utilities\CacheManager::clearGroup( \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS );
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( '[PUNTWORK] [MEMORY-MGMT] Final cache clear after batch processing completion' );
 		}
 	}
 }

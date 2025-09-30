@@ -54,7 +54,7 @@ if ( file_exists( PUNTWORK_PATH . 'vendor/autoload.php' ) ) {
 // =====================================================================================
 
 // Increase memory limit to prevent exhaustion
-ini_set( 'memory_limit', '2048M' );
+ini_set( 'memory_limit', '1024M' );
 
 $debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
