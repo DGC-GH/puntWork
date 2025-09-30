@@ -17,13 +17,15 @@ class ProtocolEvolutionEngine
     private const MUTATION_RATE = 0.1;
 
     /**
-     * Fitness weights for protocol evaluation.
+     * Fitness weights for protocol evaluation (AI-optimized).
      */
     private const FITNESS_WEIGHTS = [
-        'execution_time' => -0.5,  // Negative because faster is better
-        'success_rate' => 0.3,
-        'error_reduction' => 0.2,
+        'execution_time' => -0.4,  // Negative because faster is better
+        'success_rate' => 0.25,
+        'error_reduction' => 0.15,
         'maintainability' => 0.1,
+        'ai_comprehension' => 0.05,  // New: AI code understanding score
+        'code_quality' => 0.05,  // New: Code clarity and structure
     ];
 
     /**
@@ -43,6 +45,10 @@ class ProtocolEvolutionEngine
                 // Store only essential data, not full result arrays
                 'data_size' => isset($data) ? count($data) : 0,
                 'has_error' => isset($data['error']),
+                // AI-specific metrics
+                'ai_context_provided' => $data['ai_context_provided'] ?? false,
+                'code_comprehension_score' => $data['code_comprehension_score'] ?? 0,
+                'ai_suggestions_accepted' => $data['ai_suggestions_accepted'] ?? 0,
             ],
             'protocol_version' => self::getCurrentProtocolVersion(),
         ];
@@ -79,6 +85,10 @@ class ProtocolEvolutionEngine
             'success_patterns' => self::findSuccessPatterns($executions),
             'failure_patterns' => self::findFailurePatterns($executions),
             'optimization_opportunities' => self::suggestOptimizations($executions),
+            // AI-specific analysis
+            'ai_performance' => self::analyzeAIPerformance($executions),
+            'code_comprehension_metrics' => self::analyzeCodeComprehension($executions),
+            'ai_optimization_suggestions' => self::suggestAIOptimizations($executions),
             'generated_at' => time(),
         ];
 
@@ -250,6 +260,170 @@ class ProtocolEvolutionEngine
     }
 
     /**
+     * Analyze AI agent performance metrics.
+     */
+    private static function analyzeAIPerformance(array $executions): array
+    {
+        $aiMetrics = [
+            'context_provision_rate' => 0,
+            'average_comprehension_score' => 0,
+            'suggestion_acceptance_rate' => 0,
+            'ai_interaction_count' => 0,
+        ];
+
+        $totalExecutions = count($executions);
+        $aiInteractions = 0;
+        $totalComprehensionScore = 0;
+        $totalSuggestionsAccepted = 0;
+        $contextProvided = 0;
+
+        foreach ($executions as $execution) {
+            $metrics = $execution['metrics'];
+            if (isset($metrics['ai_context_provided']) && $metrics['ai_context_provided']) {
+                $contextProvided++;
+            }
+            if (isset($metrics['code_comprehension_score']) && $metrics['code_comprehension_score'] > 0) {
+                $aiInteractions++;
+                $totalComprehensionScore += $metrics['code_comprehension_score'];
+                $totalSuggestionsAccepted += $metrics['ai_suggestions_accepted'] ?? 0;
+            }
+        }
+
+        if ($totalExecutions > 0) {
+            $aiMetrics['context_provision_rate'] = $contextProvided / $totalExecutions;
+        }
+        if ($aiInteractions > 0) {
+            $aiMetrics['average_comprehension_score'] = $totalComprehensionScore / $aiInteractions;
+            $aiMetrics['suggestion_acceptance_rate'] = $totalSuggestionsAccepted / $aiInteractions;
+        }
+        $aiMetrics['ai_interaction_count'] = $aiInteractions;
+
+        return $aiMetrics;
+    }
+
+    /**
+     * Analyze code comprehension effectiveness.
+     */
+    private static function analyzeCodeComprehension(array $executions): array
+    {
+        $comprehensionMetrics = [
+            'average_score' => 0,
+            'improvement_trend' => 0,
+            'high_impact_steps' => [],
+            'comprehension_gaps' => [],
+        ];
+
+        $scores = [];
+        $stepScores = [];
+
+        foreach ($executions as $execution) {
+            $score = $execution['metrics']['code_comprehension_score'] ?? 0;
+            if ($score > 0) {
+                $scores[] = $score;
+                $stepId = $execution['step_id'];
+                if (!isset($stepScores[$stepId])) {
+                    $stepScores[$stepId] = [];
+                }
+                $stepScores[$stepId][] = $score;
+            }
+        }
+
+        if (!empty($scores)) {
+            $comprehensionMetrics['average_score'] = array_sum($scores) / count($scores);
+
+            // Calculate improvement trend (simple linear trend)
+            if (count($scores) > 1) {
+                $firstHalf = array_slice($scores, 0, intval(count($scores) / 2));
+                $secondHalf = array_slice($scores, intval(count($scores) / 2));
+                $firstAvg = array_sum($firstHalf) / count($firstHalf);
+                $secondAvg = array_sum($secondHalf) / count($secondHalf);
+                $comprehensionMetrics['improvement_trend'] = $secondAvg - $firstAvg;
+            }
+
+            // Identify high-impact steps
+            foreach ($stepScores as $stepId => $stepScoreArray) {
+                $avgScore = array_sum($stepScoreArray) / count($stepScoreArray);
+                if ($avgScore > 0.8) {
+                    $comprehensionMetrics['high_impact_steps'][] = [
+                        'step' => $stepId,
+                        'average_score' => round($avgScore, 2),
+                        'executions' => count($stepScoreArray),
+                    ];
+                }
+            }
+
+            // Identify comprehension gaps
+            foreach ($stepScores as $stepId => $stepScoreArray) {
+                $avgScore = array_sum($stepScoreArray) / count($stepScoreArray);
+                if ($avgScore < 0.5) {
+                    $comprehensionMetrics['comprehension_gaps'][] = [
+                        'step' => $stepId,
+                        'average_score' => round($avgScore, 2),
+                        'needs_improvement' => true,
+                    ];
+                }
+            }
+        }
+
+        return $comprehensionMetrics;
+    }
+
+    /**
+     * Suggest AI-specific optimizations.
+     */
+    private static function suggestAIOptimizations(array $executions): array
+    {
+        $suggestions = [];
+        $aiAnalysis = self::analyzeAIPerformance($executions);
+        $comprehensionAnalysis = self::analyzeCodeComprehension($executions);
+
+        // Context provision suggestions
+        if ($aiAnalysis['context_provision_rate'] < 0.7) {
+            $suggestions[] = [
+                'type' => 'ai_context_improvement',
+                'priority' => 'high',
+                'suggestion' => 'Increase AI context provision rate - currently ' .
+                    round($aiAnalysis['context_provision_rate'] * 100, 1) . '%',
+                'benefit' => 'Better AI comprehension and more accurate suggestions',
+            ];
+        }
+
+        // Comprehension improvement suggestions
+        if ($comprehensionAnalysis['average_score'] < 0.7) {
+            $suggestions[] = [
+                'type' => 'code_clarity_improvement',
+                'priority' => 'high',
+                'suggestion' => 'Improve code clarity for AI comprehension - average score: ' .
+                    round($comprehensionAnalysis['average_score'], 2),
+                'benefit' => 'Enhanced AI-driven development and maintenance',
+            ];
+        }
+
+        // Learning trend analysis
+        if ($comprehensionAnalysis['improvement_trend'] < 0) {
+            $suggestions[] = [
+                'type' => 'ai_learning_optimization',
+                'priority' => 'medium',
+                'suggestion' => 'AI comprehension is declining - investigate protocol changes',
+                'benefit' => 'Maintain AI effectiveness over time',
+            ];
+        }
+
+        // Step-specific optimizations
+        foreach ($comprehensionAnalysis['comprehension_gaps'] as $gap) {
+            $suggestions[] = [
+                'type' => 'step_optimization',
+                'priority' => 'medium',
+                'step' => $gap['step'],
+                'suggestion' => 'Improve AI comprehension for step: ' . $gap['step'],
+                'benefit' => 'Better AI assistance for specific protocol steps',
+            ];
+        }
+
+        return $suggestions;
+    }
+
+    /**
      * Generate variations of the protocol.
      */
     private static function generateProtocolVariations(array $currentProtocol, array $analysis): array
@@ -370,6 +544,8 @@ class ProtocolEvolutionEngine
             'success_rate' => $totalCount > 0 ? $successCount / $totalCount : 0,
             'error_reduction' => max(0, 1 - ($errorCount / max(1, $totalCount))),
             'maintainability' => self::calculateMaintainabilityScore($protocol),
+            'ai_comprehension' => self::calculateAIComprehensionScore($protocol, $executions),
+            'code_quality' => self::calculateCodeQualityScore($protocol),
         ];
     }
 
@@ -394,6 +570,83 @@ class ProtocolEvolutionEngine
                 $score += 0.1; // Optimization hints are good
             }
         }
+
+        return max(0, min(1, $score));
+    }
+
+    /**
+     * Calculate AI comprehension score based on protocol structure.
+     */
+    private static function calculateAIComprehensionScore(array $protocol, array $executions): float
+    {
+        $score = 0.5; // Base score
+
+        // Reward protocols with clear, descriptive steps (easier for AI to understand)
+        foreach ($protocol as $step) {
+            $stepLength = strlen($step);
+            if ($stepLength > 20 && $stepLength < 100) {
+                $score += 0.05; // Good length for comprehension
+            }
+            if (strpos($step, 'AI-') !== false) {
+                $score += 0.1; // AI-specific steps
+            }
+            if (strpos($step, 'FAST TRACK') !== false) {
+                $score += 0.05; // Fast track indicators help AI prioritize
+            }
+        }
+
+        // Analyze execution data for AI interaction patterns
+        $aiInteractionScore = 0;
+        $interactionCount = 0;
+        foreach ($executions as $execution) {
+            if (isset($execution['metrics']['code_comprehension_score'])) {
+                $aiInteractionScore += $execution['metrics']['code_comprehension_score'];
+                $interactionCount++;
+            }
+        }
+        if ($interactionCount > 0) {
+            $score = ($score + ($aiInteractionScore / $interactionCount)) / 2;
+        }
+
+        return max(0, min(1, $score));
+    }
+
+    /**
+     * Calculate code quality score based on protocol structure.
+     */
+    private static function calculateCodeQualityScore(array $protocol): float
+    {
+        $score = 0.5; // Base score
+
+        // Reward well-structured protocols
+        $phaseCount = 0;
+        foreach ($protocol as $step) {
+            if (strpos($step, 'Phase ') !== false) {
+                $phaseCount++;
+            }
+        }
+        if ($phaseCount > 0) {
+            $score += min(0.2, $phaseCount * 0.05); // Up to 0.2 for good phase organization
+        }
+
+        // Penalize overly complex protocols
+        if (count($protocol) > 25) {
+            $score -= 0.1;
+        }
+
+        // Reward clear categorization
+        $categoryKeywords = ['FAST TRACK', 'AI-FOCUSED', 'AI-DRIVEN', 'AI-VALIDATED'];
+        $categoryMatches = 0;
+        foreach ($protocol as $step) {
+            foreach ($categoryKeywords as $keyword) {
+                if (strpos($step, $keyword) !== false) {
+                    $categoryMatches++;
+
+                    break;
+                }
+            }
+        }
+        $score += min(0.2, $categoryMatches * 0.02); // Up to 0.2 for good categorization
 
         return max(0, min(1, $score));
     }
