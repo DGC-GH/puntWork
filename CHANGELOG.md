@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Protocol update: Always check debug.log for new errors before running tests
 
 ### Fixed
-- Fixed feed download path issue causing "Invalid file path" errors by correcting download_feed function call to pass full file path
+- **AJAX 500 Error Fix**: Removed large logs array from AJAX responses in process_feed and combine_jsonl handlers to prevent JSON encoding failures and memory exhaustion, resolving client-side 500 errors during feed processing
 - Added debug logs to SSE endpoint to track data serialization and detect "undefined" responses causing JSON parse errors
 - Enhanced import locking mechanism with detailed debug logs to diagnose and prevent "Import already running" false positives
 - Changed default feed format detection from XML to JSON to properly handle modern API feeds

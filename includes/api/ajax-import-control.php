@@ -1364,18 +1364,16 @@ function process_feed_ajax()
             [
                 'feed_key' => $feed_key,
                 'item_count' => $item_count,
-                'logs' => $logs,
+                'logs_count' => count($logs),
             ]
         );
 
         error_log('[PUNTWORK] [DEBUG-PHP] ===== PROCESS_FEED_AJAX SUCCESS =====');
-        wp_send_json_success(
-            [
-                'feed_key' => $feed_key,
-                'item_count' => $item_count,
-                'logs' => $logs,
-            ]
-        );
+        wp_send_json_success([
+            'feed_key' => $feed_key,
+            'item_count' => $item_count,
+            'message' => 'Feed processed successfully',
+        ]);
     } catch (\Exception $e) {
         error_log('[PUNTWORK] [DEBUG-PHP] process_feed_ajax exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
         error_log('[PUNTWORK] [DEBUG-PHP] Stack trace: ' . $e->getTraceAsString());

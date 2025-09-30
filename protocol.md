@@ -1,10 +1,17 @@
-- redownload download debug.log using PASS in [text](ftp_script.txt)
-- read Console.txt if attached
+- redownload current version of debug.log from the server using [text](ftp_script.txt) and replace the local version of debug.log
+- read debug.log
+- read Console.txt
 - identify problems
-- analyze code
-- fix issues
+- debug issues
+- analyze code base
+- fix errors
+- optimize and echnace features
 - add comprehensive debug logs
+- update analyze-import-logs.sh
+- update import-flow.md
+- update CHANGELOG.md
+- update README.md
 - commit
 - output summery
 - ask to push
-- remove debug.log on the server via SSH using PASS in [text](.env)
+- remove debug.log on the server [fond a way]

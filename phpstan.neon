@@ -1,6 +1,5 @@
 parameters:
     level: 5
-    memoryLimit: 512M
     paths:
         - includes/
         - puntwork.php
