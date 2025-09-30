@@ -5,6 +5,9 @@
 - **Fitness Score**: Calculated from execution metrics
 - **Evolution Cycle**: Runs automatically after each execution
 - **AI Optimization**: Enhanced for code comprehension and agent interaction
+- **FAST TRACK**: Use protocol.md as prompt for Grok Code Fast 1 copilot agent to execute maintenance protocol
+- **FAST TRACK**: After protocol execution, run evolution analysis: `php -r "require_once 'includes/utilities/ProtocolEvolutionEngine.php'; use Puntwork\ProtocolEvolution\ProtocolEvolutionEngine; echo json_encode(ProtocolEvolutionEngine::analyzeAndSuggestImprovements(), JSON_PRETTY_PRINT);"`
+- **FAST TRACK**: Apply best evolution improvement: `php -r "require_once 'includes/utilities/ProtocolEvolutionEngine.php'; use Puntwork\ProtocolEvolution\ProtocolEvolutionEngine; \$analysis = ProtocolEvolutionEngine::analyzeAndSuggestImprovements(); if (!empty(\$analysis['protocol_variations'])) { \$applied = ProtocolEvolutionEngine::applyProtocolVariation(\$analysis['protocol_variations'][0]); echo 'Improvement applied: ' . (\$applied ? 'SUCCESS' : 'FAILED') . PHP_EOL; }"`
 - **FAST TRACK**: redownload current version of debug.log from the server using [text](ftp_script.txt) and replace the local version of debug.log
 - **FAST TRACK**: read debug.log (extract error patterns, performance metrics, memory usage)
 - **AI-ENHANCED**: run analyze-import-logs.sh to get performance insights and error analysis (parse for AI-actionable insights)
@@ -26,13 +29,10 @@
 - **AI-GENERATED**: update README.md with enhanced code documentation
 - **EVOLUTION STEP**: run protocol evolution analysis (analyze execution metrics, generate improvements)
 - **EVOLUTION STEP**: evaluate and apply protocol variations if fitness score improves >5%
-- **AI STEP**: analyze AI agent performance (track comprehension success, suggestion accuracy)
-- **AI STEP**: optimize protocol for AI interaction (improve prompts, context provision)
-- **AI-VALIDATED**: commit with AI-generated commit messages
-- **AI-VALIDATED**: output summary with AI insights and recommendations
-- **AI-VALIDATED**: ask to push with risk assessment
-- **FAST TRACK**: clear debug.log on the server using FTP: create empty local debug.log, then use ftp script with 'put debug.log' instead of 'get debug.log'
-- **EVOLUTION STEP**: record execution metrics for continuous learning
+- **EVOLUTION STEP**: record protocol execution metrics for continuous learning
+- **EVOLUTION STEP**: after each protocol run, record key metrics: `php evolution-helper.php record <step_id> true <duration>`
+- **EVOLUTION STEP**: analyze AI agent performance (track comprehension success, suggestion accuracy)
+- **EVOLUTION STEP**: optimize protocol for AI interaction (improve prompts, context provision)
 - **Context Mapping**: Automatically map code relationships and dependencies
 - **Pattern Recognition**: Identify common code smells and anti-patterns
 - **Documentation Generation**: Create AI-readable documentation for complex logic

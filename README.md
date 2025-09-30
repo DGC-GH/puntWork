@@ -175,8 +175,8 @@ puntWork includes an advanced evolutionary algorithm that automatically improves
 
 ### Key Components
 - **ProtocolEvolutionEngine**: Core evolution engine with analysis, variation generation, and fitness scoring
-- **run-protocol.php**: Self-improving protocol runner that integrates evolution into each execution
-- **run-protocol.sh**: Shell wrapper for easy protocol execution
+- **protocol.md**: Comprehensive maintenance protocol documentation and AI prompts
+- **evolution-helper.php**: Command-line tool for managing protocol evolution
 - **protocol-evolution-data.json**: Evolution data storage and analytics
 
 ### How It Works
@@ -189,12 +189,27 @@ puntWork includes an advanced evolutionary algorithm that automatically improves
 ### Usage
 
 #### Run the Self-Improving Protocol
-```bash
-# Quick execution
-./run-protocol.sh
+Use `protocol.md` as a prompt for Grok Code Fast 1 copilot agent:
+1. Ask the copilot to execute protocol.md steps
+2. Push resulting changes to repository
+3. Test on WordPress admin page (run import, check functionality)
+4. Save console logs to Console.txt
+5. Re-run protocol.md prompt to verify improvements and identify next issues
 
-# Or directly with PHP
-php run-protocol.php
+#### Evolution Management
+Use the evolution helper script to manage protocol improvements:
+```bash
+# Analyze current performance and suggest improvements
+php evolution-helper.php analyze
+
+# Apply the best available protocol improvement
+php evolution-helper.php apply
+
+# Record a protocol step execution
+php evolution-helper.php record <step_id> <success> <duration>
+
+# Check evolution status
+php evolution-helper.php status
 ```
 
 #### Manual Evolution Control
@@ -554,7 +569,7 @@ Server files are accessible via FTP using credentials from .env file:
 
 ## Maintenance Protocol
 
-This project includes a self-improving maintenance protocol that runs automated analysis and optimization cycles. The protocol is documented in `protocol.md` and executed via `run-protocol.php`.
+This project includes a self-improving maintenance protocol that runs automated analysis and optimization cycles. The protocol is documented in `protocol.md` and executed via Grok Code Fast 1 copilot agent.
 
 ### Key Features:
 - **AI-Enhanced Analysis**: Code comprehension scoring, pattern recognition, error correlation
@@ -563,9 +578,7 @@ This project includes a self-improving maintenance protocol that runs automated 
 - **Continuous Learning**: Metrics collection for improving future executions
 
 ### Running the Protocol:
-```bash
-php run-protocol.php
-```
+Use `protocol.md` as a prompt for Grok Code Fast 1 copilot agent to execute the maintenance steps interactively.
 
 ### Protocol Evolution Data:
 - Evolution metrics stored in `protocol-evolution-data.json`
