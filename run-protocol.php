@@ -366,9 +366,9 @@ class SelfImprovingProtocolRunner
         $totalTime = microtime(true) - $this->startTime;
         $successRate = count(array_filter($results, fn($r) => $r['success'] ?? false)) / count($results);
 
-        // Store summary metrics only, not the full results to avoid recursion
+        // Store only essential summary metrics, not the full results
         $this->evolutionEngine->recordStepExecution('protocol_complete', true, $totalTime, [
-            'success_rate' => $successRate,
+            'success_rate' => round($successRate, 2),
             'total_steps' => count($results),
             'evolution_applied' => $results['apply_improvements']['data']['applied'] ?? false
         ]);
