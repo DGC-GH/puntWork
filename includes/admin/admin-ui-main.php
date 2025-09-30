@@ -201,7 +201,7 @@ function render_main_import_ui(): void
 					<p class="puntwork-card__subtitle">Start, pause, or resume job imports from configured feeds.</p>
 				</div>
 
-				<?php if (false): // Always hide the warning since Start Import now processes feeds first ?>
+				<?php if (false): // Always hide the warning since Start Import now processes feeds first?>
 				<!-- No Data Available Notice -->
 				<div class="puntwork-card__body" style="background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: var(--radius-md); padding: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
 					<div style="display: flex; align-items: flex-start; gap: var(--spacing-md);">
