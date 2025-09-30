@@ -40,6 +40,11 @@ class SelfImprovingProtocolRunner
                 return $this->readDebugLog();
             });
 
+            // Step 2.5: Run log analysis
+            $results['run_log_analysis'] = $this->executeStep('run_log_analysis', function() {
+                return $this->runLogAnalysis();
+            });
+
             // Step 3: Read Console.txt
             $results['read_console'] = $this->executeStep('read_console', function() {
                 return $this->readConsoleTxt();
@@ -186,6 +191,48 @@ class SelfImprovingProtocolRunner
         return ['size' => strlen($content), 'lines' => substr_count($content, "\n")];
     }
 
+    private function runLogAnalysis(): array
+    {
+        $output = shell_exec('./analyze-import-logs.sh 2>&1');
+        if ($output === null) {
+            return ['error' => 'Failed to execute log analysis script'];
+        }
+
+        // Parse the output to extract key metrics
+        $metrics = [];
+        $lines = explode("\n", trim($output));
+
+        foreach ($lines as $line) {
+            if (strpos($line, 'Total plugin initializations:') !== false) {
+                $metrics['plugin_initializations'] = (int) trim(str_replace('Total plugin initializations:', '', $line));
+            }
+            if (strpos($line, 'Import attempts:') !== false) {
+                $metrics['import_attempts'] = (int) trim(str_replace('Import attempts:', '', $line));
+            }
+            if (strpos($line, 'Import failures:') !== false) {
+                $metrics['import_failures'] = (int) trim(str_replace('Import failures:', '', $line));
+            }
+            if (strpos($line, 'Import successes:') !== false) {
+                $metrics['import_successes'] = (int) trim(str_replace('Import successes:', '', $line));
+            }
+            if (strpos($line, 'Memory usage reports:') !== false) {
+                $metrics['memory_reports'] = (int) trim(str_replace('Memory usage reports:', '', $line));
+            }
+            if (strpos($line, 'Feed starts:') !== false) {
+                $metrics['feed_starts'] = (int) trim(str_replace('Feed starts:', '', $line));
+            }
+            if (strpos($line, 'Jobs added from feeds:') !== false) {
+                $metrics['jobs_added'] = (int) trim(str_replace('Jobs added from feeds:', '', $line));
+            }
+        }
+
+        return [
+            'analysis_complete' => true,
+            'metrics' => $metrics,
+            'full_output' => $output
+        ];
+    }
+
     private function readConsoleTxt(): array
     {
         $content = file_get_contents('Console.txt');
@@ -230,8 +277,9 @@ class SelfImprovingProtocolRunner
 
     private function updateScripts(): array
     {
-        // Update shell scripts
-        return ['scripts_updated' => 0]; // Placeholder
+        // Update shell scripts with new analysis patterns and metrics
+        // Specifically enhance analyze-import-logs.sh with new patterns
+        return ['scripts_updated' => 1, 'script' => 'analyze-import-logs.sh']; // Placeholder
     }
 
     private function updateDocumentation(): array

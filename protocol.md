@@ -10,6 +10,7 @@
 
 - redownload current version of debug.log from the server using [text](ftp_script.txt) and replace the local version of debug.log
 - read debug.log
+- run analyze-import-logs.sh to get performance insights and error analysis
 - read Console.txt
 - identify problems
 - debug issues (check for AJAX response size issues, large logs arrays causing JSON encoding failures)
@@ -17,7 +18,7 @@
 - fix errors
 - optimize and enhance features
 - add comprehensive debug logs
-- update analyze-import-logs.sh
+- update analyze-import-logs.sh with new analysis patterns and metrics
 - update import-flow.md
 - update CHANGELOG.md
 - update README.md
