@@ -35,6 +35,7 @@ require_once __DIR__ . '/../jobboards/jobboard-manager.php';
 require_once __DIR__ . '/../jobboards/indeed-board.php';
 require_once __DIR__ . '/../jobboards/linkedin-board.php';
 require_once __DIR__ . '/../jobboards/glassdoor-board.php';
+require_once __DIR__ . '/../utilities/ImportAnalytics.php';  // Load ImportAnalytics to prevent class not found errors
 
 /*
  * AJAX handlers for import control operations

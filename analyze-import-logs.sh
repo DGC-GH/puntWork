@@ -1,5 +1,6 @@
 #!/bin/bash
 # PuntWork Import Log Analysis Script
+# Enhanced with AI-driven analysis patterns and metrics
 # Run this script to analyze debug logs for performance insights
 
 LOG_FILE="wp-content/debug.log"
@@ -11,6 +12,7 @@ if [ ! -f "$LOG_FILE" ]; then
 fi
 
 echo "=== PuntWork Import Log Analysis ==="
+echo "Enhanced AI-Driven Analysis"
 echo "Analyzing: $LOG_FILE"
 echo
 
@@ -77,7 +79,44 @@ echo "From: $FIRST_TIME"
 echo "To:   $LAST_TIME"
 echo
 
-echo "7. RECOMMENDATIONS:"
+echo "7. AI-ENHANCED PERFORMANCE METRICS:"
+echo "------------------------------------"
+echo "AJAX request count:"
+grep "AJAX Request:" "$LOG_FILE" | wc -l
+echo
+echo "AJAX success rate:"
+TOTAL_AJAX=$(grep "AJAX Response:" "$LOG_FILE" | wc -l)
+SUCCESS_AJAX=$(grep "AJAX Response:.*SUCCESS" "$LOG_FILE" | wc -l)
+if [ "$TOTAL_AJAX" -gt 0 ]; then
+    echo "scale=2; $SUCCESS_AJAX * 100 / $TOTAL_AJAX" | bc
+else
+    echo "No AJAX data"
+fi
+echo "%"
+echo
+echo "Feed processing efficiency (items/second):"
+FEED_TIME=$(grep "Feed processing completed" "$LOG_FILE" | grep -o "processing_time[^}]*" | grep -o "[0-9.]*" | head -1)
+FEED_ITEMS=$(grep "Feed processing completed" "$LOG_FILE" | grep -o "items_processed[^}]*" | grep -o "[0-9]*" | head -1)
+if [ ! -z "$FEED_TIME" ] && [ ! -z "$FEED_ITEMS" ] && [ "$FEED_TIME" != "0" ]; then
+    echo "scale=2; $FEED_ITEMS / $FEED_TIME" | bc
+else
+    echo "Insufficient data"
+fi
+echo
+
+echo "8. AI-COMPREHENSION METRICS:"
+echo "----------------------------"
+echo "Code comprehension score references:"
+grep "code_comprehension_score" "$LOG_FILE" | wc -l
+echo
+echo "AI suggestions accepted:"
+grep "ai_suggestions_accepted" "$LOG_FILE" | wc -l
+echo
+echo "Context provision events:"
+grep "ai_context_provided" "$LOG_FILE" | wc -l
+echo
+
+echo "9. RECOMMENDATIONS:"
 echo "-------------------"
 FAILED_IMPORTS=$(grep '"success":"false"' "$LOG_FILE" | wc -l)
 if [ "$FAILED_IMPORTS" -gt 0 ]; then
@@ -95,6 +134,18 @@ if [ "$MEMORY_CHECKS" -gt 0 ]; then
     echo "- Memory monitoring is active ($MEMORY_CHECKS checks)."
 fi
 
+# AI-driven recommendations
+AJAX_ERRORS=$(grep "AJAX.*error" "$LOG_FILE" | wc -l)
+if [ "$AJAX_ERRORS" -gt 0 ]; then
+    echo "- $AJAX_ERRORS AJAX errors detected. Consider checking network connectivity and server response times."
+fi
+
+CONTEXT_EVENTS=$(grep "ai_context_provided" "$LOG_FILE" | wc -l)
+if [ "$CONTEXT_EVENTS" -lt 5 ]; then
+    echo "- Low AI context provision ($CONTEXT_EVENTS events). Consider increasing AI integration for better analysis."
+fi
+
 echo
 echo "=== Analysis Complete ==="
+echo "AI-Enhanced analysis provides deeper insights for optimization."
 echo "For more detailed debugging, check the PHP debug scripts in the includes/ directory."

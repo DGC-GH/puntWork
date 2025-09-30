@@ -88,10 +88,14 @@ puntwork/
 - **includes/core/core-structure-logic.php**: Core setup functions
 - **includes/admin/admin-menu.php**: Admin menu registration
 - **includes/api/rest-api.php**: REST API setup
+- **includes/api/ajax-import-control.php**: AJAX handlers for import operations with enhanced debug logging and class loading fixes
 - **includes/batch/batch-core.php**: Batch processing core logic
 - **includes/import/import-batch.php**: Import processing
-- **includes/utilities/PuntWorkLogger.php**: Logging class
+- **includes/import/feed-processor.php**: Multi-format feed processing (XML/JSON/CSV) with batch optimization
+- **includes/utilities/PuntWorkLogger.php**: Logging class with contextual logging
+- **includes/utilities/ImportAnalytics.php**: Analytics tracking for import operations
 - **includes/ai/job-categorizer.php**: AI job categorization
+- **analyze-import-logs.sh**: Enhanced AI-driven log analysis script with performance metrics and recommendations
 - **mobile/App.js**: React Native app entry
 - **tests/ImportTest.php**: PHPUnit import tests
 - **docker-compose.yml**: Docker services configuration

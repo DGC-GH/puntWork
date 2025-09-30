@@ -2072,6 +2072,566 @@
                 "ai_suggestions_accepted": 0
             },
             "protocol_version": "1759232331"
+        },
+        {
+            "step_id": "download_debug",
+            "timestamp": 1759232891,
+            "metrics": {
+                "success": true,
+                "duration": 9.5367431640625e-7,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "read_debug",
+            "timestamp": 1759232891,
+            "metrics": {
+                "success": true,
+                "duration": 3.0994415283203125e-6,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "run_log_analysis",
+            "timestamp": 1759232891,
+            "metrics": {
+                "success": true,
+                "duration": 0.005604982376098633,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "read_console",
+            "timestamp": 1759232891,
+            "metrics": {
+                "success": true,
+                "duration": 0.000308990478515625,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "identify_problems",
+            "timestamp": 1759232891,
+            "metrics": {
+                "success": true,
+                "duration": 9.5367431640625e-7,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "debug_issues",
+            "timestamp": 1759232891,
+            "metrics": {
+                "success": true,
+                "duration": 9.5367431640625e-7,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "analyze_codebase",
+            "timestamp": 1759232891,
+            "metrics": {
+                "success": true,
+                "duration": 0.024317026138305664,
+                "data_size": 4,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 1,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "fix_errors",
+            "timestamp": 1759232891,
+            "metrics": {
+                "success": true,
+                "duration": 2.1457672119140625e-6,
+                "data_size": 4,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.9,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "optimize_features",
+            "timestamp": 1759232891,
+            "metrics": {
+                "success": true,
+                "duration": 9.5367431640625e-7,
+                "data_size": 4,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.85,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "add_debug_logs",
+            "timestamp": 1759232891,
+            "metrics": {
+                "success": true,
+                "duration": 0,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "update_scripts",
+            "timestamp": 1759232891,
+            "metrics": {
+                "success": true,
+                "duration": 0,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "update_docs",
+            "timestamp": 1759232892,
+            "metrics": {
+                "success": true,
+                "duration": 9.5367431640625e-7,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "evolution_analysis",
+            "timestamp": 1759232892,
+            "metrics": {
+                "success": true,
+                "duration": 0.0018291473388671875,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "apply_improvements",
+            "timestamp": 1759232892,
+            "metrics": {
+                "success": true,
+                "duration": 2.86102294921875e-6,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "commit",
+            "timestamp": 1759232892,
+            "metrics": {
+                "success": true,
+                "duration": 9.5367431640625e-7,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "summary",
+            "timestamp": 1759232892,
+            "metrics": {
+                "success": true,
+                "duration": 7.152557373046875e-6,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "push_prompt",
+            "timestamp": 1759232892,
+            "metrics": {
+                "success": true,
+                "duration": 5.0067901611328125e-6,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "cleanup",
+            "timestamp": 1759232892,
+            "metrics": {
+                "success": true,
+                "duration": 9.5367431640625e-7,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "protocol_complete",
+            "timestamp": 1759232892,
+            "metrics": {
+                "success": true,
+                "duration": 0.03877615928649902,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "record_metrics",
+            "timestamp": 1759232892,
+            "metrics": {
+                "success": true,
+                "duration": 0.0003101825714111328,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "download_debug",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 1.9073486328125e-6,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "read_debug",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 3.814697265625e-6,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "run_log_analysis",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 0.004923820495605469,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "read_console",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 0.0002918243408203125,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "identify_problems",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 9.5367431640625e-7,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "debug_issues",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 9.5367431640625e-7,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "analyze_codebase",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 0.021991968154907227,
+                "data_size": 4,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 1,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "fix_errors",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 2.1457672119140625e-6,
+                "data_size": 4,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.9,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "optimize_features",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 9.5367431640625e-7,
+                "data_size": 4,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.85,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "add_debug_logs",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 9.5367431640625e-7,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "update_scripts",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 0,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "update_docs",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 0,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "evolution_analysis",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 0.0020339488983154297,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "apply_improvements",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 3.0994415283203125e-6,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "commit",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 9.5367431640625e-7,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "summary",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 5.9604644775390625e-6,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "push_prompt",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 1.1920928955078125e-6,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "cleanup",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 1.1920928955078125e-6,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "protocol_complete",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 0.03642106056213379,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
+        },
+        {
+            "step_id": "record_metrics",
+            "timestamp": 1759232949,
+            "metrics": {
+                "success": true,
+                "duration": 0.0004839897155761719,
+                "data_size": 1,
+                "has_error": false,
+                "ai_context_provided": false,
+                "code_comprehension_score": 0,
+                "ai_suggestions_accepted": 0
+            },
+            "protocol_version": "1759232862"
         }
     ],
     "applied_variations": [
