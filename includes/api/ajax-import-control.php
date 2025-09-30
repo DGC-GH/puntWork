@@ -23,6 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once __DIR__ . '/../utilities/SecurityUtils.php';
 require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
 require_once __DIR__ . '/../utilities/CacheManager.php';
+require_once __DIR__ . '/../utilities/EnhancedCacheManager.php';
 require_once __DIR__ . '/../utilities/AjaxErrorHandler.php';
 require_once __DIR__ . '/../utilities/DynamicRateLimiter.php';
 require_once __DIR__ . '/../utilities/AdvancedJsonlProcessor.php';

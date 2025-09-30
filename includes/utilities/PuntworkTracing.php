@@ -7,7 +7,6 @@
 
 namespace Puntwork;
 
-// Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -170,7 +169,9 @@ class PuntworkTracing {
 }
 
 // Initialize tracing on plugin load
-add_action( 'init', __NAMESPACE__ . '\\PuntworkTracing::init' );
+if ( function_exists( 'add_action' ) ) {
+	\add_action( 'init', __NAMESPACE__ . '\\PuntworkTracing::init' );
 
-// Shutdown tracing on plugin deactivation
-register_deactivation_hook( __FILE__, __NAMESPACE__ . '\\PuntworkTracing::shutdown' );
+	// Shutdown tracing on plugin deactivation
+	\register_deactivation_hook( __FILE__, __NAMESPACE__ . '\\PuntworkTracing::shutdown' );
+}
