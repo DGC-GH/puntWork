@@ -14,7 +14,6 @@ if (!defined('ABSPATH')) {
 }
 
 use Puntwork\Utilities\CacheManager;
-use Puntwork\PuntWorkLogger;
 
 // Include required utility classes
 require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
