@@ -184,6 +184,23 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Update details: title="' . $xml_title . '", validfrom="' . $xml_validfrom . '", modified="' . $post_modified . '"' );
 
+					// Temporarily disable ACF hooks to prevent hanging during wp_update_post
+					$acf_hooks_disabled = false;
+					if ( function_exists( 'acf' ) ) {
+						$acf_hooks_disabled = true;
+						error_log( '[PUNTWORK] [ITEMS-DEBUG] Temporarily disabling ACF hooks for wp_update_post' );
+						
+						// Remove common ACF hooks that might cause issues
+						remove_action( 'save_post', 'acf_save_post', 10 );
+						remove_action( 'wp_insert_post_data', 'acf_wp_insert_post_data', 10 );
+						remove_action( 'pre_post_update', 'acf_pre_post_update', 10 );
+						
+						// Disable ACF field saving temporarily
+						if ( function_exists( 'acf_disable_field_saving' ) ) {
+							acf_disable_field_saving();
+						}
+					}
+
 					$post_update_start = microtime( true );
 					wp_update_post(
 						array(
@@ -197,6 +214,21 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 					);
 					$post_update_time = microtime( true ) - $post_update_start;
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Post update completed in ' . number_format( $post_update_time, 4 ) . ' seconds' );
+
+					// Re-enable ACF hooks after wp_update_post
+					if ( $acf_hooks_disabled ) {
+						error_log( '[PUNTWORK] [ITEMS-DEBUG] Re-enabling ACF hooks after wp_update_post' );
+						
+						// Re-add ACF hooks
+						add_action( 'save_post', 'acf_save_post', 10, 1 );
+						add_action( 'wp_insert_post_data', 'acf_wp_insert_post_data', 10, 2 );
+						add_action( 'pre_post_update', 'acf_pre_post_update', 10, 2 );
+						
+						// Re-enable ACF field saving
+						if ( function_exists( 'acf_enable_field_saving' ) ) {
+							acf_enable_field_saving();
+						}
+					}
 
 					// Check for database errors after wp_update_post
 					global $wpdb;
@@ -242,6 +274,23 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Creating new post with: title="' . $xml_title . '", validfrom="' . $xml_validfrom . '", modified="' . $post_modified . '"' );
 
+					// Temporarily disable ACF hooks to prevent hanging during wp_insert_post
+					$acf_hooks_disabled = false;
+					if ( function_exists( 'acf' ) ) {
+						$acf_hooks_disabled = true;
+						error_log( '[PUNTWORK] [ITEMS-DEBUG] Temporarily disabling ACF hooks for wp_insert_post' );
+						
+						// Remove common ACF hooks that might cause issues
+						remove_action( 'save_post', 'acf_save_post', 10 );
+						remove_action( 'wp_insert_post_data', 'acf_wp_insert_post_data', 10 );
+						remove_action( 'pre_post_update', 'acf_pre_post_update', 10 );
+						
+						// Disable ACF field saving temporarily
+						if ( function_exists( 'acf_disable_field_saving' ) ) {
+							acf_disable_field_saving();
+						}
+					}
+
 					$post_data = array(
 						'post_type'      => 'job',  // Use existing CPT created with ACF
 						'post_title'     => $xml_title,
@@ -257,6 +306,21 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 					$post_id           = wp_insert_post( $post_data );
 					$post_insert_time  = microtime( true ) - $post_insert_start;
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Post insert completed in ' . number_format( $post_insert_time, 4 ) . ' seconds' );
+					
+					// Re-enable ACF hooks after wp_insert_post
+					if ( $acf_hooks_disabled ) {
+						error_log( '[PUNTWORK] [ITEMS-DEBUG] Re-enabling ACF hooks after wp_insert_post' );
+						
+						// Re-add ACF hooks
+						add_action( 'save_post', 'acf_save_post', 10, 1 );
+						add_action( 'wp_insert_post_data', 'acf_wp_insert_post_data', 10, 2 );
+						add_action( 'pre_post_update', 'acf_pre_post_update', 10, 2 );
+						
+						// Re-enable ACF field saving
+						if ( function_exists( 'acf_enable_field_saving' ) ) {
+							acf_enable_field_saving();
+						}
+					}
 					if ( is_wp_error( $post_id ) ) {
 						$error_msg = 'Create failed GUID: ' . $guid . ' - ' . $post_id->get_error_message();
 						$logs[]    = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . $error_msg;
