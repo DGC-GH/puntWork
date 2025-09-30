@@ -777,7 +777,7 @@ function handle_get_feed_details( $request ) {
 
 		$feed_health = FeedHealthMonitor::getFeedHealthStatus();
 		$health      = $feed_health[ $feed_key ] ?? null;
-		$history     = FeedHealthMonitor::get_feed_health_history( $feed_key, 7 );
+		$history     = FeedHealthMonitor::getFeedHealthHistory( $feed_key, 7 );
 
 		$feed_data = array(
 			'key'            => $feed_key,
