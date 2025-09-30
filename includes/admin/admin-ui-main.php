@@ -180,8 +180,8 @@ function render_main_import_ui(): void
     error_log('[PUNTWORK] [UI-VALIDATION] Combined JSONL file check - Path: ' . $jsonl_path . ', Exists: ' . ($jsonl_exists ? 'YES' : 'NO') . ', Size: ' . $jsonl_size . ' bytes');
 
     if (!$jsonl_exists || $jsonl_size === 0) {
-        error_log('[PUNTWORK] [UI-WARNING] No import data available - Combined JSONL file missing or empty, disabling Start Import button');
-        PuntWorkLogger::logAdminAction('UI Import Data Check', 'No import data available - combined JSONL file missing or empty', PuntWorkLogger::CONTEXT_ADMIN);
+        error_log('[PUNTWORK] [UI-WARNING] No import data available - Combined JSONL file missing or empty, but Start Import will process feeds first');
+        PuntWorkLogger::logAdminAction('UI Import Data Check', 'No import data available - combined JSONL file missing or empty, but Start Import will process feeds first', PuntWorkLogger::CONTEXT_ADMIN);
     } else {
         error_log('[PUNTWORK] [UI-SUCCESS] Import data available - Combined JSONL file found and valid');
     }
@@ -201,7 +201,7 @@ function render_main_import_ui(): void
 					<p class="puntwork-card__subtitle">Start, pause, or resume job imports from configured feeds.</p>
 				</div>
 
-				<?php if (!$jsonl_exists || $jsonl_size === 0): ?>
+				<?php if (false): // Always hide the warning since Start Import now processes feeds first ?>
 				<!-- No Data Available Notice -->
 				<div class="puntwork-card__body" style="background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: var(--radius-md); padding: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
 					<div style="display: flex; align-items: flex-start; gap: var(--spacing-md);">
@@ -221,7 +221,7 @@ function render_main_import_ui(): void
 
 				<div class="puntwork-card__footer">
 					<div style="display: flex; gap: var(--spacing-md); align-items: center; flex-wrap: wrap;">
-						<button id="start-import" class="puntwork-btn puntwork-btn--primary" <?php echo (!$jsonl_exists || $jsonl_size === 0) ? 'disabled title="No import data available - use Scheduling > Run Now instead"' : ''; ?>>
+						<button id="start-import" class="puntwork-btn puntwork-btn--primary">
 							<i class="fas fa-play puntwork-btn__icon"></i>
 							<span id="start-text">Start Import</span>
 							<span id="start-loading" style="display: none;">Starting...</span>
