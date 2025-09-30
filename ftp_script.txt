@@ -1,5 +1,5 @@
 open 153.92.216.191
-user u164580062.belgiumjobs.work Ftpbjw2105.
+user u164580062.belgiumjobs.work REDACTED
 cd public_html
 cd wp-content
 get debug.log
