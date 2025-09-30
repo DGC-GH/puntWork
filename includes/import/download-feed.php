@@ -68,13 +68,33 @@ function download_feed( $url, $feed_path, $output_dir, &$logs, &$format = null )
 			throw new \Exception( 'Output directory is not writable' );
 		}
 
-		try {
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [DOWNLOAD-DEBUG] Starting download...' );
-			}
+		// Check if URL is a local file path (for testing)
+		$is_local_file = false;
+		$local_file_path = null;
+		if ( strpos( $url, 'file://' ) === 0 ) {
+			$is_local_file = true;
+			$local_file_path = substr( $url, 7 ); // Remove 'file://' prefix
+		} elseif ( strpos( $url, '/' ) === 0 || strpos( $url, './' ) === 0 || strpos( $url, '../' ) === 0 ) {
+			// Relative or absolute local path
+			$is_local_file = true;
+			$local_file_path = $url;
+		}
 
-			// Download the feed
-			if ( function_exists( 'curl_init' ) ) {
+		try {
+			if ( $is_local_file ) {
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [DOWNLOAD-DEBUG] Using local file copy for: ' . $local_file_path );
+				}
+				if ( ! file_exists( $local_file_path ) ) {
+					throw new \Exception( 'Local file does not exist: ' . $local_file_path );
+				}
+				if ( ! copy( $local_file_path, $full_feed_path ) ) {
+					throw new \Exception( 'Failed to copy local file from ' . $local_file_path . ' to ' . $full_feed_path );
+				}
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [DOWNLOAD-DEBUG] Local file copied successfully' );
+				}
+			} elseif ( function_exists( 'curl_init' ) ) {
 				if ( $debug_mode ) {
 					error_log( '[PUNTWORK] [DOWNLOAD-DEBUG] Using cURL for download' );
 				}
