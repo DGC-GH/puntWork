@@ -151,7 +151,7 @@ class SelfImprovingProtocolRunner
 
             // Only record essential metrics, not full result data to prevent memory issues
             $essentialData = $this->extractEssentialData($stepName, $result);
-            // $this->recordStepExecution($stepName, true, $stepTime, $essentialData); // Disabled for testing
+            $this->recordStepExecution($stepName, true, $stepTime, $essentialData);
 
             echo "✅ {$stepName} completed in " . round($stepTime, 2) . "s\n\n";
             return ['success' => true, 'time' => $stepTime, 'data' => $result];
@@ -159,9 +159,9 @@ class SelfImprovingProtocolRunner
         } catch (Exception $e) {
             $stepTime = microtime(true) - $stepStart;
 
-            // $this->recordStepExecution($stepName, false, $stepTime, [ // Disabled for testing
-            //     'error' => $e->getMessage()
-            // ]);
+            $this->recordStepExecution($stepName, false, $stepTime, [
+                'error' => $e->getMessage()
+            ]);
 
             echo "❌ {$stepName} failed: " . $e->getMessage() . "\n\n";
             throw $e;
@@ -335,21 +335,92 @@ class SelfImprovingProtocolRunner
 
     private function runEvolutionAnalysis(): array
     {
-        // Temporarily disabled to prevent memory issues
-        return [
-            'variations_count' => 0,
-            'current_score' => 0,
-            'bottlenecks_found' => 0,
-            'optimizations_suggested' => 0,
-            'analysis_completed' => false,
-            'message' => 'Evolution analysis temporarily disabled'
-        ];
+        try {
+            echo "🧬 Running evolution analysis...\n";
+            $analysis = $this->evolutionEngine->analyzeAndSuggestImprovements();
+
+            if (isset($analysis['message'])) {
+                echo "📊 Evolution analysis: {$analysis['message']}\n";
+                return [
+                    'variations_count' => 0,
+                    'current_score' => 0,
+                    'bottlenecks_found' => 0,
+                    'optimizations_suggested' => 0,
+                    'analysis_completed' => false,
+                    'message' => $analysis['message']
+                ];
+            }
+
+            $variationsCount = count($analysis['protocol_variations'] ?? []);
+            $bottlenecksCount = count($analysis['bottlenecks'] ?? []);
+            $optimizationsCount = count($analysis['optimization_opportunities'] ?? []);
+            $currentScore = $analysis['current_protocol_score'] ?? 0;
+
+            echo "📊 Evolution analysis complete:\n";
+            echo "   - Protocol variations generated: {$variationsCount}\n";
+            echo "   - Bottlenecks identified: {$bottlenecksCount}\n";
+            echo "   - Optimizations suggested: {$optimizationsCount}\n";
+            echo "   - Current protocol score: " . round($currentScore, 3) . "\n";
+
+            return [
+                'variations_count' => $variationsCount,
+                'current_score' => $currentScore,
+                'bottlenecks_found' => $bottlenecksCount,
+                'optimizations_suggested' => $optimizationsCount,
+                'analysis_completed' => true,
+                'analysis_data' => $analysis
+            ];
+
+        } catch (Exception $e) {
+            echo "❌ Evolution analysis failed: " . $e->getMessage() . "\n";
+            return [
+                'variations_count' => 0,
+                'current_score' => 0,
+                'bottlenecks_found' => 0,
+                'optimizations_suggested' => 0,
+                'analysis_completed' => false,
+                'error' => $e->getMessage()
+            ];
+        }
     }
 
     private function applyImprovements(): array
     {
-        // Temporarily disabled to prevent memory issues
-        return ['applied' => false, 'reason' => 'Evolution application temporarily disabled'];
+        try {
+            echo "🔧 Applying protocol improvements...\n";
+
+            // Get the analysis results from the previous step
+            $analysis = $this->executionMetrics['evolution_analysis']['data']['analysis_data'] ?? null;
+
+            if (!$analysis || !isset($analysis['protocol_variations']) || empty($analysis['protocol_variations'])) {
+                echo "📋 No improvements to apply - no variations available\n";
+                return ['applied' => false, 'reason' => 'No variations available'];
+            }
+
+            // Apply the best variation
+            $bestVariation = $analysis['protocol_variations'][0];
+            $applied = $this->evolutionEngine->applyProtocolVariation($bestVariation);
+
+            if ($applied) {
+                echo "✅ Protocol improvement applied successfully!\n";
+                echo "   - Score improvement: " . round($bestVariation['score'] - ($analysis['current_protocol_score'] ?? 0), 3) . "\n";
+                echo "   - Improvements: " . implode(', ', $bestVariation['improvements'] ?? []) . "\n";
+
+                return [
+                    'applied' => true,
+                    'variation_score' => $bestVariation['score'],
+                    'improvements' => $bestVariation['improvements'] ?? [],
+                    'backup_created' => true
+                ];
+            } else {
+                echo "❌ Failed to apply protocol improvement\n";
+                return ['applied' => false, 'reason' => 'Application failed'];
+            }
+
+        } catch (Exception $e) {
+            echo "❌ Improvement application failed: " . $e->getMessage() . "\n";
+            return ['applied' => false, 'error' => $e->getMessage()];
+        }
     }
 
     private function commitChanges(): array
@@ -389,11 +460,11 @@ class SelfImprovingProtocolRunner
         $successRate = count(array_filter($results, fn($r) => $r['success'] ?? false)) / count($results);
 
         // Store only essential summary metrics, not the full results
-        // $this->evolutionEngine->recordStepExecution('protocol_complete', true, $totalTime, [ // Disabled for testing
-        //     'success_rate' => round($successRate, 2),
-        //     'total_steps' => count($results),
-        //     'evolution_applied' => $results['apply_improvements']['data']['applied'] ?? false
-        // ]);
+        $this->evolutionEngine->recordStepExecution('protocol_complete', true, $totalTime, [
+            'success_rate' => round($successRate, 2),
+            'total_steps' => count($results),
+            'evolution_applied' => $results['apply_improvements']['data']['applied'] ?? false
+        ]);
 
         return ['recorded' => true, 'total_time' => $totalTime, 'success_rate' => $successRate];
     }
