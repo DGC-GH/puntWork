@@ -2,7 +2,7 @@
 - read debug.log
 - read Console.txt
 - identify problems
-- debug issues
+- debug issues (check for AJAX response size issues, large logs arrays causing JSON encoding failures)
 - analyze code base
 - fix errors
 - optimize and echnace features

@@ -1489,21 +1489,19 @@ function combine_jsonl_ajax()
             'combine_jsonl',
             [
                 'total_items' => $total_items,
-                'logs' => $logs,
+                'logs_count' => count($logs),
                 'combined_file_exists' => file_exists($combined_file),
                 'combined_file_size' => $file_size ?? 0,
             ]
         );
 
         error_log('[PUNTWORK] [DEBUG-PHP] ===== COMBINE_JSONL_AJAX SUCCESS =====');
-        wp_send_json_success(
-            [
-                'total_items' => $total_items,
-                'logs' => $logs,
-                'combined_file_exists' => file_exists($combined_file),
-                'combined_file_size' => $file_size ?? 0,
-            ]
-        );
+        wp_send_json_success([
+            'total_items' => $total_items,
+            'message' => 'JSONL files combined successfully',
+            'combined_file_exists' => file_exists($combined_file),
+            'combined_file_size' => $file_size ?? 0,
+        ]);
     } catch (\Exception $e) {
         error_log('[PUNTWORK] [DEBUG-PHP] combine_jsonl_ajax exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
         error_log('[PUNTWORK] [DEBUG-PHP] Stack trace: ' . $e->getTraceAsString());
