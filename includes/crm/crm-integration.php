@@ -9,254 +9,245 @@
 namespace Puntwork\CRM;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
  * Abstract base class for CRM integrations.
  */
-abstract class CRMIntegration
-{
-    /**
-     * CRM platform identifier.
-     */
-    protected string $platform_id;
+abstract class CRMIntegration {
 
-    /**
-     * CRM platform name.
-     */
-    protected string $platform_name;
+	/**
+	 * CRM platform identifier.
+	 */
+	protected string $platform_id;
 
-    /**
-     * Configuration array.
-     */
-    protected array $config = [];
+	/**
+	 * CRM platform name.
+	 */
+	protected string $platform_name;
 
-    /**
-     * API rate limits.
-     */
-    protected array $rate_limits = [
-        'requests_per_minute' => 60,
-        'requests_per_hour' => 1000,
-        'requests_per_day' => 50000,
-    ];
+	/**
+	 * Configuration array.
+	 */
+	protected array $config = array();
 
-    /**
-     * Constructor.
-     */
-    public function __construct(array $config = [])
-    {
-        $this->config = $config;
-        $this->initialize();
-    }
+	/**
+	 * API rate limits.
+	 */
+	protected array $rate_limits = array(
+		'requests_per_minute' => 60,
+		'requests_per_hour'   => 1000,
+		'requests_per_day'    => 50000,
+	);
 
-    /**
-     * Initialize the CRM integration.
-     */
-    abstract protected function initialize(): void;
+	/**
+	 * Constructor.
+	 */
+	public function __construct( array $config = array() ) {
+		$this->config = $config;
+		$this->initialize();
+	}
 
-    /**
-     * Check if CRM is properly configured.
-     */
-    abstract public function isConfigured(): bool;
+	/**
+	 * Initialize the CRM integration.
+	 */
+	abstract protected function initialize(): void;
 
-    /**
-     * Test CRM connection.
-     */
-    abstract public function testConnection(): array;
+	/**
+	 * Check if CRM is properly configured.
+	 */
+	abstract public function isConfigured(): bool;
 
-    /**
-     * Create or update a contact/lead.
-     */
-    abstract public function createContact(array $contact_data): array;
+	/**
+	 * Test CRM connection.
+	 */
+	abstract public function testConnection(): array;
 
-    /**
-     * Update existing contact.
-     */
-    abstract public function updateContact(string $contact_id, array $contact_data): array;
+	/**
+	 * Create or update a contact/lead.
+	 */
+	abstract public function createContact( array $contact_data ): array;
 
-    /**
-     * Find contact by email.
-     */
-    abstract public function findContactByEmail(string $email): ?array;
+	/**
+	 * Update existing contact.
+	 */
+	abstract public function updateContact( string $contact_id, array $contact_data ): array;
 
-    /**
-     * Create a deal/opportunity.
-     */
-    abstract public function createDeal(array $deal_data): array;
+	/**
+	 * Find contact by email.
+	 */
+	abstract public function findContactByEmail( string $email ): ?array;
 
-    /**
-     * Get platform identifier.
-     */
-    public function getPlatformId(): string
-    {
-        return $this->platform_id;
-    }
+	/**
+	 * Create a deal/opportunity.
+	 */
+	abstract public function createDeal( array $deal_data ): array;
 
-    /**
-     * Get platform name.
-     */
-    abstract public static function getPlatformName(): string;
+	/**
+	 * Get platform identifier.
+	 */
+	public function getPlatformId(): string {
+		return $this->platform_id;
+	}
 
-    /**
-     * Get configuration.
-     */
-    public function getConfig(): array
-    {
-        return $this->config;
-    }
+	/**
+	 * Get platform name.
+	 */
+	abstract public static function getPlatformName(): string;
 
-    /**
-     * Update configuration.
-     */
-    public function updateConfig(array $config): void
-    {
-        $this->config = array_merge($this->config, $config);
-    }
+	/**
+	 * Get configuration.
+	 */
+	public function getConfig(): array {
+		return $this->config;
+	}
 
-    /**
-     * Check rate limits.
-     */
-    protected function checkRateLimit(): bool
-    {
-        $transient_key = 'crm_ratelimit_' . $this->platform_id;
-        $requests_today = get_transient($transient_key) ?: 0;
-        $requests_hour = get_transient($transient_key . '_hour_' . date('Y-m-d-H')) ?: 0;
-        $requests_minute = get_transient($transient_key . '_minute_' . date('Y-m-d-H-i')) ?: 0;
+	/**
+	 * Update configuration.
+	 */
+	public function updateConfig( array $config ): void {
+		$this->config = array_merge( $this->config, $config );
+	}
 
-        if ($requests_today >= $this->rate_limits['requests_per_day']) {
-            throw new \Exception('Daily rate limit exceeded for ' . $this->platform_name);
-        }
+	/**
+	 * Check rate limits.
+	 */
+	protected function checkRateLimit(): bool {
+		$transient_key   = 'crm_ratelimit_' . $this->platform_id;
+		$requests_today  = get_transient( $transient_key ) ?: 0;
+		$requests_hour   = get_transient( $transient_key . '_hour_' . date( 'Y-m-d-H' ) ) ?: 0;
+		$requests_minute = get_transient( $transient_key . '_minute_' . date( 'Y-m-d-H-i' ) ) ?: 0;
 
-        if ($requests_hour >= $this->rate_limits['requests_per_hour']) {
-            throw new \Exception('Hourly rate limit exceeded for ' . $this->platform_name);
-        }
+		if ( $requests_today >= $this->rate_limits['requests_per_day'] ) {
+			throw new \Exception( 'Daily rate limit exceeded for ' . $this->platform_name );
+		}
 
-        if ($requests_minute >= $this->rate_limits['requests_per_minute']) {
-            throw new \Exception('Minute rate limit exceeded for ' . $this->platform_name);
-        }
+		if ( $requests_hour >= $this->rate_limits['requests_per_hour'] ) {
+			throw new \Exception( 'Hourly rate limit exceeded for ' . $this->platform_name );
+		}
 
-        return true;
-    }
+		if ( $requests_minute >= $this->rate_limits['requests_per_minute'] ) {
+			throw new \Exception( 'Minute rate limit exceeded for ' . $this->platform_name );
+		}
 
-    /**
-     * Record API request for rate limiting.
-     */
-    protected function recordRequest(): void
-    {
-        $transient_key = 'crm_ratelimit_' . $this->platform_id;
+		return true;
+	}
 
-        // Daily counter
-        $requests_today = get_transient($transient_key) ?: 0;
-        set_transient($transient_key, $requests_today + 1, DAY_IN_SECONDS);
+	/**
+	 * Record API request for rate limiting.
+	 */
+	protected function recordRequest(): void {
+		$transient_key = 'crm_ratelimit_' . $this->platform_id;
 
-        // Hourly counter
-        $hour_key = $transient_key . '_hour_' . date('Y-m-d-H');
-        $requests_hour = get_transient($hour_key) ?: 0;
-        set_transient($hour_key, $requests_hour + 1, HOUR_IN_SECONDS);
+		// Daily counter
+		$requests_today = get_transient( $transient_key ) ?: 0;
+		set_transient( $transient_key, $requests_today + 1, DAY_IN_SECONDS );
 
-        // Minute counter
-        $minute_key = $transient_key . '_minute_' . date('Y-m-d-H-i');
-        $requests_minute = get_transient($minute_key) ?: 0;
-        set_transient($minute_key, $requests_minute + 1, MINUTE_IN_SECONDS);
-    }
+		// Hourly counter
+		$hour_key      = $transient_key . '_hour_' . date( 'Y-m-d-H' );
+		$requests_hour = get_transient( $hour_key ) ?: 0;
+		set_transient( $hour_key, $requests_hour + 1, HOUR_IN_SECONDS );
 
-    /**
-     * Make API request with error handling.
-     */
-    protected function makeApiRequest(string $endpoint, array $params = [], string $method = 'GET', array $headers = []): array
-    {
-        $this->checkRateLimit();
+		// Minute counter
+		$minute_key      = $transient_key . '_minute_' . date( 'Y-m-d-H-i' );
+		$requests_minute = get_transient( $minute_key ) ?: 0;
+		set_transient( $minute_key, $requests_minute + 1, MINUTE_IN_SECONDS );
+	}
 
-        $url = $this->getApiBaseUrl() . $endpoint;
+	/**
+	 * Make API request with error handling.
+	 */
+	protected function makeApiRequest( string $endpoint, array $params = array(), string $method = 'GET', array $headers = array() ): array {
+		$this->checkRateLimit();
 
-        $args = [
-            'method' => $method,
-            'headers' => array_merge($this->getDefaultHeaders(), $headers),
-            'timeout' => 30,
-        ];
+		$url = $this->getApiBaseUrl() . $endpoint;
 
-        if ($method == 'GET') {
-            $url .= '?' . http_build_query($params);
-        } else {
-            $args['body'] = json_encode($params);
-        }
+		$args = array(
+			'method'  => $method,
+			'headers' => array_merge( $this->getDefaultHeaders(), $headers ),
+			'timeout' => 30,
+		);
 
-        $response = wp_remote_request($url, $args);
+		if ( $method == 'GET' ) {
+			$url .= '?' . http_build_query( $params );
+		} else {
+			$args['body'] = json_encode( $params );
+		}
 
-        $this->recordRequest();
+		$response = wp_remote_request( $url, $args );
 
-        if (is_wp_error($response)) {
-            throw new \Exception('API request failed: ' . $response->get_error_message());
-        }
+		$this->recordRequest();
 
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
+		if ( is_wp_error( $response ) ) {
+			throw new \Exception( 'API request failed: ' . $response->get_error_message() );
+		}
 
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \Exception('Invalid JSON response from CRM API');
-        }
+		$body = wp_remote_retrieve_body( $response );
+		$data = json_decode( $body, true );
 
-        $this->handleApiError($data);
+		if ( json_last_error() !== JSON_ERROR_NONE ) {
+			throw new \Exception( 'Invalid JSON response from CRM API' );
+		}
 
-        return $data;
-    }
+		$this->handleApiError( $data );
 
-    /**
-     * Get API base URL.
-     */
-    abstract protected function getApiBaseUrl(): string;
+		return $data;
+	}
 
-    /**
-     * Get default headers for API requests.
-     */
-    abstract protected function getDefaultHeaders(): array;
+	/**
+	 * Get API base URL.
+	 */
+	abstract protected function getApiBaseUrl(): string;
 
-    /**
-     * Handle API-specific errors.
-     */
-    abstract protected function handleApiError(array $response): void;
+	/**
+	 * Get default headers for API requests.
+	 */
+	abstract protected function getDefaultHeaders(): array;
 
-    /**
-     * Standardize contact data format.
-     */
-    protected function standardizeContactData(array $contact_data): array
-    {
-        return [
-            'first_name' => $contact_data['first_name'] ?? '',
-            'last_name' => $contact_data['last_name'] ?? '',
-            'email' => $contact_data['email'] ?? '',
-            'phone' => $contact_data['phone'] ?? '',
-            'company' => $contact_data['company'] ?? '',
-            'job_title' => $contact_data['job_title'] ?? '',
-            'address' => $contact_data['address'] ?? '',
-            'city' => $contact_data['city'] ?? '',
-            'state' => $contact_data['state'] ?? '',
-            'zip' => $contact_data['zip'] ?? '',
-            'country' => $contact_data['country'] ?? '',
-            'website' => $contact_data['website'] ?? '',
-            'notes' => $contact_data['notes'] ?? '',
-            'tags' => $contact_data['tags'] ?? [],
-            'custom_fields' => $contact_data['custom_fields'] ?? [],
-        ];
-    }
+	/**
+	 * Handle API-specific errors.
+	 */
+	abstract protected function handleApiError( array $response ): void;
 
-    /**
-     * Standardize deal data format.
-     */
-    protected function standardizeDealData(array $deal_data): array
-    {
-        return [
-            'title' => $deal_data['title'] ?? '',
-            'value' => $deal_data['value'] ?? 0,
-            'currency' => $deal_data['currency'] ?? 'USD',
-            'stage' => $deal_data['stage'] ?? 'lead',
-            'contact_id' => $deal_data['contact_id'] ?? '',
-            'expected_close_date' => $deal_data['expected_close_date'] ?? '',
-            'description' => $deal_data['description'] ?? '',
-            'source' => $deal_data['source'] ?? 'puntwork',
-            'tags' => $deal_data['tags'] ?? [],
-        ];
-    }
+	/**
+	 * Standardize contact data format.
+	 */
+	protected function standardizeContactData( array $contact_data ): array {
+		return array(
+			'first_name'    => $contact_data['first_name'] ?? '',
+			'last_name'     => $contact_data['last_name'] ?? '',
+			'email'         => $contact_data['email'] ?? '',
+			'phone'         => $contact_data['phone'] ?? '',
+			'company'       => $contact_data['company'] ?? '',
+			'job_title'     => $contact_data['job_title'] ?? '',
+			'address'       => $contact_data['address'] ?? '',
+			'city'          => $contact_data['city'] ?? '',
+			'state'         => $contact_data['state'] ?? '',
+			'zip'           => $contact_data['zip'] ?? '',
+			'country'       => $contact_data['country'] ?? '',
+			'website'       => $contact_data['website'] ?? '',
+			'notes'         => $contact_data['notes'] ?? '',
+			'tags'          => $contact_data['tags'] ?? array(),
+			'custom_fields' => $contact_data['custom_fields'] ?? array(),
+		);
+	}
+
+	/**
+	 * Standardize deal data format.
+	 */
+	protected function standardizeDealData( array $deal_data ): array {
+		return array(
+			'title'               => $deal_data['title'] ?? '',
+			'value'               => $deal_data['value'] ?? 0,
+			'currency'            => $deal_data['currency'] ?? 'USD',
+			'stage'               => $deal_data['stage'] ?? 'lead',
+			'contact_id'          => $deal_data['contact_id'] ?? '',
+			'expected_close_date' => $deal_data['expected_close_date'] ?? '',
+			'description'         => $deal_data['description'] ?? '',
+			'source'              => $deal_data['source'] ?? 'puntwork',
+			'tags'                => $deal_data['tags'] ?? array(),
+		);
+	}
 }

@@ -10,19 +10,18 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
  * Render debug UI section (only in development).
  */
-function render_debug_ui()
-{
-    if (!defined('WP_DEBUG') || !WP_DEBUG) {
-        return;
-    }
-    ?>
+function render_debug_ui() {
+	if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
+		return;
+	}
+	?>
 	<!-- Debug Section (only in development) -->
 	<div style="max-width: 800px; margin: 0 auto; margin-top: 32px; background-color: #f9f9f9; border-radius: 12px; padding: 16px; border: 1px solid #e0e0e0;">
 		<h3 style="font-size: 14px; font-weight: 600; margin: 0 0 12px 0; color: #666;">Debug Information</h3>
