@@ -27,14 +27,20 @@ DEBUG
        - `[PUNTWORK] [ADMIN-MENU] Menu registration completed - Main menu and submenu items added`
      - console:
 
-2. **UI Rendering**
+2. **UI Rendering & Data Validation**
    - `render_main_import_ui()` called
+   - **NEW: Combined JSONL File Validation**
+     - Checks if `/feeds/combined-jobs.jsonl` exists and has content
+     - If missing/empty: Shows warning notice and disables "Start Import" button
+     - If valid: Enables normal import functionality
    - HTML elements render: `#start-import` button, progress bars, status displays
    - AJAX polling mechanism initialized
    - DEBUG
      - debug.log:
        - `[PUNTWORK] [UI-RENDER] render_main_import_ui() called - Rendering main import interface`
-       - `[PUNTWORK] [UI-RENDER] UI rendering completed - Import button, progress bars, and status displays ready`
+       - `[PUNTWORK] [UI-VALIDATION] Combined JSONL file check - Path: {path}, Exists: {yes|no}, Size: {bytes} bytes`
+       - `[PUNTWORK] [UI-WARNING] No import data available - Combined JSONL file missing or empty, disabling Start Import button` (when file missing)
+       - `[PUNTWORK] [UI-SUCCESS] Import data available - Combined JSONL file found and valid` (when file exists)
      - console:
 
 3. **JavaScript Event Binding**
