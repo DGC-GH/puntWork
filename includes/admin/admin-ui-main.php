@@ -169,6 +169,9 @@ function render_jobs_dashboard_ui(): void
  */
 function render_main_import_ui(): void
 {
+    error_log('[PUNTWORK] [UI-RENDER] render_main_import_ui() called at ' . date('Y-m-d H:i:s T'));
+    error_log('[PUNTWORK] [UI-RENDER] Rendering main import UI elements');
+
     ?>
 	<div class="puntwork-admin">
 		<div class="puntwork-container">

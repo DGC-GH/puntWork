@@ -33,6 +33,9 @@ add_action(
 add_action(
     'admin_menu',
     function () {
+        PuntWorkLogger::info('Admin menu registration started', PuntWorkLogger::CONTEXT_ADMIN);
+        error_log('[PUNTWORK] [ADMIN-MENU] Admin menu registration started at ' . date('Y-m-d H:i:s T'));
+
         add_menu_page(
             __('puntWork Dashboard', 'puntwork'),
             '.work',
@@ -42,6 +45,7 @@ add_action(
             PUNTWORK_URL . 'assets/images/icon.svg',
             0
         );
+        error_log('[PUNTWORK] [ADMIN-MENU] Main menu page added: puntwork-dashboard');
 
         add_submenu_page(
             'puntwork-dashboard',
@@ -51,6 +55,7 @@ add_action(
             'job-feed-dashboard',
             __NAMESPACE__ . '\\feeds_dashboard_page'
         );
+        error_log('[PUNTWORK] [ADMIN-MENU] Feeds dashboard submenu added');
 
         add_submenu_page(
             'puntwork-dashboard',
@@ -60,6 +65,7 @@ add_action(
             'jobs-dashboard',
             __NAMESPACE__ . '\\jobs_dashboard_page'
         );
+        error_log('[PUNTWORK] [ADMIN-MENU] Jobs dashboard submenu added');
 
         add_submenu_page(
             'puntwork-dashboard',
@@ -69,6 +75,7 @@ add_action(
             'puntwork-feed-config',
             __NAMESPACE__ . '\\feed_config_page'
         );
+        error_log('[PUNTWORK] [ADMIN-MENU] Feed configuration submenu added');
 
         add_submenu_page(
             'puntwork-dashboard',
@@ -78,6 +85,7 @@ add_action(
             'puntwork-feed-health',
             __NAMESPACE__ . '\\feed_health_monitor_page'
         );
+        error_log('[PUNTWORK] [ADMIN-MENU] Feed health monitor submenu added');
 
         add_submenu_page(
             'puntwork-dashboard',
@@ -87,6 +95,7 @@ add_action(
             'puntwork-analytics',
             __NAMESPACE__ . '\\import_analytics_page'
         );
+        error_log('[PUNTWORK] [ADMIN-MENU] Import analytics submenu added');
 
         add_submenu_page(
             'puntwork-dashboard',
@@ -96,6 +105,7 @@ add_action(
             'puntwork-performance',
             __NAMESPACE__ . '\\performance_metrics_page'
         );
+        error_log('[PUNTWORK] [ADMIN-MENU] Performance metrics submenu added');
 
         add_submenu_page(
             'puntwork-dashboard',
@@ -105,6 +115,7 @@ add_action(
             'puntwork-api-settings',
             __NAMESPACE__ . '\\api_settings_page'
         );
+        error_log('[PUNTWORK] [ADMIN-MENU] API settings submenu added');
 
         add_submenu_page(
             'puntwork-dashboard',
@@ -114,6 +125,10 @@ add_action(
             'puntwork-monitoring',
             __NAMESPACE__ . '\\system_monitoring_page'
         );
+        error_log('[PUNTWORK] [ADMIN-MENU] System monitoring submenu added');
+
+        PuntWorkLogger::info('Admin menu registration completed', PuntWorkLogger::CONTEXT_ADMIN);
+        error_log('[PUNTWORK] [ADMIN-MENU] Admin menu registration completed');
     }
 );
 

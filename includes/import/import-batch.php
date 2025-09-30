@@ -230,6 +230,15 @@ if (!function_exists('import_jobs_from_json')) {
                 error_log('[PUNTWORK] [IMPORT-DEBUG] import_jobs_from_json called with is_batch=' . ($is_batch ? 'true' : 'false') . ', batch_start=' . $batch_start);
                 error_log('[PUNTWORK] [IMPORT-SETUP] Calling prepare_import_setup...');
             }
+
+            // Add specific debug logs for STEP 5
+            $user_id = get_current_user_id();
+            $php_version = PHP_VERSION;
+            $memory_mb = round(memory_get_usage(true) / 1024 / 1024, 2);
+            error_log('[PUNTWORK] [IMPORT-START] Starting import - User: ' . $user_id . ', PHP: ' . $php_version . ', Memory: ' . $memory_mb . 'MB, Start: ' . $batch_start);
+
+            error_log('[PUNTWORK] [SETUP-START] Executing prepare_import_setup()');
+
             $setup = prepare_import_setup($batch_start);
             if ($debug_mode) {
                 error_log(
@@ -246,6 +255,9 @@ if (!function_exists('import_jobs_from_json')) {
                 );
                 error_log('[PUNTWORK] [IMPORT-SETUP] prepare_import_setup completed');
             }
+
+            // Add setup completion log
+            error_log('[PUNTWORK] [SETUP-COMPLETE] Setup completed - Feeds: ' . ($setup['feed_count'] ?? 'unknown') . ', Batch size: ' . ($setup['batch_size'] ?? 'unknown') . ', GUID cache: initialized');
 
             if (is_wp_error($setup)) {
                 if ($debug_mode) {
@@ -267,6 +279,27 @@ if (!function_exists('import_jobs_from_json')) {
 
                 return $setup; // Early return for empty or completed cases
             }
+
+            // Check for stale locks
+            $import_status = get_option('job_import_status', []);
+            $stale_check = '';
+            $age_minutes = 0;
+            if (!empty($import_status)) {
+                $last_update = $import_status['last_update'] ?? 0;
+                $is_complete = $import_status['complete'] ?? false;
+                $time_since_update = time() - $last_update;
+                $age_minutes = round($time_since_update / 60, 1);
+                if ($is_complete) {
+                    $stale_check = 'complete';
+                } elseif ($time_since_update > 1800) { // 30 minutes
+                    $stale_check = 'stale (>30min)';
+                } else {
+                    $stale_check = 'active';
+                }
+            } else {
+                $stale_check = 'no status found';
+            }
+            error_log('[PUNTWORK] [STALE-LOCK] Checking for stale imports: Found ' . $stale_check . ', Age: ' . $age_minutes . ' minutes');
 
             if ($debug_mode) {
                 error_log('[PUNTWORK] [IMPORT-PROCESS] Setup successful, calling process_batch_items_logic...');

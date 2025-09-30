@@ -79,6 +79,7 @@ console.info("=== Job Import Logic Script Loaded ===");
             try {
                 console.log('[PUNTWORK] ===== PHASE: INITIAL BATCH API CALL =====');
                 console.log('[PUNTWORK] Calling JobImportAPI.runImportBatch with start:', initialStart);
+                console.log('[PUNTWORK] PuntWork: AJAX request data: {action: `run_job_import_batch`, start: ' + initialStart + '}');
                 const batchStartTime = Date.now();
                 const initialBatchTimeout = 600000; // 10 minutes for initial batch
                 const initialBatchPromise = JobImportAPI.runImportBatch(initialStart);
@@ -330,6 +331,7 @@ console.info("=== Job Import Logic Script Loaded ===");
          * @returns {Promise} Start import process promise
          */
         handleStartImport: async function() {
+            console.log('[PUNTWORK] [UI-CLICK] Import button clicked by user ' + (window.jobImportData?.current_user_id || 'unknown'));
             console.log('[PUNTWORK] [DEBUG-IMPORT] ===== START IMPORT PROCESS =====');
             console.log('[PUNTWORK] [DEBUG-IMPORT] Timestamp:', new Date().toISOString());
             console.log('[PUNTWORK] [DEBUG-IMPORT] Browser:', navigator.userAgent);
@@ -512,7 +514,7 @@ console.info("=== Job Import Logic Script Loaded ===");
                     });
 
                     console.log('[PUNTWORK] [DEBUG-IMPORT] Feed URL:', feeds[feed]);
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] About to call JobImportAPI.processFeed...');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] About to call JobImportAPI.processFeed...');
 
                     const feedStartTime = Date.now();
                     const response = await JobImportAPI.processFeed(feed);

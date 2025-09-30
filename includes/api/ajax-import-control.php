@@ -141,6 +141,13 @@ function run_job_import_batch_ajax()
         }
         error_log('[PUNTWORK] [AJAX-SECURITY] Security validation passed');
 
+        // Log comprehensive security validation results
+        $user_id = get_current_user_id();
+        $user_ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $memory_mb = round(memory_get_usage(true) / 1024 / 1024, 2);
+        error_log('[PUNTWORK] [AJAX-RECEIVED] Import request received - User: ' . $user_id . ', IP: ' . $user_ip . ', Memory: ' . $memory_mb . 'MB');
+        error_log('[PUNTWORK] [AJAX-SECURITY] Nonce verification: passed; User permissions check: ' . (current_user_can('manage_options') ? 'passed' : 'failed') . ' for user ' . $user_id . '; Field validation: start=' . ($_POST['start'] ?? 'missing') . ', type=' . (is_numeric($_POST['start'] ?? null) ? 'valid' : 'invalid'));
+
         // Check for concurrent import lock
         if (get_transient('puntwork_import_lock')) {
             \Puntwork\PuntWorkLogger::warn('Import already running - concurrent request blocked', \Puntwork\PuntWorkLogger::CONTEXT_AJAX, [
