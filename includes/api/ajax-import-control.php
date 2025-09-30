@@ -25,6 +25,8 @@ require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
 require_once __DIR__ . '/../utilities/CacheManager.php';
 require_once __DIR__ . '/../utilities/AjaxErrorHandler.php';
 require_once __DIR__ . '/../utilities/DynamicRateLimiter.php';
+require_once __DIR__ . '/../utilities/AdvancedJsonlProcessor.php';
+require_once __DIR__ . '/../utilities/JsonlOptimizer.php';
 require_once __DIR__ . '/../import/feed-processor.php';  // Load FeedProcessor before core-structure-logic.php
 require_once __DIR__ . '/../core/core-structure-logic.php';
 require_once __DIR__ . '/../import/download-feed.php';
