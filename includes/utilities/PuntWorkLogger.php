@@ -28,6 +28,7 @@ class PuntWorkLogger
 
     // Log contexts
     public const CONTEXT_AJAX = 'AJAX';
+    public const CONTEXT_ADMIN = 'ADMIN';
     public const CONTEXT_API = 'API';
     public const CONTEXT_BATCH = 'BATCH';
     public const CONTEXT_FEED = 'FEED';
