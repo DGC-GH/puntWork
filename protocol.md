@@ -22,8 +22,6 @@ Execute the following maintenance protocol steps in strict numerical order. Do n
 
 7. **Fix Critical Issues**: Address any log errors, 500 errors, class loading failures, warnings or import blocks.
 
-8. **Map Codebase**: Identify all classes, functions, and dependencies.
-
 9. **Find Comprehension Gaps**: Locate unclear logic, missing docs, complex algorithms.
 
 10. **Analyze Data Flow**: Map import/export patterns and integration points.

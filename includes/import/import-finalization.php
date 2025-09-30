@@ -184,7 +184,7 @@ function get_import_status_summary() {
 		'skipped'                  => $status['skipped'] ?? 0,
 		'duplicates_drafted'       => $status['duplicates_drafted'] ?? 0,
 		'complete'                 => $status['complete'] ?? false,
-		'progress_percentage'      => $status['total'] > 0 ? round( ( $status['processed'] / $status['total'] ) * 100, 2 ) : 0,
+		'progress_percentage'      => ($status['total'] ?? 0) > 0 ? round( ( ($status['processed'] ?? 0) / ($status['total'] ?? 1) ) * 100, 2 ) : 0,
 		'time_elapsed'             => $status['time_elapsed'] ?? 0,
 		'estimated_time_remaining' => calculate_estimated_time_remaining( $status ),
 		'last_update'              => $status['last_update'] ?? null,
@@ -198,12 +198,12 @@ function get_import_status_summary() {
  * @return float Estimated time remaining in seconds.
  */
 function calculate_estimated_time_remaining( $status ) {
-	if ( $status['complete'] || $status['processed'] === 0 || $status['job_importing_time_elapsed'] === 0 ) {
+	if ( $status['complete'] || ($status['processed'] ?? 0) === 0 || ($status['job_importing_time_elapsed'] ?? 0) === 0 ) {
 		return 0;
 	}
 
-	$items_remaining   = $status['total'] - $status['processed'];
-	$time_per_item     = $status['job_importing_time_elapsed'] / $status['processed'];
+	$items_remaining   = ($status['total'] ?? 0) - ($status['processed'] ?? 0);
+	$time_per_item     = ($status['job_importing_time_elapsed'] ?? 0) / ($status['processed'] ?? 1);
 	$estimated_seconds = $items_remaining * $time_per_item;
 
 	// PuntWorkLogger::debug('PHP time calculation', PuntWorkLogger::CONTEXT_BATCH, [

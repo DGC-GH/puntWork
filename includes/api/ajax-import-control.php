@@ -431,8 +431,8 @@ function get_job_import_status_ajax() {
 			'Retrieved import status',
 			PuntWorkLogger::CONTEXT_BATCH,
 			array(
-				'total'     => $progress['total'],
-				'processed' => $progress['processed'],
+				'total'     => $progress['total'] ?? 0,
+				'processed' => $progress['processed'] ?? 0,
 				'complete'  => $progress['complete'] ?? null,
 			)
 		);
@@ -457,7 +457,7 @@ function get_job_import_status_ajax() {
 			$is_stuck     = false;
 			$stuck_reason = '';
 
-			if ( $progress['processed'] === 0 && $time_elapsed > 300 ) {
+			if ( ($progress['processed'] ?? 0) === 0 && $time_elapsed > 300 ) {
 				$is_stuck     = true;
 				$stuck_reason = 'no progress for 5+ minutes';
 			} elseif ( $time_elapsed > 7200 ) { // 2 hours
@@ -473,8 +473,8 @@ function get_job_import_status_ajax() {
 					'Detected stuck import in status check, clearing status',
 					PuntWorkLogger::CONTEXT_BATCH,
 					array(
-						'processed'              => $progress['processed'],
-						'total'                  => $progress['total'],
+						'processed'              => $progress['processed'] ?? 0,
+						'total'                  => $progress['total'] ?? 0,
 						'time_elapsed'           => $time_elapsed,
 						'time_since_last_update' => $time_since_last_update,
 						'reason'                 => $stuck_reason,
@@ -525,7 +525,7 @@ function get_job_import_status_ajax() {
 		}
 		// Only recalculate complete status if it's not already marked as complete
 		if ( ! isset( $progress['complete'] ) || ! $progress['complete'] ) {
-			$progress['complete'] = ( $progress['processed'] >= $progress['total'] && $progress['total'] > 0 );
+			$progress['complete'] = ( ($progress['processed'] ?? 0) >= ($progress['total'] ?? 0) && ($progress['total'] ?? 0) > 0 );
 		}
 
 		// Add resume_progress for JavaScript
@@ -550,7 +550,7 @@ function get_job_import_status_ajax() {
 		// Log response summary instead of full data to prevent large debug logs
 		$log_summary = array(
 			'total'                      => $progress['total'],
-			'processed'                  => $progress['processed'],
+			'processed'                  => $progress['processed'] ?? 0,
 			'published'                  => $progress['published'],
 			'updated'                    => $progress['updated'],
 			'skipped'                    => $progress['skipped'],
