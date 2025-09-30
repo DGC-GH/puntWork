@@ -18,6 +18,12 @@
 
 namespace Puntwork;
 
+// Prevent multiple plugin loading (critical performance fix)
+if (isset($GLOBALS['puntwork_plugin_loaded']) && $GLOBALS['puntwork_plugin_loaded']) {
+    return;
+}
+$GLOBALS['puntwork_plugin_loaded'] = true;
+
 // Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
@@ -439,6 +445,11 @@ if (!function_exists(__NAMESPACE__ . '\\setup_job_import')) {
         // Initialize feed health monitoring
         if (class_exists(__NAMESPACE__ . '\\FeedHealthMonitor')) {
             call_user_func([__NAMESPACE__ . '\\FeedHealthMonitor', 'init']);
+        }
+
+        // Ensure database indexes exist (call during setup, not just activation)
+        if (function_exists(__NAMESPACE__ . '\\create_database_indexes')) {
+            call_user_func(__NAMESPACE__ . '\\create_database_indexes');
         }
 
         if ($debug_mode) {
