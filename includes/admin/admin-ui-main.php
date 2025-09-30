@@ -177,6 +177,15 @@ function render_main_import_ui(): void
     $jsonl_exists = file_exists($jsonl_path);
     $jsonl_size = $jsonl_exists ? filesize($jsonl_path) : 0;
 
+    error_log('[PUNTWORK] [UI-VALIDATION] Combined JSONL file check - Path: ' . $jsonl_path . ', Exists: ' . ($jsonl_exists ? 'YES' : 'NO') . ', Size: ' . $jsonl_size . ' bytes');
+
+    if (!$jsonl_exists || $jsonl_size === 0) {
+        error_log('[PUNTWORK] [UI-WARNING] No import data available - Combined JSONL file missing or empty, disabling Start Import button');
+        PuntWorkLogger::logAdminAction('UI Import Data Check', 'No import data available - combined JSONL file missing or empty', PuntWorkLogger::CONTEXT_ADMIN);
+    } else {
+        error_log('[PUNTWORK] [UI-SUCCESS] Import data available - Combined JSONL file found and valid');
+    }
+
     ?>
 	<div class="puntwork-admin">
 		<div class="puntwork-container">
