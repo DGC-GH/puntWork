@@ -1,20 +1,23 @@
 <?xml version="1.0"?>
-<ruleset name="PuntWork">
-    <description>PuntWork WordPress Plugin Coding Standards</description>
+<ruleset name="PuntWork WordPress Plugin">
+    <description>PuntWork WordPress Plugin Coding Standards - Optimized for Grok Code Fast 1 copilot agent</description>
 
-    <!-- Use WordPress coding standards -->
+    <!-- Use WordPress coding standards as the primary standard -->
     <rule ref="WordPress"/>
     <rule ref="WordPress-Core"/>
     <rule ref="WordPress-Extra"/>
 
-    <!-- Set the minimum PHP version -->
-    <config name="testVersion" value="8.2-"/>
+    <!-- Set the minimum PHP version for this project -->
+    <config name="testVersion" value="8.1-"/>
 
-    <!-- Exclude vendor directory -->
+    <!-- Exclude directories that shouldn't be checked -->
     <exclude-pattern>vendor/*</exclude-pattern>
     <exclude-pattern>node_modules/*</exclude-pattern>
+    <exclude-pattern>feeds/*</exclude-pattern>
+    <exclude-pattern>cache/*</exclude-pattern>
+    <exclude-pattern>*.log</exclude-pattern>
 
-    <!-- Custom rules -->
+    <!-- Line length limit appropriate for modern displays -->
     <rule ref="Generic.Files.LineLength">
         <properties>
             <property name="lineLimit" value="120"/>
@@ -22,8 +25,11 @@
         </properties>
     </rule>
 
-    <!-- Allow some warnings for development -->
+    <!-- Allow some WordPress-specific naming conventions -->
     <rule ref="WordPress.Files.FileName">
         <exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
     </rule>
+
+    <!-- Allow long arrays for readability in WordPress contexts -->
+    <rule ref="WordPress.Arrays.ArrayDeclarationSpacing"/>
 </ruleset>
