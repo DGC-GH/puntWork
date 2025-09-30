@@ -3,43 +3,80 @@
 <head>
     <title>Progress Bar Test</title>
     <style>
-        .puntwork-progress {
+        .progress-container {
             width: 100%;
             height: 20px;
-            background-color: #f2f2f7;
-            border-radius: 3px;
-            overflow: hidden;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            display: flex;
+            margin: 20px 0;
         }
-        .puntwork-progress__bar {
-            height: 100%;
-            background-color: #007aff;
-            border-radius: 3px;
-            width: 0%;
-            transition: width 0.3s ease;
+        .progress-segment {
+            flex: 1;
+            background-color: #e0e0e0;
+            opacity: 0.3;
+            transition: all 0.3s ease;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
         }
     </style>
 </head>
 <body>
-    <h1>Progress Bar Test</h1>
-    <div class="puntwork-progress">
-        <div id="progress-bar" class="puntwork-progress__bar"></div>
+    <h1>Progress Bar Test - Segment Based</h1>
+    <div class="progress-container" id="progress-bar">
+        <!-- 100 progress segments -->
+        <script>
+            for (let i = 1; i <= 100; i++) {
+                document.write('<div class="progress-segment" data-percent="' + i + '"></div>');
+            }
+        </script>
+    </div>
+    <div>
+        <button onclick="setProgress(25)">25%</button>
+        <button onclick="setProgress(50)">50%</button>
+        <button onclick="setProgress(75)">75%</button>
+        <button onclick="setProgress(100)">100%</button>
+        <button onclick="resetProgress()">Reset</button>
+        <button onclick="testProgress()">Auto Test</button>
     </div>
     <div id="progress-percent">0%</div>
-    <button onclick="testProgress()">Test Progress</button>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
+        function setProgress(percent) {
+            $('.progress-segment').each(function(index) {
+                var segmentPercent = index + 1; // 1-based (1-100)
+                if (segmentPercent <= percent) {
+                    $(this).css({
+                        'background-color': '#007aff',
+                        'opacity': '1'
+                    });
+                } else {
+                    $(this).css({
+                        'background-color': '#e0e0e0',
+                        'opacity': '0.3'
+                    });
+                }
+            });
+            $('#progress-percent').text(percent + '%');
+        }
+
+        function resetProgress() {
+            $('.progress-segment').css({
+                'background-color': '#e0e0e0',
+                'opacity': '0.3'
+            });
+            $('#progress-percent').text('0%');
+        }
+
         function testProgress() {
             // Simulate progress updates
             let percent = 0;
             const interval = setInterval(() => {
                 percent += 10;
-                $('#progress-bar').css({
-                    width: percent + '%',
-                    backgroundColor: percent >= 100 ? '#34c759' : '#007aff',
-                    transition: 'width 0.3s ease'
-                });
-                $('#progress-percent').text(percent + '%');
+                setProgress(percent);
 
                 if (percent >= 100) {
                     clearInterval(interval);

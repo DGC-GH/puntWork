@@ -89,9 +89,10 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             this.batchTimes = []; // Reset batch times
             this.lastBatchTime = 0;
             this.lastBatchSize = 0;
-            $('#progress-bar').css({
-                width: '0%',
-                backgroundColor: '#007aff'
+            // Reset all progress segments to initial gray state
+            $('.progress-segment').css({
+                'background-color': '#e0e0e0',
+                'opacity': '0.3'
             });
             $('#progress-percent').text('0%');
             $('#progress-percent').css('color', '#007aff'); // Reset to blue
@@ -355,13 +356,22 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
 
             $('#progress-percent').css('color', percentColor);
 
-            // Update progress bar using width-based approach (simpler and more reliable)
-            $('#progress-bar').css({
-                width: percent + '%',
-                backgroundColor: barColor,
-                transition: 'width 0.3s ease'
+            // Update progress bar using individual segments (each div represents 1%)
+            $('.progress-segment').each(function(index) {
+                var segmentPercent = index + 1; // 1-based (1-100)
+                if (segmentPercent <= percent) {
+                    $(this).css({
+                        'background-color': barColor,
+                        'opacity': '1'
+                    });
+                } else {
+                    $(this).css({
+                        'background-color': '#e0e0e0',
+                        'opacity': '0.3'
+                    });
+                }
             });
-            console.log('[PUNTWORK] [PROGRESS-DEBUG] Progress bar updated: width=' + percent + '%, color=' + barColor);
+            console.log('[PUNTWORK] [PROGRESS-DEBUG] Progress bar updated: ' + percent + ' segments colored, color=' + barColor);
 
             // Check if we're in feed processing phase (no job stats yet)
             var is_feed_processing = (data.published === 0 && data.updated === 0 && data.skipped === 0 &&
