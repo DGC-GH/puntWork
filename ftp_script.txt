@@ -2,5 +2,5 @@ open 153.92.216.191
 user u164580062.belgiumjobs.work Ftpbjw2105.
 set ssl:verify-certificate no
 cd wp-content
-get debug.log
+get -c debug.log
 bye

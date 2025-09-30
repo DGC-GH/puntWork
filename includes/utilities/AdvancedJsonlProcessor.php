@@ -127,6 +127,7 @@ class AdvancedJsonlProcessor {
 			if ( isset( $output_handle ) && $output_handle ) {
 				fclose( $output_handle );
 			}
+			$stats['error'] = $e->getMessage();
 
 			return false;
 		}
@@ -315,6 +316,7 @@ class AdvancedJsonlProcessor {
 					unlink( $temp_file );
 				}
 			}
+			$stats['error'] = $e->getMessage();
 
 			return false;
 		}
@@ -411,6 +413,7 @@ class AdvancedJsonlProcessor {
 			if ( isset( $temp_file ) && file_exists( $temp_file ) ) {
 				unlink( $temp_file );
 			}
+			$stats['error'] = $e->getMessage();
 
 			return false;
 		}

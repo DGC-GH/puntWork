@@ -1427,6 +1427,18 @@ function combine_jsonl_ajax() {
 		error_log( '[PUNTWORK] [DEBUG-PHP] Available feeds: ' . json_encode( $feeds ) );
 		error_log( '[PUNTWORK] [DEBUG-PHP] Output directory: ' . $output_dir );
 
+		// Check if there are any feed files to combine
+		$feed_files = array();
+		foreach ( $feeds as $feed_key => $url ) {
+			$feed_files[] = $output_dir . $feed_key . '.jsonl';
+		}
+		$existing_feeds = array_filter( $feed_files, 'file_exists' );
+		if ( empty( $existing_feeds ) ) {
+			error_log( '[PUNTWORK] [DEBUG-PHP] No feed files found to combine' );
+			wp_send_json_error( array( 'message' => 'No feed files found to combine - please process feeds first' ) );
+			return;
+		}
+
 		// Ensure output directory exists
 		if ( ! wp_mkdir_p( $output_dir ) || ! is_writable( $output_dir ) ) {
 			error_log( '[PUNTWORK] [DEBUG-PHP] Feeds directory not writable: ' . $output_dir );
