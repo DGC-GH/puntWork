@@ -343,8 +343,8 @@ class SelfImprovingProtocolRunner
 
         echo "\n📊 Protocol Summary:\n";
         echo "- Steps completed: {$successCount}/{$totalSteps}\n";
-        echo "- Evolution analysis: " . ($results['evolution_analysis']['success'] ? '✅' : '❌') . "\n";
-        echo "- Improvements applied: " . ($results['apply_improvements']['data']['applied'] ? '✅' : '❌') . "\n";
+        echo "- Evolution analysis: " . (($results['evolution_analysis']['success'] ?? false) ? '✅' : '❌') . "\n";
+        echo "- Improvements applied: " . (($results['apply_improvements']['data']['applied'] ?? false) ? '✅' : '❌') . "\n";
 
         return ['success_rate' => $successCount / $totalSteps];
     }
