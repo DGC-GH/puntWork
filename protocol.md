@@ -31,7 +31,7 @@
 - **AI-VALIDATED**: commit with AI-generated commit messages
 - **AI-VALIDATED**: output summary with AI insights and recommendations
 - **AI-VALIDATED**: ask to push with risk assessment
-- **FAST TRACK**: clear debug.log on the server [GROK: find a way to do it and note it here]
+- **FAST TRACK**: clear debug.log on the server using FTP: create empty local debug.log, then use ftp script with 'put debug.log' instead of 'get debug.log'
 - **EVOLUTION STEP**: record execution metrics for continuous learning
 - **Context Mapping**: Automatically map code relationships and dependencies
 - **Pattern Recognition**: Identify common code smells and anti-patterns

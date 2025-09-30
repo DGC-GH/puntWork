@@ -1270,6 +1270,9 @@ function process_feed_ajax()
     error_log('[PUNTWORK] [DEBUG-PHP] Memory usage: ' . memory_get_usage(true) . ' bytes');
     error_log('[PUNTWORK] [DEBUG-PHP] Peak memory usage: ' . memory_get_peak_usage(true) . ' bytes');
 
+    // Include required files for AJAX processing
+    include_once dirname(__DIR__) . '/import/feed-processor.php';
+
     PuntWorkLogger::logAjaxRequest('process_feed', $_POST);
 
     // Basic security validation

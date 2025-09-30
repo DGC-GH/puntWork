@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive debug logging in AJAX handlers with memory usage tracking and detailed error context
 
 ### Fixed
+- **Critical AJAX 500 Error Resolution**: Fixed "Class 'Puntwork\FeedProcessor' not found" error by adding explicit include_once for feed-processor.php in process_feed_ajax handler, preventing fatal errors during feed processing in WordPress AJAX context
 - **Critical AJAX 500 Error Resolution**: Fixed "Class 'Puntwork\Import\...' not found" errors by adding explicit require_once for ImportAnalytics.php in ajax-import-control.php, preventing class loading failures in WordPress AJAX context
 - **Composer Autoload Optimization**: Regenerated autoload files to resolve PSR-4 namespace mapping issues and eliminate class loading warnings
 - **AJAX 500 Error Fix**: Removed large logs array from AJAX responses in process_feed and combine_jsonl handlers to prevent JSON encoding failures and memory exhaustion, resolving client-side 500 errors during feed processing
