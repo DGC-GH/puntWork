@@ -106,7 +106,7 @@ class SelfImprovingProtocolRunner
             });
 
             // Step 13: Output summary
-            $results['summary'] = $this->executeStep('summary', function() {
+            $results['summary'] = $this->executeStep('summary', function() use ($results) {
                 return $this->outputSummary($results);
             });
 
@@ -187,6 +187,10 @@ class SelfImprovingProtocolRunner
 
     private function readDebugLog(): array
     {
+        if (!file_exists('debug.log')) {
+            return ['size' => 0, 'lines' => 0, 'error' => 'debug.log not found'];
+        }
+
         $content = file_get_contents('debug.log');
         return ['size' => strlen($content), 'lines' => substr_count($content, "\n")];
     }
@@ -235,6 +239,10 @@ class SelfImprovingProtocolRunner
 
     private function readConsoleTxt(): array
     {
+        if (!file_exists('Console.txt')) {
+            return ['size' => 0, 'lines' => 0, 'error' => 'Console.txt not found'];
+        }
+
         $content = file_get_contents('Console.txt');
         return ['size' => strlen($content), 'lines' => substr_count($content, "\n")];
     }
@@ -305,8 +313,9 @@ class SelfImprovingProtocolRunner
         $bestVariation = $analysis['protocol_variations'][0];
 
         // Only apply if fitness improvement > 10%
-        if ($bestVariation['fitness_improvement'] < 10) {
-            return ['applied' => false, 'reason' => 'improvement too small'];
+        $fitnessImprovement = $bestVariation['fitness_improvement'] ?? 0;
+        if ($fitnessImprovement < 10) {
+            return ['applied' => false, 'reason' => 'improvement too small', 'fitness_improvement' => $fitnessImprovement];
         }
 
         $applied = $this->evolutionEngine->applyProtocolVariation($bestVariation);
