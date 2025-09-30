@@ -258,7 +258,7 @@ function handle_import_progress_sse( $request ) {
 
 				// Calculate completion status
 				if ( ! isset( $current_status['complete'] ) || ! $current_status['complete'] ) {
-					$current_status['complete'] = ( $current_status['processed'] >= $current_status['total'] && $current_status['total'] > 0 );
+					$current_status['complete'] = ( ($current_status['processed'] ?? 0) >= ($current_status['total'] ?? 0) && ($current_status['total'] ?? 0) > 0 );
 				}
 
 				// Add additional status info
