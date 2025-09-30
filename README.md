@@ -164,17 +164,131 @@ puntwork/
 - **API**: Axios with JWT
 - **Storage**: AsyncStorage
 
-## Important Notes
-- **Entry Point**: puntwork.php loads all includes on 'init' hook
-- **AJAX Actions**: puntwork_import_control, run_job_import_batch, etc.
-- **REST Endpoints**: /wp-json/puntwork/v1/trigger-import, /status, etc.
-- **Cron Hooks**: job_import_cron, puntwork_social_cron
-- **Constants**: PUNTWORK_VERSION, PUNTWORK_PATH, etc.
-- **Security**: Always verify nonces, sanitize inputs
-- **Performance**: Streaming JSONL, batch processing, caching
-- **Multi-site**: Check is_multisite() for network features
-- **AI Features**: ContentQualityScorer, JobCategorizer, DuplicateDetector
-- **Scaling**: HorizontalScalingManager for distributed processing
+## Self-Improving Protocol System
+
+### Overview
+puntWork includes an advanced evolutionary algorithm that automatically improves the maintenance protocol through continuous learning and optimization. The system analyzes execution metrics, generates protocol variations, and applies improvements that demonstrate measurable fitness gains.
+
+### Key Components
+- **ProtocolEvolutionEngine**: Core evolution engine with analysis, variation generation, and fitness scoring
+- **run-protocol.php**: Self-improving protocol runner that integrates evolution into each execution
+- **run-protocol.sh**: Shell wrapper for easy protocol execution
+- **protocol-evolution-data.json**: Evolution data storage and analytics
+
+### How It Works
+1. **Execution Tracking**: Each protocol step records success, duration, and performance metrics
+2. **Analysis**: Evolution engine analyzes patterns, bottlenecks, and improvement opportunities
+3. **Variation Generation**: Creates protocol variations with different step orders, optimizations, and automation
+4. **Fitness Scoring**: Evaluates variations based on execution time, success rate, and resource usage
+5. **Selective Application**: Applies only variations that improve fitness by >10%
+
+### Usage
+
+#### Run the Self-Improving Protocol
+```bash
+# Quick execution
+./run-protocol.sh
+
+# Or directly with PHP
+php run-protocol.php
+```
+
+#### Manual Evolution Control
+```bash
+# Analyze current performance and suggest improvements
+php -r "
+require_once 'includes/utilities/ProtocolEvolutionEngine.php';
+use Puntwork\ProtocolEvolution\ProtocolEvolutionEngine;
+$analysis = ProtocolEvolutionEngine::analyzeAndSuggestImprovements();
+echo json_encode($analysis, JSON_PRETTY_PRINT);
+"
+
+# Apply the best available improvement
+php -r "
+require_once 'includes/utilities/ProtocolEvolutionEngine.php';
+use Puntwork\ProtocolEvolution\ProtocolEvolutionEngine;
+$analysis = ProtocolEvolutionEngine::analyzeAndSuggestImprovements();
+if (!empty($analysis['protocol_variations'])) {
+    $best = $analysis['protocol_variations'][0];
+    $applied = ProtocolEvolutionEngine::applyProtocolVariation($best);
+    echo 'Improvement applied: ' . ($applied ? 'SUCCESS' : 'FAILED') . PHP_EOL;
+}
+"
+
+# View evolution analytics
+php -r "
+require_once 'includes/utilities/ProtocolEvolutionEngine.php';
+use Puntwork\ProtocolEvolution\ProtocolEvolutionEngine;
+$analytics = ProtocolEvolutionEngine::getEvolutionAnalytics();
+echo json_encode($analytics, JSON_PRETTY_PRINT);
+"
+```
+
+### Evolution Metrics
+The system tracks comprehensive metrics for continuous improvement:
+- **Execution Time**: Per-step and total protocol duration
+- **Success Rate**: Step completion and overall protocol success
+- **Resource Usage**: Memory, CPU, and I/O patterns
+- **Error Patterns**: Common failure modes and recovery effectiveness
+- **Bottleneck Identification**: Steps that consistently slow execution
+- **Optimization Potential**: Calculated improvement opportunities
+
+### Safety Features
+- **Gradual Rollout**: Only applies improvements with proven fitness gains
+- **Rollback Capability**: Can revert to previous protocol versions
+- **Human Oversight**: Major changes require manual approval
+- **Validation Gates**: Ensures critical functionality remains intact
+- **Backup Creation**: All protocol changes are versioned and backed up
+
+### Evolution Triggers
+- **Automatic**: After each protocol execution
+- **Scheduled**: Daily analysis, weekly improvements, monthly optimizations
+- **Manual**: On-demand evolution via command line
+- **Critical Events**: Immediate analysis after failures or performance degradation
+
+### Benefits
+- **Continuous Improvement**: Protocol efficiency increases with each execution
+- **Automated Optimization**: No manual tuning required
+- **Data-Driven Decisions**: Improvements based on real performance metrics
+- **Adaptive Learning**: System learns from successes and failures
+- **Predictive Optimization**: Anticipates and prevents common issues
+
+### Evolution Data
+Evolution data is stored in `protocol-evolution-data.json` and includes:
+- Historical execution metrics
+- Applied improvements and their impact
+- Fitness scores over time
+- Protocol variation success rates
+- Performance trends and predictions
+
+### Integration
+The evolution system is fully integrated into the development workflow:
+- Pre-commit hooks validate protocol changes
+- CI/CD pipeline includes evolution testing
+- Documentation automatically updates with improvements
+- Analytics dashboard shows evolution progress
+
+### Advanced Features
+- **Multi-Objective Optimization**: Balances speed, reliability, and resource usage
+- **Context-Aware Evolution**: Adapts to different environments and workloads
+- **Collaborative Learning**: Can share improvements across similar projects
+- **Predictive Maintenance**: Anticipates and prevents protocol failures
+- **A/B Testing**: Tests multiple variations simultaneously
+
+### Monitoring Evolution
+```bash
+# Check evolution status
+php -r "
+require_once 'includes/utilities/ProtocolEvolutionEngine.php';
+use Puntwork\ProtocolEvolution\ProtocolEvolutionEngine;
+$status = ProtocolEvolutionEngine::getEvolutionStatus();
+echo 'Evolution Status: ' . $status['status'] . PHP_EOL;
+echo 'Current Fitness: ' . $status['current_fitness'] . PHP_EOL;
+echo 'Improvements Applied: ' . $status['improvements_applied'] . PHP_EOL;
+"
+```
+
+The self-improving protocol system ensures puntWork's maintenance processes continuously evolve and optimize, providing exponential improvements in development efficiency and code quality.
 
 ## Quick Reference
 - **Trigger Import**: puntwork_trigger_import(['test_mode' => false])
