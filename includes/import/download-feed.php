@@ -68,15 +68,57 @@ function download_feed( $url, $feed_path, $output_dir, &$logs, &$format = null )
 			throw new \Exception( 'Output directory is not writable' );
 		}
 
+		// Check feed cache first
+		$cache_key   = 'puntwork_feed_cache_' . md5( $url );
+		$cached_feed = get_transient( $cache_key );
+
+		if ( $cached_feed !== false && isset( $cached_feed['content'] ) && isset( $cached_feed['format'] ) ) {
+			$cache_age = time() - $cached_feed['timestamp'];
+			$max_age   = apply_filters( 'puntwork_feed_cache_max_age', HOUR_IN_SECONDS ); // 1 hour default, filterable
+
+			if ( $cache_age < $max_age ) {
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [DOWNLOAD-CACHE] Using cached feed (age: ' . round( $cache_age / 60, 1 ) . ' minutes)' );
+				}
+
+				// Use cached content
+				file_put_contents( $full_feed_path, $cached_feed['content'] );
+				$format = $cached_feed['format'];
+
+				$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' .
+				"Used cached feed ($format): " . strlen( $cached_feed['content'] ) . ' bytes (cached ' . round( $cache_age / 60, 1 ) . ' minutes ago)';
+				error_log( "Used cached feed ($format): " . strlen( $cached_feed['content'] ) . ' bytes (cached ' . round( $cache_age / 60, 1 ) . ' minutes ago)' );
+				@chmod( $full_feed_path, 0644 );
+
+				if ( $span ) {
+					$span->setAttribute( 'feed.cached', true );
+					$span->setAttribute( 'feed.size', strlen( $cached_feed['content'] ) );
+					$span->setAttribute( 'feed.format', $format );
+					$span->setAttribute( 'cache.age', $cache_age );
+					$span->end();
+				}
+
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [DOWNLOAD-END] ===== DOWNLOAD_FEED CACHE HIT =====' );
+				}
+
+				return true;
+			} elseif ( $debug_mode ) {
+					error_log( '[PUNTWORK] [DOWNLOAD-CACHE] Cache expired (age: ' . round( $cache_age / 60, 1 ) . ' minutes), downloading fresh feed' );
+			}
+		} elseif ( $debug_mode ) {
+				error_log( '[PUNTWORK] [DOWNLOAD-CACHE] No cache found, downloading feed' );
+		}
+
 		// Check if URL is a local file path (for testing)
-		$is_local_file = false;
+		$is_local_file   = false;
 		$local_file_path = null;
 		if ( strpos( $url, 'file://' ) === 0 ) {
-			$is_local_file = true;
+			$is_local_file   = true;
 			$local_file_path = substr( $url, 7 ); // Remove 'file://' prefix
 		} elseif ( strpos( $url, '/' ) === 0 || strpos( $url, './' ) === 0 || strpos( $url, '../' ) === 0 ) {
 			// Relative or absolute local path
-			$is_local_file = true;
+			$is_local_file   = true;
 			$local_file_path = $url;
 		}
 
@@ -162,12 +204,26 @@ function download_feed( $url, $feed_path, $output_dir, &$logs, &$format = null )
 				error_log( '[PUNTWORK] [DOWNLOAD-DEBUG] Content preview: ' . substr( $content, 0, 200 ) );
 			}
 
+			// Cache the downloaded feed content
+			$cache_data = array(
+				'content'   => $content,
+				'format'    => $format,
+				'timestamp' => time(),
+				'url'       => $url,
+			);
+			set_transient( $cache_key, $cache_data, apply_filters( 'puntwork_feed_cache_expiration', 1 * HOUR_IN_SECONDS ) ); // 1 hour default
+
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [DOWNLOAD-CACHE] Feed cached for 1 hour' );
+			}
+
 			$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' .
 			"Downloaded feed ($format): " . filesize( $full_feed_path ) . ' bytes';
 			error_log( "Downloaded feed ($format): " . filesize( $full_feed_path ) . ' bytes' );
 			@chmod( $full_feed_path, 0644 );
 
 			if ( $span ) {
+				$span->setAttribute( 'feed.cached', false );
 				$span->setAttribute( 'feed.size', filesize( $full_feed_path ) );
 				$span->setAttribute( 'feed.format', $format );
 				$span->end();
@@ -190,7 +246,6 @@ function download_feed( $url, $feed_path, $output_dir, &$logs, &$format = null )
 
 			return false;
 		}
-		// Close outer try block
 	} catch ( \Exception $e ) {
 		error_log( '[PUNTWORK] [DOWNLOAD-ERROR] Outer download exception: ' . $e->getMessage() );
 		$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Outer download error: ' . $e->getMessage();

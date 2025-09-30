@@ -14,8 +14,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Protocol update: Always check debug.log for new errors before running tests
 - Enhanced analyze-import-logs.sh script with AI-driven analysis patterns and metrics including AJAX success rates, feed processing efficiency, and AI comprehension metrics
 - Comprehensive debug logging in AJAX handlers with memory usage tracking and detailed error context
+- **Feed Caching System**: Implemented transient-based caching for downloaded feeds with 1-hour freshness check and 6-hour expiration to reduce redundant downloads and improve performance
+- **Conditional Plugin Loading**: Optimized plugin initialization by loading includes only when needed (admin pages, AJAX requests, cron jobs, etc.) reducing from 101 includes per request to 8-50 context-specific includes
 
 ### Fixed
+- **Critical AJAX 500 Error Resolution**: Fixed "Class 'Puntwork\FeedProcessor' not found" error by adding explicit include_once for feed-processor.php in process_feed_ajax handler, preventing fatal errors during feed processing in WordPress AJAX context
+- **Critical AJAX 500 Error Resolution**: Fixed "Class 'Puntwork\Import\...' not found" errors by adding explicit require_once for ImportAnalytics.php in ajax-import-control.php, preventing class loading failures in WordPress AJAX context
+- **Composer Autoload Optimization**: Regenerated autoload files to resolve PSR-4 namespace mapping issues and eliminate class loading warnings
+- **AJAX 500 Error Fix**: Removed large logs array from AJAX responses in process_feed and combine_jsonl handlers to prevent JSON encoding failures and memory exhaustion, resolving client-side 500 errors during feed processing
+- Added debug logs to SSE endpoint to track data serialization and detect "undefined" responses causing JSON parse errors
+- Enhanced import locking mechanism with detailed debug logs to diagnose and prevent "Import already running" false positives
+- Changed default feed format detection from XML to JSON to properly handle modern API feeds
+- Fixed job board configuration issues for API-based feeds
+- Fixed undefined function load_and_prepare_batch_items by adding namespace prefix \Puntwork\
+- Optimized instances table creation check with transient caching to eliminate repetitive database queries and logging
+- Improved accessibility error handling for non-array menu parameters
+- Added missing disable_expensive_plugins() and enable_expensive_plugins() functions to prevent fatal errors during batch processing
+- Added missing CacheManager.php include to resolve "Class not found" error for EnhancedCacheManager
+- Fixed namespace declaration in JsonlIterator class (batch-loading.php) for PSR-12 compliance
+- Reduced verbose logging in instance registration to only log errors and new registrations
+- Added nonce verification to AJAX import control handlers for improved security
+- Fixed excessive logging in DatabasePerformanceMonitor by making per-query logging conditional on PUNTWORK_DB_DEBUG constant
+- Fixed undefined function bulk_get_post_statuses by adding proper function declaration and debug logs
+- **Memory Exhaustion Fix**: Increased PHP memory limit from 512MB to 1024MB and added comprehensive memory usage logging to prevent import failures with large datasets (7476+ items)
+- **SSE JSON Parse Error Fix**: Added sanitization functions to remove "undefined" values from import status data before JSON serialization, preventing JavaScript parse errors
+- **Concurrent Import Prevention**: Implemented transient-based locking mechanism to prevent multiple simultaneous imports that cause "Import already running" errors
+- **Status Data Sanitization**: Added sanitize_import_status() function to clean AJAX responses and prevent corrupted status data from breaking real-time updates
+- **Enhanced Error Messages**: Replaced generic "Unknown error" messages with specific, detailed error descriptions in feed processing, download, and combination operations for better troubleshooting
+- **Code Quality Improvements**: Fixed PHPCS violations including indentation, spacing, inline comments, and WordPress coding standards compliance
+
+### Performance
+- Implemented parallel feed downloading using Symfony HTTP Client to reduce total import time for multiple feeds
+- Added HTTP caching support with ETag and Last-Modified headers to skip unchanged feeds
+- Optimized feed processing with concurrent downloads (up to 5 simultaneous connections)
+- Added feed cache cleanup to prevent disk space issues
+- Reduced memory usage by processing downloaded feeds without redundant format detection
+- Optimized load balancer initialization by caching table existence checks
+- Reduced logging frequency for routine instance updates
+- Drag-and-drop functionality in feed configuration by replacing SortableJS with jQuery UI Sortable
+- Fatal error in CRM admin class instantiation preventing plugin initialization
+- **Database Index Optimization**: Added 9 performance indexes on wp_postmeta and wp_posts tables for critical queries (GUID lookups, import hashes, job status, feed URLs, etc.)
+- **Plugin Loading Optimization**: Reduced plugin initialization time by conditionally loading includes based on request context (frontend: 8 includes, admin: 25-30 includes, AJAX: 40-50 includes)
 - **Critical AJAX 500 Error Resolution**: Fixed "Class 'Puntwork\FeedProcessor' not found" error by adding explicit include_once for feed-processor.php in process_feed_ajax handler, preventing fatal errors during feed processing in WordPress AJAX context
 - **Critical AJAX 500 Error Resolution**: Fixed "Class 'Puntwork\Import\...' not found" errors by adding explicit require_once for ImportAnalytics.php in ajax-import-control.php, preventing class loading failures in WordPress AJAX context
 - **Composer Autoload Optimization**: Regenerated autoload files to resolve PSR-4 namespace mapping issues and eliminate class loading warnings

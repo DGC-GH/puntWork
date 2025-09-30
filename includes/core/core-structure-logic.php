@@ -937,8 +937,8 @@ function fetch_and_generate_combined_json(): array {
 					}
 				} elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 					// Enhanced error logging for feed download failures
-					$error_details = isset($result['error']) ? $result['error'] : 'Unknown error - result array missing error key';
-					$url_info = isset($result['url']) ? $result['url'] : $feeds[$feed_key] ?? 'URL not found';
+					$error_details = isset($result['error']) ? $result['error'] : 'Feed download failed - no specific error details available';
+					$url_info = isset($result['url']) ? $result['url'] : $feeds[$feed_key] ?? 'URL not found in feed configuration';
 					error_log( "[PUNTWORK] [FEED-ERROR] Failed to download feed {$feed_key}: " . $error_details );
 					error_log( "[PUNTWORK] [FEED-ERROR] Feed URL: {$url_info}" );
 					error_log( "[PUNTWORK] [FEED-ERROR] Result details: " . json_encode($result) );

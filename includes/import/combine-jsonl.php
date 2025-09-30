@@ -51,7 +51,7 @@ function combine_jsonl_files( $feeds, $output_dir, $total_items, &$logs ) {
 	}
 
 	if ( empty( $existing_feeds ) ) {
-		$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'No feed files found to combine';
+		$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'No feed files found to combine - check if feed processing completed successfully';
 		if ( $debug_mode ) {
 			error_log( '[PUNTWORK] [JSONL-COMBINE-ERROR] No feed files found to combine' );
 		}
@@ -121,7 +121,15 @@ function combine_jsonl_files( $feeds, $output_dir, $total_items, &$logs ) {
 		}
 
 		// Fallback to original method if advanced processing fails
-		return combine_jsonl_files_fallback( $feeds, $output_dir, $total_items, $logs );
+		try {
+			return combine_jsonl_files_fallback( $feeds, $output_dir, $total_items, $logs );
+		} catch ( \Exception $fallback_exception ) {
+			$error_msg = 'Both advanced and fallback JSONL combination methods failed. Advanced error: ' . ( $processing_stats['error'] ?? 'Unknown' ) . '. Fallback error: ' . $fallback_exception->getMessage();
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [JSONL-COMBINE-FATAL] ' . $error_msg );
+			}
+			throw new \Exception( $error_msg );
+		}
 	}
 
 	// Log results
