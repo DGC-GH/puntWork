@@ -233,7 +233,7 @@ class SelfImprovingProtocolRunner
         return [
             'analysis_complete' => true,
             'metrics' => $metrics,
-            'full_output' => $output
+            'output_length' => strlen($output)
         ];
     }
 
@@ -300,12 +300,13 @@ class SelfImprovingProtocolRunner
     {
         $analysis = $this->evolutionEngine->analyzeAndSuggestImprovements();
 
-        // Return summary data only, not the full analysis to avoid recursion
+        // Return only essential summary data
         return [
             'variations_count' => count($analysis['protocol_variations'] ?? []),
             'current_score' => $analysis['current_protocol_score'] ?? 0,
             'bottlenecks_found' => count($analysis['bottlenecks'] ?? []),
-            'optimizations_suggested' => count($analysis['optimization_opportunities'] ?? [])
+            'optimizations_suggested' => count($analysis['optimization_opportunities'] ?? []),
+            'analysis_completed' => true
         ];
     }
 
@@ -322,11 +323,11 @@ class SelfImprovingProtocolRunner
         // Only apply if fitness improvement > 10%
         $fitnessImprovement = $bestVariation['fitness_improvement'] ?? 0;
         if ($fitnessImprovement < 10) {
-            return ['applied' => false, 'reason' => 'improvement too small', 'fitness_improvement' => $fitnessImprovement];
+            return ['applied' => false, 'reason' => 'improvement too small'];
         }
 
         $applied = $this->evolutionEngine->applyProtocolVariation($bestVariation);
-        return ['applied' => $applied, 'variation_score' => $bestVariation['score'] ?? 0];
+        return ['applied' => $applied];
     }
 
     private function commitChanges(): array
