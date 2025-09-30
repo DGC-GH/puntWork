@@ -299,7 +299,14 @@ class SelfImprovingProtocolRunner
     private function runEvolutionAnalysis(): array
     {
         $analysis = $this->evolutionEngine->analyzeAndSuggestImprovements();
-        return $analysis;
+
+        // Return summary data only, not the full analysis to avoid recursion
+        return [
+            'variations_count' => count($analysis['protocol_variations'] ?? []),
+            'current_score' => $analysis['current_protocol_score'] ?? 0,
+            'bottlenecks_found' => count($analysis['bottlenecks'] ?? []),
+            'optimizations_suggested' => count($analysis['optimization_opportunities'] ?? [])
+        ];
     }
 
     private function applyImprovements(): array
@@ -319,7 +326,7 @@ class SelfImprovingProtocolRunner
         }
 
         $applied = $this->evolutionEngine->applyProtocolVariation($bestVariation);
-        return ['applied' => $applied, 'variation' => $bestVariation['description']];
+        return ['applied' => $applied, 'variation_score' => $bestVariation['score'] ?? 0];
     }
 
     private function commitChanges(): array
@@ -358,13 +365,14 @@ class SelfImprovingProtocolRunner
         $totalTime = microtime(true) - $this->startTime;
         $successRate = count(array_filter($results, fn($r) => $r['success'] ?? false)) / count($results);
 
+        // Store summary metrics only, not the full results to avoid recursion
         $this->evolutionEngine->recordStepExecution('protocol_complete', true, $totalTime, [
             'success_rate' => $successRate,
             'total_steps' => count($results),
             'evolution_applied' => $results['apply_improvements']['data']['applied'] ?? false
         ]);
 
-        return ['recorded' => true, 'metrics' => $this->executionMetrics];
+        return ['recorded' => true, 'total_time' => $totalTime, 'success_rate' => $successRate];
     }
 }
 
