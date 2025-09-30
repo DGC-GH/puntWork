@@ -16,11 +16,11 @@ Execute the following maintenance protocol steps in strict numerical order. Do n
 
 4. **Download Logs**: Run `ftp_script.txt` to download current debug.log from the server.
 
-5. **Analyze Logs**: Analize debug.log for error, warnings and issues.
+5. **Analyze Logs**: Read debug.log for error, warnings and issues.
 
-6. **Check Console**: Read Console.txt for client-side errors.
+6. **Check Console**: Read Console.txt for client-side errors, warnings and issues.
 
-7. **Fix Critical Issues**: Address any 500 errors, class loading failures, or import blocks.
+7. **Fix Critical Issues**: Address any log errors, 500 errors, class loading failures, warnings or import blocks.
 
 8. **Map Codebase**: Identify all classes, functions, and dependencies.
 

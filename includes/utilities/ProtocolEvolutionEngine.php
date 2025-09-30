@@ -119,15 +119,21 @@ class ProtocolEvolutionEngine {
 	 */
 	public static function applyProtocolVariation( array $variation ): bool {
 		try {
+			$protocolFile = __DIR__ . '/../../protocol.md';
+
+			// protocol.md is the main prompt file for GROK CODE FAST 1 COPILOT AGENT
+			// Apply AI-specific improvements instead of random mutations
+			return self::applyAIPromptImprovements( $variation );
+
 			// Backup current protocol
 			$backupPath = __DIR__ . '/../../protocol.md.backup.' . time();
-			if ( ! copy( __DIR__ . '/../../protocol.md', $backupPath ) ) {
+			if ( ! copy( $protocolFile, $backupPath ) ) {
 				throw new \Exception( 'Failed to create protocol backup' );
 			}
 
 			// Apply variation
 			$newProtocol = self::formatProtocolForFile( $variation['variation'] );
-			if ( file_put_contents( __DIR__ . '/../../protocol.md', $newProtocol ) === false ) {
+			if ( file_put_contents( $protocolFile, $newProtocol ) === false ) {
 				throw new \Exception( 'Failed to write new protocol' );
 			}
 
@@ -766,38 +772,163 @@ class ProtocolEvolutionEngine {
 	}
 
 	/**
-	 * Run the evolution cycle.
+	 * Analyze successful patterns from recent executions.
 	 */
-	public static function runEvolutionCycle(): array {
-		$startTime = microtime( true );
+	private static function analyzeSuccessfulPatterns( array $executions ): array {
+		$patterns = array(
+			'fast_steps'        => array(),
+			'high_success'      => array(),
+			'low_error_steps'   => array(),
+			'efficient_context' => array(),
+		);
 
-		// Analyze current performance
-		$analysis = self::analyzeAndSuggestImprovements();
+		$stepStats = array();
+		foreach ( $executions as $execution ) {
+			$stepId = $execution['step_id'];
+			if ( ! isset( $stepStats[ $stepId ] ) ) {
+				$stepStats[ $stepId ] = array(
+					'durations' => array(),
+					'successes' => 0,
+					'total'     => 0,
+					'errors'    => 0,
+				);
+			}
 
-		// Generate and test variations
-		$currentProtocol = self::getCurrentProtocol();
-		$variations      = self::generateProtocolVariations( $currentProtocol, $analysis );
+			$stepStats[ $stepId ]['durations'][] = $execution['metrics']['duration'] ?? 0;
+			$stepStats[ $stepId ]['successes']   += ( $execution['metrics']['success'] ?? false ) ? 1 : 0;
+			$stepStats[ $stepId ]['total']       += 1;
+			if ( ! empty( $execution['metrics']['data']['error'] ?? null ) ) {
+				$stepStats[ $stepId ]['errors'] += 1;
+			}
+		}
 
-		// Score and select best
-		$scoredVariations = array();
-		foreach ( $variations as $variation ) {
-			$score              = self::calculateFitnessScore( $variation, self::loadEvolutionData()['executions'] );
-			$scoredVariations[] = array(
-				'variation' => $variation,
-				'score'     => $score,
+		foreach ( $stepStats as $stepId => $stats ) {
+			if ( $stats['total'] < 3 ) {
+				continue; // Need minimum executions for pattern analysis
+			}
+
+			$avgDuration = array_sum( $stats['durations'] ) / count( $stats['durations'] );
+			$successRate = $stats['successes'] / $stats['total'];
+			$errorRate   = $stats['errors'] / $stats['total'];
+
+			if ( $avgDuration < 1.0 ) {
+				$patterns['fast_steps'][] = $stepId;
+			}
+			if ( $successRate > 0.9 ) {
+				$patterns['high_success'][] = $stepId;
+			}
+			if ( $errorRate < 0.1 ) {
+				$patterns['low_error_steps'][] = $stepId;
+			}
+		}
+
+		return $patterns;
+	}
+
+	/**
+	 * Extract AI learnings from execution data.
+	 */
+	private static function extractAILearnings( array $executions ): array {
+		$learnings = array();
+
+		// Analyze comprehension scores
+		$comprehensionScores = array();
+		foreach ( $executions as $execution ) {
+			if ( isset( $execution['metrics']['code_comprehension_score'] ) ) {
+				$comprehensionScores[] = $execution['metrics']['code_comprehension_score'];
+			}
+		}
+
+		if ( ! empty( $comprehensionScores ) ) {
+			$avgComprehension = array_sum( $comprehensionScores ) / count( $comprehensionScores );
+			if ( $avgComprehension > 0.8 ) {
+				$learnings['high_ai_engagement'] = 'AI shows strong comprehension and engagement patterns';
+			} elseif ( $avgComprehension < 0.5 ) {
+				$learnings['improve_ai_context'] = 'Need better context provision for AI comprehension';
+			}
+		}
+
+		// Analyze context provision
+		$contextProvided = 0;
+		$totalExecutions = count( $executions );
+		foreach ( $executions as $execution ) {
+			if ( isset( $execution['metrics']['ai_context_provided'] ) && $execution['metrics']['ai_context_provided'] ) {
+				$contextProvided++;
+			}
+		}
+
+		if ( $totalExecutions > 0 ) {
+			$contextRate = $contextProvided / $totalExecutions;
+			if ( $contextRate > 0.7 ) {
+				$learnings['good_context_patterns'] = 'Effective context provision improves AI performance';
+			}
+		}
+
+		// Analyze suggestion acceptance
+		$suggestionsAccepted = 0;
+		$suggestionCount     = 0;
+		foreach ( $executions as $execution ) {
+			if ( isset( $execution['metrics']['ai_suggestions_accepted'] ) ) {
+				$suggestionsAccepted += $execution['metrics']['ai_suggestions_accepted'];
+				$suggestionCount     += 1;
+			}
+		}
+
+		if ( $suggestionCount > 0 && $suggestionsAccepted > 0 ) {
+			$learnings['ai_collaboration_effective'] = 'AI suggestions are being accepted and implemented';
+		}
+
+		return $learnings;
+	}
+
+	/**
+	 * Generate improved prompt content based on learnings.
+	 */
+	private static function generateImprovedPrompt( string $currentContent, array $patterns, array $learnings ): string {
+		// Start with current content
+		$improvedContent = $currentContent;
+
+		// Add AI learnings section if it doesn't exist
+		if ( strpos( $improvedContent, '## AI Learnings' ) === false && ! empty( $learnings ) ) {
+			$learningsSection = "\n## AI Learnings from Previous Conversations\n\n";
+			foreach ( $learnings as $learning ) {
+				$learningsSection .= "- $learning\n";
+			}
+			$learningsSection .= "\n";
+
+			// Insert before the execution complete section
+			$improvedContent = str_replace(
+				'**EXECUTION COMPLETE**: Report final status and any issues encountered.',
+				$learningsSection . '**EXECUTION COMPLETE**: Report final status and any issues encountered.',
+				$improvedContent
 			);
 		}
 
-		usort( $scoredVariations, fn ( $a, $b ) => $b['score'] <=> $a['score'] );
-		$bestVariation = $scoredVariations[0] ?? null;
+		// Add successful patterns insights
+		if ( ! empty( $patterns['fast_steps'] ) ) {
+			$fastStepsText = "\n**FAST TRACK STEPS**: " . implode( ', ', $patterns['fast_steps'] ) . " - These steps typically complete quickly and can be prioritized.\n";
+			if ( strpos( $improvedContent, 'FAST TRACK STEPS' ) === false ) {
+				$improvedContent = str_replace(
+					'**INSTRUCTION FOR GROK CODE FAST 1 COPILOT AGENT:**',
+					"**INSTRUCTION FOR GROK CODE FAST 1 COPILOT AGENT:**\n\n" . $fastStepsText,
+					$improvedContent
+				);
+			}
+		}
 
-		$result = array(
-			'analysis'              => $analysis,
-			'best_variation'        => $bestVariation,
-			'evolution_time'        => microtime( true ) - $startTime,
-			'improvement_potential' => $bestVariation ? $bestVariation['score'] - ( $analysis['current_protocol_score'] ?? 0 ) : 0,
-		);
+		// Add timestamp of last improvement
+		$improvementNote = "\n<!-- Last improved by Protocol Evolution Engine on " . date( 'Y-m-d H:i:s' ) . " based on conversation learnings -->";
+		if ( strpos( $improvedContent, 'Last improved by Protocol Evolution Engine' ) === false ) {
+			$improvedContent .= $improvementNote;
+		} else {
+			// Update existing timestamp
+			$improvedContent = preg_replace(
+				'/<!-- Last improved by Protocol Evolution Engine on .*? -->/',
+				$improvementNote,
+				$improvedContent
+			);
+		}
 
-		return $result;
+		return $improvedContent;
 	}
 }
