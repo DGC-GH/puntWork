@@ -16,7 +16,7 @@ Execute the following maintenance protocol steps in strict numerical order. Do n
 
 4. **Download Logs**: Run `ftp_script.txt` to download current debug.log from the server.
 
-5. **Analyze Logs**: Run `analyze-import-logs.sh` for error patterns and performance metrics.
+5. **Analyze Logs**: Analize debug.log for error, warnings and issues.
 
 6. **Check Console**: Read Console.txt for client-side errors.
 

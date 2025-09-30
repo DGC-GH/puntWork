@@ -106,6 +106,7 @@ function process_async_batch_job( array $batch_data ): array {
 		// Update setup for this specific batch
 		$setup['start_index'] = $start_index;
 		$setup['total']       = $total;
+		$setup['json_path']   = $json_path;
 
 		// Process the batch
 		$result = process_batch_items_logic( $setup );

@@ -163,6 +163,7 @@ function process_batch_items_logic( array $setup ): array {
 		// Extract setup variables explicitly for security
 		$start_index = $setup['start_index'] ?? 0;
 		$total       = $setup['total'] ?? 0;
+		$json_path   = $setup['json_path'] ?? '';
 		$start_time  = $setup['start_time'] ?? microtime( true );
 
 		$batch_start_time = microtime( true ); // Record start time for this batch
