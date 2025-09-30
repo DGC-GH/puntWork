@@ -738,5 +738,7 @@ class PuntworkSocialMediaAdmin {
 	}
 }
 
-// Initialize admin interface
-new PuntworkSocialMediaAdmin();
+// Initialize admin interface only in admin context
+if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
+	new PuntworkSocialMediaAdmin();
+}

@@ -642,5 +642,7 @@ class PuntworkCrmAdmin {
 	}
 }
 
-// Initialize admin interface
-new PuntworkCrmAdmin();
+// Initialize admin interface only in admin context
+if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
+	new PuntworkCrmAdmin();
+}

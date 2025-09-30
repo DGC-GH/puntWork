@@ -389,5 +389,7 @@ class PuntworkCrmAdmin {
 	}
 }
 
-// Initialize CRM Admin
-new PuntworkCrmAdmin();
+// Initialize CRM Admin only in admin context
+if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
+	new PuntworkCrmAdmin();
+}

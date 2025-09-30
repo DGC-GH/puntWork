@@ -197,6 +197,24 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 			'utilities/performance-functions.php',
 		);
 
+		// Social Media includes (load on admin or cron) - moved before admin includes
+		if ( $is_admin || $is_cron ) {
+			$includes = array_merge(
+				$includes,
+				array(
+					'socialmedia/social-media-platform.php',
+					'socialmedia/twitter-platform.php',
+					'socialmedia/twitter-ads-manager.php',
+					'socialmedia/facebook-platform.php',
+					'socialmedia/facebook-ads-manager.php',
+					'socialmedia/tiktok-platform.php',
+					'socialmedia/tiktok-ads-manager.php',
+					'socialmedia/social-media-manager.php',
+					'database/social-media-db.php',
+				)
+			);
+		}
+
 		// Admin-only includes
 		if ( $is_admin ) {
 			$includes = array_merge(
@@ -224,6 +242,22 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 			);
 		}
 
+		// CRM includes (load on admin)
+		if ( $is_admin ) {
+			$includes = array_merge(
+				$includes,
+				array(
+					'crm/crm-integration.php',
+					'crm/hubspot-integration.php',
+					'crm/salesforce-integration.php',
+					'crm/zoho-integration.php',
+					'crm/pipedrive-integration.php',
+					'crm/crm-manager.php',
+					'database/crm-db.php',
+				)
+			);
+		}
+
 		// API/AJAX includes (load on AJAX, REST, or admin)
 		if ( $is_ajax || $is_rest || $is_admin ) {
 			$includes = array_merge(
@@ -242,7 +276,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 		}
 
 		// Batch/Import includes (load on AJAX, cron, or when explicitly needed)
-		if ( $is_ajax || $is_cron || isset( $_REQUEST['puntwork_import'] ) || isset( $_REQUEST['action'] ) && strpos( $_REQUEST['action'], 'puntwork' ) === 0 ) {
+		if ( $is_ajax || $is_cron || isset( $_REQUEST['puntwork_import'] ) || ( isset( $_REQUEST['action'] ) && strpos( $_REQUEST['action'], 'puntwork' ) === 0 ) ) {
 			$includes = array_merge(
 				$includes,
 				array(
@@ -291,40 +325,6 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 				array(
 					'queue/queue-manager.php',
 					'queue/queue-ajax.php',
-				)
-			);
-		}
-
-		// Social Media includes (load on admin or cron)
-		if ( $is_admin || $is_cron ) {
-			$includes = array_merge(
-				$includes,
-				array(
-					'socialmedia/social-media-platform.php',
-					'socialmedia/twitter-platform.php',
-					'socialmedia/twitter-ads-manager.php',
-					'socialmedia/facebook-platform.php',
-					'socialmedia/facebook-ads-manager.php',
-					'socialmedia/tiktok-platform.php',
-					'socialmedia/tiktok-ads-manager.php',
-					'socialmedia/social-media-manager.php',
-					'database/social-media-db.php',
-				)
-			);
-		}
-
-		// CRM includes (load on admin)
-		if ( $is_admin ) {
-			$includes = array_merge(
-				$includes,
-				array(
-					'crm/crm-integration.php',
-					'crm/hubspot-integration.php',
-					'crm/salesforce-integration.php',
-					'crm/zoho-integration.php',
-					'crm/pipedrive-integration.php',
-					'crm/crm-manager.php',
-					'database/crm-db.php',
 				)
 			);
 		}
