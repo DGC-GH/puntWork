@@ -29,13 +29,17 @@ class ProtocolEvolutionEngine
     /**
      * Record execution metrics for a protocol step
      */
-    public static function recordStepExecution(string $stepId, array $metrics): void
+    public static function recordStepExecution(string $stepId, bool $success, float $duration, array $data = []): void
     {
         $data = self::loadEvolutionData();
         $execution = [
             'step_id' => $stepId,
             'timestamp' => time(),
-            'metrics' => $metrics,
+            'metrics' => [
+                'success' => $success,
+                'duration' => $duration,
+                'data' => $data
+            ],
             'protocol_version' => self::getCurrentProtocolVersion()
         ];
 
@@ -190,7 +194,7 @@ class ProtocolEvolutionEngine
 
         foreach ($failedSteps as $execution) {
             $stepId = $execution['step_id'];
-            $error = $execution['metrics']['error'] ?? 'unknown';
+            $error = $execution['metrics']['data']['error'] ?? 'unknown';
 
             if (!isset($stepFailures[$stepId])) {
                 $stepFailures[$stepId] = [];
@@ -337,7 +341,7 @@ class ProtocolEvolutionEngine
             if (!empty($metrics)) {
                 $avgDuration = array_sum(array_column($metrics, 'duration')) / count($metrics);
                 $avgSuccess = array_sum(array_column($metrics, 'success')) / count($metrics);
-                $totalErrors = array_sum(array_column($metrics, 'error_count'));
+                $totalErrors = count(array_filter($metrics, fn($m) => !empty($m['data']['error'])));
 
                 $totalTime += $avgDuration;
                 $successCount += $avgSuccess;
