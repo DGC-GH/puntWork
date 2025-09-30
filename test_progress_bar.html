@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Progress Bar Test</title>
+    <style>
+        .puntwork-progress {
+            width: 100%;
+            height: 20px;
+            background-color: #f2f2f7;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .puntwork-progress__bar {
+            height: 100%;
+            background-color: #007aff;
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <h1>Progress Bar Test</h1>
+    <div class="puntwork-progress">
+        <div id="progress-bar" class="puntwork-progress__bar"></div>
+    </div>
+    <div id="progress-percent">0%</div>
+    <button onclick="testProgress()">Test Progress</button>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        function testProgress() {
+            // Simulate progress updates
+            let percent = 0;
+            const interval = setInterval(() => {
+                percent += 10;
+                $('#progress-bar').css({
+                    width: percent + '%',
+                    backgroundColor: percent >= 100 ? '#34c759' : '#007aff',
+                    transition: 'width 0.3s ease'
+                });
+                $('#progress-percent').text(percent + '%');
+
+                if (percent >= 100) {
+                    clearInterval(interval);
+                }
+            }, 500);
+        }
+    </script>
+</body>
+</html>

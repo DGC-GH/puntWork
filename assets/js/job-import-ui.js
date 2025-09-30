@@ -30,6 +30,14 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             this.currentPhase = phase;
             PuntWorkJSLogger.debug('Import phase changed from ' + oldPhase + ' to: ' + phase, 'UI');
 
+            // Ensure progress UI is visible during active import phases
+            if (phase !== 'idle' && phase !== 'complete') {
+                if (!$('#import-progress').is(':visible')) {
+                    console.log('[PUNTWORK] [UI-VISIBILITY] Phase changed to ' + phase + ', ensuring progress UI is visible');
+                    this.showImportUI();
+                }
+            }
+
             // Reset progress bar when transitioning to a new phase (except complete)
             if (phase !== 'complete' && phase !== 'idle') {
                 // Reset progress bar segments to show 0% for new phase
@@ -71,7 +79,6 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
          * Clear all progress indicators and reset UI
          */
         clearProgress: function() {
-            this.segmentsCreated = false;
             this.setPhase('idle');
             this.processingSpeed = 0; // Reset processing speed
             this.lastUpdateTime = 0;
@@ -82,7 +89,10 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             this.batchTimes = []; // Reset batch times
             this.lastBatchTime = 0;
             this.lastBatchSize = 0;
-            $('#progress-bar').empty();
+            $('#progress-bar').css({
+                width: '0%',
+                backgroundColor: '#007aff'
+            });
             $('#progress-percent').text('0%');
             $('#progress-percent').css('color', '#007aff'); // Reset to blue
             $('#total-items').text(0);
@@ -194,6 +204,12 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
          * @param {Object} data - Progress data
          */
         updateProgress: function(data) {
+            // Ensure progress UI is visible during import
+            if (!$('#import-progress').is(':visible')) {
+                console.log('[PUNTWORK] [UI-VISIBILITY] Progress UI was hidden, showing it now');
+                this.showImportUI();
+            }
+
             // Normalize the data first
             data = this.normalizeResponseData(data);
 
@@ -339,24 +355,13 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
 
             $('#progress-percent').css('color', percentColor);
 
-            if (!this.segmentsCreated && total > 0) {
-                var container = $('#progress-bar');
-                container.empty();
-                for (var i = 0; i < 100; i++) {
-                    $('<div>').css({
-                        width: '1%',
-                        backgroundColor: '#f2f2f7',
-                        borderRight: i < 99 ? '1px solid #d1d1d6' : 'none'
-                    }).appendTo(container);
-                }
-                this.segmentsCreated = true;
-            }
-
-            // Update progress bar segments
-            if (this.segmentsCreated) {
-                $('#progress-bar div').css('backgroundColor', '#f2f2f7'); // Reset all to default
-                $('#progress-bar div:lt(' + percent + ')').css('backgroundColor', barColor); // Fill completed segments
-            }
+            // Update progress bar using width-based approach (simpler and more reliable)
+            $('#progress-bar').css({
+                width: percent + '%',
+                backgroundColor: barColor,
+                transition: 'width 0.3s ease'
+            });
+            console.log('[PUNTWORK] [PROGRESS-DEBUG] Progress bar updated: width=' + percent + '%, color=' + barColor);
 
             // Check if we're in feed processing phase (no job stats yet)
             var is_feed_processing = (data.published === 0 && data.updated === 0 && data.skipped === 0 &&
@@ -686,7 +691,9 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
          * Show import UI elements
          */
         showImportUI: function() {
+            console.log('[PUNTWORK] [UI-VISIBILITY] showImportUI() called - showing import progress');
             $('#import-progress').show();
+            console.log('[PUNTWORK] [UI-VISIBILITY] Import progress should now be visible');
         },
 
         /**
