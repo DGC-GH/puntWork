@@ -366,4 +366,29 @@ class PuntWorkLogger
         // Also log to WordPress debug.log
         error_log($formattedMessage);
     }
+
+    /**
+     * Log an admin action with context.
+     *
+     * @param string $action  Action name
+     * @param string $message Log message
+     * @param string $context Context identifier
+     */
+    public static function logAdminAction($action, $message, $context = self::CONTEXT_ADMIN)
+    {
+        $formattedMessage = sprintf(
+            '[PUNTWORK] [%s] [%s] %s',
+            'ACTION',
+            $context,
+            $message
+        );
+
+        // Add to global import logs if available
+        if (isset($GLOBALS['import_logs']) && is_array($GLOBALS['import_logs'])) {
+            $GLOBALS['import_logs'][] = $formattedMessage;
+        }
+
+        // Also log to WordPress debug.log
+        error_log($formattedMessage);
+    }
 }
