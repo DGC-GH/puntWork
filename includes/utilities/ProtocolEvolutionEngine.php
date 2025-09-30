@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Self-Improving Protocol Evolution System
+ * Self-Improving Protocol Evolution System.
  *
  * Implements evolutionary algorithms to continuously improve the maintenance protocol
  * through analysis, variation, selection, and iteration.
@@ -17,49 +17,58 @@ class ProtocolEvolutionEngine
     private const MUTATION_RATE = 0.1;
 
     /**
-     * Fitness weights for protocol evaluation
+     * Fitness weights for protocol evaluation.
      */
     private const FITNESS_WEIGHTS = [
         'execution_time' => -0.5,  // Negative because faster is better
         'success_rate' => 0.3,
         'error_reduction' => 0.2,
-        'maintainability' => 0.1
+        'maintainability' => 0.1,
     ];
 
     /**
-     * Record execution metrics for a protocol step
+     * Record execution metrics for a protocol step.
      */
     public static function recordStepExecution(string $stepId, bool $success, float $duration, array $data = []): void
     {
-        $data = self::loadEvolutionData();
+        $dataFile = self::loadEvolutionData();
+
+        // Only store essential metrics to prevent memory issues
         $execution = [
             'step_id' => $stepId,
             'timestamp' => time(),
             'metrics' => [
                 'success' => $success,
                 'duration' => $duration,
-                'data' => $data
+                // Store only essential data, not full result arrays
+                'data_size' => isset($data) ? count($data) : 0,
+                'has_error' => isset($data['error']),
             ],
-            'protocol_version' => self::getCurrentProtocolVersion()
+            'protocol_version' => self::getCurrentProtocolVersion(),
         ];
 
-        $data['executions'][] = $execution;
+        $dataFile['executions'][] = $execution;
 
-        // Keep only last 1000 executions to prevent file bloat
-        if (count($data['executions']) > 1000) {
-            $data['executions'] = array_slice($data['executions'], -1000);
+        // Limit stored executions to prevent file bloat (keep last 500)
+        if (count($dataFile['executions']) > 500) {
+            $dataFile['executions'] = array_slice($dataFile['executions'], -500);
         }
 
-        self::saveEvolutionData($data);
+        self::saveEvolutionData($dataFile);
     }
 
     /**
-     * Analyze historical execution data and suggest improvements
+     * Analyze historical execution data and suggest improvements.
      */
     public static function analyzeAndSuggestImprovements(): array
     {
         $data = self::loadEvolutionData();
         $executions = $data['executions'] ?? [];
+
+        // Limit analysis to last 500 executions to prevent memory issues
+        if (count($executions) > 500) {
+            $executions = array_slice($executions, -500);
+        }
 
         if (empty($executions)) {
             return ['message' => 'Insufficient execution data for analysis'];
@@ -70,7 +79,7 @@ class ProtocolEvolutionEngine
             'success_patterns' => self::findSuccessPatterns($executions),
             'failure_patterns' => self::findFailurePatterns($executions),
             'optimization_opportunities' => self::suggestOptimizations($executions),
-            'generated_at' => time()
+            'generated_at' => time(),
         ];
 
         // Generate protocol variations
@@ -84,12 +93,12 @@ class ProtocolEvolutionEngine
             $scoredVariations[] = [
                 'variation' => $variation,
                 'score' => $score,
-                'improvements' => self::getVariationImprovements($variation, $currentProtocol)
+                'improvements' => self::getVariationImprovements($variation, $currentProtocol),
             ];
         }
 
         // Sort by score (highest first)
-        usort($scoredVariations, fn($a, $b) => $b['score'] <=> $a['score']);
+        usort($scoredVariations, fn ($a, $b) => $b['score'] <=> $a['score']);
 
         $analysis['protocol_variations'] = array_slice($scoredVariations, 0, self::TOP_PERFORMERS);
         $analysis['current_protocol_score'] = self::calculateFitnessScore($currentProtocol, $executions);
@@ -98,7 +107,7 @@ class ProtocolEvolutionEngine
     }
 
     /**
-     * Apply a successful protocol variation
+     * Apply a successful protocol variation.
      */
     public static function applyProtocolVariation(array $variation): bool
     {
@@ -120,19 +129,20 @@ class ProtocolEvolutionEngine
             $data['applied_variations'][] = [
                 'variation' => $variation,
                 'applied_at' => time(),
-                'backup_file' => basename($backupPath)
+                'backup_file' => basename($backupPath),
             ];
             self::saveEvolutionData($data);
 
             return true;
         } catch (\Exception $e) {
             error_log('[PROTOCOL-EVOLUTION] Failed to apply variation: ' . $e->getMessage());
+
             return false;
         }
     }
 
     /**
-     * Identify bottleneck steps from execution data
+     * Identify bottleneck steps from execution data.
      */
     private static function identifyBottlenecks(array $executions): array
     {
@@ -159,7 +169,7 @@ class ProtocolEvolutionEngine
                 $bottlenecks[$stepId] = [
                     'average_duration' => round($avgDuration, 2),
                     'max_duration' => $maxDuration,
-                    'execution_count' => $stats['count']
+                    'execution_count' => $stats['count'],
                 ];
             }
         }
@@ -168,11 +178,11 @@ class ProtocolEvolutionEngine
     }
 
     /**
-     * Find patterns in successful executions
+     * Find patterns in successful executions.
      */
     private static function findSuccessPatterns(array $executions): array
     {
-        $successfulSteps = array_filter($executions, fn($e) => $e['metrics']['success'] ?? false);
+        $successfulSteps = array_filter($executions, fn ($e) => $e['metrics']['success'] ?? false);
         $stepSuccess = [];
 
         foreach ($successfulSteps as $execution) {
@@ -181,15 +191,16 @@ class ProtocolEvolutionEngine
         }
 
         arsort($stepSuccess);
+
         return $stepSuccess;
     }
 
     /**
-     * Find patterns in failed executions
+     * Find patterns in failed executions.
      */
     private static function findFailurePatterns(array $executions): array
     {
-        $failedSteps = array_filter($executions, fn($e) => !($e['metrics']['success'] ?? true));
+        $failedSteps = array_filter($executions, fn ($e) => !($e['metrics']['success'] ?? true));
         $stepFailures = [];
 
         foreach ($failedSteps as $execution) {
@@ -207,7 +218,7 @@ class ProtocolEvolutionEngine
     }
 
     /**
-     * Suggest optimizations based on execution data
+     * Suggest optimizations based on execution data.
      */
     private static function suggestOptimizations(array $executions): array
     {
@@ -219,7 +230,7 @@ class ProtocolEvolutionEngine
                 'type' => 'parallel_processing',
                 'step' => $stepId,
                 'reason' => "High execution time (avg: {$data['average_duration']}s)",
-                'suggestion' => 'Consider parallel processing or caching'
+                'suggestion' => 'Consider parallel processing or caching',
             ];
         }
 
@@ -231,7 +242,7 @@ class ProtocolEvolutionEngine
                 'type' => 'error_handling',
                 'step' => $stepId,
                 'reason' => "Frequent error: $topError",
-                'suggestion' => 'Add better error handling or validation'
+                'suggestion' => 'Add better error handling or validation',
             ];
         }
 
@@ -239,7 +250,7 @@ class ProtocolEvolutionEngine
     }
 
     /**
-     * Generate variations of the protocol
+     * Generate variations of the protocol.
      */
     private static function generateProtocolVariations(array $currentProtocol, array $analysis): array
     {
@@ -254,7 +265,7 @@ class ProtocolEvolutionEngine
     }
 
     /**
-     * Mutate a protocol based on analysis
+     * Mutate a protocol based on analysis.
      */
     private static function mutateProtocol(array $protocol, array $analysis): array
     {
@@ -267,18 +278,22 @@ class ProtocolEvolutionEngine
             switch ($mutationType) {
                 case 0: // Reorder steps
                     shuffle($mutated);
+
                     break;
                 case 1: // Add parallel execution hint
                     $randomIndex = array_rand($mutated);
                     $mutated[$randomIndex] .= ' (consider parallel execution)';
+
                     break;
                 case 2: // Add automation suggestion
                     $randomIndex = array_rand($mutated);
                     $mutated[$randomIndex] .= ' (automate if possible)';
+
                     break;
                 case 3: // Add monitoring
                     $randomIndex = array_rand($mutated);
                     $mutated[$randomIndex] .= ' (add metrics collection)';
+
                     break;
             }
         }
@@ -298,7 +313,7 @@ class ProtocolEvolutionEngine
     }
 
     /**
-     * Calculate fitness score for a protocol variation
+     * Calculate fitness score for a protocol variation.
      */
     private static function calculateFitnessScore(array $protocol, array $executions): float
     {
@@ -315,7 +330,7 @@ class ProtocolEvolutionEngine
     }
 
     /**
-     * Simulate protocol execution to estimate metrics
+     * Simulate protocol execution to estimate metrics.
      */
     private static function simulateProtocolExecution(array $protocol, array $executions): array
     {
@@ -341,7 +356,7 @@ class ProtocolEvolutionEngine
             if (!empty($metrics)) {
                 $avgDuration = array_sum(array_column($metrics, 'duration')) / count($metrics);
                 $avgSuccess = array_sum(array_column($metrics, 'success')) / count($metrics);
-                $totalErrors = count(array_filter($metrics, fn($m) => !empty($m['data']['error'])));
+                $totalErrors = count(array_filter($metrics, fn ($m) => !empty($m['data']['error'])));
 
                 $totalTime += $avgDuration;
                 $successCount += $avgSuccess;
@@ -354,12 +369,12 @@ class ProtocolEvolutionEngine
             'execution_time' => $totalTime,
             'success_rate' => $totalCount > 0 ? $successCount / $totalCount : 0,
             'error_reduction' => max(0, 1 - ($errorCount / max(1, $totalCount))),
-            'maintainability' => self::calculateMaintainabilityScore($protocol)
+            'maintainability' => self::calculateMaintainabilityScore($protocol),
         ];
     }
 
     /**
-     * Calculate maintainability score based on protocol structure
+     * Calculate maintainability score based on protocol structure.
      */
     private static function calculateMaintainabilityScore(array $protocol): float
     {
@@ -384,7 +399,7 @@ class ProtocolEvolutionEngine
     }
 
     /**
-     * Extract step ID from step description
+     * Extract step ID from step description.
      */
     private static function extractStepId(string $step): string
     {
@@ -412,7 +427,7 @@ class ProtocolEvolutionEngine
     }
 
     /**
-     * Get current protocol as array
+     * Get current protocol as array.
      */
     private static function getCurrentProtocol(): array
     {
@@ -436,16 +451,17 @@ class ProtocolEvolutionEngine
     }
 
     /**
-     * Get current protocol version (timestamp-based)
+     * Get current protocol version (timestamp-based).
      */
     private static function getCurrentProtocolVersion(): string
     {
         $protocolFile = __DIR__ . '/../../protocol.md';
+
         return file_exists($protocolFile) ? filemtime($protocolFile) : 'unknown';
     }
 
     /**
-     * Format protocol array for file writing
+     * Format protocol array for file writing.
      */
     private static function formatProtocolForFile(array $protocol): string
     {
@@ -454,11 +470,12 @@ class ProtocolEvolutionEngine
             $content .= "- $step\n";
         }
         $content .= "\n<!-- Generated by Protocol Evolution Engine on " . date('Y-m-d H:i:s') . " -->\n";
+
         return $content;
     }
 
     /**
-     * Get improvements made by a variation
+     * Get improvements made by a variation.
      */
     private static function getVariationImprovements(array $variation, array $current): array
     {
@@ -488,7 +505,7 @@ class ProtocolEvolutionEngine
     }
 
     /**
-     * Load evolution data from file
+     * Load evolution data from file.
      */
     private static function loadEvolutionData(): array
     {
@@ -497,11 +514,12 @@ class ProtocolEvolutionEngine
         }
 
         $data = json_decode(file_get_contents(self::EVOLUTION_DATA_FILE), true);
+
         return $data ?: ['executions' => [], 'applied_variations' => []];
     }
 
     /**
-     * Save evolution data to file
+     * Save evolution data to file.
      */
     private static function saveEvolutionData(array $data): void
     {
@@ -510,7 +528,7 @@ class ProtocolEvolutionEngine
     }
 
     /**
-     * Run the evolution cycle
+     * Run the evolution cycle.
      */
     public static function runEvolutionCycle(): array
     {
@@ -530,14 +548,14 @@ class ProtocolEvolutionEngine
             $scoredVariations[] = ['variation' => $variation, 'score' => $score];
         }
 
-        usort($scoredVariations, fn($a, $b) => $b['score'] <=> $a['score']);
+        usort($scoredVariations, fn ($a, $b) => $b['score'] <=> $a['score']);
         $bestVariation = $scoredVariations[0] ?? null;
 
         $result = [
             'analysis' => $analysis,
             'best_variation' => $bestVariation,
             'evolution_time' => microtime(true) - $startTime,
-            'improvement_potential' => $bestVariation ? $bestVariation['score'] - ($analysis['current_protocol_score'] ?? 0) : 0
+            'improvement_potential' => $bestVariation ? $bestVariation['score'] - ($analysis['current_protocol_score'] ?? 0) : 0,
         ];
 
         return $result;
