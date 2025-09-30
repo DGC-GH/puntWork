@@ -322,7 +322,7 @@ class SelfImprovingProtocolRunner
         ];
 
         // Analyze PHP files for AI comprehension
-        $phpFiles = glob('*.php') + glob('includes/**/*.php') + glob('tests/**/*.php');
+        $phpFiles = $this->getPhpFilesRecursively();
         $analysis['files_analyzed'] = count($phpFiles);
 
         foreach ($phpFiles as $file) {
@@ -349,6 +349,25 @@ class SelfImprovingProtocolRunner
         }
 
         return $analysis;
+    }
+
+    private function getPhpFilesRecursively(): array
+    {
+        $files = [];
+        $directories = ['.', 'includes', 'tests'];
+
+        foreach ($directories as $dir) {
+            if (is_dir($dir)) {
+                $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir));
+                foreach ($iterator as $file) {
+                    if ($file->isFile() && $file->getExtension() === 'php') {
+                        $files[] = $file->getPathname();
+                    }
+                }
+            }
+        }
+
+        return $files;
     }
 
     private function fixErrors(): array

@@ -1,5 +1,13 @@
 <?php
-// Define ABSPATH for WordPress compatibility
+/**
+ * Performance Testing Script
+ *
+ * Tests the performance monitoring functionality of puntWork.
+ * This script validates that performance tracking works correctly
+ * and provides timing data for optimization.
+ */
+
+ // Define ABSPATH for WordPress compatibility
 if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', __DIR__ . '/' );
 }

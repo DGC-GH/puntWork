@@ -3,7 +3,7 @@
 # Enhanced with AI-driven analysis patterns and metrics
 # Run this script to analyze debug logs for performance insights
 
-LOG_FILE="wp-content/debug.log"
+LOG_FILE="debug.log"
 
 if [ ! -f "$LOG_FILE" ]; then
     echo "Error: Debug log file not found at $LOG_FILE"

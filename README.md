@@ -552,4 +552,24 @@ Server files are accessible via FTP using credentials from .env file:
 4. Open admin URLs in VS Code Simple Browser to verify functionality
 5. Clean debug.log via FTP if it becomes too large
 
+## Maintenance Protocol
+
+This project includes a self-improving maintenance protocol that runs automated analysis and optimization cycles. The protocol is documented in `protocol.md` and executed via `run-protocol.php`.
+
+### Key Features:
+- **AI-Enhanced Analysis**: Code comprehension scoring, pattern recognition, error correlation
+- **Evolutionary Optimization**: Protocol variations tested and applied based on fitness scores
+- **Automated Improvements**: Code refactoring, documentation generation, performance optimization
+- **Continuous Learning**: Metrics collection for improving future executions
+
+### Running the Protocol:
+```bash
+php run-protocol.php
+```
+
+### Protocol Evolution Data:
+- Evolution metrics stored in `protocol-evolution-data.json`
+- Protocol variations tracked with backup creation
+- AI performance metrics for comprehension and suggestion accuracy
+
 This file provides optimal context for rapid codebase understanding and efficient task execution for Grok Code Fast.
