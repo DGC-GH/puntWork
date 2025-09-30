@@ -82,7 +82,7 @@ function combine_jsonl_files( $feeds, $output_dir, $total_items, &$logs ) {
 
 	// Choose processing strategy
 	$feed_count      = count( $existing_feeds );
-	$use_parallel    = $feed_count > 3 && function_exists( 'pcntl_fork' );
+	$use_parallel    = $feed_count > 3 && function_exists( 'pcntl_fork' ) && ! ( defined( 'DOING_AJAX' ) && DOING_AJAX );
 	$use_progressive = file_exists( $combined_json_path ) && $feed_count < $feed_count; // Use progressive for small updates
 
 	$processing_stats = array();
