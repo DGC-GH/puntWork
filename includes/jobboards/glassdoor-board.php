@@ -9,206 +9,196 @@
 namespace Puntwork\JobBoards;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
  * Glassdoor job board integration.
  */
-class GlassdoorBoard extends JobBoard
-{
-    /**
-     * Partner ID for Glassdoor API.
-     */
-    protected string $partner_id = '';
+class GlassdoorBoard extends JobBoard {
 
-    /**
-     * Partner key for Glassdoor API.
-     */
-    protected string $partner_key = '';
+	/**
+	 * Partner ID for Glassdoor API.
+	 */
+	protected string $partner_id = '';
 
-    /**
-     * Constructor.
-     */
-    public function __construct(array $config = [])
-    {
-        $this->board_id = 'glassdoor';
-        $this->board_name = 'Glassdoor';
-        $this->api_url = 'https://api.glassdoor.com/api';
+	/**
+	 * Partner key for Glassdoor API.
+	 */
+	protected string $partner_key = '';
 
-        parent::__construct($config);
-    }
+	/**
+	 * Constructor.
+	 */
+	public function __construct( array $config = array() ) {
+		$this->board_id   = 'glassdoor';
+		$this->board_name = 'Glassdoor';
+		$this->api_url    = 'https://api.glassdoor.com/api';
 
-    /**
-     * Configure Glassdoor integration.
-     */
-    public function configure(array $config): void
-    {
-        parent::configure($config);
+		parent::__construct( $config );
+	}
 
-        if (isset($config['partner_id'])) {
-            $this->partner_id = $config['partner_id'];
-        }
+	/**
+	 * Configure Glassdoor integration.
+	 */
+	public function configure( array $config ): void {
+		parent::configure( $config );
 
-        if (isset($config['partner_key'])) {
-            $this->partner_key = $config['partner_key'];
-        }
-    }
+		if ( isset( $config['partner_id'] ) ) {
+			$this->partner_id = $config['partner_id'];
+		}
 
-    /**
-     * Check if Glassdoor is properly configured.
-     */
-    public function isConfigured(): bool
-    {
-        return parent::isConfigured() && !empty($this->partner_id) && !empty($this->partner_key);
-    }
+		if ( isset( $config['partner_key'] ) ) {
+			$this->partner_key = $config['partner_key'];
+		}
+	}
 
-    /**
-     * Fetch jobs from Glassdoor.
-     */
-    public function fetchJobs(array $params = []): array
-    {
-        if (!$this->isConfigured()) {
-            throw new \Exception('Glassdoor integration not properly configured');
-        }
+	/**
+	 * Check if Glassdoor is properly configured.
+	 */
+	public function isConfigured(): bool {
+		return parent::isConfigured() && ! empty( $this->partner_id ) && ! empty( $this->partner_key );
+	}
 
-        $default_params = [
-            'v' => '1',
-            'format' => 'json',
-            'action' => 'jobs',
-            'pn' => 1, // Page number
-            'ps' => 50, // Page size
-            't.p' => $this->partner_id,
-            't.k' => $this->partner_key,
-            'userip' => $this->getUserIP(),
-            'useragent' => $this->getUserAgent(),
-        ];
+	/**
+	 * Fetch jobs from Glassdoor.
+	 */
+	public function fetchJobs( array $params = array() ): array {
+		if ( ! $this->isConfigured() ) {
+			throw new \Exception( 'Glassdoor integration not properly configured' );
+		}
 
-        $search_params = array_merge($default_params, $params);
+		$default_params = array(
+			'v'         => '1',
+			'format'    => 'json',
+			'action'    => 'jobs',
+			'pn'        => 1, // Page number
+			'ps'        => 50, // Page size
+			't.p'       => $this->partner_id,
+			't.k'       => $this->partner_key,
+			'userip'    => $this->getUserIP(),
+			'useragent' => $this->getUserAgent(),
+		);
 
-        try {
-            $response = $this->makeApiRequest('', $search_params);
+		$search_params = array_merge( $default_params, $params );
 
-            if (!isset($response['response']) || !isset($response['response']['job'])) {
-                return [];
-            }
+		try {
+			$response = $this->makeApiRequest( '', $search_params );
 
-            $jobs = [];
-            foreach ($response['response']['job'] as $job_data) {
-                $jobs[] = $this->normalizeGlassdoorJob($job_data);
-            }
+			if ( ! isset( $response['response'] ) || ! isset( $response['response']['job'] ) ) {
+				return array();
+			}
 
-            return $jobs;
-        } catch (\Exception $e) {
-            PuntWorkLogger::error(
-                'Glassdoor API error',
-                PuntWorkLogger::CONTEXT_IMPORT,
-                [
-                    'error' => $e->getMessage(),
-                    'params' => $search_params,
-                ]
-            );
+			$jobs = array();
+			foreach ( $response['response']['job'] as $job_data ) {
+				$jobs[] = $this->normalizeGlassdoorJob( $job_data );
+			}
 
-            return [];
-        }
-    }
+			return $jobs;
+		} catch ( \Exception $e ) {
+			PuntWorkLogger::error(
+				'Glassdoor API error',
+				PuntWorkLogger::CONTEXT_IMPORT,
+				array(
+					'error'  => $e->getMessage(),
+					'params' => $search_params,
+				)
+			);
 
-    /**
-     * Get job details by ID.
-     */
-    public function getJobDetails(string $jobId): ?array
-    {
-        // Glassdoor doesn't provide detailed job info via API
-        // Return basic info if we have it cached, otherwise null
-        return null;
-    }
+			return array();
+		}
+	}
 
-    /**
-     * Search jobs with filters.
-     */
-    public function searchJobs(array $filters = []): array
-    {
-        $params = [];
+	/**
+	 * Get job details by ID.
+	 */
+	public function getJobDetails( string $jobId ): ?array {
+		// Glassdoor doesn't provide detailed job info via API
+		// Return basic info if we have it cached, otherwise null
+		return null;
+	}
 
-        if (isset($filters['keywords'])) {
-            $params['q'] = $filters['keywords'];
-        }
+	/**
+	 * Search jobs with filters.
+	 */
+	public function searchJobs( array $filters = array() ): array {
+		$params = array();
 
-        if (isset($filters['location'])) {
-            $params['l'] = $filters['location'];
-        }
+		if ( isset( $filters['keywords'] ) ) {
+			$params['q'] = $filters['keywords'];
+		}
 
-        if (isset($filters['category'])) {
-            $params['co'] = $filters['category'];
-        }
+		if ( isset( $filters['location'] ) ) {
+			$params['l'] = $filters['location'];
+		}
 
-        if (isset($filters['job_type'])) {
-            $params['jt'] = $filters['job_type'];
-        }
+		if ( isset( $filters['category'] ) ) {
+			$params['co'] = $filters['category'];
+		}
 
-        return $this->fetchJobs($params);
-    }
+		if ( isset( $filters['job_type'] ) ) {
+			$params['jt'] = $filters['job_type'];
+		}
 
-    /**
-     * Normalize Glassdoor job data.
-     */
-    private function normalizeGlassdoorJob(array $jobData): array
-    {
-        return [
-            'id' => $jobData['id'] ?? uniqid('glassdoor_'),
-            'title' => $jobData['jobTitle'] ?? '',
-            'description' => $jobData['jobDescription'] ?? '',
-            'company' => $jobData['company'] ?? '',
-            'location' => $jobData['location'] ?? '',
-            'salary' => $this->formatGlassdoorSalary($jobData),
-            'job_type' => $jobData['jobType'] ?? 'full-time',
-            'category' => $jobData['category'] ?? '',
-            'url' => $jobData['jobLink'] ?? '',
-            'date_posted' => $jobData['postDate'] ?? date('Y-m-d'),
-            'source' => 'glassdoor',
-            'raw_data' => $jobData,
-        ];
-    }
+		return $this->fetchJobs( $params );
+	}
 
-    /**
-     * Format Glassdoor salary information.
-     */
-    private function formatGlassdoorSalary(array $jobData): string
-    {
-        $salary = '';
+	/**
+	 * Normalize Glassdoor job data.
+	 */
+	private function normalizeGlassdoorJob( array $jobData ): array {
+		return array(
+			'id'          => $jobData['id'] ?? uniqid( 'glassdoor_' ),
+			'title'       => $jobData['jobTitle'] ?? '',
+			'description' => $jobData['jobDescription'] ?? '',
+			'company'     => $jobData['company'] ?? '',
+			'location'    => $jobData['location'] ?? '',
+			'salary'      => $this->formatGlassdoorSalary( $jobData ),
+			'job_type'    => $jobData['jobType'] ?? 'full-time',
+			'category'    => $jobData['category'] ?? '',
+			'url'         => $jobData['jobLink'] ?? '',
+			'date_posted' => $jobData['postDate'] ?? date( 'Y-m-d' ),
+			'source'      => 'glassdoor',
+			'raw_data'    => $jobData,
+		);
+	}
 
-        if (isset($jobData['payLow']) && isset($jobData['payHigh'])) {
-            $currency = $jobData['currency'] ?? 'USD';
-            $low = $jobData['payLow'];
-            $high = $jobData['payHigh'];
-            $period = $jobData['payPeriod'] ?? 'yearly';
+	/**
+	 * Format Glassdoor salary information.
+	 */
+	private function formatGlassdoorSalary( array $jobData ): string {
+		$salary = '';
 
-            $salary = "{$currency} {$low} - {$high} per {$period}";
-        }
+		if ( isset( $jobData['payLow'] ) && isset( $jobData['payHigh'] ) ) {
+			$currency = $jobData['currency'] ?? 'USD';
+			$low      = $jobData['payLow'];
+			$high     = $jobData['payHigh'];
+			$period   = $jobData['payPeriod'] ?? 'yearly';
 
-        return $salary;
-    }
+			$salary = "{$currency} {$low} - {$high} per {$period}";
+		}
 
-    /**
-     * Get user IP address for Glassdoor API.
-     */
-    private function getUserIP(): string
-    {
-        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-            return $_SERVER['HTTP_CLIENT_IP'];
-        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            return $_SERVER['HTTP_X_FORWARDED_FOR'];
-        } else {
-            return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-        }
-    }
+		return $salary;
+	}
 
-    /**
-     * Get user agent for Glassdoor API.
-     */
-    private function getUserAgent(): string
-    {
-        return $_SERVER['HTTP_USER_AGENT'] ?? 'PuntWork/' . PUNTWORK_VERSION;
-    }
+	/**
+	 * Get user IP address for Glassdoor API.
+	 */
+	private function getUserIP(): string {
+		if ( ! empty( $_SERVER['HTTP_CLIENT_IP'] ) ) {
+			return $_SERVER['HTTP_CLIENT_IP'];
+		} elseif ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+			return $_SERVER['HTTP_X_FORWARDED_FOR'];
+		} else {
+			return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+		}
+	}
+
+	/**
+	 * Get user agent for Glassdoor API.
+	 */
+	private function getUserAgent(): string {
+		return $_SERVER['HTTP_USER_AGENT'] ?? 'PuntWork/' . PUNTWORK_VERSION;
+	}
 }

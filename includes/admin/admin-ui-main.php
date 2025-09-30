@@ -10,8 +10,8 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
@@ -19,9 +19,8 @@ if (!defined('ABSPATH')) {
  *
  * @return void
  */
-function render_jobs_dashboard_ui(): void
-{
-    ?>
+function render_jobs_dashboard_ui(): void {
+	?>
 	<div class="puntwork-admin">
 		<div class="puntwork-container">
 			<header class="puntwork-header">
@@ -167,26 +166,25 @@ function render_jobs_dashboard_ui(): void
  *
  * @return void
  */
-function render_main_import_ui(): void
-{
-    error_log('[PUNTWORK] [UI-RENDER] render_main_import_ui() called at ' . date('Y-m-d H:i:s T'));
-    error_log('[PUNTWORK] [UI-RENDER] Rendering main import UI elements');
+function render_main_import_ui(): void {
+	error_log( '[PUNTWORK] [UI-RENDER] render_main_import_ui() called at ' . date( 'Y-m-d H:i:s T' ) );
+	error_log( '[PUNTWORK] [UI-RENDER] Rendering main import UI elements' );
 
-    // Check if combined JSONL file exists
-    $jsonl_path = '/Users/dg/Documents/GitHub/puntWork/feeds/combined-jobs.jsonl';
-    $jsonl_exists = file_exists($jsonl_path);
-    $jsonl_size = $jsonl_exists ? filesize($jsonl_path) : 0;
+	// Check if combined JSONL file exists
+	$jsonl_path   = '/Users/dg/Documents/GitHub/puntWork/feeds/combined-jobs.jsonl';
+	$jsonl_exists = file_exists( $jsonl_path );
+	$jsonl_size   = $jsonl_exists ? filesize( $jsonl_path ) : 0;
 
-    error_log('[PUNTWORK] [UI-VALIDATION] Combined JSONL file check - Path: ' . $jsonl_path . ', Exists: ' . ($jsonl_exists ? 'YES' : 'NO') . ', Size: ' . $jsonl_size . ' bytes');
+	error_log( '[PUNTWORK] [UI-VALIDATION] Combined JSONL file check - Path: ' . $jsonl_path . ', Exists: ' . ( $jsonl_exists ? 'YES' : 'NO' ) . ', Size: ' . $jsonl_size . ' bytes' );
 
-    if (!$jsonl_exists || $jsonl_size === 0) {
-        error_log('[PUNTWORK] [UI-WARNING] No import data available - Combined JSONL file missing or empty, but Start Import will process feeds first');
-        PuntWorkLogger::logAdminAction('UI Import Data Check', 'No import data available - combined JSONL file missing or empty, but Start Import will process feeds first', PuntWorkLogger::CONTEXT_ADMIN);
-    } else {
-        error_log('[PUNTWORK] [UI-SUCCESS] Import data available - Combined JSONL file found and valid');
-    }
+	if ( ! $jsonl_exists || $jsonl_size === 0 ) {
+		error_log( '[PUNTWORK] [UI-WARNING] No import data available - Combined JSONL file missing or empty, but Start Import will process feeds first' );
+		PuntWorkLogger::logAdminAction( 'UI Import Data Check', 'No import data available - combined JSONL file missing or empty, but Start Import will process feeds first', PuntWorkLogger::CONTEXT_ADMIN );
+	} else {
+		error_log( '[PUNTWORK] [UI-SUCCESS] Import data available - Combined JSONL file found and valid' );
+	}
 
-    ?>
+	?>
 	<div class="puntwork-admin">
 		<div class="puntwork-container">
 			<header class="puntwork-header">
@@ -201,7 +199,7 @@ function render_main_import_ui(): void
 					<p class="puntwork-card__subtitle">Start, pause, or resume job imports from configured feeds.</p>
 				</div>
 
-				<?php if (false) : // Always hide the warning since Start Import now processes feeds first?>
+				<?php if ( false ) : // Always hide the warning since Start Import now processes feeds first ?>
 				<!-- No Data Available Notice -->
 				<div class="puntwork-card__body" style="background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: var(--radius-md); padding: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
 					<div style="display: flex; align-items: flex-start; gap: var(--spacing-md);">
@@ -212,7 +210,7 @@ function render_main_import_ui(): void
 								Job feeds need to be processed before you can run imports. The combined data file is missing or empty.
 							</p>
 							<p style="font-size: var(--font-size-sm); color: #92400e; margin: 0;">
-								<strong>Solution:</strong> Go to the <a href="<?php echo admin_url('admin.php?page=puntwork-scheduling'); ?>" style="color: #dc2626; text-decoration: underline;">Scheduling section</a> and click "Run Now" to process feeds and start a complete import.
+								<strong>Solution:</strong> Go to the <a href="<?php echo admin_url( 'admin.php?page=puntwork-scheduling' ); ?>" style="color: #dc2626; text-decoration: underline;">Scheduling section</a> and click "Run Now" to process feeds and start a complete import.
 							</p>
 						</div>
 					</div>
@@ -506,7 +504,7 @@ function render_main_import_ui(): void
 				per_page: 20,
 				status: filters.status || 'any',
 				search: filters.search || '',
-				nonce: '<?php echo wp_create_nonce('puntwork_load_jobs'); ?>'
+				nonce: '<?php echo wp_create_nonce( 'puntwork_load_jobs' ); ?>'
 			};
 
 			// Make AJAX request
@@ -631,7 +629,7 @@ function render_main_import_ui(): void
 
 				const jobId = target.dataset.id;
 				if (target.classList.contains('edit-job')) {
-					window.open(`<?php echo admin_url('post.php?action=edit&post='); ?>\${jobId}`, '_blank');
+					window.open(`<?php echo admin_url( 'post.php?action=edit&post=' ); ?>\${jobId}`, '_blank');
 				} else if (target.classList.contains('view-job')) {
 					window.open(`<?php echo get_permalink(); ?>?p=\${jobId}`, '_blank');
 				}

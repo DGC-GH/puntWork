@@ -11,128 +11,124 @@
 namespace Puntwork;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
  * Advanced Reporting Admin UI.
  */
-class ReportingAdminUI
-{
-    /**
-     * Initialize admin interface.
-     */
-    public static function init(): void
-    {
-        add_action('admin_menu', [self::class, 'addAdminMenu']);
-        add_action('admin_enqueueScripts', [self::class, 'enqueueScripts']);
-        add_action('wp_ajaxExportReport', [self::class, 'ajaxExportReport']);
-        add_action('wp_ajaxDeleteReport', [self::class, 'ajaxDeleteReport']);
-    }
+class ReportingAdminUI {
 
-    /**
-     * Add admin menu.
-     */
-    public static function addAdminMenu(): void
-    {
-        add_submenu_page(
-            'puntwork-admin',
-            __('Reports', 'puntwork'),
-            __('Reports', 'puntwork'),
-            'manage_options',
-            'puntwork-reports',
-            [self::class, 'renderAdminPage']
-        );
-    }
+	/**
+	 * Initialize admin interface.
+	 */
+	public static function init(): void {
+		add_action( 'admin_menu', array( self::class, 'addAdminMenu' ) );
+		add_action( 'admin_enqueueScripts', array( self::class, 'enqueueScripts' ) );
+		add_action( 'wp_ajaxExportReport', array( self::class, 'ajaxExportReport' ) );
+		add_action( 'wp_ajaxDeleteReport', array( self::class, 'ajaxDeleteReport' ) );
+	}
 
-    /**
-     * Enqueue admin scripts and styles.
-     */
-    public static function enqueueScripts(string $hook): void
-    {
-        if ($hook !== 'puntwork_page_puntwork-reports') {
-            return;
-        }
+	/**
+	 * Add admin menu.
+	 */
+	public static function addAdminMenu(): void {
+		add_submenu_page(
+			'puntwork-admin',
+			__( 'Reports', 'puntwork' ),
+			__( 'Reports', 'puntwork' ),
+			'manage_options',
+			'puntwork-reports',
+			array( self::class, 'renderAdminPage' )
+		);
+	}
 
-        wp_enqueue_style('puntwork-reports-admin', plugins_url('assets/css/reports-admin.css', dirname(__DIR__, 1)), [], '2.4.0');
-        wp_enqueue_script('puntwork-reports-admin', plugins_url('assets/js/reports-admin.js', dirname(__DIR__, 1)), ['jquery'], '2.4.0', true);
+	/**
+	 * Enqueue admin scripts and styles.
+	 */
+	public static function enqueueScripts( string $hook ): void {
+		if ( $hook !== 'puntwork_page_puntwork-reports' ) {
+			return;
+		}
 
-        wp_localize_script(
-            'puntwork-reports-admin',
-            'puntworkReports',
-            [
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('puntwork_reports_admin'),
-                'generate_nonce' => wp_create_nonce('puntwork_generate_report'),
-                'export_nonce' => wp_create_nonce('puntwork_export_report'),
-                'delete_nonce' => wp_create_nonce('puntwork_delete_report'),
-                'strings' => [
-                    'generating' => __('Generating report...', 'puntwork'),
-                    'exporting' => __('Exporting report...', 'puntwork'),
-                    'deleting' => __('Deleting report...', 'puntwork'),
-                    'confirm_delete' => __('Are you sure you want to delete this report?', 'puntwork'),
-                    'report_generated' => __('Report generated successfully', 'puntwork'),
-                    'report_exported' => __('Report exported successfully', 'puntwork'),
-                    'report_deleted' => __('Report deleted successfully', 'puntwork'),
-                    'error' => __('An error occurred', 'puntwork'),
-                ],
-            ]
-        );
-    }
+		wp_enqueue_style( 'puntwork-reports-admin', plugins_url( 'assets/css/reports-admin.css', dirname( __DIR__, 1 ) ), array(), '2.4.0' );
+		wp_enqueue_script( 'puntwork-reports-admin', plugins_url( 'assets/js/reports-admin.js', dirname( __DIR__, 1 ) ), array( 'jquery' ), '2.4.0', true );
 
-    /**
-     * Render admin page.
-     */
-    public static function renderAdminPage(): void
-    {
-        if (!current_user_can('manage_options')) {
-            wp_die(__('You do not have sufficient permissions to access this page.'));
-        }
+		wp_localize_script(
+			'puntwork-reports-admin',
+			'puntworkReports',
+			array(
+				'ajax_url'       => admin_url( 'admin-ajax.php' ),
+				'nonce'          => wp_create_nonce( 'puntwork_reports_admin' ),
+				'generate_nonce' => wp_create_nonce( 'puntwork_generate_report' ),
+				'export_nonce'   => wp_create_nonce( 'puntwork_export_report' ),
+				'delete_nonce'   => wp_create_nonce( 'puntwork_delete_report' ),
+				'strings'        => array(
+					'generating'       => __( 'Generating report...', 'puntwork' ),
+					'exporting'        => __( 'Exporting report...', 'puntwork' ),
+					'deleting'         => __( 'Deleting report...', 'puntwork' ),
+					'confirm_delete'   => __( 'Are you sure you want to delete this report?', 'puntwork' ),
+					'report_generated' => __( 'Report generated successfully', 'puntwork' ),
+					'report_exported'  => __( 'Report exported successfully', 'puntwork' ),
+					'report_deleted'   => __( 'Report deleted successfully', 'puntwork' ),
+					'error'            => __( 'An error occurred', 'puntwork' ),
+				),
+			)
+		);
+	}
 
-        ?>
+	/**
+	 * Render admin page.
+	 */
+	public static function renderAdminPage(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
+		}
+
+		?>
 		<div class="wrap">
-			<h1><?php _e('Advanced Reports', 'puntwork'); ?></h1>
+			<h1><?php _e( 'Advanced Reports', 'puntwork' ); ?></h1>
 
 			<div class="puntwork-reports-container">
 				<!-- Report Generation -->
 				<div class="puntwork-reports-section">
-					<h2><?php _e('Generate Custom Report', 'puntwork'); ?></h2>
+					<h2><?php _e( 'Generate Custom Report', 'puntwork' ); ?></h2>
 					<div class="report-generator">
 						<form id="report-generator-form">
 							<div class="form-row">
 								<div class="form-group">
-									<label for="report-type"><?php _e('Report Type', 'puntwork'); ?></label>
+									<label for="report-type"><?php _e( 'Report Type', 'puntwork' ); ?></label>
 									<select id="report-type" name="report_type">
-										<option value="performance"><?php _e('Performance Report', 'puntwork'); ?></option>
-										<option value="feed_health"><?php _e('Feed Health Report', 'puntwork'); ?></option>
-										<option value="job_analytics"><?php _e('Job Analytics Report', 'puntwork'); ?></option>
-										<option value="network"><?php _e('Network Report', 'puntwork'); ?></option>
-										<option value="ml_insights"><?php _e('ML Insights Report', 'puntwork'); ?></option>
+										<option value="performance"><?php _e( 'Performance Report', 'puntwork' ); ?></option>
+										<option value="feed_health"><?php _e( 'Feed Health Report', 'puntwork' ); ?></option>
+										<option value="job_analytics"><?php _e( 'Job Analytics Report', 'puntwork' ); ?></option>
+										<option value="network"><?php _e( 'Network Report', 'puntwork' ); ?></option>
+										<option value="ml_insights"><?php _e( 'ML Insights Report', 'puntwork' ); ?></option>
 									</select>
 								</div>
 								<div class="form-group">
-									<label for="date-range"><?php _e('Date Range', 'puntwork'); ?></label>
+									<label for="date-range"><?php _e( 'Date Range', 'puntwork' ); ?></label>
 									<select id="date-range" name="date_range">
-										<option value="7"><?php _e('Last 7 days', 'puntwork'); ?></option>
-										<option value="30" selected><?php _e('Last 30 days', 'puntwork'); ?></option>
-										<option value="90"><?php _e('Last 90 days', 'puntwork'); ?></option>
-										<option value="365"><?php _e('Last year', 'puntwork'); ?></option>
+										<option value="7"><?php _e( 'Last 7 days', 'puntwork' ); ?></option>
+										<option value="30" selected><?php _e( 'Last 30 days', 'puntwork' ); ?></option>
+										<option value="90"><?php _e( 'Last 90 days', 'puntwork' ); ?></option>
+										<option value="365"><?php _e( 'Last year', 'puntwork' ); ?></option>
 									</select>
 								</div>
 								<div class="form-group">
-									<label for="report-format"><?php _e('Format', 'puntwork'); ?></label>
+									<label for="report-format"><?php _e( 'Format', 'puntwork' ); ?></label>
 									<select id="report-format" name="format">
-										<option value="html"><?php _e('HTML', 'puntwork'); ?></option>
-										<option value="pdf"><?php _e('PDF', 'puntwork'); ?></option>
-										<option value="csv"><?php _e('CSV', 'puntwork'); ?></option>
-										<option value="json"><?php _e('JSON', 'puntwork'); ?></option>
+										<option value="html"><?php _e( 'HTML', 'puntwork' ); ?></option>
+										<option value="pdf"><?php _e( 'PDF', 'puntwork' ); ?></option>
+										<option value="csv"><?php _e( 'CSV', 'puntwork' ); ?></option>
+										<option value="json"><?php _e( 'JSON', 'puntwork' ); ?></option>
 									</select>
 								</div>
 							</div>
 							<div class="form-actions">
 								<button type="submit" class="puntwork-btn puntwork-btn--primary" id="generate-report">
-									<?php _e('Generate Report', 'puntwork'); ?>
+									<?php _e( 'Generate Report', 'puntwork' ); ?>
 								</button>
 							</div>
 						</form>
@@ -141,14 +137,14 @@ class ReportingAdminUI
 
 				<!-- Report Preview -->
 				<div class="puntwork-reports-section" id="report-preview" style="display: none;">
-					<h2><?php _e('Report Preview', 'puntwork'); ?></h2>
+					<h2><?php _e( 'Report Preview', 'puntwork' ); ?></h2>
 					<div class="report-preview-container">
 						<div class="report-actions">
 							<button type="button" class="button" id="export-report">
-								<?php _e('Export Report', 'puntwork'); ?>
+								<?php _e( 'Export Report', 'puntwork' ); ?>
 							</button>
 							<button type="button" class="button" id="schedule-report">
-								<?php _e('Schedule Report', 'puntwork'); ?>
+								<?php _e( 'Schedule Report', 'puntwork' ); ?>
 							</button>
 						</div>
 						<div id="report-content" class="report-content">
@@ -159,18 +155,18 @@ class ReportingAdminUI
 
 				<!-- Saved Reports -->
 				<div class="puntwork-reports-section">
-					<h2><?php _e('Saved Reports', 'puntwork'); ?></h2>
+					<h2><?php _e( 'Saved Reports', 'puntwork' ); ?></h2>
 					<div class="reports-list-container">
 						<div class="reports-filters">
 							<select id="filter-type">
-								<option value=""><?php _e('All Types', 'puntwork'); ?></option>
-								<option value="performance"><?php _e('Performance', 'puntwork'); ?></option>
-								<option value="feed_health"><?php _e('Feed Health', 'puntwork'); ?></option>
-								<option value="job_analytics"><?php _e('Job Analytics', 'puntwork'); ?></option>
-								<option value="network"><?php _e('Network', 'puntwork'); ?></option>
-								<option value="ml_insights"><?php _e('ML Insights', 'puntwork'); ?></option>
+								<option value=""><?php _e( 'All Types', 'puntwork' ); ?></option>
+								<option value="performance"><?php _e( 'Performance', 'puntwork' ); ?></option>
+								<option value="feed_health"><?php _e( 'Feed Health', 'puntwork' ); ?></option>
+								<option value="job_analytics"><?php _e( 'Job Analytics', 'puntwork' ); ?></option>
+								<option value="network"><?php _e( 'Network', 'puntwork' ); ?></option>
+								<option value="ml_insights"><?php _e( 'ML Insights', 'puntwork' ); ?></option>
 							</select>
-							<input type="text" id="search-reports" placeholder="<?php esc_attr_e('Search reports...', 'puntwork'); ?>">
+							<input type="text" id="search-reports" placeholder="<?php esc_attr_e( 'Search reports...', 'puntwork' ); ?>">
 						</div>
 						<div id="reports-list" class="reports-list">
 							<!-- Reports will be loaded here -->
@@ -180,46 +176,46 @@ class ReportingAdminUI
 
 				<!-- Report Settings -->
 				<div class="puntwork-reports-section">
-					<h2><?php _e('Report Settings', 'puntwork'); ?></h2>
+					<h2><?php _e( 'Report Settings', 'puntwork' ); ?></h2>
 					<form method="post" action="options.php">
-		<?php settings_fields('puntwork_reporting'); ?>
+		<?php settings_fields( 'puntwork_reporting' ); ?>
 
 						<table class="form-table">
 							<tr>
-								<th scope="row"><?php _e('Automated Reports', 'puntwork'); ?></th>
+								<th scope="row"><?php _e( 'Automated Reports', 'puntwork' ); ?></th>
 								<td>
 									<label for="automated-reports-enabled">
-										<input type="checkbox" id="automated-reports-enabled" name="puntwork_automated_reports_enabled" value="1" <?php checked(get_option('puntwork_automated_reports_enabled', true)); ?> />
-										<?php _e('Enable automated report generation', 'puntwork'); ?>
+										<input type="checkbox" id="automated-reports-enabled" name="puntwork_automated_reports_enabled" value="1" <?php checked( get_option( 'puntwork_automated_reports_enabled', true ) ); ?> />
+										<?php _e( 'Enable automated report generation', 'puntwork' ); ?>
 									</label>
 									<p class="description">
-										<?php _e('Automatically generate reports daily for performance monitoring.', 'puntwork'); ?>
+										<?php _e( 'Automatically generate reports daily for performance monitoring.', 'puntwork' ); ?>
 									</p>
 								</td>
 							</tr>
 							<tr>
-								<th scope="row"><?php _e('Report Retention', 'puntwork'); ?></th>
+								<th scope="row"><?php _e( 'Report Retention', 'puntwork' ); ?></th>
 								<td>
-									<input type="number" id="report-retention" name="puntwork_report_retention_days" value="<?php echo esc_attr(get_option('puntwork_report_retention_days', 90)); ?>" min="7" max="365" />
-									<span><?php _e('days', 'puntwork'); ?></span>
+									<input type="number" id="report-retention" name="puntwork_report_retention_days" value="<?php echo esc_attr( get_option( 'puntwork_report_retention_days', 90 ) ); ?>" min="7" max="365" />
+									<span><?php _e( 'days', 'puntwork' ); ?></span>
 									<p class="description">
-										<?php _e('How long to keep generated reports before automatic deletion.', 'puntwork'); ?>
+										<?php _e( 'How long to keep generated reports before automatic deletion.', 'puntwork' ); ?>
 									</p>
 								</td>
 							</tr>
 							<tr>
-								<th scope="row"><?php _e('Dashboard Refresh', 'puntwork'); ?></th>
+								<th scope="row"><?php _e( 'Dashboard Refresh', 'puntwork' ); ?></th>
 								<td>
-									<input type="number" id="dashboard-refresh" name="puntwork_dashboard_refresh_interval" value="<?php echo esc_attr(get_option('puntwork_dashboard_refresh_interval', 300)); ?>" min="60" max="3600" />
-									<span><?php _e('seconds', 'puntwork'); ?></span>
+									<input type="number" id="dashboard-refresh" name="puntwork_dashboard_refresh_interval" value="<?php echo esc_attr( get_option( 'puntwork_dashboard_refresh_interval', 300 ) ); ?>" min="60" max="3600" />
+									<span><?php _e( 'seconds', 'puntwork' ); ?></span>
 									<p class="description">
-										<?php _e('How often to refresh dashboard widgets with new data.', 'puntwork'); ?>
+										<?php _e( 'How often to refresh dashboard widgets with new data.', 'puntwork' ); ?>
 									</p>
 								</td>
 							</tr>
 						</table>
 
-		<?php submit_button(__('Save Settings', 'puntwork')); ?>
+		<?php submit_button( __( 'Save Settings', 'puntwork' ) ); ?>
 					</form>
 				</div>
 			</div>
@@ -229,7 +225,7 @@ class ReportingAdminUI
 		<div id="report-modal" class="puntwork-modal" style="display: none;">
 			<div class="puntwork-modal-content">
 				<div class="puntwork-modal-header">
-					<h3 id="modal-title"><?php _e('Report', 'puntwork'); ?></h3>
+					<h3 id="modal-title"><?php _e( 'Report', 'puntwork' ); ?></h3>
 					<button type="button" class="puntwork-modal-close">&times;</button>
 				</div>
 				<div class="puntwork-modal-body" id="modal-content">
@@ -535,7 +531,7 @@ class ReportingAdminUI
 					showMessage(puntworkReports.strings.error + ': ' + error, 'error');
 				},
 				complete: function() {
-					$('#generate-report').prop('disabled', false).text('<?php _e('Generate Report', 'puntwork'); ?>');
+					$('#generate-report').prop('disabled', false).text('<?php _e( 'Generate Report', 'puntwork' ); ?>');
 				}
 			});
 		}
@@ -700,111 +696,109 @@ class ReportingAdminUI
 		}
 		</script>
 		<?php
-    }
+	}
 
-    /**
-     * AJAX handler for exporting reports.
-     */
-    public static function ajaxExportReport(): void
-    {
-        try {
-            if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_export_report')) {
-                wp_send_json_error('Security check failed');
+	/**
+	 * AJAX handler for exporting reports.
+	 */
+	public static function ajaxExportReport(): void {
+		try {
+			if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'puntwork_export_report' ) ) {
+				wp_send_json_error( 'Security check failed' );
 
-                return;
-            }
+				return;
+			}
 
-            if (!current_user_can('manage_options')) {
-                wp_send_json_error('Insufficient permissions');
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_send_json_error( 'Insufficient permissions' );
 
-                return;
-            }
+				return;
+			}
 
-            $report_id = intval($_POST['report_id'] ?? 0);
-            $format = sanitize_text_field($_POST['format'] ?? 'html');
+			$report_id = intval( $_POST['report_id'] ?? 0 );
+			$format    = sanitize_text_field( $_POST['format'] ?? 'html' );
 
-            if (!$report_id) {
-                wp_send_json_error('Invalid report ID');
+			if ( ! $report_id ) {
+				wp_send_json_error( 'Invalid report ID' );
 
-                return;
-            }
+				return;
+			}
 
-            global $wpdb;
-            $table_name = $wpdb->prefix . 'puntwork_reports';
+			global $wpdb;
+			$table_name = $wpdb->prefix . 'puntwork_reports';
 
-            $report = $wpdb->get_row(
-                $wpdb->prepare(
-                    "
+			$report = $wpdb->get_row(
+				$wpdb->prepare(
+					"
                 SELECT * FROM $table_name WHERE id = %d
             ",
-                    $report_id
-                ),
-                ARRAY_A
-            );
+					$report_id
+				),
+				ARRAY_A
+			);
 
-            if (!$report) {
-                wp_send_json_error('Report not found');
+			if ( ! $report ) {
+				wp_send_json_error( 'Report not found' );
 
-                return;
-            }
+				return;
+			}
 
-            // Generate filename
-            $filename = sanitize_title($report['report_title']) . '_' . date('Y-m-d') . '.' . $format;
+			// Generate filename
+			$filename = sanitize_title( $report['report_title'] ) . '_' . date( 'Y-m-d' ) . '.' . $format;
 
-            // Set headers for download
-            header('Content-Type: text/plain');
-            header('Content-Disposition: attachment; filename="' . $filename . '"');
-            header('Content-Length: ' . strlen($report['report_data']));
+			// Set headers for download
+			header( 'Content-Type: text/plain' );
+			header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+			header( 'Content-Length: ' . strlen( $report['report_data'] ) );
 
-            echo $report['report_data'];
-            exit;
-        } catch (\Exception $e) {
-            wp_send_json_error('Export failed: ' . $e->getMessage());
-        }
-    }
+			echo $report['report_data'];
+			exit;
+		} catch ( \Exception $e ) {
+			wp_send_json_error( 'Export failed: ' . $e->getMessage() );
+		}
+	}
 
-    /**
-     * AJAX handler for deleting reports.
-     */
-    public static function ajaxDeleteReport(): void
-    {
-        try {
-            if (!wp_verify_nonce($_POST['nonce'] ?? '', 'puntwork_delete_report')) {
-                wp_send_json_error('Security check failed');
+	/**
+	 * AJAX handler for deleting reports.
+	 */
+	public static function ajaxDeleteReport(): void {
+		try {
+			if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'puntwork_delete_report' ) ) {
+				wp_send_json_error( 'Security check failed' );
 
-                return;
-            }
+				return;
+			}
 
-            if (!current_user_can('manage_options')) {
-                wp_send_json_error('Insufficient permissions');
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_send_json_error( 'Insufficient permissions' );
 
-                return;
-            }
+				return;
+			}
 
-            $report_id = intval($_POST['report_id'] ?? 0);
+			$report_id = intval( $_POST['report_id'] ?? 0 );
 
-            if (!$report_id) {
-                wp_send_json_error('Invalid report ID');
+			if ( ! $report_id ) {
+				wp_send_json_error( 'Invalid report ID' );
 
-                return;
-            }
+				return;
+			}
 
-            global $wpdb;
-            $table_name = $wpdb->prefix . 'puntwork_reports';
+			global $wpdb;
+			$table_name = $wpdb->prefix . 'puntwork_reports';
 
-            $result = $wpdb->delete($table_name, ['id' => $report_id], ['%d']);
+			$result = $wpdb->delete( $table_name, array( 'id' => $report_id ), array( '%d' ) );
 
-            if ($result == false) {
-                wp_send_json_error('Failed to delete report');
+			if ( $result == false ) {
+				wp_send_json_error( 'Failed to delete report' );
 
-                return;
-            }
+				return;
+			}
 
-            wp_send_json_success(['message' => 'Report deleted successfully']);
-        } catch (\Exception $e) {
-            wp_send_json_error('Delete failed: ' . $e->getMessage());
-        }
-    }
+			wp_send_json_success( array( 'message' => 'Report deleted successfully' ) );
+		} catch ( \Exception $e ) {
+			wp_send_json_error( 'Delete failed: ' . $e->getMessage() );
+		}
+	}
 }
 
 // Initialize the admin UI

@@ -11,59 +11,56 @@
 namespace Puntwork;
 
 // Prevent direct access.
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
  * Social Media Database Class.
  */
-class SocialMediaDb
-{
-    /**
-     * Database version.
-     */
-    public const DB_VERSION = '1.0';
+class SocialMediaDb {
 
-    /**
-     * Option name for database version.
-     */
-    public const DB_VERSION_OPTION = 'puntwork_social_db_version';
+	/**
+	 * Database version.
+	 */
+	public const DB_VERSION = '1.0';
 
-    /**
-     * Initialize database.
-     */
-    public static function init(): void
-    {
-        add_action('admin_init', [__CLASS__, 'checkDbVersion']);
-    }
+	/**
+	 * Option name for database version.
+	 */
+	public const DB_VERSION_OPTION = 'puntwork_social_db_version';
 
-    /**
-     * Check database version and upgrade if needed.
-     */
-    public static function checkDbVersion(): void
-    {
-        $current_version = get_option(self::DB_VERSION_OPTION, '0');
+	/**
+	 * Initialize database.
+	 */
+	public static function init(): void {
+		add_action( 'admin_init', array( __CLASS__, 'checkDbVersion' ) );
+	}
 
-        if (version_compare($current_version, self::DB_VERSION, '<')) {
-            self::create_tables();
-            update_option(self::DB_VERSION_OPTION, self::DB_VERSION);
-        }
-    }
+	/**
+	 * Check database version and upgrade if needed.
+	 */
+	public static function checkDbVersion(): void {
+		$current_version = get_option( self::DB_VERSION_OPTION, '0' );
 
-    /**
-     * Create database tables.
-     */
-    public static function createTables(): void
-    {
-        global $wpdb;
+		if ( version_compare( $current_version, self::DB_VERSION, '<' ) ) {
+			self::create_tables();
+			update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
+		}
+	}
 
-        $charset_collate = $wpdb->get_charset_collate();
+	/**
+	 * Create database tables.
+	 */
+	public static function createTables(): void {
+		global $wpdb;
 
-        // Social media posts table.
-        $table_name = $wpdb->prefix . 'puntwork_social_posts';
+		$charset_collate = $wpdb->get_charset_collate();
 
-        $sql = "CREATE TABLE $table_name (
+		// Social media posts table.
+		$table_name = $wpdb->prefix . 'puntwork_social_posts';
+
+		$sql = "CREATE TABLE $table_name (
             id int(11) NOT NULL AUTO_INCREMENT,
             post_data longtext NOT NULL,
             scheduled_time datetime DEFAULT NULL,
@@ -76,57 +73,55 @@ class SocialMediaDb
             KEY scheduled_time (scheduled_time)
         ) $charset_collate;";
 
-        include_once ABSPATH . 'wp-admin/includes/upgrade.php';
-        dbDelta($sql);
+		include_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		dbDelta( $sql );
 
-        // Log successful table creation.
-        PuntWorkLogger::info(
-            'Social media database tables created',
-            PuntWorkLogger::CONTEXT_SYSTEM,
-            [
-                'table' => $table_name,
-                'version' => self::DB_VERSION,
-            ]
-        );
-    }
+		// Log successful table creation.
+		PuntWorkLogger::info(
+			'Social media database tables created',
+			PuntWorkLogger::CONTEXT_SYSTEM,
+			array(
+				'table'   => $table_name,
+				'version' => self::DB_VERSION,
+			)
+		);
+	}
 
-    /**
-     * Drop database tables (for uninstall).
-     */
-    public static function dropTables(): void
-    {
-        global $wpdb;
+	/**
+	 * Drop database tables (for uninstall).
+	 */
+	public static function dropTables(): void {
+		global $wpdb;
 
-        $table_name = $wpdb->prefix . 'puntwork_social_posts';
+		$table_name = $wpdb->prefix . 'puntwork_social_posts';
 
-        $wpdb->query($wpdb->prepare('DROP TABLE IF EXISTS %s', $table_name));
+		$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %s', $table_name ) );
 
-        delete_option(self::DB_VERSION_OPTION);
+		delete_option( self::DB_VERSION_OPTION );
 
-        PuntWorkLogger::info(
-            'Social media database tables dropped',
-            PuntWorkLogger::CONTEXT_SYSTEM,
-            [
-                'table' => $table_name,
-            ]
-        );
-    }
+		PuntWorkLogger::info(
+			'Social media database tables dropped',
+			PuntWorkLogger::CONTEXT_SYSTEM,
+			array(
+				'table' => $table_name,
+			)
+		);
+	}
 
-    /**
-     * Get table name with prefix.
-     *
-     * @param string $table Table identifier.
-     */
-    public static function getTableName(string $table): string
-    {
-        global $wpdb;
+	/**
+	 * Get table name with prefix.
+	 *
+	 * @param string $table Table identifier.
+	 */
+	public static function getTableName( string $table ): string {
+		global $wpdb;
 
-        $tables = [
-            'posts' => $wpdb->prefix . 'puntwork_social_posts',
-        ];
+		$tables = array(
+			'posts' => $wpdb->prefix . 'puntwork_social_posts',
+		);
 
-        return $tables[$table] ?? '';
-    }
+		return $tables[ $table ] ?? '';
+	}
 }
 
 // Initialize database.
