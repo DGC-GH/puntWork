@@ -3696,6 +3696,286 @@
                 "ai_suggestions_accepted": 1
             },
             "protocol_version": "1759247415"
+        },
+        {
+            "step_id": "1",
+            "timestamp": 1759249745,
+            "metrics": {
+                "success": true,
+                "duration": 5,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "2",
+            "timestamp": 1759249746,
+            "metrics": {
+                "success": true,
+                "duration": 3,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "3",
+            "timestamp": 1759249748,
+            "metrics": {
+                "success": true,
+                "duration": 2,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "4",
+            "timestamp": 1759249750,
+            "metrics": {
+                "success": true,
+                "duration": 10,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "5",
+            "timestamp": 1759249751,
+            "metrics": {
+                "success": true,
+                "duration": 15,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "6",
+            "timestamp": 1759249753,
+            "metrics": {
+                "success": true,
+                "duration": 5,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "7",
+            "timestamp": 1759249755,
+            "metrics": {
+                "success": true,
+                "duration": 20,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "9",
+            "timestamp": 1759249756,
+            "metrics": {
+                "success": true,
+                "duration": 10,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "10",
+            "timestamp": 1759249758,
+            "metrics": {
+                "success": true,
+                "duration": 8,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "11",
+            "timestamp": 1759249760,
+            "metrics": {
+                "success": true,
+                "duration": 12,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "12",
+            "timestamp": 1759249761,
+            "metrics": {
+                "success": true,
+                "duration": 25,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "13",
+            "timestamp": 1759249764,
+            "metrics": {
+                "success": true,
+                "duration": 15,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "14",
+            "timestamp": 1759249765,
+            "metrics": {
+                "success": true,
+                "duration": 10,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "15",
+            "timestamp": 1759249767,
+            "metrics": {
+                "success": true,
+                "duration": 5,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "16",
+            "timestamp": 1759249769,
+            "metrics": {
+                "success": true,
+                "duration": 30,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "17",
+            "timestamp": 1759249771,
+            "metrics": {
+                "success": true,
+                "duration": 20,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "18",
+            "timestamp": 1759249773,
+            "metrics": {
+                "success": true,
+                "duration": 60,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "19",
+            "timestamp": 1759249775,
+            "metrics": {
+                "success": true,
+                "duration": 10,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "20",
+            "timestamp": 1759249777,
+            "metrics": {
+                "success": true,
+                "duration": 5,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "21",
+            "timestamp": 1759249779,
+            "metrics": {
+                "success": true,
+                "duration": 15,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759249738"
         }
     ],
     "applied_variations": [
@@ -4135,6 +4415,92 @@
             },
             "applied_at": 1759247415,
             "backup_file": "protocol.md.backup.1759247415",
+            "patterns": {
+                "fast_steps": [
+                    "download_debug",
+                    "read_debug",
+                    "run_log_analysis",
+                    "read_console",
+                    "identify_problems",
+                    "debug_issues",
+                    "fix_errors",
+                    "optimize_features",
+                    "add_debug_logs",
+                    "update_scripts",
+                    "update_docs",
+                    "evolution_analysis",
+                    "apply_improvements",
+                    "commit",
+                    "summary",
+                    "push_prompt",
+                    "cleanup",
+                    "protocol_complete",
+                    "record_metrics"
+                ],
+                "high_success": [
+                    "download_debug",
+                    "read_debug",
+                    "run_log_analysis",
+                    "read_console",
+                    "identify_problems",
+                    "debug_issues",
+                    "analyze_codebase",
+                    "fix_errors",
+                    "optimize_features",
+                    "add_debug_logs",
+                    "update_scripts",
+                    "update_docs",
+                    "evolution_analysis",
+                    "apply_improvements",
+                    "commit",
+                    "summary",
+                    "push_prompt",
+                    "cleanup",
+                    "protocol_complete",
+                    "record_metrics"
+                ],
+                "low_error_steps": [
+                    "download_debug",
+                    "read_debug",
+                    "run_log_analysis",
+                    "read_console",
+                    "identify_problems",
+                    "debug_issues",
+                    "analyze_codebase",
+                    "fix_errors",
+                    "optimize_features",
+                    "add_debug_logs",
+                    "update_scripts",
+                    "update_docs",
+                    "evolution_analysis",
+                    "apply_improvements",
+                    "commit",
+                    "summary",
+                    "push_prompt",
+                    "cleanup",
+                    "protocol_complete",
+                    "record_metrics"
+                ],
+                "efficient_context": []
+            },
+            "learnings": {
+                "improve_ai_context": "Need better context provision for AI comprehension",
+                "ai_collaboration_effective": "AI suggestions are being accepted and implemented"
+            }
+        },
+        {
+            "variation": {
+                "variation": [
+                    "`post_type='job'` - for job listings (created with ACF)",
+                    "`post_type='job-feed'` - for feed configurations (created with ACF)",
+                    "Need better context provision for AI comprehension",
+                    "AI suggestions are being accepted and implemented"
+                ],
+                "score": 0.2986886160714286,
+                "improvements": []
+            },
+            "applied_at": 1759249738,
+            "backup_file": "protocol.md.backup.1759249738",
             "patterns": {
                 "fast_steps": [
                     "download_debug",
