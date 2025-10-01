@@ -509,54 +509,63 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 		}
 
 		try {
-			// Check for concurrent import lock with recovery
-			$result = \Puntwork\ErrorHandler::executeWithRecovery(
-				'full_import_lock_check',
-				function() use ( $import_lock_key, $debug_mode ) {
-					if ( get_transient( $import_lock_key ) ) {
-						// Check if the lock is stale (import status shows complete or last update > 30 minutes ago)
-						$import_status = get_option( 'job_import_status', array() );
-						$is_stale      = false;
+			// Get total items first
+			$json_path = get_option( 'job_import_json_path', 'feeds/combined-jobs.jsonl' );
+			if ( ! file_exists( $json_path ) ) {
+				$json_path = PUNTWORK_PATH . '/' . $json_path;
+			}
+			$total_items = get_json_item_count( $json_path );
 
-						if ( ! empty( $import_status ) ) {
-							$last_update       = $import_status['last_update'] ?? 0;
-							$is_complete       = $import_status['complete'] ?? false;
-							$time_since_update = time() - $last_update;
+			// Set default batch size
+			$batch_size = 65; // From logs
 
-							if ( $is_complete || $time_since_update > 1800 ) { // 30 minutes
-								$is_stale = true;
-								delete_transient( $import_lock_key );
-								if ( $debug_mode ) {
-									error_log( '[PUNTWORK] [IMPORT-LOCK] Cleared stale import lock (complete: ' . ( $is_complete ? 'yes' : 'no' ) . ', time since update: ' . $time_since_update . 's)' );
-								}
-							}
-						}
+			// Loop through batches
+			$current_batch_start = 0;
+			while ( $current_batch_start < $total_items ) {
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [BATCH-LOOP] Processing batch starting at ' . $current_batch_start . ' of ' . $total_items );
+				}
 
-						if ( ! $is_stale ) {
-							throw new \Puntwork\Exceptions\ImportException( 'Import already running - concurrent imports not allowed' );
-						}
-					}
+				// Call import for this batch
+				$batch_result = import_jobs_from_json( true, $current_batch_start );
 
-					// Set import lock
-					set_transient( $import_lock_key, true, 1200 ); // 20 minutes timeout
+				if ( ! $batch_result['success'] ) {
 					if ( $debug_mode ) {
-						error_log( '[PUNTWORK] Import lock set for import_all_jobs_from_json' );
+						error_log( '[PUNTWORK] [BATCH-LOOP] Batch failed at ' . $current_batch_start . ': ' . ( $batch_result['message'] ?? 'Unknown error' ) );
 					}
+					return $batch_result; // Return failure
+				}
 
-					return true;
-				},
-				array( 'lock_key' => $import_lock_key, 'preserve_status' => $preserve_status )
-			);
+				// Accumulate results
+				$total_processed += $batch_result['processed'] ?? 0;
+				$total_published += $batch_result['published'] ?? 0;
+				$total_updated += $batch_result['updated'] ?? 0;
+				$total_skipped += $batch_result['skipped'] ?? 0;
+				$total_duplicates_drafted += $batch_result['duplicates_drafted'] ?? 0;
+				$batch_count++;
 
-			if ( ! $result ) {
-				return array(
-					'success' => false,
-					'message' => 'Import already running',
-					'logs'    => array( 'Import already running - concurrent imports not allowed' ),
-				);
+				if ( ! empty( $batch_result['logs'] ) ) {
+					$all_logs = array_merge( $all_logs, $batch_result['logs'] );
+				}
+
+				// Check if this batch completed the import
+				if ( isset( $batch_result['complete'] ) && $batch_result['complete'] ) {
+					break;
+				}
+
+				// Move to next batch
+				$current_batch_start += $batch_size;
+
+				// Safety check to prevent infinite loops
+				if ( $batch_count > 1000 ) {
+					if ( $debug_mode ) {
+						error_log( '[PUNTWORK] [BATCH-LOOP] Safety break: too many batches (' . $batch_count . ')' );
+					}
+					break;
+				}
 			}
 
-			$end_time       = microtime( true );
+			$end_time = microtime( true );
 			$total_duration = $end_time - $start_time;
 
 			$final_result = array(
