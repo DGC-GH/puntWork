@@ -1105,6 +1105,60 @@ function fetch_and_generate_combined_json(): array {
 			)
 		);
 
+		// Schedule the batch import to run after feed processing is complete
+		if ( $total_items > 0 ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( '[PUNTWORK] [SCHEDULING] Scheduling batch import after successful feed processing' );
+			}
+
+			PuntWorkLogger::info(
+				'Scheduling batch import after feed processing completion',
+				PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+				array(
+					'total_items' => $total_items,
+					'combined_file_exists' => file_exists( $output_dir . 'combined-jobs.jsonl' ),
+				)
+			);
+
+			// Schedule the import to run asynchronously after a short delay
+			if ( function_exists( 'as_schedule_single_action' ) ) {
+				// Use Action Scheduler if available (preferred for reliability)
+				as_schedule_single_action( time() + 30, 'puntwork_scheduled_import_async' );
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( '[PUNTWORK] [SCHEDULING] Batch import scheduled using Action Scheduler (30 second delay)' );
+				}
+			} elseif ( function_exists( 'wp_schedule_single_event' ) ) {
+				// Fallback: Use WordPress cron
+				wp_schedule_single_event( time() + 30, 'puntwork_scheduled_import_async' );
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( '[PUNTWORK] [SCHEDULING] Batch import scheduled using WordPress cron (30 second delay)' );
+				}
+			} else {
+				// Last resort: Log that scheduling failed
+				PuntWorkLogger::error(
+					'No async scheduling mechanism available for batch import',
+					PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+					array(
+						'total_items' => $total_items,
+					)
+				);
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( '[PUNTWORK] [SCHEDULING] ERROR: No async scheduling available for batch import' );
+				}
+			}
+		} else {
+			PuntWorkLogger::warn(
+				'Batch import not scheduled - no items were processed',
+				PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+				array(
+					'total_items' => $total_items,
+				)
+			);
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( '[PUNTWORK] [SCHEDULING] WARNING: No items processed, batch import not scheduled' );
+			}
+		}
+
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			// Final memory logging
 			error_log( '[PUNTWORK] [MEMORY] Final memory usage: ' . memory_get_usage( true ) / 1024 / 1024 . ' MB' );
