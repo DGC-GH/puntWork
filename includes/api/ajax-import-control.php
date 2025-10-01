@@ -1297,11 +1297,23 @@ function process_feed_ajax() {
 		$feed_key = sanitize_text_field( $_POST['feed_key'] );
 		error_log( '[PUNTWORK] [DEBUG-PHP] Processing feed: ' . $feed_key );
 
+		// Check if this feed is already being processed
+		$feed_lock_key = 'puntwork_feed_processing_' . $feed_key;
+		if ( get_transient( $feed_lock_key ) ) {
+			error_log( '[PUNTWORK] [DEBUG-PHP] Feed ' . $feed_key . ' is already being processed, skipping' );
+			wp_send_json_error( array( 'message' => 'Feed ' . $feed_key . ' is already being processed' ) );
+			return;
+		}
+
+		// Set feed processing lock (5 minute timeout)
+		set_transient( $feed_lock_key, true, 300 );
+
 		// Get feeds and find the URL for this feed key
 		$feeds = get_feeds();
 		error_log( '[PUNTWORK] [DEBUG-PHP] Available feeds: ' . json_encode( $feeds ) );
 		if ( ! isset( $feeds[ $feed_key ] ) ) {
 			error_log( '[PUNTWORK] [DEBUG-PHP] Feed not found: ' . $feed_key );
+			delete_transient( $feed_lock_key ); // Clear lock
 			wp_send_json_error( array( 'message' => 'Feed not found: ' . $feed_key ) );
 
 			return;
@@ -1316,6 +1328,7 @@ function process_feed_ajax() {
 		// Ensure output directory exists
 		if ( ! wp_mkdir_p( $output_dir ) || ! is_writable( $output_dir ) ) {
 			error_log( '[PUNTWORK] [DEBUG-PHP] Feeds directory not writable: ' . $output_dir );
+			delete_transient( $feed_lock_key ); // Clear lock
 			wp_send_json_error( array( 'message' => 'Feeds directory not writable' ) );
 
 			return;
@@ -1351,6 +1364,9 @@ function process_feed_ajax() {
 
 			return;
 		}
+		// Clear feed processing lock
+		delete_transient( $feed_lock_key );
+
 		error_log( '[PUNTWORK] [DEBUG-PHP] Logs from processing: ' . json_encode( $logs ) );
 
 		PuntWorkLogger::info(
@@ -1381,6 +1397,11 @@ function process_feed_ajax() {
 			)
 		);
 	} catch ( \Exception $e ) {
+		// Clear feed processing lock on any error
+		if ( isset( $feed_lock_key ) ) {
+			delete_transient( $feed_lock_key );
+		}
+
 		error_log( '[PUNTWORK] [DEBUG-PHP] process_feed_ajax exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
 		error_log( '[PUNTWORK] [DEBUG-PHP] Stack trace: ' . $e->getTraceAsString() );
 		PuntWorkLogger::error( 'Process feed AJAX error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
@@ -1425,6 +1446,17 @@ function combine_jsonl_ajax() {
 		$feeds       = get_feeds();
 		$output_dir  = ABSPATH . 'feeds/';
 
+		// Check if combination is already in progress
+		$combine_lock_key = 'puntwork_combine_processing';
+		if ( get_transient( $combine_lock_key ) ) {
+			error_log( '[PUNTWORK] [DEBUG-PHP] JSONL combination already in progress, skipping' );
+			wp_send_json_error( array( 'message' => 'JSONL combination already in progress' ) );
+			return;
+		}
+
+		// Set combination processing lock (10 minute timeout)
+		set_transient( $combine_lock_key, true, 600 );
+
 		error_log( '[PUNTWORK] [DEBUG-PHP] Combining JSONL for ' . count( $feeds ) . ' feeds, total_items: ' . $total_items );
 		error_log( '[PUNTWORK] [DEBUG-PHP] Available feeds: ' . json_encode( $feeds ) );
 		error_log( '[PUNTWORK] [DEBUG-PHP] Output directory: ' . $output_dir );
@@ -1437,6 +1469,7 @@ function combine_jsonl_ajax() {
 		$existing_feeds = array_filter( $feed_files, 'file_exists' );
 		if ( empty( $existing_feeds ) ) {
 			error_log( '[PUNTWORK] [DEBUG-PHP] No feed files found to combine' );
+			delete_transient( $combine_lock_key ); // Clear lock
 			wp_send_json_error( array( 'message' => 'No feed files found to combine - please process feeds first' ) );
 			return;
 		}
@@ -1444,6 +1477,7 @@ function combine_jsonl_ajax() {
 		// Ensure output directory exists
 		if ( ! wp_mkdir_p( $output_dir ) || ! is_writable( $output_dir ) ) {
 			error_log( '[PUNTWORK] [DEBUG-PHP] Feeds directory not writable: ' . $output_dir );
+			delete_transient( $combine_lock_key ); // Clear lock
 			wp_send_json_error( array( 'message' => 'Feeds directory not writable' ) );
 
 			return;
@@ -1516,6 +1550,9 @@ function combine_jsonl_ajax() {
 			)
 		);
 
+		// Clear combination processing lock
+		delete_transient( $combine_lock_key );
+
 		error_log( '[PUNTWORK] [DEBUG-PHP] ===== COMBINE_JSONL_AJAX SUCCESS =====' );
 		wp_send_json_success(
 			array(
@@ -1526,6 +1563,9 @@ function combine_jsonl_ajax() {
 			)
 		);
 	} catch ( \Exception $e ) {
+		// Clear combination processing lock on any error
+		delete_transient( $combine_lock_key );
+
 		error_log( '[PUNTWORK] [DEBUG-PHP] combine_jsonl_ajax exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
 		error_log( '[PUNTWORK] [DEBUG-PHP] Stack trace: ' . $e->getTraceAsString() );
 		PuntWorkLogger::error( 'Combine JSONL AJAX error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
