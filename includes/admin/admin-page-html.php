@@ -28,6 +28,16 @@ require_once __DIR__ . '/../queue/queue-manager.php';
 require_once __DIR__ . '/../queue/queue-ajax.php';
 
 function feeds_dashboard_page() {
+	// Ensure API key exists for SSE functionality
+	if ( function_exists( __NAMESPACE__ . '\\get_or_create_api_key' ) ) {
+		call_user_func( __NAMESPACE__ . '\\get_or_create_api_key' );
+	}
+
+	// Ensure database indexes exist
+	if ( function_exists( __NAMESPACE__ . '\\create_database_indexes' ) ) {
+		call_user_func( __NAMESPACE__ . '\\create_database_indexes' );
+	}
+
 	// Enqueue admin modern styles
 	wp_enqueue_style( 'puntwork-admin-modern', PUNTWORK_URL . 'assets/css/admin-modern.css', array(), PUNTWORK_VERSION );
 
@@ -270,6 +280,16 @@ function jobs_dashboard_page() {
  * Render the main puntWork dashboard page.
  */
 function puntwork_dashboard_page() {
+	// Ensure API key exists for SSE functionality
+	if ( function_exists( __NAMESPACE__ . '\\get_or_create_api_key' ) ) {
+		call_user_func( __NAMESPACE__ . '\\get_or_create_api_key' );
+	}
+
+	// Ensure database indexes exist
+	if ( function_exists( __NAMESPACE__ . '\\create_database_indexes' ) ) {
+		call_user_func( __NAMESPACE__ . '\\create_database_indexes' );
+	}
+
 	// Enqueue FontAwesome
 	wp_enqueue_style(
 		'font-awesome',

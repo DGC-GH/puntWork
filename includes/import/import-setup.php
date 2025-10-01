@@ -174,6 +174,40 @@ function prepare_import_setup( $batch_start = 0 ) {
 		return new WP_Error( 'acf_error', 'Failed to get ACF fields: ' . $e->getMessage() );
 	}
 
+	// Ensure database indexes are created before import processing
+	try {
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [SETUP-INDEXES] Ensuring database indexes are created...' );
+		}
+		create_database_indexes();
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [SETUP-INDEXES] Database indexes creation completed' );
+		}
+	} catch ( \Exception $e ) {
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [SETUP-ERROR] Error creating database indexes: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
+		}
+
+		return new WP_Error( 'db_indexes_error', 'Failed to create database indexes: ' . $e->getMessage() );
+	}
+
+	// Ensure API key is created for SSE connections
+	try {
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [SETUP-API-KEY] Ensuring API key is created...' );
+		}
+		$api_key = get_or_create_api_key();
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [SETUP-API-KEY] API key creation completed: ' . ( empty( $api_key ) ? 'empty' : 'created/retrieved' ) );
+		}
+	} catch ( \Exception $e ) {
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [SETUP-ERROR] Error creating API key: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
+		}
+
+		return new WP_Error( 'api_key_error', 'Failed to create API key: ' . $e->getMessage() );
+	}
+
 	try {
 		if ( $debug_mode ) {
 			error_log( '[PUNTWORK] [SETUP-ZERO] Getting zero empty fields...' );

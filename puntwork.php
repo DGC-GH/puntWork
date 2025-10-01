@@ -96,6 +96,11 @@ function job_import_activate() {
 	if ( function_exists( __NAMESPACE__ . '\\create_database_indexes' ) ) {
 		call_user_func( __NAMESPACE__ . '\\create_database_indexes' );
 	}
+
+	// Create API key for SSE and REST API authentication
+	if ( function_exists( __NAMESPACE__ . '\\get_or_create_api_key' ) ) {
+		call_user_func( __NAMESPACE__ . '\\get_or_create_api_key' );
+	}
 }
 
 // Deactivation hook
@@ -511,6 +516,11 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 		// Ensure database indexes exist (call during setup, not just activation)
 		if ( function_exists( __NAMESPACE__ . '\\create_database_indexes' ) ) {
 			call_user_func( __NAMESPACE__ . '\\create_database_indexes' );
+		}
+
+		// Ensure API key exists for SSE and REST API authentication
+		if ( function_exists( __NAMESPACE__ . '\\get_or_create_api_key' ) ) {
+			call_user_func( __NAMESPACE__ . '\\get_or_create_api_key' );
 		}
 
 		if ( $debug_mode ) {
