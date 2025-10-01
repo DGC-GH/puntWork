@@ -170,16 +170,25 @@ function render_main_import_ui(): void {
 	error_log( '[PUNTWORK] [UI-RENDER] render_main_import_ui() called at ' . date( 'Y-m-d H:i:s T' ) );
 	error_log( '[PUNTWORK] [UI-RENDER] Rendering main import UI elements' );
 
-	// Check if combined JSONL file exists
-	$jsonl_path   = '/Users/dg/Documents/GitHub/puntWork/feeds/combined-jobs.jsonl';
+	// Check if combined JSONL file exists and if there are feeds configured
+	$jsonl_path   = ABSPATH . 'feeds/combined-jobs.jsonl';
 	$jsonl_exists = file_exists( $jsonl_path );
 	$jsonl_size   = $jsonl_exists ? filesize( $jsonl_path ) : 0;
+	$feeds        = get_feeds();
+	$has_feeds    = ! empty( $feeds );
 
 	error_log( '[PUNTWORK] [UI-VALIDATION] Combined JSONL file check - Path: ' . $jsonl_path . ', Exists: ' . ( $jsonl_exists ? 'YES' : 'NO' ) . ', Size: ' . $jsonl_size . ' bytes' );
+	error_log( '[PUNTWORK] [UI-VALIDATION] Feeds check - Count: ' . count( $feeds ) . ', Has feeds: ' . ( $has_feeds ? 'YES' : 'NO' ) );
 
 	if ( ! $jsonl_exists || $jsonl_size === 0 ) {
-		error_log( '[PUNTWORK] [UI-WARNING] No import data available - Combined JSONL file missing or empty, but Start Import will process feeds first' );
-		PuntWorkLogger::logAdminAction( 'UI Import Data Check', 'No import data available - combined JSONL file missing or empty, but Start Import will process feeds first', PuntWorkLogger::CONTEXT_ADMIN );
+		if ( $has_feeds ) {
+			// If feeds are configured but no JSONL, Start Import will create it
+			error_log( '[PUNTWORK] [UI-INFO] No combined JSONL file found, but feeds are configured - Start Import will process feeds first' );
+		} else {
+			// No feeds configured and no JSONL - show warning
+			error_log( '[PUNTWORK] [UI-WARNING] No import data available - Combined JSONL file missing or empty, and no feeds configured' );
+			PuntWorkLogger::logAdminAction( 'UI Import Data Check', 'No import data available - combined JSONL file missing or empty, and no feeds configured', PuntWorkLogger::CONTEXT_ADMIN );
+		}
 	} else {
 		error_log( '[PUNTWORK] [UI-SUCCESS] Import data available - Combined JSONL file found and valid' );
 	}
@@ -199,8 +208,8 @@ function render_main_import_ui(): void {
 					<p class="puntwork-card__subtitle">Start, pause, or resume job imports from configured feeds.</p>
 				</div>
 
-				<?php if ( false ) : // Always hide the warning since Start Import now processes feeds first ?>
-				<!-- No Data Available Notice -->
+				<?php if ( ( ! $jsonl_exists || $jsonl_size === 0 ) && ! $has_feeds ) : ?>
+				<!-- No Data Available Notice - Only show if no feeds are configured -->
 				<div class="puntwork-card__body" style="background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: var(--radius-md); padding: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
 					<div style="display: flex; align-items: flex-start; gap: var(--spacing-md);">
 						<i class="fas fa-exclamation-triangle" style="color: #f59e0b; font-size: var(--font-size-xl); margin-top: var(--spacing-xs);"></i>
