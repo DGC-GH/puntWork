@@ -424,22 +424,23 @@ function prepare_import_setup( $batch_start = 0 ) {
 		}
 
 		return array(
-			'success'            => true,
-			'processed'          => 0,
-			'total'              => 0,
-			'published'          => 0,
-			'updated'            => 0,
-			'skipped'            => 0,
+			'success' => false,
+			'message' => 'No items found in JSONL file - feeds may need to be processed first',
+			'processed' => 0,
+			'total' => 0,
+			'published' => 0,
+			'updated' => 0,
+			'skipped' => 0,
 			'duplicates_drafted' => 0,
-			'time_elapsed'       => 0,
-			'complete'           => true,
-			'logs'               => array( 'No items found in JSONL file - nothing to import' ),
-			'batch_size'         => 0,
+			'time_elapsed' => 0,
+			'complete' => true,
+			'logs' => array( 'No items found in JSONL file - run feed processing first' ),
+			'batch_size' => 0,
 			'inferred_languages' => 0,
-			'inferred_benefits'  => 0,
-			'schema_generated'   => 0,
-			'batch_time'         => 0,
-			'batch_processed'    => 0,
+			'inferred_benefits' => 0,
+			'schema_generated' => 0,
+			'batch_time' => 0,
+			'batch_processed' => 0,
 		);
 	}
 

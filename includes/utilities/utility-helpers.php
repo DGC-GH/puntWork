@@ -40,7 +40,10 @@ if ( ! function_exists( 'get_json_item_count' ) ) {
 	 * @return int Total item count.
 	 */
 	function get_json_item_count( $json_path ) {
-		error_log( '[PUNTWORK] get_json_item_count called with path: ' . $json_path );
+		$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] get_json_item_count called with path: ' . $json_path );
+		}
 		$count        = 0;
 		$sample_lines = array();
 		$bom          = "\xef\xbb\xbf";
@@ -62,15 +65,19 @@ if ( ! function_exists( 'get_json_item_count' ) ) {
 							$sample_lines[] = 'Line ' . $line_num . ': GUID=' . ( $item['guid'] ?? 'MISSING' ) . ', keys=' . implode( ',', array_keys( $item ) );
 						}
 					} else {
-						error_log( '[PUNTWORK] get_json_item_count: Invalid JSON at line ' . $line_num . ': ' . json_last_error_msg() );
+						if ( $debug_mode ) {
+							error_log( '[PUNTWORK] get_json_item_count: Invalid JSON at line ' . $line_num . ': ' . json_last_error_msg() );
+						}
 					}
 				}
 			}
 			fclose( $handle );
 		}
-		error_log( '[PUNTWORK] get_json_item_count: Total valid items: ' . $count . ' (file has ' . ( file_exists( $json_path ) ? 'exists' : 'does not exist' ) . ')' );
-		if ( ! empty( $sample_lines ) ) {
-			error_log( '[PUNTWORK] get_json_item_count: Sample items: ' . implode( ' | ', $sample_lines ) );
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] get_json_item_count: Total valid items: ' . $count . ' (file has ' . ( file_exists( $json_path ) ? 'exists' : 'does not exist' ) . ')' );
+			if ( ! empty( $sample_lines ) ) {
+				error_log( '[PUNTWORK] get_json_item_count: Sample items: ' . implode( ' | ', $sample_lines ) );
+			}
 		}
 
 		return $count;
