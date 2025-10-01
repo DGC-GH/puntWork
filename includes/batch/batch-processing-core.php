@@ -141,15 +141,45 @@ function process_batch_items_logic( array $setup ): array {
 
 		$batch_start_time = microtime( true ); // Record start time for this batch
 
+		// Validate and adjust batch size
+		$batch_size_info = validate_and_adjust_batch_size( $setup );
+		$batch_size      = $batch_size_info['batch_size'];
+		$threshold       = $batch_size_info['threshold'];
+
 	// Temporarily disable spam logging - uncomment for debugging
 	// error_log( '[PUNTWORK] [BATCH-DEBUG] Calling validate_and_adjust_batch_size' );
 	// error_log( '[PUNTWORK] [BATCH-DEBUG] validate_and_adjust_batch_size completed, batch_size=' . $batch_size );
 
 		// Add batch size logging to UI logs
+		$logs = array();
 		if ( ! empty( $batch_size_info['logs'] ) ) {
 			$logs = array_merge( $logs, $batch_size_info['logs'] );
 		}
 		$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "Batch size set to {$batch_size} for this import batch";
+
+		// Initialize performance monitoring
+		$perf_id = start_performance_monitoring( 'batch_processing' );
+
+		// Start database performance monitoring
+		start_db_performance_monitoring();
+
+		// Store original memory limit for restoration
+		$original_memory_limit = ini_get( 'memory_limit' );
+
+		// Increase memory limit for batch processing
+		ini_set( 'memory_limit', '1024M' );
+
+		// Clear analytics cache
+		if ( function_exists( 'wp_cache_flush' ) ) {
+			wp_cache_flush();
+		}
+		\Puntwork\Utilities\CacheManager::clearGroup( \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS );
+
+		// Optimize memory for large batch operations
+		optimize_memory_for_batch();
+
+		// Disable expensive plugin operations during batch processing
+		disable_expensive_plugins();
 
 		// Initialize variables
 		$end_index       = $start_index;
@@ -186,6 +216,13 @@ function process_batch_items_logic( array $setup ): array {
 	// error_log( '[PUNTWORK] [BATCH-LOAD] load_and_prepare_batch_items completed, loaded ' . count( $batch_guids ) . ' GUIDs, lines_read=' . $lines_read . ', end_index=' . $end_index );
 	// error_log( '[PUNTWORK] [BATCH-LOAD] Batch items count: ' . count( $batch_items ) );
 	// error_log( '[PUNTWORK] [BATCH-LOAD] First few GUIDs: ' . implode( ', ', array_slice( $batch_guids, 0, 5 ) ) );
+
+			// Load and prepare batch items
+			$batch_load_info = load_and_prepare_batch_items( $json_path, $start_index, $batch_size, $threshold, $logs );
+			$batch_items     = $batch_load_info['batch_items'];
+			$batch_guids     = $batch_load_info['batch_guids'];
+			$lines_read      = $batch_load_info['lines_read'];
+			$end_index       = $start_index + count( $batch_guids );
 
 			// Checkpoint: Batch items loaded
 			checkpoint_performance(
@@ -291,6 +328,9 @@ function process_batch_items_logic( array $setup ): array {
 	// error_log( '[PUNTWORK] [BATCH-PROCESS] Calling process_batch_data' );
 	// error_log( '[PUNTWORK] [BATCH-PROCESS] process_batch_data completed, processed_count=' . $result['processed_count'] );
 	// error_log( '[PUNTWORK] [BATCH-PROCESS] Results: published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', duplicates_drafted=' . $duplicates_drafted );
+
+			// Process batch data
+			$result = process_batch_data( $batch_guids, $batch_items, $logs, $published, $updated, $skipped, $duplicates_drafted );
 
 			// Checkpoint: Batch processing complete
 			checkpoint_performance(
