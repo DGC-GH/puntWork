@@ -753,7 +753,50 @@ function process_batch_items_with_metadata( array $batch_guids, array $batch_ite
 	// Include the optimized batch processing file
 	require_once __DIR__ . '/../import/process-batch-items-optimized.php';
 
-	process_batch_items_optimized( $batch_guids, $batch_items, $batch_metadata['last_updates'], $batch_metadata['hashes_by_post'], $acf_fields, $zero_empty_fields, $post_ids_by_guid, $logs, $updated, $published, $skipped, $processed_count );
+	// Check if we should use streaming processing for large batches
+	$use_streaming = count( $batch_guids ) > 1000 || memory_get_usage( true ) > 100 * 1024 * 1024; // 100MB threshold
+
+	if ( $use_streaming && isset( $batch_metadata['json_path'] ) && file_exists( $batch_metadata['json_path'] ) ) {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( '[PUNTWORK] [STREAMING] Using streaming processing for large batch of ' . count( $batch_guids ) . ' items' );
+		}
+
+		// Use streaming processing for memory efficiency
+		process_batch_items_streaming(
+			$batch_metadata['json_path'],
+			$batch_guids,
+			$batch_metadata['last_updates'],
+			$batch_metadata['hashes_by_post'],
+			$acf_fields,
+			$zero_empty_fields,
+			$post_ids_by_guid,
+			$logs,
+			$updated,
+			$published,
+			$skipped,
+			$processed_count
+		);
+	} else {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( '[PUNTWORK] [BATCH] Using traditional processing for batch of ' . count( $batch_guids ) . ' items' );
+		}
+
+		// Use traditional processing for smaller batches
+		process_batch_items_optimized(
+			$batch_guids,
+			$batch_items,
+			$batch_metadata['last_updates'],
+			$batch_metadata['hashes_by_post'],
+			$acf_fields,
+			$zero_empty_fields,
+			$post_ids_by_guid,
+			$logs,
+			$updated,
+			$published,
+			$skipped,
+			$processed_count
+		);
+	}
 
 	return $processed_count;
 }

@@ -491,33 +491,212 @@ if ( function_exists( 'add_action' ) ) {
 }
 
 /**
- * AJAX handler for getting ML insights.
+ * Get ML insights.
+ *
+ * @return array ML insights data
  */
-function ajax_get_ml_insights(): void {
-	try {
-		if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'puntwork_ml_insights' ) ) {
-			wp_send_json_error( 'Security check failed' );
+function get_ml_insights(): array {
+	return AI\MachineLearningEngine::getInsights();
+}
 
-			return;
-		}
+/**
+ * Initialize performance optimizations on system startup.
+ */
+function initialize_performance_optimizations(): void {
+	// Warm critical caches
+	\Puntwork\Utilities\IntelligentCacheManager::warmCriticalCaches();
 
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( 'Insufficient permissions' );
+	// Start performance monitoring
+	start_performance_monitoring( 'system_startup' );
 
-			return;
-		}
-
-		$insights = AI\MachineLearningEngine::getInsights();
-
-		wp_send_json_success(
-			array(
-				'insights' => $insights,
-			)
-		);
-	} catch ( \Exception $e ) {
-		wp_send_json_error( 'Failed to get ML insights: ' . $e->getMessage() );
+	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		error_log( '[PUNTWORK] [PERFORMANCE] Performance optimizations initialized' );
 	}
 }
+
+/**
+ * Get comprehensive performance dashboard data.
+ *
+ * @return array Performance dashboard data
+ */
+function get_performance_dashboard_data(): array {
+	return array(
+		'memory_stats' => \Puntwork\Utilities\AdvancedMemoryManager::getMemoryStats(),
+		'cache_stats' => \Puntwork\Utilities\IntelligentCacheManager::getCacheStats(),
+		'performance_snapshot' => get_performance_snapshot(),
+		'circuit_breaker_status' => get_circuit_breaker_status(),
+		'parallel_processing_stats' => \Puntwork\Utilities\ParallelProcessor::getProcessingStats(),
+		'cache_recommendations' => \Puntwork\Utilities\IntelligentCacheManager::getPredictiveRecommendations(),
+	);
+}
+
+/**
+ * Optimize system for large batch import.
+ */
+function optimize_for_large_batch_import(): void {
+	// Disable expensive plugins
+	disable_expensive_plugins();
+
+	// Optimize memory management
+	optimize_memory_for_batch();
+
+	// Warm predictive caches
+	\Puntwork\Utilities\IntelligentCacheManager::predictiveCacheLoading( array(
+		array( 'type' => 'batch_process', 'taxonomy_terms' => array( 'job_category', 'job_location', 'job_type' ) ),
+		array( 'type' => 'post_meta_query', 'meta_keys' => array( '_import_hash', 'guid' ), 'post_ids' => array() ),
+	) );
+
+	// Start comprehensive monitoring
+	start_performance_monitoring( 'large_batch_import' );
+	start_db_performance_monitoring();
+
+	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		error_log( '[PUNTWORK] [PERFORMANCE] System optimized for large batch import' );
+	}
+}
+
+/**
+ * Cleanup after large batch import.
+ */
+function cleanup_after_large_batch_import(): void {
+	// Re-enable expensive plugins
+	enable_expensive_plugins();
+
+	// Reset memory manager
+	reset_memory_manager();
+
+	// Clear temporary caches
+	if ( function_exists( 'wp_cache_flush' ) ) {
+		wp_cache_flush();
+	}
+
+	// End monitoring and log results
+	$performance_data = end_performance_monitoring( 'large_batch_import' );
+	$db_performance_data = end_db_performance_monitoring();
+
+	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		error_log( sprintf(
+			'[PUNTWORK] [PERFORMANCE] Large batch import completed - Time: %.2fs, Memory Peak: %s, DB Queries: %d',
+			$performance_data['duration'] ?? 0,
+			size_format( $performance_data['memory_peak'] ?? 0 ),
+			$db_performance_data['query_count'] ?? 0
+		) );
+	}
+}
+
+/**
+ * Process feeds in parallel for improved performance.
+ *
+ * @param array $feeds Array of feed URLs keyed by feed identifier
+ * @return array Processing results
+ */
+function process_feeds_parallel( array $feeds ): array {
+	return \Puntwork\Utilities\ParallelProcessor::processFeedsParallel( $feeds, function( $feed_key, $body, $content_type ) {
+		// Feed processing logic here
+		return array(
+			'success' => true,
+			'feed_key' => $feed_key,
+			'data_size' => strlen( $body ),
+			'content_type' => $content_type,
+		);
+	} );
+}
+
+/**
+ * Perform parallel duplicate detection.
+ *
+ * @param array $items Array of items to check
+ * @return array Duplicate detection results
+ */
+function parallel_duplicate_detection( array $items ): array {
+	return \Puntwork\Utilities\ParallelProcessor::parallelDuplicateDetection( $items, function( $item ) {
+		return md5( json_encode( $item ) );
+	} );
+}
+
+/**
+ * Execute bulk database operations in parallel.
+ *
+ * @param array $operations Array of database operations
+ * @return array Operation results
+ */
+function parallel_bulk_database_operations( array $operations ): array {
+	return \Puntwork\Utilities\ParallelProcessor::parallelBulkOperations( $operations );
+}
+
+/**
+ * Get adaptive chunk size for current system conditions.
+ *
+ * @return int Optimal chunk size
+ */
+function get_adaptive_chunk_size(): int {
+	return \Puntwork\Utilities\AdvancedMemoryManager::getOptimalChunkSize();
+}
+
+/**
+ * Check and optimize memory usage during processing.
+ */
+function check_and_optimize_memory(): void {
+	\Puntwork\Utilities\AdvancedMemoryManager::checkMemoryUsage();
+}
+
+/**
+ * Predict memory usage for batch operations.
+ *
+ * @param int $batch_size Expected batch size
+ * @return array Memory usage prediction
+ */
+function predict_batch_memory_usage( int $batch_size ): array {
+	return \Puntwork\Utilities\AdvancedMemoryManager::predictMemoryUsage( $batch_size );
+}
+
+/**
+ * Optimize cache performance based on access patterns.
+ */
+function optimize_cache_performance(): void {
+	\Puntwork\Utilities\IntelligentCacheManager::optimizeCache();
+}
+
+/**
+ * Smart cache invalidation for specific operations.
+ *
+ * @param string $operation_type Type of operation
+ * @param array $affected_items Affected items
+ */
+function smart_cache_invalidation( string $operation_type, array $affected_items = array() ): void {
+	\Puntwork\Utilities\IntelligentCacheManager::smartInvalidateCache( $operation_type, $affected_items );
+}
+
+/**
+ * Get performance optimization recommendations.
+ *
+ * @return array Array of recommendations
+ */
+function get_performance_optimization_recommendations(): array {
+	$recommendations = array();
+
+	// Memory recommendations
+	$memory_stats = \Puntwork\Utilities\AdvancedMemoryManager::getMemoryStats();
+	if ( ( $memory_stats['current_usage'] / $memory_stats['memory_limit'] ) > 0.8 ) {
+		$recommendations[] = 'High memory usage detected. Consider using streaming processing for large datasets.';
+	}
+
+	// Cache recommendations
+	$cache_recommendations = \Puntwork\Utilities\IntelligentCacheManager::getPredictiveRecommendations();
+	$recommendations = array_merge( $recommendations, $cache_recommendations );
+
+	// Performance recommendations
+	$performance_stats = get_performance_snapshot();
+	if ( isset( $performance_stats['avg_response_time'] ) && $performance_stats['avg_response_time'] > 2.0 ) {
+		$recommendations[] = 'Slow response times detected. Consider enabling parallel processing and optimizing database queries.';
+	}
+
+	return $recommendations;
+}
+
+/**
+ * AJAX handler for getting ML insights.
+ */
 
 // Only register WordPress hooks if WordPress functions are available
 if ( function_exists( 'add_action' ) ) {

@@ -197,20 +197,42 @@ class AdvancedMemoryManager extends MemoryManager {
 	}
 
 	/**
-	 * Compressed caching for large datasets.
+	 * Get optimal chunk size based on current memory usage and performance history
 	 */
-	public static function setCompressed( string $key, $data, string $group = '', int $expiration = 3600 ): bool {
-		$compressed = gzcompress( serialize( $data ), 6 );
+	public static function getOptimalChunkSize() {
+		$current_memory_usage = self::getCurrentMemoryUsage();
+		$memory_limit = self::getMemoryLimitBytes();
 
-		return self::set( $key . '_compressed', $compressed, $group, $expiration );
-	}
+		$default_chunk_size = 50;
+		$min_chunk_size = 10;
+		$max_chunk_size = 200;
+		$memory_threshold_high = 0.8; // 80% of memory limit
+		$memory_threshold_low = 0.6;  // 60% of memory limit
 
-	public static function getCompressed( string $key, string $group = '' ) {
-		$compressed = self::get( $key . '_compressed', $group );
-		if ( $compressed == false ) {
-			return false;
+		if ( $current_memory_usage >= $memory_threshold_high * $memory_limit ) {
+			// High memory pressure - reduce chunk size
+			$chunk_size = max( $min_chunk_size, $default_chunk_size / 2 );
+		} elseif ( $current_memory_usage <= $memory_threshold_low * $memory_limit ) {
+			// Low memory pressure - can increase chunk size
+			$chunk_size = min( $max_chunk_size, $default_chunk_size * 1.5 );
+		} else {
+			$chunk_size = $default_chunk_size;
 		}
 
-		return unserialize( gzuncompress( $compressed ) );
+		return (int) $chunk_size;
+	}
+
+	/**
+	 * Get current memory usage in bytes
+	 */
+	public static function getCurrentMemoryUsage() {
+		return memory_get_usage( true );
+	}
+
+	/**
+	 * Get memory limit in bytes
+	 */
+	public static function getMemoryLimitBytes() {
+		return parent::getMemoryLimitBytes();
 	}
 }

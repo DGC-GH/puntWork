@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Optimized batch item processing with bulk operations.
+ * Optimized batch item processing with streaming and bulk operations.
  *
  * @since      1.0.1
  */
@@ -13,69 +13,62 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Ensure required utilities are loaded
 require_once __DIR__ . '/../utilities/database-optimization.php';
+require_once __DIR__ . '/../utilities/MemoryManager.php';
 
-if ( ! function_exists( 'process_batch_items_optimized' ) ) {
-	function process_batch_items_optimized( $batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count ) {
+if ( ! function_exists( 'process_batch_items_streaming' ) ) {
+	/**
+	 * Process batch items using streaming approach to minimize memory usage.
+	 *
+	 * @param string $json_path Path to the JSONL file
+	 * @param array $batch_guids Array of GUIDs to process
+	 * @param array $last_updates Last update timestamps
+	 * @param array $all_hashes_by_post Existing post hashes
+	 * @param array $acf_fields ACF fields to update
+	 * @param array $zero_empty_fields Fields that should be empty when value is '0'
+	 * @param array $post_ids_by_guid Existing post IDs by GUID
+	 * @param array &$logs Processing logs
+	 * @param int &$updated Count of updated posts
+	 * @param int &$published Count of published posts
+	 * @param int &$skipped Count of skipped posts
+	 * @param int &$processed_count Total processed count
+	 */
+	function process_batch_items_streaming( $json_path, $batch_guids, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count ) {
 		$script_start_time = microtime( true );
 
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [ITEMS-DEBUG] process_batch_items_optimized called with ' . count( $batch_guids ) . ' GUIDs' );
+			error_log( '[PUNTWORK] [STREAMING] process_batch_items_streaming called with ' . count( $batch_guids ) . ' GUIDs' );
 		}
+
 		if ( empty( $batch_guids ) ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[PUNTWORK] [ITEMS-DEBUG] process_batch_items_optimized called with empty batch_guids - no items to process' );
+				error_log( '[PUNTWORK] [STREAMING] process_batch_items_streaming called with empty batch_guids - no items to process' );
 			}
 			return;
 		}
 
 		$user_id = get_user_by( 'login', 'admin' ) ? get_user_by( 'login', 'admin' )->ID : get_current_user_id();
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [ITEMS-DEBUG] Got user_id: ' . $user_id );
-		}
 
-		// Bulk fetch post statuses to avoid N+1 queries
+		// Preload post statuses and meta for existing posts
 		$post_ids_for_status = array_values( $post_ids_by_guid );
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [ITEMS-DEBUG] Post IDs for status: ' . count( $post_ids_for_status ) );
-			error_log( '[PUNTWORK] [ITEMS-DEBUG] About to call bulk_get_post_statuses' );
-		}
-		if ( ! function_exists( 'bulk_get_post_statuses' ) ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[PUNTWORK] [ERROR] bulk_get_post_statuses function not found' );
-			}
-			throw new Exception( 'bulk_get_post_statuses function not available' );
-		}
-		$post_statuses = bulk_get_post_statuses( $post_ids_for_status );
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [ITEMS-DEBUG] bulk_get_post_statuses returned ' . count( $post_statuses ) . ' statuses' );
-		}
-
-		// Preload post meta to avoid N+1 queries during ACF updates
 		if ( ! empty( $post_ids_for_status ) ) {
+			$post_statuses = bulk_get_post_statuses( $post_ids_for_status );
 			$preloaded_meta = preload_post_meta_batch( $post_ids_for_status );
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[PUNTWORK] [ITEMS-DEBUG] Preloaded meta for ' . count( $preloaded_meta ) . ' posts' );
-			}
 		}
 
 		$total_to_process = count( $batch_guids );
+		$chunk_size = \Puntwork\Utilities\MemoryManager::getOptimalChunkSize();
+		$processed_in_chunk = 0;
+
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [ITEMS-DEBUG] Starting to process ' . $total_to_process . ' items' );
-			error_log( '[PUNTWORK] [ITEMS-DEBUG] Current counts before processing: published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', processed_count=' . $processed_count );
+			error_log( '[PUNTWORK] [STREAMING] Using chunk size: ' . $chunk_size . ' for ' . $total_to_process . ' items' );
 		}
 
 		// DISABLE EXPENSIVE HOOKS AT BATCH LEVEL FOR MAXIMUM PERFORMANCE
 		global $wp_filter;
 		$expensive_hooks_backup = array();
 		$expensive_hooks = array(
-			'save_post',           // Many plugins hook here for indexing/notifications
-			'wp_insert_post',      // Post insertion hooks
-			'publish_post',        // Publishing hooks
-			'transition_post_status', // Status change hooks
-			'added_post_meta',     // Meta addition hooks
-			'updated_post_meta',   // Meta update hooks
-			'post_updated',        // Post update hooks
-			'pre_post_update',     // Pre post update hooks
+			'save_post', 'wp_insert_post', 'publish_post', 'transition_post_status',
+			'added_post_meta', 'updated_post_meta', 'post_updated', 'pre_post_update',
 		);
 		foreach ( $expensive_hooks as $hook ) {
 			if ( isset( $wp_filter[ $hook ] ) ) {
@@ -84,7 +77,7 @@ if ( ! function_exists( 'process_batch_items_optimized' ) ) {
 			}
 		}
 
-		// Disable ACF hooks for the entire batch
+		// Disable ACF hooks
 		$acf_hooks_disabled = false;
 		if ( function_exists( 'acf' ) && function_exists( 'acf_save_post' ) ) {
 			$acf_hooks_disabled = true;
@@ -94,43 +87,121 @@ if ( ! function_exists( 'process_batch_items_optimized' ) ) {
 			}
 		}
 
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [PERFORMANCE] Disabled expensive hooks for batch processing' );
+		// Process items in chunks
+		$chunk_start_time = microtime( true );
+		$chunk_guids = array_chunk( $batch_guids, $chunk_size );
+
+		foreach ( $chunk_guids as $chunk_index => $guid_chunk ) {
+			$chunk_processed = process_guid_chunk(
+				$json_path, $guid_chunk, $last_updates, $all_hashes_by_post,
+				$acf_fields, $zero_empty_fields, $post_ids_by_guid, $post_statuses,
+				$user_id, $logs, $updated, $published, $skipped, $processed_count
+			);
+
+			$processed_in_chunk += $chunk_processed;
+
+			// Memory management checkpoint
+			if ( $processed_in_chunk % 100 === 0 ) {
+				\Puntwork\Utilities\MemoryManager::checkMemoryUsage();
+			}
+
+			// Update progress every chunk
+			update_intermediate_batch_status( $processed_count, $total_to_process, $published, $updated, $skipped, $logs );
+
+			// Check for cancellation
+			if ( get_transient( 'import_cancel' ) ) {
+				$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Batch processing cancelled by user';
+				break;
+			}
 		}
 
-		// Collect data for bulk operations
+		// RESTORE EXPENSIVE HOOKS
+		foreach ( $expensive_hooks_backup as $hook => $filters ) {
+			if ( ! isset( $wp_filter[ $hook ] ) ) {
+				$wp_filter[ $hook ] = $filters;
+			} else {
+				$wp_filter[ $hook ]->callbacks = array_merge( $wp_filter[ $hook ]->callbacks, $filters->callbacks );
+			}
+		}
+
+		// Re-enable ACF hooks
+		if ( $acf_hooks_disabled ) {
+			add_action( 'save_post', 'acf_save_post', 10, 1 );
+			if ( function_exists( 'acf_enable_field_saving' ) ) {
+				acf_enable_field_saving();
+			}
+		}
+
+		// Final cleanup
+		if ( function_exists( 'wp_cache_flush' ) ) {
+			wp_cache_flush();
+		}
+		\Puntwork\Utilities\CacheManager::clearGroup( \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS );
+
+		$total_time = microtime( true ) - $script_start_time;
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( sprintf( '[PUNTWORK] [STREAMING] Completed streaming processing in %.4f seconds', $total_time ) );
+		}
+	}
+}
+
+if ( ! function_exists( 'process_guid_chunk' ) ) {
+	/**
+	 * Process a chunk of GUIDs by streaming the JSONL file.
+	 */
+	function process_guid_chunk( $json_path, $guid_chunk, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $post_statuses, $user_id, &$logs, &$updated, &$published, &$skipped, &$processed_count ) {
 		$posts_to_insert = array();
 		$posts_to_update = array();
 		$acf_updates = array();
-		$meta_updates = array(); // For _last_import_update and _import_hash
+		$meta_updates = array();
 
-		$item_counter = 0;
-		$intermediate_update_interval = 5; // Update status every 5 items for better UI responsiveness
-		$last_intermediate_update = 0;
+		$guid_set = array_flip( $guid_chunk );
+		$found_items = array();
 
-		foreach ( $batch_guids as $guid ) {
-			++$item_counter;
+		// Stream through JSONL file to find matching items
+		$handle = fopen( $json_path, 'r' );
+		if ( ! $handle ) {
+			throw new Exception( 'Unable to open JSONL file for streaming: ' . $json_path );
+		}
+
+		while ( ( $line = fgets( $handle ) ) !== false ) {
+			$item_data = json_decode( trim( $line ), true );
+			if ( ! $item_data || ! isset( $item_data['guid'] ) ) {
+				continue;
+			}
+
+			$guid = $item_data['guid'];
+			if ( isset( $guid_set[ $guid ] ) ) {
+				$found_items[ $guid ] = $item_data;
+				unset( $guid_set[ $guid ] );
+
+				// Break if we've found all items in this chunk
+				if ( empty( $guid_set ) ) {
+					break;
+				}
+			}
+		}
+		fclose( $handle );
+
+		// Process found items
+		foreach ( $guid_chunk as $guid ) {
+			if ( ! isset( $found_items[ $guid ] ) ) {
+				$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Warning: GUID not found in JSONL: ' . $guid;
+				++$processed_count;
+				continue;
+			}
 
 			try {
-				$item = $batch_items[ $guid ]['item'];
+				$item = $found_items[ $guid ];
 				$xml_updated = isset( $item['updated'] ) ? $item['updated'] : '';
 				$xml_updated_ts = strtotime( $xml_updated );
 				$post_id = isset( $post_ids_by_guid[ $guid ] ) ? $post_ids_by_guid[ $guid ] : null;
-
-				// Check for cancellation at the start of each item
-				if ( get_transient( 'import_cancel' ) ) {
-					$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Batch processing cancelled by user';
-					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] Batch processing cancelled by user at item ' . $item_counter );
-					}
-					break;
-				}
 
 				// If post exists, check if it needs updating
 				if ( $post_id ) {
 					$current_post_status = $post_statuses[ $post_id ] ?? 'draft';
 					if ( $current_post_status !== 'publish' ) {
-						// Need to republish - add to update queue
+						// Need to republish
 						$posts_to_update[] = array(
 							'ID' => $post_id,
 							'post_status' => 'publish',
@@ -243,28 +314,26 @@ if ( ! function_exists( 'process_batch_items_optimized' ) ) {
 
 				++$processed_count;
 
-				// Update intermediate status every N items
-				if ( $processed_count % $intermediate_update_interval == 0 || $processed_count >= $total_to_process ) {
-					$current_time = microtime( true );
-					if ( $current_time - $last_intermediate_update >= 0.5 || $processed_count >= $total_to_process ) {
-						update_intermediate_batch_status( $processed_count, $total_to_process, $published, $updated, $skipped, $logs );
-						$last_intermediate_update = $current_time;
-					}
-				}
-
 			} catch ( \Exception $e ) {
 				$error_msg = 'Error processing GUID ' . $guid . ': ' . $e->getMessage();
 				$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . $error_msg;
-				error_log( '[PUNTWORK] [ITEMS-DEBUG] EXCEPTION processing GUID ' . $guid . ': ' . $e->getMessage() );
+				error_log( '[PUNTWORK] [STREAMING] EXCEPTION processing GUID ' . $guid . ': ' . $e->getMessage() );
 				++$processed_count;
 			}
 		}
 
-		// EXECUTE BULK OPERATIONS
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [BULK-OPS] Executing bulk operations: ' . count( $posts_to_insert ) . ' inserts, ' . count( $posts_to_update ) . ' updates' );
-		}
+		// Execute bulk operations for this chunk
+		execute_chunk_bulk_operations( $posts_to_insert, $posts_to_update, $meta_updates, $acf_updates, $logs );
 
+		return count( $guid_chunk );
+	}
+}
+
+if ( ! function_exists( 'execute_chunk_bulk_operations' ) ) {
+	/**
+	 * Execute bulk operations for a chunk of processed items.
+	 */
+	function execute_chunk_bulk_operations( $posts_to_insert, $posts_to_update, $meta_updates, $acf_updates, &$logs ) {
 		$bulk_start_time = microtime( true );
 
 		// Bulk insert new posts
@@ -274,9 +343,11 @@ if ( ! function_exists( 'process_batch_items_optimized' ) ) {
 
 			// Update GUIDs for inserted posts and fix meta_updates placeholders
 			foreach ( $inserted_post_ids as $index => $post_id ) {
-				if ( isset( $batch_guids[ $index ] ) ) {
-					$guid = $batch_guids[ $index ];
-					update_post_meta( $post_id, 'guid', $guid );
+				if ( isset( $posts_to_insert[ $index ] ) ) {
+					$guid = $posts_to_insert[ $index ]['guid'] ?? '';
+					if ( $guid ) {
+						update_post_meta( $post_id, 'guid', $guid );
+					}
 
 					// Fix meta_updates placeholders
 					foreach ( $meta_updates as &$meta_update ) {
@@ -294,7 +365,7 @@ if ( ! function_exists( 'process_batch_items_optimized' ) ) {
 			bulk_update_posts( $posts_to_update );
 		}
 
-		// Bulk update meta (including ACF fields)
+		// Bulk update meta
 		if ( ! empty( $meta_updates ) ) {
 			bulk_insert_postmeta( $meta_updates );
 		}
@@ -307,39 +378,7 @@ if ( ! function_exists( 'process_batch_items_optimized' ) ) {
 
 		$bulk_time = microtime( true ) - $bulk_start_time;
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [BULK-OPS] Bulk operations completed in ' . number_format( $bulk_time, 4 ) . ' seconds' );
-		}
-
-		// RESTORE EXPENSIVE HOOKS
-		foreach ( $expensive_hooks_backup as $hook => $filters ) {
-			if ( ! isset( $wp_filter[ $hook ] ) ) {
-				$wp_filter[ $hook ] = $filters;
-			} else {
-				$wp_filter[ $hook ]->callbacks = array_merge( $wp_filter[ $hook ]->callbacks, $filters->callbacks );
-			}
-		}
-
-		// Re-enable ACF hooks
-		if ( $acf_hooks_disabled ) {
-			add_action( 'save_post', 'acf_save_post', 10, 1 );
-			if ( function_exists( 'acf_enable_field_saving' ) ) {
-				acf_enable_field_saving();
-			}
-		}
-
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [PERFORMANCE] Restored expensive hooks after batch processing' );
-			error_log( '[PUNTWORK] [ITEMS-DEBUG] process_batch_items_optimized completed processing all ' . $total_to_process . ' items' );
-			error_log( '[PUNTWORK] [ITEMS-DEBUG] Final counts: published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', processed_count=' . $processed_count );
-		}
-
-		// Final cache clear after all processing
-		if ( function_exists( 'wp_cache_flush' ) ) {
-			wp_cache_flush();
-		}
-		\Puntwork\Utilities\CacheManager::clearGroup( \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS );
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [MEMORY-MGMT] Final cache clear after batch processing completion' );
+			error_log( sprintf( '[PUNTWORK] [BULK-OPS] Chunk bulk operations completed in %.4f seconds', $bulk_time ) );
 		}
 	}
 }
