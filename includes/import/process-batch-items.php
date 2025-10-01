@@ -16,6 +16,8 @@ require_once __DIR__ . '/../utilities/database-optimization.php';
 
 if ( ! function_exists( 'process_batch_items' ) ) {
 	function process_batch_items( $batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count ) {
+		$script_start_time = microtime( true );
+		
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( '[PUNTWORK] [ITEMS-DEBUG] process_batch_items called with ' . count( $batch_guids ) . ' GUIDs' );
 			error_log( '[PUNTWORK] [ITEMS-DEBUG] batch_items keys: ' . implode( ', ', array_keys( $batch_items ) ) );
@@ -80,8 +82,11 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 		$item_counter                 = 0;
 		$intermediate_update_interval = 5; // Update status every 5 items for better UI responsiveness
 		$last_intermediate_update     = 0;
+		$item_timeout_limit          = 60; // 60 seconds per item max
 
 		foreach ( $batch_guids as $guid ) {
+			$item_start_time = microtime( true );
+			
 			// Check for cancellation at the start of each item
 			if ( get_transient( 'import_cancel' ) ) {
 				$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Batch processing cancelled by user';
@@ -115,6 +120,14 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Item company: "' . ( isset( $item['company'] ) ? $item['company'] : 'MISSING' ) . '"' );
 				}
 
+				// Check if we're approaching script timeout
+				$script_elapsed = microtime( true ) - $script_start_time;
+				$max_script_time = ini_get( 'max_execution_time' );
+				if ( $max_script_time > 0 && $script_elapsed > ( $max_script_time * 0.8 ) ) {
+					error_log( '[PUNTWORK] [TIMEOUT] Approaching script timeout (' . number_format( $script_elapsed, 1 ) . 's elapsed of ' . $max_script_time . 's limit), skipping remaining items' );
+					break;
+				}
+
 				// If post exists, check if it needs updating
 				if ( $post_id ) {
 					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -127,12 +140,15 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 
 					if ( $current_post_status !== 'publish' ) {
 						error_log( '[PUNTWORK] [ITEMS-DEBUG] Republishing post ' . $post_id . ' for GUID ' . $guid . ' (was ' . $current_post_status . ')' );
+						$republish_start = microtime( true );
 						wp_update_post(
 							array(
 								'ID'          => $post_id,
 								'post_status' => 'publish',
 							)
 						);
+						$republish_time = microtime( true ) - $republish_start;
+						error_log( '[PUNTWORK] [ITEMS-DEBUG] Republish completed in ' . number_format( $republish_time, 4 ) . ' seconds' );
 						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Republished ID: ' . $post_id . ' GUID: ' . $guid . ' - Found in active feed';
 						error_log( '[PUNTWORK] [ITEMS-DEBUG] Successfully republished post ' . $post_id );
 					} else {
@@ -199,6 +215,7 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 						}
 					}
 
+					error_log( '[PUNTWORK] [ITEMS-DEBUG] About to call wp_update_post for GUID ' . $guid );
 					$post_update_start = microtime( true );
 					wp_update_post(
 						array(
@@ -212,6 +229,11 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 					);
 					$post_update_time = microtime( true ) - $post_update_start;
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Post update completed in ' . number_format( $post_update_time, 4 ) . ' seconds' );
+
+					// Check if the update took too long (possible hang indicator)
+					if ( $post_update_time > 30 ) {
+						error_log( '[PUNTWORK] [WARNING] Post update for GUID ' . $guid . ' took ' . number_format( $post_update_time, 2 ) . ' seconds - this may indicate a performance issue' );
+					}
 
 					// Re-enable ACF hooks after wp_update_post
 					if ( $acf_hooks_disabled ) {
@@ -234,10 +256,15 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Post updated successfully, now updating metadata' );
 
+					$meta_update_start = microtime( true );
 					update_post_meta( $post_id, '_last_import_update', $xml_updated );
 					update_post_meta( $post_id, '_import_hash', $item_hash );
+					$meta_update_time = microtime( true ) - $meta_update_start;
+					error_log( '[PUNTWORK] [ITEMS-DEBUG] Metadata updates completed in ' . number_format( $meta_update_time, 4 ) . ' seconds' );
 
 					// Prepare ACF field updates for bulk operation
+					error_log( '[PUNTWORK] [ITEMS-DEBUG] Preparing ACF field updates for GUID ' . $guid );
+					$acf_prepare_start = microtime( true );
 					$acf_updates = array();
 					foreach ( $acf_fields as $field ) {
 						$value      = $item[ $field ] ?? '';
@@ -253,6 +280,8 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 							error_log( '[PUNTWORK] [ITEMS-DEBUG] ACF field ' . $field . ': "' . substr( $value_str, 0, 50 ) . '" -> "' . substr( $set_value_str, 0, 50 ) . '"' );
 						}
 					}
+					$acf_prepare_time = microtime( true ) - $acf_prepare_start;
+					error_log( '[PUNTWORK] [ITEMS-DEBUG] ACF field preparation completed in ' . number_format( $acf_prepare_time, 4 ) . ' seconds' );
 
 					// Collect ACF updates for batch processing
 					$all_acf_updates[] = $acf_updates;
@@ -296,10 +325,16 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 						'post_author'    => $user_id,
 					);
 
+					error_log( '[PUNTWORK] [ITEMS-DEBUG] About to call wp_insert_post for GUID ' . $guid );
 					$post_insert_start = microtime( true );
 					$post_id           = wp_insert_post( $post_data );
 					$post_insert_time  = microtime( true ) - $post_insert_start;
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Post insert completed in ' . number_format( $post_insert_time, 4 ) . ' seconds' );
+
+					// Check if the insert took too long (possible hang indicator)
+					if ( $post_insert_time > 30 ) {
+						error_log( '[PUNTWORK] [WARNING] Post insert for GUID ' . $guid . ' took ' . number_format( $post_insert_time, 2 ) . ' seconds - this may indicate a performance issue' );
+					}
 					
 					// Re-enable ACF hooks after wp_insert_post
 					if ( $acf_hooks_disabled ) {
@@ -325,11 +360,17 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Successfully created post ID: ' . $post_id . ' for GUID: ' . $guid );
 					++$published;
+
+					$meta_update_start = microtime( true );
 					update_post_meta( $post_id, '_last_import_update', $xml_updated );
 					$item_hash = md5( json_encode( $item ) );
 					update_post_meta( $post_id, '_import_hash', $item_hash );
+					$meta_update_time = microtime( true ) - $meta_update_start;
+					error_log( '[PUNTWORK] [ITEMS-DEBUG] Metadata updates completed in ' . number_format( $meta_update_time, 4 ) . ' seconds' );
 
 					// Prepare ACF field updates for bulk operation
+					error_log( '[PUNTWORK] [ITEMS-DEBUG] Preparing ACF field updates for GUID ' . $guid );
+					$acf_prepare_start = microtime( true );
 					$acf_updates = array();
 					foreach ( $acf_fields as $field ) {
 						$value      = $item[ $field ] ?? '';
@@ -345,6 +386,8 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 							error_log( '[PUNTWORK] [ITEMS-DEBUG] ACF field ' . $field . ': "' . substr( $value_str, 0, 50 ) . '" -> "' . substr( $set_value_str, 0, 50 ) . '"' );
 						}
 					}
+					$acf_prepare_time = microtime( true ) - $acf_prepare_start;
+					error_log( '[PUNTWORK] [ITEMS-DEBUG] ACF field preparation completed in ' . number_format( $acf_prepare_time, 4 ) . ' seconds' );
 
 					// Collect ACF updates for batch processing
 					$all_acf_updates[] = $acf_updates;
@@ -394,6 +437,15 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 				// Continue to next item instead of failing the whole batch
 				++$processed_count;
 				error_log( '[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - EXCEPTION ===' );
+			}
+
+			// Check if this item took too long to process
+			$item_processing_time = microtime( true ) - $item_start_time;
+			if ( $item_processing_time > $item_timeout_limit ) {
+				error_log( '[PUNTWORK] [TIMEOUT] Item ' . $guid . ' processing exceeded ' . $item_timeout_limit . ' second limit (took ' . number_format( $item_processing_time, 2 ) . 's)' );
+				$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Skipped GUID: ' . $guid . ' - Processing timeout';
+				// Continue to next item
+				continue;
 			}
 		}
 		error_log( '[PUNTWORK] [ITEMS-DEBUG] process_batch_items completed processing all ' . $total_to_process . ' items' );
