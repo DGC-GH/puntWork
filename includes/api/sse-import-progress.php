@@ -80,6 +80,13 @@ function deep_sanitize_for_json( $data ) {
 add_action( 'rest_api_init', __NAMESPACE__ . '\\register_sse_import_progress_route' );
 function register_sse_import_progress_route() {
 	error_log( '[PUNTWORK] SSE: register_sse_import_progress_route called' );
+	
+	// Check if verify_api_key function exists
+	if ( ! function_exists( __NAMESPACE__ . '\\verify_api_key' ) ) {
+		error_log( '[PUNTWORK] SSE: ERROR - verify_api_key function not found' );
+		return;
+	}
+	
 	register_rest_route(
 		'puntwork/v1',
 		'/import-progress',
