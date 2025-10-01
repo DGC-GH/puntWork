@@ -633,7 +633,7 @@ class FeedProcessor {
 
 						if ( ! empty( $guid_source ) ) {
 							$item->guid = md5( $guid_source );
-							$logs[]     = '[' . date( 'd-M-Y
+							$logs[]     = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Generated GUID from available fields";
 						} else {
 							$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Skipping job - no unique fields for GUID generation";
 
