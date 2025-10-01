@@ -350,7 +350,18 @@ class FeedProcessor {
 					$job_obj = json_decode( json_encode( $item ), true );
 					infer_item_details( $item, $fallback_domain, $lang, $job_obj );
 
-					$batch[] = json_encode( $job_obj, JSON_UNESCAPED_UNICODE ) . "\n";
+					// Validate JSON encoding before adding to batch
+					$json_line = json_encode( $job_obj, JSON_UNESCAPED_UNICODE );
+					if ( $json_line === false ) {
+						$json_error = json_last_error_msg();
+						$logs[]     = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: JSON encoding failed for item with GUID {$item->guid}: $json_error";
+						if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+							error_log( "$feed_key: JSON encoding failed: $json_error" );
+						}
+						continue; // Skip this item
+					}
+
+					$batch[] = $json_line . "\n";
 					++$feed_item_count;
 
 					// Process in batches
@@ -486,7 +497,18 @@ class FeedProcessor {
 					$job_obj = json_decode( json_encode( $item ), true );
 					infer_item_details( $item, $fallback_domain, $lang, $job_obj );
 
-					$batch[] = json_encode( $job_obj, JSON_UNESCAPED_UNICODE ) . "\n";
+					// Validate JSON encoding before adding to batch
+					$json_line = json_encode( $job_obj, JSON_UNESCAPED_UNICODE );
+					if ( $json_line === false ) {
+						$json_error = json_last_error_msg();
+						$logs[]     = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: JSON encoding failed for item with GUID {$item->guid}: $json_error";
+						if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+							error_log( "$feed_key: JSON encoding failed: $json_error" );
+						}
+						continue; // Skip this item
+					}
+
+					$batch[] = $json_line . "\n";
 					++$feed_item_count;
 
 					// Process in batches
@@ -620,7 +642,18 @@ class FeedProcessor {
 					$job_obj = json_decode( json_encode( $item ), true );
 					infer_item_details( $item, $fallback_domain, $lang, $job_obj );
 
-					$batch[] = json_encode( $job_obj, JSON_UNESCAPED_UNICODE ) . "\n";
+					// Validate JSON encoding before adding to batch
+					$json_line = json_encode( $job_obj, JSON_UNESCAPED_UNICODE );
+					if ( $json_line === false ) {
+						$json_error = json_last_error_msg();
+						$logs[]     = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: JSON encoding failed for item with GUID {$item->guid}: $json_error";
+						if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+							error_log( "$feed_key: JSON encoding failed: $json_error" );
+						}
+						continue; // Skip this item
+					}
+
+					$batch[] = $json_line . "\n";
 					++$feed_item_count;
 
 					// Process in batches
