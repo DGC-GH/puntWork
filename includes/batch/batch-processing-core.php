@@ -388,10 +388,28 @@ function process_batch_items_logic( array $setup ): array {
 
 			if ( $has_recent_intermediate ) {
 				error_log( '[PUNTWORK] [UI-STATUS] Preserving recent intermediate update from ' . round( microtime( true ) - $current_status['intermediate_update_time'], 2 ) . ' seconds ago' );
-				// Don't overwrite the intermediate update - let the frontend see it
-				// The intermediate update will be naturally replaced on the next batch or final completion
+				// Update the processed count even when preserving intermediate update
 				$current_processed = $current_status['processed'] ?? 0;
 				$new_processed     = $current_processed + $result['processed_count'];
+				
+				// Update only the essential fields without overwriting the intermediate update
+				$current_status['processed']          = $new_processed;
+				$current_status['published']          = ( $current_status['published'] ?? 0 ) + $published;
+				$current_status['updated']            = ( $current_status['updated'] ?? 0 ) + $updated;
+				$current_status['skipped']            = ( $current_status['skipped'] ?? 0 ) + $skipped;
+				$current_status['duplicates_drafted'] = ( $current_status['duplicates_drafted'] ?? 0 ) + $duplicates_drafted;
+				$current_status['complete']           = ( $new_processed >= $total );
+				$current_status['inferred_languages'] = ( $current_status['inferred_languages'] ?? 0 ) + $inferred_languages;
+				$current_status['inferred_benefits']  = ( $current_status['inferred_benefits'] ?? 0 ) + $inferred_benefits;
+				$current_status['schema_generated']   = ( $current_status['schema_generated'] ?? 0 ) + $schema_generated;
+				$current_status['end_time']           = $current_status['complete'] ? microtime( true ) : null;
+				
+				update_option( 'job_import_status', $current_status, false );
+				
+				// Flush cache for real-time status updates
+				if ( function_exists( 'wp_cache_flush' ) ) {
+					wp_cache_flush();
+				}
 			} else {
 				$current_processed = $current_status['processed'] ?? 0;
 				$new_processed     = $current_processed + $result['processed_count'];
@@ -588,7 +606,6 @@ function update_intermediate_batch_status( int $processed_count, int $total_in_b
 
 	// Update status with intermediate values
 	$intermediate_status                 = $current_status;
-	$intermediate_status['processed']    = $total_processed;
 	$intermediate_status['published']    = ( $current_status['published'] ?? 0 ) + $published;
 	$intermediate_status['updated']      = ( $current_status['updated'] ?? 0 ) + $updated;
 	$intermediate_status['skipped']      = ( $current_status['skipped'] ?? 0 ) + $skipped;

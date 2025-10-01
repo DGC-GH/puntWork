@@ -641,7 +641,14 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 				if ( $debug_mode ) {
 					error_log( '[PUNTWORK] [LOOP-DEBUG] Accumulating results for batch ' . $batch_count );
 				}
-				$total_processed           = max( $total_processed, $result['processed'] );
+				// Use batch_processed if available (number processed in this batch), otherwise use processed (cumulative)
+				$batch_processed = $result['batch_processed'] ?? 0;
+				if ( $batch_processed > 0 ) {
+					$total_processed += $batch_processed;
+				} else {
+					// Fallback: use the cumulative processed value
+					$total_processed = max( $total_processed, $result['processed'] ?? 0 );
+				}
 				$total_published          += $result['published'] ?? 0;
 				$total_updated            += $result['updated'] ?? 0;
 				$total_skipped            += $result['skipped'] ?? 0;
