@@ -13,6 +13,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// Include required batch processing files
+require_once __DIR__ . '/batch-loading.php';
+require_once __DIR__ . '/batch-metadata.php';
+require_once __DIR__ . '/batch-duplicates.php';
+require_once __DIR__ . '/batch-size-management.php';
+require_once __DIR__ . '/../utilities/performance-functions.php';
+require_once __DIR__ . '/../utilities/database-optimization.php';
+require_once __DIR__ . '/../mappings/mappings-fields.php';
+require_once __DIR__ . '/../utilities/async-processing.php';
+require_once __DIR__ . '/../utilities/CacheManager.php';
+require_once __DIR__ . '/../utilities/MemoryManager.php';
+require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
+
 /**
  * Process batch items and handle imports.
  *
