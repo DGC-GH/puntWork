@@ -58,16 +58,20 @@ Execute the following maintenance protocol steps in strict numerical order. Do n
 
 23. **Commit Changes**: Commit the local fixes to the git repository with descriptive commit messages.
 
-24. **Wait for Validation**: Pause protocol execution and wait for user validation of the changes.
+24. **Deployment Policy**: NEVER upload files directly to the server. All changes MUST go through git commit and push for auto-deployment. Direct FTP uploads are prohibited to maintain version control and deployment consistency.
 
-25. **Push Changes**: Push the committed changes to the remote repository.
+25. **Wait for Validation**: Pause protocol execution and wait for user validation of the changes.
 
-26. **Verify on Server**: Deploy and verify that the fixes resolve issues on the server.
+26. **Push Changes**: Push the committed changes to the remote repository to trigger auto-deployment.
+
+27. **Verify on Server**: Deploy and verify that the fixes resolve issues on the server.
 
 ## AI Learnings from Previous Conversations
 
 - Need better context provision for AI comprehension
 - AI suggestions are being accepted and implemented
+- **DEPLOYMENT POLICY**: Never upload files directly to server - always use git commit/push for auto-deployment
+- Direct FTP uploads are prohibited to maintain version control and deployment consistency
 
 **EXECUTION COMPLETE**: Report final status and any issues encountered.
 
