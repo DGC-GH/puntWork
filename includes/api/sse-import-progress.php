@@ -13,6 +13,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+error_log( '[PUNTWORK] SSE: sse-import-progress.php file loaded successfully' );
+
 // Explicitly load required utility classes for SSE context
 require_once __DIR__ . '/../utilities/async-processing.php';
 require_once __DIR__ . '/../scheduling/scheduling-core.php';
@@ -77,6 +79,7 @@ function deep_sanitize_for_json( $data ) {
  */
 add_action( 'rest_api_init', __NAMESPACE__ . '\\register_sse_import_progress_route' );
 function register_sse_import_progress_route() {
+	error_log( '[PUNTWORK] SSE: register_sse_import_progress_route called' );
 	register_rest_route(
 		'puntwork/v1',
 		'/import-progress',
@@ -93,6 +96,7 @@ function register_sse_import_progress_route() {
 			),
 		)
 	);
+	error_log( '[PUNTWORK] SSE: SSE route registered successfully' );
 }
 
 /**
