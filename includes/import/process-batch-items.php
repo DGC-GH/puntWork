@@ -186,16 +186,14 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 
 					// Temporarily disable ACF hooks to prevent hanging during wp_update_post
 					$acf_hooks_disabled = false;
-					if ( function_exists( 'acf' ) ) {
+					if ( function_exists( 'acf' ) && function_exists( 'acf_save_post' ) ) {
 						$acf_hooks_disabled = true;
 						error_log( '[PUNTWORK] [ITEMS-DEBUG] Temporarily disabling ACF hooks for wp_update_post' );
 						
-						// Remove common ACF hooks that might cause issues
+						// Remove ACF save hook that might cause issues
 						remove_action( 'save_post', 'acf_save_post', 10 );
-						remove_action( 'wp_insert_post_data', 'acf_wp_insert_post_data', 10 );
-						remove_action( 'pre_post_update', 'acf_pre_post_update', 10 );
 						
-						// Disable ACF field saving temporarily
+						// Disable ACF field saving temporarily if function exists
 						if ( function_exists( 'acf_disable_field_saving' ) ) {
 							acf_disable_field_saving();
 						}
@@ -219,10 +217,8 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 					if ( $acf_hooks_disabled ) {
 						error_log( '[PUNTWORK] [ITEMS-DEBUG] Re-enabling ACF hooks after wp_update_post' );
 						
-						// Re-add ACF hooks
+						// Re-add ACF save hook
 						add_action( 'save_post', 'acf_save_post', 10, 1 );
-						// Note: acf_wp_insert_post_data function does not exist, so not re-adding
-						add_action( 'pre_post_update', 'acf_pre_post_update', 10, 2 );
 						
 						// Re-enable ACF field saving
 						if ( function_exists( 'acf_enable_field_saving' ) ) {
@@ -276,16 +272,14 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 
 					// Temporarily disable ACF hooks to prevent hanging during wp_insert_post
 					$acf_hooks_disabled = false;
-					if ( function_exists( 'acf' ) ) {
+					if ( function_exists( 'acf' ) && function_exists( 'acf_save_post' ) ) {
 						$acf_hooks_disabled = true;
 						error_log( '[PUNTWORK] [ITEMS-DEBUG] Temporarily disabling ACF hooks for wp_insert_post' );
 						
-						// Remove common ACF hooks that might cause issues
+						// Remove ACF save hook that might cause issues
 						remove_action( 'save_post', 'acf_save_post', 10 );
-						remove_action( 'wp_insert_post_data', 'acf_wp_insert_post_data', 10 );
-						remove_action( 'pre_post_update', 'acf_pre_post_update', 10 );
 						
-						// Disable ACF field saving temporarily
+						// Disable ACF field saving temporarily if function exists
 						if ( function_exists( 'acf_disable_field_saving' ) ) {
 							acf_disable_field_saving();
 						}
@@ -311,10 +305,8 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 					if ( $acf_hooks_disabled ) {
 						error_log( '[PUNTWORK] [ITEMS-DEBUG] Re-enabling ACF hooks after wp_insert_post' );
 						
-						// Re-add ACF hooks
+						// Re-add ACF save hook
 						add_action( 'save_post', 'acf_save_post', 10, 1 );
-						// Note: acf_wp_insert_post_data function does not exist, so not re-adding
-						add_action( 'pre_post_update', 'acf_pre_post_update', 10, 2 );
 						
 						// Re-enable ACF field saving
 						if ( function_exists( 'acf_enable_field_saving' ) ) {
