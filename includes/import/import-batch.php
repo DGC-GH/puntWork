@@ -152,6 +152,9 @@ if ( ! function_exists( 'import_jobs_from_json' ) ) {
 	function import_jobs_from_json( bool $is_batch = false, int $batch_start = 0 ): array {
 		$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
+		// Define import lock key
+		$import_lock_key = 'puntwork_import_lock';
+
 		if ( $debug_mode ) {
 			error_log( '[PUNTWORK] [IMPORT-ENTRY] ===== IMPORT_JOBS_FROM_JSON ENTRY POINT =====' );
 			error_log( '[PUNTWORK] [IMPORT-ENTRY] import_jobs_from_json ENTRY POINT - is_batch=' . ( $is_batch ? 'true' : 'false' ) . ', batch_start=' . $batch_start );
