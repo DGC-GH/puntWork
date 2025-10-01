@@ -77,7 +77,7 @@ function deep_sanitize_for_json( $data ) {
 /*
  * Register SSE endpoint for import progress
  */
-add_action( 'init', __NAMESPACE__ . '\\register_sse_import_progress_route' );
+add_action( 'rest_api_init', __NAMESPACE__ . '\\register_sse_import_progress_route' );
 function register_sse_import_progress_route() {
 	error_log( '[PUNTWORK] SSE: register_sse_import_progress_route called' );
 	
