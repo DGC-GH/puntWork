@@ -24,35 +24,45 @@ Execute the following maintenance protocol steps in strict numerical order. Do n
 
 6. **Check Console**: Read Console.txt for client-side errors, warnings and issues.
 
-7. **Fix Critical Issues**: Address any log errors, 500 errors, class loading failures, warnings or import blocks.
+7. **Fix Critical Issues Locally**: Address any log errors, 500 errors, class loading failures, warnings or import blocks.
 
-9. **Find Comprehension Gaps**: Locate unclear logic, missing docs, complex algorithms.
+8. **Find Comprehension Gaps**: Locate unclear logic, missing docs, complex algorithms.
 
-10. **Analyze Data Flow**: Map import/export patterns and integration points.
+9. **Analyze Data Flow**: Map import/export patterns and integration points.
 
-11. **Review Error Handling**: Identify fragile code sections needing improvement.
+10. **Review Error Handling**: Identify fragile code sections needing improvement.
 
-12. **Optimize Performance**: Address memory usage, response times, CPU utilization.
+11. **Optimize Performance**: Address memory usage, response times, CPU utilization.
 
-13. **Enhance Error Handling**: Add comprehensive error recovery and logging.
+12. **Enhance Error Handling**: Add comprehensive error recovery and logging.
 
-14. **Refactor Complex Code**: Break down large functions, improve readability.
+13. **Refactor Complex Code**: Break down large functions, improve readability.
 
-15. **Add Debug Logging**: Implement AI-readable logging for future analysis.
+14. **Add Debug Logging**: Implement AI-readable logging for future analysis.
 
-16. **Run Analysis**: Execute `php evolution-helper.php analyze`.
+15. **Run Analysis**: Execute `php evolution-helper.php analyze`.
 
-17. **Apply Improvements**: Execute `php evolution-helper.php apply`.
+16. **Apply Improvements**: Execute `php evolution-helper.php apply`.
 
-18. **Record Metrics**: Track all steps with `php evolution-helper.php record <step> <success> <duration>`.
+17. **Record Metrics**: Track all steps with `php evolution-helper.php record <step> <success> <duration>`.
 
-19. **Check Performance**: Ensure no degradation in speed or memory usage.
+18. **Check Performance**: Ensure no degradation in speed or memory usage.
 
-20. **Validate AJAX**: Confirm all AJAX endpoints work without 500 errors.
+19. **Validate AJAX**: Confirm all AJAX endpoints work without 500 errors.
 
-21. **Regression Test**: Run existing functionality to ensure no breakage.
+20. **Regression Test**: Run existing functionality to ensure no breakage.
 
-22. **Update Documentation**: Update CHANGELOG.md, and README.md if needed.
+21. **Update Documentation**: Update CHANGELOG.md, and README.md if needed.
+
+22. **Fix Errors Locally**: Implement code fixes for identified issues in the local development environment.
+
+23. **Commit Changes**: Commit the local fixes to the git repository with descriptive commit messages.
+
+24. **Wait for Validation**: Pause protocol execution and wait for user validation of the changes.
+
+25. **Push Changes**: Push the committed changes to the remote repository.
+
+26. **Verify on Server**: Deploy and verify that the fixes resolve issues on the server.
 
 ## AI Learnings from Previous Conversations
 
