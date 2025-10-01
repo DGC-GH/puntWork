@@ -42,7 +42,10 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             if (phase !== 'complete' && phase !== 'idle') {
                 // Reset progress bar segments to show 0% for new phase
                 if (this.segmentsCreated) {
-                    $('#progress-bar div').css('backgroundColor', '#f2f2f7'); // Reset all to default
+                    $('.progress-segment').css({
+                        'background-color': '#e0e0e0',
+                        'opacity': '0.3'
+                    });
                 }
                 $('#progress-percent').text('0%');
                 $('#progress-percent').css('color', '#007aff'); // Reset to blue for in-progress
@@ -89,6 +92,8 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             this.batchTimes = []; // Reset batch times
             this.lastBatchTime = 0;
             this.lastBatchSize = 0;
+            // Ensure progress bar segments exist
+            this.initializeProgressBar();
             // Reset all progress segments to initial gray state
             $('.progress-segment').css({
                 'background-color': '#e0e0e0',
@@ -702,6 +707,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
          */
         showImportUI: function() {
             console.log('[PUNTWORK] [UI-VISIBILITY] showImportUI() called - showing import progress');
+            this.initializeProgressBar(); // Ensure progress bar segments are created
             $('#import-progress').show();
             console.log('[PUNTWORK] [UI-VISIBILITY] Import progress should now be visible');
         },
@@ -770,7 +776,30 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             $('#cleanup-items-left').text('0 left');
             $('#cleanup-progress-bar').empty();
             this.hideCleanupUI();
-        }
+        },
+
+        /**
+         * Initialize progress bar segments
+         */
+        initializeProgressBar: function() {
+            if (this.segmentsCreated) {
+                return; // Already initialized
+            }
+
+            console.log('[PUNTWORK] Initializing progress bar segments');
+            var progressBar = $('#progress-bar');
+            progressBar.empty(); // Clear any existing content
+            progressBar.css('width', '100%'); // Ensure container takes full width for segments
+
+            // Create 100 progress segments
+            for (var i = 0; i < 100; i++) {
+                var segment = $('<div>').addClass('progress-segment');
+                progressBar.append(segment);
+            }
+
+            this.segmentsCreated = true;
+            console.log('[PUNTWORK] Progress bar segments initialized');
+        },
     };
 
     // Expose to global scope
