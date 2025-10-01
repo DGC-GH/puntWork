@@ -307,7 +307,7 @@ function render_main_import_ui(): void {
 			<div class="puntwork-card__body">
 				<!-- Progress Bar -->
 				<div class="puntwork-progress" style="margin-bottom: var(--spacing-lg);">
-					<div id="progress-bar" class="puntwork-progress__bar" style="width: 0%;"></div>
+					<div id="progress-bar" class="puntwork-progress__bar" style="width: 100%;"></div>
 				</div>
 
 				<!-- Time Counters -->
