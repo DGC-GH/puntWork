@@ -274,10 +274,17 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 					'api/ajax-db-optimization.php',
 					'api/ajax-feed-health.php',
 					'api/rest-api.php',
-					'api/sse-import-progress.php',
 				)
 			);
 		}
+
+		// SSE endpoint (always load since REST_REQUEST may not be set during init)
+		$includes = array_merge(
+			$includes,
+			array(
+				'api/sse-import-progress.php',
+			)
+		);
 
 		// Batch/Import includes (load on AJAX, cron, or when explicitly needed)
 		if ( $is_ajax || $is_cron || isset( $_REQUEST['puntwork_import'] ) || ( isset( $_REQUEST['action'] ) && strpos( $_REQUEST['action'], 'puntwork' ) === 0 ) ) {

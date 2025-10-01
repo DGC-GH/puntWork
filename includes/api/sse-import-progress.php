@@ -112,7 +112,7 @@ function handle_import_progress_sse( $request ) {
 			header( 'Content-Type: text/event-stream' );
 			header( 'Cache-Control: no-cache' );
 			header( 'Connection: keep-alive' );
-			header( 'Access-Control-Allow-Origin: *' );
+			header( 'Access-Control-Allow-Origin: ' . get_site_url() );
 			header( 'Access-Control-Allow-Headers: Cache-Control' );
 			if ( ob_get_level() ) {
 				ob_end_clean();
@@ -138,7 +138,7 @@ function handle_import_progress_sse( $request ) {
 			header( 'Content-Type: text/event-stream' );
 			header( 'Cache-Control: no-cache' );
 			header( 'Connection: keep-alive' );
-			header( 'Access-Control-Allow-Origin: *' );
+			header( 'Access-Control-Allow-Origin: ' . get_site_url() );
 			header( 'Access-Control-Allow-Headers: Cache-Control' );
 			if ( ob_get_level() ) {
 				ob_end_clean();
@@ -161,7 +161,7 @@ function handle_import_progress_sse( $request ) {
 		header( 'Content-Type: text/event-stream' );
 		header( 'Cache-Control: no-cache' );
 		header( 'Connection: keep-alive' );
-		header( 'Access-Control-Allow-Origin: *' );
+		header( 'Access-Control-Allow-Origin: ' . get_site_url() );
 		header( 'Access-Control-Allow-Headers: Cache-Control' );
 
 		// Disable output buffering
