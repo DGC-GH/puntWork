@@ -291,6 +291,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 			$includes = array_merge(
 				$includes,
 				array(
+					'utilities/ErrorHandler.php',
 					'batch/batch-core.php',
 					'batch/batch-data.php',
 					'batch/batch-loading.php',

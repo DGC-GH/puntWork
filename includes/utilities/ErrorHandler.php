@@ -1,5 +1,7 @@
 <?php
 
+namespace Puntwork;
+
 /**
  * Enhanced Error Handling and Recovery System for PuntWork.
  *
@@ -267,7 +269,7 @@ if ( ! class_exists( 'Puntwork\ErrorHandler' ) ) {
 				'trace' => $trace,
 				'context' => $context,
 				'recovery_strategy' => $recovery_strategy,
-				'timestamp' => microtime( true )
+				'timestamp' => time()
 			);
 		}
 
