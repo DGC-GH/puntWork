@@ -31,24 +31,62 @@ function process_xml_batch( $xml_path, $handle, $feed_key, $output_dir, $fallbac
 				try {
 					$item         = new \stdClass();
 					$element_name = strtolower( $reader->name );
-					// Traverse child elements of the job element
-					while ( $reader->read() && ! ( $reader->nodeType === \XMLReader::END_ELEMENT && strtolower( $reader->name ) === $element_name ) ) {
-						if ( $reader->nodeType === \XMLReader::ELEMENT ) {
-							$name = strtolower( preg_replace( '/^.*:/', '', $reader->name ) );
-							if ( $reader->isEmptyElement ) {
-								$item->$name = '';
-							} else {
-								$value       = $reader->readInnerXML();
-								$item->$name = $value;
+
+					// Use expand() to get the full element as DOMElement for safer parsing
+					$dom_element = $reader->expand();
+					if ( $dom_element ) {
+						// Extract all child elements and text content
+						foreach ( $dom_element->childNodes as $child ) {
+							if ( $child->nodeType === XML_ELEMENT_NODE ) {
+								$name = strtolower( preg_replace( '/^.*:/', '', $child->tagName ) );
+								// Get text content only, ignore nested XML structures
+								$value = '';
+								foreach ( $child->childNodes as $text_node ) {
+									if ( $text_node->nodeType === XML_TEXT_NODE || $text_node->nodeType === XML_CDATA_SECTION_NODE ) {
+										$value .= $text_node->textContent;
+									}
+								}
+								$item->$name = trim( $value );
+							} elseif ( $child->nodeType === XML_TEXT_NODE || $child->nodeType === XML_CDATA_SECTION_NODE ) {
+								// Handle text content at job element level
+								if ( ! isset( $item->description ) ) {
+									$item->description = trim( $child->textContent );
+								}
+							}
+						}
+
+						// Also try to get attributes
+						foreach ( $dom_element->attributes as $attr ) {
+							$name           = strtolower( preg_replace( '/^.*:/', '', $attr->name ) );
+							$item->$name = $attr->value;
+						}
+					} else {
+						// Fallback to the old method if expand() fails
+						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Using fallback XML parsing for item";
+						while ( $reader->read() && ! ( $reader->nodeType === \XMLReader::END_ELEMENT && strtolower( $reader->name ) === $element_name ) ) {
+							if ( $reader->nodeType === \XMLReader::ELEMENT ) {
+								$name = strtolower( preg_replace( '/^.*:/', '', $reader->name ) );
+								if ( $reader->isEmptyElement ) {
+									$item->$name = '';
+								} else {
+									try {
+										$value       = $reader->readInnerXML();
+										$item->$name = $value;
+									} catch ( \Exception $xml_error ) {
+										$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: XML parsing error for field $name: " . $xml_error->getMessage();
+										$item->$name = '';
+									}
+								}
 							}
 						}
 					}
+
 					// If item is empty or failed to collect fields, skip and log
 					if ( empty( (array) $item ) ) {
 						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key item skipped: No fields collected";
-
 						continue;
 					}
+
 					clean_item_fields( $item );
 
 					// Generate GUID if missing
@@ -73,7 +111,6 @@ function process_xml_batch( $xml_path, $handle, $feed_key, $output_dir, $fallbac
 							$logs[]     = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Generated GUID for item: " . $item->guid;
 						} else {
 							$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Skipping item - no unique fields for GUID generation";
-
 							continue;
 						}
 					}
@@ -86,41 +123,61 @@ function process_xml_batch( $xml_path, $handle, $feed_key, $output_dir, $fallbac
 					} else {
 						$lang = 'en';
 					}
+
 					$job_obj = json_decode( json_encode( $item ), true );
 					infer_item_details( $item, $fallback_domain, $lang, $job_obj );
 
-					$batch[] = json_encode( $job_obj, JSON_UNESCAPED_UNICODE ) . "\n";
+					// Validate JSON encoding before adding to batch
+					$json_line = json_encode( $job_obj, JSON_UNESCAPED_UNICODE );
+					if ( $json_line === false ) {
+						$json_error = json_last_error_msg();
+						$logs[]     = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: JSON encoding failed for item with GUID {$item->guid}: $json_error";
+						if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+							error_log( "$feed_key: JSON encoding failed: $json_error" );
+						}
+						continue; // Skip this item
+					}
+
+					$batch[] = $json_line . "\n";
 					++$feed_item_count;
+
 					if ( $feed_item_count % 100 === 0 ) {
 						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "Processed $feed_item_count items so far for $feed_key";
 						if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 							error_log( "Processed $feed_item_count items so far for $feed_key" );
 						}
 					}
+
 					if ( count( $batch ) >= $batch_size ) {
 						fwrite( $handle, implode( '', $batch ) );
 						$batch        = array();
 						$total_items += $batch_size;
 					}
-					unset( $item, $job_obj );
+
+					unset( $item, $job_obj, $dom_element );
+
 				} catch ( \Exception $e ) {
-					$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Error processing XML item: " . $e->getMessage() . ' at XML line ' . $reader->expand()->getLineNo();
+					$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Error processing XML item: " . $e->getMessage();
 					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-						error_log( "$feed_key: Error processing XML item: " . $e->getMessage() . ' at XML line ' . $reader->expand()->getLineNo() );
+						error_log( "$feed_key: Error processing XML item: " . $e->getMessage() );
 					}
 					// Continue with next item
 				}
 			}
 		}
+
 		if ( ! empty( $batch ) ) {
 			fwrite( $handle, implode( '', $batch ) );
 			$total_items += count( $batch );
 		}
+
 		$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "Processed $feed_item_count items for $feed_key";
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( "Processed $feed_item_count items for $feed_key" );
 		}
+
 		$reader->close();
+
 	} catch ( \Exception $e ) {
 		$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "Processing error for $feed_key: " . $e->getMessage();
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {

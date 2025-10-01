@@ -529,6 +529,11 @@ function process_one_feed( string $feed_key, string $url, string $output_dir, st
 
 		fclose( $handle );
 
+		// Clean up downloaded file
+		if ( file_exists( $feed_file_path ) ) {
+			unlink( $feed_file_path );
+		}
+
 		throw $e; // Re-throw to maintain existing behavior
 	}
 
@@ -917,19 +922,64 @@ function fetch_and_generate_combined_json(): array {
 						)
 					);
 
-					// Process the downloaded feed
-					$count        = process_downloaded_feed( $feed_key, $result['path'], $output_dir, $fallback_domain, $import_logs );
-					$total_items += $count;
+					// Force garbage collection before processing each feed
+					if ( function_exists( 'gc_collect_cycles' ) ) {
+						gc_collect_cycles();
+					}
 
-					PuntWorkLogger::info(
-						'Downloaded feed processed',
-						PuntWorkLogger::CONTEXT_FEED_PROCESSING,
-						array(
-							'feed_key'           => $feed_key,
-							'items_processed'    => $count,
-							'total_items_so_far' => $total_items,
-						)
-					);
+					// Check memory usage before processing
+					$memory_before = memory_get_usage( true );
+					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+						error_log( '[PUNTWORK] [MEMORY] Memory before processing ' . $feed_key . ': ' . round( $memory_before / 1024 / 1024, 2 ) . ' MB' );
+					}
+
+					try {
+						$count        = process_downloaded_feed( $feed_key, $result['path'], $output_dir, $fallback_domain, $import_logs );
+						$total_items += $count;
+
+						PuntWorkLogger::info(
+							'Downloaded feed processed',
+							PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+							array(
+								'feed_key'           => $feed_key,
+								'items_processed'    => $count,
+								'total_items_so_far' => $total_items,
+							)
+						);
+
+						// Check memory usage after processing
+						$memory_after = memory_get_usage( true );
+						if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+							error_log( '[PUNTWORK] [MEMORY] Memory after processing ' . $feed_key . ': ' . round( $memory_after / 1024 / 1024, 2 ) . ' MB (delta: ' . round( ( $memory_after - $memory_before ) / 1024 / 1024, 2 ) . ' MB)' );
+						}
+
+						// Clean up the downloaded file immediately
+						if ( file_exists( $result['path'] ) ) {
+							unlink( $result['path'] );
+						}
+
+					} catch ( \Exception $e ) {
+						// Log the error but continue with other feeds
+						$import_logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ERROR processing feed ' . $feed_key . ': ' . $e->getMessage();
+						PuntWorkLogger::error(
+							'Feed processing failed',
+							PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+							array(
+								'feed_key'      => $feed_key,
+								'error_message' => $e->getMessage(),
+								'error_file'    => $e->getFile(),
+								'error_line'    => $e->getLine(),
+							)
+						);
+
+						// Clean up the downloaded file
+						if ( file_exists( $result['path'] ) ) {
+							unlink( $result['path'] );
+						}
+
+						// Continue with next feed instead of failing completely
+						continue;
+					}
 
 					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 						// Log memory usage after each feed
@@ -976,18 +1026,54 @@ function fetch_and_generate_combined_json(): array {
 					)
 				);
 
-				$count        = process_one_feed( $feed_key, $url, $output_dir, $fallback_domain, $import_logs );
-				$total_items += $count;
+				// Force garbage collection before processing each feed
+				if ( function_exists( 'gc_collect_cycles' ) ) {
+					gc_collect_cycles();
+				}
 
-				PuntWorkLogger::info(
-					'Sequential feed processed',
-					PuntWorkLogger::CONTEXT_FEED_PROCESSING,
-					array(
-						'feed_key'           => $feed_key,
-						'items_processed'    => $count,
-						'total_items_so_far' => $total_items,
-					)
-				);
+				// Check memory usage before processing
+				$memory_before = memory_get_usage( true );
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( '[PUNTWORK] [MEMORY] Memory before processing ' . $feed_key . ': ' . round( $memory_before / 1024 / 1024, 2 ) . ' MB' );
+				}
+
+				try {
+					$count        = process_one_feed( $feed_key, $url, $output_dir, $fallback_domain, $import_logs );
+					$total_items += $count;
+
+					PuntWorkLogger::info(
+						'Sequential feed processed',
+						PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+						array(
+							'feed_key'           => $feed_key,
+							'items_processed'    => $count,
+							'total_items_so_far' => $total_items,
+						)
+					);
+
+					// Check memory usage after processing
+					$memory_after = memory_get_usage( true );
+					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+						error_log( '[PUNTWORK] [MEMORY] Memory after processing ' . $feed_key . ': ' . round( $memory_after / 1024 / 1024, 2 ) . ' MB (delta: ' . round( ( $memory_after - $memory_before ) / 1024 / 1024, 2 ) . ' MB)' );
+					}
+
+				} catch ( \Exception $e ) {
+					// Log the error but continue with other feeds
+					$import_logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ERROR processing feed ' . $feed_key . ': ' . $e->getMessage();
+					PuntWorkLogger::error(
+						'Feed processing failed',
+						PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+						array(
+							'feed_key'      => $feed_key,
+							'error_message' => $e->getMessage(),
+							'error_file'    => $e->getFile(),
+							'error_line'    => $e->getLine(),
+						)
+					);
+
+					// Continue with next feed instead of failing completely
+					continue;
+				}
 
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 					// Log memory usage after each feed
