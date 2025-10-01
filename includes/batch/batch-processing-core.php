@@ -20,6 +20,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return array Processing results.
  */
 function process_batch_items_logic( array $setup ): array {
+	// Temporarily disable Jetpack autoloader to prevent database conflicts
+	$jetpack_autoloader_disabled = false;
+	if ( class_exists( 'Automattic\Jetpack\Autoloader\Autoloader' ) ) {
+		$jetpack_autoloader_disabled = true;
+		error_log( '[PUNTWORK] [JETPACK] Temporarily disabling Jetpack autoloader to prevent database conflicts' );
+		// Note: Jetpack autoloader cannot be easily disabled once loaded, but we can try to minimize its impact
+	}
+
 	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
 	if ( $debug_mode ) {

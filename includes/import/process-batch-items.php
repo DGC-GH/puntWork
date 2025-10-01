@@ -87,6 +87,26 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 		foreach ( $batch_guids as $guid ) {
 			$item_start_time = microtime( true );
 			
+			// Clear database state at the start of each item to prevent "Commands out of sync" errors
+			global $wpdb;
+			if ( $wpdb->result ) {
+				$wpdb->result = null;
+			}
+			if ( method_exists( $wpdb, 'flush' ) ) {
+				$wpdb->flush();
+			}
+			$wpdb->last_error = ''; // Clear any previous errors
+			
+			// Check for "Commands out of sync" error and attempt recovery
+			if ( strpos( $wpdb->last_error, 'Commands out of sync' ) !== false ) {
+				error_log( '[PUNTWORK] [DB-RECOVERY] Detected "Commands out of sync" error, attempting recovery' );
+				// Force a new database connection
+				if ( method_exists( $wpdb, 'db_connect' ) ) {
+					$wpdb->db_connect();
+				}
+				$wpdb->last_error = '';
+			}
+			
 			// Check for cancellation at the start of each item
 			if ( get_transient( 'import_cancel' ) ) {
 				$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Batch processing cancelled by user';
@@ -238,7 +258,7 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] About to call wp_update_post for GUID ' . $guid );
 					$post_update_start = microtime( true );
-					wp_update_post(
+					$post_id_updated = wp_update_post(
 						array(
 							'ID'            => $post_id,
 							'post_title'    => $xml_title,
@@ -250,6 +270,24 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 					);
 					$post_update_time = microtime( true ) - $post_update_start;
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Post update completed in ' . number_format( $post_update_time, 4 ) . ' seconds' );
+
+					// Check if wp_update_post failed
+					if ( is_wp_error( $post_id_updated ) ) {
+						error_log( '[PUNTWORK] [DB-ERROR] wp_update_post failed for post ' . $post_id . ': ' . $post_id_updated->get_error_message() );
+						// Try to recover by clearing database state
+						global $wpdb;
+						if ( $wpdb->result ) {
+							$wpdb->result = null;
+						}
+						if ( method_exists( $wpdb, 'flush' ) ) {
+							$wpdb->flush();
+						}
+						$wpdb->last_error = '';
+						// Skip this item and continue
+						++$processed_count;
+						error_log( '[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - UPDATE FAILED ===' );
+						continue;
+					}
 
 					// Restore expensive hooks
 					foreach ( $expensive_hooks_backup as $hook => $filters ) {
@@ -283,6 +321,16 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 					global $wpdb;
 					if ( ! empty( $wpdb->last_error ) ) {
 						error_log( '[PUNTWORK] [DB-ERROR] Database error after wp_update_post for post ' . $post_id . ': ' . $wpdb->last_error );
+						// Clear the error to prevent it from affecting subsequent operations
+						$wpdb->last_error = '';
+					}
+
+					// Clear any unconsumed results that might cause "Commands out of sync" errors
+					if ( $wpdb->result ) {
+						$wpdb->result = null;
+					}
+					if ( method_exists( $wpdb, 'flush' ) ) {
+						$wpdb->flush();
 					}
 
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Post updated successfully, now updating metadata' );
@@ -391,6 +439,24 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 					$post_insert_time  = microtime( true ) - $post_insert_start;
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Post insert completed in ' . number_format( $post_insert_time, 4 ) . ' seconds' );
 
+					// Check if wp_insert_post failed due to database issues
+					if ( is_wp_error( $post_id ) ) {
+						error_log( '[PUNTWORK] [DB-ERROR] wp_insert_post failed for GUID ' . $guid . ': ' . $post_id->get_error_message() );
+						// Try to recover by clearing database state
+						global $wpdb;
+						if ( $wpdb->result ) {
+							$wpdb->result = null;
+						}
+						if ( method_exists( $wpdb, 'flush' ) ) {
+							$wpdb->flush();
+						}
+						$wpdb->last_error = '';
+						// Skip this item and continue
+						++$processed_count;
+						error_log( '[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - INSERT FAILED ===' );
+						continue;
+					}
+
 					// Restore expensive hooks
 					foreach ( $expensive_hooks_backup as $hook => $filters ) {
 						if ( ! isset( $wp_filter[ $hook ] ) ) {
@@ -432,6 +498,22 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 						error_log( '[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - CREATE FAILED ===' );
 
 						continue;
+					}
+
+					// Check for database errors after wp_insert_post
+					global $wpdb;
+					if ( ! empty( $wpdb->last_error ) ) {
+						error_log( '[PUNTWORK] [DB-ERROR] Database error after wp_insert_post for post ' . $post_id . ': ' . $wpdb->last_error );
+						// Clear the error to prevent it from affecting subsequent operations
+						$wpdb->last_error = '';
+					}
+
+					// Clear any unconsumed results that might cause "Commands out of sync" errors
+					if ( $wpdb->result ) {
+						$wpdb->result = null;
+					}
+					if ( method_exists( $wpdb, 'flush' ) ) {
+						$wpdb->flush();
 					}
 
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Successfully created post ID: ' . $post_id . ' for GUID: ' . $guid );
