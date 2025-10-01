@@ -258,7 +258,7 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] About to call wp_update_post for GUID ' . $guid );
 					$post_update_start = microtime( true );
-					$post_id_updated = wp_update_post(
+					$post_id_updated = execute_with_timeout( 'wp_update_post', array(
 						array(
 							'ID'            => $post_id,
 							'post_title'    => $xml_title,
@@ -267,9 +267,18 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 							'post_date'     => $xml_validfrom,
 							'post_modified' => $post_modified,
 						)
-					);
+					), 30 ); // 30 second timeout
 					$post_update_time = microtime( true ) - $post_update_start;
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Post update completed in ' . number_format( $post_update_time, 4 ) . ' seconds' );
+
+					// Check if update timed out
+					if ( $post_id_updated === null ) {
+						error_log( '[PUNTWORK] [TIMEOUT] wp_update_post timed out for GUID ' . $guid . ', skipping item' );
+						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - Update timeout';
+						++$processed_count;
+						error_log( '[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - UPDATE TIMEOUT ===' );
+						continue;
+					}
 
 					// Check if wp_update_post failed
 					if ( is_wp_error( $post_id_updated ) ) {
@@ -435,9 +444,18 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] About to call wp_insert_post for GUID ' . $guid );
 					$post_insert_start = microtime( true );
-					$post_id           = wp_insert_post( $post_data );
+					$post_id           = execute_with_timeout( 'wp_insert_post', array( $post_data ), 30 ); // 30 second timeout
 					$post_insert_time  = microtime( true ) - $post_insert_start;
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Post insert completed in ' . number_format( $post_insert_time, 4 ) . ' seconds' );
+
+					// Check if insert timed out
+					if ( $post_id === null ) {
+						error_log( '[PUNTWORK] [TIMEOUT] wp_insert_post timed out for GUID ' . $guid . ', skipping item' );
+						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Skipped GUID: ' . $guid . ' - Insert timeout';
+						++$processed_count;
+						error_log( '[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - INSERT TIMEOUT ===' );
+						continue;
+					}
 
 					// Check if wp_insert_post failed due to database issues
 					if ( is_wp_error( $post_id ) ) {
@@ -640,4 +658,77 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 			error_log( '[PUNTWORK] [MEMORY-MGMT] Final cache clear after batch processing completion' );
 		}
 	}
+}
+
+/**
+ * Execute a function with timeout protection
+ *
+ * @param callable $function The function to execute
+ * @param array $args Arguments to pass to the function
+ * @param int $timeout_seconds Timeout in seconds
+ * @return mixed Result of the function or null on timeout
+ */
+function execute_with_timeout( callable $function, array $args = array(), int $timeout_seconds = 30 ) {
+	$result = null;
+	$timed_out = false;
+	
+	// Use pcntl if available for better timeout handling
+	if ( function_exists( 'pcntl_fork' ) && function_exists( 'pcntl_waitpid' ) && function_exists( 'pcntl_signal' ) ) {
+		$pid = pcntl_fork();
+		
+		if ( $pid == -1 ) {
+			// Fork failed, execute normally
+			return call_user_func_array( $function, $args );
+		} elseif ( $pid == 0 ) {
+			// Child process
+			$result = call_user_func_array( $function, $args );
+			exit( 0 );
+		} else {
+			// Parent process
+			$status = null;
+			$start_time = time();
+			
+			while ( time() - $start_time < $timeout_seconds ) {
+				$wait_result = pcntl_waitpid( $pid, $status, WNOHANG );
+				
+				if ( $wait_result == -1 ) {
+					// Error waiting
+					break;
+				} elseif ( $wait_result > 0 ) {
+					// Child finished
+					break;
+				}
+				
+				usleep( 100000 ); // 0.1 seconds
+			}
+			
+			if ( time() - $start_time >= $timeout_seconds ) {
+				// Timeout occurred, kill child process
+				posix_kill( $pid, SIGKILL );
+				pcntl_waitpid( $pid, $status );
+				$timed_out = true;
+				error_log( '[PUNTWORK] [TIMEOUT] Function execution timed out after ' . $timeout_seconds . ' seconds' );
+			}
+		}
+	} else {
+		// Fallback: simple time-based timeout (less reliable)
+		$start_time = microtime( true );
+		try {
+			$result = call_user_func_array( $function, $args );
+		} catch ( \Exception $e ) {
+			error_log( '[PUNTWORK] [TIMEOUT] Exception during function execution: ' . $e->getMessage() );
+			$timed_out = true;
+		}
+		
+		if ( microtime( true ) - $start_time > $timeout_seconds ) {
+			$timed_out = true;
+			error_log( '[PUNTWORK] [TIMEOUT] Function execution exceeded ' . $timeout_seconds . ' seconds' );
+		}
+	}
+	
+	if ( $timed_out ) {
+		return null;
+	}
+	
+	return $result;
 }
