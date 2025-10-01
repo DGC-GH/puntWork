@@ -259,13 +259,15 @@ function process_batch_items_logic( array $setup ): array {
 				// Update import status for UI polling
 				$current_status                       = get_option( 'job_import_status', array() );
 				$current_status['total']              = $total;
-				$current_status['processed']          = $end_index;
+				$current_processed                    = $current_status['processed'] ?? 0;
+				$new_processed                        = $current_processed; // No items processed since cancelled
+				$current_status['processed']          = $new_processed;
 				$current_status['published']          = $current_status['published'] ?? 0;
 				$current_status['updated']            = $current_status['updated'] ?? 0;
 				$current_status['skipped']            = ( $current_status['skipped'] ?? 0 ) + $skipped;
 				$current_status['duplicates_drafted'] = $current_status['duplicates_drafted'] ?? 0;
 				$current_status['time_elapsed']       = $time_elapsed;
-				$current_status['complete']           = ( $end_index >= $total );
+				$current_status['complete']           = ( $new_processed >= $total );
 				$current_status['success']            = true;
 				$current_status['error_message']      = '';
 				$current_status['batch_size']         = $batch_size;
@@ -299,14 +301,14 @@ function process_batch_items_logic( array $setup ): array {
 
 				return array(
 					'success'            => true,
-					'processed'          => $end_index,
+					'processed'          => $new_processed,
 					'total'              => $setup['total'],
 					'published'          => $published,
 					'updated'            => $updated,
 					'skipped'            => $skipped,
 					'duplicates_drafted' => $duplicates_drafted,
 					'time_elapsed'       => $time_elapsed,
-					'complete'           => ( $end_index >= $setup['total'] ),
+					'complete'           => ( $new_processed >= $setup['total'] ),
 					'logs'               => $logs,
 					'batch_size'         => $batch_size,
 					'inferred_languages' => $inferred_languages,
@@ -388,15 +390,20 @@ function process_batch_items_logic( array $setup ): array {
 				error_log( '[PUNTWORK] [UI-STATUS] Preserving recent intermediate update from ' . round( microtime( true ) - $current_status['intermediate_update_time'], 2 ) . ' seconds ago' );
 				// Don't overwrite the intermediate update - let the frontend see it
 				// The intermediate update will be naturally replaced on the next batch or final completion
+				$current_processed = $current_status['processed'] ?? 0;
+				$new_processed     = $current_processed + $result['processed_count'];
 			} else {
+				$current_processed = $current_status['processed'] ?? 0;
+				$new_processed     = $current_processed + $result['processed_count'];
+
 				$current_status['total']              = $total;
-				$current_status['processed']          = $end_index;
+				$current_status['processed']          = $new_processed;
 				$current_status['published']          = ( $current_status['published'] ?? 0 ) + $published;
 				$current_status['updated']            = ( $current_status['updated'] ?? 0 ) + $updated;
 				$current_status['skipped']            = ( $current_status['skipped'] ?? 0 ) + $skipped;
 				$current_status['duplicates_drafted'] = ( $current_status['duplicates_drafted'] ?? 0 ) + $duplicates_drafted;
 				$current_status['time_elapsed']       = $time_elapsed;
-				$current_status['complete']           = ( $end_index >= $total );
+				$current_status['complete']           = ( $new_processed >= $total );
 				$current_status['success']            = true;
 				$current_status['error_message']      = '';
 				$current_status['batch_size']         = $batch_size;
@@ -445,7 +452,7 @@ function process_batch_items_logic( array $setup ): array {
 				'Batch processing completed successfully',
 				\Puntwork\PuntWorkLogger::CONTEXT_BATCH,
 				array(
-					'processed'    => $end_index,
+					'processed'    => $new_processed,
 					'total'        => $total,
 					'published'    => $published,
 					'updated'      => $updated,
@@ -469,14 +476,14 @@ function process_batch_items_logic( array $setup ): array {
 
 			return array(
 				'success'            => true,
-				'processed'          => $end_index,
+				'processed'          => $new_processed,
 				'total'              => $total,
 				'published'          => $published,
 				'updated'            => $updated,
 				'skipped'            => $skipped,
 				'duplicates_drafted' => $duplicates_drafted,
 				'time_elapsed'       => $time_elapsed,
-				'complete'           => ( $end_index >= $total ),
+				'complete'           => ( $new_processed >= $total ),
 				'logs'               => $logs,
 				'batch_size'         => $batch_size,
 				'inferred_languages' => $inferred_languages,
