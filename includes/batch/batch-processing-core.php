@@ -227,7 +227,7 @@ function process_batch_items_logic( array $setup ): array {
 			$batch_items     = $batch_load_info['batch_items'];
 			$batch_guids     = $batch_load_info['batch_guids'];
 			$lines_read      = $batch_load_info['lines_read'] ?? $batch_size;
-			$end_index       = $start_index + $lines_read;
+			$end_index       = $start_index + count( $batch_guids ); // Advance by number of valid items processed, not lines read
 			if ( $debug_mode ) {
 				error_log( '[PUNTWORK] [BATCH-LOAD] load_and_prepare_batch_items completed, loaded ' . count( $batch_guids ) . ' GUIDs, lines_read=' . $lines_read . ', end_index=' . $end_index );
 				error_log( '[PUNTWORK] [BATCH-LOAD] Batch items count: ' . count( $batch_items ) );
@@ -248,7 +248,7 @@ function process_batch_items_logic( array $setup ): array {
 				if ( $debug_mode ) {
 					error_log( '[PUNTWORK] [BATCH-CANCEL] Batch was cancelled, returning early' );
 				}
-				update_option( 'job_import_progress', $end_index, false );
+				update_option( 'job_import_progress', $start_index + count( $batch_guids ), false ); // Advance by items processed so far
 				update_option( 'job_import_processed_guids', $processed_guids, false );
 				$time_elapsed = microtime( true ) - $start_time;
 				$batch_time   = microtime( true ) - $batch_start_time; // Calculate actual batch processing time
