@@ -26,9 +26,14 @@ class FeedProcessor {
 	/**
 	 * Detect feed format from URL or content.
 	 *
+	 * Format detection priority:
+	 * 1. URL file extension (.xml, .json, .csv)
+	 * 2. Content analysis (XML declaration, JSON brackets, CSV structure)
+	 * 3. Default to JSON for modern feeds
+	 *
 	 * @param  string      $url     Feed URL
 	 * @param  string|null $content Optional content to analyze
-	 * @return string Detected format (xml, json, csv, or job_board)
+	 * @return string Detected format (FORMAT_XML, FORMAT_JSON, FORMAT_CSV, or FORMAT_JOB_BOARD)
 	 */
 	public static function detectFormat( string $url, ?string $content = null ): string {
 		// Check if it's a job board URL
@@ -628,7 +633,7 @@ class FeedProcessor {
 
 						if ( ! empty( $guid_source ) ) {
 							$item->guid = md5( $guid_source );
-							$logs[]     = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Generated GUID for job: " . $item->guid;
+							$logs[]     = '[' . date( 'd-M-Y
 						} else {
 							$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Skipping job - no unique fields for GUID generation";
 
@@ -727,6 +732,13 @@ class FeedProcessor {
 	/**
 	 * Extract items from various JSON structures.
 	 *
+	 * Handles different JSON feed formats:
+	 * - Array of job objects: [{"title": "...", ...}, ...]
+	 * - Object with items array: {"jobs": [{"title": "...", ...}], ...}
+	 * - Single job object: {"title": "...", ...}
+	 *
+	 * Searches for common container keys: jobs, items, data, results, feed, entries
+	 *
 	 * @param  mixed $data JSON data structure
 	 * @return array Extracted items array
 	 */
@@ -757,6 +769,13 @@ class FeedProcessor {
 
 	/**
 	 * Detect CSV delimiter by analyzing the first few lines.
+	 *
+	 * Analyzes the first 5 lines of the CSV file and counts occurrences
+	 * of common delimiters: comma (,), semicolon (;), tab (\t), pipe (|)
+	 * Returns the delimiter with the highest count.
+	 *
+	 * Note: This is a heuristic and may not work for all CSV formats.
+	 * For complex CSV files, the delimiter should be explicitly configured.
 	 *
 	 * @param  string $file_path Path to CSV file
 	 * @return string Detected delimiter character

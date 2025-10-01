@@ -104,9 +104,12 @@ class JobBoardManager {
 	/**
 	 * Fetch jobs from all configured boards.
 	 *
-	 * @param  array $params    Search parameters
-	 * @param  array $board_ids Specific board IDs to search (empty = all)
-	 * @return array Combined job results
+	 * Fetches jobs using board-specific APIs with the provided parameters.
+	 * Each board may interpret parameters differently based on its API.
+	 *
+	 * @param  array $params    Search parameters (board-specific interpretation)
+	 * @param  array $board_ids Specific board IDs to search (empty = all configured boards)
+	 * @return array Combined job results from all boards
 	 */
 	public function fetchAllJobs( array $params = array(), array $board_ids = array() ): array {
 		$all_jobs         = array();
@@ -143,9 +146,12 @@ class JobBoardManager {
 	/**
 	 * Search jobs across all configured boards.
 	 *
-	 * @param  array $filters   Search filters
-	 * @param  array $board_ids Specific board IDs to search (empty = all)
-	 * @return array Combined search results
+	 * Searches for jobs using standardized filters that are translated
+	 * to board-specific API calls. More structured than fetchAllJobs.
+	 *
+	 * @param  array $filters   Standardized search filters (location, keywords, etc.)
+	 * @param  array $board_ids Specific board IDs to search (empty = all configured boards)
+	 * @return array Combined search results from all boards
 	 */
 	public function searchAllBoards( array $filters = array(), array $board_ids = array() ): array {
 		$all_jobs         = array();

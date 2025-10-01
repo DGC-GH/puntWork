@@ -1325,6 +1325,14 @@ function process_feed_ajax() {
 
 		error_log( '[PUNTWORK] [DEBUG-PHP] Feed URL: ' . $feed_url . ', Output dir: ' . $output_dir );
 
+		// Validate feed URL
+		if ( ! filter_var( $feed_url, FILTER_VALIDATE_URL ) ) {
+			error_log( '[PUNTWORK] [DEBUG-PHP] Invalid feed URL: ' . $feed_url );
+			delete_transient( $feed_lock_key ); // Clear lock
+			wp_send_json_error( array( 'message' => 'Invalid feed URL: ' . $feed_url ) );
+			return;
+		}
+
 		// Ensure output directory exists
 		if ( ! wp_mkdir_p( $output_dir ) || ! is_writable( $output_dir ) ) {
 			error_log( '[PUNTWORK] [DEBUG-PHP] Feeds directory not writable: ' . $output_dir );
@@ -1360,7 +1368,27 @@ function process_feed_ajax() {
 					'error_line' => $e->getLine(),
 				)
 			);
-			wp_send_json_error( array( 'message' => 'Feed processing failed: ' . $e->getMessage() ) );
+			delete_transient( $feed_lock_key ); // Clear lock
+			wp_send_json_error( array( 'message' => 'Feed processing failed: ' . ( $e->getMessage() ?: 'Unknown error' ) ) );
+
+			return;
+		} catch ( \Throwable $e ) {
+			error_log( '[PUNTWORK] [DEBUG-PHP] process_one_feed threw throwable: ' . $e->getMessage() );
+			error_log( '[PUNTWORK] [DEBUG-PHP] Throwable file: ' . $e->getFile() . ':' . $e->getLine() );
+			error_log( '[PUNTWORK] [DEBUG-PHP] Throwable trace: ' . $e->getTraceAsString() );
+			\Puntwork\PuntWorkLogger::error(
+				'Feed processing failed with throwable',
+				\Puntwork\PuntWorkLogger::CONTEXT_AJAX,
+				array(
+					'feed_key'   => $feed_key,
+					'feed_url'   => $feed_url,
+					'error'      => $e->getMessage(),
+					'error_file' => $e->getFile(),
+					'error_line' => $e->getLine(),
+				)
+			);
+			delete_transient( $feed_lock_key ); // Clear lock
+			wp_send_json_error( array( 'message' => 'Feed processing failed: ' . ( $e->getMessage() ?: 'Unknown error' ) ) );
 
 			return;
 		}
@@ -1405,7 +1433,17 @@ function process_feed_ajax() {
 		error_log( '[PUNTWORK] [DEBUG-PHP] process_feed_ajax exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
 		error_log( '[PUNTWORK] [DEBUG-PHP] Stack trace: ' . $e->getTraceAsString() );
 		PuntWorkLogger::error( 'Process feed AJAX error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
-		wp_send_json_error( array( 'message' => 'Failed to process feed: ' . $e->getMessage() ) );
+		wp_send_json_error( array( 'message' => 'Failed to process feed: ' . ( $e->getMessage() ?: 'Unknown error' ) ) );
+	} catch ( \Throwable $e ) {
+		// Clear feed processing lock on any error
+		if ( isset( $feed_lock_key ) ) {
+			delete_transient( $feed_lock_key );
+		}
+
+		error_log( '[PUNTWORK] [DEBUG-PHP] process_feed_ajax throwable: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
+		error_log( '[PUNTWORK] [DEBUG-PHP] Stack trace: ' . $e->getTraceAsString() );
+		PuntWorkLogger::error( 'Process feed AJAX throwable: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
+		wp_send_json_error( array( 'message' => 'Failed to process feed: ' . ( $e->getMessage() ?: 'Unknown error' ) ) );
 	}
 }
 

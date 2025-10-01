@@ -3,6 +3,12 @@
 /**
  * XML batch processing utilities.
  *
+ * Processes XML feeds by streaming through elements to handle large files efficiently.
+ * Uses XMLReader for memory-efficient parsing without loading entire DOM into memory.
+ *
+ * Supports multiple job element names: item, job, vacancy, position, entry, listing
+ * Extracts both element text content and attributes.
+ *
  * @since      1.0.0
  */
 
@@ -13,6 +19,29 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Process XML feed in batches using streaming XML parser.
+ *
+ * This function uses XMLReader to efficiently process large XML files without
+ * loading the entire DOM into memory. It:
+ * 1. Streams through XML elements looking for job items
+ * 2. Extracts field data from both element content and attributes
+ * 3. Handles XML namespaces by stripping prefixes
+ * 4. Falls back to alternative parsing if DOM expansion fails
+ * 5. Processes items in configurable batches for memory efficiency
+ *
+ * Supported job element names: item, job, vacancy, position, entry, listing
+ *
+ * @param  string   $xml_path        Path to XML file
+ * @param  resource $handle          File handle for writing JSONL output
+ * @param  string   $feed_key        Feed identifier for logging
+ * @param  string   $output_dir      Output directory (unused in this function)
+ * @param  string   $fallback_domain Fallback domain for job URLs
+ * @param  int      $batch_size      Number of items to process before writing
+ * @param  int      &$total_items    Reference to total items counter
+ * @param  array    &$logs           Reference to logs array
+ * @return int Number of items processed
+ */
 function process_xml_batch( $xml_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, &$total_items, &$logs ) {
 	$feed_item_count = 0;
 	$batch           = array();

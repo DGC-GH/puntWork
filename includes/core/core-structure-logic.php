@@ -347,7 +347,7 @@ function process_one_feed( string $feed_key, string $url, string $output_dir, st
 			error_log( '[PUNTWORK] [PROCESS-ERROR] ' . $error_msg . ' after ' . ( microtime( true ) - $download_start ) . ' seconds' );
 		}
 
-		return 0;
+		throw new \Exception( 'Feed download failed from URL: ' . $url );
 	}
 	$download_time = microtime( true ) - $download_start;
 	if ( $debug_mode ) {
@@ -380,7 +380,7 @@ function process_one_feed( string $feed_key, string $url, string $output_dir, st
 			)
 		);
 
-		return 0;
+		throw new \Exception( 'Downloaded feed file does not exist: ' . $feed_file_path );
 	}
 	$feed_file_size = filesize( $feed_file_path );
 	if ( $debug_mode ) {
@@ -400,7 +400,7 @@ function process_one_feed( string $feed_key, string $url, string $output_dir, st
 			)
 		);
 
-		return 0;
+		throw new \Exception( 'Downloaded feed file is empty: ' . $feed_file_path );
 	}
 
 	PuntWorkLogger::debug(
@@ -428,7 +428,7 @@ function process_one_feed( string $feed_key, string $url, string $output_dir, st
 			)
 		);
 
-		return 0;
+		throw new \Exception( 'Failed to read downloaded feed file: ' . $feed_file_path );
 	}
 	$content_length = strlen( $content );
 	if ( $debug_mode ) {
@@ -655,7 +655,7 @@ function process_downloaded_feed( string $feed_key, string $feed_path, string $o
 			error_log( '[PUNTWORK] Feed file does not exist: ' . $feed_path );
 		}
 
-		return 0;
+		throw new \Exception( 'Feed file does not exist: ' . $feed_path );
 	}
 
 	$json_filename = $feed_key . '.jsonl';
@@ -674,7 +674,7 @@ function process_downloaded_feed( string $feed_key, string $feed_path, string $o
 			error_log( '[PUNTWORK] Failed to read feed file: ' . $feed_path );
 		}
 
-		return 0;
+		throw new \Exception( 'Failed to read feed file: ' . $feed_path );
 	}
 
 	$format = \Puntwork\FeedProcessor::detectFormat( '', $content );
