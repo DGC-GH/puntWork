@@ -294,8 +294,10 @@ function bulk_update_acf_fields( array $post_ids, array $acf_data ): void {
 	}
 
 	$start_time = microtime( true );
+	$total_timeout = 300; // 5 minute total timeout for all ACF updates in this batch
+	$field_timeout = 5; // 5 second timeout per field
 
-	// Use ACF's update_field function for proper field handling
+	// Use ACF's update_field function for proper field handling with timeout protection
 	foreach ( $post_ids as $index => $post_id ) {
 		if ( ! isset( $acf_data[ $index ] ) ) {
 			continue;
@@ -303,9 +305,29 @@ function bulk_update_acf_fields( array $post_ids, array $acf_data ): void {
 
 		$fields = $acf_data[ $index ];
 		foreach ( $fields as $field_name => $value ) {
+			// Check if we've exceeded total timeout
+			if ( microtime( true ) - $start_time > $total_timeout ) {
+				error_log( '[PUNTWORK] [ACF-TIMEOUT] Total ACF update time exceeded ' . $total_timeout . ' seconds, stopping batch' );
+				return;
+			}
+
 			// Use ACF's update_field function if available, otherwise fall back to postmeta
 			if ( function_exists( 'update_field' ) ) {
-				update_field( $field_name, $value, $post_id );
+				$field_start = microtime( true );
+				try {
+					$result = update_field( $field_name, $value, $post_id );
+					$field_time = microtime( true ) - $field_start;
+
+					if ( $field_time > $field_timeout ) {
+						error_log( '[PUNTWORK] [ACF-TIMEOUT] update_field for ' . $field_name . ' on post ' . $post_id . ' took ' . number_format( $field_time, 2 ) . ' seconds (exceeded ' . $field_timeout . 's limit)' );
+					}
+
+					if ( $result === false ) {
+						error_log( '[PUNTWORK] [ACF-ERROR] update_field failed for field ' . $field_name . ' on post ' . $post_id );
+					}
+				} catch ( \Exception $e ) {
+					error_log( '[PUNTWORK] [ACF-ERROR] Exception updating field ' . $field_name . ' on post ' . $post_id . ': ' . $e->getMessage() );
+				}
 			} else {
 				// Fallback to direct postmeta update
 				update_post_meta( $post_id, $field_name, $value );

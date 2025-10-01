@@ -85,38 +85,6 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 		$item_timeout_limit          = 60; // 60 seconds per item max
 
 		foreach ( $batch_guids as $guid ) {
-			$item_start_time = microtime( true );
-			
-			// Clear database state at the start of each item to prevent "Commands out of sync" errors
-			global $wpdb;
-			if ( $wpdb->result ) {
-				$wpdb->result = null;
-			}
-			if ( method_exists( $wpdb, 'flush' ) ) {
-				$wpdb->flush();
-			}
-			$wpdb->last_error = ''; // Clear any previous errors
-			
-			// Check for "Commands out of sync" error and attempt recovery
-			if ( strpos( $wpdb->last_error, 'Commands out of sync' ) !== false ) {
-				error_log( '[PUNTWORK] [DB-RECOVERY] Detected "Commands out of sync" error, attempting recovery' );
-				// Force a new database connection
-				if ( method_exists( $wpdb, 'db_connect' ) ) {
-					$wpdb->db_connect();
-				}
-				$wpdb->last_error = '';
-			}
-			
-			// Check for cancellation at the start of each item
-			if ( get_transient( 'import_cancel' ) ) {
-				$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Batch processing cancelled by user';
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Batch processing cancelled by user at item ' . $item_counter );
-				}
-
-				break;
-			}
-
 			++$item_counter;
 			if ( $item_counter % 100 == 0 ) {
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -128,382 +96,62 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 				error_log( '[PUNTWORK] [ITEMS-DEBUG] GUID exists in batch_items: ' . ( isset( $batch_items[ $guid ] ) ? 'yes' : 'no' ) );
 			}
 
-			try {
-				$item           = $batch_items[ $guid ]['item'];
-				$xml_updated    = isset( $item['updated'] ) ? $item['updated'] : '';
-				$xml_updated_ts = strtotime( $xml_updated );
-				$post_id        = isset( $post_ids_by_guid[ $guid ] ) ? $post_ids_by_guid[ $guid ] : null;
+			// Process item with fork-based timeout protection
+			$item_result = process_item_with_fork($guid, $batch_items, $post_ids_by_guid, $last_updates, $post_statuses, $all_hashes_by_post, $item_counter, $item_timeout_limit);
 
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Item data extracted: post_id=' . ( $post_id ?? 'null' ) . ', xml_updated="' . $xml_updated . '", xml_updated_ts=' . $xml_updated_ts );
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Item title: "' . ( isset( $item['functiontitle'] ) ? $item['functiontitle'] : 'MISSING' ) . '"' );
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Item company: "' . ( isset( $item['company'] ) ? $item['company'] : 'MISSING' ) . '"' );
+			if ($item_result['success']) {
+				$processed_count++;
+				$published += $item_result['published'];
+				$updated += $item_result['updated'];
+				$skipped += $item_result['skipped'];
+				$logs = array_merge($logs, $item_result['logs']);
+
+				// Collect ACF updates for bulk processing
+				if ($item_result['acf_updates'] && $item_result['post_id']) {
+					$all_acf_updates[] = $item_result['acf_updates'];
+					$posts_to_update[] = $item_result['post_id'];
 				}
-
-				// Check if we're approaching script timeout
-				$script_elapsed = microtime( true ) - $script_start_time;
-				$max_script_time = ini_get( 'max_execution_time' );
-				if ( $max_script_time > 0 && $script_elapsed > ( $max_script_time * 0.8 ) ) {
-					error_log( '[PUNTWORK] [TIMEOUT] Approaching script timeout (' . number_format( $script_elapsed, 1 ) . 's elapsed of ' . $max_script_time . 's limit), skipping remaining items' );
-					break;
-				}
-
-				// If post exists, check if it needs updating
-				if ( $post_id ) {
-					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] Post exists for GUID ' . $guid . ' (ID: ' . $post_id . '), checking if update needed' );
-					}
-
-					// First, ensure the job is published if it's in the feed
-					$current_post_status = $post_statuses[ $post_id ] ?? 'draft';
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Current post status: ' . $current_post_status );
-
-					if ( $current_post_status !== 'publish' ) {
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] Republishing post ' . $post_id . ' for GUID ' . $guid . ' (was ' . $current_post_status . ')' );
-						$republish_start = microtime( true );
-						wp_update_post(
-							array(
-								'ID'          => $post_id,
-								'post_status' => 'publish',
-							)
-						);
-						$republish_time = microtime( true ) - $republish_start;
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] Republish completed in ' . number_format( $republish_time, 4 ) . ' seconds' );
-						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Republished ID: ' . $post_id . ' GUID: ' . $guid . ' - Found in active feed';
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] Successfully republished post ' . $post_id );
-					} else {
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] Post ' . $post_id . ' already published, no republish needed' );
-					}
-
-					$current_last_update = isset( $last_updates[ $post_id ] ) ? $last_updates[ $post_id ]->meta_value : '';
-					$current_last_ts     = $current_last_update ? strtotime( $current_last_update ) : 0;
-
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] GUID ' . $guid . ' timestamp comparison:' );
-					error_log( '[PUNTWORK] [ITEMS-DEBUG]   - xml_updated: "' . $xml_updated . '" -> timestamp: ' . $xml_updated_ts . ' (' . date( 'Y-m-d H:i:s', $xml_updated_ts ) . ')' );
-					error_log( '[PUNTWORK] [ITEMS-DEBUG]   - current_last_update: "' . $current_last_update . '" -> timestamp: ' . $current_last_ts . ' (' . date( 'Y-m-d H:i:s', $current_last_ts ) . ')' );
-
-					// Skip if no update timestamp or if current version is newer/equal
-					// if ($xml_updated_ts && $current_last_ts >= $xml_updated_ts ) {
-					// error_log('[PUNTWORK] [ITEMS-DEBUG] SKIPPING: GUID ' . $guid . ' - Not updated (current version is newer or equal)');
-					// error_log('[PUNTWORK] [ITEMS-DEBUG]   - Reason: current_ts (' . $current_last_ts . ') >= xml_ts (' . $xml_updated_ts . ')');
-					// ++$skipped;
-					// $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - Not updated (current: ' . date('Y-m-d H:i:s', $current_last_ts) . ', xml: ' . date('Y-m-d H:i:s', $xml_updated_ts) . ')';
-					// ++$processed_count;
-					// error_log('[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - SKIPPED (NOT UPDATED) ===');
-					// continue;
-					// }
-
-					$current_hash = $all_hashes_by_post[ $post_id ] ?? '';
-					$item_hash    = md5( json_encode( $item ) );
-
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] GUID ' . $guid . ' hash comparison:' );
-					error_log( '[PUNTWORK] [ITEMS-DEBUG]   - current_hash: ' . substr( $current_hash, 0, 8 ) . '...' );
-					error_log( '[PUNTWORK] [ITEMS-DEBUG]   - item_hash: ' . substr( $item_hash, 0, 8 ) . '...' );
-					error_log( '[PUNTWORK] [ITEMS-DEBUG]   - hash_match: ' . ( $current_hash === $item_hash ? 'true' : 'false' ) );
-
-					// Skip if content hasn't changed
-					if ( $current_hash === $item_hash ) {
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] SKIPPING: GUID ' . $guid . ' - No changes (content hash identical)' );
-						++$skipped;
-						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - No changes';
-						++$processed_count;
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - SKIPPED (NO CHANGES) ===' );
-
-						continue;
-					}
-
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] UPDATING existing post ' . $post_id . ' for GUID ' . $guid . ' - SKIPPING wp_update_post, using direct ACF/meta updates only' );
-					// Update existing post - skip wp_update_post to avoid timeouts, just update ACF fields and metadata directly
-					$xml_title     = isset( $item['functiontitle'] ) ? $item['functiontitle'] : '';
-					$xml_validfrom = isset( $item['validfrom'] ) ? $item['validfrom'] : '';
-					$post_modified = $xml_updated ?: current_time( 'mysql' );
-
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Update details: title="' . $xml_title . '", validfrom="' . $xml_validfrom . '", modified="' . $post_modified . '"' );
-
-					// Skip wp_update_post entirely - just update metadata and ACF fields directly
-					// This avoids the timeout issues while still updating the necessary data
-
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Skipping wp_update_post, proceeding directly to metadata and ACF updates' );
-
-					// Update metadata directly
-					$meta_update_start = microtime( true );
-					update_post_meta( $post_id, '_last_import_update', $xml_updated );
-					update_post_meta( $post_id, '_import_hash', $item_hash );
-					$meta_update_time = microtime( true ) - $meta_update_start;
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Metadata updates completed in ' . number_format( $meta_update_time, 4 ) . ' seconds' );
-
-					// Prepare ACF field updates for bulk operation
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Preparing ACF field updates for GUID ' . $guid );
-					$acf_prepare_start = microtime( true );
-					$acf_updates = array();
-					foreach ( $acf_fields as $field ) {
-						$value      = $item[ $field ] ?? '';
-						$is_special = in_array( $field, $zero_empty_fields );
-						$set_value  = $is_special && $value == '0' ? '' : $value;
-
-						// Ensure values are strings for logging
-						$value_str     = is_array( $value ) ? json_encode( $value ) : (string) $value;
-						$set_value_str = is_array( $set_value ) ? json_encode( $set_value ) : (string) $set_value;
-
-						$acf_updates[ $field ] = $set_value;
-						if ( $item_counter % 100 == 0 ) {
-							error_log( '[PUNTWORK] [ITEMS-DEBUG] ACF field ' . $field . ': "' . substr( $value_str, 0, 50 ) . '" -> "' . substr( $set_value_str, 0, 50 ) . '"' );
-						}
-					}
-					$acf_prepare_time = microtime( true ) - $acf_prepare_start;
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] ACF field preparation completed in ' . number_format( $acf_prepare_time, 4 ) . ' seconds' );
-
-					// Collect ACF updates for batch processing
-					$all_acf_updates[] = $acf_updates;
-					$posts_to_update[] = $post_id;
-
-					++$updated;
-					$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Updated ID: ' . $post_id . ' GUID: ' . $guid;
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - UPDATED (DIRECT) ===' );
-				} else {
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] No existing post found for GUID ' . $guid . ', creating new post' );
-					// Create new post only if it doesn't exist
-					$xml_title     = isset( $item['functiontitle'] ) ? $item['functiontitle'] : '';
-					$xml_validfrom = isset( $item['validfrom'] ) ? $item['validfrom'] : current_time( 'mysql' );
-					$post_modified = $xml_updated ?: current_time( 'mysql' );
-
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Creating new post with: title="' . $xml_title . '", validfrom="' . $xml_validfrom . '", modified="' . $post_modified . '"' );
-
-					// Temporarily disable ACF hooks to prevent hanging during wp_insert_post
-					$acf_hooks_disabled = false;
-					if ( function_exists( 'acf' ) && function_exists( 'acf_save_post' ) ) {
-						$acf_hooks_disabled = true;
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] Temporarily disabling ACF hooks for wp_insert_post' );
-						
-						// Remove ACF save hook that might cause issues
-						remove_action( 'save_post', 'acf_save_post', 10 );
-						
-						// Disable ACF field saving temporarily if function exists
-						if ( function_exists( 'acf_disable_field_saving' ) ) {
-							acf_disable_field_saving();
-						}
-					}
-
-					// Temporarily disable ALL save_post hooks to prevent infinite loops or hangs
-					global $wp_filter;
-					$save_post_hooks_backup = array();
-					if ( isset( $wp_filter['save_post'] ) ) {
-						$save_post_hooks_backup = $wp_filter['save_post'];
-						remove_all_actions( 'save_post' );
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] Temporarily disabled all save_post hooks for insert' );
-					}
-
-					// Temporarily disable ALL expensive hooks to prevent infinite loops or hangs
-					$expensive_hooks_backup = array();
-					$expensive_hooks = array(
-						'save_post',           // Many plugins hook here for indexing/notifications
-						'wp_insert_post',      // Post insertion hooks
-						'publish_post',        // Publishing hooks
-						'transition_post_status', // Status change hooks
-						'added_post_meta',     // Meta addition hooks
-						'updated_post_meta',   // Meta update hooks
-						'post_updated',        // Post update hooks
-						'pre_post_update',     // Pre post update hooks
-					);
-					foreach ( $expensive_hooks as $hook ) {
-						if ( isset( $wp_filter[ $hook ] ) ) {
-							$expensive_hooks_backup[ $hook ] = $wp_filter[ $hook ];
-							unset( $wp_filter[ $hook ] );
-						}
-					}
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Temporarily disabled expensive hooks for insert' );
-
-					$post_data = array(
-						'post_type'      => 'job',  // Use existing CPT created with ACF
-						'post_title'     => $xml_title,
-						'post_name'      => sanitize_title( $xml_title . '-' . $guid ),
-						'post_status'    => 'publish',
-						'post_date'      => $xml_validfrom,
-						'post_modified'  => $post_modified,
-						'comment_status' => 'closed',
-						'post_author'    => $user_id,
-					);
-
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] About to call wp_insert_post for GUID ' . $guid );
-					$post_insert_start = microtime( true );
-					$post_id           = execute_with_timeout( 'wp_insert_post', array( $post_data ), 30 ); // 30 second timeout
-					$post_insert_time  = microtime( true ) - $post_insert_start;
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Post insert completed in ' . number_format( $post_insert_time, 4 ) . ' seconds' );
-
-					// Check if insert timed out
-					if ( $post_id === null ) {
-						error_log( '[PUNTWORK] [TIMEOUT] wp_insert_post timed out for GUID ' . $guid . ', skipping item' );
-						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Skipped GUID: ' . $guid . ' - Insert timeout';
-						++$processed_count;
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - INSERT TIMEOUT ===' );
-						continue;
-					}
-
-					// Check if wp_insert_post failed due to database issues
-					if ( is_wp_error( $post_id ) ) {
-						error_log( '[PUNTWORK] [DB-ERROR] wp_insert_post failed for GUID ' . $guid . ': ' . $post_id->get_error_message() );
-						// Try to recover by clearing database state
-						global $wpdb;
-						if ( $wpdb->result ) {
-							$wpdb->result = null;
-						}
-						if ( method_exists( $wpdb, 'flush' ) ) {
-							$wpdb->flush();
-						}
-						$wpdb->last_error = '';
-						// Skip this item and continue
-						++$processed_count;
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - INSERT FAILED ===' );
-						continue;
-					}
-
-					// Restore expensive hooks
-					foreach ( $expensive_hooks_backup as $hook => $filters ) {
-						if ( ! isset( $wp_filter[ $hook ] ) ) {
-							$wp_filter[ $hook ] = $filters;
-						} else {
-							$wp_filter[ $hook ]->callbacks = array_merge( $wp_filter[ $hook ]->callbacks, $filters->callbacks );
-						}
-					}
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Restored expensive hooks after insert' );
-
-					// Restore save_post hooks
-					if ( ! empty( $save_post_hooks_backup ) ) {
-						$wp_filter['save_post'] = $save_post_hooks_backup;
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] Restored save_post hooks after insert' );
-					}
-
-					// Check if the insert took too long (possible hang indicator)
-					if ( $post_insert_time > 30 ) {
-						error_log( '[PUNTWORK] [WARNING] Post insert for GUID ' . $guid . ' took ' . number_format( $post_insert_time, 2 ) . ' seconds - this may indicate a performance issue' );
-					}
-					
-					// Re-enable ACF hooks after wp_insert_post
-					if ( $acf_hooks_disabled ) {
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] Re-enabling ACF hooks after wp_insert_post' );
-						
-						// Re-add ACF save hook
-						add_action( 'save_post', 'acf_save_post', 10, 1 );
-						
-						// Re-enable ACF field saving
-						if ( function_exists( 'acf_enable_field_saving' ) ) {
-							acf_enable_field_saving();
-						}
-					}
-					if ( is_wp_error( $post_id ) ) {
-						$error_msg = 'Create failed GUID: ' . $guid . ' - ' . $post_id->get_error_message();
-						$logs[]    = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . $error_msg;
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] ERROR: Post creation failed for GUID ' . $guid . ': ' . $post_id->get_error_message() );
-						++$processed_count;
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - CREATE FAILED ===' );
-
-						continue;
-					}
-
-					// Check for database errors after wp_insert_post
-					global $wpdb;
-					if ( ! empty( $wpdb->last_error ) ) {
-						error_log( '[PUNTWORK] [DB-ERROR] Database error after wp_insert_post for post ' . $post_id . ': ' . $wpdb->last_error );
-						// Clear the error to prevent it from affecting subsequent operations
-						$wpdb->last_error = '';
-					}
-
-					// Clear any unconsumed results that might cause "Commands out of sync" errors
-					if ( $wpdb->result ) {
-						$wpdb->result = null;
-					}
-					if ( method_exists( $wpdb, 'flush' ) ) {
-						$wpdb->flush();
-					}
-
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Successfully created post ID: ' . $post_id . ' for GUID: ' . $guid );
-					++$published;
-
-					$meta_update_start = microtime( true );
-					update_post_meta( $post_id, '_last_import_update', $xml_updated );
-					$item_hash = md5( json_encode( $item ) );
-					update_post_meta( $post_id, '_import_hash', $item_hash );
-					$meta_update_time = microtime( true ) - $meta_update_start;
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Metadata updates completed in ' . number_format( $meta_update_time, 4 ) . ' seconds' );
-
-					// Prepare ACF field updates for bulk operation
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Preparing ACF field updates for GUID ' . $guid );
-					$acf_prepare_start = microtime( true );
-					$acf_updates = array();
-					foreach ( $acf_fields as $field ) {
-						$value      = $item[ $field ] ?? '';
-						$is_special = in_array( $field, $zero_empty_fields );
-						$set_value  = $is_special && $value == '0' ? '' : $value;
-
-						// Ensure values are strings for logging
-						$value_str     = is_array( $value ) ? json_encode( $value ) : (string) $value;
-						$set_value_str = is_array( $set_value ) ? json_encode( $set_value ) : (string) $set_value;
-
-						$acf_updates[ $field ] = $set_value;
-						if ( $item_counter % 100 == 0 ) {
-							error_log( '[PUNTWORK] [ITEMS-DEBUG] ACF field ' . $field . ': "' . substr( $value_str, 0, 50 ) . '" -> "' . substr( $set_value_str, 0, 50 ) . '"' );
-						}
-					}
-					$acf_prepare_time = microtime( true ) - $acf_prepare_start;
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] ACF field preparation completed in ' . number_format( $acf_prepare_time, 4 ) . ' seconds' );
-
-					// Collect ACF updates for batch processing
-					$all_acf_updates[] = $acf_updates;
-					$posts_to_update[] = $post_id;
-
-					$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Published ID: ' . $post_id . ' GUID: ' . $guid;
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - PUBLISHED ===' );
-				}
-
-				++$processed_count;
-				unset( $batch_items[ $guid ] );
-
-				// Clear cache periodically to prevent memory accumulation during large batch processing
-				if ( $processed_count % 10 === 0 ) {
-					if ( function_exists( 'wp_cache_flush' ) ) {
-						wp_cache_flush();
-					}
-					\Puntwork\Utilities\CacheManager::clearGroup( \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS );
-					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-						error_log( '[PUNTWORK] [MEMORY-MGMT] Cache cleared after processing ' . $processed_count . ' items' );
-					}
-				}
-
-				// Update intermediate status every N items to keep UI responsive
-				if ( $processed_count % $intermediate_update_interval == 0 || $processed_count >= $total_to_process ) {
-					$current_time = microtime( true );
-					if ( $current_time - $last_intermediate_update >= 0.5 || $processed_count >= $total_to_process ) { // At least 0.5 seconds between updates
-						error_log( '[PUNTWORK] [UI-STATUS] About to call update_intermediate_batch_status: processed=' . $processed_count . ', total=' . $total_to_process . ', published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped );
-						update_intermediate_batch_status( $processed_count, $total_to_process, $published, $updated, $skipped, $logs );
-						$last_intermediate_update = $current_time;
-						error_log( '[PUNTWORK] [UI-STATUS] Intermediate status update completed at ' . $processed_count . '/' . $total_to_process . ' items' );
-					} else {
-						error_log( '[PUNTWORK] [UI-STATUS] Skipping intermediate update - too soon since last update (' . round( $current_time - $last_intermediate_update, 2 ) . 's ago)' );
-					}
-				}
-
-				if ( $processed_count % 5 == 0 ) {
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Processed ' . $processed_count . ' items so far in batch' );
-					ob_flush();
-					flush();
-				}
-			} catch ( \Exception $e ) {
-				$error_msg = 'Error processing GUID ' . $guid . ': ' . $e->getMessage();
-				$logs[]    = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . $error_msg;
-				error_log( '[PUNTWORK] [ITEMS-DEBUG] EXCEPTION processing GUID ' . $guid . ': ' . $e->getMessage() );
-				error_log( '[PUNTWORK] [ITEMS-DEBUG] Stack trace: ' . $e->getTraceAsString() );
-				// Continue to next item instead of failing the whole batch
-				++$processed_count;
-				error_log( '[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - EXCEPTION ===' );
+			} else {
+				// Item processing failed or timed out
+				error_log( '[PUNTWORK] [TIMEOUT] Item ' . $guid . ' processing failed: ' . $item_result['error'] );
+				$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Skipped GUID: ' . $guid . ' - ' . $item_result['error'];
+				$processed_count++;
 			}
 
-			// Check if this item took too long to process
-			$item_processing_time = microtime( true ) - $item_start_time;
-			if ( $item_processing_time > $item_timeout_limit ) {
-				error_log( '[PUNTWORK] [TIMEOUT] Item ' . $guid . ' processing exceeded ' . $item_timeout_limit . ' second limit (took ' . number_format( $item_processing_time, 2 ) . 's)' );
-				$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Skipped GUID: ' . $guid . ' - Processing timeout';
-				// Continue to next item
-				continue;
+			unset( $batch_items[ $guid ] );
+
+			// Clear cache periodically to prevent memory accumulation during large batch processing
+			if ( $processed_count % 10 === 0 ) {
+				$cache_clear_start = microtime( true );
+				$result1 = execute_with_timeout( function() { if ( function_exists( 'wp_cache_flush' ) ) { wp_cache_flush(); } }, array(), 5 ); // 5 second timeout
+				$result2 = execute_with_timeout( function() { \Puntwork\Utilities\CacheManager::clearGroup( \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS ); }, array(), 5 ); // 5 second timeout
+				$cache_clear_time = microtime( true ) - $cache_clear_start;
+				error_log( '[PUNTWORK] [MEMORY-MGMT] Cache cleared after processing ' . $processed_count . ' items in ' . number_format( $cache_clear_time, 4 ) . ' seconds' );
+			}
+
+			// Update intermediate status every N items to keep UI responsive
+			if ( $processed_count % $intermediate_update_interval == 0 || $processed_count >= $total_to_process ) {
+				$current_time = microtime( true );
+				if ( $current_time - $last_intermediate_update >= 0.5 || $processed_count >= $total_to_process ) { // At least 0.5 seconds between updates
+					$status_update_start = microtime( true );
+					error_log( '[PUNTWORK] [UI-STATUS] About to call update_intermediate_batch_status: processed=' . $processed_count . ', total=' . $total_to_process . ', published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped );
+					$result = execute_with_timeout( 'update_intermediate_batch_status', array( $processed_count, $total_to_process, $published, $updated, $skipped, $logs ), 10 ); // 10 second timeout
+					$status_update_time = microtime( true ) - $status_update_start;
+					if ( $result === null ) {
+						error_log( '[PUNTWORK] [TIMEOUT] Intermediate status update timed out after ' . number_format( $status_update_time, 2 ) . ' seconds' );
+					} else {
+						error_log( '[PUNTWORK] [UI-STATUS] Intermediate status update completed in ' . number_format( $status_update_time, 4 ) . ' seconds' );
+					}
+					$last_intermediate_update = $current_time;
+				} else {
+					error_log( '[PUNTWORK] [UI-STATUS] Skipping intermediate update - too soon since last update (' . round( $current_time - $last_intermediate_update, 2 ) . 's ago)' );
+				}
+			}
+
+			if ( $processed_count % 5 == 0 ) {
+				error_log( '[PUNTWORK] [ITEMS-DEBUG] Processed ' . $processed_count . ' items so far in batch' );
+				ob_flush();
+				flush();
 			}
 		}
 		error_log( '[PUNTWORK] [ITEMS-DEBUG] process_batch_items completed processing all ' . $total_to_process . ' items' );
@@ -532,24 +180,225 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 		}
 
 		// Final cache clear after all processing to ensure clean state
-		if ( function_exists( 'wp_cache_flush' ) ) {
-			wp_cache_flush();
-		}
-		\Puntwork\Utilities\CacheManager::clearGroup( \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS );
+		$final_cache_start = microtime( true );
+		$result1 = execute_with_timeout( function() { if ( function_exists( 'wp_cache_flush' ) ) { wp_cache_flush(); } }, array(), 10 ); // 10 second timeout
+		$result2 = execute_with_timeout( function() { \Puntwork\Utilities\CacheManager::clearGroup( \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS ); }, array(), 10 ); // 10 second timeout
+		$final_cache_time = microtime( true ) - $final_cache_start;
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [MEMORY-MGMT] Final cache clear after batch processing completion' );
+			error_log( '[PUNTWORK] [MEMORY-MGMT] Final cache clear completed in ' . number_format( $final_cache_time, 4 ) . ' seconds' );
 		}
 	}
 }
 
 /**
- * Execute a function with timeout protection
- *
- * @param callable $function The function to execute
- * @param array $args Arguments to pass to the function
- * @param int $timeout_seconds Timeout in seconds
- * @return mixed Result of the function or null on timeout
+ * Process a single item with fork-based timeout protection
  */
+function process_item_with_fork($guid, $batch_items, $post_ids_by_guid, $last_updates, $post_statuses, $all_hashes_by_post, $item_counter, $timeout_limit) {
+	$result = array(
+		'success'  => false,
+		'error'    => '',
+		'published' => 0,
+		'updated'  => 0,
+		'skipped'  => 0,
+		'logs'     => array(),
+		'acf_updates' => null,
+		'post_id' => null,
+	);
+
+	if (!function_exists('pcntl_fork') || !function_exists('pcntl_waitpid') || !function_exists('pcntl_signal')) {
+		$result['error'] = 'pcntl functions not available';
+		return $result;
+	}
+
+	$pid = pcntl_fork();
+
+	if ($pid == -1) {
+		// Fork failed
+		$result['error'] = 'Failed to fork process';
+		return $result;
+	} elseif ($pid == 0) {
+		// Child process - process the item
+		try {
+			$item_result = process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updates, $post_statuses, $all_hashes_by_post, $item_counter);
+			// Send result back to parent via stdout
+			echo json_encode($item_result);
+			exit(0);
+		} catch (\Exception $e) {
+			echo json_encode(array('error' => $e->getMessage()));
+			exit(1);
+		}
+	} else {
+		// Parent process - wait for child with timeout
+		$start_time = time();
+		$status = null;
+		$output = '';
+
+		while (time() - $start_time < $timeout_limit) {
+			$wait_result = pcntl_waitpid($pid, $status, WNOHANG);
+
+			if ($wait_result == -1) {
+				$result['error'] = 'Error waiting for child process';
+				break;
+			} elseif ($wait_result > 0) {
+				// Child finished
+				break;
+			}
+
+			// Check if child has output
+			$read_pipes = array();
+			$write_pipes = array();
+			$error_pipes = array();
+			$proc = proc_open('true', array(0 => array('pipe', 'r'), 1 => array('pipe', 'w'), 2 => array('pipe', 'w')), $pipes);
+			if (is_resource($proc)) {
+				fclose($pipes[0]);
+				fclose($pipes[1]);
+				fclose($pipes[2]);
+				proc_close($proc);
+			}
+
+			usleep(100000); // 0.1 seconds
+		}
+
+		if (time() - $start_time >= $timeout_limit) {
+			// Timeout - kill child process
+			posix_kill($pid, SIGKILL);
+			pcntl_waitpid($pid, $status);
+			$result['error'] = 'Item processing timed out after ' . $timeout_limit . ' seconds';
+			return $result;
+		}
+
+		// Read result from child
+		$child_output = '';
+		$handle = fopen('php://fd/' . posix_getpid(), 'r');
+		if ($handle) {
+			stream_set_blocking($handle, false);
+			$child_output = stream_get_contents($handle);
+			fclose($handle);
+		}
+
+		if (!empty($child_output)) {
+			$child_result = json_decode($child_output, true);
+			if ($child_result && isset($child_result['success'])) {
+				return $child_result;
+			}
+		}
+
+		$result['error'] = 'Failed to get result from child process';
+		return $result;
+	}
+}
+
+/**
+ * Process a single item (called in child process)
+ */
+function process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updates, $post_statuses, $all_hashes_by_post, $item_counter) {
+	$result = array(
+		'success'  => false,
+		'error'    => '',
+		'published' => 0,
+		'updated'  => 0,
+		'skipped'  => 0,
+		'logs'     => array(),
+		'acf_updates' => null,
+		'post_id' => null,
+	);
+
+	$item = $batch_items[$guid]['item'];
+	$xml_updated = isset($item['updated']) ? $item['updated'] : '';
+	$xml_updated_ts = strtotime($xml_updated);
+	$post_id = isset($post_ids_by_guid[$guid]) ? $post_ids_by_guid[$guid] : null;
+
+	// If post exists, check if it needs updating
+	if ($post_id) {
+		// Check if content has changed
+		$current_hash = $all_hashes_by_post[$post_id] ?? '';
+		$item_hash = md5(json_encode($item));
+
+		if ($current_hash === $item_hash) {
+			$result['skipped'] = 1;
+			$result['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - No changes';
+			$result['success'] = true;
+			return $result;
+		}
+
+		// Update existing post
+		$xml_title = isset($item['functiontitle']) ? $item['functiontitle'] : '';
+		$xml_validfrom = isset($item['validfrom']) ? $item['validfrom'] : '';
+		$post_modified = $xml_updated ?: current_time('mysql');
+
+		// Update metadata
+		update_post_meta($post_id, '_last_import_update', $xml_updated);
+		update_post_meta($post_id, '_import_hash', $item_hash);
+
+		// Prepare ACF updates
+		$acf_fields = get_acf_fields();
+		$zero_empty_fields = get_zero_empty_fields();
+		$acf_updates = array();
+		foreach ($acf_fields as $field) {
+			$value = $item[$field] ?? '';
+			$is_special = in_array($field, $zero_empty_fields);
+			$set_value = $is_special && $value == '0' ? '' : $value;
+			$acf_updates[$field] = $set_value;
+		}
+
+		$result['updated'] = 1;
+		$result['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Updated ID: ' . $post_id . ' GUID: ' . $guid;
+		$result['acf_updates'] = $acf_updates;
+		$result['post_id'] = $post_id;
+	} else {
+		// Create new post
+		$xml_title = isset($item['functiontitle']) ? $item['functiontitle'] : '';
+		$xml_validfrom = isset($item['validfrom']) ? $item['validfrom'] : current_time('mysql');
+		$post_modified = $xml_updated ?: current_time('mysql');
+
+		$user_id = get_current_user_id();
+		if (!$user_id) {
+			$user_id = 1; // Fallback to admin user
+		}
+
+		$post_data = array(
+			'post_type' => 'job',
+			'post_title' => $xml_title,
+			'post_name' => sanitize_title($xml_title . '-' . $guid),
+			'post_status' => 'publish',
+			'post_date' => $xml_validfrom,
+			'post_modified' => $post_modified,
+			'comment_status' => 'closed',
+			'post_author' => $user_id,
+		);
+
+		$post_id = wp_insert_post($post_data);
+
+		if (is_wp_error($post_id)) {
+			$result['error'] = 'Create failed: ' . $post_id->get_error_message();
+			return $result;
+		}
+
+		// Update metadata
+		update_post_meta($post_id, '_last_import_update', $xml_updated);
+		$item_hash = md5(json_encode($item));
+		update_post_meta($post_id, '_import_hash', $item_hash);
+
+		// Prepare ACF updates
+		$acf_fields = get_acf_fields();
+		$zero_empty_fields = get_zero_empty_fields();
+		$acf_updates = array();
+		foreach ($acf_fields as $field) {
+			$value = $item[$field] ?? '';
+			$is_special = in_array($field, $zero_empty_fields);
+			$set_value = $is_special && $value == '0' ? '' : $value;
+			$acf_updates[$field] = $set_value;
+		}
+
+		$result['published'] = 1;
+		$result['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Published ID: ' . $post_id . ' GUID: ' . $guid;
+		$result['acf_updates'] = $acf_updates;
+		$result['post_id'] = $post_id;
+	}
+
+	$result['success'] = true;
+	return $result;
+}
 function execute_with_timeout( callable $function, array $args = array(), int $timeout_seconds = 30 ) {
 	$result = null;
 	$timed_out = false;
