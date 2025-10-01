@@ -268,7 +268,7 @@ function cancel_job_import_ajax() {
 	try {
 		set_transient( 'import_cancel', true, 3600 );
 		// Also clear the import status to reset the UI
-		delete_transient( 'job_import_status' );
+		delete_option( 'job_import_status' );
 		delete_option( 'job_import_batch_size' );
 		PuntWorkLogger::info( 'Import cancelled and status cleared', PuntWorkLogger::CONTEXT_BATCH );
 
@@ -355,8 +355,8 @@ function reset_job_import_status_ajax() {
 	try {
 		error_log( '[PUNTWORK] [DEBUG-PHP] Starting import status reset' );
 		// Clear only the import status, not other options
-		delete_transient( 'job_import_status' );
-		error_log( '[PUNTWORK] [DEBUG-PHP] Deleted job_import_status transient' );
+		delete_option( 'job_import_status' );
+		error_log( '[PUNTWORK] [DEBUG-PHP] Deleted job_import_status option' );
 
 		// Also reset progress and related options for complete reset
 		delete_option( 'job_import_progress' );
@@ -408,7 +408,7 @@ function get_job_import_status_ajax() {
 	}
 
 	try {
-		$progress = get_transient( 'job_import_status' ) ?: array(
+		$progress = get_option( 'job_import_status', array(
 			'total'              => 0,
 			'processed'          => 0,
 			'published'          => 0,
@@ -427,7 +427,7 @@ function get_job_import_status_ajax() {
 			'end_time'           => null,
 			'last_update'        => time(),
 			'logs'               => array(),
-		);
+		) );
 
 		PuntWorkLogger::debug(
 			'Retrieved import status',
@@ -482,7 +482,7 @@ function get_job_import_status_ajax() {
 						'reason'                 => $stuck_reason,
 					)
 				);
-				delete_transient( 'job_import_status' );
+				delete_option( 'job_import_status' );
 				delete_option( 'job_import_progress' );
 				delete_option( 'job_import_processed_guids' );
 				delete_option( 'job_import_last_batch_time' );
@@ -536,7 +536,7 @@ function get_job_import_status_ajax() {
 		// Track job importing start time
 		if ( $progress['total'] > 1 && ! isset( $progress['job_import_start_time'] ) ) {
 			$progress['job_import_start_time'] = microtime( true );
-			set_transient( 'job_import_status', $progress, 3600 );
+			update_option( 'job_import_status', $progress );
 		}
 
 		// Calculate job importing elapsed time
