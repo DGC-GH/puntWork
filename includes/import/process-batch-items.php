@@ -215,14 +215,26 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 						}
 					}
 
-					// Temporarily disable ALL save_post hooks to prevent infinite loops or hangs
+					// Temporarily disable ALL expensive hooks to prevent infinite loops or hangs
 					global $wp_filter;
-					$save_post_hooks_backup = array();
-					if ( isset( $wp_filter['save_post'] ) ) {
-						$save_post_hooks_backup = $wp_filter['save_post'];
-						remove_all_actions( 'save_post' );
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] Temporarily disabled all save_post hooks' );
+					$expensive_hooks_backup = array();
+					$expensive_hooks = array(
+						'save_post',           // Many plugins hook here for indexing/notifications
+						'wp_insert_post',      // Post insertion hooks
+						'publish_post',        // Publishing hooks
+						'transition_post_status', // Status change hooks
+						'added_post_meta',     // Meta addition hooks
+						'updated_post_meta',   // Meta update hooks
+						'post_updated',        // Post update hooks
+						'pre_post_update',     // Pre post update hooks
+					);
+					foreach ( $expensive_hooks as $hook ) {
+						if ( isset( $wp_filter[ $hook ] ) ) {
+							$expensive_hooks_backup[ $hook ] = $wp_filter[ $hook ];
+							unset( $wp_filter[ $hook ] );
+						}
 					}
+					error_log( '[PUNTWORK] [ITEMS-DEBUG] Temporarily disabled expensive hooks for update' );
 
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] About to call wp_update_post for GUID ' . $guid );
 					$post_update_start = microtime( true );
@@ -239,11 +251,15 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 					$post_update_time = microtime( true ) - $post_update_start;
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Post update completed in ' . number_format( $post_update_time, 4 ) . ' seconds' );
 
-					// Restore save_post hooks
-					if ( ! empty( $save_post_hooks_backup ) ) {
-						$wp_filter['save_post'] = $save_post_hooks_backup;
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] Restored save_post hooks' );
+					// Restore expensive hooks
+					foreach ( $expensive_hooks_backup as $hook => $filters ) {
+						if ( ! isset( $wp_filter[ $hook ] ) ) {
+							$wp_filter[ $hook ] = $filters;
+						} else {
+							$wp_filter[ $hook ]->callbacks = array_merge( $wp_filter[ $hook ]->callbacks, $filters->callbacks );
+						}
 					}
+					error_log( '[PUNTWORK] [ITEMS-DEBUG] Restored expensive hooks after update' );
 
 					// Check if the update took too long (possible hang indicator)
 					if ( $post_update_time > 30 ) {
@@ -338,6 +354,26 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 						error_log( '[PUNTWORK] [ITEMS-DEBUG] Temporarily disabled all save_post hooks for insert' );
 					}
 
+					// Temporarily disable ALL expensive hooks to prevent infinite loops or hangs
+					$expensive_hooks_backup = array();
+					$expensive_hooks = array(
+						'save_post',           // Many plugins hook here for indexing/notifications
+						'wp_insert_post',      // Post insertion hooks
+						'publish_post',        // Publishing hooks
+						'transition_post_status', // Status change hooks
+						'added_post_meta',     // Meta addition hooks
+						'updated_post_meta',   // Meta update hooks
+						'post_updated',        // Post update hooks
+						'pre_post_update',     // Pre post update hooks
+					);
+					foreach ( $expensive_hooks as $hook ) {
+						if ( isset( $wp_filter[ $hook ] ) ) {
+							$expensive_hooks_backup[ $hook ] = $wp_filter[ $hook ];
+							unset( $wp_filter[ $hook ] );
+						}
+					}
+					error_log( '[PUNTWORK] [ITEMS-DEBUG] Temporarily disabled expensive hooks for insert' );
+
 					$post_data = array(
 						'post_type'      => 'job',  // Use existing CPT created with ACF
 						'post_title'     => $xml_title,
@@ -354,6 +390,16 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 					$post_id           = wp_insert_post( $post_data );
 					$post_insert_time  = microtime( true ) - $post_insert_start;
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Post insert completed in ' . number_format( $post_insert_time, 4 ) . ' seconds' );
+
+					// Restore expensive hooks
+					foreach ( $expensive_hooks_backup as $hook => $filters ) {
+						if ( ! isset( $wp_filter[ $hook ] ) ) {
+							$wp_filter[ $hook ] = $filters;
+						} else {
+							$wp_filter[ $hook ]->callbacks = array_merge( $wp_filter[ $hook ]->callbacks, $filters->callbacks );
+						}
+					}
+					error_log( '[PUNTWORK] [ITEMS-DEBUG] Restored expensive hooks after insert' );
 
 					// Restore save_post hooks
 					if ( ! empty( $save_post_hooks_backup ) ) {
