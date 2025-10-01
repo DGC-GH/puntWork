@@ -284,11 +284,13 @@ add_action( 'wp_ajax_clear_import_cancel', __NAMESPACE__ . '\\clear_import_cance
 function clear_import_cancel_ajax() {
 	PuntWorkLogger::logAjaxRequest( 'clear_import_cancel', $_POST );
 
-	// Use comprehensive security validation
-	$validation = SecurityUtils::validateAjaxRequest( 'clear_import_cancel', 'job_import_nonce' );
-	if ( is_wp_error( $validation ) ) {
-		wp_send_json_error( array( 'message' => $validation->get_error_message() ) );
-
+	// Use simple validation to avoid 500 errors like reset_job_import_status_ajax
+	if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'job_import_nonce' ) ) {
+		wp_send_json_error( array( 'message' => 'Security check failed' ) );
+		return;
+	}
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => 'Insufficient permissions' ) );
 		return;
 	}
 
