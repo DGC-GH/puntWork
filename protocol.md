@@ -25,6 +25,7 @@ Execute the following maintenance protocol steps in strict numerical order. Do n
 6. **Check Console**: Read Console.txt for client-side errors, warnings and issues.
 
 7. **Fix Critical Issues**: Address any log errors, 500 errors, class loading failures, warnings or import blocks.
+   - **FIXED**: Resolved PHP Fatal error in process-batch-items.php where 'acf_wp_insert_post_data' function was not found. Removed invalid add_action calls for non-existent ACF function to prevent callback errors during wp_insert_post/wp_update_post operations.
 
 9. **Find Comprehension Gaps**: Locate unclear logic, missing docs, complex algorithms.
 
@@ -61,4 +62,5 @@ Execute the following maintenance protocol steps in strict numerical order. Do n
 **EXECUTION COMPLETE**: Report final status and any issues encountered.
 
 
-<!-- Last improved by Protocol Evolution Engine on 2025-09-30 16:28:58 based on conversation learnings -->
+
+<!-- Last improved by Protocol Evolution Engine on 2025-09-30 19:24:23 based on conversation learnings -->

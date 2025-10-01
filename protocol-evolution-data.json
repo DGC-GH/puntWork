@@ -3976,6 +3976,20 @@
                 "ai_suggestions_accepted": 1
             },
             "protocol_version": "1759249738"
+        },
+        {
+            "step_id": "fix_critical_issues",
+            "timestamp": 1759260271,
+            "metrics": {
+                "success": true,
+                "duration": 300,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759260263"
         }
     ],
     "applied_variations": [
@@ -4501,6 +4515,92 @@
             },
             "applied_at": 1759249738,
             "backup_file": "protocol.md.backup.1759249738",
+            "patterns": {
+                "fast_steps": [
+                    "download_debug",
+                    "read_debug",
+                    "run_log_analysis",
+                    "read_console",
+                    "identify_problems",
+                    "debug_issues",
+                    "fix_errors",
+                    "optimize_features",
+                    "add_debug_logs",
+                    "update_scripts",
+                    "update_docs",
+                    "evolution_analysis",
+                    "apply_improvements",
+                    "commit",
+                    "summary",
+                    "push_prompt",
+                    "cleanup",
+                    "protocol_complete",
+                    "record_metrics"
+                ],
+                "high_success": [
+                    "download_debug",
+                    "read_debug",
+                    "run_log_analysis",
+                    "read_console",
+                    "identify_problems",
+                    "debug_issues",
+                    "analyze_codebase",
+                    "fix_errors",
+                    "optimize_features",
+                    "add_debug_logs",
+                    "update_scripts",
+                    "update_docs",
+                    "evolution_analysis",
+                    "apply_improvements",
+                    "commit",
+                    "summary",
+                    "push_prompt",
+                    "cleanup",
+                    "protocol_complete",
+                    "record_metrics"
+                ],
+                "low_error_steps": [
+                    "download_debug",
+                    "read_debug",
+                    "run_log_analysis",
+                    "read_console",
+                    "identify_problems",
+                    "debug_issues",
+                    "analyze_codebase",
+                    "fix_errors",
+                    "optimize_features",
+                    "add_debug_logs",
+                    "update_scripts",
+                    "update_docs",
+                    "evolution_analysis",
+                    "apply_improvements",
+                    "commit",
+                    "summary",
+                    "push_prompt",
+                    "cleanup",
+                    "protocol_complete",
+                    "record_metrics"
+                ],
+                "efficient_context": []
+            },
+            "learnings": {
+                "improve_ai_context": "Need better context provision for AI comprehension",
+                "ai_collaboration_effective": "AI suggestions are being accepted and implemented"
+            }
+        },
+        {
+            "variation": {
+                "variation": [
+                    "`post_type='job'` - for job listings (created with ACF)",
+                    "`post_type='job-feed'` - for feed configurations (created with ACF)",
+                    "Need better context provision for AI comprehension",
+                    "AI suggestions are being accepted and implemented"
+                ],
+                "score": 0.2998206967213115,
+                "improvements": []
+            },
+            "applied_at": 1759260263,
+            "backup_file": "protocol.md.backup.1759260263",
             "patterns": {
                 "fast_steps": [
                     "download_debug",

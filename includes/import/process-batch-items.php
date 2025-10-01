@@ -221,7 +221,7 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 						
 						// Re-add ACF hooks
 						add_action( 'save_post', 'acf_save_post', 10, 1 );
-						add_action( 'wp_insert_post_data', 'acf_wp_insert_post_data', 10, 2 );
+						// Note: acf_wp_insert_post_data function does not exist, so not re-adding
 						add_action( 'pre_post_update', 'acf_pre_post_update', 10, 2 );
 						
 						// Re-enable ACF field saving
@@ -313,7 +313,7 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 						
 						// Re-add ACF hooks
 						add_action( 'save_post', 'acf_save_post', 10, 1 );
-						add_action( 'wp_insert_post_data', 'acf_wp_insert_post_data', 10, 2 );
+						// Note: acf_wp_insert_post_data function does not exist, so not re-adding
 						add_action( 'pre_post_update', 'acf_pre_post_update', 10, 2 );
 						
 						// Re-enable ACF field saving
