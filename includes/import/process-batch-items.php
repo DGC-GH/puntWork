@@ -215,6 +215,15 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 						}
 					}
 
+					// Temporarily disable ALL save_post hooks to prevent infinite loops or hangs
+					global $wp_filter;
+					$save_post_hooks_backup = array();
+					if ( isset( $wp_filter['save_post'] ) ) {
+						$save_post_hooks_backup = $wp_filter['save_post'];
+						remove_all_actions( 'save_post' );
+						error_log( '[PUNTWORK] [ITEMS-DEBUG] Temporarily disabled all save_post hooks' );
+					}
+
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] About to call wp_update_post for GUID ' . $guid );
 					$post_update_start = microtime( true );
 					wp_update_post(
@@ -229,6 +238,12 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 					);
 					$post_update_time = microtime( true ) - $post_update_start;
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Post update completed in ' . number_format( $post_update_time, 4 ) . ' seconds' );
+
+					// Restore save_post hooks
+					if ( ! empty( $save_post_hooks_backup ) ) {
+						$wp_filter['save_post'] = $save_post_hooks_backup;
+						error_log( '[PUNTWORK] [ITEMS-DEBUG] Restored save_post hooks' );
+					}
 
 					// Check if the update took too long (possible hang indicator)
 					if ( $post_update_time > 30 ) {
@@ -314,6 +329,15 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 						}
 					}
 
+					// Temporarily disable ALL save_post hooks to prevent infinite loops or hangs
+					global $wp_filter;
+					$save_post_hooks_backup = array();
+					if ( isset( $wp_filter['save_post'] ) ) {
+						$save_post_hooks_backup = $wp_filter['save_post'];
+						remove_all_actions( 'save_post' );
+						error_log( '[PUNTWORK] [ITEMS-DEBUG] Temporarily disabled all save_post hooks for insert' );
+					}
+
 					$post_data = array(
 						'post_type'      => 'job',  // Use existing CPT created with ACF
 						'post_title'     => $xml_title,
@@ -330,6 +354,12 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 					$post_id           = wp_insert_post( $post_data );
 					$post_insert_time  = microtime( true ) - $post_insert_start;
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Post insert completed in ' . number_format( $post_insert_time, 4 ) . ' seconds' );
+
+					// Restore save_post hooks
+					if ( ! empty( $save_post_hooks_backup ) ) {
+						$wp_filter['save_post'] = $save_post_hooks_backup;
+						error_log( '[PUNTWORK] [ITEMS-DEBUG] Restored save_post hooks after insert' );
+					}
 
 					// Check if the insert took too long (possible hang indicator)
 					if ( $post_insert_time > 30 ) {
