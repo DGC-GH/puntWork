@@ -686,6 +686,17 @@ function process_batch_data( array $batch_guids, array $batch_items, array &$log
 		$logs[]   = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Batch optimization: Skipped entire batch of ' . count( $batch_guids ) . ' items (no changes detected)';
 		error_log( '[PUNTWORK] [BATCH-OPTIMIZATION] Skipped entire batch of ' . count( $batch_guids ) . ' items - no changes detected' );
 
+		// Update status immediately when batch is skipped to prevent stuck detection
+		$current_status = get_option( 'job_import_status', array() );
+		$current_status['processed'] = $end_index;
+		$current_status['skipped']   = ( $current_status['skipped'] ?? 0 ) + $skipped;
+		$current_status['last_update'] = time();
+		$current_status['logs'] = array_slice( $logs, -50 );
+		update_option( 'job_import_status', $current_status, false );
+		if ( function_exists( 'wp_cache_flush' ) ) {
+			wp_cache_flush();
+		}
+
 		return array( 'processed_count' => count( $batch_guids ) );
 	}
 
