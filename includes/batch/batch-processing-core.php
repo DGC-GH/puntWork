@@ -30,21 +30,22 @@ function process_batch_items_logic( array $setup ): array {
 
 	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [BATCH-START] ===== PROCESS_BATCH_ITEMS_LOGIC START =====' );
-		error_log(
-			'[PUNTWORK] [BATCH-START] process_batch_items_logic called with setup: ' . json_encode(
-				array(
-					'start_index'    => $setup['start_index'] ?? 'not set',
-					'total'          => $setup['total'] ?? 'not set',
-					'json_path'      => isset( $setup['json_path'] ) ? basename( $setup['json_path'] ) : 'not set',
-					'json_path_full' => $setup['json_path'] ?? 'not set',
-				)
-			)
-		);
-		error_log( '[PUNTWORK] [BATCH-START] Memory usage at start: ' . memory_get_usage( true ) . ' bytes' );
-		error_log( '[PUNTWORK] [BATCH-START] Peak memory usage: ' . memory_get_peak_usage( true ) . ' bytes' );
-	}
+	// Temporarily disable spam logging - uncomment for debugging
+	// error_log(
+	// '[PUNTWORK] [BATCH-START] ===== PROCESS_BATCH_ITEMS_LOGIC START ====='
+	// );
+	// error_log(
+	// '[PUNTWORK] [BATCH-START] process_batch_items_logic called with setup: ' . json_encode(
+	//	array(
+	//		'start_index'    => $setup['start_index'] ?? 'not set',
+	//		'total'          => $setup['total'] ?? 'not set',
+	//		'json_path'      => isset( $setup['json_path'] ) ? basename( $setup['json_path'] ) : 'not set',
+	//		'json_path_full' => $setup['json_path'] ?? 'not set',
+	//	)
+	// )
+	// );
+	// error_log( '[PUNTWORK] [BATCH-START] Memory usage at start: ' . memory_get_usage( true ) . ' bytes' );
+	// error_log( '[PUNTWORK] [BATCH-START] Peak memory usage: ' . memory_get_peak_usage( true ) . ' bytes' );
 
 	// Log batch processing start
 	\Puntwork\PuntWorkLogger::info(
@@ -122,51 +123,15 @@ function process_batch_items_logic( array $setup ): array {
 	}
 
 	try {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [BATCH-DEBUG] Starting performance monitoring' );
-		}
-		// Start performance monitoring
-		$perf_id = start_performance_monitoring( 'batch_import' );
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [BATCH-DEBUG] Performance monitoring started with ID: ' . $perf_id );
-		}
-
-		// Increase memory limit for batch processing
-		$original_memory_limit = ini_get( 'memory_limit' );
-		ini_set( 'memory_limit', '1024M' );
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [BATCH-DEBUG] Memory limit increased to 1024M' );
-		}
-
-		// Clear analytics cache to prevent memory accumulation during import
-		\Puntwork\Utilities\CacheManager::clearGroup( \Puntwork\Utilities\CacheManager::GROUP_ANALYTICS );
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [BATCH-DEBUG] Analytics cache cleared' );
-		}
-
-		// Start database performance monitoring
-		start_db_performance_monitoring();
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [BATCH-DEBUG] Database performance monitoring started' );
-		}
-
-		// Optimize memory for large batch
-		optimize_memory_for_batch();
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [BATCH-DEBUG] Memory optimization completed' );
-		}
-
-		// Reset memory manager
-		reset_memory_manager();
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [BATCH-DEBUG] Memory manager reset completed' );
-		}
-
-		// Disable expensive plugin operations during batch processing for performance
-		disable_expensive_plugins();
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [BATCH-DEBUG] Expensive plugins disabled for batch processing' );
-		}
+	// Temporarily disable spam logging - uncomment for debugging
+	// error_log( '[PUNTWORK] [BATCH-DEBUG] Starting performance monitoring' );
+	// error_log( '[PUNTWORK] [BATCH-DEBUG] Performance monitoring started with ID: ' . $perf_id );
+	// error_log( '[PUNTWORK] [BATCH-DEBUG] Memory limit increased to 1024M' );
+	// error_log( '[PUNTWORK] [BATCH-DEBUG] Analytics cache cleared' );
+	// error_log( '[PUNTWORK] [BATCH-DEBUG] Database performance monitoring started' );
+	// error_log( '[PUNTWORK] [BATCH-DEBUG] Memory optimization completed' );
+	// error_log( '[PUNTWORK] [BATCH-DEBUG] Memory manager reset completed' );
+	// error_log( '[PUNTWORK] [BATCH-DEBUG] Expensive plugins disabled for batch processing' );
 
 		// Extract setup variables explicitly for security
 		$start_index = $setup['start_index'] ?? 0;
@@ -176,14 +141,9 @@ function process_batch_items_logic( array $setup ): array {
 
 		$batch_start_time = microtime( true ); // Record start time for this batch
 
-		error_log( '[PUNTWORK] [BATCH-DEBUG] Calling validate_and_adjust_batch_size' );
-		// Validate and adjust batch size based on performance metrics
-		$batch_size_info = validate_and_adjust_batch_size( $setup );
-		$batch_size      = $batch_size_info['batch_size'];
-		$logs            = $batch_size_info['logs'];
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [BATCH-DEBUG] validate_and_adjust_batch_size completed, batch_size=' . $batch_size );
-		}
+	// Temporarily disable spam logging - uncomment for debugging
+	// error_log( '[PUNTWORK] [BATCH-DEBUG] Calling validate_and_adjust_batch_size' );
+	// error_log( '[PUNTWORK] [BATCH-DEBUG] validate_and_adjust_batch_size completed, batch_size=' . $batch_size );
 
 		// Add batch size logging to UI logs
 		if ( ! empty( $batch_size_info['logs'] ) ) {
@@ -221,18 +181,11 @@ function process_batch_items_logic( array $setup ): array {
 				)
 			);
 
-			error_log( '[PUNTWORK] [BATCH-LOAD] Calling load_and_prepare_batch_items' );
-			// Load and prepare batch items from JSONL
-			$batch_load_info = \Puntwork\load_and_prepare_batch_items( $json_path, $start_index, $batch_size, $batch_size_info['threshold'], $logs );
-			$batch_items     = $batch_load_info['batch_items'];
-			$batch_guids     = $batch_load_info['batch_guids'];
-			$lines_read      = $batch_load_info['lines_read'] ?? $batch_size;
-			$end_index       = $start_index + count( $batch_guids ); // Advance by number of valid items processed, not lines read
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [BATCH-LOAD] load_and_prepare_batch_items completed, loaded ' . count( $batch_guids ) . ' GUIDs, lines_read=' . $lines_read . ', end_index=' . $end_index );
-				error_log( '[PUNTWORK] [BATCH-LOAD] Batch items count: ' . count( $batch_items ) );
-				error_log( '[PUNTWORK] [BATCH-LOAD] First few GUIDs: ' . implode( ', ', array_slice( $batch_guids, 0, 5 ) ) );
-			}
+	// Temporarily disable spam logging - uncomment for debugging
+	// error_log( '[PUNTWORK] [BATCH-LOAD] Calling load_and_prepare_batch_items' );
+	// error_log( '[PUNTWORK] [BATCH-LOAD] load_and_prepare_batch_items completed, loaded ' . count( $batch_guids ) . ' GUIDs, lines_read=' . $lines_read . ', end_index=' . $end_index );
+	// error_log( '[PUNTWORK] [BATCH-LOAD] Batch items count: ' . count( $batch_items ) );
+	// error_log( '[PUNTWORK] [BATCH-LOAD] First few GUIDs: ' . implode( ', ', array_slice( $batch_guids, 0, 5 ) ) );
 
 			// Checkpoint: Batch items loaded
 			checkpoint_performance(
@@ -334,12 +287,10 @@ function process_batch_items_logic( array $setup ): array {
 				wp_cache_flush();
 			}
 
-			// Process batch items
-			$result = process_batch_data( $batch_guids, $batch_items, $logs, $published, $updated, $skipped, $duplicates_drafted );
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [BATCH-PROCESS] process_batch_data completed, processed_count=' . $result['processed_count'] );
-				error_log( '[PUNTWORK] [BATCH-PROCESS] Results: published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', duplicates_drafted=' . $duplicates_drafted );
-			}
+	// Temporarily disable spam logging - uncomment for debugging
+	// error_log( '[PUNTWORK] [BATCH-PROCESS] Calling process_batch_data' );
+	// error_log( '[PUNTWORK] [BATCH-PROCESS] process_batch_data completed, processed_count=' . $result['processed_count'] );
+	// error_log( '[PUNTWORK] [BATCH-PROCESS] Results: published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', duplicates_drafted=' . $duplicates_drafted );
 
 			// Checkpoint: Batch processing complete
 			checkpoint_performance(
@@ -461,10 +412,9 @@ function process_batch_items_logic( array $setup ): array {
 				schedule_async_analytics_update( $analytics_data );
 			}
 
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [BATCH-COMPLETE] process_batch_items_logic completed successfully' );
-				error_log( '[PUNTWORK] [BATCH-END] ===== PROCESS_BATCH_ITEMS_LOGIC END =====' );
-			}
+	// Temporarily disable spam logging - uncomment for debugging
+	// error_log( '[PUNTWORK] [BATCH-COMPLETE] process_batch_items_logic completed successfully' );
+	// error_log( '[PUNTWORK] [BATCH-END] ===== PROCESS_BATCH_ITEMS_LOGIC END =====' );
 
 			\Puntwork\PuntWorkLogger::info(
 				'Batch processing completed successfully',
@@ -639,9 +589,8 @@ function update_intermediate_batch_status( int $processed_count, int $total_in_b
 function process_batch_data( array $batch_guids, array $batch_items, array &$logs, int &$published, int &$updated, int &$skipped, int &$duplicates_drafted ): array {
 	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] process_batch_data called with ' . count( $batch_guids ) . ' GUIDs' );
-	}
+	// Temporarily disable spam logging - uncomment for debugging
+	// error_log( '[PUNTWORK] process_batch_data called with ' . count( $batch_guids ) . ' GUIDs' );
 
 	if ( empty( $batch_guids ) ) {
 		error_log( '[PUNTWORK] ERROR: process_batch_data called with empty batch_guids! This means load_and_prepare_batch_items failed to load valid items.' );
@@ -747,7 +696,8 @@ function process_batch_data( array $batch_guids, array $batch_items, array &$log
 		error_log( '[PUNTWORK] [BATCH-DEBUG] process_batch_items_with_metadata completed, processed_count=' . $processed_count );
 	}
 
-	error_log( '[PUNTWORK] [BATCH-DATA] Batch processing completed: processed=' . $processed_count . ', published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', duplicates_drafted=' . $duplicates_drafted );
+	// Temporarily disable spam logging - uncomment for debugging
+	// error_log( '[PUNTWORK] [BATCH-DATA] Batch processing completed: processed=' . $processed_count . ', published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', duplicates_drafted=' . $duplicates_drafted );
 
 	return array( 'processed_count' => $processed_count );
 }
