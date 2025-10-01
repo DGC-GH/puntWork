@@ -294,10 +294,14 @@ function bulk_update_acf_fields( array $post_ids, array $acf_data ): void {
 	}
 
 	$start_time = microtime( true );
-	$total_timeout = 300; // 5 minute total timeout for all ACF updates in this batch
-	$field_timeout = 5; // 5 second timeout per field
 
-	// Use ACF's update_field function for proper field handling with timeout protection
+	// For bulk import operations, use direct postmeta updates to bypass ACF overhead
+	// This is much faster than individual update_field() calls
+	global $wpdb;
+
+	$meta_inserts = array();
+	$meta_updates = array();
+
 	foreach ( $post_ids as $index => $post_id ) {
 		if ( ! isset( $acf_data[ $index ] ) ) {
 			continue;
@@ -305,33 +309,46 @@ function bulk_update_acf_fields( array $post_ids, array $acf_data ): void {
 
 		$fields = $acf_data[ $index ];
 		foreach ( $fields as $field_name => $value ) {
-			// Check if we've exceeded total timeout
-			if ( microtime( true ) - $start_time > $total_timeout ) {
-				error_log( '[PUNTWORK] [ACF-TIMEOUT] Total ACF update time exceeded ' . $total_timeout . ' seconds, stopping batch' );
-				return;
-			}
+			// Prepare meta data for bulk insertion/update
+			$meta_inserts[] = array(
+				'post_id'    => $post_id,
+				'meta_key'   => $field_name,
+				'meta_value' => $value,
+			);
+		}
+	}
 
-			// Use ACF's update_field function if available, otherwise fall back to postmeta
-			if ( function_exists( 'update_field' ) ) {
-				$field_start = microtime( true );
-				try {
-					$result = update_field( $field_name, $value, $post_id );
-					$field_time = microtime( true ) - $field_start;
+	if ( ! empty( $meta_inserts ) ) {
+		// First, delete existing ACF meta keys to avoid duplicates
+		$post_ids_list = array_unique( array_column( $meta_inserts, 'post_id' ) );
+		$meta_keys_list = array_unique( array_column( $meta_inserts, 'meta_key' ) );
 
-					if ( $field_time > $field_timeout ) {
-						error_log( '[PUNTWORK] [ACF-TIMEOUT] update_field for ' . $field_name . ' on post ' . $post_id . ' took ' . number_format( $field_time, 2 ) . ' seconds (exceeded ' . $field_timeout . 's limit)' );
-					}
+		if ( ! empty( $post_ids_list ) && ! empty( $meta_keys_list ) ) {
+			$post_placeholders = implode( ',', array_fill( 0, count( $post_ids_list ), '%d' ) );
+			$key_placeholders = implode( ',', array_fill( 0, count( $meta_keys_list ), '%s' ) );
 
-					if ( $result === false ) {
-						error_log( '[PUNTWORK] [ACF-ERROR] update_field failed for field ' . $field_name . ' on post ' . $post_id );
-					}
-				} catch ( \Exception $e ) {
-					error_log( '[PUNTWORK] [ACF-ERROR] Exception updating field ' . $field_name . ' on post ' . $post_id . ': ' . $e->getMessage() );
-				}
-			} else {
-				// Fallback to direct postmeta update
-				update_post_meta( $post_id, $field_name, $value );
-			}
+			$delete_query = $wpdb->prepare(
+				"DELETE FROM {$wpdb->postmeta} WHERE post_id IN ({$post_placeholders}) AND meta_key IN ({$key_placeholders})",
+				array_merge( $post_ids_list, $meta_keys_list )
+			);
+
+			$wpdb->query( $delete_query );
+		}
+
+		// Bulk insert new ACF meta data
+		$values = array();
+		$placeholders = array();
+
+		foreach ( $meta_inserts as $meta ) {
+			$values[] = $meta['post_id'];
+			$values[] = $meta['meta_key'];
+			$values[] = $meta['meta_value'];
+			$placeholders[] = '(%d, %s, %s)';
+		}
+
+		if ( ! empty( $values ) ) {
+			$query = "INSERT INTO {$wpdb->postmeta} (post_id, meta_key, meta_value) VALUES " . implode( ', ', $placeholders );
+			$wpdb->query( $wpdb->prepare( $query, $values ) );
 		}
 	}
 
