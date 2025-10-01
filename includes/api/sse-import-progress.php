@@ -216,8 +216,8 @@ function handle_import_progress_sse( $request ) {
 
 			try {
 				// Get current import status
-				$current_status = get_option( 'job_import_status', array() );
-				error_log( '[PUNTWORK] SSE: Raw current_status from get_option: ' . json_encode( $current_status ) );
+				$current_status = get_transient( 'job_import_status' ) ?: array();
+				error_log( '[PUNTWORK] SSE: Raw current_status from get_transient: ' . json_encode( $current_status ) );
 
 				// Ensure current_status is an array and sanitize it
 				if ( ! is_array( $current_status ) ) {

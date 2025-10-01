@@ -463,7 +463,7 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 				delete_option( 'job_import_consecutive_small_batches' );
 			}
 
-			// Initialize import status for UI tracking (only if not preserving)
+				// Initialize import status for UI tracking (only if not preserving)
 			if ( ! $preserve_status ) {
 				$initial_status = array(
 					'total'              => 0, // Will be updated when we know the total
@@ -485,13 +485,11 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 					'last_update'        => time(),
 					'logs'               => array( 'Scheduled import started - preparing feeds...' ),
 				);
-				update_option( 'job_import_status', $initial_status, false );
+				set_transient( 'job_import_status', $initial_status, 3600 );
 			} else {
 				// For preserved status, we'll update the existing status as we go
-				$initial_status = get_option( 'job_import_status', array() );
-			}
-
-			// Store import start time for timeout checking
+				$initial_status = get_transient( 'job_import_status' ) ?: array();
+			}			// Store import start time for timeout checking
 			update_option( 'job_import_start_time', $start_time, false );
 
 			while ( true ) {
@@ -564,7 +562,7 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 					$total_items = $setup['total'] ?? 0;
 					// Update status with total items
 					$initial_status['total'] = $total_items;
-					update_option( 'job_import_status', $initial_status, false );
+					set_transient( 'job_import_status', $initial_status, 3600 );
 					// Flush cache to ensure AJAX can see the updated status
 					if ( function_exists( 'wp_cache_flush' ) ) {
 						wp_cache_flush();
@@ -662,7 +660,7 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 				if ( $debug_mode ) {
 					error_log( '[PUNTWORK] [LOOP-DEBUG] Updating import status after batch ' . $batch_count );
 				}
-				$current_status                       = get_option( 'job_import_status', $initial_status );
+				$current_status                       = get_transient( 'job_import_status' ) ?: $initial_status;
 				$current_status['processed']          = $total_processed;
 				$current_status['published']          = $total_published;
 				$current_status['updated']            = $total_updated;
@@ -671,7 +669,7 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 				$current_status['time_elapsed']       = microtime( true ) - $start_time;
 				$current_status['last_update']        = time();
 				$current_status['logs']               = array_slice( $all_logs, -50 ); // Keep last 50 log entries for UI
-				update_option( 'job_import_status', $current_status, false );
+				set_transient( 'job_import_status', $current_status, 3600 );
 				// Flush cache to ensure AJAX can see the updated status
 				if ( function_exists( 'wp_cache_flush' ) ) {
 					wp_cache_flush();
