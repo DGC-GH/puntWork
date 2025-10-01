@@ -212,138 +212,20 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 						continue;
 					}
 
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] UPDATING existing post ' . $post_id . ' for GUID ' . $guid );
-					// Update existing post
+					error_log( '[PUNTWORK] [ITEMS-DEBUG] UPDATING existing post ' . $post_id . ' for GUID ' . $guid . ' - SKIPPING wp_update_post, using direct ACF/meta updates only' );
+					// Update existing post - skip wp_update_post to avoid timeouts, just update ACF fields and metadata directly
 					$xml_title     = isset( $item['functiontitle'] ) ? $item['functiontitle'] : '';
 					$xml_validfrom = isset( $item['validfrom'] ) ? $item['validfrom'] : '';
 					$post_modified = $xml_updated ?: current_time( 'mysql' );
 
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] Update details: title="' . $xml_title . '", validfrom="' . $xml_validfrom . '", modified="' . $post_modified . '"' );
 
-					// Temporarily disable ACF hooks to prevent hanging during wp_update_post
-					$acf_hooks_disabled = false;
-					if ( function_exists( 'acf' ) && function_exists( 'acf_save_post' ) ) {
-						$acf_hooks_disabled = true;
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] Temporarily disabling ACF hooks for wp_update_post' );
-						
-						// Remove ACF save hook that might cause issues
-						remove_action( 'save_post', 'acf_save_post', 10 );
-						
-						// Disable ACF field saving temporarily if function exists
-						if ( function_exists( 'acf_disable_field_saving' ) ) {
-							acf_disable_field_saving();
-						}
-					}
+					// Skip wp_update_post entirely - just update metadata and ACF fields directly
+					// This avoids the timeout issues while still updating the necessary data
 
-					// Temporarily disable ALL expensive hooks to prevent infinite loops or hangs
-					global $wp_filter;
-					$expensive_hooks_backup = array();
-					$expensive_hooks = array(
-						'save_post',           // Many plugins hook here for indexing/notifications
-						'wp_insert_post',      // Post insertion hooks
-						'publish_post',        // Publishing hooks
-						'transition_post_status', // Status change hooks
-						'added_post_meta',     // Meta addition hooks
-						'updated_post_meta',   // Meta update hooks
-						'post_updated',        // Post update hooks
-						'pre_post_update',     // Pre post update hooks
-					);
-					foreach ( $expensive_hooks as $hook ) {
-						if ( isset( $wp_filter[ $hook ] ) ) {
-							$expensive_hooks_backup[ $hook ] = $wp_filter[ $hook ];
-							unset( $wp_filter[ $hook ] );
-						}
-					}
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Temporarily disabled expensive hooks for update' );
+					error_log( '[PUNTWORK] [ITEMS-DEBUG] Skipping wp_update_post, proceeding directly to metadata and ACF updates' );
 
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] About to call wp_update_post for GUID ' . $guid );
-					$post_update_start = microtime( true );
-					$post_id_updated = execute_with_timeout( 'wp_update_post', array(
-						array(
-							'ID'            => $post_id,
-							'post_title'    => $xml_title,
-							'post_name'     => sanitize_title( $xml_title . '-' . $guid ),
-							'post_status'   => 'publish', // Ensure updated posts are published
-							'post_date'     => $xml_validfrom,
-							'post_modified' => $post_modified,
-						)
-					), 30 ); // 30 second timeout
-					$post_update_time = microtime( true ) - $post_update_start;
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Post update completed in ' . number_format( $post_update_time, 4 ) . ' seconds' );
-
-					// Check if update timed out
-					if ( $post_id_updated === null ) {
-						error_log( '[PUNTWORK] [TIMEOUT] wp_update_post timed out for GUID ' . $guid . ', skipping item' );
-						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - Update timeout';
-						++$processed_count;
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - UPDATE TIMEOUT ===' );
-						continue;
-					}
-
-					// Check if wp_update_post failed
-					if ( is_wp_error( $post_id_updated ) ) {
-						error_log( '[PUNTWORK] [DB-ERROR] wp_update_post failed for post ' . $post_id . ': ' . $post_id_updated->get_error_message() );
-						// Try to recover by clearing database state
-						global $wpdb;
-						if ( $wpdb->result ) {
-							$wpdb->result = null;
-						}
-						if ( method_exists( $wpdb, 'flush' ) ) {
-							$wpdb->flush();
-						}
-						$wpdb->last_error = '';
-						// Skip this item and continue
-						++$processed_count;
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - UPDATE FAILED ===' );
-						continue;
-					}
-
-					// Restore expensive hooks
-					foreach ( $expensive_hooks_backup as $hook => $filters ) {
-						if ( ! isset( $wp_filter[ $hook ] ) ) {
-							$wp_filter[ $hook ] = $filters;
-						} else {
-							$wp_filter[ $hook ]->callbacks = array_merge( $wp_filter[ $hook ]->callbacks, $filters->callbacks );
-						}
-					}
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Restored expensive hooks after update' );
-
-					// Check if the update took too long (possible hang indicator)
-					if ( $post_update_time > 30 ) {
-						error_log( '[PUNTWORK] [WARNING] Post update for GUID ' . $guid . ' took ' . number_format( $post_update_time, 2 ) . ' seconds - this may indicate a performance issue' );
-					}
-
-					// Re-enable ACF hooks after wp_update_post
-					if ( $acf_hooks_disabled ) {
-						error_log( '[PUNTWORK] [ITEMS-DEBUG] Re-enabling ACF hooks after wp_update_post' );
-						
-						// Re-add ACF save hook
-						add_action( 'save_post', 'acf_save_post', 10, 1 );
-						
-						// Re-enable ACF field saving
-						if ( function_exists( 'acf_enable_field_saving' ) ) {
-							acf_enable_field_saving();
-						}
-					}
-
-					// Check for database errors after wp_update_post
-					global $wpdb;
-					if ( ! empty( $wpdb->last_error ) ) {
-						error_log( '[PUNTWORK] [DB-ERROR] Database error after wp_update_post for post ' . $post_id . ': ' . $wpdb->last_error );
-						// Clear the error to prevent it from affecting subsequent operations
-						$wpdb->last_error = '';
-					}
-
-					// Clear any unconsumed results that might cause "Commands out of sync" errors
-					if ( $wpdb->result ) {
-						$wpdb->result = null;
-					}
-					if ( method_exists( $wpdb, 'flush' ) ) {
-						$wpdb->flush();
-					}
-
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] Post updated successfully, now updating metadata' );
-
+					// Update metadata directly
 					$meta_update_start = microtime( true );
 					update_post_meta( $post_id, '_last_import_update', $xml_updated );
 					update_post_meta( $post_id, '_import_hash', $item_hash );
@@ -377,7 +259,7 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 
 					++$updated;
 					$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Updated ID: ' . $post_id . ' GUID: ' . $guid;
-					error_log( '[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - UPDATED ===' );
+					error_log( '[PUNTWORK] [ITEMS-DEBUG] ==== COMPLETED ITEM ' . $item_counter . ' - UPDATED (DIRECT) ===' );
 				} else {
 					error_log( '[PUNTWORK] [ITEMS-DEBUG] No existing post found for GUID ' . $guid . ', creating new post' );
 					// Create new post only if it doesn't exist

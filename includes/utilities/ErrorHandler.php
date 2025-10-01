@@ -241,7 +241,7 @@ if ( ! class_exists( 'Puntwork\ErrorHandler' ) ) {
 		/**
 		 * Analyze error and determine type and recovery strategy
 		 */
-		private static function analyzeError( \Exception $e, array $context = array() ) {
+		private static function analyzeError( \Throwable $e, array $context = array() ) {
 			$error_message = $e->getMessage();
 			$error_code = $e->getCode();
 			$file = $e->getFile();
@@ -643,7 +643,7 @@ if ( ! class_exists( 'Puntwork\ErrorHandler' ) ) {
 		/**
 		 * Handle uncaught exceptions
 		 */
-		public function handleUncaughtExceptions( $exception ) {
+		public function handleUncaughtExceptions( \Throwable $exception ) {
 			$error_details = self::analyzeError( $exception, self::getContext() );
 			$error_details['level'] = self::ERROR_LEVEL_CRITICAL;
 

@@ -295,8 +295,7 @@ function bulk_update_acf_fields( array $post_ids, array $acf_data ): void {
 
 	$start_time = microtime( true );
 
-	// Prepare bulk insert data for better performance
-	$bulk_meta_data = array();
+	// Use ACF's update_field function for proper field handling
 	foreach ( $post_ids as $index => $post_id ) {
 		if ( ! isset( $acf_data[ $index ] ) ) {
 			continue;
@@ -304,17 +303,14 @@ function bulk_update_acf_fields( array $post_ids, array $acf_data ): void {
 
 		$fields = $acf_data[ $index ];
 		foreach ( $fields as $field_name => $value ) {
-			$bulk_meta_data[] = array(
-				'post_id'    => $post_id,
-				'meta_key'   => $field_name,
-				'meta_value' => maybe_serialize( $value ),
-			);
+			// Use ACF's update_field function if available, otherwise fall back to postmeta
+			if ( function_exists( 'update_field' ) ) {
+				update_field( $field_name, $value, $post_id );
+			} else {
+				// Fallback to direct postmeta update
+				update_post_meta( $post_id, $field_name, $value );
+			}
 		}
-	}
-
-	// Use bulk insert for better performance
-	if ( ! empty( $bulk_meta_data ) ) {
-		bulk_insert_postmeta( $bulk_meta_data );
 	}
 
 	$total_time = microtime( true ) - $start_time;
