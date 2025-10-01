@@ -295,46 +295,201 @@ function bulk_update_acf_fields( array $post_ids, array $acf_data ): void {
 
 	$start_time = microtime( true );
 
+	// Prepare bulk insert data for better performance
+	$bulk_meta_data = array();
 	foreach ( $post_ids as $index => $post_id ) {
 		if ( ! isset( $acf_data[ $index ] ) ) {
 			continue;
 		}
 
-		$post_acf_start = microtime( true );
-		$fields         = $acf_data[ $index ];
-
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [ACF-DEBUG] Updating ACF fields for post ' . $post_id . ' (' . count( $fields ) . ' fields)' );
-		}
-
+		$fields = $acf_data[ $index ];
 		foreach ( $fields as $field_name => $value ) {
-			$field_start = microtime( true );
-			update_post_meta( $post_id, $field_name, $value );
-			$field_time = microtime( true ) - $field_start;
-			if ( $field_time > 1.0 ) { // Log slow field updates
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( '[PUNTWORK] [ACF-DEBUG] SLOW field update: ' . $field_name . ' took ' . number_format( $field_time, 4 ) . ' seconds for post ' . $post_id . ' (value length: ' . strlen( is_array( $value ) ? json_encode( $value ) : $value ) . ')' );
-				}
-			}
+			$bulk_meta_data[] = array(
+				'post_id'    => $post_id,
+				'meta_key'   => $field_name,
+				'meta_value' => maybe_serialize( $value ),
+			);
 		}
+	}
 
-		// Check for database errors after updates
-		global $wpdb;
-		if ( ! empty( $wpdb->last_error ) ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[PUNTWORK] [DB-ERROR] Database error after updates for post ' . $post_id . ': ' . $wpdb->last_error );
-			}
-		}
-
-		$post_acf_time = microtime( true ) - $post_acf_start;
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [ACF-DEBUG] Update for post ' . $post_id . ' completed in ' . number_format( $post_acf_time, 4 ) . ' seconds' );
-		}
+	// Use bulk insert for better performance
+	if ( ! empty( $bulk_meta_data ) ) {
+		bulk_insert_postmeta( $bulk_meta_data );
 	}
 
 	$total_time = microtime( true ) - $start_time;
 	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 		error_log( '[PUNTWORK] [ACF-DEBUG] bulk_update_acf_fields completed in ' . number_format( $total_time, 4 ) . ' seconds total (' . number_format( $total_time / count( $post_ids ), 4 ) . ' seconds per post)' );
+	}
+}
+
+/**
+ * Bulk insert postmeta data for maximum performance.
+ *
+ * @param array $meta_data Array of meta data arrays with post_id, meta_key, meta_value
+ * @return void
+ */
+function bulk_insert_postmeta( array $meta_data ): void {
+	if ( empty( $meta_data ) ) {
+		return;
+	}
+
+	global $wpdb;
+
+	// First, delete existing meta keys to avoid duplicates
+	$post_ids = array_unique( array_column( $meta_data, 'post_id' ) );
+	$meta_keys = array_unique( array_column( $meta_data, 'meta_key' ) );
+
+	if ( ! empty( $post_ids ) && ! empty( $meta_keys ) ) {
+		$post_placeholders = implode( ',', array_fill( 0, count( $post_ids ), '%d' ) );
+		$key_placeholders = implode( ',', array_fill( 0, count( $meta_keys ), '%s' ) );
+
+		$delete_query = $wpdb->prepare(
+			"DELETE FROM {$wpdb->postmeta} WHERE post_id IN ({$post_placeholders}) AND meta_key IN ({$key_placeholders})",
+			array_merge( $post_ids, $meta_keys )
+		);
+
+		$wpdb->query( $delete_query );
+	}
+
+	// Bulk insert new meta data
+	$values = array();
+	$placeholders = array();
+
+	foreach ( $meta_data as $meta ) {
+		$values[] = $meta['post_id'];
+		$values[] = $meta['meta_key'];
+		$values[] = $meta['meta_value'];
+		$placeholders[] = '(%d, %s, %s)';
+	}
+
+	if ( ! empty( $values ) ) {
+		$query = "INSERT INTO {$wpdb->postmeta} (post_id, meta_key, meta_value) VALUES " . implode( ', ', $placeholders );
+		$wpdb->query( $wpdb->prepare( $query, $values ) );
+	}
+}
+
+/**
+ * Bulk insert posts for maximum performance.
+ *
+ * @param array $posts_data Array of post data arrays
+ * @return array Array of inserted post IDs
+ */
+function bulk_insert_posts( array $posts_data ): array {
+	if ( empty( $posts_data ) ) {
+		return array();
+	}
+
+	global $wpdb;
+
+	$inserted_ids = array();
+	$values = array();
+	$placeholders = array();
+
+	foreach ( $posts_data as $post_data ) {
+		$values[] = $post_data['post_author'] ?? 1;
+		$values[] = $post_data['post_date'] ?? current_time( 'mysql' );
+		$values[] = $post_data['post_date_gmt'] ?? current_time( 'mysql', true );
+		$values[] = $post_data['post_content'] ?? '';
+		$values[] = $post_data['post_title'];
+		$values[] = $post_data['post_excerpt'] ?? '';
+		$values[] = $post_data['post_status'] ?? 'publish';
+		$values[] = $post_data['comment_status'] ?? 'closed';
+		$values[] = $post_data['ping_status'] ?? 'closed';
+		$values[] = $post_data['post_password'] ?? '';
+		$values[] = $post_data['post_name'];
+		$values[] = $post_data['to_ping'] ?? '';
+		$values[] = $post_data['pinged'] ?? '';
+		$values[] = $post_data['post_modified'] ?? current_time( 'mysql' );
+		$values[] = $post_data['post_modified_gmt'] ?? current_time( 'mysql', true );
+		$values[] = $post_data['post_content_filtered'] ?? '';
+		$values[] = $post_data['post_parent'] ?? 0;
+		$values[] = $post_data['guid'] ?? '';
+		$values[] = $post_data['menu_order'] ?? 0;
+		$values[] = $post_data['post_type'] ?? 'post';
+		$values[] = $post_data['post_mime_type'] ?? '';
+		$values[] = $post_data['comment_count'] ?? 0;
+
+		$placeholders[] = '(%d, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %d, %s, %d, %s, %s, %d)';
+	}
+
+	if ( ! empty( $values ) ) {
+		$query = "INSERT INTO {$wpdb->posts} (post_author, post_date, post_date_gmt, post_content, post_title, post_excerpt, post_status, comment_status, ping_status, post_password, post_name, to_ping, pinged, post_modified, post_modified_gmt, post_content_filtered, post_parent, guid, menu_order, post_type, post_mime_type, comment_count) VALUES " . implode( ', ', $placeholders );
+		$wpdb->query( $wpdb->prepare( $query, $values ) );
+
+		// Get the inserted IDs
+		$first_id = $wpdb->insert_id;
+		$count = count( $posts_data );
+		for ( $i = 0; $i < $count; $i++ ) {
+			$inserted_ids[] = $first_id + $i;
+		}
+	}
+
+	return $inserted_ids;
+}
+
+/**
+ * Bulk update posts for maximum performance.
+ *
+ * @param array $posts_data Array of post data arrays with ID key
+ * @return void
+ */
+function bulk_update_posts( array $posts_data ): void {
+	if ( empty( $posts_data ) ) {
+		return;
+	}
+
+	global $wpdb;
+
+	// Process updates in chunks to avoid overly large queries
+	$chunk_size = 50;
+	$chunks = array_chunk( $posts_data, $chunk_size );
+
+	foreach ( $chunks as $chunk ) {
+		$when_clauses = array();
+		$ids = array();
+
+		foreach ( $chunk as $post_data ) {
+			$id = $post_data['ID'];
+			$ids[] = $id;
+
+			// Build CASE statements for each field
+			foreach ( $post_data as $field => $value ) {
+				if ( $field === 'ID' ) continue;
+
+				if ( ! isset( $when_clauses[ $field ] ) ) {
+					$when_clauses[ $field ] = "WHEN {$wpdb->posts}.ID = %d THEN %s";
+				} else {
+					$when_clauses[ $field ] .= " WHEN {$wpdb->posts}.ID = %d THEN %s";
+				}
+			}
+		}
+
+		if ( empty( $ids ) ) continue;
+
+		// Build the bulk update query
+		$set_clauses = array();
+		$values = array();
+
+		foreach ( $when_clauses as $field => $when_clause ) {
+			$set_clauses[] = "{$field} = CASE " . $when_clause . " END";
+
+			// Add values for each WHEN condition
+			foreach ( $chunk as $post_data ) {
+				$id = $post_data['ID'];
+				if ( isset( $post_data[ $field ] ) ) {
+					$values[] = $id;
+					$values[] = $post_data[ $field ];
+				}
+			}
+		}
+
+		// Add IDs for WHERE clause
+		$id_placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		$values = array_merge( $values, $ids );
+
+		$query = "UPDATE {$wpdb->posts} SET " . implode( ', ', $set_clauses ) . " WHERE ID IN ({$id_placeholders})";
+		$wpdb->query( $wpdb->prepare( $query, $values ) );
 	}
 }
 

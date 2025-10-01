@@ -710,7 +710,10 @@ function process_batch_items_with_metadata( array $batch_guids, array $batch_ite
 	$acf_fields        = get_acf_fields();
 	$zero_empty_fields = get_zero_empty_fields();
 
-	process_batch_items( $batch_guids, $batch_items, $batch_metadata['last_updates'], $batch_metadata['hashes_by_post'], $acf_fields, $zero_empty_fields, $post_ids_by_guid, $logs, $updated, $published, $skipped, $processed_count );
+	// Include the optimized batch processing file
+	require_once __DIR__ . '/../import/process-batch-items-optimized.php';
+
+	process_batch_items_optimized( $batch_guids, $batch_items, $batch_metadata['last_updates'], $batch_metadata['hashes_by_post'], $acf_fields, $zero_empty_fields, $post_ids_by_guid, $logs, $updated, $published, $skipped, $processed_count );
 
 	return $processed_count;
 }
