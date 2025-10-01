@@ -516,10 +516,8 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 			}
 			$total_items = get_json_item_count( $json_path );
 
-			// Set default batch size
-			$batch_size = 65; // From logs
-
-			// Loop through batches
+	// Set default batch size
+	$batch_size = 10; // Reduced from 65 to prevent timeouts			// Loop through batches
 			$current_batch_start = 0;
 			while ( $current_batch_start < $total_items ) {
 				if ( $debug_mode ) {
