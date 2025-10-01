@@ -58,7 +58,13 @@ Execute the following maintenance protocol steps in strict numerical order. Do n
 
 23. **Commit Changes**: Commit the local fixes to the git repository with descriptive commit messages.
 
-24. **Deployment Policy**: NEVER upload files directly to the server. All changes MUST go through git commit and push for auto-deployment. Direct FTP uploads are prohibited to maintain version control and deployment consistency.
+24. **Deployment Policy - STRICT ENFORCEMENT**: 
+   - **NEVER** upload files directly to the server via FTP, SFTP, or any direct file transfer method
+   - **ALL** changes **MUST** go through proper git workflow: commit locally → push to remote → auto-deployment
+   - **NO EXCEPTIONS** for "urgent fixes", "quick tests", or "emergency deployments"
+   - Direct uploads are **PROHIBITED** to maintain version control integrity, deployment consistency, and change tracking
+   - If urgent server changes are needed, implement the fix locally, commit, push, and wait for auto-deployment
+   - **AI AGENT RESTRICTION**: Do not suggest, implement, or execute direct server uploads under any circumstances
 
 25. **Wait for Validation**: Pause protocol execution and wait for user validation of the changes.
 
@@ -70,6 +76,8 @@ Execute the following maintenance protocol steps in strict numerical order. Do n
 
 - Need better context provision for AI comprehension
 - AI suggestions are being accepted and implemented
+- **CRITICAL**: AI agent attempted direct FTP upload despite existing deployment policy - policy strengthened to prevent future violations
+- **REMINDER**: Direct server uploads bypass version control, create deployment inconsistencies, and violate git workflow requirements
 
 **EXECUTION COMPLETE**: Report final status and any issues encountered.
 

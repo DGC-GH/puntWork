@@ -674,40 +674,36 @@ function process_batch_data( array $batch_guids, array $batch_items, array &$log
 	}
 
 	// Check for batch-level changes before processing individual items
-	// DISABLED: This optimization was causing imports to show processed items but 0 published/updated/skipped
-	// because entire batches were skipped without proper individual item evaluation
-	/*
 	$batch_change_check = check_batch_for_changes( $batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid );
 	if ( $debug_mode ) {
 		error_log( '[PUNTWORK] [BATCH-DEBUG] Batch change check: ' . ( $batch_change_check['has_changes'] ? 'CHANGES DETECTED' : 'NO CHANGES' ) );
 		error_log( '[PUNTWORK] [BATCH-DEBUG] Batch change details: ' . json_encode( $batch_change_check ) );
 	}
 
-	if ( ! $batch_change_check['has_changes'] ) {
-		// Entire batch unchanged - skip all processing
-		$skipped += count( $batch_guids );
-		$logs[]   = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Batch optimization: Skipped entire batch of ' . count( $batch_guids ) . ' items (no changes detected)';
-		error_log( '[PUNTWORK] [BATCH-OPTIMIZATION] Skipped entire batch of ' . count( $batch_guids ) . ' items - no changes detected' );
-
-		// Update status immediately when batch is skipped to prevent stuck detection
-		$current_status = get_option( 'job_import_status', array() );
-		// Calculate the correct processed count for this batch
-		$batch_size = count( $batch_guids );
-		$current_status['processed'] = ($current_status['processed'] ?? 0) + $batch_size;
-		$current_status['skipped']   = ($current_status['skipped'] ?? 0) + $skipped;
-		$current_status['last_update'] = time();
-		$current_status['logs'] = array_slice( $logs, -50 );
-		update_option( 'job_import_status', $current_status, false );
-		if ( function_exists( 'wp_cache_flush' ) ) {
-			wp_cache_flush();
-		}
-
-		return array( 'processed_count' => count( $batch_guids ) );
-	}
-	*/
+	// DISABLED: Batch-level optimization was causing imports to appear complete without processing items
+	// The batch hash check was too aggressive and skipped batches even when individual items needed processing
+	// if ( ! $batch_change_check['has_changes'] ) {
+	// 	// Entire batch unchanged - skip all processing
+	// 	$skipped += count( $batch_guids );
+	// 	$logs[]   = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Batch optimization: Skipped entire batch of ' . count( $batch_guids ) . ' items (no changes detected)';
+	// 	error_log( '[PUNTWORK] [BATCH-OPTIMIZATION] Skipped entire batch of ' . count( $batch_guids ) . ' items - no changes detected' );
+	//
+	// 	// Update status immediately when batch is skipped to prevent stuck detection
+	// 	$current_status = get_option( 'job_import_status', array() );
+	// 	$current_status['processed'] = $end_index;
+	// 	$current_status['skipped']   = ( $current_status['skipped'] ?? 0 ) + $skipped;
+	// 	$current_status['last_update'] = time();
+	// 	$current_status['logs'] = array_slice( $logs, -50 );
+	// 	update_option( 'job_import_status', $current_status, false );
+	// 	if ( function_exists( 'wp_cache_flush' ) ) {
+	// 		wp_cache_flush();
+	// 	}
+	//
+	// 	return array( 'processed_count' => count( $batch_guids ) );
+	// }
 
 	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [BATCH-DEBUG] Proceeding with individual item processing (batch optimization disabled)' );
+		error_log( '[PUNTWORK] [BATCH-DEBUG] Batch has changes, proceeding with individual item processing' );
 	}
 
 	if ( $debug_mode ) {
@@ -749,9 +745,6 @@ function queue_batch_items( array $batch_guids, array $batch_items, array $batch
 	}
 
 	// Check for batch-level changes before queuing individual items
-	// DISABLED: This optimization was causing imports to show processed items but 0 published/updated/skipped
-	// because entire batches were skipped without proper individual item evaluation
-	/*
 	$batch_change_check = check_batch_for_changes( $batch_guids, $batch_items, $batch_metadata, $post_ids_by_guid );
 	$debug_mode         = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
@@ -759,17 +752,16 @@ function queue_batch_items( array $batch_guids, array $batch_items, array $batch
 		error_log( '[PUNTWORK] [QUEUE-OPTIMIZATION] Batch change check: ' . ( $batch_change_check['has_changes'] ? 'CHANGES DETECTED' : 'NO CHANGES' ) );
 	}
 
-	if ( ! $batch_change_check['has_changes'] ) {
-		// Entire batch unchanged - skip all queuing
-		$skipped += count( $batch_guids );
-		$logs[]   = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Queue optimization: Skipped entire batch of ' . count( $batch_guids ) . ' items (no changes detected)';
-		error_log( '[PUNTWORK] [QUEUE-OPTIMIZATION] Skipped queuing entire batch of ' . count( $batch_guids ) . ' items - no changes detected' );
-
-		return count( $batch_guids ); // Return count as "processed"
-	}
-	*/
-
-	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
+	// DISABLED: Batch-level optimization was causing imports to appear complete without processing items
+	// The batch hash check was too aggressive and skipped batches even when individual items needed processing
+	// if ( ! $batch_change_check['has_changes'] ) {
+	// 	// Entire batch unchanged - skip all queuing
+	// 	$skipped += count( $batch_guids );
+	// 	$logs[]   = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Queue optimization: Skipped entire batch of ' . count( $batch_guids ) . ' items (no changes detected)';
+	// 	error_log( '[PUNTWORK] [QUEUE-OPTIMIZATION] Skipped queuing entire batch of ' . count( $batch_guids ) . ' items - no changes detected' );
+	//
+	// 	return count( $batch_guids ); // Return count as "processed"
+	// }
 
 	// Ensure queue table exists
 	$puntwork_queue_manager->ensureTableExists();
