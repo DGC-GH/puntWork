@@ -70,8 +70,6 @@ Execute the following maintenance protocol steps in strict numerical order. Do n
 
 - Need better context provision for AI comprehension
 - AI suggestions are being accepted and implemented
-- **DEPLOYMENT POLICY**: Never upload files directly to server - always use git commit/push for auto-deployment
-- Direct FTP uploads are prohibited to maintain version control and deployment consistency
 
 **EXECUTION COMPLETE**: Report final status and any issues encountered.
 
