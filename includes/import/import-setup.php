@@ -22,6 +22,12 @@ require_once __DIR__ . '/../mappings/mappings-fields.php';
 // Include utility helpers
 require_once __DIR__ . '/../utilities/utility-helpers.php';
 
+// Include database optimization utilities
+require_once __DIR__ . '/../utilities/database-optimization.php';
+
+// Include REST API utilities
+require_once __DIR__ . '/../api/rest-api.php';
+
 /**
  * Validate JSONL file integrity by checking a sample of lines.
  *
@@ -196,7 +202,7 @@ function prepare_import_setup( $batch_start = 0 ) {
 		if ( $debug_mode ) {
 			error_log( '[PUNTWORK] [SETUP-API-KEY] Ensuring API key is created...' );
 		}
-		$api_key = get_or_create_api_key();
+		$api_key = \Puntwork\get_or_create_api_key();
 		if ( $debug_mode ) {
 			error_log( '[PUNTWORK] [SETUP-API-KEY] API key creation completed: ' . ( empty( $api_key ) ? 'empty' : 'created/retrieved' ) );
 		}

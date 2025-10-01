@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Conditional Plugin Loading**: Optimized plugin initialization by loading includes only when needed (admin pages, AJAX requests, cron jobs, etc.) reducing from 101 includes per request to 8-50 context-specific includes
 
 ### Fixed
+- **Database Index Creation SQL Syntax Error**: Fixed CREATE INDEX queries with WHERE clauses that are not supported in older MariaDB/MySQL versions by removing WHERE conditions and adding table existence check for performance logs table
+- **Undefined Function get_or_create_api_key**: Fixed fatal error by adding proper namespace prefix \Puntwork\ and including rest-api.php in import-setup.php
 - **Critical AJAX 500 Error Resolution**: Fixed "Class 'Puntwork\FeedProcessor' not found" error by adding explicit include_once for feed-processor.php in process_feed_ajax handler, preventing fatal errors during feed processing in WordPress AJAX context
 - **Social Media Class Loading Dependency**: Fixed "Class 'Puntwork\SocialMedia\SocialMediaManager' not found" error by reordering conditional includes in puntwork.php to load social media platform classes before admin classes, and made admin class instantiations conditional to prevent loading during non-admin requests
 - **Restored Missing Conditional Include Sections**: Added back API/AJAX, Batch/Import, and Queue include sections that were accidentally removed during the dependency fix, ensuring all plugin functionality remains available

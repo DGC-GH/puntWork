@@ -27,7 +27,6 @@ function create_database_indexes(): void {
 		"
         CREATE INDEX IF NOT EXISTS idx_postmeta_guid
         ON {$wpdb->postmeta} (meta_key, meta_value(50))
-        WHERE meta_key = 'guid'
     "
 	);
 	$duration   = microtime( true ) - $start_time;
@@ -47,7 +46,6 @@ function create_database_indexes(): void {
 		"
         CREATE INDEX IF NOT EXISTS idx_postmeta_import_hash
         ON {$wpdb->postmeta} (meta_key, meta_value(32))
-        WHERE meta_key = '_import_hash'
     "
 	);
 	$duration   = microtime( true ) - $start_time;
@@ -67,7 +65,6 @@ function create_database_indexes(): void {
 		"
         CREATE INDEX IF NOT EXISTS idx_postmeta_last_update
         ON {$wpdb->postmeta} (meta_key, post_id)
-        WHERE meta_key = '_last_import_update'
     "
 	);
 	$duration   = microtime( true ) - $start_time;
@@ -87,7 +84,6 @@ function create_database_indexes(): void {
 		"
         CREATE INDEX IF NOT EXISTS idx_posts_job_status
         ON {$wpdb->posts} (post_type, post_status, post_modified)
-        WHERE post_type = 'job'
     "
 	);
 	$duration   = microtime( true ) - $start_time;
@@ -107,7 +103,6 @@ function create_database_indexes(): void {
 		"
         CREATE INDEX IF NOT EXISTS idx_postmeta_feed_url
         ON {$wpdb->postmeta} (meta_key, meta_value(255))
-        WHERE meta_key = 'feed_url'
     "
 	);
 	$duration   = microtime( true ) - $start_time;
@@ -127,7 +122,6 @@ function create_database_indexes(): void {
 		"
         CREATE INDEX IF NOT EXISTS idx_posts_job_date
         ON {$wpdb->posts} (post_type, post_date, post_modified)
-        WHERE post_type = 'job'
     "
 	);
 	$duration   = microtime( true ) - $start_time;
@@ -147,7 +141,6 @@ function create_database_indexes(): void {
 		"
         CREATE INDEX IF NOT EXISTS idx_posts_job_title
         ON {$wpdb->posts} (post_type, post_title(100))
-        WHERE post_type = 'job'
     "
 	);
 	$duration   = microtime( true ) - $start_time;
@@ -163,41 +156,51 @@ function create_database_indexes(): void {
 
 	// Index for performance logs queries
 	$performance_table = $wpdb->prefix . 'puntwork_performance_logs';
-	$start_time        = microtime( true );
-	$result            = $wpdb->query(
-		"
+	if ( $wpdb->get_var( "SHOW TABLES LIKE '$performance_table'" ) ) {
+		$start_time = microtime( true );
+		$result     = $wpdb->query(
+			"
         CREATE INDEX IF NOT EXISTS idx_performance_operation_time
         ON {$performance_table} (operation, created_at)
     "
-	);
-	$duration          = microtime( true ) - $start_time;
-	\Puntwork\PuntWorkLogger::debug(
-		'Created idx_performance_operation_time index',
-		\Puntwork\PuntWorkLogger::CONTEXT_SYSTEM,
-		array(
-			'result'   => $result !== false,
-			'duration' => round( $duration, 4 ),
-			'table'    => $performance_table,
-		)
-	);
+		);
+		$duration   = microtime( true ) - $start_time;
+		\Puntwork\PuntWorkLogger::debug(
+			'Created idx_performance_operation_time index',
+			\Puntwork\PuntWorkLogger::CONTEXT_SYSTEM,
+			array(
+				'result'   => $result !== false,
+				'duration' => round( $duration, 4 ),
+				'table'    => $performance_table,
+			)
+		);
 
-	$start_time = microtime( true );
-	$result     = $wpdb->query(
-		"
+		$start_time = microtime( true );
+		$result     = $wpdb->query(
+			"
         CREATE INDEX IF NOT EXISTS idx_performance_duration
         ON {$performance_table} (total_time, items_per_second)
     "
-	);
-	$duration   = microtime( true ) - $start_time;
-	\Puntwork\PuntWorkLogger::debug(
-		'Created idx_performance_duration index',
-		\Puntwork\PuntWorkLogger::CONTEXT_SYSTEM,
-		array(
-			'result'   => $result !== false,
-			'duration' => round( $duration, 4 ),
-			'table'    => $performance_table,
-		)
-	);
+		);
+		$duration   = microtime( true ) - $start_time;
+		\Puntwork\PuntWorkLogger::debug(
+			'Created idx_performance_duration index',
+			\Puntwork\PuntWorkLogger::CONTEXT_SYSTEM,
+			array(
+				'result'   => $result !== false,
+				'duration' => round( $duration, 4 ),
+				'table'    => $performance_table,
+			)
+		);
+	} else {
+		\Puntwork\PuntWorkLogger::debug(
+			'Performance logs table does not exist, skipping index creation',
+			\Puntwork\PuntWorkLogger::CONTEXT_SYSTEM,
+			array(
+				'table' => $performance_table,
+			)
+		);
+	}
 
 	\Puntwork\PuntWorkLogger::info( 'Database index creation completed', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM );
 }
