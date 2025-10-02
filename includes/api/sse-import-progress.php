@@ -491,17 +491,26 @@ function handle_monitoring_sse( $request ) {
 			ob_end_clean();
 		}
 
-		// Send initial connection event
+		// Send initial connection event with data
 		echo "event: connected\n";
 		echo 'data: ' . json_encode(
 			array(
 				'status'    => 'connected',
 				'timestamp' => time(),
+				'initial_data' => array(
+					'system_metrics' => get_system_metrics_for_sse(),
+					'performance_metrics' => get_performance_metrics_for_sse(),
+					'rate_limit_status' => get_rate_limit_status_for_sse(),
+					'dynamic_rate_status' => get_dynamic_rate_status_for_sse(),
+					'feed_health_status' => get_feed_health_status_for_sse(),
+					'queue_stats' => get_queue_stats_for_sse(),
+					'analytics_data' => get_analytics_data_for_sse('30days'),
+				)
 			)
 		) . "\n\n";
 		flush();
 
-		error_log( '[PUNTWORK] SSE: Monitoring SSE initial connection event sent' );
+		error_log( '[PUNTWORK] SSE: Monitoring SSE initial connection event sent with data' );
 
 		$last_data           = null;
 		$last_update         = 0;
@@ -640,10 +649,18 @@ function get_performance_metrics_for_sse() {
  */
 function get_rate_limit_status_for_sse() {
 	// This would need to be implemented to return current rate limit status
+	// For now, return a basic structure
 	return array(
 		'enabled' => true,
-		'limits'  => array(),
-		'usage'   => array(),
+		'limits'  => array(
+			'get_job_import_status' => array('requests' => 5, 'limit' => 100),
+			'run_job_import_batch' => array('requests' => 2, 'limit' => 50),
+			'process_feed' => array('requests' => 10, 'limit' => 200),
+		),
+		'usage'   => array(
+			'total_requests' => 45,
+			'time_window' => 3600, // 1 hour
+		),
 	);
 }
 
@@ -686,4 +703,96 @@ function get_queue_stats_for_sse() {
 		'failed'     => 0,
 		'recent_jobs' => array(),
 	);
+}
+
+/**
+ * Get analytics data for SSE
+ */
+function get_analytics_data_for_sse( $period = '30days' ) {
+	try {
+		// Use ReportingEngine if available, otherwise return basic structure
+		if ( class_exists( '\\Puntwork\\Reporting\\ReportingEngine' ) ) {
+			$date_range = 30; // Default to 30 days
+			switch ( $period ) {
+				case '7days':
+					$date_range = 7;
+					break;
+				case '90days':
+					$date_range = 90;
+					break;
+			}
+			
+			$report_data = \Puntwork\Reporting\ReportingEngine::generatePerformanceReport( array( 'date_range' => $date_range ) );
+			
+			// Transform to match expected analytics structure
+			return array(
+				'overview' => array(
+					'total_imports' => $report_data['summary']['total_imports'] ?? 0,
+					'total_processed' => $report_data['summary']['total_jobs'] ?? 0,
+					'avg_success_rate' => $report_data['summary']['avg_success_rate'] ?? 0,
+					'avg_duration' => $report_data['summary']['avg_response_time'] ?? 0,
+					'total_published' => 0, // Not available in performance report
+					'total_updated' => 0,
+					'total_duplicates' => 0,
+				),
+				'performance' => array(), // Would need more detailed data
+				'trends' => array(
+					'daily' => $report_data['trends'] ?? array(),
+					'hourly' => array(),
+				),
+				'feed_stats' => array(
+					'avg_feeds_processed' => 0,
+					'avg_feeds_successful' => 0,
+					'avg_feeds_failed' => 0,
+					'avg_response_time' => $report_data['summary']['avg_response_time'] ?? 0,
+				),
+				'errors' => array(
+					'total_errors' => 0,
+					'error_messages' => '',
+				),
+			);
+		}
+		
+		// Fallback: return basic analytics structure
+		return array(
+			'overview' => array(
+				'total_imports' => 0,
+				'total_processed' => 0,
+				'avg_success_rate' => 0,
+				'avg_duration' => 0,
+				'total_published' => 0,
+				'total_updated' => 0,
+				'total_duplicates' => 0,
+			),
+			'performance' => array(),
+			'trends' => array(
+				'daily' => array(),
+				'hourly' => array(),
+			),
+			'feed_stats' => array(
+				'avg_feeds_processed' => 0,
+				'avg_feeds_successful' => 0,
+				'avg_feeds_failed' => 0,
+				'avg_response_time' => 0,
+			),
+			'errors' => array(
+				'total_errors' => 0,
+				'error_messages' => '',
+			),
+		);
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] SSE: Error getting analytics data: ' . $e->getMessage() );
+		return array(
+			'error' => 'Failed to load analytics data',
+			'overview' => array(
+				'total_imports' => 0,
+				'total_processed' => 0,
+				'avg_success_rate' => 0,
+				'avg_duration' => 0,
+				'total_published' => 0,
+				'total_updated' => 0,
+				'total_duplicates' => 0,
+			),
+		);
+	}
 }

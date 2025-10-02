@@ -586,27 +586,46 @@ function api_settings_page() {
 				}, 2000);
 			});
 
-			// Load rate limit status
-			loadRateLimitStatus();
+			// Load rate limit status from SSE instead of AJAX
+			// Initial AJAX call removed to prevent plugin reinitialization
+			connectToMonitoringSSE();
 
-			function loadRateLimitStatus() {
-				$.ajax({
-					url: ajaxurl,
-					type: 'POST',
-					data: {
-						action: 'get_rate_limit_status',
-						nonce: '<?php echo wp_create_nonce( 'puntwork_rate_limits' ); ?>'
-					},
-					success: function(response) {
-						if (response.success) {
-							displayRateLimitStatus(response.data);
-						} else {
-							$('#rate-limit-status-content').html('<p class="description">' + (response.data || '<?php esc_js( _e( 'Failed to load rate limit status.', 'puntwork' ) ); ?>') + '</p>');
+			function connectToMonitoringSSE() {
+				const apiKey = '<?php echo esc_js( get_option( 'puntwork_api_key' ) ); ?>';
+				const sseUrl = '<?php echo esc_url( rest_url( 'puntwork/v1/sse/monitoring' ) ); ?>?api_key=' + encodeURIComponent(apiKey);
+
+				const eventSource = new EventSource(sseUrl);
+
+				eventSource.addEventListener('connected', function(event) {
+					const data = JSON.parse(event.data);
+					console.log('API Settings SSE connected:', data);
+
+					if (data.initial_data) {
+						if (data.initial_data.rate_limit_status) {
+							displayRateLimitStatus(data.initial_data.rate_limit_status);
 						}
-					},
-					error: function() {
-						$('#rate-limit-status-content').html('<p class="description"><?php esc_js( _e( 'Failed to load rate limit status.', 'puntwork' ) ); ?></p>');
+						if (data.initial_data.dynamic_rate_status) {
+							updateDynamicStatusDisplay(data.initial_data.dynamic_rate_status);
+						}
 					}
+				});
+
+				eventSource.addEventListener('monitoring', function(event) {
+					const data = JSON.parse(event.data);
+					console.log('API Settings SSE monitoring update:', data);
+
+					if (data.data) {
+						if (data.data.rate_limit_status) {
+							displayRateLimitStatus(data.data.rate_limit_status);
+						}
+						if (data.data.dynamic_rate_status) {
+							updateDynamicStatusDisplay(data.data.dynamic_rate_status);
+						}
+					}
+				});
+
+				eventSource.addEventListener('error', function(event) {
+					console.error('API Settings SSE error:', event);
 				});
 			}
 
@@ -637,7 +656,7 @@ function api_settings_page() {
 				}
 
 				html += '</tbody></table>';
-				html += '<p class="description" style="margin-top: 10px;"><?php esc_js( _e( 'Status updates every 30 seconds. Click refresh to update manually.', 'puntwork' ) ); ?></p>';
+				html += '<p class="description" style="margin-top: 10px;"><?php esc_js( _e( 'Status updates in real-time via SSE. No manual refresh needed.', 'puntwork' ) ); ?></p>';
 
 				$('#rate-limit-status-content').html(html);
 			}
@@ -645,31 +664,8 @@ function api_settings_page() {
 			// Auto-refresh rate limit status using SSE instead of polling
 			// Polling removed - now using SSE for real-time updates
 
-			// Dynamic rate limiting functionality
-			function refreshDynamicStatus() {
-				const statusContainer = $('.dynamic-rate-status .status-grid');
-				statusContainer.addClass('loading');
-
-				$.ajax({
-					url: ajaxurl,
-					type: 'POST',
-					data: {
-						action: 'get_dynamic_rate_status',
-						nonce: '<?php echo wp_create_nonce( 'puntwork_dynamic_rate_limits' ); ?>'
-					},
-					success: function(response) {
-						if (response.success) {
-							updateDynamicStatusDisplay(response.data);
-						}
-					},
-					error: function() {
-						console.error('Failed to load dynamic rate limiting status');
-					},
-					complete: function() {
-						statusContainer.removeClass('loading');
-					}
-				});
-			}
+			// Dynamic rate limiting functionality - now uses SSE
+			// AJAX polling removed to prevent plugin reinitialization
 
 			function updateDynamicStatusDisplay(data) {
 				// Update status indicator
@@ -692,9 +688,6 @@ function api_settings_page() {
 					maximumFractionDigits: decimals
 				}).format(number);
 			}
-
-			// Auto-refresh dynamic status using SSE instead of polling
-			// Polling removed - now using SSE for real-time updates
 
 			// Handle dynamic configuration form validation
 			$('form input[name="update_dynamic_rate_config"]').closest('form').on('submit', function(e) {

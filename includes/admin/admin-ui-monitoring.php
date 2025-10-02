@@ -353,10 +353,8 @@ function system_monitoring_page() {
 				},
 
 				loadInitialData: function() {
-					this.checkSystemStatus();
-					this.loadPerformanceMetrics();
-					this.loadActivityLog();
-					this.initializeCharts();
+					// Initial data now comes from SSE connection
+					// AJAX calls removed to prevent plugin reinitialization
 				},
 
 				startAutoRefresh: function() {
@@ -378,7 +376,14 @@ function system_monitoring_page() {
 					this.monitoringEventSource.onmessage = (event) => {
 						try {
 							const data = JSON.parse(event.data);
-							if (data.data) {
+							if (data.initial_data) {
+								// Handle initial data load
+								this.updateFromSSE(data.initial_data);
+								// Load activity log separately (not real-time data)
+								this.loadActivityLog();
+								this.initializeCharts();
+							} else if (data.data) {
+								// Handle real-time updates
 								this.updateFromSSE(data.data);
 							}
 						} catch (e) {

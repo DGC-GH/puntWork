@@ -141,10 +141,15 @@ function import_analytics_page() {
 	</div>
 
 	<script>
-		// Analytics Lazy Loading.
+		// Analytics SSE Connection
 		let currentAnalyticsPeriod = '<?php echo esc_js( $period ); ?>';
+		let analyticsSSE = null;
 
-		function loadAnalyticsData(period) {
+		function connectToAnalyticsSSE() {
+			if (analyticsSSE) {
+				analyticsSSE.close();
+			}
+
 			const dashboard = document.getElementById('analytics-dashboard');
 			const loading = document.getElementById('analytics-loading');
 			const content = document.getElementById('analytics-content');
@@ -153,29 +158,64 @@ function import_analytics_page() {
 			loading.style.display = 'block';
 			content.style.display = 'none';
 
-			// Fetch analytics data
-			fetch(window.location.pathname + '?page=puntwork-analytics&period=' + period + '&ajax=1')
-				.then(response => response.json())
-				.then(data => {
-					if (data.success) {
-						renderAnalyticsContent(data.data, period);
+			try {
+				const sseUrl = new URL(puntworkAnalyticsL10n.sseUrl);
+				sseUrl.searchParams.set('api_key', puntworkAnalyticsL10n.apiKey);
+
+				analyticsSSE = new EventSource(sseUrl.toString());
+
+				analyticsSSE.addEventListener('connected', function(event) {
+					const data = JSON.parse(event.data);
+					console.log('Analytics SSE connected:', data);
+
+					if (data.initial_data && data.initial_data.analytics_data) {
+						renderAnalyticsContent(data.initial_data.analytics_data, currentAnalyticsPeriod);
 						loading.style.display = 'none';
 						content.style.display = 'block';
-						currentAnalyticsPeriod = period;
-					} else {
-						throw new Error(data.message || 'Failed to load analytics data');
 					}
-				})
-				.catch(error => {
-					console.error('Error loading analytics:', error);
+				});
+
+				analyticsSSE.addEventListener('monitoring', function(event) {
+					const data = JSON.parse(event.data);
+					console.log('Analytics SSE monitoring update:', data);
+
+					if (data.data && data.data.analytics_data) {
+						// Update analytics data if period changed or data updated
+						renderAnalyticsContent(data.data.analytics_data, currentAnalyticsPeriod);
+					}
+				});
+
+				analyticsSSE.addEventListener('error', function(event) {
+					console.error('Analytics SSE error:', event);
 					loading.innerHTML = `
 						<div class="loading-spinner error">
 							<i class="fas fa-exclamation-triangle"></i>
 							<div>${puntworkAnalyticsL10n.errorLoading}</div>
-							<button onclick="loadAnalyticsData('${period}')" class="puntwork-btn puntwork-btn--secondary" style="margin-top: 10px;">${puntworkAnalyticsL10n.retry}</button>
+							<button onclick="connectToAnalyticsSSE()" class="puntwork-btn puntwork-btn--secondary" style="margin-top: 10px;">${puntworkAnalyticsL10n.retry}</button>
 						</div>
 					`;
 				});
+
+			} catch (error) {
+				console.error('Error connecting to analytics SSE:', error);
+				loading.innerHTML = `
+					<div class="loading-spinner error">
+						<i class="fas fa-exclamation-triangle"></i>
+						<div>${puntworkAnalyticsL10n.errorLoading}</div>
+						<button onclick="connectToAnalyticsSSE()" class="puntwork-btn puntwork-btn--secondary" style="margin-top: 10px;">${puntworkAnalyticsL10n.retry}</button>
+					</div>
+				`;
+			}
+		}
+
+		function loadAnalyticsData(period) {
+			// For period changes, we need to request new data
+			// Since SSE provides real-time data, we'll update the period and let SSE handle updates
+			currentAnalyticsPeriod = period;
+			
+			// For now, just reconnect SSE to get fresh data for the new period
+			// In a more advanced implementation, we could send the period via SSE
+			connectToAnalyticsSSE();
 		}
 
 		function renderAnalyticsContent(analytics_data, period) {
@@ -209,25 +249,25 @@ function import_analytics_page() {
 				<div class="analytics-section">
 					<h2>${puntworkAnalyticsL10n.performanceByTrigger}</h2>
 					<div class="performance-breakdown">
-						${Object.entries(analytics_data.performance).map(([trigger_type, stats]) => `
+						${Object.entries(analytics_data.performance || {}).map(([trigger_type, stats]) => `
 							<div class="performance-card">
 								<h3>${trigger_type.charAt(0).toUpperCase() + trigger_type.slice(1)} ${puntworkAnalyticsL10n.imports}</h3>
 								<div class="performance-stats">
 									<div class="stat">
 										<span class="stat-label">${puntworkAnalyticsL10n.count}</span>
-										<span class="stat-value">${number_format(stats.count)}</span>
+										<span class="stat-value">${number_format(stats.count || 0)}</span>
 									</div>
 									<div class="stat">
 										<span class="stat-label">${puntworkAnalyticsL10n.avgDurationShort}</span>
-										<span class="stat-value">${stats.avg_duration}s</span>
+										<span class="stat-value">${stats.avg_duration || 0}s</span>
 									</div>
 									<div class="stat">
 										<span class="stat-label">${puntworkAnalyticsL10n.successRate}</span>
-										<span class="stat-value">${stats.avg_success_rate}%</span>
+										<span class="stat-value">${stats.avg_success_rate || 0}%</span>
 									</div>
 									<div class="stat">
 										<span class="stat-label">${puntworkAnalyticsL10n.jobsProcessedShort}</span>
-										<span class="stat-value">${number_format(stats.total_processed)}</span>
+										<span class="stat-value">${number_format(stats.total_processed || 0)}</span>
 									</div>
 								</div>
 							</div>
@@ -248,19 +288,19 @@ function import_analytics_page() {
 					<h2>${puntworkAnalyticsL10n.feedPerformance}</h2>
 					<div class="feed-stats-grid">
 						<div class="feed-stat-card">
-							<div class="stat-value">${analytics_data.feed_stats.avg_feeds_processed}</div>
+							<div class="stat-value">${analytics_data.feed_stats ? analytics_data.feed_stats.avg_feeds_processed || 0 : 0}</div>
 							<div class="stat-label">${puntworkAnalyticsL10n.avgFeedsProcessed}</div>
 						</div>
 						<div class="feed-stat-card">
-							<div class="stat-value">${analytics_data.feed_stats.avg_feeds_successful}</div>
+							<div class="stat-value">${analytics_data.feed_stats ? analytics_data.feed_stats.avg_feeds_successful || 0 : 0}</div>
 							<div class="stat-label">${puntworkAnalyticsL10n.avgFeedsSuccessful}</div>
 						</div>
 						<div class="feed-stat-card">
-							<div class="stat-value">${analytics_data.feed_stats.avg_feeds_failed}</div>
+							<div class="stat-value">${analytics_data.feed_stats ? analytics_data.feed_stats.avg_feeds_failed || 0 : 0}</div>
 							<div class="stat-label">${puntworkAnalyticsL10n.avgFeedsFailed}</div>
 						</div>
 						<div class="feed-stat-card">
-							<div class="stat-value">${analytics_data.feed_stats.avg_response_time}s</div>
+							<div class="stat-value">${analytics_data.feed_stats ? analytics_data.feed_stats.avg_response_time || 0 : 0}s</div>
 							<div class="stat-label">${puntworkAnalyticsL10n.avgResponseTime}</div>
 						</div>
 					</div>
@@ -272,29 +312,29 @@ function import_analytics_page() {
 					<div class="job-stats-breakdown">
 						<div class="job-stat-item">
 							<span class="job-stat-label">${puntworkAnalyticsL10n.published}</span>
-							<span class="job-stat-value">${number_format(analytics_data.overview.total_published)}</span>
+							<span class="job-stat-value">${number_format(analytics_data.overview.total_published || 0)}</span>
 							<div class="job-stat-bar">
-								<div class="job-stat-fill published" style="width: ${analytics_data.overview.total_processed > 0 ? (analytics_data.overview.total_published / analytics_data.overview.total_processed * 100) : 0}%;"></div>
+								<div class="job-stat-fill published" style="width: ${analytics_data.overview.total_processed > 0 ? ((analytics_data.overview.total_published || 0) / analytics_data.overview.total_processed * 100) : 0}%;"></div>
 							</div>
 						</div>
 						<div class="job-stat-item">
 							<span class="job-stat-label">${puntworkAnalyticsL10n.updated}</span>
-							<span class="job-stat-value">${number_format(analytics_data.overview.total_updated)}</span>
+							<span class="job-stat-value">${number_format(analytics_data.overview.total_updated || 0)}</span>
 							<div class="job-stat-bar">
-								<div class="job-stat-fill updated" style="width: ${analytics_data.overview.total_processed > 0 ? (analytics_data.overview.total_updated / analytics_data.overview.total_processed * 100) : 0}%;"></div>
+								<div class="job-stat-fill updated" style="width: ${analytics_data.overview.total_processed > 0 ? ((analytics_data.overview.total_updated || 0) / analytics_data.overview.total_processed * 100) : 0}%;"></div>
 							</div>
 						</div>
 						<div class="job-stat-item">
 							<span class="job-stat-label">${puntworkAnalyticsL10n.duplicates}</span>
-							<span class="job-stat-value">${number_format(analytics_data.overview.total_duplicates)}</span>
+							<span class="job-stat-value">${number_format(analytics_data.overview.total_duplicates || 0)}</span>
 							<div class="job-stat-bar">
-								<div class="job-stat-fill duplicates" style="width: ${analytics_data.overview.total_processed > 0 ? (analytics_data.overview.total_duplicates / analytics_data.overview.total_processed * 100) : 0}%;"></div>
+								<div class="job-stat-fill duplicates" style="width: ${analytics_data.overview.total_processed > 0 ? ((analytics_data.overview.total_duplicates || 0) / analytics_data.overview.total_processed * 100) : 0}%;"></div>
 							</div>
 						</div>
 					</div>
 				</div>
 
-				${analytics_data.errors.total_errors > 0 ? `
+				${(analytics_data.errors && analytics_data.errors.total_errors > 0) ? `
 				<!-- Error Summary -->
 				<div class="analytics-section">
 					<h2>${puntworkAnalyticsL10n.errorSummary}</h2>
@@ -330,7 +370,7 @@ function import_analytics_page() {
 
 		function initializeCharts(analytics_data) {
 			// Trends Chart
-			const trendsData = analytics_data.trends.daily;
+			const trendsData = analytics_data.trends ? analytics_data.trends.daily || [] : [];
 			if (trendsData && trendsData.length > 0) {
 				const trendsCtx = document.getElementById('trends-chart').getContext('2d');
 				new Chart(trendsCtx, {
@@ -379,7 +419,7 @@ function import_analytics_page() {
 			}
 
 			// Hourly Distribution Chart
-			const hourlyData = analytics_data.trends.hourly;
+			const hourlyData = analytics_data.trends ? analytics_data.trends.hourly || [] : [];
 			if (hourlyData && hourlyData.length > 0) {
 				const hourlyCtx = document.getElementById('hourly-chart').getContext('2d');
 				new Chart(hourlyCtx, {
@@ -416,7 +456,7 @@ function import_analytics_page() {
 
 		// Initialize analytics on page load
 		document.addEventListener('DOMContentLoaded', function() {
-			loadAnalyticsData(currentAnalyticsPeriod);
+			connectToAnalyticsSSE();
 
 			// Period selector change handler
 			document.getElementById('period-select').addEventListener('change', function() {
