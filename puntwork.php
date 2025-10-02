@@ -197,7 +197,12 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 		// Determine context for conditional loading
 		$is_admin    = is_admin();
 		$is_ajax     = defined( 'DOING_AJAX' ) && DOING_AJAX;
-		$is_rest     = defined( 'REST_REQUEST' ) && REST_REQUEST;
+               $is_rest     = false;
+               if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+                   $is_rest = true;
+               } elseif ( strpos( $request_uri, '/wp-json/' ) !== false ) {
+                   $is_rest = true;
+               }
 		$is_cron     = defined( 'DOING_CRON' ) && DOING_CRON;
 		$is_frontend = ! $is_admin && ! $is_ajax && ! $is_rest && ! $is_cron;
 
