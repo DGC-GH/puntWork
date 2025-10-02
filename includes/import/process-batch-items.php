@@ -85,6 +85,12 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 		$item_timeout_limit          = 60; // 60 seconds per item max
 
 		foreach ( $batch_guids as $guid ) {
+			// Check for import cancellation
+			if ( get_transient( 'import_cancel' ) ) {
+				error_log( '[PUNTWORK] [CANCEL] Import cancelled by user' );
+				break;
+			}
+
 			++$item_counter;
 			if ( $item_counter % 100 == 0 ) {
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
