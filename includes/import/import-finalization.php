@@ -11,6 +11,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// Include required dependencies
+require_once __DIR__ . '/../scheduling/scheduling-history.php';
+
 /**
  * Import finalization and status management
  * Handles completion of import batches and status updates.
@@ -72,10 +75,10 @@ function finalize_batch_import( $result ) {
 	$status['complete']            = $result['complete'];
 	$status['success']             = $result['success']; // Set success status
 	$status['error_message']       = $result['message'] ?? ''; // Set error message if any
-	$status['batch_size']          = $result['batch_size'];
-	$status['inferred_languages'] += $result['inferred_languages'];
-	$status['inferred_benefits']  += $result['inferred_benefits'];
-	$status['schema_generated']   += $result['schema_generated'];
+	$status['batch_size']          = $result['batch_size'] ?? 50; // Default batch size
+	$status['inferred_languages'] += $result['inferred_languages'] ?? 0;
+	$status['inferred_benefits']  += $result['inferred_benefits'] ?? 0;
+	$status['schema_generated']   += $result['schema_generated'] ?? 0;
 	$status['last_update']         = time();
 
 	update_option( 'job_import_status', $status, false );

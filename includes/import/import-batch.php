@@ -515,7 +515,8 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 			// Get total items first
 			$json_path = get_option( 'job_import_json_path', 'feeds/combined-jobs.jsonl' );
 			if ( ! file_exists( $json_path ) ) {
-				$json_path = PUNTWORK_PATH . '/' . $json_path;
+				// Use the correct path where the combined file is actually created
+				$json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
 			}
 			$total_items = get_json_item_count( $json_path );
 
