@@ -377,8 +377,8 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 			);
 		}
 
-		// Scheduling includes (load on admin or cron)
-		if ( $is_admin || $is_cron ) {
+		// Scheduling includes (load on admin, cron, or AJAX)
+		if ( $is_admin || $is_cron || $is_ajax ) {
 			$includes = array_merge(
 				$includes,
 				array(

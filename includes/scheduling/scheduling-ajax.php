@@ -30,10 +30,7 @@ add_action(
 			wp_die( 'Permission denied' );
 		}
 
-		error_log( '[PUNTWORK] === MANUAL DEBUG TRIGGER ===' );
 		run_scheduled_import_async();
-		error_log( '[PUNTWORK] === MANUAL DEBUG TRIGGER COMPLETED ===' );
-
 		wp_die( 'Async function triggered - check debug.log' );
 	}
 );
@@ -48,8 +45,6 @@ add_action(
 
 		delete_option( 'job_import_status' );
 		delete_transient( 'import_cancel' );
-		error_log( '[PUNTWORK] === DEBUG: Cleared import status and cancel transient ===' );
-
 		wp_die( 'Import status cleared - you can now try Run Now again' );
 	}
 );
@@ -69,47 +64,50 @@ function save_import_schedule_ajax() {
 	}
 
 	try {
+		// Set defaults for missing fields
+		$input_data = array(
+			'enabled'   => $_POST['enabled'] ?? false,
+			'frequency' => $_POST['frequency'] ?? 'daily',
+			'interval'  => $_POST['interval'] ?? 24,
+			'hour'      => $_POST['hour'] ?? 9,
+			'minute'    => $_POST['minute'] ?? 0,
+		);
+
 		// Validate and sanitize input fields
-		$enabled   = SecurityUtils::validateField( $_POST, 'enabled', 'boolean', array( 'default' => false ) );
-		$frequency = SecurityUtils::validateField(
-			$_POST,
-			'frequency',
-			'string',
-			array(
-				'default'        => 'daily',
-				'allowed_values' => array( 'hourly', '3hours', '6hours', '12hours', 'daily', 'custom' ),
-			)
+		$validation_rules = array(
+			'enabled'   => array( 'type' => 'boolean' ),
+			'frequency' => array(
+				'type' => 'string',
+				'enum' => array( 'hourly', '3hours', '6hours', '12hours', 'daily', 'custom' ),
+			),
+			'interval'  => array(
+				'type' => 'integer',
+				'min'  => 1,
+				'max'  => 168,
+			),
+			'hour'      => array(
+				'type' => 'integer',
+				'min'  => 0,
+				'max'  => 23,
+			),
+			'minute'    => array(
+				'type' => 'integer',
+				'min'  => 0,
+				'max'  => 59,
+			),
 		);
-		$interval  = SecurityUtils::validateField(
-			$_POST,
-			'interval',
-			'integer',
-			array(
-				'min'     => 1,
-				'max'     => 168,
-				'default' => 24,
-			)
-		);
-		$hour      = SecurityUtils::validateField(
-			$_POST,
-			'hour',
-			'integer',
-			array(
-				'min'     => 0,
-				'max'     => 23,
-				'default' => 9,
-			)
-		);
-		$minute    = SecurityUtils::validateField(
-			$_POST,
-			'minute',
-			'integer',
-			array(
-				'min'     => 0,
-				'max'     => 59,
-				'default' => 0,
-			)
-		);
+
+		$validated_data = SecurityUtils::sanitizeDataArray( $input_data, $validation_rules );
+		if ( is_wp_error( $validated_data ) ) {
+			AjaxErrorHandler::sendError( $validated_data );
+			return;
+		}
+
+		$enabled   = $validated_data['enabled'];
+		$frequency = $validated_data['frequency'];
+		$interval  = $validated_data['interval'];
+		$hour      = $validated_data['hour'];
+		$minute    = $validated_data['minute'];
 
 		PuntWorkLogger::info(
 			'Saving import schedule',
@@ -172,35 +170,22 @@ function save_import_schedule_ajax() {
  * Get current import schedule settings via AJAX.
  */
 function get_import_schedule_ajax() {
-	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
-
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [SCHEDULE-AJAX-START] ===== GET_IMPORT_SCHEDULE_AJAX START =====' );
-		error_log( '[PUNTWORK] [SCHEDULE-AJAX-START] POST data: ' . json_encode( $_POST ) );
-		error_log( '[PUNTWORK] [SCHEDULE-AJAX-START] Memory usage at start: ' . memory_get_usage( true ) . ' bytes' );
-	}
-
 	PuntWorkLogger::logAjaxRequest( 'get_import_schedule', $_POST );
 
 	// Simple validation for debugging
 	if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'job_import_nonce' ) ) {
-		error_log( '[PUNTWORK] [DEBUG-AJAX] Nonce verification failed for get_import_schedule' );
 		wp_send_json_error( array( 'message' => 'Security check failed' ) );
 
 		return;
 	}
 
 	if ( ! current_user_can( 'manage_options' ) ) {
-		error_log( '[PUNTWORK] [DEBUG-AJAX] Insufficient permissions for get_import_schedule' );
 		wp_send_json_error( array( 'message' => 'Insufficient permissions' ) );
 
 		return;
 	}
 
 	try {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULE-AJAX-DEBUG] Attempting to get schedule from database' );
-		}
 		$schedule = safe_get_option(
 			'puntwork_import_schedule',
 			array(
@@ -214,10 +199,6 @@ function get_import_schedule_ajax() {
 			)
 		);
 
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULE-AJAX-DEBUG] Schedule retrieved: ' . json_encode( $schedule ) );
-		}
-
 		PuntWorkLogger::info(
 			'Retrieved import schedule',
 			PuntWorkLogger::CONTEXT_SCHEDULING,
@@ -227,16 +208,8 @@ function get_import_schedule_ajax() {
 			)
 		);
 
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULE-AJAX-DEBUG] Getting last run data' );
-		}
 		$last_run         = safe_get_option( 'puntwork_last_import_run', null );
 		$last_run_details = safe_get_option( 'puntwork_last_import_details', null );
-
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULE-AJAX-DEBUG] Last run: ' . json_encode( $last_run ) );
-			error_log( '[PUNTWORK] [SCHEDULE-AJAX-DEBUG] Last run details: ' . json_encode( $last_run_details ) );
-		}
 
 		// Add formatted date to last run if it exists
 		if ( $last_run && isset( $last_run['timestamp'] ) ) {
@@ -244,15 +217,7 @@ function get_import_schedule_ajax() {
 			$last_run['formatted_date'] = wp_date( 'M j, Y H:i', $last_run['timestamp'] );
 		}
 
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULE-AJAX-DEBUG] Getting next scheduled time' );
-		}
 		$next_run = get_next_scheduled_time();
-
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULE-AJAX-DEBUG] Next run: ' . json_encode( $next_run ) );
-			error_log( '[PUNTWORK] [SCHEDULE-AJAX-DEBUG] Preparing success response' );
-		}
 
 		PuntWorkLogger::logAjaxResponse(
 			'get_import_schedule',
@@ -271,22 +236,10 @@ function get_import_schedule_ajax() {
 				'last_run_details' => $last_run_details,
 			)
 		);
-
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULE-AJAX-END] ===== GET_IMPORT_SCHEDULE_AJAX SUCCESS =====' );
-		}
 	} catch ( \Exception $e ) {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULE-AJAX-ERROR] Exception in get_import_schedule_ajax: ' . $e->getMessage() );
-			error_log( '[PUNTWORK] [SCHEDULE-AJAX-ERROR] Stack trace: ' . $e->getTraceAsString() );
-		}
 		PuntWorkLogger::error( 'Get schedule failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SCHEDULING );
 		AjaxErrorHandler::sendError( 'Get schedule failed: ' . $e->getMessage() );
 	} catch ( \Throwable $e ) {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULE-AJAX-FATAL] Fatal error in get_import_schedule_ajax: ' . $e->getMessage() );
-			error_log( '[PUNTWORK] [SCHEDULE-AJAX-FATAL] Stack trace: ' . $e->getTraceAsString() );
-		}
 		PuntWorkLogger::error( 'Get schedule fatal error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SCHEDULING );
 		AjaxErrorHandler::sendError( 'Get schedule failed with fatal error: ' . $e->getMessage() );
 	}
@@ -296,50 +249,29 @@ function get_import_schedule_ajax() {
  * Get import run history via AJAX.
  */
 function get_import_run_history_ajax() {
-	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
-
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [HISTORY-AJAX-START] ===== GET_IMPORT_RUN_HISTORY_AJAX START =====' );
-		error_log( '[PUNTWORK] [HISTORY-AJAX-START] POST data: ' . json_encode( $_POST ) );
-		error_log( '[PUNTWORK] [HISTORY-AJAX-START] Memory usage at start: ' . memory_get_usage( true ) . ' bytes' );
-	}
-
 	PuntWorkLogger::logAjaxRequest( 'get_import_run_history', $_POST );
 
 	// Simple validation for debugging
 	if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'job_import_nonce' ) ) {
-		error_log( '[PUNTWORK] [DEBUG-AJAX] Nonce verification failed for get_import_run_history' );
 		wp_send_json_error( array( 'message' => 'Security check failed' ) );
 
 		return;
 	}
 
 	if ( ! current_user_can( 'manage_options' ) ) {
-		error_log( '[PUNTWORK] [DEBUG-AJAX] Insufficient permissions for get_import_run_history' );
 		wp_send_json_error( array( 'message' => 'Insufficient permissions' ) );
 
 		return;
 	}
 
 	try {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [HISTORY-AJAX-DEBUG] Attempting to get history from database' );
-		}
 		$history = safe_get_option( 'puntwork_import_run_history', array() );
-
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [HISTORY-AJAX-DEBUG] History retrieved, count: ' . count( $history ) );
-		}
 
 		// Format dates for history entries - timestamps are stored in UTC
 		foreach ( $history as &$entry ) {
 			if ( isset( $entry['timestamp'] ) ) {
 				$entry['formatted_date'] = wp_date( 'M j, Y H:i', $entry['timestamp'] );
 			}
-		}
-
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [HISTORY-AJAX-DEBUG] History formatted, preparing response' );
 		}
 
 		PuntWorkLogger::info(
@@ -363,22 +295,10 @@ function get_import_run_history_ajax() {
 				'count'   => count( $history ),
 			)
 		);
-
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [HISTORY-AJAX-END] ===== GET_IMPORT_RUN_HISTORY_AJAX SUCCESS =====' );
-		}
 	} catch ( \Exception $e ) {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [HISTORY-AJAX-ERROR] Exception in get_import_run_history_ajax: ' . $e->getMessage() );
-			error_log( '[PUNTWORK] [HISTORY-AJAX-ERROR] Stack trace: ' . $e->getTraceAsString() );
-		}
 		PuntWorkLogger::error( 'Get run history failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SCHEDULING );
 		AjaxErrorHandler::sendError( 'Get run history failed: ' . $e->getMessage() );
 	} catch ( \Throwable $e ) {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [HISTORY-AJAX-FATAL] Fatal error in get_import_run_history_ajax: ' . $e->getMessage() );
-			error_log( '[PUNTWORK] [HISTORY-AJAX-FATAL] Stack trace: ' . $e->getTraceAsString() );
-		}
 		PuntWorkLogger::error( 'Get run history fatal error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_SCHEDULING );
 		AjaxErrorHandler::sendError( 'Get run history failed with fatal error: ' . $e->getMessage() );
 	}
@@ -596,33 +516,21 @@ add_action( 'puntwork_analytics_cleanup', array( __NAMESPACE__ . '\\ImportAnalyt
  * Run scheduled import asynchronously (non-blocking).
  */
 function run_scheduled_import_async() {
-	error_log( '[PUNTWORK] === ASYNC FUNCTION STARTED ===' );
-	error_log( '[PUNTWORK] Async scheduled import started - Action Scheduler hook fired' );
-	error_log( '[PUNTWORK] Current time: ' . date( 'Y-m-d H:i:s' ) );
-	error_log( '[PUNTWORK] Function called with arguments: ' . print_r( func_get_args(), true ) );
-
 	// Clear any previous cancellation before starting
 	delete_transient( 'import_cancel' );
-	error_log( '[PUNTWORK] Cleared import_cancel transient' );
 
 	// Check if an import is already running
 	$import_status = get_option( 'job_import_status', array() );
-	error_log( '[PUNTWORK] Current import status at async start: ' . json_encode( $import_status ) );
 
 	if (
 		isset( $import_status['complete'] ) && $import_status['complete'] == false
 		&& isset( $import_status['processed'] ) && $import_status['processed'] > 0
 	) {
-		error_log( '[PUNTWORK] Async import skipped - import already running and has processed items' );
-
 		return;
 	}
 
-	error_log( '[PUNTWORK] Starting actual import process...' );
-
 	// Clear import_cancel transient again just before starting the import
 	delete_transient( 'import_cancel' );
-	error_log( '[PUNTWORK] Cleared import_cancel transient again before import' );
 
 	try {
 		// Get test mode and trigger type from status if set
@@ -631,64 +539,41 @@ function run_scheduled_import_async() {
 		$trigger_type_flag = $current_status['trigger_type'] ?? 'scheduled';
 
 		$result = run_scheduled_import( $test_mode_flag, $trigger_type_flag );
-		error_log( '[PUNTWORK] Import result: ' . print_r( $result, true ) );
 
 		// Import runs to completion without pausing
 		if ( $result['success'] ) {
-			error_log( '[PUNTWORK] Async scheduled import completed successfully' );
+			// Success is logged in run_scheduled_import
 		} else {
-			error_log( '[PUNTWORK] Async scheduled import failed: ' . ( $result['message'] ?? 'Unknown error' ) );
 			// Reset import status on failure so future attempts can start
 			delete_option( 'job_import_status' );
-			error_log( '[PUNTWORK] Reset job_import_status due to import failure' );
 		}
 	} catch ( \Exception $e ) {
-		error_log( '[PUNTWORK] Async scheduled import exception: ' . $e->getMessage() );
-		error_log( '[PUNTWORK] Exception trace: ' . $e->getTraceAsString() );
 		// Reset import status on exception so future attempts can start
 		delete_option( 'job_import_status' );
-		error_log( '[PUNTWORK] Reset job_import_status due to import exception' );
 	}
-
-	error_log( '[PUNTWORK] === ASYNC FUNCTION COMPLETED ===' );
 }
 
 /**
  * Run the complete scheduled import process: feed processing -> combination -> import.
  */
 function run_scheduled_import( bool $test_mode = false, string $trigger_type = 'scheduled' ): array {
-	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 	$start_time = microtime( true );
 
 	// Initialize memory management for large batch operations
 	\Puntwork\Utilities\MemoryManager::reset();
 	\Puntwork\Utilities\MemoryManager::optimizeForLargeBatch();
 
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [SCHEDULED-IMPORT] ===== STARTING SCHEDULED IMPORT =====' );
-		error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Test mode: ' . ( $test_mode ? 'true' : 'false' ) );
-		error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Trigger type: ' . $trigger_type );
-		error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Start time: ' . date( 'Y-m-d H:i:s' ) );
-	}
-
 	try {
 		// Step 1: Get all configured feeds
 		$feeds = get_feeds();
 		if ( empty( $feeds ) ) {
 			$error_msg = 'No feeds configured for import';
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [SCHEDULED-IMPORT] ERROR: ' . $error_msg );
-			}
 
 			return array(
 				'success' => false,
 				'message' => $error_msg,
 				'logs'    => array( $error_msg ),
 			);
-		}
-
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Found ' . count( $feeds ) . ' feeds to process: ' . json_encode( array_keys( $feeds ) ) );
 		}
 
 		// Step 2: Process all feeds (download and convert to JSONL)
@@ -700,9 +585,6 @@ function run_scheduled_import( bool $test_mode = false, string $trigger_type = '
 		// Ensure output directory exists
 		if ( ! wp_mkdir_p( $output_dir ) || ! is_writable( $output_dir ) ) {
 			$error_msg = 'Feeds directory not writable: ' . $output_dir;
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [SCHEDULED-IMPORT] ERROR: ' . $error_msg );
-			}
 
 			return array(
 				'success' => false,
@@ -711,20 +593,12 @@ function run_scheduled_import( bool $test_mode = false, string $trigger_type = '
 			);
 		}
 
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Output directory ready: ' . $output_dir );
-		}
-
 		// Load required functions
 		if ( ! function_exists( 'process_one_feed' ) ) {
 			require_once __DIR__ . '/../core/core-structure-logic.php';
 		}
 
 		foreach ( $feeds as $feed_key => $feed_url ) {
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Processing feed: ' . $feed_key . ' -> ' . $feed_url );
-			}
-
 			$logs         = array();
 			$item_count   = process_one_feed( $feed_key, $feed_url, $output_dir, $fallback_domain, $logs );
 			$total_items += $item_count;
@@ -746,25 +620,13 @@ function run_scheduled_import( bool $test_mode = false, string $trigger_type = '
 				}
 			}
 
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Feed ' . $feed_key . ' processed, items: ' . $item_count );
-				error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Feed logs: ' . json_encode( $logs ) );
-			}
-
 			$all_logs = array_merge( $all_logs, $logs );
 
 			// Check memory usage after each feed processing
 			$memory_check = \Puntwork\Utilities\MemoryManager::checkMemoryUsage( $total_items );
 			if ( ! empty( $memory_check['actions_taken'] ) ) {
 				$all_logs[] = 'Memory management triggered: ' . implode( ', ', $memory_check['actions_taken'] ) . ' (Usage: ' . round( $memory_check['memory_ratio'] * 100, 1 ) . '%)';
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Memory check after feed ' . $feed_key . ': ' . json_encode( $memory_check ) );
-				}
 			}
-		}
-
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULED-IMPORT] All feeds processed, total items: ' . $total_items );
 		}
 
 		// Step 3: Combine JSONL files
@@ -780,13 +642,6 @@ function run_scheduled_import( bool $test_mode = false, string $trigger_type = '
 			if ( function_exists( 'wp_cache_flush' ) ) {
 				wp_cache_flush();
 			}
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Memory cleanup before combining: ' . json_encode( $memory_check ) );
-			}
-		}
-
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Combining JSONL files...' );
 		}
 
 		$combine_logs = array();
@@ -797,9 +652,6 @@ function run_scheduled_import( bool $test_mode = false, string $trigger_type = '
 		$combined_file = $output_dir . 'combined-jobs.jsonl';
 		if ( ! file_exists( $combined_file ) ) {
 			$error_msg = 'Combined JSONL file was not created';
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [SCHEDULED-IMPORT] ERROR: ' . $error_msg );
-			}
 
 			return array(
 				'success' => false,
@@ -809,15 +661,9 @@ function run_scheduled_import( bool $test_mode = false, string $trigger_type = '
 		}
 
 		$file_size = filesize( $combined_file );
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Combined file created: ' . $combined_file . ' (' . $file_size . ' bytes)' );
-		}
 
 		if ( $file_size == 0 ) {
 			$error_msg = 'Combined JSONL file is empty';
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [SCHEDULED-IMPORT] ERROR: ' . $error_msg );
-			}
 
 			return array(
 				'success' => false,
@@ -835,13 +681,6 @@ function run_scheduled_import( bool $test_mode = false, string $trigger_type = '
 			if ( function_exists( 'wp_cache_flush' ) ) {
 				wp_cache_flush();
 			}
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Memory cleanup before import: ' . json_encode( $memory_check ) );
-			}
-		}
-
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Starting import process...' );
 		}
 
 		$import_result = import_all_jobs_from_json();
@@ -849,10 +688,6 @@ function run_scheduled_import( bool $test_mode = false, string $trigger_type = '
 		$total_duration = microtime( true ) - $start_time;
 
 		if ( $import_result['success'] ) {
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Scheduled import completed successfully in ' . $total_duration . ' seconds' );
-			}
-
 			// Log the successful run
 			include_once __DIR__ . '/../scheduling/scheduling-history.php';
 			if ( function_exists( 'log_manual_import_run' ) ) {
@@ -880,9 +715,6 @@ function run_scheduled_import( bool $test_mode = false, string $trigger_type = '
 			);
 		} else {
 			$error_msg = $import_result['message'] ?? 'Import failed';
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Scheduled import failed: ' . $error_msg );
-			}
 
 			// Log the failed run
 			include_once __DIR__ . '/../scheduling/scheduling-history.php';
@@ -910,10 +742,6 @@ function run_scheduled_import( bool $test_mode = false, string $trigger_type = '
 		}
 	} catch ( \Exception $e ) {
 		$error_msg = 'Scheduled import failed: ' . $e->getMessage();
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Exception: ' . $error_msg );
-			error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Stack trace: ' . $e->getTraceAsString() );
-		}
 
 		return array(
 			'success' => false,
