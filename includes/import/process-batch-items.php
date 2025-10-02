@@ -210,11 +210,30 @@ function process_item_with_fork($guid, $batch_items, $post_ids_by_guid, $last_up
 		return $result;
 	}
 
-	// Create a pipe for inter-process communication
-	$pipe = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+	// Create a pipe for inter-process communication using proc_open
+	$descriptors = array(
+		0 => array('pipe', 'r'), // stdin
+		1 => array('pipe', 'w'), // stdout
+		2 => array('pipe', 'w'), // stderr
+	);
+
+	$process = proc_open('php -r "echo json_encode(array());"', $descriptors, $pipes, null, null, array('bypass_shell' => true));
+
+	if (is_resource($process)) {
+		// Close pipes and terminate the dummy process
+		fclose($pipes[0]);
+		fclose($pipes[1]);
+		fclose($pipes[2]);
+		proc_close($process);
+	}
+
+	// Try stream_socket_pair with different parameters
+	$pipe = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, 0);
 	if ($pipe === false) {
-		$result['error'] = 'Failed to create communication pipe';
-		return $result;
+		// Fallback: disable fork-based timeout and process directly
+		error_log('[PUNTWORK] [TIMEOUT] Pipe creation failed, falling back to direct processing');
+		$item_result = process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updates, $post_statuses, $all_hashes_by_post, $item_counter);
+		return $item_result;
 	}
 
 	$pid = pcntl_fork();

@@ -610,6 +610,7 @@ function update_intermediate_batch_status( int $processed_count, int $total_in_b
 
 	// Update status with intermediate values
 	$intermediate_status                 = $current_status;
+	$intermediate_status['processed']    = $total_processed;
 	$intermediate_status['published']    = ( $current_status['published'] ?? 0 ) + $published;
 	$intermediate_status['updated']      = ( $current_status['updated'] ?? 0 ) + $updated;
 	$intermediate_status['skipped']      = ( $current_status['skipped'] ?? 0 ) + $skipped;

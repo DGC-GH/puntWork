@@ -551,7 +551,7 @@ function get_job_import_status_ajax() {
 
 		// Log response summary instead of full data to prevent large debug logs
 		$log_summary = array(
-			'total'                      => $progress['total'],
+			'total'                      => $progress['total'] ?? 0,
 			'processed'                  => $progress['processed'] ?? 0,
 			'published'                  => $progress['published'],
 			'updated'                    => $progress['updated'],

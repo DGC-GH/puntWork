@@ -13,7 +13,7 @@ function job_import_deactivate() {
 	delete_option( 'puntwork_setup_done' );
 }time analytics, health monitoring, AI-powered features, CRM integrations,
  *     multi-site support, horizontal scaling, GraphQL API, webhooks, and mobile app.
- * Version: 0.0.4
+ * Version: 0.0.5
  * Author: DGC-GH
  * Requires at least: 5.0
  * Tested up to: 6.8
