@@ -164,7 +164,14 @@ if ( ! function_exists( 'process_guid_chunk' ) ) {
 			throw new Exception( 'Unable to open JSONL file for streaming: ' . $json_path );
 		}
 
+		$read_attempts = 0;
+		$max_read_attempts = count( $guid_chunk ) * 2; // Safety limit
 		while ( ( $line = fgets( $handle ) ) !== false ) {
+			++$read_attempts;
+			if ( $read_attempts > $max_read_attempts ) {
+				error_log( '[PUNTWORK] [STREAMING] Safety break - read ' . $read_attempts . ' lines, found ' . count( $found_items ) . ' items' );
+				break;
+			}
 			$item_data = json_decode( trim( $line ), true );
 			if ( ! $item_data || ! isset( $item_data['guid'] ) ) {
 				continue;

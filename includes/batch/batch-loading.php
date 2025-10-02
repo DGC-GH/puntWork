@@ -328,8 +328,18 @@ function load_json_batch( $json_path, $start_index, $batch_size ) {
 		}
 
 		// Skip to start_index
+		$skip_count = 0;
 		while ( $current_index < $start_index && ( $line = fgets( $handle ) ) !== false ) {
 			++$current_index;
+			++$skip_count;
+			if ( $skip_count > $start_index + 1000 ) { // Safety check to prevent infinite loop
+				error_log( '[PUNTWORK] load_json_batch: Safety break - skipped ' . $skip_count . ' lines, current_index=' . $current_index . ', start_index=' . $start_index );
+				break;
+			}
+		}
+
+		if ( $debug_mode && $current_index < $start_index ) {
+			error_log( '[PUNTWORK] load_json_batch: Could not skip to start_index=' . $start_index . ', reached current_index=' . $current_index . ', file may be shorter than expected' );
 		}
 
 		if ( $debug_mode ) {
@@ -337,8 +347,15 @@ function load_json_batch( $json_path, $start_index, $batch_size ) {
 		}
 
 		// Read batch_size items
+		$read_attempts = 0;
+		$fgets_failed = false;
 		while ( $count < $batch_size && ( $line = fgets( $handle ) ) !== false ) {
 			++$lines_read;
+			++$read_attempts;
+			if ( $read_attempts > $batch_size + 100 ) { // Safety check
+				error_log( '[PUNTWORK] load_json_batch: Safety break - read ' . $read_attempts . ' lines, count=' . $count . ', batch_size=' . $batch_size );
+				break;
+			}
 			$line = trim( $line );
 			// Remove BOM if present
 			if ( substr( $line, 0, 3 ) === $bom ) {
@@ -383,6 +400,12 @@ function load_json_batch( $json_path, $start_index, $batch_size ) {
 				}
 			}
 			++$current_index;
+		}
+
+		// Check if fgets failed
+		if ( $line === false && $read_attempts == 0 ) {
+			$fgets_failed = true;
+			error_log( '[PUNTWORK] load_json_batch: fgets failed immediately after skipping to start_index=' . $start_index );
 		}
 
 		fclose( $handle );
