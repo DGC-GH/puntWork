@@ -32,23 +32,6 @@ if ( isset( $GLOBALS['puntwork_plugin_loaded'] ) && $GLOBALS['puntwork_plugin_lo
 }
 $GLOBALS['puntwork_plugin_loaded'] = true;
 
-// Check if plugin has already been loaded in this WordPress session
-$plugin_loaded_key = 'puntwork_plugin_loaded_session';
-if ( get_option( $plugin_loaded_key, false ) ) {
-	return;
-}
-update_option( $plugin_loaded_key, true );
-
-// Additional check: prevent loading if already loaded this request
-$load_token = 'puntwork_loaded_' . getmypid();
-if ( isset( $GLOBALS['puntwork_load_tokens'] ) && in_array( $load_token, $GLOBALS['puntwork_load_tokens'] ) ) {
-	return;
-}
-if ( ! isset( $GLOBALS['puntwork_load_tokens'] ) ) {
-	$GLOBALS['puntwork_load_tokens'] = array();
-}
-$GLOBALS['puntwork_load_tokens'][] = $load_token;
-
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -125,7 +108,6 @@ function job_import_deactivate() {
 	wp_clear_scheduled_hook( 'puntwork_social_cron' );
 	
 	// Clear plugin loading flags to allow fresh load on reactivation
-	delete_option( 'puntwork_plugin_loaded_session' );
 	delete_option( 'puntwork_includes_loaded' );
 	delete_option( 'puntwork_setup_done' );
 }
