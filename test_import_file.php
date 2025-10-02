@@ -40,7 +40,7 @@ require_once __DIR__ . '/includes/batch/batch-processing.php';
 $batch_size  = 10;
 $start_index = 0;
 
-$batch = \Puntwork\load_json_batch( $json_path, $start_index, $batch_size );
+$batch = load_json_batch( $json_path, $start_index, $batch_size );
 $batch_items = $batch['items'] ?? $batch; // Handle both return formats
 echo 'Batch loaded: ' . count( $batch_items ) . " items\n";
 
@@ -52,7 +52,7 @@ if ( ! empty( $batch_items ) ) {
 // Test a batch from the middle
 $middle_index = (int) ( $total / 2 );
 echo "\nTesting batch from middle (index $middle_index)...\n";
-$batch_middle = \Puntwork\load_json_batch( $json_path, $middle_index, $batch_size );
+$batch_middle = load_json_batch( $json_path, $middle_index, $batch_size );
 $batch_middle_items = $batch_middle['items'] ?? $batch_middle;
 echo 'Middle batch loaded: ' . count( $batch_middle_items ) . " items\n";
 
@@ -63,7 +63,7 @@ if ( ! empty( $batch_middle_items ) ) {
 // Test end of file
 $end_index = $total - $batch_size;
 echo "\nTesting batch from end (index $end_index)...\n";
-$batch_end = \Puntwork\load_json_batch( $json_path, $end_index, $batch_size );
+$batch_end = load_json_batch( $json_path, $end_index, $batch_size );
 $batch_end_items = $batch_end['items'] ?? $batch_end;
 echo 'End batch loaded: ' . count( $batch_end_items ) . " items\n";
 

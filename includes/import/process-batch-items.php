@@ -210,54 +210,69 @@ function process_item_with_fork($guid, $batch_items, $post_ids_by_guid, $last_up
 		return $result;
 	}
 
+	// Create a pipe for inter-process communication
+	$pipe = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+	if ($pipe === false) {
+		$result['error'] = 'Failed to create communication pipe';
+		return $result;
+	}
+
 	$pid = pcntl_fork();
 
 	if ($pid == -1) {
 		// Fork failed
+		fclose($pipe[0]);
+		fclose($pipe[1]);
 		$result['error'] = 'Failed to fork process';
 		return $result;
 	} elseif ($pid == 0) {
 		// Child process - process the item
 		try {
+			// Close the read end of the pipe in child
+			fclose($pipe[0]);
+
 			$item_result = process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updates, $post_statuses, $all_hashes_by_post, $item_counter);
-			// Send result back to parent via stdout
-			echo json_encode($item_result);
+
+			// Send result back to parent via pipe
+			fwrite($pipe[1], json_encode($item_result));
+			fclose($pipe[1]);
+
 			exit(0);
 		} catch (\Exception $e) {
-			echo json_encode(array('error' => $e->getMessage()));
+			fwrite($pipe[1], json_encode(array('error' => $e->getMessage())));
+			fclose($pipe[1]);
 			exit(1);
 		}
 	} else {
 		// Parent process - wait for child with timeout
+		// Close the write end of the pipe in parent
+		fclose($pipe[1]);
+
 		$start_time = time();
 		$status = null;
-		$output = '';
+		$child_output = '';
 
 		while (time() - $start_time < $timeout_limit) {
 			$wait_result = pcntl_waitpid($pid, $status, WNOHANG);
 
 			if ($wait_result == -1) {
+				fclose($pipe[0]);
 				$result['error'] = 'Error waiting for child process';
-				break;
+				return $result;
 			} elseif ($wait_result > 0) {
-				// Child finished
+				// Child finished - read output from pipe
+				$child_output = '';
+				while (!feof($pipe[0])) {
+					$child_output .= fread($pipe[0], 8192);
+				}
 				break;
-			}
-
-			// Check if child has output
-			$read_pipes = array();
-			$write_pipes = array();
-			$error_pipes = array();
-			$proc = proc_open('true', array(0 => array('pipe', 'r'), 1 => array('pipe', 'w'), 2 => array('pipe', 'w')), $pipes);
-			if (is_resource($proc)) {
-				fclose($pipes[0]);
-				fclose($pipes[1]);
-				fclose($pipes[2]);
-				proc_close($proc);
 			}
 
 			usleep(100000); // 0.1 seconds
 		}
+
+		// Close the pipe
+		fclose($pipe[0]);
 
 		if (time() - $start_time >= $timeout_limit) {
 			// Timeout - kill child process
@@ -265,15 +280,6 @@ function process_item_with_fork($guid, $batch_items, $post_ids_by_guid, $last_up
 			pcntl_waitpid($pid, $status);
 			$result['error'] = 'Item processing timed out after ' . $timeout_limit . ' seconds';
 			return $result;
-		}
-
-		// Read result from child
-		$child_output = '';
-		$handle = fopen('php://fd/' . posix_getpid(), 'r');
-		if ($handle) {
-			stream_set_blocking($handle, false);
-			$child_output = stream_get_contents($handle);
-			fclose($handle);
 		}
 
 		if (!empty($child_output)) {
@@ -402,37 +408,66 @@ function process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updat
 function execute_with_timeout( callable $function, array $args = array(), int $timeout_seconds = 30 ) {
 	$result = null;
 	$timed_out = false;
-	
+
 	// Use pcntl if available for better timeout handling
 	if ( function_exists( 'pcntl_fork' ) && function_exists( 'pcntl_waitpid' ) && function_exists( 'pcntl_signal' ) ) {
+		// Create a pipe for inter-process communication
+		$pipe = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+		if ($pipe === false) {
+			// Fallback to direct execution if pipe creation fails
+			return call_user_func_array( $function, $args );
+		}
+
 		$pid = pcntl_fork();
-		
+
 		if ( $pid == -1 ) {
-			// Fork failed, execute normally
+			// Fork failed, close pipes and execute normally
+			fclose($pipe[0]);
+			fclose($pipe[1]);
 			return call_user_func_array( $function, $args );
 		} elseif ( $pid == 0 ) {
 			// Child process
-			$result = call_user_func_array( $function, $args );
+			fclose($pipe[0]); // Close read end
+
+			try {
+				$result = call_user_func_array( $function, $args );
+				// Send result back to parent via pipe
+				fwrite($pipe[1], serialize($result));
+			} catch ( \Exception $e ) {
+				fwrite($pipe[1], serialize(array('exception' => $e->getMessage())));
+			}
+
+			fclose($pipe[1]);
 			exit( 0 );
 		} else {
 			// Parent process
+			fclose($pipe[1]); // Close write end
+
 			$status = null;
 			$start_time = time();
-			
+
 			while ( time() - $start_time < $timeout_seconds ) {
 				$wait_result = pcntl_waitpid( $pid, $status, WNOHANG );
-				
+
 				if ( $wait_result == -1 ) {
 					// Error waiting
-					break;
+					fclose($pipe[0]);
+					return null;
 				} elseif ( $wait_result > 0 ) {
-					// Child finished
+					// Child finished - read result from pipe
+					$serialized_result = '';
+					while (!feof($pipe[0])) {
+						$serialized_result .= fread($pipe[0], 8192);
+					}
+					$result = unserialize($serialized_result);
 					break;
 				}
-				
+
 				usleep( 100000 ); // 0.1 seconds
 			}
-			
+
+			fclose($pipe[0]);
+
 			if ( time() - $start_time >= $timeout_seconds ) {
 				// Timeout occurred, kill child process
 				posix_kill( $pid, SIGKILL );
@@ -450,16 +485,16 @@ function execute_with_timeout( callable $function, array $args = array(), int $t
 			error_log( '[PUNTWORK] [TIMEOUT] Exception during function execution: ' . $e->getMessage() );
 			$timed_out = true;
 		}
-		
+
 		if ( microtime( true ) - $start_time > $timeout_seconds ) {
 			$timed_out = true;
 			error_log( '[PUNTWORK] [TIMEOUT] Function execution exceeded ' . $timeout_seconds . ' seconds' );
 		}
 	}
-	
+
 	if ( $timed_out ) {
 		return null;
 	}
-	
+
 	return $result;
 }

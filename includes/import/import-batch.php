@@ -176,7 +176,15 @@ if ( ! function_exists( 'import_jobs_from_json' ) ) {
 			// Check for concurrent import lock with recovery
 			$result = \Puntwork\ErrorHandler::executeWithRecovery(
 				'import_lock_check',
-				function() use ( $import_lock_key, $debug_mode ) {
+				function() use ( $import_lock_key, $debug_mode, $is_batch ) {
+					// Skip lock check for batch processing (lock already set by caller)
+					if ( $is_batch ) {
+						if ( $debug_mode ) {
+							error_log( '[PUNTWORK] [IMPORT-LOCK] Skipping lock check for batch processing' );
+						}
+						return true;
+					}
+
 					if ( get_transient( $import_lock_key ) ) {
 						if ( $debug_mode ) {
 							error_log( '[PUNTWORK] [IMPORT-LOCK] Import lock detected: ' . $import_lock_key );
@@ -434,10 +442,12 @@ if ( ! function_exists( 'import_jobs_from_json' ) ) {
 				'logs' => array( 'Fatal error: ' . $e->getMessage() ),
 			);
 		} finally {
-			// Release import lock
-			delete_transient( 'puntwork_import_lock' );
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [IMPORT-LOCK] Import lock released' );
+			// Release import lock (only for non-batch calls)
+			if ( ! $is_batch ) {
+				delete_transient( 'puntwork_import_lock' );
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [IMPORT-LOCK] Import lock released' );
+				}
 			}
 		}
 	}
