@@ -492,46 +492,34 @@ function render_main_import_ui(): void {
 			search: ''
 		};
 
-		function loadJobListings(page = 1, filters = {}) {
-			const container = document.getElementById('job-listings-container');
+		function loadJobListings(page, filters) {
 			const loading = document.getElementById('job-listings-loading');
+			const empty = document.getElementById('job-listings-empty');
 			const table = document.getElementById('job-listings-table');
 			const body = document.getElementById('job-listings-body');
-			const empty = document.getElementById('job-listings-empty');
-			const pagination = document.getElementById('job-pagination');
 
-			// Show loading state
 			loading.style.display = 'block';
-			table.style.display = 'none';
 			empty.style.display = 'none';
-			pagination.style.display = 'none';
+			table.style.display = 'none';
 
-			// Prepare AJAX data
-			const ajaxData = {
-				action: 'puntwork_load_jobs',
-				page: page,
-				per_page: 20,
-				status: filters.status || 'any',
-				search: filters.search || '',
-				nonce: '<?php echo wp_create_nonce( 'puntwork_load_jobs' ); ?>'
-			};
+			const apiKey = '<?php echo esc_js( get_option( 'puntwork_api_key' ) ); ?>';
+			const apiUrl = `${window.location.origin}/wp-json/puntwork/v1/jobs?api_key=${encodeURIComponent(apiKey)}&page=${page}&per_page=20&status=${encodeURIComponent(filters.status || 'any')}&search=${encodeURIComponent(filters.search || '')}`;
 
-			// Make AJAX request
-			fetch(ajaxurl, {
-				method: 'POST',
+			// Make REST API request
+			fetch(apiUrl, {
+				method: 'GET',
 				headers: {
-					'Content-Type': 'application/x-www-form-urlencoded',
-				},
-				body: new URLSearchParams(ajaxData)
+					'Content-Type': 'application/json',
+				}
 			})
 			.then(response => response.json())
 			.then(data => {
 				loading.style.display = 'none';
 
-				if (data.success && data.data && data.data.data && data.data.data.length > 0) {
+				if (data.success && data.data && data.data.length > 0) {
 					// Render job listings
 					body.innerHTML = '';
-					data.data.data.forEach(job => {
+					data.data.forEach(job => {
 						const row = document.createElement('div');
 						row.className = 'job-listings-row';
 						row.innerHTML = `
@@ -559,8 +547,8 @@ function render_main_import_ui(): void {
 
 					// Update pagination
 					currentJobPage = page;
-					totalJobPages = data.data.pagination.total_pages;
-					updateJobPagination(data.data.pagination);
+					totalJobPages = data.pagination.total_pages;
+					updateJobPagination(data.pagination);
 
 				} else {
 					empty.style.display = 'block';
@@ -576,9 +564,7 @@ function render_main_import_ui(): void {
 				`;
 				empty.style.display = 'block';
 			});
-		}
-
-		function updateJobPagination(pagination) {
+		}		function updateJobPagination(pagination) {
 			const paginationEl = document.getElementById('job-pagination');
 			const pageInfo = document.getElementById('job-page-info');
 			const prevBtn = document.getElementById('job-prev-page');
