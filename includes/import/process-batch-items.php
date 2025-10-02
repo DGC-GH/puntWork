@@ -332,114 +332,14 @@ function execute_with_timeout( callable $function, array $args = array(), int $t
 	$result = null;
 	$timed_out = false;
 
-	// Use pcntl if available for better timeout handling
-	if ( function_exists( 'pcntl_fork' ) && function_exists( 'pcntl_waitpid' ) && function_exists( 'pcntl_signal' ) ) {
-		// Create a pipe for inter-process communication
-		$pipe = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
-		if ($pipe === false) {
-			// Fallback to direct execution if pipe creation fails
-			return call_user_func_array( $function, $args );
-		}
-
-		// Validate pipe resources
-		if (!is_resource($pipe[0]) || !is_resource($pipe[1])) {
-			if (is_resource($pipe[0])) fclose($pipe[0]);
-			if (is_resource($pipe[1])) fclose($pipe[1]);
-			return call_user_func_array( $function, $args );
-		}
-
-		$pid = pcntl_fork();
-
-		if ( $pid == -1 ) {
-			// Fork failed, close pipes and execute normally
-			fclose($pipe[0]);
-			fclose($pipe[1]);
-			return call_user_func_array( $function, $args );
-		} elseif ( $pid == 0 ) {
-			// Child process
-			fclose($pipe[0]); // Close read end
-
-			try {
-				$result = call_user_func_array( $function, $args );
-				// Send result back to parent via pipe
-				if (is_resource($pipe[1])) {
-					fwrite($pipe[1], serialize($result));
-				}
-			} catch ( \Exception $e ) {
-				if (is_resource($pipe[1])) {
-					fwrite($pipe[1], serialize(array('exception' => $e->getMessage())));
-				}
-			}
-
-			if (is_resource($pipe[1])) {
-				fclose($pipe[1]);
-			}
-			exit( 0 );
-		} else {
-			// Parent process
-			fclose($pipe[1]); // Close write end
-
-			$status = null;
-			$start_time = time();
-
-			while ( time() - $start_time < $timeout_seconds ) {
-				$wait_result = pcntl_waitpid( $pid, $status, WNOHANG );
-
-				if ( $wait_result == -1 ) {
-					// Error waiting
-					fclose($pipe[0]);
-					return null;
-				} elseif ( $wait_result > 0 ) {
-					// Child finished - read result from pipe
-					$serialized_result = '';
-					try {
-						while (!feof($pipe[0]) && is_resource($pipe[0])) {
-							$data = fread($pipe[0], 8192);
-							if ($data === false) {
-								error_log( '[PUNTWORK] [TIMEOUT] Failed to read from pipe in execute_with_timeout' );
-								break;
-							}
-							$serialized_result .= $data;
-						}
-						$result = unserialize($serialized_result);
-					} catch (\Exception $e) {
-						error_log( '[PUNTWORK] [TIMEOUT] Exception reading from pipe in execute_with_timeout: ' . $e->getMessage() );
-						$result = null;
-					}
-					break;
-				}
-
-				usleep( 100000 ); // 0.1 seconds
-			}
-
-			fclose($pipe[0]);
-
-			if ( time() - $start_time >= $timeout_seconds ) {
-				// Timeout occurred, kill child process
-				posix_kill( $pid, SIGKILL );
-				pcntl_waitpid( $pid, $status );
-				$timed_out = true;
-				error_log( '[PUNTWORK] [TIMEOUT] Function execution timed out after ' . $timeout_seconds . ' seconds' );
-			}
-		}
-	} else {
-		// Fallback: simple time-based timeout (less reliable)
-		$start_time = microtime( true );
-		try {
-			$result = call_user_func_array( $function, $args );
-		} catch ( \Exception $e ) {
-			error_log( '[PUNTWORK] [TIMEOUT] Exception during function execution: ' . $e->getMessage() );
-			$timed_out = true;
-		}
-
-		if ( microtime( true ) - $start_time > $timeout_seconds ) {
-			$timed_out = true;
-			error_log( '[PUNTWORK] [TIMEOUT] Function execution exceeded ' . $timeout_seconds . ' seconds' );
-		}
-	}
-
-	if ( $timed_out ) {
-		return null;
+	// DISABLED: Forking causes issues with WordPress database connections in child processes
+	// Always execute directly to avoid fork-related errors
+	error_log( '[PUNTWORK] [TIMEOUT] Forking disabled, executing directly' );
+	try {
+		$result = call_user_func_array( $function, $args );
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] [TIMEOUT] Exception during direct execution: ' . $e->getMessage() );
+		$timed_out = true;
 	}
 
 	return $result;
