@@ -13,13 +13,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-function combine_jsonl_files( $feeds, $output_dir, $total_items, &$logs ) {
+function combine_jsonl_files( $feeds, $output_dir, $total_items, &$logs, $chunk_size = 0, $chunk_offset = 0 ) {
 	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
 	if ( $debug_mode ) {
 		error_log( '[PUNTWORK] [JSONL-COMBINE-START] ===== COMBINE_JSONL_FILES START =====' );
 		error_log( '[PUNTWORK] [JSONL-COMBINE-START] feeds count: ' . count( $feeds ) );
 		error_log( '[PUNTWORK] [JSONL-COMBINE-START] total_items: ' . $total_items );
+		error_log( '[PUNTWORK] [JSONL-COMBINE-START] chunk_size: ' . $chunk_size );
+		error_log( '[PUNTWORK] [JSONL-COMBINE-START] chunk_offset: ' . $chunk_offset );
 		error_log( '[PUNTWORK] [JSONL-COMBINE-START] output_dir: ' . $output_dir );
 		error_log( '[PUNTWORK] [JSONL-COMBINE-START] Memory usage at start: ' . memory_get_usage( true ) . ' bytes' );
 	}
@@ -60,6 +62,14 @@ function combine_jsonl_files( $feeds, $output_dir, $total_items, &$logs ) {
 		}
 
 		return;
+	}
+
+	// For chunked processing, use a different approach
+	if ( $chunk_size > 0 ) {
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [JSONL-COMBINE-DEBUG] Using chunked processing mode' );
+		}
+		return combine_jsonl_files_chunked( $feeds, $output_dir, $total_items, $logs, $chunk_size, $chunk_offset );
 	}
 
 	// Log details of existing files
@@ -374,4 +384,187 @@ function combine_jsonl_files_fallback( $feeds, $output_dir, $total_items, &$logs
 	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 		error_log( '[PUNTWORK] [JSONL-COMBINE] Fallback: GZIP compression completed for ' . $combined_gz_path );
 	}
+}
+
+/**
+ * Chunked JSONL combination to avoid timeouts with large datasets.
+ */
+function combine_jsonl_files_chunked( $feeds, $output_dir, $total_items, &$logs, $chunk_size, $chunk_offset ) {
+	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
+
+	if ( $debug_mode ) {
+		error_log( '[PUNTWORK] [JSONL-CHUNKED] ===== COMBINE_JSONL_FILES_CHUNKED START =====' );
+		error_log( '[PUNTWORK] [JSONL-CHUNKED] chunk_size: ' . $chunk_size . ', chunk_offset: ' . $chunk_offset );
+	}
+
+	$combined_json_path = $output_dir . 'combined-jobs.jsonl';
+	$temp_json_path     = $output_dir . 'combined-jobs.jsonl.temp';
+
+	// For first chunk, initialize the temp file
+	if ( $chunk_offset === 0 ) {
+		if ( file_exists( $temp_json_path ) ) {
+			unlink( $temp_json_path );
+		}
+		if ( file_exists( $combined_json_path ) ) {
+			unlink( $combined_json_path );
+		}
+	}
+
+	// Open temp file for appending
+	$temp_handle = fopen( $temp_json_path, 'a' );
+	if ( ! $temp_handle ) {
+		throw new \Exception( 'Cannot open temp file for writing: ' . $temp_json_path );
+	}
+
+	$seen_guids      = array();
+	$duplicate_count = 0;
+	$unique_count    = 0;
+	$processed_count = 0;
+	$max_to_process  = $chunk_size;
+
+	PuntWorkLogger::info(
+		'Chunked JSONL file combination started',
+		PuntWorkLogger::CONTEXT_FEED,
+		array(
+			'feeds_count'  => count( $feeds ),
+			'output_dir'   => $output_dir,
+			'total_items'  => $total_items,
+			'chunk_size'   => $chunk_size,
+			'chunk_offset' => $chunk_offset,
+		)
+	);
+
+	if ( $debug_mode ) {
+		error_log( '[PUNTWORK] [JSONL-CHUNKED] Starting chunked JSONL combination, chunk_size=' . $chunk_size . ', offset=' . $chunk_offset );
+	}
+
+	foreach ( $feeds as $feed_key => $url ) {
+		$feed_json_path = $output_dir . $feed_key . '.jsonl';
+
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [JSONL-CHUNKED] Processing feed: ' . $feed_key . ', file: ' . $feed_json_path );
+		}
+
+		if ( ! file_exists( $feed_json_path ) ) {
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [JSONL-CHUNKED] Feed file not found: ' . $feed_json_path );
+			}
+			continue;
+		}
+
+		$feed_handle = fopen( $feed_json_path, 'r' );
+		if ( ! $feed_handle ) {
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [JSONL-CHUNKED] Could not open feed file: ' . $feed_json_path );
+			}
+			continue;
+		}
+
+		$line_number = 0;
+		while ( ( $line = fgets( $feed_handle ) ) !== false ) {
+			$line = trim( $line );
+			if ( empty( $line ) ) {
+				continue;
+			}
+
+			// Skip lines before offset
+			if ( $processed_count < $chunk_offset ) {
+				++$processed_count;
+				continue;
+			}
+
+			// Stop if we've processed enough for this chunk
+			if ( $processed_count >= $chunk_offset + $max_to_process ) {
+				break 2; // Break out of both loops
+			}
+
+			// Parse JSON to check GUID
+			$job_data = json_decode( $line, true );
+			if ( $job_data == null ) {
+				// Invalid JSON, skip
+				PuntWorkLogger::debug( 'Skipping invalid JSON line in feed: ' . $feed_key, PuntWorkLogger::CONTEXT_FEED );
+				++$processed_count;
+				continue;
+			}
+
+			$guid = isset( $job_data['guid'] ) ? trim( $job_data['guid'] ) : '';
+			if ( empty( $guid ) ) {
+				// No GUID, include but log
+				fwrite( $temp_handle, $line . "\n" );
+				++$unique_count;
+				++$processed_count;
+				continue;
+			}
+
+			// Check for duplicates (in this chunk only, since we can't maintain full state across chunks)
+			if ( isset( $seen_guids[ $guid ] ) ) {
+				++$duplicate_count;
+				++$processed_count;
+				continue; // Skip duplicate
+			}
+
+			// New unique job
+			$seen_guids[ $guid ] = true;
+			fwrite( $temp_handle, $line . "\n" );
+			++$unique_count;
+			++$processed_count;
+		}
+
+		fclose( $feed_handle );
+
+		// Check if we've reached the chunk limit
+		if ( $processed_count >= $chunk_offset + $max_to_process ) {
+			break;
+		}
+	}
+
+	fclose( $temp_handle );
+
+	$chunk_processed = $processed_count - $chunk_offset;
+
+	if ( $debug_mode ) {
+		error_log( '[PUNTWORK] [JSONL-CHUNKED] Chunk processed: ' . $chunk_processed . ' items, unique_count=' . $unique_count . ', duplicate_count=' . $duplicate_count );
+	}
+
+	// Check if this is the final chunk
+	$is_final_chunk = ( $processed_count >= $total_items );
+
+	if ( $is_final_chunk ) {
+		// Rename temp file to final file
+		if ( file_exists( $combined_json_path ) ) {
+			unlink( $combined_json_path );
+		}
+		rename( $temp_json_path, $combined_json_path );
+
+		$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "Chunked JSONL combination completed ($unique_count unique items, $duplicate_count duplicates removed)";
+
+		PuntWorkLogger::info(
+			'Chunked JSONL combination completed',
+			PuntWorkLogger::CONTEXT_FEED,
+			array(
+				'unique_count'    => $unique_count,
+				'duplicate_count' => $duplicate_count,
+				'total_processed' => $unique_count + $duplicate_count,
+				'chunks_used'     => ceil( $total_items / $chunk_size ),
+			)
+		);
+
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [JSONL-CHUNKED] Final chunk completed, unique_count=' . $unique_count . ', duplicate_count=' . $duplicate_count );
+		}
+	} else {
+		$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "Chunked JSONL combination progress: processed $chunk_processed items in this chunk";
+
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [JSONL-CHUNKED] Chunk completed, more chunks needed' );
+		}
+	}
+
+	return array(
+		'processed_in_chunk' => $chunk_processed,
+		'unique_count'       => $unique_count,
+		'duplicate_count'    => $duplicate_count,
+		'is_final_chunk'     => $is_final_chunk,
+		'next_offset'        => $processed_count,
+	);
 }

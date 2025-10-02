@@ -1405,7 +1405,7 @@ function process_feed_ajax() {
 				'item_count' => $item_count,
 				'feed_url'   => $feed_url,
 			)
-		);
+			);
 
 		PuntWorkLogger::logAjaxResponse(
 			'process_feed',
@@ -1525,73 +1525,109 @@ function combine_jsonl_ajax() {
 		$logs = array();
 		error_log( '[PUNTWORK] [DEBUG-PHP] Calling combine_jsonl_files...' );
 
-		try {
-			$start_time = microtime( true );
-			combine_jsonl_files( $feeds, $output_dir, $total_items, $logs );
-			$end_time        = microtime( true );
-			$processing_time = $end_time - $start_time;
-			error_log( '[PUNTWORK] [DEBUG-PHP] combine_jsonl_files completed in ' . round( $processing_time, 2 ) . ' seconds' );
-		} catch ( \Exception $e ) {
-			error_log( '[PUNTWORK] [DEBUG-PHP] combine_jsonl_files threw exception: ' . $e->getMessage() );
-			error_log( '[PUNTWORK] [DEBUG-PHP] Exception file: ' . $e->getFile() . ':' . $e->getLine() );
-			error_log( '[PUNTWORK] [DEBUG-PHP] Exception trace: ' . $e->getTraceAsString() );
-			\Puntwork\PuntWorkLogger::error(
-				'JSONL combination failed with exception',
-				\Puntwork\PuntWorkLogger::CONTEXT_AJAX,
-				array(
-					'total_items' => $total_items,
-					'error'       => $e->getMessage(),
-					'error_file'  => $e->getFile(),
-					'error_line'  => $e->getLine(),
-				)
-			);
-			wp_send_json_error( array( 'message' => 'JSONL combination failed: ' . $e->getMessage() ) );
+		// Use chunked processing for large datasets to avoid timeouts
+		$chunk_size = 1000; // Process 1000 items per chunk
+		if ( $total_items > $chunk_size ) {
+			error_log( '[PUNTWORK] [DEBUG-PHP] Using chunked processing for large dataset (' . $total_items . ' items)' );
 
-			return;
+			$chunk_offset = 0;
+			$total_processed = 0;
+			$chunks_processed = 0;
+
+			while ( $chunk_offset < $total_items ) {
+				try {
+					$start_time = microtime( true );
+					$chunk_result = combine_jsonl_files( $feeds, $output_dir, $total_items, $logs, $chunk_size, $chunk_offset );
+					$end_time = microtime( true );
+					$chunk_time = $end_time - $start_time;
+
+					$total_processed += $chunk_result['processed_in_chunk'];
+					$chunks_processed++;
+
+					error_log( '[PUNTWORK] [DEBUG-PHP] Chunk ' . $chunks_processed . ' processed in ' . round( $chunk_time, 2 ) . ' seconds: ' . $chunk_result['processed_in_chunk'] . ' items' );
+
+					if ( $chunk_result['is_final_chunk'] ) {
+						break;
+					}
+
+					$chunk_offset = $chunk_result['next_offset'];
+
+					// Safety check to prevent infinite loops
+					if ( $chunks_processed > 100 ) {
+						error_log( '[PUNTWORK] [DEBUG-PHP] Too many chunks processed, stopping to prevent infinite loop' );
+						break;
+					}
+				} catch ( \Exception $e ) {
+					error_log( '[PUNTWORK] [DEBUG-PHP] Exception in chunked processing: ' . $e->getMessage() );
+					error_log( '[PUNTWORK] [DEBUG-PHP] Exception file: ' . $e->getFile() . ':' . $e->getLine() );
+					error_log( '[PUNTWORK] [DEBUG-PHP] Exception trace: ' . $e->getTraceAsString() );
+					\Puntwork\PuntWorkLogger::error(
+						'JSONL combination failed with exception',
+						\Puntwork\PuntWorkLogger::CONTEXT_AJAX,
+						array(
+							'total_items' => $total_items,
+							'error'       => $e->getMessage(),
+							'error_file'  => $e->getFile(),
+							'error_line'  => $e->getLine(),
+						)
+					);
+					delete_transient( $combine_lock_key ); // Clear lock
+					wp_send_json_error( array( 'message' => 'JSONL combination failed: ' . $e->getMessage() ) );
+
+					return;
+				}
+			}
+
+			error_log( '[PUNTWORK] [DEBUG-PHP] Chunked processing completed: ' . $chunks_processed . ' chunks, ' . $total_processed . ' total items' );
+		} else {
+			try {
+				$start_time = microtime( true );
+				combine_jsonl_files( $feeds, $output_dir, $total_items, $logs );
+				$end_time        = microtime( true );
+				$processing_time = $end_time - $start_time;
+				error_log( '[PUNTWORK] [DEBUG-PHP] combine_jsonl_files completed in ' . round( $processing_time, 2 ) . ' seconds' );
+			} catch ( \Exception $e ) {
+				error_log( '[PUNTWORK] [DEBUG-PHP] combine_jsonl_files threw exception: ' . $e->getMessage() );
+				error_log( '[PUNTWORK] [DEBUG-PHP] Exception file: ' . $e->getFile() . ':' . $e->getLine() );
+				error_log( '[PUNTWORK] [DEBUG-PHP] Exception trace: ' . $e->getTraceAsString() );
+				\Puntwork\PuntWorkLogger::error(
+					'JSONL combination failed with exception',
+					\Puntwork\PuntWorkLogger::CONTEXT_AJAX,
+					array(
+						'total_items' => $total_items,
+						'error'       => $e->getMessage(),
+						'error_file'  => $e->getFile(),
+						'error_line'  => $e->getLine(),
+					)
+				);
+				delete_transient( $combine_lock_key ); // Clear lock
+				wp_send_json_error( array( 'message' => 'JSONL combination failed: ' . $e->getMessage() ) );
+
+				return;
+			}
 		}
+
+		// Clear combination processing lock
+		delete_transient( $combine_lock_key );
+
 		error_log( '[PUNTWORK] [DEBUG-PHP] Logs from combination: ' . json_encode( $logs ) );
 
-		// Check if combined file was created and start import automatically
+		// Check if combined file was created
 		$combined_file = $output_dir . 'combined-jobs.jsonl';
 		if ( file_exists( $combined_file ) ) {
 			$file_size = filesize( $combined_file );
 			error_log( '[PUNTWORK] [DEBUG-PHP] Combined file created: ' . $combined_file . ' (' . $file_size . ' bytes)' );
 
-			// Start the import automatically after JSONL combination
-			if ( $file_size > 0 ) {
-				// Start import directly instead of scheduling to avoid cron dependency
-				error_log( '[PUNTWORK] [DEBUG-PHP] Starting automatic import immediately after JSONL combination' );
-				
-				try {
-					// Include the import functions if not already loaded
-					if ( ! function_exists( 'start_scheduled_import' ) ) {
-						require_once __DIR__ . '/../import/import-batch.php';
-					}
-					
-					// Start the import
-					start_scheduled_import();
-					
-					PuntWorkLogger::info(
-						'JSONL combination completed, import started immediately',
-						PuntWorkLogger::CONTEXT_AJAX,
-						array(
-							'total_items'        => $total_items,
-							'combined_file_size' => $file_size,
-						)
-					);
-				} catch ( \Exception $e ) {
-					error_log( '[PUNTWORK] [DEBUG-PHP] Failed to start import after JSONL combination: ' . $e->getMessage() );
-					PuntWorkLogger::error(
-						'Failed to start import after JSONL combination',
-						PuntWorkLogger::CONTEXT_AJAX,
-						array(
-							'error' => $e->getMessage(),
-						)
-					);
-				}
-			} else {
-				error_log( '[PUNTWORK] [DEBUG-PHP] Combined file created but is empty' );
-			}
+			// Note: Import is now started separately by the user after combination completes
+			// This prevents cascading timeouts where combination succeeds but import start fails
+			PuntWorkLogger::info(
+				'JSONL combination completed successfully, ready for import',
+				PuntWorkLogger::CONTEXT_AJAX,
+				array(
+					'total_items'        => $total_items,
+					'combined_file_size' => $file_size,
+				)
+			);
 		} else {
 			error_log( '[PUNTWORK] [DEBUG-PHP] Combined file was not created' );
 		}
@@ -1605,9 +1641,6 @@ function combine_jsonl_ajax() {
 				'combined_file_size'   => $file_size ?? 0,
 			)
 		);
-
-		// Clear combination processing lock
-		delete_transient( $combine_lock_key );
 
 		error_log( '[PUNTWORK] [DEBUG-PHP] ===== COMBINE_JSONL_AJAX SUCCESS =====' );
 		wp_send_json_success(
