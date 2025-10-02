@@ -1559,18 +1559,36 @@ function combine_jsonl_ajax() {
 
 			// Start the import automatically after JSONL combination
 			if ( $file_size > 0 ) {
-				// Import will start automatically via scheduled import
-				error_log( '[PUNTWORK] [DEBUG-PHP] Scheduling automatic import start in 5 seconds' );
-				wp_schedule_single_event( time() + 5, 'puntwork_start_scheduled_import' );
-
-				PuntWorkLogger::info(
-					'JSONL combination completed, scheduled automatic import start',
-					PuntWorkLogger::CONTEXT_AJAX,
-					array(
-						'total_items'        => $total_items,
-						'combined_file_size' => $file_size,
-					)
-				);
+				// Start import directly instead of scheduling to avoid cron dependency
+				error_log( '[PUNTWORK] [DEBUG-PHP] Starting automatic import immediately after JSONL combination' );
+				
+				try {
+					// Include the import functions if not already loaded
+					if ( ! function_exists( 'start_scheduled_import' ) ) {
+						require_once __DIR__ . '/../import/import-batch.php';
+					}
+					
+					// Start the import
+					start_scheduled_import();
+					
+					PuntWorkLogger::info(
+						'JSONL combination completed, import started immediately',
+						PuntWorkLogger::CONTEXT_AJAX,
+						array(
+							'total_items'        => $total_items,
+							'combined_file_size' => $file_size,
+						)
+					);
+				} catch ( \Exception $e ) {
+					error_log( '[PUNTWORK] [DEBUG-PHP] Failed to start import after JSONL combination: ' . $e->getMessage() );
+					PuntWorkLogger::error(
+						'Failed to start import after JSONL combination',
+						PuntWorkLogger::CONTEXT_AJAX,
+						array(
+							'error' => $e->getMessage(),
+						)
+					);
+				}
 			} else {
 				error_log( '[PUNTWORK] [DEBUG-PHP] Combined file created but is empty' );
 			}
