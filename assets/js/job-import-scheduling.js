@@ -99,7 +99,7 @@
             var schedule = data.schedule;
 
             // Update form controls
-            $('#schedule-enabled').prop('checked', schedule.enabled);
+            $('#schedule-enabled')[0].checked = schedule.enabled;
 
             $('#schedule-frequency').val(schedule.frequency);
             $('#schedule-interval').val(schedule.interval);
