@@ -458,8 +458,8 @@ function execute_with_timeout( callable $function, array $args = array(), int $t
 
 		// Validate pipe resources
 		if (!is_resource($pipe[0]) || !is_resource($pipe[1])) {
-			fclose($pipe[0]);
-			fclose($pipe[1]);
+			if (is_resource($pipe[0])) fclose($pipe[0]);
+			if (is_resource($pipe[1])) fclose($pipe[1]);
 			return call_user_func_array( $function, $args );
 		}
 

@@ -600,6 +600,9 @@ function update_intermediate_batch_status( int $processed_count, int $total_in_b
 
 	// Get current status
 	$current_status = get_option( 'job_import_status', array() );
+	if (!is_array($current_status)) {
+		$current_status = array();
+	}
 	error_log( '[PUNTWORK] [UI-STATUS] Current status from DB: processed=' . ( $current_status['processed'] ?? 'null' ) . ', total=' . ( $current_status['total'] ?? 'null' ) . ', last_update=' . ( isset( $current_status['last_update'] ) ? date( 'H:i:s', $current_status['last_update'] ) : 'null' ) );
 
 	// Calculate total processed so far (previous batches + current batch progress)
