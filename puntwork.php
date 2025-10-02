@@ -56,9 +56,10 @@ ini_set( 'memory_limit', '1024M' );
 
 $debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
-if ( $debug_mode ) {
-	error_log( '[PUNTWORK] [PLUGIN-LOAD] ===== PLUGIN INITIALIZATION START =====' );
-}
+// Temporarily disabled to reduce log clutter
+// if ( $debug_mode ) {
+// 	error_log( '[PUNTWORK] [PLUGIN-LOAD] ===== PLUGIN INITIALIZATION START =====' );
+// }
 
 // =====================================================================================
 // END PLUGIN INITIALIZATION
