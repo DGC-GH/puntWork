@@ -3,7 +3,15 @@
 /**
  * Plugin Name: puntWork
  * Description: Advanced job import plugin with multi-format feed support,
- *     real-time analytics, health monitoring, AI-powered features, CRM integrations,
+ // Deactivation hook
+register_deactivation_hook( __FILE__, __NAMESPACE__ . '\\job_import_deactivate' );
+function job_import_deactivate() {
+	wp_clear_scheduled_hook( 'job_import_cron' );
+	wp_clear_scheduled_hook( 'puntwork_social_cron' );
+	
+	// Clear plugin loading flags to allow fresh load on reactivation
+	delete_option( 'puntwork_setup_done' );
+}time analytics, health monitoring, AI-powered features, CRM integrations,
  *     multi-site support, horizontal scaling, GraphQL API, webhooks, and mobile app.
  * Version: 0.0.4
  * Author: DGC-GH
@@ -185,14 +193,6 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 
 		// Prevent multiple include loading with a global flag
 		if ( isset( $GLOBALS['puntwork_includes_loaded'] ) && $GLOBALS['puntwork_includes_loaded'] ) {
-			return;
-		}
-
-		// Prevent multiple include loading across requests using WordPress option
-		$includes_option_key = 'puntwork_includes_loaded';
-		$includes_loaded_option = get_option( $includes_option_key, false );
-		if ( $includes_loaded_option ) {
-			$GLOBALS['puntwork_includes_loaded'] = true;
 			return;
 		}
 
@@ -414,7 +414,6 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 		}
 
 		$GLOBALS['puntwork_includes_loaded'] = true;
-		update_option( $includes_option_key, true );
 	}
 }
 
