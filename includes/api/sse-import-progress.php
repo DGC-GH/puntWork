@@ -796,3 +796,650 @@ function get_analytics_data_for_sse( $period = '30days' ) {
 		);
 	}
 }
+
+/**
+ * Get activity logs for SSE
+ */
+function get_activity_logs_for_sse( $limit = 20 ) {
+	try {
+		global $wpdb;
+		
+		$table_name = $wpdb->prefix . 'puntwork_logs';
+		
+		// Check if table exists
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_name'" ) != $table_name ) {
+			return array();
+		}
+		
+		$logs = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM $table_name ORDER BY timestamp DESC LIMIT %d",
+				$limit
+			),
+			ARRAY_A
+		);
+		
+		if ( ! $logs ) {
+			return array();
+		}
+		
+		// Format logs for SSE
+		$formatted_logs = array();
+		foreach ( $logs as $log ) {
+			$formatted_logs[] = array(
+				'level' => $log['level'] ?? 'info',
+				'message' => $log['message'] ?? 'Unknown event',
+				'timestamp' => $log['timestamp'] ?? time(),
+			);
+		}
+		
+		return $formatted_logs;
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] SSE: Error getting activity logs: ' . $e->getMessage() );
+		return array();
+	}
+}
+
+/*
+ * Register REST API endpoints for monitoring actions
+ */
+add_action( 'rest_api_init', __NAMESPACE__ . '\\register_monitoring_api_routes' );
+function register_monitoring_api_routes() {
+	error_log( '[PUNTWORK] SSE: register_monitoring_api_routes called' );
+	
+	// Activity logs endpoint
+	register_rest_route(
+		'puntwork/v1',
+		'/monitoring/activity-logs',
+		array(
+			'methods'             => 'GET',
+			'callback'            => __NAMESPACE__ . '\\handle_get_activity_logs',
+			'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
+			'args'                => array(
+				'api_key' => array(
+					'required'    => true,
+					'type'        => 'string',
+					'description' => 'API key for authentication',
+				),
+				'limit' => array(
+					'required'    => false,
+					'type'        => 'integer',
+					'default'     => 20,
+					'description' => 'Number of logs to retrieve',
+				),
+			),
+		)
+	);
+	
+	// Clear logs endpoint
+	register_rest_route(
+		'puntwork/v1',
+		'/monitoring/clear-logs',
+		array(
+			'methods'             => 'POST',
+			'callback'            => __NAMESPACE__ . '\\handle_clear_old_logs',
+			'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
+			'args'                => array(
+				'api_key' => array(
+					'required'    => true,
+					'type'        => 'string',
+					'description' => 'API key for authentication',
+				),
+			),
+		)
+	);
+	
+	// Save alert settings endpoint
+	register_rest_route(
+		'puntwork/v1',
+		'/monitoring/alert-settings',
+		array(
+			'methods'             => 'POST',
+			'callback'            => __NAMESPACE__ . '\\handle_save_alert_settings',
+			'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
+			'args'                => array(
+				'api_key' => array(
+					'required'    => true,
+					'type'        => 'string',
+					'description' => 'API key for authentication',
+				),
+				'email_enabled' => array(
+					'required' => false,
+					'type'     => 'boolean',
+					'default'  => true,
+				),
+				'email_recipients' => array(
+					'required' => false,
+					'type'     => 'string',
+					'default'  => '',
+				),
+				'alert_types' => array(
+					'required' => false,
+					'type'     => 'object',
+					'default'  => array(),
+				),
+			),
+		)
+	);
+	
+	error_log( '[PUNTWORK] SSE: Monitoring API routes registered successfully' );
+}
+
+/*
+ * Register REST API endpoints for feed management
+ */
+add_action( 'rest_api_init', __NAMESPACE__ . '\\register_feed_api_routes' );
+function register_feed_api_routes() {
+	error_log( '[PUNTWORK] SSE: register_feed_api_routes called' );
+	
+	// Get feeds endpoint
+	register_rest_route(
+		'puntwork/v1',
+		'/feeds',
+		array(
+			'methods'             => 'GET',
+			'callback'            => __NAMESPACE__ . '\\handle_get_feeds',
+			'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
+			'args'                => array(
+				'api_key' => array(
+					'required'    => true,
+					'type'        => 'string',
+					'description' => 'API key for authentication',
+				),
+			),
+		)
+	);
+	
+	// Save feed endpoint
+	register_rest_route(
+		'puntwork/v1',
+		'/feeds',
+		array(
+			'methods'             => 'POST',
+			'callback'            => __NAMESPACE__ . '\\handle_save_feed',
+			'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
+			'args'                => array(
+				'api_key' => array(
+					'required'    => true,
+					'type'        => 'string',
+					'description' => 'API key for authentication',
+				),
+				'feed_title' => array(
+					'required' => true,
+					'type'     => 'string',
+				),
+				'feed_url' => array(
+					'required' => true,
+					'type'     => 'string',
+				),
+				'feed_slug' => array(
+					'required' => true,
+					'type'     => 'string',
+				),
+				'feed_enabled' => array(
+					'required' => false,
+					'type'     => 'boolean',
+					'default'  => true,
+				),
+			),
+		)
+	);
+	
+	// Update feed status endpoint
+	register_rest_route(
+		'puntwork/v1',
+		'/feeds/(?P<feed_id>\d+)/status',
+		array(
+			'methods'             => 'POST',
+			'callback'            => __NAMESPACE__ . '\\handle_update_feed_status',
+			'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
+			'args'                => array(
+				'api_key' => array(
+					'required'    => true,
+					'type'        => 'string',
+					'description' => 'API key for authentication',
+				),
+				'feed_id' => array(
+					'required' => true,
+					'type'     => 'integer',
+				),
+				'enabled' => array(
+					'required' => true,
+					'type'     => 'boolean',
+				),
+			),
+		)
+	);
+	
+	// Delete feed endpoint
+	register_rest_route(
+		'puntwork/v1',
+		'/feeds/(?P<feed_id>\d+)',
+		array(
+			'methods'             => 'DELETE',
+			'callback'            => __NAMESPACE__ . '\\handle_delete_feed',
+			'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
+			'args'                => array(
+				'api_key' => array(
+					'required'    => true,
+					'type'        => 'string',
+					'description' => 'API key for authentication',
+				),
+				'feed_id' => array(
+					'required' => true,
+					'type'     => 'integer',
+				),
+			),
+		)
+	);
+	
+	// Save feed order endpoint
+	register_rest_route(
+		'puntwork/v1',
+		'/feeds/order',
+		array(
+			'methods'             => 'POST',
+			'callback'            => __NAMESPACE__ . '\\handle_save_feed_order',
+			'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
+			'args'                => array(
+				'api_key' => array(
+					'required'    => true,
+					'type'        => 'string',
+					'description' => 'API key for authentication',
+				),
+				'feed_order' => array(
+					'required' => true,
+					'type'     => 'array',
+				),
+			),
+		)
+	);
+	
+	error_log( '[PUNTWORK] SSE: Feed API routes registered successfully' );
+}
+
+/**
+ * Handle GET request for feeds
+ */
+function handle_get_feeds( $request ) {
+	try {
+		global $wpdb;
+		
+		$table_name = $wpdb->prefix . 'puntwork_feeds';
+		
+		// Check if table exists
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_name'" ) != $table_name ) {
+			return new \WP_REST_Response(
+				array(
+					'success' => true,
+					'data'    => array(
+						'feeds' => array(),
+					),
+				),
+				200
+			);
+		}
+		
+		$feeds = $wpdb->get_results( "SELECT * FROM $table_name ORDER BY feed_order ASC, id ASC", ARRAY_A );
+		
+		if ( ! $feeds ) {
+			$feeds = array();
+		}
+		
+		return new \WP_REST_Response(
+			array(
+				'success' => true,
+				'data'    => array(
+					'feeds' => $feeds,
+				),
+			),
+			200
+		);
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] SSE: Error getting feeds: ' . $e->getMessage() );
+		return new \WP_Error(
+			'get_feeds_error',
+			'Failed to retrieve feeds: ' . $e->getMessage(),
+			array( 'status' => 500 )
+		);
+	}
+}
+
+/**
+ * Handle POST request to save feed
+ */
+function handle_save_feed( $request ) {
+	try {
+		global $wpdb;
+		
+		$table_name = $wpdb->prefix . 'puntwork_feeds';
+		
+		$feed_title = sanitize_text_field( $request->get_param( 'feed_title' ) );
+		$feed_url = esc_url_raw( $request->get_param( 'feed_url' ) );
+		$feed_slug = sanitize_title( $request->get_param( 'feed_slug' ) );
+		$feed_enabled = (bool) $request->get_param( 'feed_enabled' );
+		
+		// Validate required fields
+		if ( empty( $feed_title ) || empty( $feed_url ) || empty( $feed_slug ) ) {
+			return new \WP_Error(
+				'invalid_feed_data',
+				'Feed title, URL, and slug are required',
+				array( 'status' => 400 )
+			);
+		}
+		
+		// Check if slug already exists
+		$existing = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM $table_name WHERE feed_slug = %s",
+				$feed_slug
+			)
+		);
+		
+		if ( $existing ) {
+			return new \WP_Error(
+				'feed_slug_exists',
+				'A feed with this slug already exists',
+				array( 'status' => 400 )
+			);
+		}
+		
+		// Get next order
+		$max_order = $wpdb->get_var( "SELECT MAX(feed_order) FROM $table_name" );
+		$next_order = $max_order ? $max_order + 1 : 1;
+		
+		$result = $wpdb->insert(
+			$table_name,
+			array(
+				'feed_title'   => $feed_title,
+				'feed_url'     => $feed_url,
+				'feed_slug'    => $feed_slug,
+				'feed_enabled' => $feed_enabled ? 1 : 0,
+				'feed_order'   => $next_order,
+				'created_at'   => current_time( 'mysql' ),
+				'updated_at'   => current_time( 'mysql' ),
+			),
+			array( '%s', '%s', '%s', '%d', '%d', '%s', '%s' )
+		);
+		
+		if ( $result === false ) {
+			throw new \Exception( 'Database insert failed' );
+		}
+		
+		return new \WP_REST_Response(
+			array(
+				'success' => true,
+				'message' => 'Feed saved successfully',
+				'data'    => array(
+					'feed_id' => $wpdb->insert_id,
+				),
+			),
+			201
+		);
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] SSE: Error saving feed: ' . $e->getMessage() );
+		return new \WP_Error(
+			'save_feed_error',
+			'Failed to save feed: ' . $e->getMessage(),
+			array( 'status' => 500 )
+		);
+	}
+}
+
+/**
+ * Handle POST request to update feed status
+ */
+function handle_update_feed_status( $request ) {
+	try {
+		global $wpdb;
+		
+		$table_name = $wpdb->prefix . 'puntwork_feeds';
+		$feed_id = (int) $request->get_param( 'feed_id' );
+		$enabled = (bool) $request->get_param( 'enabled' );
+		
+		$result = $wpdb->update(
+			$table_name,
+			array(
+				'feed_enabled' => $enabled ? 1 : 0,
+				'updated_at'   => current_time( 'mysql' ),
+			),
+			array( 'id' => $feed_id ),
+			array( '%d', '%s' ),
+			array( '%d' )
+		);
+		
+		if ( $result === false ) {
+			throw new \Exception( 'Database update failed' );
+		}
+		
+		return new \WP_REST_Response(
+			array(
+				'success' => true,
+				'message' => 'Feed status updated successfully',
+			),
+			200
+		);
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] SSE: Error updating feed status: ' . $e->getMessage() );
+		return new \WP_Error(
+			'update_feed_status_error',
+			'Failed to update feed status: ' . $e->getMessage(),
+			array( 'status' => 500 )
+		);
+	}
+}
+
+/**
+ * Handle DELETE request to delete feed
+ */
+function handle_delete_feed( $request ) {
+	try {
+		global $wpdb;
+		
+		$table_name = $wpdb->prefix . 'puntwork_feeds';
+		$feed_id = (int) $request->get_param( 'feed_id' );
+		
+		$result = $wpdb->delete(
+			$table_name,
+			array( 'id' => $feed_id ),
+			array( '%d' )
+		);
+		
+		if ( $result === false ) {
+			throw new \Exception( 'Database delete failed' );
+		}
+		
+		return new \WP_REST_Response(
+			array(
+				'success' => true,
+				'message' => 'Feed deleted successfully',
+			),
+			200
+		);
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] SSE: Error deleting feed: ' . $e->getMessage() );
+		return new \WP_Error(
+			'delete_feed_error',
+			'Failed to delete feed: ' . $e->getMessage(),
+			array( 'status' => 500 )
+		);
+	}
+}
+
+/**
+ * Handle POST request to save feed order
+ */
+function handle_save_feed_order( $request ) {
+	try {
+		global $wpdb;
+		
+		$table_name = $wpdb->prefix . 'puntwork_feeds';
+		$feed_order = $request->get_param( 'feed_order' );
+		
+		if ( ! is_array( $feed_order ) ) {
+			return new \WP_Error(
+				'invalid_order',
+				'Feed order must be an array',
+				array( 'status' => 400 )
+			);
+		}
+		
+		// Update order for each feed
+		foreach ( $feed_order as $order => $feed_id ) {
+			$wpdb->update(
+				$table_name,
+				array(
+					'feed_order' => $order + 1,
+					'updated_at' => current_time( 'mysql' ),
+				),
+				array( 'id' => (int) $feed_id ),
+				array( '%d', '%s' ),
+				array( '%d' )
+			);
+		}
+		
+		return new \WP_REST_Response(
+			array(
+				'success' => true,
+				'message' => 'Feed order saved successfully',
+			),
+			200
+		);
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] SSE: Error saving feed order: ' . $e->getMessage() );
+		return new \WP_Error(
+			'save_feed_order_error',
+			'Failed to save feed order: ' . $e->getMessage(),
+			array( 'status' => 500 )
+		);
+	}
+}
+
+/**
+ * Handle GET request for activity logs
+ */
+function handle_get_activity_logs( $request ) {
+	try {
+		$limit = $request->get_param( 'limit' ) ?? 20;
+		$logs = get_activity_logs_for_sse( $limit );
+		
+		return new \WP_REST_Response(
+			array(
+				'success' => true,
+				'data'    => array(
+					'logs' => $logs,
+				),
+			),
+			200
+		);
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] SSE: Error getting activity logs: ' . $e->getMessage() );
+		return new \WP_Error(
+			'activity_logs_error',
+			'Failed to retrieve activity logs: ' . $e->getMessage(),
+			array( 'status' => 500 )
+		);
+	}
+}
+
+/**
+ * Handle POST request to clear old logs
+ */
+function handle_clear_old_logs( $request ) {
+	try {
+		global $wpdb;
+		
+		$table_name = $wpdb->prefix . 'puntwork_logs';
+		
+		// Check if table exists
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_name'" ) != $table_name ) {
+			return new \WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'Logs table does not exist',
+				),
+				400
+			);
+		}
+		
+		// Clear logs older than 30 days
+		$thirty_days_ago = date( 'Y-m-d H:i:s', strtotime( '-30 days' ) );
+		$result = $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM $table_name WHERE timestamp < %s",
+				$thirty_days_ago
+			)
+		);
+		
+		if ( $result === false ) {
+			throw new \Exception( 'Database query failed' );
+		}
+		
+		return new \WP_REST_Response(
+			array(
+				'success' => true,
+				'message' => 'Old logs cleared successfully',
+				'deleted_count' => $result,
+			),
+			200
+		);
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] SSE: Error clearing old logs: ' . $e->getMessage() );
+		return new \WP_Error(
+			'clear_logs_error',
+			'Failed to clear old logs: ' . $e->getMessage(),
+			array( 'status' => 500 )
+		);
+	}
+}
+
+/**
+ * Handle POST request to save alert settings
+ */
+function handle_save_alert_settings( $request ) {
+	try {
+		$email_enabled = $request->get_param( 'email_enabled' );
+		$email_recipients = sanitize_text_field( $request->get_param( 'email_recipients' ) );
+		$alert_types = $request->get_param( 'alert_types' );
+		
+		// Validate alert types
+		$valid_alert_types = array(
+			'feed_down' => false,
+			'feed_slow' => false,
+			'feed_empty' => false,
+			'feed_changed' => false,
+		);
+		
+		if ( is_array( $alert_types ) ) {
+			foreach ( $alert_types as $type => $enabled ) {
+				if ( array_key_exists( $type, $valid_alert_types ) ) {
+					$valid_alert_types[ $type ] = (bool) $enabled;
+				}
+			}
+		}
+		
+		$settings = array(
+			'email_enabled' => (bool) $email_enabled,
+			'email_recipients' => $email_recipients,
+			'alert_types' => $valid_alert_types,
+		);
+		
+		update_option( 'puntwork_alert_settings', $settings );
+		
+		return new \WP_REST_Response(
+			array(
+				'success' => true,
+				'message' => 'Alert settings saved successfully',
+				'data'    => $settings,
+			),
+			200
+		);
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] SSE: Error saving alert settings: ' . $e->getMessage() );
+		return new \WP_Error(
+			'save_alert_settings_error',
+			'Failed to save alert settings: ' . $e->getMessage(),
+			array( 'status' => 500 )
+		);
+	}
+}

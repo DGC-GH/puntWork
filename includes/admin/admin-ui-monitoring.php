@@ -416,22 +416,6 @@ function system_monitoring_page() {
 					console.log('Received monitoring update via SSE:', data);
 				},
 
-				checkSystemStatus: function() {
-					$.ajax({
-						url: puntworkMonitoring.ajaxurl,
-						type: 'POST',
-						data: {
-							action: 'puntwork_get_system_metrics',
-							nonce: puntworkMonitoring.nonce
-						},
-						success: (response) => {
-							if (response.success) {
-								this.updateSystemStatus(response.data);
-							}
-						}
-					});
-				},
-
 				updateSystemStatus: function(data) {
 					// Update status indicators based on metrics
 					const memoryPercent = data.memory_usage && data.memory_usage.limit ?
@@ -481,23 +465,6 @@ function system_monitoring_page() {
 					return size;
 				},
 
-				loadPerformanceMetrics: function() {
-					$.ajax({
-						url: puntworkMonitoring.ajaxurl,
-						type: 'POST',
-						data: {
-							action: 'puntwork_get_performance_metrics',
-							nonce: puntworkMonitoring.nonce,
-							time_range: '1h'
-						},
-						success: (response) => {
-							if (response.success) {
-								this.updatePerformanceMetrics(response.data);
-							}
-						}
-					});
-				},
-
 				updatePerformanceMetrics: function(data) {
 					// Update metrics display
 					const memoryMB = data.memory_usage && data.memory_usage.current ?
@@ -525,19 +492,25 @@ function system_monitoring_page() {
 				},
 
 				loadActivityLog: function() {
-					$.ajax({
-						url: puntworkMonitoring.ajaxurl,
-						type: 'POST',
-						data: {
-							action: 'puntwork_get_error_logs',
-							nonce: puntworkMonitoring.nonce,
-							limit: 20
+					const apiKey = '<?php echo esc_js( get_option( 'puntwork_api_key' ) ); ?>';
+					const apiUrl = '<?php echo esc_url( rest_url( 'puntwork/v1/monitoring/activity-logs' ) ); ?>?api_key=' + encodeURIComponent(apiKey);
+
+					fetch(apiUrl, {
+						method: 'GET',
+						headers: {
+							'Content-Type': 'application/json',
 						},
-						success: (response) => {
-							if (response.success) {
-								this.updateActivityLog(response.data.logs);
-							}
+					})
+					.then(response => response.json())
+					.then(data => {
+						if (data.success) {
+							this.updateActivityLog(data.data.logs);
+						} else {
+							console.error('Failed to load activity logs:', data);
 						}
+					})
+					.catch(error => {
+						console.error('Error loading activity logs:', error);
 					});
 				},
 
@@ -580,19 +553,30 @@ function system_monitoring_page() {
 
 				clearOldLogs: function() {
 					if (confirm('<?php _e( 'Are you sure you want to clear old logs?', 'puntwork' ); ?>')) {
-						$.ajax({
-							url: puntworkMonitoring.ajaxurl,
-							type: 'POST',
-							data: {
-								action: 'puntwork_clear_old_logs',
-								nonce: puntworkMonitoring.nonce
+						const apiKey = '<?php echo esc_js( get_option( 'puntwork_api_key' ) ); ?>';
+						const apiUrl = '<?php echo esc_url( rest_url( 'puntwork/v1/monitoring/clear-logs' ) ); ?>';
+
+						fetch(apiUrl, {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
 							},
-							success: (response) => {
-								if (response.success) {
-									this.loadActivityLog();
-									alert('<?php _e( 'Old logs cleared successfully', 'puntwork' ); ?>');
-								}
+							body: JSON.stringify({
+								api_key: apiKey
+							})
+						})
+						.then(response => response.json())
+						.then(data => {
+							if (data.success) {
+								this.loadActivityLog();
+								alert('<?php _e( 'Old logs cleared successfully', 'puntwork' ); ?>');
+							} else {
+								alert('<?php _e( 'Error clearing old logs', 'puntwork' ); ?>');
 							}
+						})
+						.catch(error => {
+							console.error('Error clearing logs:', error);
+							alert('<?php _e( 'Error clearing old logs', 'puntwork' ); ?>');
 						});
 					}
 				},
@@ -600,23 +584,42 @@ function system_monitoring_page() {
 				saveAlertSettings: function(e) {
 					e.preventDefault();
 
-					const formData = $(e.target).serialize();
-
-					$.ajax({
-						url: puntworkMonitoring.ajaxurl,
-						type: 'POST',
-						data: {
-							action: 'puntwork_save_alert_settings',
-							nonce: puntworkMonitoring.nonce,
-							...Object.fromEntries(new URLSearchParams(formData))
-						},
-						success: (response) => {
-							if (response.success) {
-								alert('<?php _e( 'Alert settings saved successfully', 'puntwork' ); ?>');
-							} else {
-								alert('<?php _e( 'Error saving alert settings', 'puntwork' ); ?>');
-							}
+					const formData = new FormData(e.target);
+					const settings = {
+						email_enabled: formData.get('email_enabled') === 'on',
+						email_recipients: formData.get('email_recipients') || '',
+						alert_types: {
+							feed_down: formData.get('alert_types[feed_down]') === 'on',
+							feed_slow: formData.get('alert_types[feed_slow]') === 'on',
+							feed_empty: formData.get('alert_types[feed_empty]') === 'on',
+							feed_changed: formData.get('alert_types[feed_changed]') === 'on',
 						}
+					};
+
+					const apiKey = '<?php echo esc_js( get_option( 'puntwork_api_key' ) ); ?>';
+					const apiUrl = '<?php echo esc_url( rest_url( 'puntwork/v1/monitoring/alert-settings' ) ); ?>';
+
+					fetch(apiUrl, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify({
+							api_key: apiKey,
+							...settings
+						})
+					})
+					.then(response => response.json())
+					.then(data => {
+						if (data.success) {
+							alert('<?php _e( 'Alert settings saved successfully', 'puntwork' ); ?>');
+						} else {
+							alert('<?php _e( 'Error saving alert settings', 'puntwork' ); ?>');
+						}
+					})
+					.catch(error => {
+						console.error('Error saving alert settings:', error);
+						alert('<?php _e( 'Error saving alert settings', 'puntwork' ); ?>');
 					});
 				},
 

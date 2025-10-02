@@ -714,71 +714,101 @@ function render_feed_config_ui(): void {
 					nonce: '<?php echo wp_create_nonce( 'puntwork_feed_config' ); ?>'
 				};
 
-				// Make AJAX request
-				$.post(ajaxurl, data)
-					.done(function(response) {
-						if (response.success) {
-							closeFeedModal();
-							location.reload(); // Refresh to show changes
-						} else {
-							alert('Error saving feed: ' + (response.data || 'Unknown error'));
-						}
+				// Make API request
+				const apiKey = '<?php echo esc_js( get_option( 'puntwork_api_key' ) ); ?>';
+				const apiUrl = '<?php echo esc_url( rest_url( 'puntwork/v1/feeds' ) ); ?>';
+
+				fetch(apiUrl, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						api_key: apiKey,
+						feed_title: title,
+						feed_url: url,
+						feed_slug: slug,
+						feed_enabled: enabled
 					})
-					.fail(function(xhr, status, error) {
-						alert('Error saving feed: ' + error);
-					})
-					.always(function() {
-						$('#save-feed-text').show();
-						$('#save-feed-loading').hide();
-					});
+				})
+				.then(response => response.json())
+				.then(data => {
+					if (data.success) {
+						closeFeedModal();
+						location.reload(); // Refresh to show changes
+					} else {
+						alert('Error saving feed: ' + (data.message || 'Unknown error'));
+					}
+				})
+				.catch(error => {
+					alert('Error saving feed: ' + error.message);
+				})
+				.finally(() => {
+					$('#save-feed-text').show();
+					$('#save-feed-loading').hide();
+				});
 			}
 
 			function updateFeedStatus(feedId, enabled) {
-				const data = {
-					action: 'puntwork_toggle_feed',
-					feed_id: feedId,
-					enabled: enabled,
-					nonce: '<?php echo wp_create_nonce( 'puntwork_feed_config' ); ?>'
-				};
+				const apiKey = '<?php echo esc_js( get_option( 'puntwork_api_key' ) ); ?>';
+				const apiUrl = '<?php echo esc_url( rest_url( 'puntwork/v1/feeds/' . $feed_id . '/status' ) ); ?>'.replace('$feed_id', feedId);
 
-				$.post(ajaxurl, data)
-					.done(function(response) {
-						if (!response.success) {
-							alert('Error updating feed status: ' + (response.data || 'Unknown error'));
-							// Revert checkbox
-							$('.feed-item[data-feed-id="' + feedId + '"] .feed-enabled').prop('checked', !enabled);
-						}
+				fetch(apiUrl, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						api_key: apiKey,
+						feed_id: feedId,
+						enabled: enabled
 					})
-					.fail(function(xhr, status, error) {
-						alert('Error updating feed status: ' + error);
+				})
+				.then(response => response.json())
+				.then(data => {
+					if (!data.success) {
+						alert('Error updating feed status: ' + (data.message || 'Unknown error'));
 						// Revert checkbox
 						$('.feed-item[data-feed-id="' + feedId + '"] .feed-enabled').prop('checked', !enabled);
-					});
+					}
+				})
+				.catch(error => {
+					alert('Error updating feed status: ' + error.message);
+					// Revert checkbox
+					$('.feed-item[data-feed-id="' + feedId + '"] .feed-enabled').prop('checked', !enabled);
+				});
 			}
 
 			function deleteFeed(feedId) {
-				const data = {
-					action: 'puntwork_delete_feed',
-					feed_id: feedId,
-					nonce: '<?php echo wp_create_nonce( 'puntwork_feed_config' ); ?>'
-				};
+				const apiKey = '<?php echo esc_js( get_option( 'puntwork_api_key' ) ); ?>';
+				const apiUrl = '<?php echo esc_url( rest_url( 'puntwork/v1/feeds/' . $feed_id ) ); ?>'.replace('$feed_id', feedId);
 
-				$.post(ajaxurl, data)
-					.done(function(response) {
-						if (response.success) {
-							$('.feed-item[data-feed-id="' + feedId + '"]').fadeOut(function() {
-								$(this).remove();
-								if ($('.feed-item').length == 0) {
-									location.reload(); // Show empty state
-								}
-							});
-						} else {
-							alert('Error deleting feed: ' + (response.data || 'Unknown error'));
-						}
+				fetch(apiUrl, {
+					method: 'DELETE',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						api_key: apiKey,
+						feed_id: feedId
 					})
-					.fail(function(xhr, status, error) {
-						alert('Error deleting feed: ' + error);
-					});
+				})
+				.then(response => response.json())
+				.then(data => {
+					if (data.success) {
+						$('.feed-item[data-feed-id="' + feedId + '"]').fadeOut(function() {
+							$(this).remove();
+							if ($('.feed-item').length == 0) {
+								location.reload(); // Show empty state
+							}
+						});
+					} else {
+						alert('Error deleting feed: ' + (data.message || 'Unknown error'));
+					}
+				})
+				.catch(error => {
+					alert('Error deleting feed: ' + error.message);
+				});
 			}
 
 			function saveFeedOrder() {
@@ -787,32 +817,39 @@ function render_feed_config_ui(): void {
 					feedOrder.push($(this).data('feed-id'));
 				});
 
-				const data = {
-					action: 'puntwork_save_feed_order',
-					feed_order: feedOrder,
-					nonce: '<?php echo wp_create_nonce( 'puntwork_feed_config' ); ?>'
-				};
+				const apiKey = '<?php echo esc_js( get_option( 'puntwork_api_key' ) ); ?>';
+				const apiUrl = '<?php echo esc_url( rest_url( 'puntwork/v1/feeds/order' ) ); ?>';
 
 				$('#save-feed-order').prop('disabled', true).text('Saving...');
 
-				$.post(ajaxurl, data)
-					.done(function(response) {
-						if (response.success) {
-							isOrderChanged = false;
-							$('#save-feed-order').hide();
-							updateOrderStatus('Order saved successfully', 'success');
-							setTimeout(function() {
-								$('#feed-order-status').text('');
-							}, 3000);
-						} else {
-							alert('Error saving feed order: ' + (response.data || 'Unknown error'));
-							$('#save-feed-order').prop('disabled', false).text('Save Order');
-						}
+				fetch(apiUrl, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						api_key: apiKey,
+						feed_order: feedOrder
 					})
-					.fail(function(xhr, status, error) {
-						alert('Error saving feed order: ' + error);
+				})
+				.then(response => response.json())
+				.then(data => {
+					if (data.success) {
+						isOrderChanged = false;
+						$('#save-feed-order').hide();
+						updateOrderStatus('Order saved successfully', 'success');
+						setTimeout(function() {
+							$('#feed-order-status').text('');
+						}, 3000);
+					} else {
+						alert('Error saving feed order: ' + (data.message || 'Unknown error'));
 						$('#save-feed-order').prop('disabled', false).text('Save Order');
-					});
+					}
+				})
+				.catch(error => {
+					alert('Error saving feed order: ' + error.message);
+					$('#save-feed-order').prop('disabled', false).text('Save Order');
+				});
 			}
 
 			function updateOrderStatus(message, type = 'info') {
