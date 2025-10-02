@@ -83,7 +83,7 @@ function finalize_batch_import( $result ) {
 
 	update_option( 'job_import_status', $status, false );
 	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-		error_log( '[PUNTWORK] [FINALIZE-STATUS] Updated import status: processed=' . $status['processed'] . '/' . $status['total'] . ', complete=' . ( $status['complete'] ? 'true' : 'false' ) . ', elapsed=' . round( $total_elapsed, 2 ) . 's' );
+		error_log( '[PUNTWORK] [FINALIZE-STATUS] Updated import status: processed=' . ($status['processed'] ?? 0) . '/' . ($status['total'] ?? 0) . ', complete=' . ( ($status['complete'] ?? false) ? 'true' : 'false' ) . ', elapsed=' . round( $total_elapsed, 2 ) . 's' );
 	}
 
 	// Log completed import to history
@@ -201,7 +201,7 @@ function get_import_status_summary() {
  * @return float Estimated time remaining in seconds.
  */
 function calculate_estimated_time_remaining( $status ) {
-	if ( $status['complete'] || ($status['processed'] ?? 0) === 0 || ($status['job_importing_time_elapsed'] ?? 0) === 0 ) {
+	if ( ($status['complete'] ?? false) || ($status['processed'] ?? 0) === 0 || ($status['job_importing_time_elapsed'] ?? 0) === 0 ) {
 		return 0;
 	}
 

@@ -641,8 +641,8 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 				)
 			);
 			// When complete, ensure processed equals total
-			if ( $final_status['complete'] && $final_status['processed'] < $final_status['total'] ) {
-				$final_status['processed'] = $final_status['total'];
+			if ( ($final_status['complete'] ?? false) && (($final_status['processed'] ?? 0) < ($final_status['total'] ?? 0)) ) {
+				$final_status['processed'] = $final_status['total'] ?? 0;
 			}
 			update_option( 'job_import_status', $final_status, false );
 			if ( $debug_mode ) {

@@ -406,7 +406,7 @@ try {
 
 		if ( $batch_result['success'] ) {
 			echo "✅ Batch processing successful!\n";
-			echo 'Processed: ' . $batch_result['processed'] . " items\n";
+			echo 'Processed: ' . ($batch_result['processed'] ?? 0) . " items\n";
 			echo 'Result: ' . json_encode( $batch_result, JSON_PRETTY_PRINT ) . "\n";
 		} else {
 			echo "❌ Batch processing failed!\n";
