@@ -41,6 +41,8 @@ add_action(
 
 		PuntWorkLogger::info( 'Admin menu registration started', PuntWorkLogger::CONTEXT_ADMIN );
 		error_log( '[PUNTWORK] [ADMIN-MENU] Admin menu registration started at ' . date( 'Y-m-d H:i:s T' ) );
+		error_log( '[PUNTWORK] [ADMIN-MENU] Current URL: ' . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : 'unknown' ) );
+		error_log( '[PUNTWORK] [ADMIN-MENU] is_admin(): ' . ( is_admin() ? 'true' : 'false' ) );
 
 		// Check if menu already exists to prevent conflicts
 		global $menu;

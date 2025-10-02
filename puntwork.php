@@ -209,6 +209,10 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 		$is_cron     = defined( 'DOING_CRON' ) && DOING_CRON;
 		$is_frontend = ! $is_admin && ! $is_ajax && ! $is_rest && ! $is_cron;
 
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [INIT-DEBUG] Context check: admin=' . ( $is_admin ? '1' : '0' ) . ', ajax=' . ( $is_ajax ? '1' : '0' ) . ', rest=' . ( $is_rest ? '1' : '0' ) . ', cron=' . ( $is_cron ? '1' : '0' ) );
+		}
+
 		// Always load core functionality
 		$includes = array(
 			// Core functionality (always needed)
@@ -242,6 +246,9 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 
 		// Admin-only includes
 		if ( $is_admin ) {
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [INIT-DEBUG] Loading admin includes...' );
+			}
 			$includes = array_merge(
 				$includes,
 				array(
