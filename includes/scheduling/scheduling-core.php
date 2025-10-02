@@ -298,53 +298,42 @@ function check_import_health() {
 /**
  * Initialize scheduling system
  * Called during plugin setup to ensure scheduling is properly configured.
+ * DISABLED: Background processing disabled to prevent persistent PHP processes
  */
 function init_scheduling() {
 	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
 	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [SCHEDULING-INIT] Initializing scheduling system...' );
+		error_log( '[PUNTWORK] [SCHEDULING-INIT] Scheduling system DISABLED - Background processing disabled' );
 	}
 
-	// Get current schedule settings
-	$schedule = get_option( 'puntwork_import_schedule', array( 'enabled' => false ) );
+	// DISABLED: Background processing disabled to prevent persistent PHP processes
+	// All scheduling functionality has been disabled
 
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [SCHEDULING-INIT] Current schedule settings: ' . json_encode( $schedule ) );
-	}
+	// Clear any existing scheduled imports to ensure no background processing
+	wp_clear_scheduled_hook( 'puntwork_scheduled_import' );
+	wp_clear_scheduled_hook( 'puntwork_scheduled_import_async' );
+	wp_clear_scheduled_hook( 'puntwork_continue_import' );
 
-	// If scheduling is enabled, ensure the cron job is scheduled
-	if ( ! empty( $schedule['enabled'] ) ) {
-		$next_scheduled = wp_next_scheduled( 'puntwork_scheduled_import' );
-
-		if ( ! $next_scheduled ) {
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [SCHEDULING-INIT] No scheduled import found, scheduling new one...' );
+	// Clear any other puntwork cron jobs that might exist
+	$cron_jobs = _get_cron_array();
+	if ( is_array( $cron_jobs ) ) {
+		foreach ( $cron_jobs as $timestamp => $cron ) {
+			if ( is_array( $cron ) ) {
+				foreach ( $cron as $hook => $jobs ) {
+					if ( strpos( $hook, 'puntwork_' ) === 0 ) {
+						wp_clear_scheduled_hook( $hook );
+						if ( $debug_mode ) {
+							error_log( '[PUNTWORK] [SCHEDULING-INIT] Cleared cron job: ' . $hook );
+						}
+					}
+				}
 			}
-
-			// Schedule the import using the current settings
-			update_cron_schedule( $schedule );
-
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [SCHEDULING-INIT] Scheduling completed' );
-			}
-		} elseif ( $debug_mode ) {
-				error_log( '[PUNTWORK] [SCHEDULING-INIT] Import already scheduled for: ' . wp_date( 'Y-m-d H:i:s', $next_scheduled ) );
 		}
-	} elseif ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULING-INIT] Scheduling is disabled' );
 	}
 
-	// Ensure health check is scheduled - DISABLED: Background processing disabled
-	// if ( ! wp_next_scheduled( 'puntwork_import_health_check' ) ) {
-	// 	wp_schedule_event( time(), 'puntwork_5min', 'puntwork_import_health_check' );
-	// 	if ( $debug_mode ) {
-	// 		error_log( '[PUNTWORK] [SCHEDULING-INIT] Health check cron scheduled' );
-	// 	}
-	// }
-
 	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [SCHEDULING-INIT] Scheduling initialization completed' );
+		error_log( '[PUNTWORK] [SCHEDULING-INIT] All scheduled imports and cron jobs cleared - no background processing allowed' );
 	}
 }
 
@@ -359,6 +348,7 @@ class AdvancedScheduler {
 
 	/**
 	 * Schedule a job with dependencies and conditions.
+	 * DISABLED: Background processing disabled to prevent persistent PHP processes
 	 *
 	 * @param  string $jobId        Unique job identifier
 	 * @param  array  $schedule     Schedule configuration
@@ -374,26 +364,8 @@ class AdvancedScheduler {
 		array $conditions = array(),
 		int $priority = 5
 	): bool {
-		// Store job configuration
-		self::$jobDependencies[ $jobId ] = $dependencies;
-		self::$jobPriorities[ $jobId ]   = max( 1, min( 10, $priority ) );
-		self::$jobConditions[ $jobId ]   = $conditions;
-
-		// Calculate next run time considering dependencies
-		$nextRun = self::calculateNextRunWithDependencies( $jobId, $schedule );
-
-		if ( $nextRun ) {
-			// Schedule the job
-			$hook = 'puntwork_scheduled_job_' . $jobId;
-			wp_schedule_single_event( $nextRun, $hook, array( $jobId ) );
-
-			// Store job metadata
-			update_option( "puntwork_job_{$jobId}_schedule", $schedule );
-			update_option( "puntwork_job_{$jobId}_next_run", $nextRun );
-
-			return true;
-		}
-
+		// DISABLED: Background processing disabled to prevent persistent PHP processes
+		error_log( '[PUNTWORK] [SCHEDULER] Job scheduling DISABLED - Background processing disabled for ' . $jobId );
 		return false;
 	}
 
@@ -586,52 +558,12 @@ class AdvancedScheduler {
 
 	/**
 	 * Execute a scheduled job with dependency checking.
+	 * DISABLED: Background processing disabled to prevent persistent PHP processes
 	 */
 	public static function executeJob( string $jobId ): bool {
-		// Double-check dependencies before execution
-		if ( ! self::areDependenciesSatisfied( $jobId ) ) {
-			// Reschedule for later
-			$schedule = get_option( "puntwork_job_{$jobId}_schedule", array() );
-			if ( ! empty( $schedule ) ) {
-				$nextRun = time() + ( 6 * HOUR_IN_SECONDS );
-				wp_schedule_single_event( $nextRun, 'puntwork_scheduled_job_' . $jobId, array( $jobId ) );
-			}
-
-			return false;
-		}
-
-		// Double-check conditions
-		if ( ! self::areConditionsMet( $jobId ) ) {
-			// Skip this execution, schedule next regular run
-			$schedule = get_option( "puntwork_job_{$jobId}_schedule", array() );
-			if ( ! empty( $schedule ) ) {
-				$nextRun = calculate_next_run_time( $schedule );
-				wp_schedule_single_event( $nextRun, 'puntwork_scheduled_job_' . $jobId, array( $jobId ) );
-			}
-
-			return false;
-		}
-
-		// Execute the job (this would be overridden in subclasses)
-		$result = self::runJobImplementation( $jobId );
-
-		// Record execution result
-		if ( $result ) {
-			update_option( "puntwork_job_{$jobId}_last_success", time() );
-		} else {
-			update_option( "puntwork_job_{$jobId}_last_failure", time() );
-		}
-
-		// Schedule next run
-		$schedule = get_option( "puntwork_job_{$jobId}_schedule", array() );
-		if ( ! empty( $schedule ) ) {
-			$nextRun = self::calculateNextRunWithDependencies( $jobId, $schedule );
-			if ( $nextRun ) {
-				wp_schedule_single_event( $nextRun, 'puntwork_scheduled_job_' . $jobId, array( $jobId ) );
-			}
-		}
-
-		return $result;
+		// DISABLED: Background processing disabled to prevent persistent PHP processes
+		error_log( '[PUNTWORK] [SCHEDULER] Job execution DISABLED - Background processing disabled for ' . $jobId );
+		return false;
 	}
 
 	/**
