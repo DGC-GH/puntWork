@@ -180,6 +180,11 @@ if ( ! isset( $GLOBALS['puntwork_init_hook_added'] ) ) {
 	$GLOBALS['puntwork_init_hook_added'] = true;
 	add_action( 'init', __NAMESPACE__ . '\\load_puntwork_includes', 5 );
 	add_action( 'init', __NAMESPACE__ . '\\setup_job_import', 10 );
+	
+	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
+	if ( $debug_mode ) {
+		error_log( '[PUNTWORK] [INIT-DEBUG] Init hooks added: load_puntwork_includes and setup_job_import' );
+	}
 }
 
 if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
@@ -199,6 +204,10 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 		$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
 		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [INIT-DEBUG] load_puntwork_includes() function called' );
+		}
+
+		if ( $debug_mode ) {
 			error_log( '[PUNTWORK] [INIT-DEBUG] Loading includes conditionally...' );
 		}
 
@@ -211,6 +220,8 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 
 		if ( $debug_mode ) {
 			error_log( '[PUNTWORK] [INIT-DEBUG] Context check: admin=' . ( $is_admin ? '1' : '0' ) . ', ajax=' . ( $is_ajax ? '1' : '0' ) . ', rest=' . ( $is_rest ? '1' : '0' ) . ', cron=' . ( $is_cron ? '1' : '0' ) );
+			error_log( '[PUNTWORK] [INIT-DEBUG] Current URL: ' . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : 'unknown' ) );
+			error_log( '[PUNTWORK] [INIT-DEBUG] is_admin() function available: ' . ( function_exists( 'is_admin' ) ? 'yes' : 'no' ) );
 		}
 
 		// Always load core functionality
