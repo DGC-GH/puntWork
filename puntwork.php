@@ -37,7 +37,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PUNTWORK_VERSION', '0.0.4' );
+define( 'PUNTWORK_VERSION', '0.0.5' );
 define( 'PUNTWORK_PATH', plugin_dir_path( __FILE__ ) );
 define( 'PUNTWORK_URL', plugin_dir_url( __FILE__ ) );
 define( 'PUNTWORK_LOGS', PUNTWORK_PATH . 'logs/import.log' );
