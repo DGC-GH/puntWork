@@ -631,7 +631,7 @@ function update_intermediate_batch_status( int $processed_count, int $total_in_b
 	$intermediate_status['is_intermediate_update']   = true;
 	$intermediate_status['intermediate_update_time'] = microtime( true );
 
-	error_log( '[PUNTWORK] [UI-STATUS] Updated status: processed=' . $intermediate_status['processed'] . ', published=' . $intermediate_status['published'] . ', updated=' . $intermediate_status['updated'] . ', skipped=' . $intermediate_status['skipped'] . ', time_elapsed=' . round( $intermediate_status['time_elapsed'], 2 ) . 's' );
+	error_log( '[PUNTWORK] [UI-STATUS] Updated status: processed=' . ($intermediate_status['processed'] ?? 0) . ', published=' . ($intermediate_status['published'] ?? 0) . ', updated=' . ($intermediate_status['updated'] ?? 0) . ', skipped=' . ($intermediate_status['skipped'] ?? 0) . ', time_elapsed=' . round( $intermediate_status['time_elapsed'] ?? 0, 2 ) . 's' );
 
 	update_option( 'job_import_status', $intermediate_status, false );
 	error_log( '[PUNTWORK] [UI-STATUS] Status saved to database' );

@@ -262,13 +262,21 @@ function process_item_with_fork($guid, $batch_items, $post_ids_by_guid, $last_up
 			$item_result = process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updates, $post_statuses, $all_hashes_by_post, $item_counter);
 
 			// Send result back to parent via pipe
-			fwrite($pipe[1], json_encode($item_result));
-			fclose($pipe[1]);
+			if (is_resource($pipe[1])) {
+				fwrite($pipe[1], json_encode($item_result));
+			}
+			if (is_resource($pipe[1])) {
+				fclose($pipe[1]);
+			}
 
 			exit(0);
 		} catch (\Exception $e) {
-			fwrite($pipe[1], json_encode(array('error' => $e->getMessage())));
-			fclose($pipe[1]);
+			if (is_resource($pipe[1])) {
+				fwrite($pipe[1], json_encode(array('error' => $e->getMessage())));
+			}
+			if (is_resource($pipe[1])) {
+				fclose($pipe[1]);
+			}
 			exit(1);
 		}
 	} else {
@@ -477,12 +485,18 @@ function execute_with_timeout( callable $function, array $args = array(), int $t
 			try {
 				$result = call_user_func_array( $function, $args );
 				// Send result back to parent via pipe
-				fwrite($pipe[1], serialize($result));
+				if (is_resource($pipe[1])) {
+					fwrite($pipe[1], serialize($result));
+				}
 			} catch ( \Exception $e ) {
-				fwrite($pipe[1], serialize(array('exception' => $e->getMessage())));
+				if (is_resource($pipe[1])) {
+					fwrite($pipe[1], serialize(array('exception' => $e->getMessage())));
+				}
 			}
 
-			fclose($pipe[1]);
+			if (is_resource($pipe[1])) {
+				fclose($pipe[1]);
+			}
 			exit( 0 );
 		} else {
 			// Parent process
