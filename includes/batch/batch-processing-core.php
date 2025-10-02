@@ -25,6 +25,7 @@ require_once __DIR__ . '/../utilities/async-processing.php';
 require_once __DIR__ . '/../utilities/CacheManager.php';
 require_once __DIR__ . '/../utilities/MemoryManager.php';
 require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
+require_once __DIR__ . '/../import/process-batch-items.php';
 
 /**
  * Process batch items and handle imports.
@@ -795,7 +796,7 @@ function process_batch_items_with_metadata( array $batch_guids, array $batch_ite
 		}
 
 		// Use traditional processing for smaller batches
-		process_batch_items_optimized(
+		process_batch_items(
 			$batch_guids,
 			$batch_items,
 			$batch_metadata['last_updates'],
