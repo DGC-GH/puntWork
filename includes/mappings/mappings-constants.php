@@ -33,7 +33,8 @@ require_once __DIR__ . '/mappings-fields.php';
 // Include schema mappings
 require_once __DIR__ . '/mappings-schema.php';
 
-// Admin script deregistration
+// Heartbeat is now disabled globally in heartbeat-control.php
+// Keeping this as fallback for edge cases
 add_action(
 	'admin_enqueue_scripts',
 	function ( $hook ) {
