@@ -376,13 +376,11 @@
   width: 100%;
   height: 8px;
   background: var(--color-gray-200);
-  border-radius: var(--radius-full);
   overflow: hidden;
 }
 
 .puntwork-progress__bar {
   height: 100%;
-  border-radius: var(--radius-full);
   position: relative;
   display: flex !important; /* Use flexbox for segments */
   align-items: stretch; /* Ensure segments fill height */
