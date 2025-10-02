@@ -280,6 +280,119 @@ function register_import_api_routes() {
 			),
 		)
 	);
+
+	register_rest_route(
+		'puntwork/v1',
+		'/social/test-platform',
+		array(
+			'methods'             => 'POST',
+			'callback'            => __NAMESPACE__ . '\\handle_social_test_platform',
+			'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
+			'args'                => array(
+				'api_key'     => array(
+					'required'    => true,
+					'type'        => 'string',
+					'description' => 'API key for authentication',
+				),
+				'platform_id' => array(
+					'required'    => true,
+					'type'        => 'string',
+					'description' => 'Social media platform ID to test',
+				),
+			),
+		)
+	);
+
+	register_rest_route(
+		'puntwork/v1',
+		'/social/save-config',
+		array(
+			'methods'             => 'POST',
+			'callback'            => __NAMESPACE__ . '\\handle_social_save_config',
+			'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
+			'args'                => array(
+				'api_key'     => array(
+					'required'    => true,
+					'type'        => 'string',
+					'description' => 'API key for authentication',
+				),
+				'platform_id' => array(
+					'required'    => true,
+					'type'        => 'string',
+					'description' => 'Social media platform ID',
+				),
+				'config'      => array(
+					'required'    => true,
+					'type'        => 'object',
+					'description' => 'Platform configuration data',
+				),
+			),
+		)
+	);
+
+	register_rest_route(
+		'puntwork/v1',
+		'/social/post',
+		array(
+			'methods'             => 'POST',
+			'callback'            => __NAMESPACE__ . '\\handle_social_post_now',
+			'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
+			'args'                => array(
+				'api_key'   => array(
+					'required'    => true,
+					'type'        => 'string',
+					'description' => 'API key for authentication',
+				),
+				'content'   => array(
+					'required'    => true,
+					'type'        => 'string',
+					'description' => 'Post content',
+				),
+				'platforms' => array(
+					'required'    => true,
+					'type'        => 'array',
+					'items'       => array(
+						'type' => 'string',
+					),
+					'description' => 'Array of platform IDs to post to',
+				),
+			),
+		)
+	);
+
+	register_rest_route(
+		'puntwork/v1',
+		'/onboarding/complete',
+		array(
+			'methods'             => 'POST',
+			'callback'            => __NAMESPACE__ . '\\handle_onboarding_complete',
+			'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
+			'args'                => array(
+				'api_key' => array(
+					'required'    => true,
+					'type'        => 'string',
+					'description' => 'API key for authentication',
+				),
+			),
+		)
+	);
+
+	register_rest_route(
+		'puntwork/v1',
+		'/cache/clear',
+		array(
+			'methods'             => 'POST',
+			'callback'            => __NAMESPACE__ . '\\handle_clear_cache',
+			'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
+			'args'                => array(
+				'api_key' => array(
+					'required'    => true,
+					'type'        => 'string',
+					'description' => 'API key for authentication',
+				),
+			),
+		)
+	);
 }
 
 /**
@@ -1285,6 +1398,320 @@ function handle_get_health_status( $request ) {
 			array(
 				'success' => false,
 				'message' => 'Failed to retrieve health status: ' . $e->getMessage(),
+			),
+			500
+		);
+	}
+}
+
+/**
+ * Handle social media platform test request.
+ */
+function handle_social_test_platform( $request ) {
+	$platform_id = $request->get_param( 'platform_id' );
+
+	try {
+		if ( empty( $platform_id ) ) {
+			return new \WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'Platform ID required',
+				),
+				400
+			);
+		}
+
+		// Check if SocialMediaManager class exists
+		if ( ! class_exists( '\Puntwork\SocialMedia\SocialMediaManager' ) ) {
+			return new \WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'Social media manager not available',
+				),
+				500
+			);
+		}
+
+		$social_manager = new \Puntwork\SocialMedia\SocialMediaManager();
+		$result         = $social_manager->testPlatform( $platform_id );
+
+		if ( $result['success'] ) {
+			return new \WP_REST_Response(
+				array(
+					'success' => true,
+					'data'    => $result,
+				),
+				200
+			);
+		} else {
+			return new \WP_REST_Response(
+				array(
+					'success' => false,
+					'data'    => $result,
+				),
+				400
+			);
+		}
+	} catch ( \Exception $e ) {
+		PuntWorkLogger::error(
+			'Social media test platform API error',
+			PuntWorkLogger::CONTEXT_API,
+			array(
+				'error'       => $e->getMessage(),
+				'platform_id' => $platform_id,
+			)
+		);
+
+		return new \WP_REST_Response(
+			array(
+				'success' => false,
+				'message' => 'Failed to test platform: ' . $e->getMessage(),
+			),
+			500
+		);
+	}
+}
+
+/**
+ * Handle social media platform configuration save request.
+ */
+function handle_social_save_config( $request ) {
+	$platform_id = $request->get_param( 'platform_id' );
+	$config      = $request->get_param( 'config' );
+
+	try {
+		if ( empty( $platform_id ) ) {
+			return new \WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'Platform ID required',
+				),
+				400
+			);
+		}
+
+		// Check if SocialMediaManager class exists
+		if ( ! class_exists( '\Puntwork\SocialMedia\SocialMediaManager' ) ) {
+			return new \WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'Social media manager not available',
+				),
+				500
+			);
+		}
+
+		// Sanitize config data
+		$sanitized_config = array();
+		if ( is_array( $config ) ) {
+			foreach ( $config as $key => $value ) {
+				$sanitized_config[ $key ] = sanitize_text_field( $value );
+			}
+		}
+
+		$success = \Puntwork\SocialMedia\SocialMediaManager::configurePlatform( $platform_id, $sanitized_config );
+
+		if ( $success ) {
+			return new \WP_REST_Response(
+				array(
+					'success' => true,
+					'message' => 'Configuration saved successfully',
+				),
+				200
+			);
+		} else {
+			return new \WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'Failed to save configuration',
+				),
+				500
+			);
+		}
+	} catch ( \Exception $e ) {
+		PuntWorkLogger::error(
+			'Social media save config API error',
+			PuntWorkLogger::CONTEXT_API,
+			array(
+				'error'       => $e->getMessage(),
+				'platform_id' => $platform_id,
+			)
+		);
+
+		return new \WP_REST_Response(
+			array(
+				'success' => false,
+				'message' => 'Failed to save configuration: ' . $e->getMessage(),
+			),
+			500
+		);
+	}
+}
+
+/**
+ * Handle social media post request.
+ */
+function handle_social_post_now( $request ) {
+	$content   = $request->get_param( 'content' );
+	$platforms = $request->get_param( 'platforms' );
+
+	try {
+		if ( empty( $content ) ) {
+			return new \WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'Content is required',
+				),
+				400
+			);
+		}
+
+		if ( empty( $platforms ) || ! is_array( $platforms ) ) {
+			return new \WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'At least one platform must be selected',
+				),
+				400
+			);
+		}
+
+		// Check if SocialMediaManager class exists
+		if ( ! class_exists( '\Puntwork\SocialMedia\SocialMediaManager' ) ) {
+			return new \WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'Social media manager not available',
+				),
+				500
+			);
+		}
+
+		$social_manager = new \Puntwork\SocialMedia\SocialMediaManager();
+
+		// Sanitize platforms
+		$sanitized_platforms = array_map( 'sanitize_text_field', $platforms );
+
+		$results = $social_manager->postToPlatforms(
+			array( 'text' => sanitize_textarea_field( $content ) ),
+			$sanitized_platforms
+		);
+
+		return new \WP_REST_Response(
+			array(
+				'success' => true,
+				'message' => 'Post sent to platforms',
+				'data'    => array(
+					'results' => $results,
+				),
+			),
+			200
+		);
+	} catch ( \Exception $e ) {
+		PuntWorkLogger::error(
+			'Social media post API error',
+			PuntWorkLogger::CONTEXT_API,
+			array(
+				'error' => $e->getMessage(),
+			)
+		);
+
+		return new \WP_REST_Response(
+			array(
+				'success' => false,
+				'message' => 'Failed to post to platforms: ' . $e->getMessage(),
+			),
+			500
+		);
+	}
+}
+
+/**
+ * Handle onboarding completion request.
+ */
+function handle_onboarding_complete( $request ) {
+	try {
+		// Mark onboarding as completed
+		update_option( 'puntwork_onboarding_completed', true );
+
+		// Log the completion
+		PuntWorkLogger::info( 'Onboarding completed via API', PuntWorkLogger::CONTEXT_API );
+
+		return new \WP_REST_Response(
+			array(
+				'success' => true,
+				'message' => 'Onboarding completed successfully',
+			),
+			200
+		);
+	} catch ( \Exception $e ) {
+		PuntWorkLogger::error(
+			'Onboarding complete API error',
+			PuntWorkLogger::CONTEXT_API,
+			array(
+				'error' => $e->getMessage(),
+			)
+		);
+
+		return new \WP_REST_Response(
+			array(
+				'success' => false,
+				'message' => 'Failed to complete onboarding: ' . $e->getMessage(),
+			),
+			500
+		);
+	}
+}
+
+/**
+ * Handle cache clearing request.
+ */
+function handle_clear_cache( $request ) {
+	try {
+		// Clear various caches
+		wp_cache_flush();
+		
+		// Clear any plugin-specific caches
+		if ( function_exists( 'wp_cache_supercache_dir' ) ) {
+			// WP Super Cache
+			global $cache_path;
+			if ( function_exists( 'prune_super_cache' ) ) {
+				prune_super_cache( $cache_path, true );
+			}
+		}
+
+		// Clear object cache if using persistent cache
+		if ( wp_using_ext_object_cache() ) {
+			wp_cache_flush();
+		}
+
+		// Clear transients
+		global $wpdb;
+		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_%'" );
+		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_site_transient_%'" );
+
+		PuntWorkLogger::info( 'Cache cleared via API', PuntWorkLogger::CONTEXT_API );
+
+		return new \WP_REST_Response(
+			array(
+				'success' => true,
+				'message' => 'Cache cleared successfully',
+			),
+			200
+		);
+	} catch ( \Exception $e ) {
+		PuntWorkLogger::error(
+			'Clear cache API error',
+			PuntWorkLogger::CONTEXT_API,
+			array(
+				'error' => $e->getMessage(),
+			)
+		);
+
+		return new \WP_REST_Response(
+			array(
+				'success' => false,
+				'message' => 'Failed to clear cache: ' . $e->getMessage(),
 			),
 			500
 		);

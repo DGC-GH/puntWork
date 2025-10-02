@@ -292,29 +292,28 @@ class PuntworkOnboarding {
     completeOnboarding() {
         console.log('[PUNTWORK] [ONBOARDING-COMPLETE] completeOnboarding() called');
         // Mark as completed
-        fetch(puntworkOnboarding.ajaxurl, {
+        const apiKey = '<?php echo esc_js( get_option( 'puntwork_api_key' ) ); ?>';
+        const apiUrl = `${window.location.origin}/wp-json/puntwork/v1/onboarding/complete?api_key=${encodeURIComponent(apiKey)}`;
+
+        fetch(apiUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                action: 'puntwork_complete_onboarding',
-                nonce: puntworkOnboarding.nonce
-            })
+                'Content-Type': 'application/json',
+            }
         })
         .then(response => response.json())
         .then(data => {
-            console.log('[PUNTWORK] [ONBOARDING-COMPLETE] AJAX response received:', data);
+            console.log('[PUNTWORK] [ONBOARDING-COMPLETE] REST API response received:', data);
             if (data.success) {
                 this.showCompletionMessage();
             } else {
-                console.error('[PUNTWORK] [ONBOARDING-COMPLETE] AJAX response indicates failure:', data);
-                this.showCompletionMessage(); // Still close even if AJAX fails
+                console.error('[PUNTWORK] [ONBOARDING-COMPLETE] REST API response indicates failure:', data);
+                this.showCompletionMessage(); // Still close even if API fails
             }
         })
         .catch(error => {
-            console.error('[PUNTWORK] [ONBOARDING-COMPLETE] Error during AJAX request:', error);
-            this.showCompletionMessage(); // Still close even if AJAX fails
+            console.error('[PUNTWORK] [ONBOARDING-COMPLETE] Error during REST API request:', error);
+            this.showCompletionMessage(); // Still close even if API fails
         });
     }
 

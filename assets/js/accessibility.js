@@ -162,16 +162,15 @@ class PuntworkAccessibilityManager {
     }
 
     clearCache() {
-        // Trigger cache clearing via AJAX
-        fetch(puntworkAjax.ajaxurl, {
+        // Trigger cache clearing via REST API
+        const apiKey = '<?php echo esc_js( get_option( 'puntwork_api_key' ) ); ?>';
+        const apiUrl = `${window.location.origin}/wp-json/puntwork/v1/cache/clear?api_key=${encodeURIComponent(apiKey)}`;
+
+        fetch(apiUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                action: 'puntwork_clear_cache',
-                nonce: puntworkAjax.nonce
-            })
+                'Content-Type': 'application/json',
+            }
         })
         .then(response => response.json())
         .then(data => {
