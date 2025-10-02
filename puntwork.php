@@ -25,7 +25,7 @@ if ( isset( $GLOBALS['puntwork_plugin_loaded'] ) && $GLOBALS['puntwork_plugin_lo
 $GLOBALS['puntwork_plugin_loaded'] = true;
 
 // Additional check: prevent loading if already loaded this request
-$load_token = 'puntwork_loaded_' . getmypid() . '_' . microtime( true );
+$load_token = 'puntwork_loaded_' . getmypid();
 if ( isset( $GLOBALS['puntwork_load_tokens'] ) && in_array( $load_token, $GLOBALS['puntwork_load_tokens'] ) ) {
 	return;
 }
@@ -173,6 +173,14 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 
 		// Prevent multiple include loading with a global flag
 		if ( isset( $GLOBALS['puntwork_includes_loaded'] ) && $GLOBALS['puntwork_includes_loaded'] ) {
+			return;
+		}
+
+		// Prevent multiple include loading across requests using WordPress option
+		$includes_option_key = 'puntwork_includes_loaded';
+		$includes_loaded_option = get_option( $includes_option_key, false );
+		if ( $includes_loaded_option ) {
+			$GLOBALS['puntwork_includes_loaded'] = true;
 			return;
 		}
 
@@ -394,6 +402,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 		}
 
 		$GLOBALS['puntwork_includes_loaded'] = true;
+		update_option( $includes_option_key, true );
 	}
 }
 
