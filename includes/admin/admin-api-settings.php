@@ -642,8 +642,8 @@ function api_settings_page() {
 				$('#rate-limit-status-content').html(html);
 			}
 
-			// Auto-refresh rate limit status every 30 seconds
-			setInterval(loadRateLimitStatus, 30000);
+			// Auto-refresh rate limit status using SSE instead of polling
+			// Polling removed - now using SSE for real-time updates
 
 			// Dynamic rate limiting functionality
 			function refreshDynamicStatus() {
@@ -693,8 +693,8 @@ function api_settings_page() {
 				}).format(number);
 			}
 
-			// Auto-refresh dynamic status every 60 seconds
-			setInterval(refreshDynamicStatus, 60000);
+			// Auto-refresh dynamic status using SSE instead of polling
+			// Polling removed - now using SSE for real-time updates
 
 			// Handle dynamic configuration form validation
 			$('form input[name="update_dynamic_rate_config"]').closest('form').on('submit', function(e) {

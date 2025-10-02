@@ -360,10 +360,55 @@ function system_monitoring_page() {
 				},
 
 				startAutoRefresh: function() {
-					setInterval(() => {
-						this.checkSystemStatus();
-						this.loadPerformanceMetrics();
-					}, puntworkMonitoring.refresh_interval);
+					// Auto-refresh using SSE instead of polling
+					// Polling removed - now using SSE for real-time updates
+					this.connectToMonitoringSSE();
+				},
+
+				connectToMonitoringSSE: function() {
+					const apiKey = '<?php echo esc_js( get_option( 'puntwork_api_key' ) ); ?>';
+					const sseUrl = '<?php echo esc_url( rest_url( 'puntwork/v1/monitoring' ) ); ?>?api_key=' + encodeURIComponent(apiKey);
+
+					if (this.monitoringEventSource) {
+						this.monitoringEventSource.close();
+					}
+
+					this.monitoringEventSource = new EventSource(sseUrl);
+
+					this.monitoringEventSource.onmessage = (event) => {
+						try {
+							const data = JSON.parse(event.data);
+							if (data.data) {
+								this.updateFromSSE(data.data);
+							}
+						} catch (e) {
+							console.error('Error parsing SSE data:', e);
+						}
+					};
+
+					this.monitoringEventSource.onerror = (error) => {
+						console.error('SSE connection error:', error);
+						// Could implement reconnection logic here
+					};
+
+					this.monitoringEventSource.onopen = () => {
+						console.log('Monitoring SSE connection opened');
+					};
+				},
+
+				updateFromSSE: function(data) {
+					// Update system metrics from SSE data
+					if (data.system_metrics) {
+						this.updateSystemStatus(data.system_metrics);
+					}
+
+					// Update performance metrics from SSE data
+					if (data.performance_metrics) {
+						this.updatePerformanceMetrics(data.performance_metrics);
+					}
+
+					// Update other monitoring data as needed
+					console.log('Received monitoring update via SSE:', data);
 				},
 
 				checkSystemStatus: function() {

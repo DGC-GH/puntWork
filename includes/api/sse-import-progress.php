@@ -106,6 +106,38 @@ function register_sse_import_progress_route() {
 	error_log( '[PUNTWORK] SSE: SSE route registered successfully' );
 }
 
+/*
+ * Register SSE endpoint for monitoring dashboard
+ */
+add_action( 'rest_api_init', __NAMESPACE__ . '\\register_sse_monitoring_route' );
+function register_sse_monitoring_route() {
+	error_log( '[PUNTWORK] SSE: register_sse_monitoring_route called' );
+	
+	// Check if verify_api_key function exists
+	if ( ! function_exists( __NAMESPACE__ . '\\verify_api_key' ) ) {
+		error_log( '[PUNTWORK] SSE: ERROR - verify_api_key function not found' );
+		return;
+	}
+	
+	register_rest_route(
+		'puntwork/v1',
+		'/monitoring',
+		array(
+			'methods'             => 'GET',
+			'callback'            => __NAMESPACE__ . '\\handle_monitoring_sse',
+			'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
+			'args'                => array(
+				'api_key' => array(
+					'required'    => true,
+					'type'        => 'string',
+					'description' => 'API key for authentication',
+				),
+			),
+		)
+	);
+	error_log( '[PUNTWORK] SSE: Monitoring SSE route registered successfully' );
+}
+
 /**
  * Handle Server-Sent Events for import progress.
  */
@@ -385,4 +417,273 @@ function handle_import_progress_sse( $request ) {
 	}
 
 	exit();
+}
+
+/**
+ * Handle Server-Sent Events for monitoring dashboard.
+ */
+function handle_monitoring_sse( $request ) {
+	try {
+		error_log( '[PUNTWORK] SSE: handle_monitoring_sse called at ' . date( 'Y-m-d H:i:s' ) );
+
+		$api_key = $request->get_param( 'api_key' );
+		error_log( '[PUNTWORK] SSE: API key from request: ' . ( empty( $api_key ) ? 'empty' : 'provided' ) );
+
+		// Verify API key
+		if ( empty( $api_key ) ) {
+			error_log( '[PUNTWORK] SSE: Missing API key' );
+			header( 'Content-Type: text/event-stream' );
+			header( 'Cache-Control: no-cache' );
+			header( 'Connection: keep-alive' );
+			header( 'Access-Control-Allow-Origin: ' . get_site_url() );
+			header( 'Access-Control-Allow-Headers: Cache-Control' );
+			if ( ob_get_level() ) {
+				ob_end_clean();
+			}
+			echo "event: error\n";
+			echo 'data: ' . json_encode(
+				array(
+					'timestamp' => time(),
+					'error'     => 'API key is required',
+					'code'      => 'missing_api_key',
+				)
+			) . "\n\n";
+			flush();
+			exit();
+		}
+
+		$stored_key = get_option( 'puntwork_api_key' );
+		error_log( '[PUNTWORK] SSE: Stored API key exists: ' . ( ! empty( $stored_key ) ? 'yes' : 'no' ) );
+
+		if ( empty( $stored_key ) || ! hash_equals( $stored_key, $api_key ) ) {
+			error_log( '[PUNTWORK] SSE: Invalid API key provided' );
+			header( 'Content-Type: text/event-stream' );
+			header( 'Cache-Control: no-cache' );
+			header( 'Connection: keep-alive' );
+			header( 'Access-Control-Allow-Origin: ' . get_site_url() );
+			header( 'Access-Control-Allow-Headers: Cache-Control' );
+			if ( ob_get_level() ) {
+				ob_end_clean();
+			}
+			echo "event: error\n";
+			echo 'data: ' . json_encode(
+				array(
+					'timestamp' => time(),
+					'error'     => 'Invalid API key',
+					'code'      => 'invalid_api_key',
+				)
+			) . "\n\n";
+			flush();
+			exit();
+		}
+
+		error_log( '[PUNTWORK] SSE: API key verified, starting monitoring SSE connection' );
+
+		// Set headers for Server-Sent Events
+		header( 'Content-Type: text/event-stream' );
+		header( 'Cache-Control: no-cache' );
+		header( 'Connection: keep-alive' );
+		header( 'Access-Control-Allow-Origin: ' . get_site_url() );
+		header( 'Access-Control-Allow-Headers: Cache-Control' );
+
+		// Disable output buffering
+		if ( ob_get_level() ) {
+			ob_end_clean();
+		}
+
+		// Send initial connection event
+		echo "event: connected\n";
+		echo 'data: ' . json_encode(
+			array(
+				'status'    => 'connected',
+				'timestamp' => time(),
+			)
+		) . "\n\n";
+		flush();
+
+		error_log( '[PUNTWORK] SSE: Monitoring SSE initial connection event sent' );
+
+		$last_data           = null;
+		$last_update         = 0;
+		$client_disconnected = false;
+
+		// Set up connection handling
+		ignore_user_abort( false );
+		set_time_limit( 0 );
+
+		// Handle client disconnect
+		register_shutdown_function(
+			function () use ( &$client_disconnected ) {
+				$client_disconnected = true;
+			}
+		);
+
+		// Main SSE loop for monitoring data
+		while ( ! $client_disconnected && ! connection_aborted() ) {
+			// Check if client is still connected
+			if ( connection_status() !== CONNECTION_NORMAL ) {
+				break;
+			}
+
+			try {
+				$current_time = time();
+
+				// Collect monitoring data
+				$monitoring_data = array(
+					'timestamp' => $current_time,
+					'system_metrics' => get_system_metrics_for_sse(),
+					'performance_metrics' => get_performance_metrics_for_sse(),
+					'rate_limit_status' => get_rate_limit_status_for_sse(),
+					'dynamic_rate_status' => get_dynamic_rate_status_for_sse(),
+					'feed_health_status' => get_feed_health_status_for_sse(),
+					'queue_stats' => get_queue_stats_for_sse(),
+				);
+
+				// Deep sanitize the monitoring data
+				$monitoring_data = deep_sanitize_for_json( $monitoring_data );
+
+				// Only send update if data has changed or it's been more than 30 seconds
+				$data_changed = $last_data == null ||
+							   json_encode( $monitoring_data ) !== json_encode( $last_data );
+				$should_update = $data_changed || ( $current_time - $last_update ) > 30;
+
+				if ( $should_update ) {
+					$event_data = array(
+						'timestamp' => $current_time,
+						'data'      => $monitoring_data,
+					);
+
+					$json_data = json_encode( $event_data );
+
+					if ( $json_data === false ) {
+						error_log( '[PUNTWORK] SSE: JSON encoding failed for monitoring data: ' . json_last_error_msg() );
+						continue;
+					}
+
+					echo "event: monitoring\n";
+					echo 'data: ' . $json_data . "\n\n";
+					flush();
+
+					$last_data = $monitoring_data;
+					$last_update = $current_time;
+
+					error_log( '[PUNTWORK] SSE: Monitoring update sent at ' . date( 'Y-m-d H:i:s', $current_time ) );
+				}
+
+			} catch ( \Exception $e ) {
+				error_log( '[PUNTWORK] SSE: Error in monitoring loop: ' . $e->getMessage() );
+				echo "event: error\n";
+				echo 'data: ' . json_encode(
+					array(
+						'timestamp' => time(),
+						'error'     => $e->getMessage(),
+					)
+				) . "\n\n";
+				flush();
+				break;
+			}
+
+			// Wait before next check (balance between real-time updates and server load)
+			sleep( 2 );
+		}
+
+		error_log( '[PUNTWORK] SSE: Monitoring SSE connection closed' );
+	} catch ( \Throwable $e ) {
+		error_log( '[PUNTWORK] SSE: Fatal error in monitoring SSE: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
+		echo "event: error\n";
+		echo 'data: ' . json_encode(
+			array(
+				'timestamp' => time(),
+				'error'     => 'Monitoring SSE initialization failed: ' . $e->getMessage(),
+			)
+		) . "\n\n";
+		flush();
+	}
+
+	exit();
+}
+
+/**
+ * Get system metrics for SSE
+ */
+function get_system_metrics_for_sse() {
+	return array(
+		'timestamp'            => current_time( 'timestamp' ),
+		'memory_usage'         => function_exists( __NAMESPACE__ . '\\puntwork_get_memory_usage' ) ? call_user_func( __NAMESPACE__ . '\\puntwork_get_memory_usage' ) : array(),
+		'cpu_usage'            => function_exists( __NAMESPACE__ . '\\puntwork_get_cpu_usage' ) ? call_user_func( __NAMESPACE__ . '\\puntwork_get_cpu_usage' ) : array(),
+		'disk_usage'           => function_exists( __NAMESPACE__ . '\\puntwork_get_disk_usage' ) ? call_user_func( __NAMESPACE__ . '\\puntwork_get_disk_usage' ) : array(),
+		'database_connections' => function_exists( __NAMESPACE__ . '\\puntwork_get_db_connections' ) ? call_user_func( __NAMESPACE__ . '\\puntwork_get_db_connections' ) : array(),
+		'active_users'         => function_exists( __NAMESPACE__ . '\\puntwork_get_active_users' ) ? call_user_func( __NAMESPACE__ . '\\puntwork_get_active_users' ) : 0,
+		'queue_status'         => function_exists( __NAMESPACE__ . '\\puntwork_get_queue_status' ) ? call_user_func( __NAMESPACE__ . '\\puntwork_get_queue_status' ) : array(),
+		'error_rate'           => function_exists( __NAMESPACE__ . '\\puntwork_get_error_rate' ) ? call_user_func( __NAMESPACE__ . '\\puntwork_get_error_rate' ) : array(),
+		'response_time'        => function_exists( __NAMESPACE__ . '\\puntwork_get_response_time' ) ? call_user_func( __NAMESPACE__ . '\\puntwork_get_response_time' ) : array(),
+	);
+}
+
+/**
+ * Get performance metrics for SSE
+ */
+function get_performance_metrics_for_sse() {
+	return array(
+		'timestamp'            => current_time( 'timestamp' ),
+		'time_range'           => '1h',
+		'page_load_times'      => function_exists( __NAMESPACE__ . '\\puntwork_get_page_load_times' ) ? call_user_func( __NAMESPACE__ . '\\puntwork_get_page_load_times', '1h' ) : array(),
+		'api_response_times'   => function_exists( __NAMESPACE__ . '\\puntwork_get_api_response_times' ) ? call_user_func( __NAMESPACE__ . '\\puntwork_get_api_response_times', '1h' ) : array(),
+		'database_query_times' => function_exists( __NAMESPACE__ . '\\puntwork_get_db_query_times' ) ? call_user_func( __NAMESPACE__ . '\\puntwork_get_db_query_times', '1h' ) : array(),
+		'cache_hit_rate'       => function_exists( __NAMESPACE__ . '\\puntwork_get_cache_hit_rate' ) ? call_user_func( __NAMESPACE__ . '\\puntwork_get_cache_hit_rate', '1h' ) : array(),
+		'throughput'           => function_exists( __NAMESPACE__ . '\\puntwork_get_throughput' ) ? call_user_func( __NAMESPACE__ . '\\puntwork_get_throughput', '1h' ) : array(),
+	);
+}
+
+/**
+ * Get rate limit status for SSE
+ */
+function get_rate_limit_status_for_sse() {
+	// This would need to be implemented to return current rate limit status
+	return array(
+		'enabled' => true,
+		'limits'  => array(),
+		'usage'   => array(),
+	);
+}
+
+/**
+ * Get dynamic rate status for SSE
+ */
+function get_dynamic_rate_status_for_sse() {
+	// This would need to be implemented to return dynamic rate limiting status
+	return array(
+		'enabled' => true,
+		'metrics' => array(
+			'total_metrics'   => 0,
+			'recent_metrics'  => 0,
+			'current_load'    => 0,
+			'current_memory'  => 0,
+			'current_cpu'     => 0,
+		),
+	);
+}
+
+/**
+ * Get feed health status for SSE
+ */
+function get_feed_health_status_for_sse() {
+	// This would need to be implemented to return feed health data
+	return array(
+		'feeds' => array(),
+		'overall_health' => 'healthy',
+	);
+}
+
+/**
+ * Get queue stats for SSE
+ */
+function get_queue_stats_for_sse() {
+	return array(
+		'pending'    => 0,
+		'processing' => 0,
+		'completed'  => 0,
+		'failed'     => 0,
+		'recent_jobs' => array(),
+	);
 }
