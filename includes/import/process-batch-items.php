@@ -236,6 +236,15 @@ function process_item_with_fork($guid, $batch_items, $post_ids_by_guid, $last_up
 		return $item_result;
 	}
 
+	// Validate pipe resources
+	if (!is_resource($pipe[0]) || !is_resource($pipe[1]) || !stream_is_local($pipe[0]) || !stream_is_local($pipe[1])) {
+		fclose($pipe[0]);
+		fclose($pipe[1]);
+		error_log('[PUNTWORK] [TIMEOUT] Invalid pipe resources, falling back to direct processing');
+		$item_result = process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updates, $post_statuses, $all_hashes_by_post, $item_counter);
+		return $item_result;
+	}
+
 	$pid = pcntl_fork();
 
 	if ($pid == -1) {
@@ -281,8 +290,18 @@ function process_item_with_fork($guid, $batch_items, $post_ids_by_guid, $last_up
 			} elseif ($wait_result > 0) {
 				// Child finished - read output from pipe
 				$child_output = '';
-				while (!feof($pipe[0])) {
-					$child_output .= fread($pipe[0], 8192);
+				try {
+					while (!feof($pipe[0]) && is_resource($pipe[0])) {
+						$data = fread($pipe[0], 8192);
+						if ($data === false) {
+							error_log('[PUNTWORK] [TIMEOUT] Failed to read from pipe');
+							break;
+						}
+						$child_output .= $data;
+					}
+				} catch (\Exception $e) {
+					error_log('[PUNTWORK] [TIMEOUT] Exception reading from pipe: ' . $e->getMessage());
+					$child_output = '';
 				}
 				break;
 			}
@@ -437,6 +456,13 @@ function execute_with_timeout( callable $function, array $args = array(), int $t
 			return call_user_func_array( $function, $args );
 		}
 
+		// Validate pipe resources
+		if (!is_resource($pipe[0]) || !is_resource($pipe[1])) {
+			fclose($pipe[0]);
+			fclose($pipe[1]);
+			return call_user_func_array( $function, $args );
+		}
+
 		$pid = pcntl_fork();
 
 		if ( $pid == -1 ) {
@@ -475,10 +501,20 @@ function execute_with_timeout( callable $function, array $args = array(), int $t
 				} elseif ( $wait_result > 0 ) {
 					// Child finished - read result from pipe
 					$serialized_result = '';
-					while (!feof($pipe[0])) {
-						$serialized_result .= fread($pipe[0], 8192);
+					try {
+						while (!feof($pipe[0]) && is_resource($pipe[0])) {
+							$data = fread($pipe[0], 8192);
+							if ($data === false) {
+								error_log( '[PUNTWORK] [TIMEOUT] Failed to read from pipe in execute_with_timeout' );
+								break;
+							}
+							$serialized_result .= $data;
+						}
+						$result = unserialize($serialized_result);
+					} catch (\Exception $e) {
+						error_log( '[PUNTWORK] [TIMEOUT] Exception reading from pipe in execute_with_timeout: ' . $e->getMessage() );
+						$result = null;
 					}
-					$result = unserialize($serialized_result);
 					break;
 				}
 
