@@ -186,6 +186,9 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 
 		$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
+		// Define request_uri early to prevent undefined variable warnings
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+
 		if ( $debug_mode ) {
 			error_log( '[PUNTWORK] [INIT-DEBUG] load_puntwork_includes() function called' );
 		}
@@ -200,7 +203,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
                $is_rest     = false;
                if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
                    $is_rest = true;
-               } elseif ( strpos( $request_uri, '/wp-json/' ) !== false ) {
+               } elseif ( is_string( $request_uri ) && strpos( $request_uri, '/wp-json/' ) !== false ) {
                    $is_rest = true;
                }
 		$is_cron     = defined( 'DOING_CRON' ) && DOING_CRON;
@@ -440,10 +443,21 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 			return;
 		}
 
+		// Skip initialization on REST API requests to prevent duplicate loading
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+		if ( ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || ( is_string( $request_uri ) && strpos( $request_uri, '/wp-json/' ) !== false ) ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( '[PUNTWORK] [INIT-SKIP] Skipping initialization on REST API request: ' . $request_uri );
+			}
+			return;
+		}
+
 		// Prevent multiple initialization across requests using WordPress option
 		$init_option_key = 'puntwork_setup_done';
 		$setup_done      = get_option( $init_option_key, false );
-		error_log( '[PUNTWORK] [OPTION-DEBUG] Key: ' . $init_option_key . ', Value: ' . ( $setup_done ? 'true' : 'false' ) );
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( '[PUNTWORK] [OPTION-DEBUG] Key: ' . $init_option_key . ', Value: ' . var_export( $setup_done, true ) . ', Type: ' . gettype( $setup_done ) );
+		}
 		if ( $setup_done ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 				error_log( '[PUNTWORK] [INIT-SKIP] Setup already completed globally, skipping...' );
