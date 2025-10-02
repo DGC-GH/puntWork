@@ -606,7 +606,7 @@ function update_intermediate_batch_status( int $processed_count, int $total_in_b
 	error_log( '[PUNTWORK] [UI-STATUS] Current status from DB: processed=' . ( $current_status['processed'] ?? 'null' ) . ', total=' . ( $current_status['total'] ?? 'null' ) . ', last_update=' . ( isset( $current_status['last_update'] ) ? date( 'H:i:s', $current_status['last_update'] ) : 'null' ) );
 
 	// Calculate total processed so far (previous batches + current batch progress)
-	$previous_processed = isset($current_status['processed']) ? (int)$current_status['processed'] : 0;
+	$previous_processed = $current_status['processed'] ?? 0;
 	$total_processed    = $previous_processed + $processed_count;
 
 	error_log( '[PUNTWORK] [UI-STATUS] Calculated: previous_processed=' . $previous_processed . ', total_processed=' . $total_processed );
@@ -614,9 +614,9 @@ function update_intermediate_batch_status( int $processed_count, int $total_in_b
 	// Update status with intermediate values
 	$intermediate_status                 = $current_status;
 	$intermediate_status['processed']    = $total_processed;
-	$intermediate_status['published']    = (isset($current_status['published']) ? (int)$current_status['published'] : 0) + $published;
-	$intermediate_status['updated']      = (isset($current_status['updated']) ? (int)$current_status['updated'] : 0) + $updated;
-	$intermediate_status['skipped']      = (isset($current_status['skipped']) ? (int)$current_status['skipped'] : 0) + $skipped;
+	$intermediate_status['published']    = ($current_status['published'] ?? 0) + $published;
+	$intermediate_status['updated']      = ($current_status['updated'] ?? 0) + $updated;
+	$intermediate_status['skipped']      = ($current_status['skipped'] ?? 0) + $skipped;
 	$intermediate_status['time_elapsed'] = microtime( true ) - ( $current_status['start_time'] ?? microtime( true ) );
 	$intermediate_status['complete']     = false; // Not complete until batch finishes
 	$intermediate_status['success']      = true; // Still successful so far

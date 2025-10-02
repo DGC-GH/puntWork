@@ -329,18 +329,12 @@ function process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updat
 	return $result;
 }
 function execute_with_timeout( callable $function, array $args = array(), int $timeout_seconds = 30 ) {
-	$result = null;
-	$timed_out = false;
-
-	// DISABLED: Forking causes issues with WordPress database connections in child processes
-	// Always execute directly to avoid fork-related errors
-	error_log( '[PUNTWORK] [TIMEOUT] Forking disabled, executing directly' );
+	// Execute directly without timeout to avoid forking issues
 	try {
 		$result = call_user_func_array( $function, $args );
+		return $result;
 	} catch ( \Exception $e ) {
-		error_log( '[PUNTWORK] [TIMEOUT] Exception during direct execution: ' . $e->getMessage() );
-		$timed_out = true;
+		error_log( '[PUNTWORK] [TIMEOUT] Exception during execution: ' . $e->getMessage() );
+		return null;
 	}
-
-	return $result;
 }

@@ -633,7 +633,7 @@ function log_manual_import_run_ajax() {
 			'duration'      => $_POST['duration'],
 			'success'       => filter_var( $_POST['success'], FILTER_VALIDATE_BOOLEAN ),
 			'processed'     => $_POST['processed'] ?? 0,
-			'total'         => $_POST['total'],
+			'total'         => $_POST['total'] ?? 0,
 			'published'     => $_POST['published'],
 			'updated'       => $_POST['updated'],
 			'skipped'       => $_POST['skipped'],
