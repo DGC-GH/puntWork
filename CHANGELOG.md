@@ -49,6 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Status Data Sanitization**: Added sanitize_import_status() function to clean AJAX responses and prevent corrupted status data from breaking real-time updates
 - **Enhanced Error Messages**: Replaced generic "Unknown error" messages with specific, detailed error descriptions in feed processing, download, and combination operations for better troubleshooting
 - **Code Quality Improvements**: Fixed PHPCS violations including indentation, spacing, inline comments, and WordPress coding standards compliance
+- **Import Lock Conflict Resolution**: Fixed import process stalling at processed:0 due to lock conflict between batch import functions
+- **Inter-Process Communication Fix**: Fixed broken pipe communication in fork-based timeout protection causing "Failed to open stream" and "Failed to get result from child process" errors
 
 ### Performance
 - Implemented parallel feed downloading using Symfony HTTP Client to reduce total import time for multiple feeds
@@ -85,28 +87,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Concurrent Import Prevention**: Implemented transient-based locking mechanism to prevent multiple simultaneous imports that cause "Import already running" errors
 - **Status Data Sanitization**: Added sanitize_import_status() function to clean AJAX responses and prevent corrupted status data from breaking real-time updates
 
-### Performance
-- Implemented parallel feed downloading using Symfony HTTP Client to reduce total import time for multiple feeds
-- Added HTTP caching support with ETag and Last-Modified headers to skip unchanged feeds
-- Optimized feed processing with concurrent downloads (up to 5 simultaneous connections)
-- Added feed cache cleanup to prevent disk space issues
-- Reduced memory usage by processing downloaded feeds without redundant format detection
-- Optimized load balancer initialization by caching table existence checks
-- Reduced logging frequency for routine instance updates
-- Drag-and-drop functionality in feed configuration by replacing SortableJS with jQuery UI Sortable
-- Fatal error in CRM admin class instantiation preventing plugin initialization
-- PHPCS error: Renamed Puntwork_CRM_Admin class to PuntworkCrmAdmin for PascalCase compliance
-- Reverted PuntworkCrmAdmin class back to Puntwork_CRM_Admin to resolve server-side class not found error
-- Restored Puntwork_CRM_Admin class to PuntworkCrmAdmin following project PascalCase naming conventions
-- Reverted PuntworkCrmAdmin class back to Puntwork_CRM_Admin to resolve persistent server-side class not found error
-- Reverted PuntworkCrmAdmin class back to Puntwork_CRM_Admin to resolve persistent server-side class not found error
-- Line length violations in crm-admin.php for PSR-12 compliance
-- Fixed CRM integration loading order to resolve class dependency issues
-- Renamed Puntwork_CRM_Admin class back to PuntworkCrmAdmin for final PascalCase compliance
-- Optimized batch import performance with exponential batch size growth (1.2x multiplier)
-- Fixed progress UI stuck in feed-processing phase by adding phase transition logic for large totals
-- Reduced logging frequency in batch processing to every 100 items to improve performance
-- Ensured all code changes including PHPCBF formatting fixes are committed in single amended commit
+## [0.0.5] - 2025-10-02
+
+### Fixed
+- **CSS Cache Refresh**: Updated version to 0.0.5 to force browsers to reload updated admin-modern.css with new modern UI styles
+- **Plugin Header Version**: Updated plugin header comment version to match constant
 
 ## [0.0.4] - 2025-09-26
 
