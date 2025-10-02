@@ -39,10 +39,10 @@ class FeedOptimizer {
 	 * Initialize the feed optimizer.
 	 */
 	public static function init(): void {
-		// Schedule daily optimization
-		if ( ! wp_next_scheduled( 'puntwork_feed_optimization' ) ) {
-			wp_schedule_event( time(), 'daily', 'puntwork_feed_optimization' );
-		}
+		// Schedule daily optimization - DISABLED: Background processing disabled
+		// if ( ! wp_next_scheduled( 'puntwork_feed_optimization' ) ) {
+		// 	wp_schedule_event( time(), 'daily', 'puntwork_feed_optimization' );
+		// }
 
 		// Add optimization action hook
 		add_action( 'puntwork_feed_optimization', array( __CLASS__, 'runScheduledOptimization' ) );

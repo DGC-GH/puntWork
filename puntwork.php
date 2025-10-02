@@ -67,15 +67,15 @@ if ( $debug_mode ) {
 // Activation hook
 register_activation_hook( __FILE__, __NAMESPACE__ . '\\job_import_activate' );
 function job_import_activate() {
-	// Schedule cron
-	if ( ! wp_next_scheduled( 'job_import_cron' ) ) {
-		wp_schedule_event( current_time( 'timestamp' ), 'daily', 'job_import_cron' );
-	}
+	// Schedule cron - DISABLED: Background processing disabled
+	// if ( ! wp_next_scheduled( 'job_import_cron' ) ) {
+	// 	wp_schedule_event( current_time( 'timestamp' ), 'daily', 'job_import_cron' );
+	// }
 
-	// Schedule social media cron
-	if ( ! wp_next_scheduled( 'puntwork_social_cron' ) ) {
-		wp_schedule_event( current_time( 'timestamp' ), 'puntwork_hourly', 'puntwork_social_cron' );
-	}
+	// Schedule social media cron - DISABLED: Background processing disabled
+	// if ( ! wp_next_scheduled( 'puntwork_social_cron' ) ) {
+	// 	wp_schedule_event( current_time( 'timestamp' ), 'puntwork_hourly', 'puntwork_social_cron' );
+	// }
 
 	// Create logs dir if needed
 	$logs_dir = dirname( PUNTWORK_LOGS );
@@ -104,8 +104,9 @@ function job_import_activate() {
 // Deactivation hook
 register_deactivation_hook( __FILE__, __NAMESPACE__ . '\\job_import_deactivate' );
 function job_import_deactivate() {
-	wp_clear_scheduled_hook( 'job_import_cron' );
-	wp_clear_scheduled_hook( 'puntwork_social_cron' );
+	// Clear cron - DISABLED: Background processing disabled
+	// wp_clear_scheduled_hook( 'job_import_cron' );
+	// wp_clear_scheduled_hook( 'puntwork_social_cron' );
 	
 	// Clear plugin loading flags to allow fresh load on reactivation
 	delete_option( 'puntwork_includes_loaded' );
@@ -148,8 +149,8 @@ function register_custom_cron_schedules( $schedules ) {
 	return $schedules;
 }
 
-// Add social media cron handler
-add_action( 'puntwork_social_cron', __NAMESPACE__ . '\\process_social_media_posts' );
+// Add social media cron handler - DISABLED: Background processing disabled
+// add_action( 'puntwork_social_cron', __NAMESPACE__ . '\\process_social_media_posts' );
 function process_social_media_posts() {
 	if ( class_exists( __NAMESPACE__ . '\\SocialMedia\\SocialMediaManager' ) ) {
 		$social_manager = new \Puntwork\SocialMedia\SocialMediaManager();
@@ -677,6 +678,6 @@ register_uninstall_hook( __FILE__, __NAMESPACE__ . '\\job_import_uninstall' );
 function job_import_uninstall() {
 	// Delete options, transients; optional: delete job-feed posts
 	delete_option( 'job_import_last_run' );
-	// Clear cron
-	wp_clear_scheduled_hook( 'job_import_cron' );
+	// Clear cron - DISABLED: Background processing disabled
+	// wp_clear_scheduled_hook( 'job_import_cron' );
 }

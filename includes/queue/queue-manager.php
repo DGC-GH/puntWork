@@ -38,10 +38,10 @@ class PuntworkQueueManager {
 		add_action( 'puntwork_process_queue', array( $this, 'processQueueCron' ) );
 		add_action( 'wp_ajax_puntwork_process_queue', array( $this, 'ajaxProcessQueue' ) );
 
-		// Schedule cron job
-		if ( ! wp_next_scheduled( 'puntwork_process_queue' ) ) {
-			wp_schedule_event( time(), 'puntwork_queue_interval', 'puntwork_process_queue' );
-		}
+		// Schedule cron job - DISABLED: Background processing disabled
+		// if ( ! wp_next_scheduled( 'puntwork_process_queue' ) ) {
+		// 	wp_schedule_event( time(), 'puntwork_queue_interval', 'puntwork_process_queue' );
+		// }
 
 		// Add custom cron schedule
 		add_filter( 'cron_schedules', array( $this, 'addQueueCronSchedule' ) );

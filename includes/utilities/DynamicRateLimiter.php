@@ -43,9 +43,7 @@ class DynamicRateLimiter {
 	/**
 	 * Performance metrics storage key.
 	 */
-	public const METRICS_KEY = 'puntwork_dynamic_rate_metrics';
-
-	/**
+	public const METRICS_KEY = 'puntwork_dynamic_rate_metrics';	/**
 	 * Rate limit adjustments storage key.
 	 */
 	public const ADJUSTMENTS_KEY = 'puntwork_dynamic_rate_adjustments';
@@ -889,10 +887,10 @@ class DynamicRateLimiter {
 	 * Initialize dynamic rate limiting system.
 	 */
 	public static function init(): void {
-		// Schedule cleanup of old metrics
-		if ( ! wp_next_scheduled( 'puntwork_cleanup_dynamic_rate_metrics' ) ) {
-			wp_schedule_event( time(), 'daily', 'puntwork_cleanup_dynamic_rate_metrics' );
-		}
+		// Schedule cleanup of old metrics - DISABLED: Background processing disabled
+		// if ( ! wp_next_scheduled( 'puntwork_cleanup_dynamic_rate_metrics' ) ) {
+		// 	wp_schedule_event( time(), 'daily', 'puntwork_cleanup_dynamic_rate_metrics' );
+		// }
 
 		add_action( 'puntwork_cleanup_dynamic_rate_metrics', array( self::class, 'cleanupOldMetrics' ) );
 	}

@@ -51,10 +51,10 @@ class PuntworkHorizontalScalingManager {
 		add_action( 'wp_ajax_nopriv_puntwork_scaling_health', array( $this, 'ajaxHealthCheck' ) );
 		add_action( 'puntwork_cleanup_instances', array( $this, 'cleanupDeadInstances' ) );
 
-		// Schedule cleanup
-		if ( ! wp_next_scheduled( 'puntwork_cleanup_instances' ) ) {
-			wp_schedule_event( time(), 'hourly', 'puntwork_cleanup_instances' );
-		}
+		// Schedule cleanup - DISABLED: Background processing disabled
+		// if ( ! wp_next_scheduled( 'puntwork_cleanup_instances' ) ) {
+		// 	wp_schedule_event( time(), 'hourly', 'puntwork_cleanup_instances' );
+		// }
 
 		// Register shutdown function for cleanup
 		add_action( 'shutdown', array( $this, 'unregisterInstance' ) );

@@ -57,10 +57,10 @@ class ReportingEngine {
 		add_action( 'wp_ajaxScheduleReport', array( self::class, 'ajaxScheduleReport' ) );
 		add_action( 'wp_ajaxGetReportData', array( self::class, 'ajaxGetReportData' ) );
 
-		// Schedule automated reports
-		if ( ! wp_next_scheduled( 'puntwork_generateAutomatedReports' ) ) {
-			wp_schedule_event( time(), 'daily', 'puntwork_generateAutomatedReports' );
-		}
+		// Schedule automated reports - DISABLED: Background processing disabled
+		// if ( ! wp_next_scheduled( 'puntwork_generateAutomatedReports' ) ) {
+		// 	wp_schedule_event( time(), 'daily', 'puntwork_generateAutomatedReports' );
+		// }
 		add_action( 'puntwork_generateAutomatedReports', array( self::class, 'generateAutomatedReports' ) );
 	}
 

@@ -81,10 +81,11 @@ class FeedHealthMonitor {
 	 * Schedule regular health checks.
 	 */
 	public static function scheduleHealthChecks() {
-		if ( ! wp_next_scheduled( 'puntwork_feed_health_check' ) ) {
-			// Run health checks every 15 minutes
-			wp_schedule_event( time(), '15min', 'puntwork_feed_health_check' );
-		}
+		// Schedule health checks - DISABLED: Background processing disabled
+		// if ( ! wp_next_scheduled( 'puntwork_feed_health_check' ) ) {
+		// 	// Run health checks every 15 minutes
+		// 	wp_schedule_event( time(), '15min', 'puntwork_feed_health_check' );
+		// }
 	}
 
 	/**

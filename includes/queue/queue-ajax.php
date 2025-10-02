@@ -328,10 +328,10 @@ add_action( 'wp_ajax_puntwork_add_test_job', __NAMESPACE__ . '\\add_test_job_aja
 add_action( 'wp_ajax_puntwork_process_queue', __NAMESPACE__ . '\\manual_process_queue_ajax' );
 
 /*
- * Schedule daily cleanup
+ * Schedule daily cleanup - DISABLED: Background processing disabled
  */
-if ( ! wp_next_scheduled( 'puntwork_queue_cleanup' ) ) {
-	wp_schedule_event( time(), 'daily', 'puntwork_queue_cleanup' );
-}
+// if ( ! wp_next_scheduled( 'puntwork_queue_cleanup' ) ) {
+// 	wp_schedule_event( time(), 'daily', 'puntwork_queue_cleanup' );
+// }
 
-add_action( 'puntwork_queue_cleanup', __NAMESPACE__ . '\\cleanup_old_queue_entries' );
+// add_action( 'puntwork_queue_cleanup', __NAMESPACE__ . '\\cleanup_old_queue_entries' );

@@ -146,11 +146,12 @@ function update_cron_schedule( $schedule_data ) {
 		$next_run_timestamp = calculate_next_run_time( $schedule_data );
 		$cron_interval      = get_cron_interval( $schedule_data );
 
-		if ( wp_schedule_event( $next_run_timestamp, $cron_interval, $hook ) ) {
-			error_log( '[PUNTWORK] Scheduled import hook registered for: ' . wp_date( 'Y-m-d H:i:s', $next_run_timestamp ) . ' (' . wp_timezone_string() . ') with interval: ' . $cron_interval );
-		} else {
-			error_log( '[PUNTWORK] Failed to register scheduled import hook with interval: ' . $cron_interval );
-		}
+		// DISABLED: Background processing disabled - no scheduling allowed
+		// if ( wp_schedule_event( $next_run_timestamp, $cron_interval, $hook ) ) {
+		// 	error_log( '[PUNTWORK] Scheduled import hook registered for: ' . wp_date( 'Y-m-d H:i:s', $next_run_timestamp ) . ' (' . wp_timezone_string() . ') with interval: ' . $cron_interval );
+		// } else {
+		// 	error_log( '[PUNTWORK] Failed to register scheduled import hook with interval: ' . $cron_interval );
+		// }
 	}
 }
 
@@ -283,16 +284,16 @@ function check_import_health() {
 	}
 }
 
-// Schedule health check to run every 5 minutes
-add_action(
-	'wp',
-	function () {
-		if ( ! wp_next_scheduled( 'puntwork_import_health_check' ) ) {
-			wp_schedule_event( time(), 'puntwork_5min', 'puntwork_import_health_check' );
-		}
-	}
-);
-add_action( 'puntwork_import_health_check', __NAMESPACE__ . '\\check_import_health' );
+// Schedule health check to run every 5 minutes - DISABLED: Background processing disabled
+// add_action(
+// 	'wp',
+// 	function () {
+// 		if ( ! wp_next_scheduled( 'puntwork_import_health_check' ) ) {
+// 			wp_schedule_event( time(), 'puntwork_5min', 'puntwork_import_health_check' );
+// 		}
+// 	}
+// );
+// add_action( 'puntwork_import_health_check', __NAMESPACE__ . '\\check_import_health' );
 
 /**
  * Initialize scheduling system
@@ -334,13 +335,13 @@ function init_scheduling() {
 			error_log( '[PUNTWORK] [SCHEDULING-INIT] Scheduling is disabled' );
 	}
 
-	// Ensure health check is scheduled
-	if ( ! wp_next_scheduled( 'puntwork_import_health_check' ) ) {
-		wp_schedule_event( time(), 'puntwork_5min', 'puntwork_import_health_check' );
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULING-INIT] Health check cron scheduled' );
-		}
-	}
+	// Ensure health check is scheduled - DISABLED: Background processing disabled
+	// if ( ! wp_next_scheduled( 'puntwork_import_health_check' ) ) {
+	// 	wp_schedule_event( time(), 'puntwork_5min', 'puntwork_import_health_check' );
+	// 	if ( $debug_mode ) {
+	// 		error_log( '[PUNTWORK] [SCHEDULING-INIT] Health check cron scheduled' );
+	// 	}
+	// }
 
 	if ( $debug_mode ) {
 		error_log( '[PUNTWORK] [SCHEDULING-INIT] Scheduling initialization completed' );

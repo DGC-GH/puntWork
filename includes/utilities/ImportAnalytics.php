@@ -76,16 +76,14 @@ class ImportAnalytics {
 	}
 
 	/**
-	 * Schedule cleanup of old analytics data.
+	 * Schedule analytics cleanup - DISABLED: Background processing disabled
 	 */
 	public static function scheduleAnalyticsCleanup() {
-		if ( ! wp_next_scheduled( 'puntwork_analytics_cleanup' ) ) {
-			// Run cleanup weekly
-			wp_schedule_event( time(), 'weekly', 'puntwork_analytics_cleanup' );
-		}
-	}
-
-	/**
+		// if ( ! wp_next_scheduled( 'puntwork_analytics_cleanup' ) ) {
+		// 	// Run cleanup weekly
+		// 	wp_schedule_event( time(), 'weekly', 'puntwork_analytics_cleanup' );
+		// }
+	}	/**
 	 * Record import metrics when an import completes.
 	 */
 	public static function recordImportMetrics( $import_data ) {
