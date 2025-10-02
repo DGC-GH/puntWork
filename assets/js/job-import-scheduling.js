@@ -272,7 +272,17 @@
             // Disable button and show loading state
             $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Saving...');
 
+            // Set a timeout to re-enable the button if the request takes too long
+            var saveTimeout = setTimeout(function() {
+                console.log('[SCHEDULING] Save request timed out');
+                $button.prop('disabled', false).html('Save Settings');
+                self.showNotification('Save request timed out. Please try again.', 'error');
+            }, 30000); // 30 second timeout
+
             JobImportAPI.call('save_import_schedule', settings, function(response) {
+                // Clear the timeout since we got a response
+                clearTimeout(saveTimeout);
+
                 console.log('[SCHEDULING] Raw response:', response);
                 console.log('[SCHEDULING] Response success:', response.success);
                 console.log('[SCHEDULING] Response data:', response.data);
@@ -297,6 +307,16 @@
                     self.showNotification('Failed to save schedule settings: ' + (response.data.message || 'Unknown error'), 'error');
                     PuntWorkJSLogger.error('Failed to save schedule settings', 'SCHEDULING', response.data);
                 }
+            }, function(error) {
+                // Clear the timeout and handle AJAX error
+                clearTimeout(saveTimeout);
+                console.log('[SCHEDULING] AJAX error:', error);
+
+                // Re-enable button
+                $button.prop('disabled', false).html('Save Settings');
+
+                self.showNotification('Failed to save schedule settings: Network error', 'error');
+                PuntWorkJSLogger.error('AJAX error saving schedule settings', 'SCHEDULING', error);
             });
         },
 
