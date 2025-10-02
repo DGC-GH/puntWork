@@ -61,7 +61,7 @@ function finalize_batch_import( $result ) {
 		$status['start_time'] = $result['start_time'] ?? microtime( true );
 	}
 
-	$status['processed']           = $result['processed'];
+	$status['processed']           = $result['processed'] ?? 0;
 	$status['published']          += $result['published'];
 	$status['updated']            += $result['updated'];
 	$status['skipped']            += $result['skipped'];
@@ -97,7 +97,7 @@ function finalize_batch_import( $result ) {
 		$details = array(
 			'success'       => true,
 			'duration'      => $total_elapsed,
-			'processed'     => $result['processed'],
+			'processed'     => $result['processed'] ?? 0,
 			'total'         => $result['total'],
 			'published'     => $result['published'],
 			'updated'       => $result['updated'],
@@ -119,7 +119,7 @@ function finalize_batch_import( $result ) {
 					'[PUNTWORK] Import completed and logged to history - Trigger: %s, Duration: %.2fs, Processed: %d/%d',
 					$trigger_type,
 					$total_elapsed,
-					$result['processed'],
+					$result['processed'] ?? 0,
 					$result['total']
 				)
 			);

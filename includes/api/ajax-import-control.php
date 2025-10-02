@@ -632,7 +632,7 @@ function log_manual_import_run_ajax() {
 			'timestamp'     => $_POST['timestamp'],
 			'duration'      => $_POST['duration'],
 			'success'       => filter_var( $_POST['success'], FILTER_VALIDATE_BOOLEAN ),
-			'processed'     => $_POST['processed'],
+			'processed'     => $_POST['processed'] ?? 0,
 			'total'         => $_POST['total'],
 			'published'     => $_POST['published'],
 			'updated'       => $_POST['updated'],
@@ -651,7 +651,7 @@ function log_manual_import_run_ajax() {
 			PuntWorkLogger::CONTEXT_AJAX,
 			array(
 				'success'   => $details['success'],
-				'processed' => $details['processed'],
+				'processed' => $details['processed'] ?? 0,
 				'total'     => $details['total'],
 				'duration'  => $details['duration'],
 			)
