@@ -33,19 +33,41 @@ add_action(
 add_action(
 	'admin_menu',
 	function () {
+		// Prevent duplicate menu registration
+		if ( defined( 'PUNTWORK_ADMIN_MENU_REGISTERED' ) && PUNTWORK_ADMIN_MENU_REGISTERED ) {
+			return;
+		}
+		define( 'PUNTWORK_ADMIN_MENU_REGISTERED', true );
+
 		PuntWorkLogger::info( 'Admin menu registration started', PuntWorkLogger::CONTEXT_ADMIN );
 		error_log( '[PUNTWORK] [ADMIN-MENU] Admin menu registration started at ' . date( 'Y-m-d H:i:s T' ) );
 
-		add_menu_page(
-			__( 'puntWork Dashboard', 'puntwork' ),
-			'.work',
-			'manage_options',
-			'puntwork-dashboard',
-			__NAMESPACE__ . '\\puntwork_dashboard_page',
-			PUNTWORK_URL . 'assets/images/icon.svg',
-			0
-		);
-		error_log( '[PUNTWORK] [ADMIN-MENU] Main menu page added: puntwork-dashboard' );
+		// Check if menu already exists to prevent conflicts
+		global $menu;
+		$menu_exists = false;
+		if ( isset( $menu ) && is_array( $menu ) ) {
+			foreach ( $menu as $menu_item ) {
+				if ( isset( $menu_item[2] ) && $menu_item[2] === 'puntwork-dashboard' ) {
+					$menu_exists = true;
+					break;
+				}
+			}
+		}
+
+		if ( ! $menu_exists ) {
+			add_menu_page(
+				__( 'puntWork Dashboard', 'puntwork' ),
+				'.work',
+				'manage_options',
+				'puntwork-dashboard',
+				__NAMESPACE__ . '\\puntwork_dashboard_page',
+				PUNTWORK_URL . 'assets/images/icon.svg',
+				2
+			);
+			error_log( '[PUNTWORK] [ADMIN-MENU] Main menu page added: puntwork-dashboard' );
+		} else {
+			error_log( '[PUNTWORK] [ADMIN-MENU] Main menu page already exists, skipping registration' );
+		}
 
 		add_submenu_page(
 			'puntwork-dashboard',
@@ -136,6 +158,11 @@ add_action(
 add_action(
 	'admin_menu',
 	function () {
+		// Prevent duplicate menu registration
+		if ( defined( 'PUNTWORK_ADMIN_MENU_REGISTERED' ) && PUNTWORK_ADMIN_MENU_REGISTERED ) {
+			return;
+		}
+
 		// Onboarding menu item (only show if onboarding not completed) - always last
 		if ( ! PuntworkOnboardingWizard::isOnboardingCompleted() ) {
 			add_submenu_page(
