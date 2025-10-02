@@ -382,7 +382,7 @@ function register_import_api_routes() {
 		'/cache/clear',
 		array(
 			'methods'             => 'POST',
-			'callback'            => __NAMESPACE__ . '\\handle_clear_cache',
+			'callback'            => __NAMESPACE__ . '\\handle_rest_clear_cache',
 			'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
 			'args'                => array(
 				'api_key' => array(
@@ -1666,7 +1666,7 @@ function handle_onboarding_complete( $request ) {
 /**
  * Handle cache clearing request.
  */
-function handle_clear_cache( $request ) {
+function handle_rest_clear_cache( $request ) {
 	try {
 		// Clear various caches
 		wp_cache_flush();
