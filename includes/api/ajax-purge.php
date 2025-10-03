@@ -75,7 +75,7 @@ function job_import_cleanup_duplicates_ajax() {
 
 		try {
 		// Get batch parameters with validation - start with very small batch size for memory safety
-		$batch_size  = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 3;
+		$batch_size  = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 1; // Reduced to 1 for maximum memory safety
 		$offset      = isset( $_POST['offset'] ) ? intval( $_POST['offset'] ) : 0;
 		$is_continue = isset( $_POST['is_continue'] ) ? filter_var( $_POST['is_continue'], FILTER_VALIDATE_BOOLEAN ) : false;
 
@@ -101,7 +101,7 @@ function job_import_cleanup_duplicates_ajax() {
 					'current_offset'  => 0,
 					'complete'        => false,
 					'start_time'      => microtime( true ),
-					'batch_size'      => 3, // Start with very small batch size
+					'batch_size'      => 1, // Start with very small batch size
 					'last_batch_time' => 0,
 					'logs'            => array(),
 				),
@@ -117,7 +117,7 @@ function job_import_cleanup_duplicates_ajax() {
 				'current_offset'  => 0,
 				'complete'        => false,
 				'start_time'      => microtime( true ),
-				'batch_size'      => 3,
+				'batch_size'      => 1,
 				'last_batch_time' => 0,
 				'logs'            => array(),
 			)
@@ -238,8 +238,8 @@ function job_import_cleanup_duplicates_ajax() {
 			
 			$memory_usage_percent = ($current_memory / $memory_limit_bytes) * 100;
 
-			// If memory usage is over 70%, stop processing this batch early
-			if ($memory_usage_percent > 70) {
+			// If memory usage is over 50%, stop processing this batch early (more conservative)
+			if ($memory_usage_percent > 50) {
 				PuntWorkLogger::warning(
 					'Memory usage too high during cleanup, stopping batch early',
 					PuntWorkLogger::CONTEXT_PURGE,
@@ -272,6 +272,11 @@ function job_import_cleanup_duplicates_ajax() {
 				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Error: Failed to delete job ID: ' . $job->ID;
 				$logs[]    = $log_entry;
 				PuntWorkLogger::error( 'Failed to delete job', PuntWorkLogger::CONTEXT_PURGE, array( 'job_id' => $job->ID ) );
+			}
+
+			// Force garbage collection to prevent memory accumulation
+			if (function_exists('gc_collect_cycles')) {
+				gc_collect_cycles();
 			}
 		}
 
@@ -646,7 +651,7 @@ function job_import_cleanup_continue_ajax() {
 		}
 
 		// Get batch parameters with validation
-		$batch_size = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 3;
+		$batch_size = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 1;
 
 		PuntWorkLogger::info(
 			'Continuing cleanup operation',
@@ -749,8 +754,8 @@ function job_import_cleanup_continue_ajax() {
 			
 			$memory_usage_percent = ($current_memory / $memory_limit_bytes) * 100;
 
-			// If memory usage is over 70%, stop processing this batch early
-			if ($memory_usage_percent > 70) {
+			// If memory usage is over 50%, stop processing this batch early
+			if ($memory_usage_percent > 50) {
 				PuntWorkLogger::warning(
 					'Memory usage too high during cleanup continue, stopping batch early',
 					PuntWorkLogger::CONTEXT_PURGE,
@@ -782,6 +787,11 @@ function job_import_cleanup_continue_ajax() {
 				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Error: Failed to delete job ID: ' . $job->ID;
 				$logs[]    = $log_entry;
 				PuntWorkLogger::error( 'Failed to delete job', PuntWorkLogger::CONTEXT_PURGE, array( 'job_id' => $job->ID ) );
+			}
+
+			// Force garbage collection to prevent memory accumulation
+			if (function_exists('gc_collect_cycles')) {
+				gc_collect_cycles();
 			}
 		}
 
@@ -867,8 +877,8 @@ function job_import_cleanup_continue_ajax() {
  */
 function job_import_adjust_cleanup_batch_size( $current_batch_size, $processing_time, $items_processed ) {
 	$target_time    = 8.0; // Target processing time per batch (seconds)
-	$min_batch_size = 2;  // Minimum batch size - reduced for memory safety
-	$max_batch_size = 50; // Maximum batch size - reduced for memory safety
+	$min_batch_size = 1;  // Minimum batch size - reduced to 1 for maximum memory safety
+	$max_batch_size = 10; // Maximum batch size - reduced for memory safety
 
 	// If no items were processed, keep current batch size
 	if ( $items_processed === 0 ) {
