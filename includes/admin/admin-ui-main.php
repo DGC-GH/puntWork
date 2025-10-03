@@ -558,7 +558,15 @@ function render_main_import_ui(): void {
 			empty.style.display = 'none';
 			table.style.display = 'none';
 
-			const apiKey = '<?php echo esc_js( get_option( 'puntwork_api_key' ) ); ?>';
+			// Get or create API key
+			<?php
+			$api_key = get_option( 'puntwork_api_key', '' );
+			if ( empty( $api_key ) ) {
+				$api_key = wp_generate_password( 32, false );
+				update_option( 'puntwork_api_key', $api_key );
+			}
+			?>
+			const apiKey = '<?php echo esc_js( $api_key ); ?>';
 			const apiUrl = `${window.location.origin}/wp-json/puntwork/v1/jobs?api_key=${encodeURIComponent(apiKey)}&page=${page}&per_page=20&status=${encodeURIComponent(filters.status || 'any')}&search=${encodeURIComponent(filters.search || '')}`;
 
 			// Make REST API request
