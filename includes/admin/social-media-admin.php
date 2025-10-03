@@ -79,6 +79,7 @@ class PuntworkSocialMediaAdmin {
 			array(
 				'ajax_url' => admin_url( 'admin-ajax.php' ),
 				'nonce'    => wp_create_nonce( 'puntwork_social_nonce' ),
+				'api_key'  => get_option( 'puntwork_api_key', '' ),
 				'strings'  => array(
 					'testing'      => __( 'Testing connection...', 'puntwork' ),
 					'test_success' => __( 'Connection successful!', 'puntwork' ),

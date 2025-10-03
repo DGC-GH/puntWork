@@ -59,7 +59,7 @@
             $button.prop('disabled', true).text('Testing...');
             $status.hide();
 
-            const apiKey = '<?php echo esc_js( get_option( 'puntwork_api_key' ) ); ?>';
+            const apiKey = puntwork_social_ajax.api_key;
             const apiUrl = `${window.location.origin}/wp-json/puntwork/v1/social/test-platform?api_key=${encodeURIComponent(apiKey)}`;
 
             fetch(apiUrl, {
@@ -111,7 +111,7 @@
             $button.prop('disabled', true).text(puntwork_social_ajax.strings.saving);
             $status.hide();
 
-            const apiKey = '<?php echo esc_js( get_option( 'puntwork_api_key' ) ); ?>';
+            const apiKey = puntwork_social_ajax.api_key;
             const apiUrl = `${window.location.origin}/wp-json/puntwork/v1/social/save-config?api_key=${encodeURIComponent(apiKey)}`;
 
             fetch(apiUrl, {
@@ -222,7 +222,7 @@
             $button.prop('disabled', true).text(puntwork_social_ajax.strings.posting);
             $status.hide();
 
-            const apiKey = '<?php echo esc_js( get_option( 'puntwork_api_key' ) ); ?>';
+            const apiKey = puntwork_social_ajax.api_key;
             const apiUrl = `${window.location.origin}/wp-json/puntwork/v1/social/post?api_key=${encodeURIComponent(apiKey)}`;
 
             fetch(apiUrl, {

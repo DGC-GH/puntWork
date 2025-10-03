@@ -472,6 +472,7 @@ function enqueue_job_import_scripts() {
 			array(
 				'ajaxurl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => wp_create_nonce( 'puntwork_onboarding_nonce' ),
+				'api_key' => get_option( 'puntwork_api_key', '' ),
 				'steps'   => array(
 					array(
 						'title'   => __( 'Welcome to puntWork', 'puntwork' ),
@@ -530,6 +531,7 @@ function enqueue_job_import_scripts() {
 			array(
 				'ajaxurl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => wp_create_nonce( 'puntwork_accessibility_nonce' ),
+				'api_key' => get_option( 'puntwork_api_key', '' ),
 			)
 		);
 

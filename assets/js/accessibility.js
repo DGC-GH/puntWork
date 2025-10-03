@@ -163,7 +163,7 @@ class PuntworkAccessibilityManager {
 
     clearCache() {
         // Trigger cache clearing via REST API
-        const apiKey = '<?php echo esc_js( get_option( 'puntwork_api_key' ) ); ?>';
+        const apiKey = puntworkAjax.api_key;
         const apiUrl = `${window.location.origin}/wp-json/puntwork/v1/cache/clear?api_key=${encodeURIComponent(apiKey)}`;
 
         fetch(apiUrl, {

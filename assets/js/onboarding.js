@@ -292,7 +292,7 @@ class PuntworkOnboarding {
     completeOnboarding() {
         console.log('[PUNTWORK] [ONBOARDING-COMPLETE] completeOnboarding() called');
         // Mark as completed
-        const apiKey = '<?php echo esc_js( get_option( 'puntwork_api_key' ) ); ?>';
+        const apiKey = puntworkOnboarding.api_key;
         const apiUrl = `${window.location.origin}/wp-json/puntwork/v1/onboarding/complete?api_key=${encodeURIComponent(apiKey)}`;
 
         fetch(apiUrl, {
