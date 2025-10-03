@@ -260,10 +260,25 @@ class SecurityUtils {
 	public static function checkRateLimit( string $action, ?int $max_requests = null, ?int $time_window = null ) {
 		// Include dynamic rate limiter for all operations including cleanup
 		if ( class_exists( '\Puntwork\DynamicRateLimiter' ) ) {
-			return \Puntwork\DynamicRateLimiter::applyDynamicRateLimit( $action );
+			try {
+				return \Puntwork\DynamicRateLimiter::applyDynamicRateLimit( $action );
+			} catch ( \Throwable $e ) {
+				// Log the error and fall back to static rate limiting
+				error_log( '[PUNTWORK] Dynamic rate limiting failed for action "' . $action . '": ' . $e->getMessage() );
+				if ( class_exists( '\Puntwork\PuntWorkLogger' ) ) {
+					\Puntwork\PuntWorkLogger::error(
+						'Dynamic rate limiting failed, falling back to static',
+						\Puntwork\PuntWorkLogger::CONTEXT_SECURITY,
+						array(
+							'action' => $action,
+							'error' => $e->getMessage(),
+						)
+					);
+				}
+			}
 		}
 
-		// Fallback to static rate limiting if dynamic limiter is not available
+		// Fallback to static rate limiting if dynamic limiter is not available or failed
 		return self::checkStaticRateLimit( $action, $max_requests, $time_window );
 	}
 

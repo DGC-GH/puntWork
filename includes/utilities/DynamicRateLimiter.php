@@ -185,7 +185,22 @@ class DynamicRateLimiter {
 		$limit_bytes   = self::getMemoryLimitBytes();
 
 		$current_percent = $limit_bytes > 0 ? ( $current_usage / $limit_bytes ) * 100 : 0;
-		$peak_percent    = $limit_bytes > 0 ? ( $peak_usage / $limit_bytes ) * 100 : 0;
+
+		// Memory safety: Skip detailed tracking if memory usage is critical
+		if ( $current_percent > 95 ) {
+			return array(
+				'current_bytes'     => $current_usage,
+				'peak_bytes'        => memory_get_peak_usage( true ),
+				'limit_bytes'       => $limit_bytes,
+				'current_percent'   => round( $current_percent, 2 ),
+				'peak_percent'      => round( ( memory_get_peak_usage( true ) / $limit_bytes ) * 100, 2 ),
+				'available_bytes'   => max( 0, $limit_bytes - $current_usage ),
+				'available_percent' => round( max( 0, 100 - $current_percent ), 2 ),
+				'pressure_level'    => 'critical',
+				'trend'             => array( 'direction' => 'unknown', 'rate' => 0, 'confidence' => 0 ),
+				'history_count'     => 0,
+			);
+		}
 
 		// Track memory usage history for trend analysis
 		$timestamp                             = microtime( true );
@@ -196,9 +211,9 @@ class DynamicRateLimiter {
 			'percent'   => $current_percent,
 		);
 
-		// Keep only last 10 measurements (last ~5 minutes at normal monitoring intervals)
-		if ( count( self::$memory_cache['usage_history'] ) > 10 ) {
-			self::$memory_cache['usage_history'] = array_slice( self::$memory_cache['usage_history'], -10 );
+		// Memory safety: Keep only last 5 measurements to prevent memory exhaustion
+		if ( count( self::$memory_cache['usage_history'] ) > 5 ) {
+			self::$memory_cache['usage_history'] = array_slice( self::$memory_cache['usage_history'], -5 );
 		}
 
 		// Calculate memory pressure trend
@@ -217,7 +232,7 @@ class DynamicRateLimiter {
 			'peak_bytes'        => $peak_usage,
 			'limit_bytes'       => $limit_bytes,
 			'current_percent'   => round( $current_percent, 2 ),
-			'peak_percent'      => round( $peak_percent, 2 ),
+			'peak_percent'      => round( ( $peak_usage / $limit_bytes ) * 100, 2 ),
 			'available_bytes'   => $limit_bytes - $current_usage,
 			'available_percent' => round( 100 - $current_percent, 2 ),
 			'pressure_level'    => $pressure_level,
@@ -332,27 +347,32 @@ class DynamicRateLimiter {
 	 * @return bool True if cleanup was triggered
 	 */
 	public static function checkMemoryPressure(): bool {
+		// Skip memory pressure checks if memory is already too high to avoid triggering expensive cleanup
+		$current_usage = memory_get_usage(true);
+		$memory_limit = self::getMemoryLimitBytes();
+		$current_memory_percent = ($current_usage / $memory_limit) * 100;
+		if ( $current_memory_percent > 75 ) {
+			return false; // Don't trigger cleanup when memory is already critical
+		}
+
 		$memory_info     = self::getDetailedMemoryUsage();
 		$current_percent = $memory_info['current_percent'];
 
 		// Emergency cleanup at critical threshold
 		if ( $current_percent >= self::$cleanup_thresholds['emergency_cleanup'] ) {
 			self::performEmergencyCleanup();
-
 			return true;
 		}
 
 		// Cache cleanup at high threshold
 		if ( $current_percent >= self::$cleanup_thresholds['cache_cleanup'] ) {
 			self::performCacheCleanup();
-
 			return true;
 		}
 
 		// Metrics cleanup at medium threshold
 		if ( $current_percent >= self::$cleanup_thresholds['metrics_cleanup'] ) {
 			self::performMetricsCleanup();
-
 			return true;
 		}
 
@@ -554,6 +574,52 @@ class DynamicRateLimiter {
 			return array(
 				'multiplier' => 1.0,
 				'reason'     => 'disabled',
+			);
+		}
+
+		// Emergency memory safety check: If memory usage is too high, disable dynamic adjustments entirely
+		// Use basic memory check without calling detailed tracking functions
+		$current_usage = memory_get_usage(true);
+		$memory_limit = self::getMemoryLimitBytes();
+		$current_memory_percent = ($current_usage / $memory_limit) * 100;
+		if ( $current_memory_percent > 90 ) {
+			// Complete bypass - return static limits without any dynamic processing
+			return array(
+				'multiplier' => 1.0,
+				'reason'     => 'emergency_memory_bypass',
+				'metrics'    => array(
+					'avg_cpu'                  => 0,
+					'avg_memory'               => $current_memory_percent,
+					'avg_load'                 => 0,
+					'error_rate'               => 0,
+					'sample_count'             => 0,
+					'memory_pressure'          => 'critical',
+					'memory_trend'             => 'unknown',
+					'available_memory_percent' => 100 - $current_memory_percent,
+				),
+			);
+		}
+
+		// Memory safety check: If memory usage is high, skip expensive operations
+		// Use basic memory check to avoid calling detailed tracking during high memory
+		$current_usage = memory_get_usage(true);
+		$memory_limit = self::getMemoryLimitBytes();
+		$current_memory_percent = ($current_usage / $memory_limit) * 100;
+		if ( $current_memory_percent > 85 ) { // Lower threshold to be more conservative
+			// Complete bypass during high memory - return static limits
+			return array(
+				'multiplier' => 1.0,
+				'reason'     => 'high_memory_bypass',
+				'metrics'    => array(
+					'avg_cpu'                  => 0,
+					'avg_memory'               => $current_memory_percent,
+					'avg_load'                 => 0,
+					'error_rate'               => 0,
+					'sample_count'             => 0,
+					'memory_pressure'          => 'high',
+					'memory_trend'             => 'unknown',
+					'available_memory_percent' => 100 - $current_memory_percent,
+				),
 			);
 		}
 
@@ -815,10 +881,16 @@ class DynamicRateLimiter {
 		$stored_metrics = get_option( $metric_key, array() );
 		$cutoff_time    = time() - $time_range;
 
+		// Memory safety: If stored metrics are too large, return empty array to avoid memory exhaustion
+		if ( ! is_array( $stored_metrics ) || count( $stored_metrics ) > 1000 ) {
+			error_log( '[PUNTWORK] DynamicRateLimiter: Too many stored metrics for action "' . $action . '", skipping dynamic adjustments' );
+			return array();
+		}
+
 		return array_filter(
 			$stored_metrics,
 			function ( $metric ) use ( $cutoff_time ) {
-				return $metric['timestamp'] >= $cutoff_time;
+				return isset( $metric['timestamp'] ) && $metric['timestamp'] >= $cutoff_time;
 			}
 		);
 	}
@@ -833,6 +905,15 @@ class DynamicRateLimiter {
 		$config = self::getConfig();
 		if ( ! $config['enabled'] ) {
 			// Fall back to static rate limiting
+			return \Puntwork\SecurityUtils::checkStaticRateLimit( $action );
+		}
+
+		// Critical memory safety check: If memory usage is too high, skip all dynamic processing
+		$current_usage = memory_get_usage(true);
+		$memory_limit = self::getMemoryLimitBytes();
+		$current_memory_percent = ($current_usage / $memory_limit) * 100;
+		if ( $current_memory_percent > 80 ) { // Very conservative threshold
+			// Bypass all dynamic processing and use static limits
 			return \Puntwork\SecurityUtils::checkStaticRateLimit( $action );
 		}
 
