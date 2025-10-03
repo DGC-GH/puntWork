@@ -309,7 +309,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 JobImportUI.clearCleanupProgress();
 
                 console.log('[PUNTWORK] Calling cleanup API');
-                JobImportEvents.processCleanupBatch(0, 10); // Start with first batch at size 10
+                JobImportEvents.processCleanupBatch(0, 1); // Start with first batch at size 1 (one post at a time for maximum safety)
             } else {
                 console.log('[PUNTWORK] User cancelled cleanup');
             }
