@@ -37,37 +37,37 @@ function render_jobs_dashboard_ui(): void {
 				</div>
 
 				<!-- Cleanup Progress Section -->
-								<div id="cleanup-progress" class="puntwork-card__body"
+								<div id="jobs-cleanup-progress" class="puntwork-card__body"
 					style="background-color: var(--color-gray-50); border-radius: var(--radius-md);
 					margin-bottom: var(--spacing-lg); display: none;">
 										<div style="display: flex; justify-content: space-between; align-items: center;
 						margin-bottom: var(--spacing-sm);">
-												<span id="cleanup-progress-percent"
+												<span id="jobs-cleanup-progress-percent"
 							style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold);
 							color: var(--color-primary);">0%</span>
-												<span id="cleanup-time-elapsed"
+												<span id="jobs-cleanup-time-elapsed"
 							style="font-size: var(--font-size-sm); color: var(--color-gray-600);">0s</span>
 					</div>
 					<div class="puntwork-progress">
-						<div id="cleanup-progress-bar" class="puntwork-progress__bar" style="width: 0%;"></div>
+						<div id="jobs-cleanup-progress-bar" class="puntwork-progress__bar" style="width: 0%;"></div>
 					</div>
 					<div style="display: flex; justify-content: space-between; align-items: center;
 						margin-top: var(--spacing-sm);">
-												<span id="cleanup-status-message"
+												<span id="jobs-cleanup-status-message"
 							style="font-size: var(--font-size-sm); color: var(--color-gray-600);">Ready to start.</span>
-												<span id="cleanup-items-left"
+												<span id="jobs-cleanup-items-left"
 							style="font-size: var(--font-size-sm); color: var(--color-gray-600);">0 left</span>
 					</div>
 				</div>
 
 				<div class="puntwork-card__footer">
 					<div style="display: flex; gap: var(--spacing-md); align-items: center;">
-						<button id="cleanup-duplicates" class="puntwork-btn puntwork-btn--danger">
+						<button id="jobs-cleanup-duplicates" class="puntwork-btn puntwork-btn--danger">
 							<i class="fas fa-trash-alt puntwork-btn__icon"></i>
-							<span id="cleanup-text">Delete Drafts & Trash</span>
-							<span id="cleanup-loading" style="display: none;">Deleting...</span>
+							<span id="jobs-cleanup-text">Delete Drafts & Trash</span>
+							<span id="jobs-cleanup-loading" style="display: none;">Deleting...</span>
 						</button>
-						<span id="cleanup-status"
+						<span id="jobs-cleanup-status"
 							style="font-size: var(--font-size-sm); color: var(--color-gray-600);"></span>
 					</div>
 				</div>
