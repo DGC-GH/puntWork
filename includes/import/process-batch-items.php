@@ -159,8 +159,10 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 
 			if ( $processed_count % 5 == 0 ) {
 				error_log( '[PUNTWORK] [ITEMS-DEBUG] Processed ' . $processed_count . ' items so far in batch' );
-				ob_flush();
-				flush();
+				if ( ob_get_level() > 0 ) {
+					ob_flush();
+					flush();
+				}
 			}
 		}
 		error_log( '[PUNTWORK] [ITEMS-DEBUG] process_batch_items completed processing all ' . $total_to_process . ' items' );

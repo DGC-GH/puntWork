@@ -72,7 +72,7 @@ function get_cached_last_updates( array $post_ids, array $post_id_chunks ): arra
 		$placeholders = implode( ',', array_fill( 0, count( $chunk ), '%d' ) );
 		$query        = $wpdb->prepare(
 			"SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_last_import_update' AND post_id IN ($placeholders)",
-			$chunk
+			...$chunk
 		);
 
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -129,7 +129,7 @@ function get_cached_import_hashes( array $post_ids, array $post_id_chunks ): arr
 		$placeholders = implode( ',', array_fill( 0, count( $chunk ), '%d' ) );
 		$query        = $wpdb->prepare(
 			"SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
-			$chunk
+			...$chunk
 		);
 
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {

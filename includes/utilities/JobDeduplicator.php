@@ -452,7 +452,7 @@ class JobDeduplicator {
 					$hashes_query   = $wpdb->prepare(
 						"SELECT post_id, meta_value FROM $wpdb->postmeta " .
 						"WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
-						$existing
+						...$existing
 					);
 					$hashes_results = $wpdb->get_results( $hashes_query, OBJECT_K );
 					$hashes         = array();
@@ -463,7 +463,7 @@ class JobDeduplicator {
 					// Batch load post_modified and post_title
 					$posts_query   = $wpdb->prepare(
 						"SELECT ID, post_modified, post_title FROM $wpdb->posts WHERE ID IN ($placeholders)",
-						$existing
+						...$existing
 					);
 					$posts_results = $wpdb->get_results( $posts_query, OBJECT_K );
 					$post_modified = array();
@@ -613,7 +613,7 @@ class JobDeduplicator {
 		// Batch load post titles
 		$posts_query   = $wpdb->prepare(
 			"SELECT ID, post_title FROM $wpdb->posts WHERE ID IN ($placeholders)",
-			$existing_jobs
+			...$existing_jobs
 		);
 		$posts_results = $wpdb->get_results( $posts_query, OBJECT_K );
 		$post_titles   = array();
@@ -626,7 +626,7 @@ class JobDeduplicator {
 		$meta_query   = $wpdb->prepare(
 			"SELECT post_id, meta_key, meta_value FROM $wpdb->postmeta
              WHERE post_id IN ($placeholders) AND meta_key IN ('job_description', 'company')",
-			$existing_jobs
+			...$existing_jobs
 		);
 		$meta_results = $wpdb->get_results( $meta_query );
 		$meta_data    = array();

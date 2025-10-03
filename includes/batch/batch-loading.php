@@ -251,8 +251,10 @@ function load_and_prepare_batch_items( string $json_path, int $start_index, int 
 		}
 
 		if ( $i % 5 == 0 ) {
-			ob_flush();
-			flush();
+			if ( ob_get_level() > 0 ) {
+				ob_flush();
+				flush();
+			}
 		}
 		unset( $batch_json_items[ $i ] );
 	}
