@@ -73,8 +73,8 @@ function job_import_cleanup_duplicates_ajax() {
 
 		error_log( '[PUNTWORK] [CLEANUP] Database connection OK' );
 		try {
-		// Get batch parameters with validation - start with smaller batch size for dynamic adjustment
-		$batch_size  = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 10;
+		// Get batch parameters with validation - start with very small batch size for memory safety
+		$batch_size  = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 3;
 		$offset      = isset( $_POST['offset'] ) ? intval( $_POST['offset'] ) : 0;
 		$is_continue = isset( $_POST['is_continue'] ) ? filter_var( $_POST['is_continue'], FILTER_VALIDATE_BOOLEAN ) : false;
 
@@ -98,7 +98,7 @@ function job_import_cleanup_duplicates_ajax() {
 					'current_offset'  => 0,
 					'complete'        => false,
 					'start_time'      => microtime( true ),
-					'batch_size'      => 10, // Start with 10
+					'batch_size'      => 3, // Start with very small batch size
 					'last_batch_time' => 0,
 					'logs'            => array(),
 				),
@@ -114,7 +114,7 @@ function job_import_cleanup_duplicates_ajax() {
 				'current_offset'  => 0,
 				'complete'        => false,
 				'start_time'      => microtime( true ),
-				'batch_size'      => 10,
+				'batch_size'      => 3,
 				'last_batch_time' => 0,
 				'logs'            => array(),
 			)
@@ -212,8 +212,39 @@ function job_import_cleanup_duplicates_ajax() {
 		wp_defer_term_counting( true );
 		wp_defer_comment_counting( true );
 
-		// Process this batch
+		// Process this batch with memory monitoring
+		$initial_memory = memory_get_usage();
 		foreach ( $batch_jobs as $job ) {
+			// Check memory usage before each deletion
+			$current_memory = memory_get_usage();
+			$memory_limit = ini_get('memory_limit');
+			
+			// Simple memory limit parsing (handle M, G suffixes)
+			if (preg_match('/^(\d+)([MG])$/', $memory_limit, $matches)) {
+				$value = (int)$matches[1];
+				$unit = $matches[2];
+				$memory_limit_bytes = $unit === 'G' ? $value * 1024 * 1024 * 1024 : $value * 1024 * 1024;
+			} else {
+				$memory_limit_bytes = (int)$memory_limit; // Assume bytes if no unit
+			}
+			
+			$memory_usage_percent = ($current_memory / $memory_limit_bytes) * 100;
+
+			// If memory usage is over 70%, stop processing this batch early
+			if ($memory_usage_percent > 70) {
+				PuntWorkLogger::warning(
+					'Memory usage too high during cleanup, stopping batch early',
+					PuntWorkLogger::CONTEXT_PURGE,
+					array(
+						'memory_usage_percent' => round($memory_usage_percent, 1),
+						'current_memory_mb' => round($current_memory / 1024 / 1024, 1),
+						'memory_limit_mb' => round($memory_limit_bytes / 1024 / 1024, 1),
+						'jobs_processed_in_batch' => $deleted_count,
+					)
+				);
+				break;
+			}
+
 			$result = wp_delete_post( $job->ID, true ); // Force delete
 			if ( $result ) {
 				++$deleted_count;
@@ -603,7 +634,7 @@ function job_import_cleanup_continue_ajax() {
 		}
 
 		// Get batch parameters with validation
-		$batch_size = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 10;
+		$batch_size = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 3;
 
 		PuntWorkLogger::info(
 			'Continuing cleanup operation',
@@ -688,8 +719,39 @@ function job_import_cleanup_continue_ajax() {
 		wp_defer_term_counting( true );
 		wp_defer_comment_counting( true );
 
-		// Process this batch
+		// Process this batch with memory monitoring
+		$initial_memory = memory_get_usage();
 		foreach ( $batch_jobs as $job ) {
+			// Check memory usage before each deletion
+			$current_memory = memory_get_usage();
+			$memory_limit = ini_get('memory_limit');
+			
+			// Simple memory limit parsing (handle M, G suffixes)
+			if (preg_match('/^(\d+)([MG])$/', $memory_limit, $matches)) {
+				$value = (int)$matches[1];
+				$unit = $matches[2];
+				$memory_limit_bytes = $unit === 'G' ? $value * 1024 * 1024 * 1024 : $value * 1024 * 1024;
+			} else {
+				$memory_limit_bytes = (int)$memory_limit; // Assume bytes if no unit
+			}
+			
+			$memory_usage_percent = ($current_memory / $memory_limit_bytes) * 100;
+
+			// If memory usage is over 70%, stop processing this batch early
+			if ($memory_usage_percent > 70) {
+				PuntWorkLogger::warning(
+					'Memory usage too high during cleanup continue, stopping batch early',
+					PuntWorkLogger::CONTEXT_PURGE,
+					array(
+						'memory_usage_percent' => round($memory_usage_percent, 1),
+						'current_memory_mb' => round($current_memory / 1024 / 1024, 1),
+						'memory_limit_mb' => round($memory_limit_bytes / 1024 / 1024, 1),
+						'jobs_processed_in_batch' => $deleted_count,
+					)
+				);
+				break;
+			}
+
 			$result = wp_delete_post( $job->ID, true ); // Force delete
 			if ( $result ) {
 				++$deleted_count;
@@ -793,8 +855,8 @@ function job_import_cleanup_continue_ajax() {
  */
 function job_import_adjust_cleanup_batch_size( $current_batch_size, $processing_time, $items_processed ) {
 	$target_time    = 8.0; // Target processing time per batch (seconds)
-	$min_batch_size = 5;  // Minimum batch size
-	$max_batch_size = 100; // Maximum batch size
+	$min_batch_size = 2;  // Minimum batch size - reduced for memory safety
+	$max_batch_size = 50; // Maximum batch size - reduced for memory safety
 
 	// If no items were processed, keep current batch size
 	if ( $items_processed === 0 ) {
