@@ -355,9 +355,36 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         JobImportEvents.processCleanupBatch(response.data.next_offset, nextBatchSize);
                     }
                 } else {
+                    // Handle rate limit errors specifically for cleanup
+                    if (response.error && response.error.code === 'rate_limit') {
+                        console.log('[PUNTWORK] Cleanup rate limit exceeded:', response.error.message);
+                        PuntWorkJSLogger.warn('Cleanup rate limit exceeded', 'EVENTS', response.error);
+                        
+                        // Update status to show rate limiting
+                        $('#cleanup-status').text('Rate limited - waiting before retry...');
+                        $('#jobs-cleanup-status').text('Rate limited - waiting before retry...');
+                        
+                        // Extract wait time from error message (e.g., "Please wait 6 seconds")
+                        var waitTime = 6000; // Default 6 seconds
+                        var match = response.error.message.match(/wait (\d+) seconds/);
+                        if (match) {
+                            waitTime = parseInt(match[1]) * 1000;
+                        }
+                        
+                        console.log('[PUNTWORK] Waiting ' + waitTime + 'ms before retrying cleanup');
+                        
+                        // Retry after the specified wait time
+                        setTimeout(function() {
+                            console.log('[PUNTWORK] Retrying cleanup batch after rate limit');
+                            JobImportEvents.processCleanupBatch(offset, batchSize);
+                        }, waitTime);
+                        
+                        return; // Don't continue with error handling
+                    }
+                    
                     console.log('[PUNTWORK] Cleanup response failed:', response.data);
-                    $('#cleanup-status').text('Cleanup failed: ' + (response.data || 'Unknown error'));
-                    $('#jobs-cleanup-status').text('Cleanup failed: ' + (response.data || 'Unknown error'));
+                    $('#cleanup-status').text('Cleanup failed: ' + (response.data?.error || response.data || 'Unknown error'));
+                    $('#jobs-cleanup-status').text('Cleanup failed: ' + (response.data?.error || response.data || 'Unknown error'));
                     $('#cleanup-duplicates').prop('disabled', false);
                     $('#jobs-cleanup-duplicates').prop('disabled', false);
                     $('#cleanup-text').show();
