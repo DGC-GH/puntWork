@@ -1642,6 +1642,22 @@ function combine_jsonl_ajax() {
 			)
 		);
 
+		// Schedule automatic import start after successful combination
+		if ( file_exists( $combined_file ) && filesize( $combined_file ) > 0 ) {
+			if ( function_exists( 'as_schedule_single_action' ) ) {
+				// Use Action Scheduler if available (preferred for reliability)
+				as_schedule_single_action( time() + 5, 'puntwork_start_scheduled_import' );
+				error_log( '[PUNTWORK] [SCHEDULING] Automatic import scheduled using Action Scheduler (5 second delay)' );
+			} elseif ( function_exists( 'wp_schedule_single_event' ) ) {
+				// Fallback: Use WordPress cron
+				wp_schedule_single_event( time() + 5, 'puntwork_start_scheduled_import' );
+				error_log( '[PUNTWORK] [SCHEDULING] Automatic import scheduled using WordPress cron (5 second delay)' );
+			} else {
+				// Last resort: Log that scheduling failed
+				error_log( '[PUNTWORK] [SCHEDULING] ERROR: No async scheduling available for automatic import' );
+			}
+		}
+
 		error_log( '[PUNTWORK] [DEBUG-PHP] ===== COMBINE_JSONL_AJAX SUCCESS =====' );
 		wp_send_json_success(
 			array(

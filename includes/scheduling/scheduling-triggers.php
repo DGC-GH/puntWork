@@ -75,3 +75,24 @@ add_action(
 		}
 	}
 );
+
+// Register the scheduled import start hook (triggered after JSONL combination)
+add_action(
+	'puntwork_start_scheduled_import',
+	function () {
+		error_log( '[PUNTWORK] Scheduled import start triggered after JSONL combination' );
+
+		try {
+			// Start the import process automatically
+			$result = import_jobs_from_json( true );
+
+			if ( $result['success'] ) {
+				error_log( '[PUNTWORK] Scheduled import start completed successfully' );
+			} else {
+				error_log( '[PUNTWORK] Scheduled import start failed: ' . ( $result['message'] ?? 'Unknown error' ) );
+			}
+		} catch ( \Exception $e ) {
+			error_log( '[PUNTWORK] Scheduled import start exception: ' . $e->getMessage() );
+		}
+	}
+);
