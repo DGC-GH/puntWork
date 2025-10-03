@@ -589,6 +589,8 @@ function job_import_cleanup_continue_ajax() {
 		return;
 	}
 
+	global $wpdb;
+
 	try {
 		$progress = get_option( 'job_import_cleanup_progress' );
 		if ( ! $progress || $progress['complete'] ) {
@@ -599,7 +601,7 @@ function job_import_cleanup_continue_ajax() {
 		}
 
 		// Get batch parameters with validation
-		$batch_size = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 50;
+		$batch_size = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 10;
 
 		PuntWorkLogger::info(
 			'Continuing cleanup operation',
@@ -610,13 +612,168 @@ function job_import_cleanup_continue_ajax() {
 			)
 		);
 
-		// Call the main cleanup function with continue parameters
-		$_POST['batch_size']  = $batch_size;
-		$_POST['offset']      = $progress['current_offset'];
-		$_POST['is_continue'] = true;
+		// Set lock for this batch
+		$lock_start = microtime( true );
+		while ( get_transient( 'job_import_cleanup_lock' ) ) {
+			usleep( 50000 );
+			if ( microtime( true ) - $lock_start > 30 ) {
+				PuntWorkLogger::error( 'Cleanup lock timeout', PuntWorkLogger::CONTEXT_PURGE );
+				AjaxErrorHandler::sendError( 'Cleanup lock timeout' );
 
-		job_import_cleanup_duplicates_ajax();
+				return;
+			}
+		}
+		set_transient( 'job_import_cleanup_lock', true, 30 );
+
+		$logs             = $progress['logs'];
+		$deleted_count    = 0;
+		$batch_start_time = microtime( true );
+
+		// Get batch of jobs
+		$batch_jobs = $wpdb->get_results(
+			$wpdb->prepare(
+				"
+            SELECT p.ID, p.post_status, p.post_title
+            FROM {$wpdb->posts} p
+            WHERE p.post_type = 'job'
+            AND p.post_status IN ('draft', 'trash')
+            ORDER BY p.ID
+            LIMIT %d OFFSET %d
+        ",
+				$batch_size,
+				$progress['current_offset']
+			)
+		);
+
+		if ( empty( $batch_jobs ) ) {
+			// No more jobs to process
+			$progress['complete']     = true;
+			$progress['end_time']     = microtime( true );
+			$progress['time_elapsed'] = $progress['end_time'] - $progress['start_time'];
+			update_option( 'job_import_cleanup_progress', $progress, false );
+			delete_transient( 'job_import_cleanup_lock' );
+
+			$message = "Cleanup completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} draft/trash posts";
+			PuntWorkLogger::info( $message, PuntWorkLogger::CONTEXT_PURGE );
+
+			PuntWorkLogger::logAjaxResponse(
+				'job_import_cleanup_continue',
+				array(
+					'message'         => $message,
+					'complete'        => true,
+					'total_processed' => $progress['total_processed'],
+					'total_deleted'   => $progress['total_deleted'],
+					'time_elapsed'    => $progress['time_elapsed'],
+					'logs_count'      => count( $logs ),
+				)
+			);
+			AjaxErrorHandler::sendSuccess(
+				array(
+					'message'         => $message,
+					'complete'        => true,
+					'total_processed' => $progress['total_processed'],
+					'total_deleted'   => $progress['total_deleted'],
+					'time_elapsed'    => $progress['time_elapsed'],
+					'logs'            => array_slice( $logs, -50 ),
+				)
+			);
+
+			return;
+		}
+
+		// Defer term and comment counting for better performance during bulk operations
+		wp_defer_term_counting( true );
+		wp_defer_comment_counting( true );
+
+		// Process this batch
+		foreach ( $batch_jobs as $job ) {
+			$result = wp_delete_post( $job->ID, true ); // Force delete
+			if ( $result ) {
+				++$deleted_count;
+				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Permanently deleted ' . $job->post_status . ' job ID: ' . $job->ID . ' - ' . $job->post_title;
+				$logs[]    = $log_entry;
+				PuntWorkLogger::info(
+					'Deleted draft/trash job',
+					PuntWorkLogger::CONTEXT_PURGE,
+					array(
+						'job_id'      => $job->ID,
+						'post_status' => $job->post_status,
+						'title'       => $job->post_title,
+					)
+				);
+			} else {
+				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Error: Failed to delete job ID: ' . $job->ID;
+				$logs[]    = $log_entry;
+				PuntWorkLogger::error( 'Failed to delete job', PuntWorkLogger::CONTEXT_PURGE, array( 'job_id' => $job->ID ) );
+			}
+		}
+
+		// Re-enable term and comment counting
+		wp_defer_term_counting( false );
+		wp_defer_comment_counting( false );
+
+		// Update progress
+		$progress['total_processed'] += count( $batch_jobs );
+		$progress['total_deleted']   += $deleted_count;
+		$progress['current_offset']   = $progress['current_offset'] + $batch_size;
+		$progress['logs']             = $logs;
+
+		// Calculate batch processing time and adjust batch size dynamically
+		$batch_end_time              = microtime( true );
+		$batch_processing_time       = $batch_end_time - $batch_start_time;
+		$progress['last_batch_time'] = $batch_processing_time;
+
+		// Dynamic batch size adjustment (only for continuation batches)
+		$new_batch_size         = job_import_adjust_cleanup_batch_size( $batch_size, $batch_processing_time, count( $batch_jobs ) );
+		$progress['batch_size'] = $new_batch_size;
+		PuntWorkLogger::info(
+			'Batch size adjusted',
+			PuntWorkLogger::CONTEXT_PURGE,
+			array(
+				'old_batch_size'  => $batch_size,
+				'new_batch_size'  => $new_batch_size,
+				'processing_time' => $batch_processing_time,
+				'items_processed' => count( $batch_jobs ),
+			)
+		);
+
+		update_option( 'job_import_cleanup_progress', $progress, false );
+
+		delete_transient( 'job_import_cleanup_lock' );
+
+		// Calculate progress percentage
+		$progress_percentage = $progress['total_jobs'] > 0 ? round( ( $progress['total_processed'] / $progress['total_jobs'] ) * 100, 1 ) : 0;
+
+		$message = "Batch processed: {$progress['total_processed']}/{$progress['total_jobs']} jobs ({$progress_percentage}%), deleted {$deleted_count} draft/trash posts this batch";
+		PuntWorkLogger::info( $message, PuntWorkLogger::CONTEXT_PURGE );
+
+		PuntWorkLogger::logAjaxResponse(
+			'job_import_cleanup_continue',
+			array(
+				'message'             => $message,
+				'complete'            => false,
+				'next_offset'         => $progress['current_offset'],
+				'batch_size'          => $progress['batch_size'] ?? $batch_size, // Use adjusted batch size for next batch
+				'total_processed'     => $progress['total_processed'],
+				'total_deleted'       => $progress['total_deleted'],
+				'progress_percentage' => $progress_percentage,
+				'logs_count'          => count( $logs ),
+			)
+		);
+		AjaxErrorHandler::sendSuccess(
+			array(
+				'message'             => $message,
+				'complete'            => false,
+				'next_offset'         => $progress['current_offset'],
+				'batch_size'          => $progress['batch_size'] ?? $batch_size, // Use adjusted batch size for next batch
+				'total_processed'     => $progress['total_processed'],
+				'total_deleted'       => $progress['total_deleted'],
+				'progress_percentage' => $progress_percentage,
+				'logs'                => array_slice( $logs, -20 ),
+			)
+		);
 	} catch ( \Exception $e ) {
+		delete_transient( 'job_import_cleanup_lock' );
 		PuntWorkLogger::error( 'Cleanup continue failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_PURGE );
 		AjaxErrorHandler::sendError( 'Cleanup continue failed: ' . $e->getMessage() );
 	}

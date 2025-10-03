@@ -62,9 +62,9 @@ class SecurityUtils {
 				'max_requests' => 3,
 				'time_window'  => 3600, // 1 hour
 			),
-			'job_import_cleanup_duplicates' => array(
-				'max_requests' => 5,
-				'time_window'  => 300, // 5 minutes
+			'job_import_cleanup_continue' => array(
+				'max_requests' => 10,
+				'time_window'  => 60, // 1 minute - allow more frequent continues
 			),
 		);
 
@@ -259,7 +259,7 @@ class SecurityUtils {
 	 */
 	public static function checkRateLimit( string $action, ?int $max_requests = null, ?int $time_window = null ) {
 		// Skip dynamic rate limiting for cleanup operations to avoid memory issues
-		if ( $action === 'job_import_cleanup_duplicates' ) {
+		if ( in_array( $action, array( 'job_import_cleanup_duplicates', 'job_import_cleanup_continue' ) ) ) {
 			return self::checkStaticRateLimit( $action, $max_requests, $time_window );
 		}
 

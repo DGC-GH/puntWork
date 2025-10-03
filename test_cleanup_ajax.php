@@ -9,6 +9,10 @@ define('ABSPATH', '/tmp/');
 define('WP_DEBUG', true);
 define('WP_MEMORY_LIMIT', '256M');
 
+// Initialize global mock options
+global $mock_options;
+$mock_options = [];
+
 // Mock essential WordPress functions
 function wp_verify_nonce($nonce, $action) {
     // For testing, accept any nonce that matches the action
@@ -25,12 +29,12 @@ function get_current_user_id() {
 
 function wp_send_json_error($data) {
     echo "ERROR: " . json_encode($data) . "\n";
-    exit;
+    // Don't exit for testing
 }
 
-function wp_send_json_success($data) {
-    echo "SUCCESS: " . json_encode($data) . "\n";
-    exit;
+function wp_send_json($data) {
+    echo "WP_SEND_JSON: " . json_encode($data) . "\n";
+    // Don't exit for testing
 }
 
 function wp_die($message = '') {
@@ -39,19 +43,19 @@ function wp_die($message = '') {
 }
 
 function get_option($key, $default = null) {
-    static $options = [];
-    return $options[$key] ?? $default;
+    global $mock_options;
+    return $mock_options[$key] ?? $default;
 }
 
 function update_option($key, $value) {
-    static $options = [];
-    $options[$key] = $value;
+    global $mock_options;
+    $mock_options[$key] = $value;
     return true;
 }
 
 function delete_option($key) {
-    static $options = [];
-    unset($options[$key]);
+    global $mock_options;
+    unset($mock_options[$key]);
     return true;
 }
 
@@ -107,8 +111,8 @@ function current_time($type = 'mysql', $gmt = false) {
     return date('Y-m-d H:i:s');
 }
 
-function apply_filters($tag, $value) {
-    return $value; // Mock filter application
+function is_admin() {
+    return true; // Mock as admin context for testing
 }
 
 // Mock WP_Error class
@@ -197,12 +201,12 @@ class PuntWorkLogger {
 class AjaxErrorHandler {
     public static function sendError($message) {
         echo "AJAX ERROR: $message\n";
-        exit;
+        // Don't exit for testing
     }
 
     public static function sendSuccess($data) {
         echo "AJAX SUCCESS: " . json_encode($data) . "\n";
-        exit;
+        // Don't exit for testing
     }
 }
 
@@ -247,17 +251,28 @@ try {
     echo "EXCEPTION: " . $e->getMessage() . "\n";
 }
 
-// Test 2: Invalid nonce
-echo "\n--- Test 2: Invalid nonce ---\n";
+// Test 3: Continue cleanup
+echo "\n--- Test 3: Continue cleanup ---\n";
 $_POST = [
-    'action' => 'job_import_cleanup_duplicates',
-    'nonce' => 'invalid_nonce'
+    'action' => 'job_import_cleanup_continue',
+    'nonce' => 'job_import_nonce_test_nonce',
+    'batch_size' => 10
 ];
 
+// Mock progress data from previous batch
+update_option('job_import_cleanup_progress', [
+    'total_jobs' => 5,
+    'total_processed' => 2,
+    'total_deleted' => 2,
+    'current_offset' => 10,
+    'batch_size' => 10,
+    'complete' => false,
+    'start_time' => microtime(true) - 1,
+    'logs' => ['Previous log entry']
+]);
+
 try {
-    \Puntwork\job_import_cleanup_duplicates_ajax();
+    \Puntwork\job_import_cleanup_continue_ajax();
 } catch (Exception $e) {
     echo "EXCEPTION: " . $e->getMessage() . "\n";
 }
-
-echo "\n=== TEST COMPLETE ===\n";
