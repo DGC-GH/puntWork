@@ -400,6 +400,20 @@
   border-right: none;
 }
 
+/* Cleanup progress bar segments */
+.cleanup-progress-segment {
+  flex: 1; /* Each segment takes equal width */
+  height: 100%;
+  background-color: var(--color-gray-300);
+  transition: background-color var(--transition-normal);
+  border-right: 1px solid var(--color-gray-400);
+  width: auto !important; /* Ensure flexbox controls width */
+}
+
+.cleanup-progress-segment:last-child {
+  border-right: none;
+}
+
 
 
 @keyframes progress-shine {

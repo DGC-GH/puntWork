@@ -130,6 +130,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
         bindCleanupEvents: function() {
             console.log('[PUNTWORK] Binding cleanup events only...');
             console.log('[PUNTWORK] Cleanup button exists:', $('#cleanup-duplicates').length);
+            console.log('[PUNTWORK] Jobs cleanup button exists:', $('#jobs-cleanup-duplicates').length);
 
             // Check if cleanup button exists before binding
             if ($('#cleanup-duplicates').length > 0) {
@@ -139,8 +140,16 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     e.preventDefault(); // Prevent any default form submission
                     JobImportEvents.handleCleanupDuplicates();
                 });
-            } else {
-                console.log('[PUNTWORK] Cleanup button NOT found!');
+            }
+
+            // Also bind the jobs cleanup button if it exists
+            if ($('#jobs-cleanup-duplicates').length > 0) {
+                console.log('[PUNTWORK] Found jobs cleanup button, binding click handler');
+                $('#jobs-cleanup-duplicates').on('click', function(e) {
+                    console.log('[PUNTWORK] Jobs cleanup button clicked!');
+                    e.preventDefault(); // Prevent any default form submission
+                    JobImportEvents.handleCleanupDuplicates();
+                });
             }
 
             console.log('[PUNTWORK] Cleanup events bound successfully');
@@ -285,10 +294,15 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
             if (confirm('This will permanently delete all job posts that are in Draft or Trash status. This action cannot be undone. Continue?')) {
                 console.log('[PUNTWORK] User confirmed cleanup');
+                // Disable both cleanup buttons
                 $('#cleanup-duplicates').prop('disabled', true);
+                $('#jobs-cleanup-duplicates').prop('disabled', true);
                 $('#cleanup-text').hide();
+                $('#jobs-cleanup-text').hide();
                 $('#cleanup-loading').show();
+                $('#jobs-cleanup-loading').show();
                 $('#cleanup-status').text('Starting cleanup...');
+                $('#jobs-cleanup-status').text('Starting cleanup...');
 
                 // Show progress UI immediately
                 JobImportUI.showCleanupUI();
@@ -320,14 +334,20 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     if (response.data.complete) {
                         // Operation completed
                         $('#cleanup-status').text('Cleanup completed: ' + response.data.total_deleted + ' duplicates removed');
+                        $('#jobs-cleanup-status').text('Cleanup completed: ' + response.data.total_deleted + ' duplicates removed');
                         $('#cleanup-duplicates').prop('disabled', false);
+                        $('#jobs-cleanup-duplicates').prop('disabled', false);
                         $('#cleanup-text').show();
+                        $('#jobs-cleanup-text').show();
                         $('#cleanup-loading').hide();
+                        $('#jobs-cleanup-loading').hide();
                         JobImportUI.clearCleanupProgress();
                     } else {
                         // Update progress and continue with next batch
                         JobImportUI.updateCleanupProgress(response.data);
                         $('#cleanup-status').text('Progress: ' + response.data.progress_percentage + '% (' +
+                            response.data.total_processed + '/' + response.data.total_jobs + ' jobs processed)');
+                        $('#jobs-cleanup-status').text('Progress: ' + response.data.progress_percentage + '% (' +
                             response.data.total_processed + '/' + response.data.total_jobs + ' jobs processed)');
                         
                         // Use the batch size returned by the server (which may be adjusted dynamically)
@@ -337,9 +357,13 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 } else {
                     console.log('[PUNTWORK] Cleanup response failed:', response.data);
                     $('#cleanup-status').text('Cleanup failed: ' + (response.data || 'Unknown error'));
+                    $('#jobs-cleanup-status').text('Cleanup failed: ' + (response.data || 'Unknown error'));
                     $('#cleanup-duplicates').prop('disabled', false);
+                    $('#jobs-cleanup-duplicates').prop('disabled', false);
                     $('#cleanup-text').show();
+                    $('#jobs-cleanup-text').show();
                     $('#cleanup-loading').hide();
+                    $('#jobs-cleanup-loading').hide();
                     JobImportUI.clearCleanupProgress();
                 }
             }).catch(function(xhr, status, error) {
@@ -347,10 +371,14 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 console.log('[PUNTWORK] XHR status:', xhr.status, 'response:', xhr.responseText);
                 PuntWorkJSLogger.error('Cleanup AJAX error', 'EVENTS', error);
                 $('#cleanup-status').text('Cleanup failed: ' + error);
+                $('#jobs-cleanup-status').text('Cleanup failed: ' + error);
                 JobImportUI.appendLogs(['Cleanup AJAX error: ' + error]);
                 $('#cleanup-duplicates').prop('disabled', false);
+                $('#jobs-cleanup-duplicates').prop('disabled', false);
                 $('#cleanup-text').show();
+                $('#jobs-cleanup-text').show();
                 $('#cleanup-loading').hide();
+                $('#jobs-cleanup-loading').hide();
                 JobImportUI.clearCleanupProgress();
             });
         },

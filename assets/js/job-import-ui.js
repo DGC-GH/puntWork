@@ -725,7 +725,31 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
          * Show cleanup progress UI
          */
         showCleanupUI: function() {
+            this.initializeCleanupProgressBar(); // Ensure progress bar segments are created
             $('#cleanup-progress').show();
+        },
+
+        /**
+         * Initialize cleanup progress bar segments
+         */
+        initializeCleanupProgressBar: function() {
+            if (this.cleanupSegmentsCreated) {
+                return; // Already initialized
+            }
+
+            console.log('[PUNTWORK] Initializing cleanup progress bar segments');
+            var progressBar = $('#cleanup-progress-bar');
+            progressBar.empty(); // Clear any existing content
+            progressBar.css('width', '100%'); // Ensure container takes full width for segments
+
+            // Create 100 progress segments
+            for (var i = 0; i < 100; i++) {
+                var segment = $('<div>').addClass('cleanup-progress-segment');
+                progressBar.append(segment);
+            }
+
+            this.cleanupSegmentsCreated = true;
+            console.log('[PUNTWORK] Cleanup progress bar segments initialized');
         },
 
         /**
@@ -746,24 +770,107 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             var totalProcessed = data.total_processed || 0;
             var totalJobs = data.total_jobs || 0;
             var timeElapsed = data.time_elapsed || 0;
+            var deletedCount = data.total_deleted || 0;
+
+            // Ensure percent is within valid range
+            percent = Math.max(0, Math.min(100, percent));
+
+            // For successful completion, ensure we show 100%
+            if (data.complete === true) {
+                percent = 100;
+            }
 
             $('#cleanup-progress-percent').text(percent + '%');
-            $('#cleanup-time-elapsed').text(this.formatTime(timeElapsed));
-            $('#cleanup-status-message').text(`Processed ${totalProcessed}/${totalJobs} jobs`);
-            $('#cleanup-items-left').text((totalJobs - totalProcessed) + ' left');
 
-            // Update progress bar
-            $('#cleanup-progress-bar').empty();
-            var progressBar = $('<div>').css({
-                width: percent + '%',
-                height: '100%',
-                backgroundColor: '#ff9500',
-                borderRadius: '3px',
-                transition: 'width 0.3s ease'
+            // Update percentage text color - green for completion, orange for in-progress
+            var percentColor = '#ff9500'; // Default orange for in-progress
+            var barColor = '#ff9500'; // Default orange for in-progress
+
+            // Turn green when cleanup is complete
+            if (data.complete === true) {
+                percentColor = '#34c759'; // Green for completion
+                barColor = '#34c759';
+            }
+
+            $('#cleanup-progress-percent').css('color', percentColor);
+
+            // Update progress bar using individual segments (each div represents 1%)
+            $('#cleanup-progress-bar').find('.cleanup-progress-segment').each(function(index) {
+                var segmentPercent = index + 1; // 1-based (1-100)
+                if (segmentPercent <= percent) {
+                    $(this).css({
+                        'background-color': barColor,
+                        'opacity': '1'
+                    });
+                } else {
+                    $(this).css({
+                        'background-color': '#e0e0e0',
+                        'opacity': '0.3'
+                    });
+                }
             });
-            $('#cleanup-progress-bar').append(progressBar);
+
+            // Update statistics
+            $('#cleanup-total-items').text(totalJobs);
+            $('#cleanup-processed-items').text(totalProcessed);
+            $('#cleanup-deleted-items').text(deletedCount);
+
+            var itemsLeft = totalJobs - totalProcessed;
+            $('#cleanup-items-left').text(isNaN(itemsLeft) ? 0 : itemsLeft);
+
+            // Update status message based on completion
+            if (data.complete === true) {
+                $('#cleanup-status-message').text('Cleanup Complete - 100%');
+            } else {
+                $('#cleanup-status-message').text(`Cleaning up... - ${percent}%`);
+            }
+
+            // Update UI update indicator
+            $('#cleanup-ui-update-indicator').show();
+            $('#cleanup-last-ui-update').text(new Date().toLocaleTimeString());
+
+            // Update elapsed time
+            $('#cleanup-time-elapsed').text(this.formatTime(timeElapsed));
+
+            // Calculate and update estimated time remaining
+            this.updateCleanupEstimatedTime(data, timeElapsed);
 
             this.showCleanupUI();
+        },
+
+        /**
+         * Update cleanup estimated time remaining calculation
+         * @param {Object} data - Progress data
+         * @param {number} elapsedTime - Current elapsed time
+         */
+        updateCleanupEstimatedTime: function(data, elapsedTime) {
+            var total = data.total_jobs || 0;
+            var processed = data.total_processed || 0;
+            var itemsLeft = total - processed;
+
+            // Handle completion case
+            if (data.complete === true) {
+                $('#cleanup-time-left').text('Complete');
+                return;
+            }
+
+            // For cleanup operations, use simple time estimation
+            if (processed > 0 && elapsedTime > 0 && itemsLeft > 0) {
+                var timePerItem = elapsedTime / processed;
+                var estimatedSeconds = timePerItem * itemsLeft;
+
+                // Sanity check - don't show ridiculous estimates
+                if (estimatedSeconds > 86400) { // More than 24 hours
+                    $('#cleanup-time-left').text('>24h');
+                } else if (estimatedSeconds < 0) {
+                    $('#cleanup-time-left').text('Calculating...');
+                } else {
+                    $('#cleanup-time-left').text(this.formatTime(estimatedSeconds));
+                }
+                return;
+            }
+
+            $('#cleanup-time-left').text('Calculating...');
         },
 
         /**
@@ -771,10 +878,25 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
          */
         clearCleanupProgress: function() {
             $('#cleanup-progress-percent').text('0%');
+            $('#cleanup-progress-percent').css('color', '#ff9500'); // Reset to orange
             $('#cleanup-time-elapsed').text('0s');
+            $('#cleanup-time-left').text('Calculating...');
+            $('#cleanup-total-items').text('0');
+            $('#cleanup-processed-items').text('0');
+            $('#cleanup-deleted-items').text('0');
+            $('#cleanup-items-left').text('0');
             $('#cleanup-status-message').text('Ready to start.');
-            $('#cleanup-items-left').text('0 left');
-            $('#cleanup-progress-bar').empty();
+            $('#cleanup-ui-update-indicator').hide();
+            $('#cleanup-last-ui-update').text('Never');
+
+            // Reset progress bar segments
+            $('#cleanup-progress-bar').find('.cleanup-progress-segment').each(function() {
+                $(this).css({
+                    'background-color': '#e0e0e0',
+                    'opacity': '0.3'
+                });
+            });
+
             this.hideCleanupUI();
         },
 

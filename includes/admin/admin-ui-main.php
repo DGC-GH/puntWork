@@ -263,28 +263,84 @@ function render_main_import_ui(): void {
 				</div>
 
 				<!-- Cleanup Progress Section -->
-				<div id="cleanup-progress" class="puntwork-card__body"
-					style="background-color: var(--color-gray-50); border-radius: var(--radius-md);
-					margin-bottom: var(--spacing-lg); display: none;">
-					<div style="display: flex; justify-content: space-between; align-items: center;
-						margin-bottom: var(--spacing-sm);">
-						<span id="cleanup-progress-percent"
-							style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold);
-							color: var(--color-primary);">0%</span>
-						<span id="cleanup-time-elapsed"
-							style="font-size: var(--font-size-sm); color: var(--color-gray-600);">0s</span>
+				<div id="cleanup-progress" class="puntwork-card" style="margin-bottom: var(--spacing-xl); display: none;">
+					<div class="puntwork-card__header">
+						<div style="display: flex; justify-content: space-between; align-items: center;">
+							<div>
+								<h2 class="puntwork-card__title">Cleanup Progress</h2>
+								<div style="display: flex; align-items: baseline; gap: var(--spacing-md); margin-top: var(--spacing-xs);">
+									<span id="cleanup-progress-percent" style="font-size: var(--font-size-3xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">0%</span>
+									<span style="font-size: var(--font-size-sm); color: var(--color-gray-600);">complete</span>
+								</div>
+							</div>
+						</div>
 					</div>
-					<div class="puntwork-progress">
-						<div id="cleanup-progress-bar" class="puntwork-progress__bar" style="width: 0%;"></div>
-					</div>
-					<div style="display: flex; justify-content: space-between; align-items: center;
-						margin-top: var(--spacing-sm);">
-						<span id="cleanup-status-message"
-							style="font-size: var(--font-size-sm); color: var(--color-gray-600);">Ready to start.</span>
-						<span id="cleanup-items-left"
-							style="font-size: var(--font-size-sm); color: var(--color-gray-600);">0 left</span>
+
+					<div class="puntwork-card__body">
+						<!-- Progress Bar -->
+						<div class="puntwork-progress" style="margin-bottom: var(--spacing-lg);">
+							<div id="cleanup-progress-bar" class="puntwork-progress__bar" style="width: 100%;"></div>
+						</div>
+
+						<!-- Time Counters -->
+						<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xl); font-size: var(--font-size-sm); color: var(--color-gray-600);">
+							<span>Elapsed: <span id="cleanup-time-elapsed" style="font-weight: var(--font-weight-medium);">0s</span></span>
+							<span>Remaining: <span id="cleanup-time-left" style="font-weight: var(--font-weight-medium);">Calculating...</span></span>
+						</div>
+
+						<!-- Statistics Grid -->
+						<div class="puntwork-stats" style="margin-bottom: var(--spacing-lg);">
+							<!-- Progress Overview -->
+							<div class="puntwork-stat">
+								<div class="puntwork-stat__icon">
+									<i class="fas fa-chart-line"></i>
+								</div>
+								<div class="puntwork-stat__value" id="cleanup-processed-items">0</div>
+								<div class="puntwork-stat__label">of <span id="cleanup-total-items">0</span> processed</div>
+							</div>
+
+							<!-- Deleted Items -->
+							<div class="puntwork-stat puntwork-stat--danger">
+								<div class="puntwork-stat__icon">
+									<i class="fas fa-trash-alt"></i>
+								</div>
+								<div class="puntwork-stat__value" id="cleanup-deleted-items">0</div>
+								<div class="puntwork-stat__label">deleted</div>
+							</div>
+
+							<!-- Items Left -->
+							<div class="puntwork-stat puntwork-stat--info">
+								<div class="puntwork-stat__icon">
+									<i class="fas fa-clock"></i>
+								</div>
+								<div class="puntwork-stat__value" id="cleanup-items-left">0</div>
+								<div class="puntwork-stat__label">remaining</div>
+							</div>
+						</div>
+
+						<!-- Status Message -->
+						<div style="background-color: var(--color-gray-50); border-radius: var(--radius-md); padding: var(--spacing-md); text-align: center; margin-bottom: var(--spacing-lg);">
+							<span id="cleanup-status-message" style="font-size: var(--font-size-sm); color: var(--color-gray-600);">Ready to start.</span>
+							<div id="cleanup-ui-update-indicator" style="font-size: var(--font-size-xs); color: var(--color-gray-500); margin-top: var(--spacing-xs); display: none;">
+								<i class="fas fa-clock" style="margin-right: var(--spacing-xs);"></i>
+								Last UI update: <span id="cleanup-last-ui-update">Never</span>
+							</div>
+						</div>
+
+					<!-- Integrated Log Section -->
+					<div id="cleanup-integrated-log" style="margin-top: var(--spacing-lg);">
+						<div style="display: flex; align-items: center; margin-bottom: var(--spacing-md);">
+							<div style="width: 6px; height: 6px; border-radius: 50%; background-color: var(--color-primary); margin-right: 10px;"></div>
+							<h3 style="font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); margin: 0; color: var(--color-black);">Cleanup Details</h3>
+							<div style="margin-left: auto; font-size: var(--font-size-xs); color: var(--color-gray-600);">
+								<i class="fas fa-terminal" style="margin-right: var(--spacing-xs);"></i>
+								Live Log
+							</div>
+						</div>
+						<textarea id="cleanup-log-textarea" readonly style="width: 100%; height: 180px; padding: var(--spacing-md); border: 1px solid var(--color-gray-300); border-radius: var(--radius-md); font-family: var(--font-family-mono); font-size: var(--font-size-xs); line-height: var(--line-height-normal); resize: vertical; background-color: var(--color-gray-50); transition: var(--transition-fast);"></textarea>
 					</div>
 				</div>
+			</div>
 
 				<div class="puntwork-card__footer">
 					<div style="display: flex; gap: var(--spacing-md); align-items: center;">
