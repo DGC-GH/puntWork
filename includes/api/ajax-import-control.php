@@ -211,6 +211,31 @@ function run_job_import_batch_ajax() {
 				error_log( '[PUNTWORK] [AJAX-EXECUTE] import_jobs_from_json returned successfully' );
 				error_log( '[PUNTWORK] [AJAX-EXECUTE] import_jobs_from_json result keys: ' . implode( ', ', array_keys( $result ) ) );
 				error_log( '[PUNTWORK] [AJAX-EXECUTE] import_jobs_from_json result: ' . json_encode( $result ) );
+
+				// Check if this batch completed the import and finalize if needed
+				if ( isset( $result['complete'] ) && $result['complete'] && isset( $result['success'] ) && $result['success'] ) {
+					error_log( '[PUNTWORK] [AJAX-FINALIZE] Import batch completed successfully, calling finalize_batch_import...' );
+
+					try {
+						$final_result = finalize_batch_import( $result );
+						error_log( '[PUNTWORK] [AJAX-FINALIZE] finalize_batch_import completed successfully' );
+						error_log( '[PUNTWORK] [AJAX-FINALIZE] Final result: ' . json_encode( $final_result ) );
+
+						// Merge finalization results with the import result
+						$result = array_merge( $result, array(
+							'finalized' => true,
+							'cleanup_completed' => isset( $final_result['success'] ) && $final_result['success'],
+						) );
+					} catch ( \Exception $e ) {
+						error_log( '[PUNTWORK] [AJAX-FINALIZE] Exception during finalization: ' . $e->getMessage() );
+						$result['finalization_error'] = $e->getMessage();
+					} catch ( \Throwable $e ) {
+						error_log( '[PUNTWORK] [AJAX-FINALIZE] Fatal error during finalization: ' . $e->getMessage() );
+						$result['finalization_error'] = $e->getMessage();
+					}
+				} else {
+					error_log( '[PUNTWORK] [AJAX-FINALIZE] Import batch not complete yet (complete: ' . ( $result['complete'] ?? false ) . ', success: ' . ( $result['success'] ?? false ) . ')' );
+				}
 			} catch ( \Exception $e ) {
 				error_log( '[PUNTWORK] [AJAX-EXECUTE] Exception in import_jobs_from_json: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
 				error_log( '[PUNTWORK] [AJAX-EXECUTE] Stack trace: ' . $e->getTraceAsString() );
