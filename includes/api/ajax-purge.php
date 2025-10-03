@@ -72,11 +72,14 @@ function job_import_cleanup_duplicates_ajax() {
 		}
 
 		error_log( '[PUNTWORK] [CLEANUP] Database connection OK' );
+
 		try {
 		// Get batch parameters with validation - start with very small batch size for memory safety
 		$batch_size  = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 3;
 		$offset      = isset( $_POST['offset'] ) ? intval( $_POST['offset'] ) : 0;
 		$is_continue = isset( $_POST['is_continue'] ) ? filter_var( $_POST['is_continue'], FILTER_VALIDATE_BOOLEAN ) : false;
+
+		error_log( '[PUNTWORK] [CLEANUP] Batch parameters: batch_size=' . $batch_size . ', offset=' . $offset . ', is_continue=' . ($is_continue ? 'true' : 'false') );
 
 		PuntWorkLogger::info(
 			'Starting cleanup duplicates batch',
@@ -151,6 +154,7 @@ function job_import_cleanup_duplicates_ajax() {
                 AND p.post_status IN ('draft', 'trash')
             "
 			);
+			error_log( '[PUNTWORK] [CLEANUP] Total jobs query result: ' . ($total_jobs !== null ? $total_jobs : 'NULL') );
 			$progress['total_jobs'] = $total_jobs;
 			update_option( 'job_import_cleanup_progress', $progress, false );
 		}
@@ -170,6 +174,10 @@ function job_import_cleanup_duplicates_ajax() {
 				$offset
 			)
 		);
+		error_log( '[PUNTWORK] [CLEANUP] Batch jobs query result: ' . (is_array($batch_jobs) ? count($batch_jobs) : 'NOT_ARRAY') . ' jobs found' );
+		if ( $batch_jobs === false ) {
+			error_log( '[PUNTWORK] [CLEANUP] Database error in batch jobs query: ' . $wpdb->last_error );
+		}
 
 		if ( empty( $batch_jobs ) ) {
 			// No more jobs to process
@@ -260,6 +268,7 @@ function job_import_cleanup_duplicates_ajax() {
 					)
 				);
 			} else {
+				error_log( '[PUNTWORK] [CLEANUP] wp_delete_post failed for job ID: ' . $job->ID . ', post_status: ' . $job->post_status );
 				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Error: Failed to delete job ID: ' . $job->ID;
 				$logs[]    = $log_entry;
 				PuntWorkLogger::error( 'Failed to delete job', PuntWorkLogger::CONTEXT_PURGE, array( 'job_id' => $job->ID ) );
@@ -362,6 +371,9 @@ function job_import_purge_ajax() {
 	global $wpdb;
 
 	try {
+		error_log( '[PUNTWORK] [CLEANUP] Starting cleanup_duplicates_ajax, database connected: ' . ($wpdb->check_connection() ? 'YES' : 'NO') );
+		error_log( '[PUNTWORK] [CLEANUP] Database last error before query: ' . $wpdb->last_error );
+
 		// Get batch parameters with validation
 		$batch_size  = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 50;
 		$offset      = isset( $_POST['offset'] ) ? intval( $_POST['offset'] ) : 0;
