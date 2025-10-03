@@ -25,19 +25,54 @@ require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
 
 add_action( 'wp_ajax_job_import_cleanup_duplicates', __NAMESPACE__ . '\\job_import_cleanup_duplicates_ajax' );
 function job_import_cleanup_duplicates_ajax() {
-	PuntWorkLogger::logAjaxRequest( 'job_import_cleanup_duplicates', $_POST );
-
-	// Use comprehensive security validation
-	$validation = SecurityUtils::validateAjaxRequest( 'job_import_cleanup_duplicates', 'job_import_nonce' );
-	if ( is_wp_error( $validation ) ) {
-		AjaxErrorHandler::sendError( $validation );
-
-		return;
-	}
-
-	global $wpdb;
-
+	// Basic error handling for debugging
 	try {
+		error_log( '[PUNTWORK] [CLEANUP] AJAX handler called' );
+
+		// Check if required classes exist
+		if ( ! class_exists( 'Puntwork\\SecurityUtils' ) ) {
+			error_log( '[PUNTWORK] [CLEANUP] SecurityUtils class not found' );
+			wp_send_json_error( 'SecurityUtils class not found' );
+			return;
+		}
+
+		if ( ! class_exists( 'Puntwork\\AjaxErrorHandler' ) ) {
+			error_log( '[PUNTWORK] [CLEANUP] AjaxErrorHandler class not found' );
+			wp_send_json_error( 'AjaxErrorHandler class not found' );
+			return;
+		}
+
+		if ( ! class_exists( 'Puntwork\\PuntWorkLogger' ) ) {
+			error_log( '[PUNTWORK] [CLEANUP] PuntWorkLogger class not found' );
+			wp_send_json_error( 'PuntWorkLogger class not found' );
+			return;
+		}
+
+		error_log( '[PUNTWORK] [CLEANUP] All classes found, proceeding with validation' );
+
+		PuntWorkLogger::logAjaxRequest( 'job_import_cleanup_duplicates', $_POST );
+
+		// Use comprehensive security validation
+		$validation = SecurityUtils::validateAjaxRequest( 'job_import_cleanup_duplicates', 'job_import_nonce' );
+		if ( is_wp_error( $validation ) ) {
+			error_log( '[PUNTWORK] [CLEANUP] Security validation failed: ' . $validation->get_error_message() );
+			AjaxErrorHandler::sendError( $validation );
+			return;
+		}
+
+		error_log( '[PUNTWORK] [CLEANUP] Security validation passed' );
+
+		global $wpdb;
+
+		// Test database connection
+		if ( ! $wpdb || ! $wpdb->ready ) {
+			error_log( '[PUNTWORK] [CLEANUP] Database not ready' );
+			AjaxErrorHandler::sendError( 'Database connection error' );
+			return;
+		}
+
+		error_log( '[PUNTWORK] [CLEANUP] Database connection OK' );
+		try {
 		// Get batch parameters with validation - start with smaller batch size for dynamic adjustment
 		$batch_size  = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 10;
 		$offset      = isset( $_POST['offset'] ) ? intval( $_POST['offset'] ) : 0;
@@ -106,19 +141,6 @@ function job_import_cleanup_duplicates_ajax() {
 		$logs             = $progress['logs'];
 		$deleted_count    = 0;
 		$batch_start_time = microtime( true );
-
-		// Get total count for progress calculation (only on first batch)
-		if ( ! $is_continue ) {
-			$total_jobs             = $wpdb->get_var(
-				"
-                SELECT COUNT(*) FROM {$wpdb->posts} p
-                WHERE p.post_type = 'job'
-                AND p.post_status IN ('draft', 'trash')
-            "
-			);
-			$progress['total_jobs'] = $total_jobs;
-			update_option( 'job_import_cleanup_progress', $progress, false );
-		}
 
 		// Get total count for progress calculation (only on first batch)
 		if ( ! $is_continue ) {
@@ -284,6 +306,11 @@ function job_import_cleanup_duplicates_ajax() {
 
 		PuntWorkLogger::logAjaxResponse( 'job_import_cleanup_duplicates', array( 'message' => 'Cleanup failed: ' . $e->getMessage() ), false );
 		AjaxErrorHandler::sendError( 'Cleanup failed: ' . $e->getMessage() );
+	}
+	} catch ( \Throwable $e ) {
+		error_log( '[PUNTWORK] AJAX: Fatal error in job_import_cleanup_duplicates_ajax: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
+		error_log( '[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString() );
+		wp_die( 'Internal server error', '500 Internal Server Error', array( 'response' => 500 ) );
 	}
 }
 
