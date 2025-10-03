@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once __DIR__ . '/../utilities/database-optimization.php';
 
 if ( ! function_exists( 'process_batch_items' ) ) {
-	function process_batch_items( $batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count ) {
+	function process_batch_items( $batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count, &$processed_guids = array() ) {
 		$script_start_time = microtime( true );
 		
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -111,6 +111,9 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 				$updated += $item_result['updated'];
 				$skipped += $item_result['skipped'];
 				$logs = array_merge($logs, $item_result['logs']);
+
+				// Collect processed GUID for cleanup operations
+				$processed_guids[] = $guid;
 
 				// Collect ACF updates for bulk processing
 				if ($item_result['acf_updates'] && $item_result['post_id']) {

@@ -31,8 +31,9 @@ if ( ! function_exists( 'process_batch_items_streaming' ) ) {
 	 * @param int &$published Count of published posts
 	 * @param int &$skipped Count of skipped posts
 	 * @param int &$processed_count Total processed count
+	 * @param array &$processed_guids Array to collect processed GUIDs
 	 */
-	function process_batch_items_streaming( $json_path, $batch_guids, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count ) {
+	function process_batch_items_streaming( $json_path, $batch_guids, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count, &$processed_guids = array() ) {
 		$script_start_time = microtime( true );
 
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -95,7 +96,7 @@ if ( ! function_exists( 'process_batch_items_streaming' ) ) {
 			$chunk_processed = process_guid_chunk(
 				$json_path, $guid_chunk, $last_updates, $all_hashes_by_post,
 				$acf_fields, $zero_empty_fields, $post_ids_by_guid, $post_statuses,
-				$user_id, $logs, $updated, $published, $skipped, $processed_count
+				$user_id, $logs, $updated, $published, $skipped, $processed_count, $processed_guids
 			);
 
 			$processed_in_chunk += $chunk_processed;
@@ -149,7 +150,7 @@ if ( ! function_exists( 'process_guid_chunk' ) ) {
 	/**
 	 * Process a chunk of GUIDs by streaming the JSONL file.
 	 */
-	function process_guid_chunk( $json_path, $guid_chunk, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $post_statuses, $user_id, &$logs, &$updated, &$published, &$skipped, &$processed_count ) {
+	function process_guid_chunk( $json_path, $guid_chunk, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $post_statuses, $user_id, &$logs, &$updated, &$published, &$skipped, &$processed_count, &$processed_guids = array() ) {
 		$posts_to_insert = array();
 		$posts_to_update = array();
 		$acf_updates = array();
@@ -203,6 +204,9 @@ if ( ! function_exists( 'process_guid_chunk' ) ) {
 				$xml_updated = isset( $item['updated'] ) ? $item['updated'] : '';
 				$xml_updated_ts = strtotime( $xml_updated );
 				$post_id = isset( $post_ids_by_guid[ $guid ] ) ? $post_ids_by_guid[ $guid ] : null;
+
+				// Collect processed GUID for cleanup operations
+				$processed_guids[] = $guid;
 
 				// If post exists, check if it needs updating
 				if ( $post_id ) {

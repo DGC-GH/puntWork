@@ -792,7 +792,8 @@ function process_batch_items_with_metadata( array $batch_guids, array $batch_ite
 			$updated,
 			$published,
 			$skipped,
-			$processed_count
+			$processed_count,
+			$processed_guids
 		);
 	} else {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -812,7 +813,8 @@ function process_batch_items_with_metadata( array $batch_guids, array $batch_ite
 			$updated,
 			$published,
 			$skipped,
-			$processed_count
+			$processed_count,
+			$processed_guids
 		);
 	}
 
