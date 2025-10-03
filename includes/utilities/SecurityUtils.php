@@ -38,34 +38,40 @@ class SecurityUtils {
 
 		// Default rate limits
 		$defaults = array(
-			'default'                => array(
+			'default'                      => array(
 				'max_requests' => 10,
 				'time_window'  => 60, // 1 minute
 			),
-			'run_job_import_batch'   => array(
+			'run_job_import_batch'         => array(
 				'max_requests' => 100,
 				'time_window'  => 300, // 5 minutes
 			),
-			'get_job_import_status'  => array(
+			'get_job_import_status'        => array(
 				'max_requests' => 30,
 				'time_window'  => 60, // 1 minute
 			),
-			'process_feed'           => array(
+			'process_feed'                 => array(
 				'max_requests' => 20,
 				'time_window'  => 300, // 5 minutes
 			),
-			'test_single_job_import' => array(
+			'test_single_job_import'       => array(
 				'max_requests' => 5,
 				'time_window'  => 300, // 5 minutes
 			),
-			'clear_rate_limits'      => array(
+			'clear_rate_limits'            => array(
 				'max_requests' => 3,
 				'time_window'  => 3600, // 1 hour
 			),
+			'job_import_cleanup_duplicates' => array(
+				'max_requests' => 5,
+				'time_window'  => 300, // 5 minutes
+			),
 		);
 
-		// Apply filter for customization
-		$defaults = apply_filters( 'puntwork_rate_limit_defaults', $defaults );
+		// Apply filter for customization (safely)
+		if ( function_exists( 'apply_filters' ) ) {
+			$defaults = apply_filters( 'puntwork_rate_limit_defaults', $defaults );
+		}
 
 		// Merge stored limits with defaults
 		$config = array_merge( $defaults, $stored_limits );
@@ -124,34 +130,40 @@ class SecurityUtils {
 
 		// Default rate limits
 		$defaults = array(
-			'default'                => array(
+			'default'                      => array(
 				'max_requests' => 10,
 				'time_window'  => 60,
 			),
-			'run_job_import_batch'   => array(
+			'run_job_import_batch'         => array(
 				'max_requests' => 100,
 				'time_window'  => 300,
 			),
-			'get_job_import_status'  => array(
+			'get_job_import_status'        => array(
 				'max_requests' => 60,
 				'time_window'  => 60,
 			),
-			'process_feed'           => array(
+			'process_feed'                 => array(
 				'max_requests' => 20,
 				'time_window'  => 300,
 			),
-			'test_single_job_import' => array(
+			'test_single_job_import'       => array(
 				'max_requests' => 5,
 				'time_window'  => 300,
 			),
-			'clear_rate_limits'      => array(
+			'clear_rate_limits'            => array(
 				'max_requests' => 3,
 				'time_window'  => 3600,
 			),
+			'job_import_cleanup_duplicates' => array(
+				'max_requests' => 5,
+				'time_window'  => 300,
+			),
 		);
 
-		// Apply filter for customization
-		$defaults = apply_filters( 'puntwork_rate_limit_defaults', $defaults );
+		// Apply filter for customization (safely)
+		if ( function_exists( 'apply_filters' ) ) {
+			$defaults = apply_filters( 'puntwork_rate_limit_defaults', $defaults );
+		}
 
 		// Merge stored limits with defaults
 		return array_merge( $defaults, $stored_limits );
@@ -246,6 +258,11 @@ class SecurityUtils {
 	 * @return bool|WP_Error True if allowed, WP_Error if rate limited
 	 */
 	public static function checkRateLimit( string $action, ?int $max_requests = null, ?int $time_window = null ) {
+		// Skip dynamic rate limiting for cleanup operations to avoid memory issues
+		if ( $action === 'job_import_cleanup_duplicates' ) {
+			return self::checkStaticRateLimit( $action, $max_requests, $time_window );
+		}
+
 		// Include dynamic rate limiter if available
 		if ( class_exists( '\Puntwork\DynamicRateLimiter' ) ) {
 			return \Puntwork\DynamicRateLimiter::applyDynamicRateLimit( $action );
@@ -271,9 +288,11 @@ class SecurityUtils {
 			$time_window  = $time_window ?? $config['time_window'];
 		}
 
-		// Allow filter to override rate limits
-		$max_requests = apply_filters( 'puntwork_rate_limit_max_requests', $max_requests, $action );
-		$time_window  = apply_filters( 'puntwork_rate_limit_time_window', $time_window, $action );
+		// Allow filter to override rate limits (safely)
+		if ( function_exists( 'apply_filters' ) ) {
+			$max_requests = apply_filters( 'puntwork_rate_limit_max_requests', $max_requests, $action );
+			$time_window  = apply_filters( 'puntwork_rate_limit_time_window', $time_window, $action );
+		}
 
 		$user_id = get_current_user_id();
 		$key     = "rate_limit_{$action}_{$user_id}";

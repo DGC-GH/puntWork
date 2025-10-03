@@ -99,8 +99,12 @@ function wp_next_scheduled($hook, $args = array()) {
     return false; // Mock as not scheduled
 }
 
-function is_admin() {
-    return true; // Mock as admin context
+function is_wp_error($thing) {
+    return $thing instanceof WP_Error;
+}
+
+function current_time($type = 'mysql', $gmt = false) {
+    return date('Y-m-d H:i:s');
 }
 
 function apply_filters($tag, $value) {
@@ -126,9 +130,13 @@ class WP_Error {
     }
 }
 
+// Define WordPress constants
+define('ARRAY_A', 'ARRAY_A');
+
 // Mock wpdb class
 class wpdb {
     public $ready = true;
+    public $posts = 'wp_posts'; // Add the posts table property
 
     public function get_var($query) {
         echo "MOCK DB QUERY: $query\n";
