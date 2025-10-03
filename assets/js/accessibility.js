@@ -162,9 +162,15 @@ class PuntworkAccessibilityManager {
     }
 
     clearCache() {
+        console.log('[PUNTWORK] [CACHE-CLEAR] clearCache() called');
+        console.log('[PUNTWORK] [CACHE-CLEAR] puntworkAjax object:', typeof puntworkAjax, puntworkAjax);
+
         // Trigger cache clearing via REST API
         const apiKey = puntworkAjax.api_key;
+        console.log('[PUNTWORK] [CACHE-CLEAR] API key retrieved:', apiKey ? 'present' : 'missing');
+
         const apiUrl = `${window.location.origin}/wp-json/puntwork/v1/cache/clear?api_key=${encodeURIComponent(apiKey)}`;
+        console.log('[PUNTWORK] [CACHE-CLEAR] API URL:', apiUrl);
 
         fetch(apiUrl, {
             method: 'POST',
@@ -172,14 +178,21 @@ class PuntworkAccessibilityManager {
                 'Content-Type': 'application/json',
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('[PUNTWORK] [CACHE-CLEAR] Fetch response status:', response.status);
+            return response.json();
+        })
         .then(data => {
+            console.log('[PUNTWORK] [CACHE-CLEAR] API response:', data);
             if (data.success) {
+                console.log('[PUNTWORK] [CACHE-CLEAR] Cache cleared successfully, reloading page');
                 location.reload();
+            } else {
+                console.error('[PUNTWORK] [CACHE-CLEAR] API response indicates failure:', data);
             }
         })
         .catch(error => {
-            console.error('Error clearing cache:', error);
+            console.error('[PUNTWORK] [CACHE-CLEAR] Error during API request:', error);
         });
     }
 
@@ -475,8 +488,15 @@ class PuntworkAccessibilityManager {
 
 // Initialize accessibility manager
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('[PUNTWORK] [ACCESSIBILITY] Script loaded, checking puntworkAjax object');
+    console.log('[PUNTWORK] [ACCESSIBILITY] puntworkAjax object:', typeof puntworkAjax, puntworkAjax);
+
     if (typeof puntworkAjax !== 'undefined') {
+        console.log('[PUNTWORK] [ACCESSIBILITY] puntworkAjax available, initializing PuntworkAccessibilityManager');
         window.puntworkAccessibility = new PuntworkAccessibilityManager();
+        console.log('[PUNTWORK] [ACCESSIBILITY] PuntworkAccessibilityManager initialized successfully');
+    } else {
+        console.error('[PUNTWORK] [ACCESSIBILITY] puntworkAjax not defined, cannot initialize accessibility features');
     }
 });
 

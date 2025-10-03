@@ -356,8 +356,11 @@ const puntworkOnboardingL10n = {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('[PUNTWORK] [DOM-CONTENT-LOADED] Onboarding script loaded, checking for modal element');
+    console.log('[PUNTWORK] [DOM-CONTENT-LOADED] puntworkOnboarding object:', typeof puntworkOnboarding, puntworkOnboarding);
+
     if (document.getElementById('puntwork-onboarding-modal')) {
-        console.log('[PUNTWORK] [DOM-CONTENT-LOADED] Initializing PuntworkOnboarding');
+        console.log('[PUNTWORK] [DOM-CONTENT-LOADED] Modal element found, initializing PuntworkOnboarding');
         new PuntworkOnboarding();
     } else {
         console.warn('[PUNTWORK] [DOM-CONTENT-LOADED] Modal element not found, onboarding not initialized');

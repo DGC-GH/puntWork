@@ -461,7 +461,7 @@ function enqueue_job_import_scripts() {
 			'puntwork-onboarding',
 			PUNTWORK_URL . 'assets/js/onboarding.js',
 			array( 'jquery' ),
-			PUNTWORK_VERSION,
+			PUNTWORK_VERSION . '.' . time(), // Add timestamp for cache busting
 			true
 		);
 
@@ -520,7 +520,7 @@ function enqueue_job_import_scripts() {
 			'puntwork-accessibility',
 			PUNTWORK_URL . 'assets/js/accessibility.js',
 			array( 'jquery' ),
-			PUNTWORK_VERSION,
+			PUNTWORK_VERSION . '.' . time(), // Add timestamp for cache busting
 			true
 		);
 
