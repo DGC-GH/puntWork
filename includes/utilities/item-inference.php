@@ -72,7 +72,7 @@ function infer_item_details( &$item, $fallback_domain, $lang, &$job_obj ) {
 	);
 	$icon     = $icon_key ? '<i class="fas ' . GetIconMap()[ $icon_key ] . '"></i>' : '<i class="fas fa-briefcase"></i>';
 
-	$all_text          = strtolower( implode( ' ', array( (string) $item->functiontitle, (string) $item->description, (string) $item->functiondescription, (string) $item->offerdescription, (string) $item->requirementsdescription, (string) $item->companydescription ) ) );
+	$all_text          = strtolower( implode( ' ', array( (string) ($item->functiontitle ?? ''), (string) ($item->description ?? ''), (string) ($item->functiondescription ?? ''), (string) ($item->offerdescription ?? ''), (string) ($item->requirementsdescription ?? ''), (string) ($item->companydescription ?? '') ) ) );
 	$job_car           = (bool) preg_match( '/bedrijfs(wagen|auto)|firmawagen|voiture de société|company car/i', $all_text );
 	$job_remote        = (bool) preg_match( '/thuiswerk|télétravail|remote work|home office/i', $all_text );
 	$job_meal_vouchers = (bool) preg_match( '/maaltijdcheques|chèques repas|meal vouchers/i', $all_text );
