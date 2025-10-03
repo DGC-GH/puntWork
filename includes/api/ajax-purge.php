@@ -198,6 +198,7 @@ function job_import_cleanup_duplicates_ajax() {
 					'message'         => $message,
 					'complete'        => true,
 					'total_processed' => $progress['total_processed'],
+					'total_jobs'      => $progress['total_jobs'],
 					'total_deleted'   => $progress['total_deleted'],
 					'time_elapsed'    => $progress['time_elapsed'],
 					'logs'            => array_slice( $logs, -50 ),
@@ -295,6 +296,7 @@ function job_import_cleanup_duplicates_ajax() {
 				'next_offset'         => $progress['current_offset'],
 				'batch_size'          => $progress['batch_size'] ?? $batch_size, // Use adjusted batch size for next batch
 				'total_processed'     => $progress['total_processed'],
+				'total_jobs'          => $progress['total_jobs'],
 				'total_deleted'       => $progress['total_deleted'],
 				'progress_percentage' => $progress_percentage,
 				'logs'                => array_slice( $logs, -20 ),
@@ -672,6 +674,7 @@ function job_import_cleanup_continue_ajax() {
 					'message'         => $message,
 					'complete'        => true,
 					'total_processed' => $progress['total_processed'],
+					'total_jobs'      => $progress['total_jobs'],
 					'total_deleted'   => $progress['total_deleted'],
 					'time_elapsed'    => $progress['time_elapsed'],
 					'logs'            => array_slice( $logs, -50 ),
@@ -767,6 +770,7 @@ function job_import_cleanup_continue_ajax() {
 				'next_offset'         => $progress['current_offset'],
 				'batch_size'          => $progress['batch_size'] ?? $batch_size, // Use adjusted batch size for next batch
 				'total_processed'     => $progress['total_processed'],
+				'total_jobs'          => $progress['total_jobs'],
 				'total_deleted'       => $progress['total_deleted'],
 				'progress_percentage' => $progress_percentage,
 				'logs'                => array_slice( $logs, -20 ),
