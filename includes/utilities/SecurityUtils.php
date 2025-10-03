@@ -258,12 +258,7 @@ class SecurityUtils {
 	 * @return bool|WP_Error True if allowed, WP_Error if rate limited
 	 */
 	public static function checkRateLimit( string $action, ?int $max_requests = null, ?int $time_window = null ) {
-		// Skip dynamic rate limiting for cleanup operations to avoid memory issues
-		if ( in_array( $action, array( 'job_import_cleanup_duplicates', 'job_import_cleanup_continue' ) ) ) {
-			return self::checkStaticRateLimit( $action, $max_requests, $time_window );
-		}
-
-		// Include dynamic rate limiter if available
+		// Include dynamic rate limiter for all operations including cleanup
 		if ( class_exists( '\Puntwork\DynamicRateLimiter' ) ) {
 			return \Puntwork\DynamicRateLimiter::applyDynamicRateLimit( $action );
 		}

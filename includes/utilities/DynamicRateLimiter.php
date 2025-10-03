@@ -683,6 +683,41 @@ class DynamicRateLimiter {
 			$reasons[]   = 'import_operation';
 		}
 
+		// Cleanup operation specific adjustments
+		if ( self::isCleanupOperation( $action ) ) {
+			$cleanup_metrics = self::getCleanupPerformanceMetrics();
+
+			// Adjust based on batch processing performance
+			if ( $cleanup_metrics['avg_batch_time'] > 8.0 ) {
+				// Slow batch processing - reduce frequency
+				$cleanup_factor = max( 0.5, 1.0 - ( ( $cleanup_metrics['avg_batch_time'] - 8.0 ) / 10 ) );
+				$multiplier    *= $cleanup_factor;
+				$reasons[]      = 'slow_cleanup_batches';
+			} elseif ( $cleanup_metrics['avg_batch_time'] < 2.0 ) {
+				// Fast batch processing - can increase frequency
+				$cleanup_factor = min( 1.8, 1.0 + ( ( 2.0 - $cleanup_metrics['avg_batch_time'] ) / 2 ) );
+				$multiplier    *= $cleanup_factor;
+				$reasons[]      = 'fast_cleanup_batches';
+			}
+
+			// Adjust based on items processed per batch
+			if ( $cleanup_metrics['avg_items_per_batch'] > 30 ) {
+				// Processing many items - slightly reduce frequency to prevent memory spikes
+				$multiplier *= 0.9;
+				$reasons[]   = 'high_volume_cleanup';
+			} elseif ( $cleanup_metrics['avg_items_per_batch'] < 5 ) {
+				// Processing few items - can increase frequency
+				$multiplier *= 1.2;
+				$reasons[]   = 'low_volume_cleanup';
+			}
+
+			// Be more conservative with cleanup during peak memory usage
+			if ( $memory_info['current_percent'] > 75 ) {
+				$multiplier *= 0.7;
+				$reasons[]   = 'cleanup_memory_conservative';
+			}
+		}
+
 		// Apply bounds with memory-aware minimums
 		$min_multiplier = $config['min_adjustment_percentage'] / 100;
 		if ( $memory_info['pressure_level'] === 'critical' ) {
@@ -711,22 +746,61 @@ class DynamicRateLimiter {
 	}
 
 	/**
-	 * Check if action is related to import operations.
+	 * Check if action is related to cleanup operations.
 	 *
 	 * @param string $action Action name
-	 * @return bool True if import operation
+	 * @return bool True if cleanup operation
 	 */
-	private static function isImportOperation( string $action ): bool {
-		$import_actions = array(
-			'run_job_import_batch',
-			'process_feed',
-			'combine_jsonl',
-			'get_job_import_status',
+	private static function isCleanupOperation( string $action ): bool {
+		$cleanup_actions = array(
+			'job_import_cleanup_duplicates',
+			'job_import_cleanup_continue',
 		);
 
-		return in_array( $action, $import_actions ) ||
-				strpos( $action, 'import' ) !== false ||
-				strpos( $action, 'feed' ) !== false;
+		return in_array( $action, $cleanup_actions ) ||
+				strpos( $action, 'cleanup' ) !== false ||
+				strpos( $action, 'purge' ) !== false;
+	}
+
+	/**
+	 * Get cleanup operation performance metrics.
+	 *
+	 * @return array Cleanup performance metrics
+	 */
+	private static function getCleanupPerformanceMetrics(): array {
+		// Get recent cleanup progress data
+		$progress = get_option( 'job_import_cleanup_progress', array() );
+
+		$metrics = array(
+			'avg_batch_time'       => 3.0, // Default 3 seconds
+			'avg_items_per_batch'  => 15,  // Default 15 items
+			'total_batches'        => 0,
+			'last_batch_time'      => 0,
+			'last_batch_items'     => 0,
+		);
+
+		if ( ! empty( $progress ) ) {
+			$metrics['last_batch_time'] = $progress['last_batch_time'] ?? 0;
+			$metrics['last_batch_items'] = $progress['batch_size'] ?? 0;
+
+			// Calculate averages from recent performance
+			if ( isset( $progress['total_processed'] ) && isset( $progress['batch_size'] ) && $progress['batch_size'] > 0 ) {
+				$estimated_batches = max( 1, round( $progress['total_processed'] / $progress['batch_size'] ) );
+				$metrics['total_batches'] = $estimated_batches;
+
+				// Estimate average batch time (rough calculation)
+				if ( isset( $progress['start_time'] ) && isset( $progress['last_batch_time'] ) ) {
+					$total_time = microtime( true ) - $progress['start_time'];
+					if ( $estimated_batches > 0 ) {
+						$metrics['avg_batch_time'] = round( $total_time / $estimated_batches, 2 );
+					}
+				}
+
+				$metrics['avg_items_per_batch'] = $progress['batch_size'];
+			}
+		}
+
+		return $metrics;
 	}
 
 	/**

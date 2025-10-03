@@ -320,6 +320,10 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
          */
         processCleanupBatch: function(offset, batchSize) {
             console.log('[PUNTWORK] Processing cleanup batch - offset:', offset, 'batchSize:', batchSize);
+            
+            // Record batch start time for performance metrics
+            window.lastCleanupBatchStart = Date.now();
+            
             var isContinue = offset > 0;
             var action = isContinue ? JobImportAPI.continueCleanup(offset, batchSize) : JobImportAPI.cleanupDuplicates();
 
@@ -330,6 +334,34 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 if (response.success) {
                     console.log('[PUNTWORK] Cleanup response successful, complete:', response.data.complete);
                     JobImportUI.appendLogs(response.data.logs || []);
+
+                    // Record cleanup performance metrics for dynamic rate limiting
+                    if (typeof window.cleanupBatchMetrics === 'undefined') {
+                        window.cleanupBatchMetrics = [];
+                    }
+                    var batchMetrics = {
+                        timestamp: Date.now(),
+                        batchSize: batchSize,
+                        offset: offset,
+                        processingTime: Date.now() - (window.lastCleanupBatchStart || Date.now()),
+                        itemsProcessed: response.data.batch_processed || 0,
+                        totalDeleted: response.data.total_deleted || 0,
+                        nextOffset: response.data.next_offset || 0,
+                        complete: response.data.complete || false
+                    };
+                    window.cleanupBatchMetrics.push(batchMetrics);
+                    
+                    // Keep only last 10 batches for memory efficiency
+                    if (window.cleanupBatchMetrics.length > 10) {
+                        window.cleanupBatchMetrics.shift();
+                    }
+                    
+                    // Store metrics in localStorage for persistence across page loads
+                    try {
+                        localStorage.setItem('puntwork_cleanup_metrics', JSON.stringify(window.cleanupBatchMetrics));
+                    } catch (e) {
+                        console.log('[PUNTWORK] Failed to store cleanup metrics in localStorage:', e);
+                    }
 
                     if (response.data.complete) {
                         // Operation completed
@@ -415,6 +447,20 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
          * Check initial import status on page load
          */
         checkInitialStatus: function() {
+            // Load stored cleanup metrics from localStorage
+            try {
+                var storedMetrics = localStorage.getItem('puntwork_cleanup_metrics');
+                if (storedMetrics) {
+                    window.cleanupBatchMetrics = JSON.parse(storedMetrics);
+                    console.log('[PUNTWORK] Loaded', window.cleanupBatchMetrics.length, 'stored cleanup metrics');
+                } else {
+                    window.cleanupBatchMetrics = [];
+                }
+            } catch (e) {
+                console.log('[PUNTWORK] Failed to load stored cleanup metrics:', e);
+                window.cleanupBatchMetrics = [];
+            }
+
             // Clear progress first to ensure clean state
             JobImportUI.clearProgress();
 
