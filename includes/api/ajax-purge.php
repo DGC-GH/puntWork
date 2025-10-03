@@ -71,6 +71,16 @@ function job_import_cleanup_duplicates_ajax() {
 			return;
 		}
 
+		// Increase memory limit for cleanup operations if possible
+		if ( function_exists( 'ini_set' ) ) {
+			$current_limit = ini_get( 'memory_limit' );
+			// Try to increase to 2GB if current is less
+			if ( wp_convert_hr_to_bytes( $current_limit ) < 2147483648 ) {
+				@ini_set( 'memory_limit', '2048M' );
+				error_log( '[PUNTWORK] [CLEANUP] Increased memory limit to 2048M for cleanup' );
+			}
+		}
+
 		error_log( '[PUNTWORK] [CLEANUP] Database connection OK' );
 
 		try {
@@ -238,8 +248,8 @@ function job_import_cleanup_duplicates_ajax() {
 			
 			$memory_usage_percent = ($current_memory / $memory_limit_bytes) * 100;
 
-			// If memory usage is over 50%, stop processing this batch early (more conservative)
-			if ($memory_usage_percent > 50) {
+			// If memory usage is over 30%, stop processing this batch early (more conservative)
+			if ($memory_usage_percent > 30) {
 				PuntWorkLogger::warning(
 					'Memory usage too high during cleanup, stopping batch early',
 					PuntWorkLogger::CONTEXT_PURGE,
@@ -253,7 +263,8 @@ function job_import_cleanup_duplicates_ajax() {
 				break;
 			}
 
-			$result = wp_delete_post( $job->ID, true ); // Force delete
+			// Use direct SQL deletion for memory efficiency instead of wp_delete_post()
+			$result = job_import_delete_post_efficiently( $job->ID );
 			if ( $result ) {
 				++$deleted_count;
 				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Permanently deleted ' . $job->post_status . ' job ID: ' . $job->ID . ' - ' . $job->post_title;
@@ -268,7 +279,7 @@ function job_import_cleanup_duplicates_ajax() {
 					)
 				);
 			} else {
-				error_log( '[PUNTWORK] [CLEANUP] wp_delete_post failed for job ID: ' . $job->ID . ', post_status: ' . $job->post_status );
+				error_log( '[PUNTWORK] [CLEANUP] job_import_delete_post_efficiently failed for job ID: ' . $job->ID . ', post_status: ' . $job->post_status );
 				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Error: Failed to delete job ID: ' . $job->ID;
 				$logs[]    = $log_entry;
 				PuntWorkLogger::error( 'Failed to delete job', PuntWorkLogger::CONTEXT_PURGE, array( 'job_id' => $job->ID ) );
@@ -650,6 +661,16 @@ function job_import_cleanup_continue_ajax() {
 			return;
 		}
 
+		// Increase memory limit for cleanup operations if possible
+		if ( function_exists( 'ini_set' ) ) {
+			$current_limit = ini_get( 'memory_limit' );
+			// Try to increase to 2GB if current is less
+			if ( wp_convert_hr_to_bytes( $current_limit ) < 2147483648 ) {
+				@ini_set( 'memory_limit', '2048M' );
+				error_log( '[PUNTWORK] [CLEANUP] Increased memory limit to 2048M for cleanup continue' );
+			}
+		}
+
 		// Get batch parameters with validation
 		$batch_size = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 1;
 
@@ -754,8 +775,8 @@ function job_import_cleanup_continue_ajax() {
 			
 			$memory_usage_percent = ($current_memory / $memory_limit_bytes) * 100;
 
-			// If memory usage is over 50%, stop processing this batch early
-			if ($memory_usage_percent > 50) {
+			// If memory usage is over 30%, stop processing this batch early
+			if ($memory_usage_percent > 30) {
 				PuntWorkLogger::warning(
 					'Memory usage too high during cleanup continue, stopping batch early',
 					PuntWorkLogger::CONTEXT_PURGE,
@@ -769,7 +790,7 @@ function job_import_cleanup_continue_ajax() {
 				break;
 			}
 
-			$result = wp_delete_post( $job->ID, true ); // Force delete
+			$result = job_import_delete_post_efficiently( $job->ID );
 			if ( $result ) {
 				++$deleted_count;
 				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Permanently deleted ' . $job->post_status . ' job ID: ' . $job->ID . ' - ' . $job->post_title;
@@ -868,60 +889,68 @@ function job_import_cleanup_continue_ajax() {
 }
 
 /**
- * Adjust batch size dynamically based on processing performance.
+ * Efficiently delete a post using direct SQL queries to avoid memory overhead.
+ * This bypasses wp_delete_post() which loads the entire post object and all metadata.
  *
- * @param  int   $current_batch_size Current batch size
- * @param  float $processing_time    Time taken to process the batch
- * @param  int   $items_processed    Number of items processed in this batch
- * @return int New batch size
+ * @param int $post_id Post ID to delete
+ * @return bool True on success, false on failure
  */
-function job_import_adjust_cleanup_batch_size( $current_batch_size, $processing_time, $items_processed ) {
-	$target_time    = 8.0; // Target processing time per batch (seconds)
-	$min_batch_size = 1;  // Minimum batch size - reduced to 1 for maximum memory safety
-	$max_batch_size = 10; // Maximum batch size - reduced for memory safety
+function job_import_delete_post_efficiently( $post_id ) {
+	global $wpdb;
 
-	// If no items were processed, keep current batch size
-	if ( $items_processed === 0 ) {
-		return $current_batch_size;
+	$post_id = (int) $post_id;
+	if ( ! $post_id ) {
+		return false;
 	}
 
-	// Calculate processing time per item
-	$time_per_item = $processing_time / $items_processed;
+	// Start transaction for data integrity
+	$wpdb->query( 'START TRANSACTION' );
 
-	// If processing time is too long, reduce batch size
-	if ( $processing_time > $target_time * 1.2 ) { // 20% over target
-		$new_batch_size = max( $min_batch_size, (int) ( $current_batch_size * 0.8 ) ); // Reduce by 20%
-		PuntWorkLogger::debug(
-			'Reducing batch size due to slow processing',
-			PuntWorkLogger::CONTEXT_PURGE,
-			array(
-				'old_size'        => $current_batch_size,
-				'new_size'        => $new_batch_size,
-				'processing_time' => $processing_time,
-				'target_time'     => $target_time,
-			)
-		);
+	try {
+		// Delete post meta
+		$wpdb->delete( $wpdb->postmeta, array( 'post_id' => $post_id ) );
 
-		return $new_batch_size;
+		// Delete term relationships
+		$wpdb->delete( $wpdb->term_relationships, array( 'object_id' => $post_id ) );
+
+		// Delete comments
+		$wpdb->delete( $wpdb->comments, array( 'comment_post_ID' => $post_id ) );
+
+		// Delete comment meta for these comments
+		$comment_ids = $wpdb->get_col( $wpdb->prepare(
+			"SELECT comment_ID FROM {$wpdb->comments} WHERE comment_post_ID = %d",
+			$post_id
+		) );
+		if ( ! empty( $comment_ids ) ) {
+			$wpdb->query( "DELETE FROM {$wpdb->commentmeta} WHERE comment_id IN (" . implode( ',', $comment_ids ) . ")" );
+		}
+
+		// Delete revisions
+		$wpdb->delete( $wpdb->posts, array(
+			'post_parent' => $post_id,
+			'post_type'   => 'revision'
+		) );
+
+		// Finally delete the post itself
+		$result = $wpdb->delete( $wpdb->posts, array( 'ID' => $post_id ) );
+
+		if ( $result === false ) {
+			$wpdb->query( 'ROLLBACK' );
+			return false;
+		}
+
+		// Commit transaction
+		$wpdb->query( 'COMMIT' );
+
+		// Clean caches without loading post object
+		wp_cache_delete( $post_id, 'posts' );
+		wp_cache_delete( $post_id, 'post_meta' );
+
+		return true;
+
+	} catch ( Exception $e ) {
+		$wpdb->query( 'ROLLBACK' );
+		error_log( '[PUNTWORK] [CLEANUP] SQL error in efficient deletion: ' . $e->getMessage() );
+		return false;
 	}
-
-	// If processing time is comfortably under target, increase batch size
-	if ( $processing_time < $target_time * 0.6 ) { // Less than 60% of target
-		$new_batch_size = min( $max_batch_size, (int) ( $current_batch_size * 1.2 ) ); // Increase by 20%
-		PuntWorkLogger::debug(
-			'Increasing batch size due to fast processing',
-			PuntWorkLogger::CONTEXT_PURGE,
-			array(
-				'old_size'        => $current_batch_size,
-				'new_size'        => $new_batch_size,
-				'processing_time' => $processing_time,
-				'target_time'     => $target_time,
-			)
-		);
-
-		return $new_batch_size;
-	}
-
-	// Keep current batch size if processing time is within acceptable range
-	return $current_batch_size;
 }

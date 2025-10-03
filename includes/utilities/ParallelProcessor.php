@@ -67,7 +67,7 @@ if ( ! class_exists( 'Puntwork\Utilities\ParallelProcessor' ) ) {
 				$results = array_merge( $results, $batch_results );
 
 				// Memory cleanup between batches
-				\Puntwork\Utilities\AdvancedMemoryManager::checkAndCleanup();
+				\Puntwork\Utilities\MemoryManager::checkMemoryUsage(0);
 			}
 
 			return $results;
@@ -147,7 +147,7 @@ if ( ! class_exists( 'Puntwork\Utilities\ParallelProcessor' ) ) {
 				}
 
 				// Memory cleanup between batches
-				\Puntwork\Utilities\AdvancedMemoryManager::checkAndCleanup();
+				\Puntwork\Utilities\MemoryManager::checkMemoryUsage(0);
 			}
 
 			return $results;
