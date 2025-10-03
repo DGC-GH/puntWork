@@ -734,10 +734,35 @@ function preload_post_meta_batch( array $post_ids ): array {
 }
 
 /**
- * Get database optimization status.
+ * Create performance logs table for storing import performance metrics.
  *
- * @return array Status information
+ * @return void
  */
+function create_performance_logs_table(): void {
+	global $wpdb;
+
+	$table_name      = $wpdb->prefix . 'puntwork_performance_logs';
+	$charset_collate = $wpdb->get_charset_collate();
+
+	$sql = "CREATE TABLE $table_name (
+        id bigint(20) NOT NULL AUTO_INCREMENT,
+        operation varchar(100) NOT NULL,
+        total_time float NOT NULL,
+        items_processed int DEFAULT 0,
+        items_per_second float DEFAULT 0,
+        memory_used bigint DEFAULT 0,
+        query_count int DEFAULT 0,
+        created_at datetime DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY operation_time (operation, created_at),
+        KEY duration (total_time, items_per_second)
+    ) $charset_collate;";
+
+	include_once ABSPATH . 'wp-admin/includes/upgrade.php';
+	dbDelta( $sql );
+
+	\Puntwork\PuntWorkLogger::info( 'Performance logs table created or verified', \Puntwork\PuntWorkLogger::CONTEXT_SYSTEM );
+}
 function get_database_optimization_status(): array {
 	global $wpdb;
 
