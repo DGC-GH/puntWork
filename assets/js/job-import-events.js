@@ -356,7 +356,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     }
                 } else {
                     // Handle rate limit errors specifically for cleanup
-                    if (response.error && response.error.code === 'rate_limit') {
+                    if (response.error && (response.error.code === 'rate_limit' || 
+                        (response.error.message && response.error.message.indexOf('Rate limit exceeded') !== -1))) {
                         console.log('[PUNTWORK] Cleanup rate limit exceeded:', response.error.message);
                         PuntWorkJSLogger.warn('Cleanup rate limit exceeded', 'EVENTS', response.error);
                         
