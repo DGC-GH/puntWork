@@ -258,7 +258,11 @@ function prepare_import_setup( $batch_start = 0 ) {
 		}
 	}
 
-	$json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
+	$json_path = get_option( 'job_import_json_path', 'feeds/combined-jobs.jsonl' );
+	if ( ! file_exists( $json_path ) ) {
+		// Use the correct path where the combined file is actually created
+		$json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
+	}
 	if ( $debug_mode ) {
 		error_log( '[PUNTWORK] [SETUP-FILE] JSONL path: ' . $json_path );
 		error_log( '[PUNTWORK] [SETUP-FILE] ABSPATH: ' . ABSPATH );

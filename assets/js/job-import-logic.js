@@ -668,6 +668,10 @@ console.info("=== Job Import Logic Script Loaded ===");
                     window.JobImportEvents.startStatusPolling();
                 }
 
+                // Start the import process directly from JavaScript
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Starting import process with handleImport(0)');
+                await this.handleImport(0);
+
                 console.log('[PUNTWORK] [DEBUG-IMPORT] ===== START IMPORT PROCESS COMPLETE =====');
 
             } catch (error) {
