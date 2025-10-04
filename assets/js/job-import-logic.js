@@ -648,6 +648,20 @@ console.info("=== Job Import Logic Script Loaded ===");
                 $('#status-message').text('Starting import...');
                 JobImportUI.appendLogs(['Starting batch import processing...']);
 
+                // Update progress bar for batch processing phase
+                JobImportUI.updateProgress({
+                    total: total_items,
+                    processed: 0,
+                    published: 0,
+                    updated: 0,
+                    skipped: 0,
+                    duplicates_drafted: 0,
+                    drafted_old: 0,
+                    time_elapsed: this.getElapsedTime() / 1000,
+                    complete: false,
+                    phase: 'job-importing'
+                });
+
                 console.log('[PUNTWORK] [DEBUG-IMPORT] About to clear import cancel');
                 await JobImportAPI.clearImportCancel();
                 console.log('[PUNTWORK] [DEBUG-IMPORT] Import cancel cleared');
