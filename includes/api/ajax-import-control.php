@@ -1935,14 +1935,14 @@ function puntwork_start_batch_import_handler() {
 			}
 		}
 
-		// Start the batch import
-		$result = import_jobs_from_json( false, 0 );
-		error_log( '[PUNTWORK] [BATCH-RESULT] Batch import result: ' . json_encode( $result ) );
+		// Start the FULL import (all batches) instead of just one batch
+		$result = import_all_jobs_from_json();
+		error_log( '[PUNTWORK] [BATCH-RESULT] Full import result: ' . json_encode( $result ) );
 		
 		if ( isset( $result['success'] ) && $result['success'] ) {
-			error_log( '[PUNTWORK] [BATCH-SUCCESS] Batch import completed successfully' );
+			error_log( '[PUNTWORK] [BATCH-SUCCESS] Full import completed successfully' );
 		} else {
-			error_log( '[PUNTWORK] [BATCH-ERROR] Batch import failed or incomplete' );
+			error_log( '[PUNTWORK] [BATCH-ERROR] Full import failed or incomplete' );
 		}
 	} catch ( \Exception $e ) {
 		error_log( '[PUNTWORK] [BATCH-EXCEPTION] Exception in batch import handler: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
