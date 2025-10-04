@@ -321,19 +321,39 @@ function process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updat
 			$post_modified = $xml_updated ?: current_time('mysql');
 
 			// Update metadata
-			update_post_meta($post_id, '_last_import_update', $xml_updated);
-			update_post_meta($post_id, '_import_hash', $item_hash);
-			error_log('[PUNTWORK] [ITEM-DEBUG] Updated metadata for post ID: ' . $post_id . ' for GUID: ' . $guid);
+			try {
+				update_post_meta($post_id, '_last_import_update', $xml_updated);
+				update_post_meta($post_id, '_import_hash', $item_hash);
+				error_log('[PUNTWORK] [ITEM-DEBUG] Updated metadata for post ID: ' . $post_id . ' for GUID: ' . $guid);
+			} catch (Exception $e) {
+				error_log('[PUNTWORK] [ITEM-DEBUG] Exception updating metadata for existing post ID: ' . $post_id . ' for GUID: ' . $guid . ': ' . $e->getMessage());
+				$result['error'] = 'Existing post metadata update exception: ' . $e->getMessage();
+				return $result;
+			} catch (Throwable $e) {
+				error_log('[PUNTWORK] [ITEM-DEBUG] Throwable updating metadata for existing post ID: ' . $post_id . ' for GUID: ' . $guid . ': ' . $e->getMessage());
+				$result['error'] = 'Existing post metadata update throwable: ' . $e->getMessage();
+				return $result;
+			}
 
 			// Prepare ACF updates
-			$acf_fields = get_acf_fields();
-			$zero_empty_fields = get_zero_empty_fields();
-			$acf_updates = array();
-			foreach ($acf_fields as $field) {
-				$value = $item[$field] ?? '';
-				$is_special = in_array($field, $zero_empty_fields);
-				$set_value = $is_special && $value == '0' ? '' : $value;
-				$acf_updates[$field] = $set_value;
+			try {
+				$acf_fields = get_acf_fields();
+				$zero_empty_fields = get_zero_empty_fields();
+				$acf_updates = array();
+				foreach ($acf_fields as $field) {
+					$value = $item[$field] ?? '';
+					$is_special = in_array($field, $zero_empty_fields);
+					$set_value = $is_special && $value == '0' ? '' : $value;
+					$acf_updates[$field] = $set_value;
+				}
+			} catch (Exception $e) {
+				error_log('[PUNTWORK] [ITEM-DEBUG] Exception preparing ACF updates for existing post ID: ' . $post_id . ' for GUID: ' . $guid . ': ' . $e->getMessage());
+				$result['error'] = 'Existing post ACF preparation exception: ' . $e->getMessage();
+				return $result;
+			} catch (Throwable $e) {
+				error_log('[PUNTWORK] [ITEM-DEBUG] Throwable preparing ACF updates for existing post ID: ' . $post_id . ' for GUID: ' . $guid . ': ' . $e->getMessage());
+				$result['error'] = 'Existing post ACF preparation throwable: ' . $e->getMessage();
+				return $result;
 			}
 
 			$result['updated'] = 1;
@@ -366,8 +386,18 @@ function process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updat
 			);
 
 			error_log('[PUNTWORK] [ITEM-DEBUG] About to call wp_insert_post for GUID: ' . $guid);
-			$post_id = wp_insert_post($post_data);
-			error_log('[PUNTWORK] [ITEM-DEBUG] wp_insert_post returned: ' . ($post_id ?: 'null/false') . ' for GUID: ' . $guid);
+			try {
+				$post_id = wp_insert_post($post_data);
+				error_log('[PUNTWORK] [ITEM-DEBUG] wp_insert_post returned: ' . ($post_id ?: 'null/false') . ' for GUID: ' . $guid);
+			} catch (Exception $e) {
+				error_log('[PUNTWORK] [ITEM-DEBUG] Exception in wp_insert_post for GUID: ' . $guid . ': ' . $e->getMessage());
+				$result['error'] = 'wp_insert_post exception: ' . $e->getMessage();
+				return $result;
+			} catch (Throwable $e) {
+				error_log('[PUNTWORK] [ITEM-DEBUG] Throwable in wp_insert_post for GUID: ' . $guid . ': ' . $e->getMessage());
+				$result['error'] = 'wp_insert_post throwable: ' . $e->getMessage();
+				return $result;
+			}
 
 			if (is_wp_error($post_id)) {
 				$result['error'] = 'Create failed: ' . $post_id->get_error_message();
@@ -382,20 +412,40 @@ function process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updat
 			}
 
 			// Update metadata
-			update_post_meta($post_id, '_last_import_update', $xml_updated);
-			$item_hash = md5(json_encode($item));
-			update_post_meta($post_id, '_import_hash', $item_hash);
-			error_log('[PUNTWORK] [ITEM-DEBUG] Updated metadata for new post ID: ' . $post_id . ' for GUID: ' . $guid);
+			try {
+				update_post_meta($post_id, '_last_import_update', $xml_updated);
+				$item_hash = md5(json_encode($item));
+				update_post_meta($post_id, '_import_hash', $item_hash);
+				error_log('[PUNTWORK] [ITEM-DEBUG] Updated metadata for new post ID: ' . $post_id . ' for GUID: ' . $guid);
+			} catch (Exception $e) {
+				error_log('[PUNTWORK] [ITEM-DEBUG] Exception updating metadata for post ID: ' . $post_id . ' for GUID: ' . $guid . ': ' . $e->getMessage());
+				$result['error'] = 'Metadata update exception: ' . $e->getMessage();
+				return $result;
+			} catch (Throwable $e) {
+				error_log('[PUNTWORK] [ITEM-DEBUG] Throwable updating metadata for post ID: ' . $post_id . ' for GUID: ' . $guid . ': ' . $e->getMessage());
+				$result['error'] = 'Metadata update throwable: ' . $e->getMessage();
+				return $result;
+			}
 
 			// Prepare ACF updates
-			$acf_fields = get_acf_fields();
-			$zero_empty_fields = get_zero_empty_fields();
-			$acf_updates = array();
-			foreach ($acf_fields as $field) {
-				$value = $item[$field] ?? '';
-				$is_special = in_array($field, $zero_empty_fields);
-				$set_value = $is_special && $value == '0' ? '' : $value;
-				$acf_updates[$field] = $set_value;
+			try {
+				$acf_fields = get_acf_fields();
+				$zero_empty_fields = get_zero_empty_fields();
+				$acf_updates = array();
+				foreach ($acf_fields as $field) {
+					$value = $item[$field] ?? '';
+					$is_special = in_array($field, $zero_empty_fields);
+					$set_value = $is_special && $value == '0' ? '' : $value;
+					$acf_updates[$field] = $set_value;
+				}
+			} catch (Exception $e) {
+				error_log('[PUNTWORK] [ITEM-DEBUG] Exception preparing ACF updates for post ID: ' . $post_id . ' for GUID: ' . $guid . ': ' . $e->getMessage());
+				$result['error'] = 'ACF preparation exception: ' . $e->getMessage();
+				return $result;
+			} catch (Throwable $e) {
+				error_log('[PUNTWORK] [ITEM-DEBUG] Throwable preparing ACF updates for post ID: ' . $post_id . ' for GUID: ' . $guid . ': ' . $e->getMessage());
+				$result['error'] = 'ACF preparation throwable: ' . $e->getMessage();
+				return $result;
 			}
 
 			$result['published'] = 1;
