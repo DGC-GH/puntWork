@@ -593,7 +593,7 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 				'skipped'            => $total_skipped,
 				'duplicates_drafted' => $total_duplicates_drafted,
 				'time_elapsed'       => $total_duration,
-				'complete'           => true,
+				'complete'           => ( $total_processed >= $total_items ),
 				'logs'               => $all_logs,
 				'batches_processed'  => $batch_count,
 				'message'            => sprintf(
@@ -636,7 +636,7 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 					'skipped'            => $total_skipped,
 					'duplicates_drafted' => $total_duplicates_drafted,
 					'time_elapsed'       => $total_duration,
-					'complete'           => true,
+					'complete'           => ( $total_processed >= $total_items ),
 					'success'            => true,
 					'error_message'      => '',
 					'end_time'           => $end_time,
