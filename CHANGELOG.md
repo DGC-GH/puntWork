@@ -49,8 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Status Data Sanitization**: Added sanitize_import_status() function to clean AJAX responses and prevent corrupted status data from breaking real-time updates
 - **Enhanced Error Messages**: Replaced generic "Unknown error" messages with specific, detailed error descriptions in feed processing, download, and combination operations for better troubleshooting
 - **Code Quality Improvements**: Fixed PHPCS violations including indentation, spacing, inline comments, and WordPress coding standards compliance
+- **PHP 8.4 Compatibility**: Fixed deprecation warnings for implicitly nullable parameters in exception constructors by explicitly declaring `?\Throwable $previous = null` in all custom exception classes
 - **Import Lock Conflict Resolution**: Fixed import process stalling at processed:0 due to lock conflict between batch import functions
-- **Inter-Process Communication Fix**: Fixed broken pipe communication in fork-based timeout protection causing "Failed to open stream" and "Failed to get result from child process" errors
 
 ### Performance
 - Implemented parallel feed downloading using Symfony HTTP Client to reduce total import time for multiple feeds
