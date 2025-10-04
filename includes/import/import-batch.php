@@ -531,8 +531,25 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 					error_log( '[PUNTWORK] [BATCH-LOOP] Processing batch starting at ' . $current_batch_start . ' of ' . $total_items );
 				}
 
-				// Call import for this batch
-				$batch_result = import_jobs_from_json( true, $current_batch_start );
+				// Prepare and process this batch
+				$setup = prepare_import_setup( $current_batch_start, true );
+				if ( is_wp_error( $setup ) ) {
+					if ( $debug_mode ) {
+						error_log( '[PUNTWORK] [BATCH-LOOP] Setup failed at ' . $current_batch_start . ': ' . $setup->get_error_message() );
+					}
+					return array(
+						'success' => false,
+						'message' => 'Setup failed: ' . $setup->get_error_message(),
+						'logs' => array( 'Setup failed: ' . $setup->get_error_message() ),
+					);
+				}
+				if ( isset( $setup['success'] ) && ! $setup['success'] ) {
+					if ( $debug_mode ) {
+						error_log( '[PUNTWORK] [BATCH-LOOP] Setup returned early at ' . $current_batch_start . ': ' . ( $setup['message'] ?? 'Unknown' ) );
+					}
+					return $setup;
+				}
+				$batch_result = process_batch_items_logic( $setup );
 
 				if ( ! $batch_result['success'] ) {
 					if ( $debug_mode ) {
