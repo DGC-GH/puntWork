@@ -816,6 +816,12 @@ console.info("=== Job Import Logic Script Loaded ===");
                     $('#cancel-import').hide();
                     $('#reset-import').hide().prop('disabled', false);
 
+                    // Force a fresh status check to ensure UI reflects the reset state
+                    console.log('[PUNTWORK] Reset completed, forcing fresh status check');
+                    setTimeout(function() {
+                        JobImportEvents.checkInitialStatus();
+                    }, 500);
+
                     console.log('[PUNTWORK] Reset completed successfully');
                 } else {
                     // Reset failed - show error but don't change UI state

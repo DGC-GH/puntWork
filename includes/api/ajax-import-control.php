@@ -394,7 +394,8 @@ function reset_job_import_status_ajax() {
 		error_log( '[PUNTWORK] [DEBUG-PHP] Starting import status reset' );
 		// Clear only the import status, not other options
 		delete_option( 'job_import_status' );
-		error_log( '[PUNTWORK] [DEBUG-PHP] Deleted job_import_status option' );
+		delete_option( 'puntwork_last_import_details' );
+		error_log( '[PUNTWORK] [DEBUG-PHP] Deleted job_import_status and puntwork_last_import_details options' );
 
 		// Also reset progress and related options for complete reset
 		delete_option( 'job_import_progress' );
