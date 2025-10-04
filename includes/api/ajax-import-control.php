@@ -493,6 +493,16 @@ function get_job_import_status_ajax() {
 			$needs_correction = ( ! $status_exists ) || ( $current_total == 0 && $current_complete );
 			
 			if ( $needs_correction ) {
+				// Check if there was a recent successful import that completed
+				$last_import_details = get_option( 'puntwork_last_import_details', array() );
+				$has_recent_successful_import = isset( $last_import_details['success'] ) && 
+					$last_import_details['success'] && 
+					isset( $last_import_details['complete'] ) && 
+					$last_import_details['complete'];
+				
+				error_log( '[PUNTWORK] [STATUS-CORRECTION] Last import details check: ' . json_encode( $last_import_details ) );
+				error_log( '[PUNTWORK] [STATUS-CORRECTION] Has recent successful import: ' . ($has_recent_successful_import ? 'true' : 'false') );
+				
 				// Status needs correction - combined file exists but status is missing or incorrect
 				error_log( '[PUNTWORK] [STATUS-CORRECTION] Status correction condition met - correcting status' );
 				
@@ -506,13 +516,13 @@ function get_job_import_status_ajax() {
 					
 					if ( $actual_total > 0 ) {
 						$progress['total'] = $actual_total;
-						$progress['complete'] = false;
-						$progress['processed'] = 0;
-						$progress['start_time'] = microtime( true );
+						$progress['processed'] = $has_recent_successful_import ? $actual_total : 0;
+						$progress['complete'] = $has_recent_successful_import;
+						$progress['start_time'] = $has_recent_successful_import ? null : microtime( true );
 						$progress['last_update'] = time();
-						$progress['logs'] = array( 'Import status corrected - combined file exists with ' . $actual_total . ' items' );
+						$progress['logs'] = array( 'Import status corrected - combined file exists with ' . $actual_total . ' items' . ($has_recent_successful_import ? ' (import appears complete)' : '') );
 						$update_result = update_option( 'job_import_status', $progress );
-						error_log( '[PUNTWORK] [STATUS-CORRECTION] Status corrected: total=' . $actual_total . ', complete=false, update_result=' . ($update_result ? 'true' : 'false') );
+						error_log( '[PUNTWORK] [STATUS-CORRECTION] Status corrected: total=' . $actual_total . ', complete=' . ($has_recent_successful_import ? 'true' : 'false') . ', update_result=' . ($update_result ? 'true' : 'false') );
 					} else {
 						error_log( '[PUNTWORK] [STATUS-CORRECTION] get_json_item_count returned 0 or invalid value, not correcting status' );
 					}
