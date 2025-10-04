@@ -16,96 +16,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Include performance utilities
 require_once __DIR__ . '/../utilities/performance-functions.php';
 
-class JsonlIterator implements \Iterator {
-
-	private string $filePath;
-	private int $startIndex;
-	private int $batchSize;
-	private $handle;
-	private int $currentIndex = 0;
-	private int $loadedCount  = 0;
-	private $currentItem      = null;
-	private int $key          = 0;
-
-	public function __construct( string $filePath, int $startIndex, int $batchSize ) {
-		if ( ! file_exists( $filePath ) ) {
-			throw new \Exception( 'JSONL file does not exist: ' . $filePath );
-		}
-		if ( ! is_readable( $filePath ) ) {
-			throw new \Exception( 'JSONL file not readable: ' . $filePath );
-		}
-		$this->filePath   = $filePath;
-		$this->startIndex = $startIndex;
-		$this->batchSize  = $batchSize;
-	}
-
-	public function rewind(): void {
-		if ( $this->handle ) {
-			fclose( $this->handle );
-		}
-		$this->handle       = fopen( $this->filePath, 'r' );
-		$this->currentIndex = 0;
-		$this->loadedCount  = 0;
-		$this->key          = 0;
-		$this->currentItem  = null;
-		$this->skipToStart();
-		$this->readNextItem();
-	}
-
-	private function skipToStart(): void {
-		while ( $this->currentIndex < $this->startIndex && ( $line = fgets( $this->handle ) ) !== false ) {
-			++$this->currentIndex;
-		}
-	}
-
-	private function readNextItem(): void {
-		$this->currentItem = null;
-		if ( $this->loadedCount >= $this->batchSize ) {
-			return;
-		}
-		$bom = "\xef\xbb\xbf";
-		while ( ( $line = fgets( $this->handle ) ) !== false ) {
-			++$this->currentIndex;
-			$line = trim( $line );
-			if ( substr( $line, 0, 3 ) === $bom ) {
-				$line = substr( $line, 3 );
-			}
-			if ( ! empty( $line ) ) {
-				$item = json_decode( $line, true );
-				if ( $item !== null ) {
-					$this->currentItem = $item;
-					++$this->loadedCount;
-					return;
-				}
-			}
-		}
-	}
-
-	#[\ReturnTypeWillChange]
-	public function current() {
-		return $this->currentItem;
-	}
-
-	public function key(): int {
-		return $this->key;
-	}
-
-	public function next(): void {
-		++$this->key;
-		$this->readNextItem();
-	}
-
-	public function valid(): bool {
-		return $this->currentItem !== null;
-	}
-
-	public function __destruct() {
-		if ( $this->handle ) {
-			fclose( $this->handle );
-		}
-	}
-}
-
 /**
  * Load and prepare batch items from JSONL.
  *
@@ -308,24 +218,51 @@ function load_json_batch( $json_path, $start_index, $batch_size ) {
 		error_log( '[PUNTWORK] load_json_batch: called with start_index=' . $start_index . ', batch_size=' . $batch_size . ', json_path=' . $json_path );
 	}
 
-	try {
-		$iterator = new JsonlIterator( $json_path, $start_index, $batch_size );
-		$items = array();
-		$lines_read = 0;
-		foreach ( $iterator as $item ) {
-			$items[] = $item;
-			$lines_read++;
-		}
+	$items = array();
+	$lines_read = 0;
 
+	if ( ( $handle = fopen( $json_path, 'r' ) ) === false ) {
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] load_json_batch: returning ' . count( $items ) . ' items (read ' . $lines_read . ' lines)' );
+			error_log( '[PUNTWORK] load_json_batch: Cannot open file: ' . $json_path );
 		}
-
 		return array( 'items' => $items, 'lines_read' => $lines_read );
-	} catch ( \Exception $e ) {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] load_json_batch: Exception: ' . $e->getMessage() );
-		}
-		return array( 'items' => array(), 'lines_read' => 0 );
 	}
+
+	// Skip to start_index
+	$current_line = 0;
+	$bom = "\xef\xbb\xbf";
+	while ( $current_line < $start_index && ( $line = fgets( $handle ) ) !== false ) {
+		$current_line++;
+	}
+
+	// Read batch_size items
+	$items_read = 0;
+	while ( $items_read < $batch_size && ( $line = fgets( $handle ) ) !== false ) {
+		$current_line++;
+		$lines_read++;
+		$line = trim( $line );
+
+		// Remove BOM if present
+		if ( substr( $line, 0, 3 ) === $bom ) {
+			$line = substr( $line, 3 );
+		}
+
+		if ( ! empty( $line ) ) {
+			$item = json_decode( $line, true );
+			if ( $item !== null ) {
+				$items[] = $item;
+				$items_read++;
+			} elseif ( $debug_mode ) {
+				error_log( '[PUNTWORK] load_json_batch: Invalid JSON at line ' . $current_line . ': ' . json_last_error_msg() );
+			}
+		}
+	}
+
+	fclose( $handle );
+
+	if ( $debug_mode ) {
+		error_log( '[PUNTWORK] load_json_batch: returning ' . count( $items ) . ' items (read ' . $lines_read . ' lines)' );
+	}
+
+	return array( 'items' => $items, 'lines_read' => $lines_read );
 }
