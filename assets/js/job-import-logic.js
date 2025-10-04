@@ -700,14 +700,7 @@ console.info("=== Job Import Logic Script Loaded ===");
                     console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling not available');
                 }
 
-                console.log('[PUNTWORK] [DEBUG-IMPORT] About to call handleImport(0)');
-                console.log('[PUNTWORK] [DEBUG-IMPORT] handleImport method exists:', typeof this.handleImport);
-                console.log('[PUNTWORK] [DEBUG-IMPORT] this context:', this);
-
-                // Start the import process directly from JavaScript
-                console.log('[PUNTWORK] [DEBUG-IMPORT] Starting import process with handleImport(0)');
-                await this.handleImport(0);
-
+                // Wait for Action Scheduler to complete the import - no manual batch processing needed
                 console.log('[PUNTWORK] [DEBUG-IMPORT] ===== START IMPORT PROCESS COMPLETE =====');
 
             } catch (error) {
@@ -758,8 +751,25 @@ console.info("=== Job Import Logic Script Loaded ===");
                     console.log('[PUNTWORK] Starting status polling for resume import');
                     window.JobImportEvents.startStatusPolling();
                 }
-                
-                await this.handleImport(jobImportData.resume_progress || 0);
+
+                // For resume, we need to check if there's an existing Action Scheduler job or restart the process
+                // Check current status first
+                const statusResponse = await JobImportAPI.getImportStatus();
+                if (statusResponse.success && statusResponse.data) {
+                    const statusData = JobImportUI.normalizeResponseData(statusResponse);
+                    
+                    // If import is already complete, show completion
+                    if (statusData.complete) {
+                        console.log('[PUNTWORK] Import already complete on resume');
+                        await this.handleImportCompletion();
+                        return;
+                    }
+                    
+                    // If there's progress but not complete, the Action Scheduler should still be running
+                    // Just continue polling for updates
+                    console.log('[PUNTWORK] Resuming import monitoring - Action Scheduler should handle processing');
+                    PuntWorkJSLogger.info('Resuming import monitoring - letting Action Scheduler handle processing', 'LOGIC');
+                }
             } catch (error) {
                 PuntWorkJSLogger.error('Resume import error', 'LOGIC', error);
                 JobImportUI.appendLogs([error.message]);
