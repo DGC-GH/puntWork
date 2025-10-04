@@ -248,9 +248,11 @@ function handle_import_progress_sse( $request ) {
 			}
 
 			try {
-				// Get current import status
-				$current_status = get_option( 'job_import_status', array() );
-				error_log( '[PUNTWORK] SSE: Raw current_status from get_option: ' . json_encode( $current_status ) );
+				// Get current import status - bypass object caching by using direct database query
+				global $wpdb;
+				$status_json = $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM $wpdb->options WHERE option_name = %s", 'job_import_status' ) );
+				$current_status = $status_json ? json_decode( $status_json, true ) : array();
+				error_log( '[PUNTWORK] SSE: Raw current_status from direct DB query: ' . json_encode( $current_status ) );
 				
 				// DEBUG: Check if we're reaching the file checking code
 				error_log( '[PUNTWORK] SSE: About to check file existence - ABSPATH defined: ' . (defined('ABSPATH') ? 'YES' : 'NO') . ', DOCUMENT_ROOT set: ' . (isset($_SERVER['DOCUMENT_ROOT']) ? 'YES' : 'NO'));
