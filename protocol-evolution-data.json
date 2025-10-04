@@ -4032,6 +4032,20 @@
                 "ai_suggestions_accepted": 1
             },
             "protocol_version": "1759590552"
+        },
+        {
+            "step_id": "protocol_run",
+            "timestamp": 1759593379,
+            "metrics": {
+                "success": true,
+                "duration": 300,
+                "data_size": 3,
+                "has_error": false,
+                "ai_context_provided": true,
+                "code_comprehension_score": 0.8,
+                "ai_suggestions_accepted": 1
+            },
+            "protocol_version": "1759593278"
         }
     ],
     "applied_variations": [
