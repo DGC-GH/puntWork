@@ -105,6 +105,21 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 			// Process item with fork-based timeout protection
 			$item_result = process_item_with_fork($guid, $batch_items, $post_ids_by_guid, $last_updates, $post_statuses, $all_hashes_by_post, $item_counter, $item_timeout_limit);
 
+			// Debug: Check what we got back
+			if (!is_array($item_result)) {
+				error_log('[PUNTWORK] [ERROR] process_item_with_fork returned non-array for GUID: ' . $guid . ', type: ' . gettype($item_result) . ', value: ' . var_export($item_result, true));
+				$item_result = array(
+					'success' => false,
+					'error' => 'Non-array result returned',
+					'published' => 0,
+					'updated' => 0,
+					'skipped' => 0,
+					'logs' => array(),
+					'acf_updates' => null,
+					'post_id' => null,
+				);
+			}
+
 			if ($item_result['success']) {
 				$processed_count++;
 				$published += $item_result['published'];
@@ -223,15 +238,27 @@ function process_item_with_fork($guid, $batch_items, $post_ids_by_guid, $last_up
 
 	// DISABLED: Forking causes issues with WordPress database connections in child processes
 	// Always process directly to avoid fork-related errors
-	error_log('[PUNTWORK] [TIMEOUT] Forking disabled, processing directly');
-	$item_result = process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updates, $post_statuses, $all_hashes_by_post, $item_counter);
-	return $item_result;
+	error_log('[PUNTWORK] [TIMEOUT] Forking disabled, processing directly for GUID: ' . $guid);
+	try {
+		$item_result = process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updates, $post_statuses, $all_hashes_by_post, $item_counter);
+		error_log('[PUNTWORK] [TIMEOUT] process_single_item returned for GUID: ' . $guid . ', success: ' . (isset($item_result['success']) ? $item_result['success'] : 'not set'));
+		return $item_result;
+	} catch (Exception $e) {
+		error_log('[PUNTWORK] [TIMEOUT] Exception in process_single_item for GUID: ' . $guid . ': ' . $e->getMessage());
+		$result['error'] = 'Exception: ' . $e->getMessage();
+		return $result;
+	} catch (Throwable $e) {
+		error_log('[PUNTWORK] [TIMEOUT] Throwable in process_single_item for GUID: ' . $guid . ': ' . $e->getMessage());
+		$result['error'] = 'Throwable: ' . $e->getMessage();
+		return $result;
+	}
 }
 
 /**
  * Process a single item (called in child process)
  */
 function process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updates, $post_statuses, $all_hashes_by_post, $item_counter) {
+	error_log('[PUNTWORK] [ITEM-DEBUG] ===== STARTING process_single_item for GUID: ' . $guid . ' =====');
 	$result = array(
 		'success'  => false,
 		'error'    => '',
@@ -243,101 +270,144 @@ function process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updat
 		'post_id' => null,
 	);
 
-	$item = $batch_items[$guid]['item'];
-	$xml_updated = isset($item['updated']) ? $item['updated'] : '';
-	$xml_updated_ts = strtotime($xml_updated);
-	$post_id = isset($post_ids_by_guid[$guid]) ? $post_ids_by_guid[$guid] : null;
+	try {
+		error_log('[PUNTWORK] [ITEM-DEBUG] Checking if batch_items[' . $guid . '] exists: ' . (isset($batch_items[$guid]) ? 'yes' : 'no'));
+		if (!isset($batch_items[$guid])) {
+			$result['error'] = 'Batch item not found for GUID: ' . $guid;
+			error_log('[PUNTWORK] [ITEM-DEBUG] ERROR: batch_items[' . $guid . '] does not exist');
+			return $result;
+		}
 
-	// If post exists, check if it needs updating
-	if ($post_id) {
-		// Check if content has changed
-		$current_hash = $all_hashes_by_post[$post_id] ?? '';
-		$item_hash = md5(json_encode($item));
+		error_log('[PUNTWORK] [ITEM-DEBUG] Checking if batch_items[' . $guid . '][\'item\'] exists: ' . (isset($batch_items[$guid]['item']) ? 'yes' : 'no'));
+		if (!isset($batch_items[$guid]['item'])) {
+			$result['error'] = 'Batch item data not found for GUID: ' . $guid;
+			error_log('[PUNTWORK] [ITEM-DEBUG] ERROR: batch_items[' . $guid . '][\'item\'] does not exist');
+			return $result;
+		}
 
-		if ($current_hash === $item_hash) {
-			$result['skipped'] = 1;
-			$result['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - No changes';
+		$item = $batch_items[$guid]['item'];
+		error_log('[PUNTWORK] [ITEM-DEBUG] Retrieved item data for GUID: ' . $guid . ', item keys: ' . implode(', ', array_keys($item)));
+		$xml_updated = isset($item['updated']) ? $item['updated'] : '';
+		$xml_updated_ts = strtotime($xml_updated);
+		$post_id = isset($post_ids_by_guid[$guid]) ? $post_ids_by_guid[$guid] : null;
+		error_log('[PUNTWORK] [ITEM-DEBUG] Post ID for GUID ' . $guid . ': ' . ($post_id ?: 'null'));
+
+		// If post exists, check if it needs updating
+		if ($post_id) {
+			error_log('[PUNTWORK] [ITEM-DEBUG] Processing existing post ID: ' . $post_id . ' for GUID: ' . $guid);
+			// Check if content has changed
+			$current_hash = $all_hashes_by_post[$post_id] ?? '';
+			$item_hash = md5(json_encode($item));
+
+			if ($current_hash === $item_hash) {
+				$result['skipped'] = 1;
+				$result['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - No changes';
+				$result['success'] = true;
+				error_log('[PUNTWORK] [ITEM-DEBUG] Skipped post ID: ' . $post_id . ' for GUID: ' . $guid . ' - no changes');
+				return $result;
+			}
+
+			// Update existing post
+			$xml_title = isset($item['functiontitle']) ? $item['functiontitle'] : '';
+			$xml_validfrom = isset($item['validfrom']) ? $item['validfrom'] : '';
+			$post_modified = $xml_updated ?: current_time('mysql');
+
+			// Update metadata
+			update_post_meta($post_id, '_last_import_update', $xml_updated);
+			update_post_meta($post_id, '_import_hash', $item_hash);
+			error_log('[PUNTWORK] [ITEM-DEBUG] Updated metadata for post ID: ' . $post_id . ' for GUID: ' . $guid);
+
+			// Prepare ACF updates
+			$acf_fields = get_acf_fields();
+			$zero_empty_fields = get_zero_empty_fields();
+			$acf_updates = array();
+			foreach ($acf_fields as $field) {
+				$value = $item[$field] ?? '';
+				$is_special = in_array($field, $zero_empty_fields);
+				$set_value = $is_special && $value == '0' ? '' : $value;
+				$acf_updates[$field] = $set_value;
+			}
+
+			$result['updated'] = 1;
+			$result['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Updated ID: ' . $post_id . ' GUID: ' . $guid;
+			$result['acf_updates'] = $acf_updates;
+			$result['post_id'] = $post_id;
 			$result['success'] = true;
-			return $result;
+			error_log('[PUNTWORK] [ITEM-DEBUG] Successfully prepared update for post ID: ' . $post_id . ' for GUID: ' . $guid);
+		} else {
+			error_log('[PUNTWORK] [ITEM-DEBUG] Creating new post for GUID: ' . $guid);
+			// Create new post
+			$xml_title = isset($item['functiontitle']) ? $item['functiontitle'] : '';
+			$xml_validfrom = isset($item['validfrom']) ? $item['validfrom'] : current_time('mysql');
+			$post_modified = $xml_updated ?: current_time('mysql');
+
+			$user_id = get_current_user_id();
+			if (!$user_id) {
+				$user_id = 1; // Fallback to admin user
+			}
+
+			$post_data = array(
+				'post_type' => 'job',
+				'post_title' => $xml_title,
+				'post_name' => sanitize_title($xml_title . '-' . $guid),
+				'post_status' => 'publish',
+				'post_date' => $xml_validfrom,
+				'post_modified' => $post_modified,
+				'comment_status' => 'closed',
+				'post_author' => $user_id,
+			);
+
+			$post_id = wp_insert_post($post_data);
+			error_log('[PUNTWORK] [ITEM-DEBUG] wp_insert_post returned: ' . ($post_id ?: 'null/false') . ' for GUID: ' . $guid);
+
+			if (is_wp_error($post_id)) {
+				$result['error'] = 'Create failed: ' . $post_id->get_error_message();
+				error_log('[PUNTWORK] [ITEM-DEBUG] wp_insert_post failed for GUID: ' . $guid . ': ' . $post_id->get_error_message());
+				return $result;
+			}
+
+			if (!$post_id || $post_id <= 0) {
+				$result['error'] = 'Create failed: wp_insert_post returned invalid post ID: ' . $post_id;
+				error_log('[PUNTWORK] [ITEM-DEBUG] wp_insert_post returned invalid post ID for GUID: ' . $guid . ': ' . $post_id);
+				return $result;
+			}
+
+			// Update metadata
+			update_post_meta($post_id, '_last_import_update', $xml_updated);
+			$item_hash = md5(json_encode($item));
+			update_post_meta($post_id, '_import_hash', $item_hash);
+			error_log('[PUNTWORK] [ITEM-DEBUG] Updated metadata for new post ID: ' . $post_id . ' for GUID: ' . $guid);
+
+			// Prepare ACF updates
+			$acf_fields = get_acf_fields();
+			$zero_empty_fields = get_zero_empty_fields();
+			$acf_updates = array();
+			foreach ($acf_fields as $field) {
+				$value = $item[$field] ?? '';
+				$is_special = in_array($field, $zero_empty_fields);
+				$set_value = $is_special && $value == '0' ? '' : $value;
+				$acf_updates[$field] = $set_value;
+			}
+
+			$result['published'] = 1;
+			$result['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Published ID: ' . $post_id . ' GUID: ' . $guid;
+			$result['acf_updates'] = $acf_updates;
+			$result['post_id'] = $post_id;
+			$result['success'] = true;
+			error_log('[PUNTWORK] [ITEM-DEBUG] Successfully created new post ID: ' . $post_id . ' for GUID: ' . $guid);
 		}
 
-		// Update existing post
-		$xml_title = isset($item['functiontitle']) ? $item['functiontitle'] : '';
-		$xml_validfrom = isset($item['validfrom']) ? $item['validfrom'] : '';
-		$post_modified = $xml_updated ?: current_time('mysql');
-
-		// Update metadata
-		update_post_meta($post_id, '_last_import_update', $xml_updated);
-		update_post_meta($post_id, '_import_hash', $item_hash);
-
-		// Prepare ACF updates
-		$acf_fields = get_acf_fields();
-		$zero_empty_fields = get_zero_empty_fields();
-		$acf_updates = array();
-		foreach ($acf_fields as $field) {
-			$value = $item[$field] ?? '';
-			$is_special = in_array($field, $zero_empty_fields);
-			$set_value = $is_special && $value == '0' ? '' : $value;
-			$acf_updates[$field] = $set_value;
-		}
-
-		$result['updated'] = 1;
-		$result['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Updated ID: ' . $post_id . ' GUID: ' . $guid;
-		$result['acf_updates'] = $acf_updates;
-		$result['post_id'] = $post_id;
-	} else {
-		// Create new post
-		$xml_title = isset($item['functiontitle']) ? $item['functiontitle'] : '';
-		$xml_validfrom = isset($item['validfrom']) ? $item['validfrom'] : current_time('mysql');
-		$post_modified = $xml_updated ?: current_time('mysql');
-
-		$user_id = get_current_user_id();
-		if (!$user_id) {
-			$user_id = 1; // Fallback to admin user
-		}
-
-		$post_data = array(
-			'post_type' => 'job',
-			'post_title' => $xml_title,
-			'post_name' => sanitize_title($xml_title . '-' . $guid),
-			'post_status' => 'publish',
-			'post_date' => $xml_validfrom,
-			'post_modified' => $post_modified,
-			'comment_status' => 'closed',
-			'post_author' => $user_id,
-		);
-
-		$post_id = wp_insert_post($post_data);
-
-		if (is_wp_error($post_id)) {
-			$result['error'] = 'Create failed: ' . $post_id->get_error_message();
-			return $result;
-		}
-
-		// Update metadata
-		update_post_meta($post_id, '_last_import_update', $xml_updated);
-		$item_hash = md5(json_encode($item));
-		update_post_meta($post_id, '_import_hash', $item_hash);
-
-		// Prepare ACF updates
-		$acf_fields = get_acf_fields();
-		$zero_empty_fields = get_zero_empty_fields();
-		$acf_updates = array();
-		foreach ($acf_fields as $field) {
-			$value = $item[$field] ?? '';
-			$is_special = in_array($field, $zero_empty_fields);
-			$set_value = $is_special && $value == '0' ? '' : $value;
-			$acf_updates[$field] = $set_value;
-		}
-
-		$result['published'] = 1;
-		$result['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Published ID: ' . $post_id . ' GUID: ' . $guid;
-		$result['acf_updates'] = $acf_updates;
-		$result['post_id'] = $post_id;
+		error_log('[PUNTWORK] [ITEM-DEBUG] Completed process_single_item for GUID: ' . $guid . ', success: ' . $result['success']);
+		return $result;
+	} catch (Exception $e) {
+		error_log('[PUNTWORK] [ITEM-DEBUG] Exception in process_single_item for GUID: ' . $guid . ': ' . $e->getMessage() . ' at line ' . $e->getLine());
+		$result['error'] = 'Exception: ' . $e->getMessage();
+		return $result;
+	} catch (Throwable $e) {
+		error_log('[PUNTWORK] [ITEM-DEBUG] Throwable in process_single_item for GUID: ' . $guid . ': ' . $e->getMessage() . ' at line ' . $e->getLine());
+		$result['error'] = 'Throwable: ' . $e->getMessage();
+		return $result;
 	}
-
-	$result['success'] = true;
-	return $result;
 }
 function execute_with_timeout( callable $function, array $args = array(), int $timeout_seconds = 30 ) {
 	// Execute directly without timeout to avoid forking issues
