@@ -522,14 +522,18 @@ function get_job_import_status_ajax() {
 					error_log( '[PUNTWORK] [STATUS-CORRECTION] get_json_item_count returned: ' . $actual_total );
 					
 					if ( $actual_total > 0 ) {
+						// Check if this is a fresh import ready to start (not a completed one)
+						$current_logs = $progress['logs'] ?? array();
+						$is_ready_for_import = in_array('JSONL files combined successfully - ready for import', $current_logs);
+						
 						$progress['total'] = $actual_total;
-						$progress['processed'] = $has_recent_successful_import ? $actual_total : 0;
-						$progress['complete'] = $has_recent_successful_import;
-						$progress['start_time'] = $has_recent_successful_import ? null : microtime( true );
+						$progress['processed'] = $has_recent_successful_import && !$is_ready_for_import ? $actual_total : 0;
+						$progress['complete'] = $has_recent_successful_import && !$is_ready_for_import;
+						$progress['start_time'] = ($has_recent_successful_import && !$is_ready_for_import) ? null : microtime( true );
 						$progress['last_update'] = time();
-						$progress['logs'] = array( 'Import status corrected - combined file exists with ' . $actual_total . ' items' . ($has_recent_successful_import ? ' (import appears complete)' : '') );
+						$progress['logs'] = $is_ready_for_import ? $current_logs : array( 'Import status corrected - combined file exists with ' . $actual_total . ' items' . ($has_recent_successful_import ? ' (import appears complete)' : '') );
 						$update_result = update_option( 'job_import_status', $progress );
-						error_log( '[PUNTWORK] [STATUS-CORRECTION] Status corrected: total=' . $actual_total . ', complete=' . ($has_recent_successful_import ? 'true' : 'false') . ', update_result=' . ($update_result ? 'true' : 'false') );
+						error_log( '[PUNTWORK] [STATUS-CORRECTION] Status corrected: total=' . $actual_total . ', complete=' . (($has_recent_successful_import && !$is_ready_for_import) ? 'true' : 'false') . ', is_ready_for_import=' . ($is_ready_for_import ? 'true' : 'false') . ', update_result=' . ($update_result ? 'true' : 'false') );
 					} else {
 						error_log( '[PUNTWORK] [STATUS-CORRECTION] get_json_item_count returned 0 or invalid value, not correcting status' );
 					}
@@ -575,9 +579,18 @@ function get_job_import_status_ajax() {
 			$is_stuck     = false;
 			$stuck_reason = '';
 
+			// Check if this is a fresh import ready for batch processing (JSONL combined but not started)
+			$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
+			$has_jsonl_success = isset($progress['logs']) && is_array($progress['logs']) && 
+				in_array('JSONL files combined successfully - ready for import', $progress['logs']);
+			$combined_file_exists = file_exists($combined_file) && filesize($combined_file) > 0;
+
 			if ( ($progress['processed'] ?? 0) === 0 && $time_elapsed > 300 ) {
-				$is_stuck     = true;
-				$stuck_reason = 'no progress for 5+ minutes and no jobs processed yet';
+				// Don't consider stuck if combined file exists (ready for batch processing)
+				if ( !$combined_file_exists ) {
+					$is_stuck     = true;
+					$stuck_reason = 'no progress for 5+ minutes and no jobs processed yet';
+				}
 			} elseif ( ($progress['processed'] ?? 0) > 0 && $time_elapsed > 300 ) {
 				$is_stuck     = true;
 				$stuck_reason = 'no progress for 5+ minutes after starting';
