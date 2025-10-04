@@ -18,6 +18,7 @@ error_log( '[PUNTWORK] SSE: sse-import-progress.php file loaded successfully' );
 // Explicitly load required utility classes for SSE context
 require_once __DIR__ . '/../utilities/async-processing.php';
 require_once __DIR__ . '/../scheduling/scheduling-core.php';
+require_once __DIR__ . '/../utilities/utility-helpers.php';
 
 /**
  * Deep sanitize data for JSON serialization
