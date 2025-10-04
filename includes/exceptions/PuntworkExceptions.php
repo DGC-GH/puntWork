@@ -53,7 +53,7 @@ class PuntworkException extends \Exception {
  * Database-related exceptions
  */
 class DatabaseException extends PuntworkException {
-	public function __construct( $message = '', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = '', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context, array(
 			'Check database connection settings',
 			'Verify table permissions',
@@ -65,7 +65,7 @@ class DatabaseException extends PuntworkException {
 }
 
 class DatabaseConnectionException extends DatabaseException {
-	public function __construct( $message = 'Database connection failed', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = 'Database connection failed', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context );
 		$this->recovery_suggestions = array(
 			'Verify database credentials',
@@ -77,7 +77,7 @@ class DatabaseConnectionException extends DatabaseException {
 }
 
 class DatabaseQueryException extends DatabaseException {
-	public function __construct( $message = 'Database query failed', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = 'Database query failed', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context );
 		$this->recovery_suggestions = array(
 			'Validate SQL syntax',
@@ -89,7 +89,7 @@ class DatabaseQueryException extends DatabaseException {
 }
 
 class DatabaseDeadlockException extends DatabaseException {
-	public function __construct( $message = 'Database deadlock detected', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = 'Database deadlock detected', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context );
 		$this->recovery_suggestions = array(
 			'Reduce concurrent operations',
@@ -104,7 +104,7 @@ class DatabaseDeadlockException extends DatabaseException {
  * Network-related exceptions
  */
 class NetworkException extends PuntworkException {
-	public function __construct( $message = '', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = '', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context, array(
 			'Check network connectivity',
 			'Verify URL accessibility',
@@ -119,7 +119,7 @@ class HTTPException extends NetworkException {
 	protected $http_code;
 	protected $url;
 
-	public function __construct( $message = '', $http_code = 0, $url = '', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = '', $http_code = 0, $url = '', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context );
 		$this->http_code = $http_code;
 		$this->url = $url;
@@ -143,7 +143,7 @@ class HTTPException extends NetworkException {
 }
 
 class TimeoutException extends NetworkException {
-	public function __construct( $message = 'Operation timed out', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = 'Operation timed out', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context );
 		$this->recovery_suggestions = array(
 			'Increase timeout values',
@@ -155,7 +155,7 @@ class TimeoutException extends NetworkException {
 }
 
 class SSLException extends NetworkException {
-	public function __construct( $message = 'SSL/TLS error occurred', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = 'SSL/TLS error occurred', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context );
 		$this->recovery_suggestions = array(
 			'Verify SSL certificate validity',
@@ -170,7 +170,7 @@ class SSLException extends NetworkException {
  * Processing-related exceptions
  */
 class ProcessingException extends PuntworkException {
-	public function __construct( $message = '', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = '', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context, array(
 			'Check system resources (memory, CPU)',
 			'Review data format and size',
@@ -182,7 +182,7 @@ class ProcessingException extends PuntworkException {
 }
 
 class MemoryException extends ProcessingException {
-	public function __construct( $message = 'Memory limit exceeded', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = 'Memory limit exceeded', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context );
 		$this->recovery_suggestions = array(
 			'Increase PHP memory limit',
@@ -194,7 +194,7 @@ class MemoryException extends ProcessingException {
 }
 
 class TimeoutProcessingException extends ProcessingException {
-	public function __construct( $message = 'Processing timed out', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = 'Processing timed out', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context );
 		$this->recovery_suggestions = array(
 			'Increase execution time limit',
@@ -209,7 +209,7 @@ class TimeoutProcessingException extends ProcessingException {
  * Validation-related exceptions
  */
 class ValidationException extends PuntworkException {
-	public function __construct( $message = '', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = '', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context, array(
 			'Validate input data format',
 			'Check required fields',
@@ -221,7 +221,7 @@ class ValidationException extends PuntworkException {
 }
 
 class SchemaValidationException extends ValidationException {
-	public function __construct( $message = 'Data schema validation failed', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = 'Data schema validation failed', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context );
 		$this->recovery_suggestions = array(
 			'Update data mapping configuration',
@@ -233,7 +233,7 @@ class SchemaValidationException extends ValidationException {
 }
 
 class DataIntegrityException extends ValidationException {
-	public function __construct( $message = 'Data integrity check failed', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = 'Data integrity check failed', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context );
 		$this->recovery_suggestions = array(
 			'Verify data source integrity',
@@ -248,7 +248,7 @@ class DataIntegrityException extends ValidationException {
  * Configuration-related exceptions
  */
 class ConfigurationException extends PuntworkException {
-	public function __construct( $message = '', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = '', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context, array(
 			'Review configuration settings',
 			'Check file permissions',
@@ -260,7 +260,7 @@ class ConfigurationException extends PuntworkException {
 }
 
 class MissingConfigurationException extends ConfigurationException {
-	public function __construct( $message = 'Required configuration missing', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = 'Required configuration missing', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context );
 		$this->recovery_suggestions = array(
 			'Add missing configuration values',
@@ -275,7 +275,7 @@ class MissingConfigurationException extends ConfigurationException {
  * Import-specific exceptions
  */
 class ImportException extends PuntworkException {
-	public function __construct( $message = '', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = '', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context, array(
 			'Check import data format',
 			'Verify feed accessibility',
@@ -287,7 +287,7 @@ class ImportException extends PuntworkException {
 }
 
 class FeedProcessingException extends ImportException {
-	public function __construct( $message = 'Feed processing failed', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = 'Feed processing failed', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context );
 		$this->recovery_suggestions = array(
 			'Validate feed URL and format',
@@ -299,7 +299,7 @@ class FeedProcessingException extends ImportException {
 }
 
 class JobMappingException extends ImportException {
-	public function __construct( $message = 'Job data mapping failed', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = 'Job data mapping failed', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context );
 		$this->recovery_suggestions = array(
 			'Update field mapping configuration',
@@ -314,7 +314,7 @@ class JobMappingException extends ImportException {
  * Batch processing exceptions
  */
 class BatchProcessingException extends ProcessingException {
-	public function __construct( $message = 'Batch processing failed', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = 'Batch processing failed', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context );
 		$this->recovery_suggestions = array(
 			'Reduce batch size',
@@ -326,7 +326,7 @@ class BatchProcessingException extends ProcessingException {
 }
 
 class BatchRollbackException extends BatchProcessingException {
-	public function __construct( $message = 'Batch rollback failed', $code = 0, \Throwable $previous = null, $context = array() ) {
+	public function __construct( $message = 'Batch rollback failed', $code = 0, ?\Throwable $previous = null, $context = array() ) {
 		parent::__construct( $message, $code, $previous, $context );
 		$this->recovery_suggestions = array(
 			'Check database transaction status',
