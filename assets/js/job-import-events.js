@@ -560,14 +560,25 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         // Start polling for status updates
                         JobImportEvents.startStatusPolling();
                     } else {
-                        // Import was interrupted - show resume and reset options
-                        $('#start-import').hide();
-                        $('#resume-import').show();
-                        $('#reset-import').show(); // Always show reset button for incomplete imports
-                        $('#cancel-import').hide();
-                        JobImportUI.showImportUI();
-                        $('#status-message').text('Previous import interrupted. Resume or reset?');
-                        console.log('[PUNTWORK] Import was interrupted, showing resume and reset options');
+                        // Import was interrupted - show resume and reset options only if not complete
+                        if (!statusData.complete) {
+                            $('#start-import').hide();
+                            $('#resume-import').show();
+                            $('#reset-import').show(); // Always show reset button for incomplete imports
+                            $('#cancel-import').hide();
+                            JobImportUI.showImportUI();
+                            $('#status-message').text('Previous import interrupted. Resume or reset?');
+                            console.log('[PUNTWORK] Import was interrupted, showing resume and reset options');
+                        } else {
+                            // Import is complete - show start button
+                            $('#start-import').show().text('Start Import');
+                            $('#resume-import').hide();
+                            $('#cancel-import').hide();
+                            $('#reset-import').hide();
+                            JobImportUI.hideImportUI();
+                            $('#status-message').text('Ready to start.');
+                            console.log('[PUNTWORK] Import is complete, showing start button');
+                        }
                     }
                 } else {
                     // Clean state - Start Import button already shown above
