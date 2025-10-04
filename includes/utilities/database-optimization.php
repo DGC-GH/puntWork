@@ -786,8 +786,8 @@ function create_performance_logs_table(): void {
         query_count int DEFAULT 0,
         created_at datetime DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
-        KEY operation_time (operation, created_at),
-        KEY duration (total_time, items_per_second)
+        KEY idx_performance_operation_time (operation, created_at),
+        KEY idx_performance_duration (total_time, items_per_second)
     ) $charset_collate;";
 
 	include_once ABSPATH . 'wp-admin/includes/upgrade.php';
