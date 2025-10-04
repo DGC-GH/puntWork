@@ -445,6 +445,9 @@ function get_job_import_status_ajax() {
 	}
 
 	try {
+		$raw_status = get_option( 'job_import_status' );
+		error_log( '[PUNTWORK] [STATUS-DEBUG] Raw job_import_status from get_option: ' . json_encode( $raw_status ) );
+		
 		$progress = get_option( 'job_import_status', array(
 			'total'              => 0,
 			'processed'          => 0,
@@ -465,6 +468,8 @@ function get_job_import_status_ajax() {
 			'last_update'        => time(),
 			'logs'               => array(),
 		) );
+
+		error_log( '[PUNTWORK] [STATUS-DEBUG] Final progress after get_option with default: ' . json_encode( $progress ) );
 
 		// Check if combined file exists and status seems incorrect
 		$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
@@ -1769,7 +1774,9 @@ function combine_jsonl_ajax() {
 				'last_update'        => time(),
 				'logs'               => array( 'JSONL files combined successfully - ready for import' ),
 			);
-			update_option( 'job_import_status', $import_status );
+			error_log( '[PUNTWORK] [COMBINE-STATUS] About to set import status with total=' . $total_items . ', complete=false' );
+			$update_result = update_option( 'job_import_status', $import_status );
+			error_log( '[PUNTWORK] [COMBINE-STATUS] update_option result: ' . ( $update_result ? 'true' : 'false' ) . ', status set: ' . json_encode( $import_status ) );
 			error_log( '[PUNTWORK] [DEBUG-PHP] Import status initialized with total: ' . $total_items );
 
 			PuntWorkLogger::info(
