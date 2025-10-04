@@ -466,6 +466,31 @@ function get_job_import_status_ajax() {
 			'logs'               => array(),
 		) );
 
+		// Check if combined file exists and status seems incorrect
+		$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
+		if ( file_exists( $combined_file ) && filesize( $combined_file ) > 0 ) {
+			if ( ($progress['total'] ?? 0) == 0 && ($progress['complete'] ?? false) ) {
+				// Status seems incorrect - combined file exists but status shows complete with total=0
+				// This can happen if polling occurs before combine_jsonl_ajax completes, or if status was cleared
+				error_log( '[PUNTWORK] [STATUS-CORRECTION] Combined file exists but status shows total=0, complete=true - correcting status' );
+				
+				// Try to get the actual count from the file
+				if ( function_exists( 'get_json_item_count' ) ) {
+					$actual_total = get_json_item_count( $combined_file );
+					if ( $actual_total > 0 ) {
+						$progress['total'] = $actual_total;
+						$progress['complete'] = false;
+						$progress['processed'] = 0;
+						$progress['start_time'] = microtime( true );
+						$progress['last_update'] = time();
+						$progress['logs'] = array( 'Import status corrected - combined file exists with ' . $actual_total . ' items' );
+						update_option( 'job_import_status', $progress );
+						error_log( '[PUNTWORK] [STATUS-CORRECTION] Status corrected: total=' . $actual_total . ', complete=false' );
+					}
+				}
+			}
+		}
+
 		PuntWorkLogger::debug(
 			'Retrieved import status',
 			PuntWorkLogger::CONTEXT_BATCH,
@@ -522,36 +547,101 @@ function get_job_import_status_ajax() {
 						'reason'                 => $stuck_reason,
 					)
 				);
-				delete_option( 'job_import_status' );
-				delete_option( 'job_import_progress' );
-				delete_option( 'job_import_processed_guids' );
-				delete_option( 'job_import_last_batch_time' );
-				delete_option( 'job_import_last_batch_processed' );
-				delete_option( 'job_import_batch_size' );
-				delete_option( 'job_import_consecutive_small_batches' );
-				delete_transient( 'import_cancel' );
+				
+				// Check if combined file exists - if so, don't clear status completely, just reset progress
+				$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
+				if ( file_exists( $combined_file ) && filesize( $combined_file ) > 0 && function_exists( 'get_json_item_count' ) ) {
+					$actual_total = get_json_item_count( $combined_file );
+					if ( $actual_total > 0 ) {
+						error_log( '[PUNTWORK] [STUCK-DETECTION] Combined file exists with ' . $actual_total . ' items - resetting progress but keeping total' );
+						// Reset progress but keep total and set incomplete
+						$progress = array(
+							'total'              => $actual_total,
+							'processed'          => 0,
+							'published'          => 0,
+							'updated'            => 0,
+							'skipped'            => 0,
+							'duplicates_drafted' => 0,
+							'time_elapsed'       => 0,
+							'complete'           => false, // Not complete
+							'success'            => false,
+							'error_message'      => 'Import was stuck and reset - ' . $stuck_reason,
+							'batch_size'         => 10,
+							'inferred_languages' => 0,
+							'inferred_benefits'  => 0,
+							'schema_generated'   => 0,
+							'start_time'         => microtime( true ),
+							'end_time'           => null,
+							'last_update'        => time(),
+							'logs'               => array( 'Import was stuck and reset: ' . $stuck_reason . ' - ready to resume' ),
+						);
+						update_option( 'job_import_status', $progress );
+						error_log( '[PUNTWORK] [STUCK-DETECTION] Status reset with total=' . $actual_total . ', complete=false' );
+					} else {
+						// No valid items, clear status
+						delete_option( 'job_import_status' );
+						delete_option( 'job_import_progress' );
+						delete_option( 'job_import_processed_guids' );
+						delete_option( 'job_import_last_batch_time' );
+						delete_option( 'job_import_last_batch_processed' );
+						delete_option( 'job_import_batch_size' );
+						delete_option( 'job_import_consecutive_small_batches' );
+						delete_transient( 'import_cancel' );
+						
+						$progress = array(
+							'total'              => 0,
+							'processed'          => 0,
+							'published'          => 0,
+							'updated'            => 0,
+							'skipped'            => 0,
+							'duplicates_drafted' => 0,
+							'time_elapsed'       => 0,
+							'complete'           => true, // Fresh state is complete
+							'success'            => null, // Don't assume failure - set to null for unknown status
+							'error_message'      => 'Import was detected as stuck and cleared',
+							'batch_size'         => 10,
+							'inferred_languages' => 0,
+							'inferred_benefits'  => 0,
+							'schema_generated'   => 0,
+							'start_time'         => microtime( true ),
+							'end_time'           => null,
+							'last_update'        => time(),
+							'logs'               => array(),
+						);
+					}
+				} else {
+					// No combined file, clear status completely
+					delete_option( 'job_import_status' );
+					delete_option( 'job_import_progress' );
+					delete_option( 'job_import_processed_guids' );
+					delete_option( 'job_import_last_batch_time' );
+					delete_option( 'job_import_last_batch_processed' );
+					delete_option( 'job_import_batch_size' );
+					delete_option( 'job_import_consecutive_small_batches' );
+					delete_transient( 'import_cancel' );
 
-				// Return fresh status - preserve success status if import was actually complete
-				$progress = array(
-					'total'              => 0,
-					'processed'          => 0,
-					'published'          => 0,
-					'updated'            => 0,
-					'skipped'            => 0,
-					'duplicates_drafted' => 0,
-					'time_elapsed'       => 0,
-					'complete'           => true, // Fresh state is complete
-					'success'            => null, // Don't assume failure - set to null for unknown status
-					'error_message'      => 'Import was detected as stuck and cleared',
-					'batch_size'         => 10,
-					'inferred_languages' => 0,
-					'inferred_benefits'  => 0,
-					'schema_generated'   => 0,
-					'start_time'         => microtime( true ),
-					'end_time'           => null,
-					'last_update'        => time(),
-					'logs'               => array(),
-				);
+					// Return fresh status - preserve success status if import was actually complete
+					$progress = array(
+						'total'              => 0,
+						'processed'          => 0,
+						'published'          => 0,
+						'updated'            => 0,
+						'skipped'            => 0,
+						'duplicates_drafted' => 0,
+						'time_elapsed'       => 0,
+						'complete'           => true, // Fresh state is complete
+						'success'            => null, // Don't assume failure - set to null for unknown status
+						'error_message'      => 'Import was detected as stuck and cleared',
+						'batch_size'         => 10,
+						'inferred_languages' => 0,
+						'inferred_benefits'  => 0,
+						'schema_generated'   => 0,
+						'start_time'         => microtime( true ),
+						'end_time'           => null,
+						'last_update'        => time(),
+						'logs'               => array(),
+					);
+				}
 			}
 		}
 
