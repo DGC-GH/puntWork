@@ -498,7 +498,10 @@ function get_job_import_status_ajax() {
 
 			if ( ($progress['processed'] ?? 0) === 0 && $time_elapsed > 300 ) {
 				$is_stuck     = true;
-				$stuck_reason = 'no progress for 5+ minutes';
+				$stuck_reason = 'no progress for 5+ minutes and no jobs processed yet';
+			} elseif ( ($progress['processed'] ?? 0) > 0 && $time_elapsed > 300 ) {
+				$is_stuck     = true;
+				$stuck_reason = 'no progress for 5+ minutes after starting';
 			} elseif ( $time_elapsed > 7200 ) { // 2 hours
 				$is_stuck     = true;
 				$stuck_reason = 'running for more than 2 hours';
@@ -1655,10 +1658,32 @@ function combine_jsonl_ajax() {
 			$file_size = filesize( $combined_file );
 			error_log( '[PUNTWORK] [DEBUG-PHP] Combined file created: ' . $combined_file . ' (' . $file_size . ' bytes)' );
 
-			// Note: Import is now started separately by the user after combination completes
-			// This prevents cascading timeouts where combination succeeds but import start fails
+			// Initialize import status with total items for the upcoming batch import
+			$import_status = array(
+				'total'              => $total_items,
+				'processed'          => 0,
+				'published'          => 0,
+				'updated'            => 0,
+				'skipped'            => 0,
+				'duplicates_drafted' => 0,
+				'time_elapsed'       => 0,
+				'complete'           => false, // Set to false so import can start
+				'success'            => false,
+				'error_message'      => '',
+				'batch_size'         => 10,
+				'inferred_languages' => 0,
+				'inferred_benefits'  => 0,
+				'schema_generated'   => 0,
+				'start_time'         => microtime( true ),
+				'end_time'           => null,
+				'last_update'        => time(),
+				'logs'               => array( 'JSONL files combined successfully - ready for import' ),
+			);
+			update_option( 'job_import_status', $import_status );
+			error_log( '[PUNTWORK] [DEBUG-PHP] Import status initialized with total: ' . $total_items );
+
 			PuntWorkLogger::info(
-				'JSONL combination completed successfully, ready for import',
+				'JSONL combination completed and import status initialized',
 				PuntWorkLogger::CONTEXT_AJAX,
 				array(
 					'total_items'        => $total_items,

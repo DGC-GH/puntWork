@@ -666,7 +666,14 @@ console.info("=== Job Import Logic Script Loaded ===");
                 if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
                     console.log('[PUNTWORK] [DEBUG-IMPORT] Starting status polling for real-time UI updates');
                     window.JobImportEvents.startStatusPolling();
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling started successfully');
+                } else {
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling not available');
                 }
+
+                console.log('[PUNTWORK] [DEBUG-IMPORT] About to call handleImport(0)');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] handleImport method exists:', typeof this.handleImport);
+                console.log('[PUNTWORK] [DEBUG-IMPORT] this context:', this);
 
                 // Start the import process directly from JavaScript
                 console.log('[PUNTWORK] [DEBUG-IMPORT] Starting import process with handleImport(0)');
