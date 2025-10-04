@@ -220,6 +220,7 @@ if ( ! function_exists( 'process_batch_items' ) ) {
  * Process a single item with fork-based timeout protection
  */
 function process_item_with_fork($guid, $batch_items, $post_ids_by_guid, $last_updates, $post_statuses, $all_hashes_by_post, $item_counter, $timeout_limit) {
+	error_log('[PUNTWORK] [FORK-DEBUG] ===== STARTING process_item_with_fork for GUID: ' . $guid . ' =====');
 	$result = array(
 		'success'  => false,
 		'error'    => '',
@@ -232,23 +233,29 @@ function process_item_with_fork($guid, $batch_items, $post_ids_by_guid, $last_up
 	);
 
 	if (!function_exists('pcntl_fork') || !function_exists('pcntl_waitpid') || !function_exists('pcntl_signal')) {
+		error_log('[PUNTWORK] [FORK-DEBUG] pcntl functions not available for GUID: ' . $guid);
 		$result['error'] = 'pcntl functions not available';
 		return $result;
 	}
 
 	// DISABLED: Forking causes issues with WordPress database connections in child processes
 	// Always process directly to avoid fork-related errors
-	error_log('[PUNTWORK] [TIMEOUT] Forking disabled, processing directly for GUID: ' . $guid);
+	error_log('[PUNTWORK] [FORK-DEBUG] Forking disabled, processing directly for GUID: ' . $guid);
+	error_log('[PUNTWORK] [FORK-DEBUG] batch_items exists: ' . (isset($batch_items) ? 'yes' : 'no'));
+	error_log('[PUNTWORK] [FORK-DEBUG] batch_items[' . $guid . '] exists: ' . (isset($batch_items[$guid]) ? 'yes' : 'no'));
+	if (isset($batch_items[$guid])) {
+		error_log('[PUNTWORK] [FORK-DEBUG] batch_items[' . $guid . '] keys: ' . implode(', ', array_keys($batch_items[$guid])));
+	}
 	try {
 		$item_result = process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updates, $post_statuses, $all_hashes_by_post, $item_counter);
-		error_log('[PUNTWORK] [TIMEOUT] process_single_item returned for GUID: ' . $guid . ', success: ' . (isset($item_result['success']) ? $item_result['success'] : 'not set'));
+		error_log('[PUNTWORK] [FORK-DEBUG] process_single_item returned for GUID: ' . $guid . ', success: ' . (isset($item_result['success']) ? $item_result['success'] : 'not set') . ', error: ' . (isset($item_result['error']) ? $item_result['error'] : 'none'));
 		return $item_result;
 	} catch (Exception $e) {
-		error_log('[PUNTWORK] [TIMEOUT] Exception in process_single_item for GUID: ' . $guid . ': ' . $e->getMessage());
+		error_log('[PUNTWORK] [FORK-DEBUG] Exception in process_single_item for GUID: ' . $guid . ': ' . $e->getMessage());
 		$result['error'] = 'Exception: ' . $e->getMessage();
 		return $result;
 	} catch (Throwable $e) {
-		error_log('[PUNTWORK] [TIMEOUT] Throwable in process_single_item for GUID: ' . $guid . ': ' . $e->getMessage());
+		error_log('[PUNTWORK] [FORK-DEBUG] Throwable in process_single_item for GUID: ' . $guid . ': ' . $e->getMessage());
 		$result['error'] = 'Throwable: ' . $e->getMessage();
 		return $result;
 	}
@@ -259,6 +266,7 @@ function process_item_with_fork($guid, $batch_items, $post_ids_by_guid, $last_up
  */
 function process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updates, $post_statuses, $all_hashes_by_post, $item_counter) {
 	error_log('[PUNTWORK] [ITEM-DEBUG] ===== STARTING process_single_item for GUID: ' . $guid . ' =====');
+	error_log('[PUNTWORK] [ITEM-DEBUG] Function called with guid=' . $guid . ', batch_items count=' . count($batch_items));
 	$result = array(
 		'success'  => false,
 		'error'    => '',
