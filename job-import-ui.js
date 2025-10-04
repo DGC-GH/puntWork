@@ -354,7 +354,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             if (this.importSuccess === true && this.currentPhase === 'complete') {
                 percentColor = '#34c759'; // Green only for successful completion
                 barColor = '#34c759';
-            } else if (this.importSuccess === false) {
+            } else if (this.importSuccess === false && this.currentPhase === 'complete') {
                 percentColor = '#ff3b30'; // Red for failure
                 barColor = '#ff3b30';
             }
@@ -441,7 +441,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 $('#items-left').text(isNaN(itemsLeft) ? 0 : itemsLeft);
 
                 // Update status message based on completion
-                if (this.importSuccess === false) {
+                if (this.importSuccess === false && this.currentPhase === 'complete') {
                     $('#status-message').text('Import Failed: ' + (this.errorMessage || 'Unknown error'));
                 } else if ((processed >= total && total > 0 && data.success === true) || data.complete === true) {
                     $('#status-message').text('Import Complete - 100%');
@@ -528,7 +528,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             var itemsLeft = total - processed;
 
             // Handle completion case
-            if (this.importSuccess === false) {
+            if (this.importSuccess === false && this.currentPhase === 'complete') {
                 $('#time-left').text('Failed');
                 return;
             } else if (this.currentPhase === 'complete' || (processed >= total && total > 0 && data.success === true)) {
