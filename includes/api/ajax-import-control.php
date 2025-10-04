@@ -472,6 +472,8 @@ function get_job_import_status_ajax() {
 
 		error_log( '[PUNTWORK] [STATUS-DEBUG] Final progress after get_option with default: ' . json_encode( $progress ) );
 
+		error_log( '[PUNTWORK] [STATUS-CORRECTION] ===== STATUS CORRECTION LOGIC START =====' );
+
 		// Check if combined file exists and status seems incorrect
 		$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
 		error_log( '[PUNTWORK] [STATUS-CORRECTION] Checking combined file: ' . $combined_file );
@@ -517,6 +519,8 @@ function get_job_import_status_ajax() {
 		} else {
 			error_log( '[PUNTWORK] [STATUS-CORRECTION] Combined file does not exist or is empty, skipping status correction' );
 		}
+
+		error_log( '[PUNTWORK] [STATUS-CORRECTION] ===== STATUS CORRECTION LOGIC END =====' );
 
 		PuntWorkLogger::debug(
 			'Retrieved import status',
