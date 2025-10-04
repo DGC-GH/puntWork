@@ -65,10 +65,14 @@ if ( ! function_exists( 'get_json_item_count' ) ) {
 							$sample_lines[] = 'Line ' . $line_num . ': GUID=' . ( $item['guid'] ?? 'MISSING' ) . ', keys=' . implode( ',', array_keys( $item ) );
 						}
 					} else {
-						error_log( '[PUNTWORK] get_json_item_count: Invalid JSON at line ' . $line_num . ': ' . json_last_error_msg() . ' - Line preview: ' . substr( $line, 0, 100 ) );
+						if ( $debug_mode ) {
+							error_log( '[PUNTWORK] get_json_item_count: Invalid JSON at line ' . $line_num . ': ' . json_last_error_msg() . ' - Line preview: ' . substr( $line, 0, 100 ) );
+						}
 					}
 				} else {
-					error_log( '[PUNTWORK] get_json_item_count: Empty line at ' . $line_num );
+					if ( $debug_mode ) {
+						error_log( '[PUNTWORK] get_json_item_count: Empty line at ' . $line_num );
+					}
 				}
 			}
 			fclose( $handle );

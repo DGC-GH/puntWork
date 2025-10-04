@@ -193,11 +193,43 @@ function create_database_indexes(): void {
 			)
 		);
 	} else {
+		// Create the performance logs table first, then create indexes
+		create_performance_logs_table();
+		
+		// Now create the indexes
+		$start_time = microtime( true );
+		$result     = $wpdb->query(
+			"
+        CREATE INDEX IF NOT EXISTS idx_performance_operation_time
+        ON {$performance_table} (operation, created_at)
+    "
+		);
+		$duration   = microtime( true ) - $start_time;
 		\Puntwork\PuntWorkLogger::debug(
-			'Performance logs table does not exist, skipping index creation',
+			'Created idx_performance_operation_time index after table creation',
 			\Puntwork\PuntWorkLogger::CONTEXT_SYSTEM,
 			array(
-				'table' => $performance_table,
+				'result'   => $result !== false,
+				'duration' => round( $duration, 4 ),
+				'table'    => $performance_table,
+			)
+		);
+
+		$start_time = microtime( true );
+		$result     = $wpdb->query(
+			"
+        CREATE INDEX IF NOT EXISTS idx_performance_duration
+        ON {$performance_table} (total_time, items_per_second)
+    "
+		);
+		$duration   = microtime( true ) - $start_time;
+		\Puntwork\PuntWorkLogger::debug(
+			'Created idx_performance_duration index after table creation',
+			\Puntwork\PuntWorkLogger::CONTEXT_SYSTEM,
+			array(
+				'result'   => $result !== false,
+				'duration' => round( $duration, 4 ),
+				'table'    => $performance_table,
 			)
 		);
 	}
