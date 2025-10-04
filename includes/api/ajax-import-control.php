@@ -1864,9 +1864,62 @@ function combine_jsonl_ajax() {
 			if ( function_exists( 'as_schedule_single_action' ) ) {
 				$scheduled = as_schedule_single_action( time(), 'puntwork_start_batch_import', array() );
 				if ( $scheduled ) {
-					error_log( '[PUNTWORK] [COMBINE] Successfully scheduled batch import using Action Scheduler' );
+					error_log( '[PUNTWORK] [COMBINE] Successfully scheduled batch import using Action Scheduler (job ID: ' . $scheduled . ')' );
+					
+					// Verify the job was actually scheduled by checking if it exists
+					if ( function_exists( 'as_get_scheduled_actions' ) ) {
+						$scheduled_actions = as_get_scheduled_actions( array(
+							'hook' => 'puntwork_start_batch_import',
+							'status' => 'pending'
+						) );
+						if ( empty( $scheduled_actions ) ) {
+							error_log( '[PUNTWORK] [COMBINE] WARNING: Action Scheduler reported success but no pending jobs found - falling back to synchronous import' );
+							$scheduled = false; // Force synchronous fallback
+						} else {
+							error_log( '[PUNTWORK] [COMBINE] Verified: ' . count( $scheduled_actions ) . ' pending Action Scheduler jobs found' );
+						}
+					}
 				} else {
 					error_log( '[PUNTWORK] [COMBINE] Failed to schedule batch import using Action Scheduler' );
+				}
+				
+				// If Action Scheduler failed or job not found, fall back to synchronous
+				if ( ! $scheduled ) {
+					error_log( '[PUNTWORK] [COMBINE] Action Scheduler scheduling failed or job not verified - falling back to synchronous import' );
+					
+					// Fallback: Run the import synchronously
+					try {
+						// Load required files for batch processing
+						$import_files = array(
+							__DIR__ . '/../batch/batch-size-management.php',
+							__DIR__ . '/../import/import-setup.php',
+							__DIR__ . '/../batch/batch-processing.php',
+							__DIR__ . '/../import/import-finalization.php',
+							__DIR__ . '/../utilities/ErrorHandler.php',
+							__DIR__ . '/../exceptions/PuntworkExceptions.php',
+							__DIR__ . '/../import/import-batch.php',
+						);
+
+						foreach ( $import_files as $file ) {
+							if ( file_exists( $file ) ) {
+								require_once $file;
+							}
+						}
+
+						// Run the full import synchronously
+						$result = import_all_jobs_from_json();
+						error_log( '[PUNTWORK] [COMBINE] Synchronous import result: ' . json_encode( $result ) );
+						
+						if ( isset( $result['success'] ) && $result['success'] ) {
+							error_log( '[PUNTWORK] [COMBINE] Synchronous import completed successfully' );
+						} else {
+							error_log( '[PUNTWORK] [COMBINE] Synchronous import failed: ' . json_encode( $result ) );
+						}
+					} catch ( \Exception $e ) {
+						error_log( '[PUNTWORK] [COMBINE] Synchronous import exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
+					} catch ( \Throwable $e ) {
+						error_log( '[PUNTWORK] [COMBINE] Synchronous import fatal error: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
+					}
 				}
 			} else {
 				error_log( '[PUNTWORK] [COMBINE] Action Scheduler not available, falling back to synchronous import' );
