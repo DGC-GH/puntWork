@@ -31,24 +31,28 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
 	$old_batch_size = $batch_size;
 
 	// Ensure batch size is within reasonable bounds
-	$batch_size = max( 10, min( 500, $batch_size ) );
+	$batch_size = max( 10, min( 200, $batch_size ) );
 
 	// Memory-based adjustment (most critical - always override other adjustments)
 	if ( $last_memory_ratio > 0.85 ) {
 		// High memory usage - reduce batch size significantly
-		$batch_size = max( 1, floor( $batch_size * 0.6 ) );
-		$reason     = 'high memory usage detected';
+		$batch_size = max( 1, floor( $batch_size * 0.5 ) );
+		$reason     = 'high memory usage detected - reducing batch size aggressively';
 	} elseif ( $last_memory_ratio > 0.75 ) {
 		// Moderate high memory - reduce slightly
-		$batch_size = max( 1, floor( $batch_size * 0.8 ) );
-		$reason     = 'moderate memory usage detected';
-	} elseif ( $last_memory_ratio < 0.4 ) {
-		// Low memory usage - allow larger batches
-		// Increase batch size when memory is low
-		$new_size = min( 500, floor( $batch_size * 1.5 ) );
+		$batch_size = max( 1, floor( $batch_size * 0.7 ) );
+		$reason     = 'moderate memory usage detected - reducing batch size';
+	} elseif ( $last_memory_ratio > 0.6 ) {
+		// Getting high memory - prevent growth
+		$batch_size = max( 1, floor( $batch_size * 0.9 ) );
+		$reason     = 'memory usage approaching limit - preventing batch size growth';
+	} elseif ( $last_memory_ratio < 0.3 ) {
+		// Low memory usage - allow larger batches but be conservative
+		// Increase batch size when memory is low, but limit to 200 for complex job data
+		$new_size = min( 200, floor( $batch_size * 1.3 ) );
 		if ( $new_size > $batch_size ) {
 			$batch_size = $new_size;
-			$reason     = 'low memory usage allows larger batches, increasing batch size';
+			$reason     = 'low memory usage allows larger batches, increasing batch size conservatively';
 		} else {
 			$reason = 'low memory usage allows larger batches';
 		}
@@ -102,14 +106,14 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
 			$adaptive_state['consecutive_slow_batches'] = 0;
 
 			// Exponentially increase batch size (multiply by 1.5 for faster growth)
-			$new_size = min( 500, floor( $batch_size * 1.5 ) );
+			$new_size = min( 200, floor( $batch_size * 1.5 ) );
 
 			// Ensure minimum increase of 5
 			if ( $new_size <= $batch_size ) {
-				$new_size = min( 500, $batch_size + 5 );
+				$new_size = min( 200, $batch_size + 5 );
 			}
 
-			if ( $new_size <= 500 ) {
+			if ( $new_size <= 200 ) {
 				$batch_size = $new_size;
 				$reason     = 'batch processing fast (' . number_format( $current_batch_time, 2 ) . 's), exponentially increasing batch size to ' . $batch_size;
 
@@ -125,7 +129,7 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
 		$adaptive_state['last_performance_check'] = time();
 	} elseif ( $last_memory_ratio < 0.6 && empty( $reason ) ) {
 		// First batch and memory is OK - allow initial increase
-		$new_size = min( 500, floor( $batch_size * 2.0 ) );
+		$new_size = min( 200, floor( $batch_size * 1.5 ) );
 		if ( $new_size > $batch_size ) {
 			$batch_size                                 = $new_size;
 			$reason                                     = 'first batch with good memory, increasing batch size for initial adaptation';
@@ -161,8 +165,8 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
 		update_option( 'job_import_consecutive_small_batches', 0, false );
 	}
 
-	// Ensure batch size never goes below 5 or above 500
-	$batch_size = max( 5, min( 500, $batch_size ) );
+	// Ensure batch size never goes below 5 or above 200
+	$batch_size = max( 5, min( 200, $batch_size ) );
 
 	// Cast to int to ensure type compatibility
 	$batch_size = (int) $batch_size;

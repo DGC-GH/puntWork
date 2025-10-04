@@ -729,7 +729,7 @@ function process_batch_data( array $batch_guids, array $batch_items, array &$log
 
 		// Update status immediately when batch is skipped to prevent stuck detection
 		$current_status = get_option( 'job_import_status', array() );
-		$current_status['processed'] = $end_index;
+		$current_status['processed'] = $start_index + count( $batch_guids );
 		$current_status['skipped']   = ( $current_status['skipped'] ?? 0 ) + $skipped;
 		$current_status['last_update'] = time();
 		$current_status['logs'] = array_slice( $logs, -50 );
