@@ -166,12 +166,13 @@ function create_database_indexes(): void {
 		);
 		$duration   = microtime( true ) - $start_time;
 		\Puntwork\PuntWorkLogger::debug(
-			'Created idx_performance_operation_time index',
+			'Created idx_performance_operation_time index (table existed)',
 			\Puntwork\PuntWorkLogger::CONTEXT_SYSTEM,
 			array(
 				'result'   => $result !== false,
 				'duration' => round( $duration, 4 ),
 				'table'    => $performance_table,
+				'error'    => $wpdb->last_error,
 			)
 		);
 
@@ -184,12 +185,13 @@ function create_database_indexes(): void {
 		);
 		$duration   = microtime( true ) - $start_time;
 		\Puntwork\PuntWorkLogger::debug(
-			'Created idx_performance_duration index',
+			'Created idx_performance_duration index (table existed)',
 			\Puntwork\PuntWorkLogger::CONTEXT_SYSTEM,
 			array(
 				'result'   => $result !== false,
 				'duration' => round( $duration, 4 ),
 				'table'    => $performance_table,
+				'error'    => $wpdb->last_error,
 			)
 		);
 	} else {
@@ -212,6 +214,7 @@ function create_database_indexes(): void {
 				'result'   => $result !== false,
 				'duration' => round( $duration, 4 ),
 				'table'    => $performance_table,
+				'error'    => $wpdb->last_error,
 			)
 		);
 
@@ -230,6 +233,7 @@ function create_database_indexes(): void {
 				'result'   => $result !== false,
 				'duration' => round( $duration, 4 ),
 				'table'    => $performance_table,
+				'error'    => $wpdb->last_error,
 			)
 		);
 	}
