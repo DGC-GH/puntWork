@@ -488,10 +488,16 @@ function get_job_import_status_ajax() {
 			$status_exists = isset( $progress['total'] ) && isset( $progress['complete'] );
 			error_log( '[PUNTWORK] [STATUS-CORRECTION] Current status - total: ' . $current_total . ', complete: ' . ($current_complete ? 'true' : 'false') . ', status_exists: ' . ($status_exists ? 'true' : 'false') );
 			
+			// Check if this is the default fresh state (should not be corrected)
+			$is_default_fresh_state = ( $current_total === 0 && $current_complete === true && 
+				( $progress['processed'] ?? 0 ) === 0 && empty( $progress['logs'] ?? array() ) );
+			
+			error_log( '[PUNTWORK] [STATUS-CORRECTION] Is default fresh state: ' . ($is_default_fresh_state ? 'true' : 'false') );
+			
 			// Check if status needs correction:
 			// 1. Status is missing entirely (empty array), OR
-			// 2. Status exists but shows incorrect values (total=0 and complete=true)
-			$needs_correction = ( ! $status_exists ) || ( $current_total == 0 && $current_complete );
+			// 2. Status exists but shows incorrect values (total=0 and complete=true) AND it's not the default fresh state
+			$needs_correction = ( ! $status_exists ) || ( $current_total == 0 && $current_complete && ! $is_default_fresh_state );
 			
 			if ( $needs_correction ) {
 				// Check if there was a recent successful import that completed
