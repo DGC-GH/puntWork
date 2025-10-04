@@ -252,6 +252,9 @@ function handle_import_progress_sse( $request ) {
 				$current_status = get_option( 'job_import_status', array() );
 				error_log( '[PUNTWORK] SSE: Raw current_status from get_option: ' . json_encode( $current_status ) );
 				
+				// DEBUG: Check if we're reaching the file checking code
+				error_log( '[PUNTWORK] SSE: About to check file existence - ABSPATH defined: ' . (defined('ABSPATH') ? 'YES' : 'NO') . ', DOCUMENT_ROOT set: ' . (isset($_SERVER['DOCUMENT_ROOT']) ? 'YES' : 'NO'));
+				
 				// Check if combined file exists and status seems incorrect
 				// FIRST TRY: Use DOCUMENT_ROOT if available (more reliable in REST context)
 				$combined_file = null;
@@ -267,7 +270,7 @@ function handle_import_progress_sse( $request ) {
 				}
 				
 				// FALLBACK: Try ABSPATH if DOCUMENT_ROOT didn't work
-				if (!$file_exists) {
+				if (!$file_exists && defined('ABSPATH')) {
 					$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
 					error_log( '[PUNTWORK] SSE: Trying ABSPATH fallback: ' . $combined_file );
 					$file_exists = file_exists( $combined_file );
