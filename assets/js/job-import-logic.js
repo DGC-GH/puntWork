@@ -693,6 +693,11 @@ console.info("=== Job Import Logic Script Loaded ===");
                 $('#status-message').text('Error: ' + error.message);
                 JobImportUI.resetButtons();
 
+                // Stop status polling on error
+                if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
+                    window.JobImportEvents.stopStatusPolling();
+                }
+
                 console.log('[PUNTWORK] [DEBUG-IMPORT] Resetting isImporting flag to false');
                 this.isImporting = false;
                 console.log('[PUNTWORK] [DEBUG-IMPORT] isImporting flag reset complete');
