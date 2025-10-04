@@ -254,23 +254,34 @@ function handle_import_progress_sse( $request ) {
 
 				// Check if combined file exists and status seems incorrect
 				$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
+				error_log( '[PUNTWORK] SSE: Checking combined file: ' . $combined_file );
+				$file_exists = file_exists( $combined_file );
+				$file_size = $file_exists ? filesize( $combined_file ) : 0;
+				error_log( '[PUNTWORK] SSE: Combined file exists: ' . ($file_exists ? 'YES' : 'NO') . ', Size: ' . $file_size . ' bytes');
+				
 				if ( file_exists( $combined_file ) && filesize( $combined_file ) > 0 ) {
 					$current_total = $current_status['total'] ?? 0;
 					$current_complete = $current_status['complete'] ?? false;
 					$status_exists = isset( $current_status['total'] ) && isset( $current_status['complete'] );
+					
+					error_log( '[PUNTWORK] SSE: Status analysis - total: ' . $current_total . ', complete: ' . ($current_complete ? 'true' : 'false') . ', status_exists: ' . ($status_exists ? 'true' : 'false'));
 					
 					// Check if status needs correction:
 					// 1. Status is missing entirely (empty array), OR
 					// 2. Status exists but shows incorrect values (total=0 and complete=true)
 					$needs_correction = ( ! $status_exists ) || ( $current_total == 0 && $current_complete );
 					
+					error_log( '[PUNTWORK] SSE: Needs correction: ' . ($needs_correction ? 'YES' : 'NO'));
+					
 					if ( $needs_correction ) {
 						// Status needs correction - combined file exists but status is missing or incorrect
-						error_log( '[PUNTWORK] SSE: Combined file exists but status is missing or shows total=0, complete=true - correcting status' );
+						error_log( '[PUNTWORK] SSE: STATUS-CORRECTION: Combined file exists but status is missing or shows total=0, complete=true - correcting status' );
 						
 						// Try to get the actual count from the file
 						if ( function_exists( 'get_json_item_count' ) ) {
+							error_log( '[PUNTWORK] SSE: get_json_item_count function is available' );
 							$actual_total = get_json_item_count( $combined_file );
+							error_log( '[PUNTWORK] SSE: Actual total from file: ' . $actual_total );
 							if ( $actual_total > 0 ) {
 								$current_status = array(
 									'total'              => $actual_total,
@@ -293,10 +304,18 @@ function handle_import_progress_sse( $request ) {
 									'logs'               => array( 'Import status corrected - combined file exists with ' . $actual_total . ' items' ),
 								);
 								update_option( 'job_import_status', $current_status );
-								error_log( '[PUNTWORK] SSE: Status corrected: total=' . $actual_total . ', complete=false' );
+								error_log( '[PUNTWORK] SSE: STATUS-CORRECTION: Status corrected: total=' . $actual_total . ', complete=false' );
+							} else {
+								error_log( '[PUNTWORK] SSE: STATUS-CORRECTION: get_json_item_count returned 0 or invalid value' );
 							}
+						} else {
+							error_log( '[PUNTWORK] SSE: STATUS-CORRECTION: get_json_item_count function is NOT available' );
 						}
+					} else {
+						error_log( '[PUNTWORK] SSE: STATUS-CORRECTION: No correction needed' );
 					}
+				} else {
+					error_log( '[PUNTWORK] SSE: Combined file does not exist or is empty, skipping status correction' );
 				}
 
 				// Ensure current_status is an array and sanitize it
