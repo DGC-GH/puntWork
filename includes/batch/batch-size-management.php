@@ -48,8 +48,8 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
 		$reason     = 'memory usage approaching limit - preventing batch size growth';
 	} elseif ( $last_memory_ratio < 0.3 ) {
 		// Low memory usage - allow larger batches but be conservative
-		// Increase batch size when memory is low, but limit to 200 for complex job data
-		$new_size = min( 200, floor( $batch_size * 1.3 ) );
+		// Increase batch size when memory is low, but limit to 100 for complex job data
+		$new_size = min( 100, floor( $batch_size * 1.3 ) );
 		if ( $new_size > $batch_size ) {
 			$batch_size = $new_size;
 			$reason     = 'low memory usage allows larger batches, increasing batch size conservatively';
@@ -106,11 +106,11 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
 			$adaptive_state['consecutive_slow_batches'] = 0;
 
 			// Exponentially increase batch size (multiply by 1.5 for faster growth)
-			$new_size = min( 200, floor( $batch_size * 1.5 ) );
+			$new_size = min( 100, floor( $batch_size * 1.5 ) );
 
 			// Ensure minimum increase of 5
 			if ( $new_size <= $batch_size ) {
-				$new_size = min( 200, $batch_size + 5 );
+				$new_size = min( 100, $batch_size + 5 );
 			}
 
 			if ( $new_size <= 200 ) {
@@ -129,7 +129,7 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
 		$adaptive_state['last_performance_check'] = time();
 	} elseif ( $last_memory_ratio < 0.6 && empty( $reason ) ) {
 		// First batch and memory is OK - allow initial increase
-		$new_size = min( 200, floor( $batch_size * 1.5 ) );
+		$new_size = min( 100, floor( $batch_size * 1.5 ) );
 		if ( $new_size > $batch_size ) {
 			$batch_size                                 = $new_size;
 			$reason                                     = 'first batch with good memory, increasing batch size for initial adaptation';
@@ -165,8 +165,8 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
 		update_option( 'job_import_consecutive_small_batches', 0, false );
 	}
 
-	// Ensure batch size never goes below 5 or above 200
-	$batch_size = max( 5, min( 200, $batch_size ) );
+	// Ensure batch size never goes below 5 or above 100
+	$batch_size = max( 5, min( 100, $batch_size ) );
 
 	// Cast to int to ensure type compatibility
 	$batch_size = (int) $batch_size;
