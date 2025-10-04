@@ -251,6 +251,45 @@ function handle_import_progress_sse( $request ) {
 				$current_status = get_option( 'job_import_status', array() );
 				error_log( '[PUNTWORK] SSE: Raw current_status from get_option: ' . json_encode( $current_status ) );
 
+				// Check if combined file exists and status seems incorrect
+				$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
+				if ( file_exists( $combined_file ) && filesize( $combined_file ) > 0 ) {
+					if ( empty( $current_status ) || ($current_status['total'] ?? 0) == 0 && ($current_status['complete'] ?? false) ) {
+						// Status seems incorrect - combined file exists but status shows total=0 complete=true
+						// This can happen if polling occurs before combine_jsonl_ajax completes, or if status was cleared
+						error_log( '[PUNTWORK] SSE: Combined file exists but status shows total=0, complete=true - correcting status' );
+						
+						// Try to get the actual count from the file
+						if ( function_exists( 'get_json_item_count' ) ) {
+							$actual_total = get_json_item_count( $combined_file );
+							if ( $actual_total > 0 ) {
+								$current_status = array(
+									'total'              => $actual_total,
+									'processed'          => 0,
+									'published'          => 0,
+									'updated'            => 0,
+									'skipped'            => 0,
+									'duplicates_drafted' => 0,
+									'time_elapsed'       => 0,
+									'complete'           => false, // Set to false so import can start
+									'success'            => false,
+									'error_message'      => '',
+									'batch_size'         => 10,
+									'inferred_languages' => 0,
+									'inferred_benefits'  => 0,
+									'schema_generated'   => 0,
+									'start_time'         => microtime( true ),
+									'end_time'           => null,
+									'last_update'        => time(),
+									'logs'               => array( 'Import status corrected - combined file exists with ' . $actual_total . ' items' ),
+								);
+								update_option( 'job_import_status', $current_status );
+								error_log( '[PUNTWORK] SSE: Status corrected: total=' . $actual_total . ', complete=false' );
+							}
+						}
+					}
+				}
+
 				// Ensure current_status is an array and sanitize it
 				if ( ! is_array( $current_status ) ) {
 					error_log( '[PUNTWORK] SSE: current_status is not an array, resetting to empty array' );
