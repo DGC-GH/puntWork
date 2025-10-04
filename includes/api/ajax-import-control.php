@@ -1566,7 +1566,7 @@ function process_feed_ajax() {
 				)
 			);
 			delete_transient( $feed_lock_key ); // Clear lock
-			wp_send_json_error( array( 'message' => 'Feed processing failed: ' . ( $e->getMessage() ?: 'Unknown error' ) ) );
+			wp_send_json_error( array( 'message' => 'Feed processing failed: ' . ( $e->getMessage() ?: 'Unknown error - check server logs for details' ) ) );
 
 			return;
 		} catch ( \Throwable $e ) {
@@ -1585,7 +1585,7 @@ function process_feed_ajax() {
 				)
 			);
 			delete_transient( $feed_lock_key ); // Clear lock
-			wp_send_json_error( array( 'message' => 'Feed processing failed: ' . ( $e->getMessage() ?: 'Unknown error' ) ) );
+			wp_send_json_error( array( 'message' => 'Feed processing failed: ' . ( $e->getMessage() ?: 'Unknown error - check server logs for details' ) ) );
 
 			return;
 		}
@@ -1630,7 +1630,7 @@ function process_feed_ajax() {
 		error_log( '[PUNTWORK] [DEBUG-PHP] process_feed_ajax exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
 		error_log( '[PUNTWORK] [DEBUG-PHP] Stack trace: ' . $e->getTraceAsString() );
 		PuntWorkLogger::error( 'Process feed AJAX error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
-		wp_send_json_error( array( 'message' => 'Failed to process feed: ' . ( $e->getMessage() ?: 'Unknown error' ) ) );
+		wp_send_json_error( array( 'message' => 'Failed to process feed: ' . ( $e->getMessage() ?: 'Unknown error - check server logs for details' ) ) );
 	} catch ( \Throwable $e ) {
 		// Clear feed processing lock on any error
 		if ( isset( $feed_lock_key ) ) {
@@ -1640,7 +1640,7 @@ function process_feed_ajax() {
 		error_log( '[PUNTWORK] [DEBUG-PHP] process_feed_ajax throwable: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
 		error_log( '[PUNTWORK] [DEBUG-PHP] Stack trace: ' . $e->getTraceAsString() );
 		PuntWorkLogger::error( 'Process feed AJAX throwable: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
-		wp_send_json_error( array( 'message' => 'Failed to process feed: ' . ( $e->getMessage() ?: 'Unknown error' ) ) );
+		wp_send_json_error( array( 'message' => 'Failed to process feed: ' . ( $e->getMessage() ?: 'Unknown error - check server logs for details' ) ) );
 	}
 }
 

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Protocol maintenance run completed on 2025-10-04: Improved error messages in AJAX handlers for better debugging, ran evolution analysis and applied improvements
 - Pre-commit git hooks for automated PHPCS and PHPUnit validation to prevent regressions
 - Validation commands added to prompt.md for consistent development workflow
 - GitHub Actions CI/CD pipeline with automated testing, code coverage, and deployment preparation

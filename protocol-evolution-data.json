@@ -4990,6 +4990,101 @@
                 "improve_ai_context": "Need better context provision for AI comprehension",
                 "ai_collaboration_effective": "AI suggestions are being accepted and implemented"
             }
+        },
+        {
+            "variation": {
+                "variation": [
+                    "`post_type='job'` - for job listings (created with ACF)",
+                    "`post_type='job-feed'` - for feed configurations (created with ACF)",
+                    "**NEVER** upload files directly to the server via FTP, SFTP, or any direct file transfer method",
+                    "**ALL** changes **MUST** go through proper git workflow: commit locally \u2192 push to remote \u2192 auto-deployment",
+                    "**NO EXCEPTIONS** for \"urgent fixes\", \"quick tests\", or \"emergency deployments\"",
+                    "Direct uploads are **PROHIBITED** to maintain version control integrity, deployment consistency, and change tracking",
+                    "If urgent server changes are needed, implement the fix locally, commit, push, and wait for auto-deployment",
+                    "**AI AGENT RESTRICTION**: Do not suggest, implement, or execute direct server uploads under any circumstances",
+                    "Need better context provision for AI comprehension",
+                    "AI suggestions are being accepted and implemented",
+                    "**CRITICAL**: AI agent attempted direct FTP upload despite existing deployment policy - policy strengthened to prevent future violations",
+                    "**REMINDER**: Direct server uploads bypass version control, create deployment inconsistencies, and violate git workflow requirements"
+                ],
+                "score": 0.30252520161290325,
+                "improvements": []
+            },
+            "applied_at": 1759593278,
+            "backup_file": "protocol.md.backup.1759593278",
+            "patterns": {
+                "fast_steps": [
+                    "download_debug",
+                    "read_debug",
+                    "run_log_analysis",
+                    "read_console",
+                    "identify_problems",
+                    "debug_issues",
+                    "fix_errors",
+                    "optimize_features",
+                    "add_debug_logs",
+                    "update_scripts",
+                    "update_docs",
+                    "evolution_analysis",
+                    "apply_improvements",
+                    "commit",
+                    "summary",
+                    "push_prompt",
+                    "cleanup",
+                    "protocol_complete",
+                    "record_metrics"
+                ],
+                "high_success": [
+                    "download_debug",
+                    "read_debug",
+                    "run_log_analysis",
+                    "read_console",
+                    "identify_problems",
+                    "debug_issues",
+                    "analyze_codebase",
+                    "fix_errors",
+                    "optimize_features",
+                    "add_debug_logs",
+                    "update_scripts",
+                    "update_docs",
+                    "evolution_analysis",
+                    "apply_improvements",
+                    "commit",
+                    "summary",
+                    "push_prompt",
+                    "cleanup",
+                    "protocol_complete",
+                    "record_metrics"
+                ],
+                "low_error_steps": [
+                    "download_debug",
+                    "read_debug",
+                    "run_log_analysis",
+                    "read_console",
+                    "identify_problems",
+                    "debug_issues",
+                    "analyze_codebase",
+                    "fix_errors",
+                    "optimize_features",
+                    "add_debug_logs",
+                    "update_scripts",
+                    "update_docs",
+                    "evolution_analysis",
+                    "apply_improvements",
+                    "commit",
+                    "summary",
+                    "push_prompt",
+                    "cleanup",
+                    "protocol_complete",
+                    "record_metrics",
+                    17
+                ],
+                "efficient_context": []
+            },
+            "learnings": {
+                "improve_ai_context": "Need better context provision for AI comprehension",
+                "ai_collaboration_effective": "AI suggestions are being accepted and implemented"
+            }
         }
     ]
 }
