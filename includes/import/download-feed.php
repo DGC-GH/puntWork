@@ -151,21 +151,6 @@ function download_feed( $url, $feed_path, $output_dir, &$logs, &$format = null )
 				curl_setopt( $ch, CURLOPT_TIMEOUT, 300 );
 				curl_setopt( $ch, CURLOPT_FOLLOWLOCATION, true );
 				curl_setopt( $ch, CURLOPT_USERAGENT, 'WordPress puntWork Importer' );
-				
-				// Add API key if available
-				$api_key = get_option( 'puntwork_api_key', '' );
-				if ( ! empty( $api_key ) ) {
-					if ( strpos( $url, '?' ) === false ) {
-						$url_with_key = $url . '?api_key=' . $api_key;
-					} else {
-						$url_with_key = $url . '&api_key=' . $api_key;
-					}
-					curl_setopt( $ch, CURLOPT_URL, $url_with_key );
-					if ( $debug_mode ) {
-						error_log( '[PUNTWORK] [DOWNLOAD-DEBUG] Added API key to URL' );
-					}
-				}
-				
 				$success    = curl_exec( $ch );
 				$http_code  = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
 				$curl_error = curl_error( $ch );
@@ -189,20 +174,7 @@ function download_feed( $url, $feed_path, $output_dir, &$logs, &$format = null )
 				if ( $debug_mode ) {
 					error_log( '[PUNTWORK] [DOWNLOAD-DEBUG] Using wp_remote_get for download' );
 				}
-				// Add API key if available
-				$api_key = get_option( 'puntwork_api_key', '' );
-				$request_url = $url;
-				if ( ! empty( $api_key ) ) {
-					if ( strpos( $request_url, '?' ) === false ) {
-						$request_url = $request_url . '?api_key=' . $api_key;
-					} else {
-						$request_url = $request_url . '&api_key=' . $api_key;
-					}
-					if ( $debug_mode ) {
-						error_log( '[PUNTWORK] [DOWNLOAD-DEBUG] Added API key to URL for wp_remote_get' );
-					}
-				}
-				$response = wp_remote_get( $request_url, array( 'timeout' => 300 ) );
+				$response = wp_remote_get( $url, array( 'timeout' => 300 ) );
 				if ( is_wp_error( $response ) ) {
 					error_log( '[PUNTWORK] [DOWNLOAD-ERROR] wp_remote_get error: ' . $response->get_error_message() );
 
