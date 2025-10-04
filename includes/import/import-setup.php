@@ -28,6 +28,9 @@ require_once __DIR__ . '/../utilities/database-optimization.php';
 // Include REST API utilities
 require_once __DIR__ . '/../api/rest-api.php';
 
+// Include batch loading utilities
+require_once __DIR__ . '/../batch/batch-loading.php';
+
 /**
  * Validate JSONL file integrity by checking a sample of lines.
  *

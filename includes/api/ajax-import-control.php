@@ -91,6 +91,7 @@ function run_job_import_batch_ajax() {
 			__DIR__ . '/../batch/batch-size-management.php',
 			__DIR__ . '/../import/import-setup.php',
 			__DIR__ . '/../batch/batch-processing.php',
+			__DIR__ . '/../batch/batch-loading.php',
 			__DIR__ . '/../import/import-finalization.php',
 			__DIR__ . '/../utilities/ErrorHandler.php',
 			__DIR__ . '/../exceptions/PuntworkExceptions.php',

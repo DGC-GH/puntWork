@@ -13,6 +13,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// Include performance utilities
+require_once __DIR__ . '/../utilities/performance-functions.php';
+
 class JsonlIterator implements \Iterator {
 
 	private string $filePath;
