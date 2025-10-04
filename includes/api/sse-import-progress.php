@@ -252,6 +252,11 @@ function handle_import_progress_sse( $request ) {
 				$current_status = get_option( 'job_import_status', array() );
 				error_log( '[PUNTWORK] SSE: Raw current_status from get_option: ' . json_encode( $current_status ) );
 
+				// DEBUG: Log ABSPATH and file path
+				error_log( '[PUNTWORK] SSE: ABSPATH = ' . ABSPATH );
+				$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
+				error_log( '[PUNTWORK] SSE: About to check combined file: ' . $combined_file );
+				
 				// Check if combined file exists and status seems incorrect
 				$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
 				error_log( '[PUNTWORK] SSE: Checking combined file: ' . $combined_file );
