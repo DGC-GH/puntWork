@@ -86,6 +86,16 @@ function run_job_import_batch_ajax() {
 		}
 
 		// Load import files
+		$import_files = array(
+			__DIR__ . '/../batch/batch-size-management.php',
+			__DIR__ . '/../import/import-setup.php',
+			__DIR__ . '/../batch/batch-processing.php',
+			__DIR__ . '/../import/import-finalization.php',
+			__DIR__ . '/../utilities/ErrorHandler.php',
+			__DIR__ . '/../exceptions/PuntworkExceptions.php',
+			__DIR__ . '/../import/import-batch.php',
+		);
+
 		foreach ( $import_files as $file ) {
 			if ( file_exists( $file ) ) {
 				error_log( '[PUNTWORK] [AJAX-LOAD] Attempting to load file: ' . basename( $file ) );
@@ -561,7 +571,7 @@ function get_job_import_status_ajax() {
 		$progress['resume_progress'] = (int) safe_get_option( 'job_import_progress', 0 );
 
 		// Track job importing start time
-		if ( $progress['total'] > 1 && ! isset( $progress['job_import_start_time'] ) ) {
+		if ( ($progress['total'] ?? 0) > 1 && ! isset( $progress['job_import_start_time'] ) ) {
 			$progress['job_import_start_time'] = microtime( true );
 			update_option( 'job_import_status', $progress );
 		}
