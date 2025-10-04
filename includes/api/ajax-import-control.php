@@ -474,15 +474,28 @@ function get_job_import_status_ajax() {
 
 		// Check if combined file exists and status seems incorrect
 		$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
-		if ( file_exists( $combined_file ) && filesize( $combined_file ) > 0 ) {
-			if ( ($progress['total'] ?? 0) == 0 && ($progress['complete'] ?? false) ) {
+		error_log( '[PUNTWORK] [STATUS-CORRECTION] Checking combined file: ' . $combined_file );
+		$file_exists = file_exists( $combined_file );
+		$file_size = $file_exists ? filesize( $combined_file ) : 0;
+		error_log( '[PUNTWORK] [STATUS-CORRECTION] File exists: ' . ($file_exists ? 'YES' : 'NO') . ', size: ' . $file_size . ' bytes' );
+		
+		if ( $file_exists && $file_size > 0 ) {
+			$current_total = $progress['total'] ?? 0;
+			$current_complete = $progress['complete'] ?? false;
+			error_log( '[PUNTWORK] [STATUS-CORRECTION] Current status - total: ' . $current_total . ', complete: ' . ($current_complete ? 'true' : 'false') );
+			
+			if ( ($current_total == 0) && $current_complete ) {
 				// Status seems incorrect - combined file exists but status shows complete with total=0
-				// This can happen if polling occurs before combine_jsonl_ajax completes, or if status was cleared
-				error_log( '[PUNTWORK] [STATUS-CORRECTION] Combined file exists but status shows total=0, complete=true - correcting status' );
+				error_log( '[PUNTWORK] [STATUS-CORRECTION] Status correction condition met - correcting status' );
 				
 				// Try to get the actual count from the file
-				if ( function_exists( 'get_json_item_count' ) ) {
+				$function_exists = function_exists( 'get_json_item_count' );
+				error_log( '[PUNTWORK] [STATUS-CORRECTION] get_json_item_count function exists: ' . ($function_exists ? 'YES' : 'NO') );
+				
+				if ( $function_exists ) {
 					$actual_total = get_json_item_count( $combined_file );
+					error_log( '[PUNTWORK] [STATUS-CORRECTION] get_json_item_count returned: ' . $actual_total );
+					
 					if ( $actual_total > 0 ) {
 						$progress['total'] = $actual_total;
 						$progress['complete'] = false;
@@ -490,11 +503,19 @@ function get_job_import_status_ajax() {
 						$progress['start_time'] = microtime( true );
 						$progress['last_update'] = time();
 						$progress['logs'] = array( 'Import status corrected - combined file exists with ' . $actual_total . ' items' );
-						update_option( 'job_import_status', $progress );
-						error_log( '[PUNTWORK] [STATUS-CORRECTION] Status corrected: total=' . $actual_total . ', complete=false' );
+						$update_result = update_option( 'job_import_status', $progress );
+						error_log( '[PUNTWORK] [STATUS-CORRECTION] Status corrected: total=' . $actual_total . ', complete=false, update_result=' . ($update_result ? 'true' : 'false') );
+					} else {
+						error_log( '[PUNTWORK] [STATUS-CORRECTION] get_json_item_count returned 0 or invalid value, not correcting status' );
 					}
+				} else {
+					error_log( '[PUNTWORK] [STATUS-CORRECTION] get_json_item_count function not available, cannot correct status' );
 				}
+			} else {
+				error_log( '[PUNTWORK] [STATUS-CORRECTION] Status correction condition not met - no correction needed' );
 			}
+		} else {
+			error_log( '[PUNTWORK] [STATUS-CORRECTION] Combined file does not exist or is empty, skipping status correction' );
 		}
 
 		PuntWorkLogger::debug(
