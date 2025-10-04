@@ -142,7 +142,7 @@ function validate_jsonl_file( $json_path ) {
  * @param  int $batch_start Starting index for batch.
  * @return array|WP_Error Setup data or error.
  */
-function prepare_import_setup( $batch_start = 0 ) {
+function prepare_import_setup( $batch_start = 0, $is_batch = false ) {
 	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
 	do_action( 'qm/cease' ); // Disable Query Monitor data collection to reduce memory usage
@@ -517,9 +517,18 @@ function prepare_import_setup( $batch_start = 0 ) {
 	}
 
 	$processed_guids = safe_get_option( 'job_import_processed_guids' ) ?: array();
-	$start_index     = max( (int) safe_get_option( 'job_import_progress' ), $batch_start );
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [SETUP-INDEX] Initial start_index calculation: max(' . (int) safe_get_option( 'job_import_progress' ) . ', ' . $batch_start . ') = ' . $start_index );
+	
+	// For batch processing, use batch_start as absolute starting index
+	if ( $is_batch ) {
+		$start_index = $batch_start;
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [SETUP-BATCH] Batch processing mode: using batch_start=' . $batch_start . ' as absolute start_index' );
+		}
+	} else {
+		$start_index = max( (int) safe_get_option( 'job_import_progress' ), $batch_start );
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [SETUP-INDEX] Initial start_index calculation: max(' . (int) safe_get_option( 'job_import_progress' ) . ', ' . $batch_start . ') = ' . $start_index );
+		}
 	}
 
 	// For fresh starts (batch_start = 0), reset the status and create new start time

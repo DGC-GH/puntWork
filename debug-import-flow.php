@@ -53,7 +53,7 @@ echo "\n";
 echo "3. Testing prepare_import_setup (dry run):\n";
 if ( function_exists( 'prepare_import_setup' ) ) {
 	try {
-		$setup_result = prepare_import_setup( 0 );
+		$setup_result = prepare_import_setup( 0, false );
 		if ( is_wp_error( $setup_result ) ) {
 			echo '   ❌ Setup failed: ' . $setup_result->get_error_message() . "\n";
 		} elseif ( isset( $setup_result['success'] ) && $setup_result['success'] === false ) {

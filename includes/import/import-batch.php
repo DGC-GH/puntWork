@@ -252,7 +252,7 @@ if ( ! function_exists( 'import_jobs_from_json' ) ) {
 						error_log( '[PUNTWORK] [IMPORT-SETUP] Calling prepare_import_setup...' );
 					}
 
-					$setup = prepare_import_setup( $batch_start );
+					$setup = prepare_import_setup( $batch_start, $is_batch );
 					if ( $debug_mode ) {
 						error_log( '[PUNTWORK] [IMPORT-SETUP] prepare_import_setup returned: ' . json_encode( $setup ) );
 						error_log( '[PUNTWORK] [IMPORT-SETUP] isset(setup[success]) = ' . ( isset( $setup['success'] ) ? 'true' : 'false' ) );
