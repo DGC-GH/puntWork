@@ -181,9 +181,7 @@ function process_batch_items_logic( array $setup ): array {
 		$original_memory_limit = ini_get( 'memory_limit' );
 
 		// Increase memory limit for batch processing
-		ini_set( 'memory_limit', '1024M' );
-
-		// Clear analytics cache
+		ini_set( 'memory_limit', '1024M' );		// Clear analytics cache
 		if ( function_exists( 'wp_cache_flush' ) ) {
 			wp_cache_flush();
 		}
@@ -699,6 +697,7 @@ function process_batch_data( array $batch_guids, array $batch_items, array &$log
 	}
 	// Prepare batch metadata
 	$batch_metadata = prepare_batch_metadata( $post_ids_by_guid );
+	$batch_metadata['json_path'] = $setup['json_path']; // Add json_path for streaming processing
 	if ( $debug_mode ) {
 		error_log( '[PUNTWORK] [BATCH-DEBUG] prepare_batch_metadata completed' );
 	}
@@ -770,7 +769,7 @@ function process_batch_items_with_metadata( array $batch_guids, array $batch_ite
 	require_once __DIR__ . '/../import/process-batch-items-optimized.php';
 
 	// Check if we should use streaming processing for large batches
-	$use_streaming = count( $batch_guids ) > 1000 || memory_get_usage( true ) > 100 * 1024 * 1024; // 100MB threshold
+	$use_streaming = true; // Always use streaming for memory efficiency
 
 	if ( $use_streaming && isset( $batch_metadata['json_path'] ) && file_exists( $batch_metadata['json_path'] ) ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
