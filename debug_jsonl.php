@@ -5,6 +5,11 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+// Define ABSPATH for standalone execution
+if (!defined('ABSPATH')) {
+    define('ABSPATH', dirname(__FILE__) . '/');
+}
+
 echo "=== PUNTWORK IMPORT DEBUG ===\n\n";
 
 $json_path = ABSPATH . 'feeds/combined-jobs.jsonl';

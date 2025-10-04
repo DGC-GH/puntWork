@@ -263,6 +263,10 @@ function prepare_import_setup( $batch_start = 0 ) {
 		// Use the correct path where the combined file is actually created
 		$json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
 	}
+	if ( ! file_exists( $json_path ) ) {
+		// Try server root feeds directory (file is at /feeds/ from FTP root)
+		$json_path = '/feeds/combined-jobs.jsonl';
+	}
 	if ( $debug_mode ) {
 		error_log( '[PUNTWORK] [SETUP-FILE] JSONL path: ' . $json_path );
 		error_log( '[PUNTWORK] [SETUP-FILE] ABSPATH: ' . ABSPATH );
@@ -488,17 +492,17 @@ function prepare_import_setup( $batch_start = 0 ) {
 	}
 
 	// For fresh starts (batch_start = 0), reset the status and create new start time
-	// But only if there's no existing valid status (preserve_status logic)
+	// But only if there's no existing valid status OR if the existing status is complete
 	$existing_status  = safe_get_option( 'job_import_status', array() );
-	$has_valid_status = ! empty( $existing_status ) && isset( $existing_status['total'] ) && $existing_status['total'] > 0;
+	$has_valid_status = ! empty( $existing_status ) && isset( $existing_status['total'] ) && $existing_status['total'] > 0 && ( ! isset( $existing_status['complete'] ) || ! $existing_status['complete'] );
 	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [SETUP-STATUS] Existing status check: has_valid_status=' . ( $has_valid_status ? 'true' : 'false' ) . ', batch_start=' . $batch_start );
+		error_log( '[PUNTWORK] [SETUP-STATUS] Existing status check: has_valid_status=' . ( $has_valid_status ? 'true' : 'false' ) . ', batch_start=' . $batch_start . ', existing_complete=' . ( $existing_status['complete'] ?? 'not set' ) );
 	}
 
 	if ( $batch_start == 0 && ! $has_valid_status ) {
 		$start_index = 0;
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SETUP-FRESH] Fresh start detected (no valid existing status), setting start_index to 0' );
+			error_log( '[PUNTWORK] [SETUP-FRESH] Fresh start detected (no valid existing status or previous import complete), setting start_index to 0' );
 		}
 		// Clear processed GUIDs for fresh start
 		$processed_guids = array();
