@@ -499,6 +499,8 @@ function get_job_import_status_ajax() {
 			// 2. Status exists but shows incorrect values (total=0 and complete=true) AND it's not the default fresh state
 			$needs_correction = ( ! $status_exists ) || ( $current_total == 0 && $current_complete && ! $is_default_fresh_state );
 			
+			error_log( '[PUNTWORK] [STATUS-CORRECTION] needs_correction calculation: !status_exists=' . (!$status_exists ? 'true' : 'false') . ', current_total==0=' . ($current_total == 0 ? 'true' : 'false') . ', current_complete=' . ($current_complete ? 'true' : 'false') . ', !is_default_fresh_state=' . (!$is_default_fresh_state ? 'true' : 'false') . ', needs_correction=' . ($needs_correction ? 'true' : 'false') );
+			
 			if ( $needs_correction ) {
 				// Check if there was a recent successful import that completed
 				$last_import_details = get_option( 'puntwork_last_import_details', array() );
@@ -525,6 +527,9 @@ function get_job_import_status_ajax() {
 						// Check if this is a fresh import ready to start (not a completed one)
 						$current_logs = $progress['logs'] ?? array();
 						$is_ready_for_import = in_array('JSONL files combined successfully - ready for import', $current_logs);
+						
+						error_log( '[PUNTWORK] [STATUS-CORRECTION] Current logs: ' . json_encode( $current_logs ) );
+						error_log( '[PUNTWORK] [STATUS-CORRECTION] is_ready_for_import (logs contain ready message): ' . ($is_ready_for_import ? 'true' : 'false') );
 						
 						$progress['total'] = $actual_total;
 						$progress['processed'] = $has_recent_successful_import && !$is_ready_for_import ? $actual_total : 0;
@@ -572,6 +577,8 @@ function get_job_import_status_ajax() {
 				$time_elapsed = $progress['time_elapsed'];
 			}
 
+			error_log( '[PUNTWORK] [STUCK-DETECTION] Checking for stuck import: complete=' . ($progress['complete'] ? 'true' : 'false') . ', total=' . $progress['total'] . ', processed=' . ($progress['processed'] ?? 0) . ', time_elapsed=' . round($time_elapsed, 2) . 's, time_since_last_update=' . $time_since_last_update . 's' );
+
 			// Detect stuck imports with multiple criteria:
 			// 1. No progress for 5+ minutes (300 seconds)
 			// 2. Import running for more than 2 hours without completion (7200 seconds)
@@ -585,24 +592,33 @@ function get_job_import_status_ajax() {
 				in_array('JSONL files combined successfully - ready for import', $progress['logs']);
 			$combined_file_exists = file_exists($combined_file) && filesize($combined_file) > 0;
 
+			error_log( '[PUNTWORK] [STUCK-DETECTION] Combined file exists: ' . ($combined_file_exists ? 'true' : 'false') . ', has_jsonl_success log: ' . ($has_jsonl_success ? 'true' : 'false') );
+
 			if ( ($progress['processed'] ?? 0) === 0 && $time_elapsed > 300 ) {
 				// Don't consider stuck if combined file exists (ready for batch processing)
 				if ( !$combined_file_exists ) {
 					$is_stuck     = true;
 					$stuck_reason = 'no progress for 5+ minutes and no jobs processed yet';
+					error_log( '[PUNTWORK] [STUCK-DETECTION] Detected stuck: ' . $stuck_reason );
+				} else {
+					error_log( '[PUNTWORK] [STUCK-DETECTION] Not stuck: combined file exists (ready for batch processing)' );
 				}
 			} elseif ( ($progress['processed'] ?? 0) > 0 && $time_elapsed > 300 ) {
 				$is_stuck     = true;
 				$stuck_reason = 'no progress for 5+ minutes after starting';
+				error_log( '[PUNTWORK] [STUCK-DETECTION] Detected stuck: ' . $stuck_reason );
 			} elseif ( $time_elapsed > 7200 ) { // 2 hours
 				$is_stuck     = true;
 				$stuck_reason = 'running for more than 2 hours';
+				error_log( '[PUNTWORK] [STUCK-DETECTION] Detected stuck: ' . $stuck_reason );
 			} elseif ( $time_since_last_update > 600 ) { // 10 minutes since last update
 				$is_stuck     = true;
 				$stuck_reason = 'no status update for 10+ minutes';
+				error_log( '[PUNTWORK] [STUCK-DETECTION] Detected stuck: ' . $stuck_reason );
 			}
 
 			if ( $is_stuck ) {
+				error_log( '[PUNTWORK] [STUCK-DETECTION] Import detected as stuck, resetting status' );
 				PuntWorkLogger::info(
 					'Detected stuck import in status check, clearing status',
 					PuntWorkLogger::CONTEXT_BATCH,
@@ -709,6 +725,8 @@ function get_job_import_status_ajax() {
 						'logs'               => array(),
 					);
 				}
+			} else {
+				error_log( '[PUNTWORK] [STUCK-DETECTION] Import not detected as stuck' );
 			}
 		}
 
@@ -1585,7 +1603,7 @@ function process_feed_ajax() {
 				)
 			);
 			delete_transient( $feed_lock_key ); // Clear lock
-			wp_send_json_error( array( 'message' => 'Feed processing failed: ' . ( $e->getMessage() ?: 'Unknown error - check server logs for details' ) ) );
+			wp_send_json_error( array( 'message' => 'Feed processing failed: ' . $e->getMessage() ?: 'Unknown error - check server logs for details' ) );
 
 			return;
 		}

@@ -254,19 +254,8 @@ if ( ! function_exists( 'import_jobs_from_json' ) ) {
 
 					$setup = prepare_import_setup( $batch_start );
 					if ( $debug_mode ) {
-						error_log(
-							'[PUNTWORK] [IMPORT-SETUP] prepare_import_setup returned: ' . json_encode(
-								array(
-									'success'          => $setup['success'] ?? 'not set',
-									'total'            => $setup['total'] ?? 'not set',
-									'start_index'      => $setup['start_index'] ?? 'not set',
-									'complete'         => $setup['complete'] ?? 'not set',
-									'json_path_exists' => isset( $setup['json_path'] ) ? file_exists( $setup['json_path'] ) : 'no json_path',
-									'json_path'        => $setup['json_path'] ?? 'not set',
-								)
-							)
-						);
-						error_log( '[PUNTWORK] [IMPORT-SETUP] prepare_import_setup completed' );
+						error_log( '[PUNTWORK] [IMPORT-SETUP] prepare_import_setup returned: ' . json_encode( $setup ) );
+						error_log( '[PUNTWORK] [IMPORT-SETUP] isset(setup[success]) = ' . ( isset( $setup['success'] ) ? 'true' : 'false' ) );
 					}
 
 					// Add setup completion log

@@ -244,6 +244,9 @@ function prepare_import_setup( $batch_start = 0 ) {
 
 	// Check if there's an existing import in progress and use its start time
 	$existing_status = safe_get_option( 'job_import_status' );
+	if ( $debug_mode ) {
+		error_log( '[PUNTWORK] [SETUP-STATUS] Existing status: ' . json_encode( $existing_status ) );
+	}
 	if ( $existing_status && isset( $existing_status['start_time'] ) && $existing_status['start_time'] > 0 ) {
 		$start_time = $existing_status['start_time'];
 		\Puntwork\PuntWorkLogger::info( 'Using existing import start time: ' . $start_time, \Puntwork\PuntWorkLogger::CONTEXT_BATCH );
@@ -521,10 +524,11 @@ function prepare_import_setup( $batch_start = 0 ) {
 
 	// For fresh starts (batch_start = 0), reset the status and create new start time
 	// But only if there's no existing valid status OR if the existing status is complete
-	$existing_status  = safe_get_option( 'job_import_status', array() );
+	$existing_status  = safe_get_option( 'job_import_status' );
 	$has_valid_status = ! empty( $existing_status ) && isset( $existing_status['total'] ) && $existing_status['total'] > 0 && ( ! isset( $existing_status['complete'] ) || ! $existing_status['complete'] );
 	if ( $debug_mode ) {
 		error_log( '[PUNTWORK] [SETUP-STATUS] Existing status check: has_valid_status=' . ( $has_valid_status ? 'true' : 'false' ) . ', batch_start=' . $batch_start . ', existing_complete=' . ( $existing_status['complete'] ?? 'not set' ) );
+		error_log( '[PUNTWORK] [SETUP-STATUS] has_valid_status calculation: !empty=' . ( ! empty( $existing_status ) ? 'true' : 'false' ) . ', isset(total)=' . ( isset( $existing_status['total'] ) ? 'true' : 'false' ) . ', total=' . ( $existing_status['total'] ?? 'not set' ) . ', total>0=' . ( ( $existing_status['total'] ?? 0 ) > 0 ? 'true' : 'false' ) . ', !isset(complete)=' . ( ! isset( $existing_status['complete'] ) ? 'true' : 'false' ) . ', !complete=' . ( ! ( $existing_status['complete'] ?? false ) ? 'true' : 'false' ) );
 	}
 
 	if ( $batch_start == 0 && ! $has_valid_status ) {
@@ -574,6 +578,21 @@ function prepare_import_setup( $batch_start = 0 ) {
 		}
 	}
 
+	if ( $debug_mode ) {
+		error_log( '[PUNTWORK] [SETUP-EARLY-CHECK] Checking for early return: start_index=' . $start_index . ', total=' . $total . ', start_index >= total = ' . ( $start_index >= $total ? 'true' : 'false' ) );
+	}
+
+// Don't do early return if the logs indicate this is a fresh import ready to start
+$current_logs = $existing_status['logs'] ?? array();
+$is_ready_for_import = in_array('JSONL files combined successfully - ready for import', $current_logs);
+if ( $is_ready_for_import ) {
+	// This is a fresh import ready to start, don't do early return even if start_index >= total
+	// (which shouldn't happen anyway for fresh imports)
+	if ( $debug_mode ) {
+		error_log( '[PUNTWORK] [SETUP-READY] Import is ready for batch processing, skipping early return check' );
+	}
+} else {
+	// Check for early return
 	if ( $start_index >= $total ) {
 		if ( $debug_mode ) {
 			error_log( '[PUNTWORK] [SETUP-EARLY] EARLY RETURN - start_index (' . $start_index . ') >= total (' . $total . ') - import appears complete' );
@@ -598,19 +617,20 @@ function prepare_import_setup( $batch_start = 0 ) {
 			'batch_processed'    => 0,
 		);
 	}
+}
 
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [SETUP-FINAL] NORMAL RETURN - start_index=' . $start_index . ', total=' . $total . ', json_path=' . $json_path . ', processed_guids_count=' . count( $processed_guids ) );
-		error_log( '[PUNTWORK] [SETUP-END] ===== PREPARE_IMPORT_SETUP END =====' );
-	}
+if ( $debug_mode ) {
+	error_log( '[PUNTWORK] [SETUP-FINAL] NORMAL RETURN - start_index=' . $start_index . ', total=' . $total . ', json_path=' . $json_path . ', processed_guids_count=' . count( $processed_guids ) );
+	error_log( '[PUNTWORK] [SETUP-END] ===== PREPARE_IMPORT_SETUP END =====' );
+}
 
-	return array(
-		'acf_fields'        => $acf_fields,
-		'zero_empty_fields' => $zero_empty_fields,
-		'start_time'        => $start_time,
-		'json_path'         => $json_path,
-		'total'             => $total,
-		'processed_guids'   => $processed_guids,
-		'start_index'       => $start_index,
-	);
+return array(
+	'acf_fields'        => $acf_fields,
+	'zero_empty_fields' => $zero_empty_fields,
+	'start_time'        => $start_time,
+	'json_path'         => $json_path,
+	'total'             => $total,
+	'processed_guids'   => $processed_guids,
+	'start_index'       => $start_index,
+);
 }
