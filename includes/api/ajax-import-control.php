@@ -68,57 +68,59 @@ function run_job_import_batch_ajax() {
 		// Log that we entered the function
 		error_log( '[PUNTWORK] [AJAX-ENTRY] AJAX handler entered successfully' );
 
-		// Ensure required functions are loaded for AJAX calls
-		if ( ! function_exists( 'import_jobs_from_json' ) ) {
-			error_log( '[PUNTWORK] [AJAX-LOAD] import_jobs_from_json function not found, attempting to load import files' );
-
-			// Explicitly load required import files for AJAX calls
-			$import_files = array(
-				__DIR__ . '/../batch/batch-size-management.php',
-				__DIR__ . '/../import/import-setup.php',
-				__DIR__ . '/../batch/batch-processing.php',
-				__DIR__ . '/../import/import-finalization.php',
-				__DIR__ . '/../import/import-batch.php',
-			);
-
-			foreach ( $import_files as $file ) {
-				if ( file_exists( $file ) ) {
-					error_log( '[PUNTWORK] [AJAX-LOAD] Attempting to load file: ' . basename( $file ) );
-
-					try {
-						$load_result = include_once $file;
-						error_log( '[PUNTWORK] [AJAX-LOAD] Loaded import file: ' . basename( $file ) . ', result: ' . ( $load_result ? 'true' : 'false' ) );
-					} catch ( \Exception $e ) {
-						error_log( '[PUNTWORK] [AJAX-LOAD] Exception loading ' . basename( $file ) . ': ' . $e->getMessage() );
-					} catch ( \Error $e ) {
-						error_log( '[PUNTWORK] [AJAX-LOAD] Fatal error loading ' . basename( $file ) . ': ' . $e->getMessage() );
-					}
-				} else {
-					error_log( '[PUNTWORK] [AJAX-LOAD] Import file not found: ' . $file );
-				}
+		// Ensure ACF is loaded for AJAX calls
+		if ( ! function_exists( 'get_field' ) ) {
+			error_log( '[PUNTWORK] [AJAX-LOAD] ACF functions not available, attempting to load ACF plugin' );
+			// Try to load ACF if it's installed
+			if ( file_exists( WP_PLUGIN_DIR . '/advanced-custom-fields/acf.php' ) ) {
+				include_once WP_PLUGIN_DIR . '/advanced-custom-fields/acf.php';
+				error_log( '[PUNTWORK] [AJAX-LOAD] Loaded ACF from standard location' );
+			} elseif ( file_exists( WP_PLUGIN_DIR . '/advanced-custom-fields-pro/acf.php' ) ) {
+				include_once WP_PLUGIN_DIR . '/advanced-custom-fields-pro/acf.php';
+				error_log( '[PUNTWORK] [AJAX-LOAD] Loaded ACF Pro from standard location' );
+			} else {
+				error_log( '[PUNTWORK] [AJAX-LOAD] ACF plugin files not found in standard locations' );
 			}
-
-			// Check again after loading
-			if ( ! function_exists( 'import_jobs_from_json' ) ) {
-				error_log( '[PUNTWORK] [AJAX-LOAD] import_jobs_from_json function still not found after loading files' );
-				// List all functions that start with 'import_' to see what's available
-				$all_functions    = get_defined_functions();
-				$import_functions = array_filter(
-					$all_functions['user'],
-					function ( $func ) {
-						return strpos( $func, 'import_' ) === 0;
-					}
-				);
-				error_log( '[PUNTWORK] [AJAX-LOAD] Available import functions: ' . implode( ', ', $import_functions ) );
-				wp_send_json_error( array( 'message' => 'Import function not available - files could not be loaded' ) );
-
-				return;
-			}
-
-			error_log( '[PUNTWORK] [AJAX-LOAD] import_jobs_from_json function now available after loading files' );
 		} else {
-			error_log( '[PUNTWORK] [AJAX-LOAD] import_jobs_from_json function already available' );
+			error_log( '[PUNTWORK] [AJAX-LOAD] ACF functions already available' );
 		}
+
+		// Load import files
+		foreach ( $import_files as $file ) {
+			if ( file_exists( $file ) ) {
+				error_log( '[PUNTWORK] [AJAX-LOAD] Attempting to load file: ' . basename( $file ) );
+
+				try {
+					$load_result = include_once $file;
+					error_log( '[PUNTWORK] [AJAX-LOAD] Loaded import file: ' . basename( $file ) . ', result: ' . ( $load_result ? 'true' : 'false' ) );
+				} catch ( \Exception $e ) {
+					error_log( '[PUNTWORK] [AJAX-LOAD] Exception loading ' . basename( $file ) . ': ' . $e->getMessage() );
+				} catch ( \Error $e ) {
+					error_log( '[PUNTWORK] [AJAX-LOAD] Fatal error loading ' . basename( $file ) . ': ' . $e->getMessage() );
+				}
+			} else {
+				error_log( '[PUNTWORK] [AJAX-LOAD] Import file not found: ' . $file );
+			}
+		}
+
+		// Check again after loading
+		if ( ! function_exists( 'import_jobs_from_json' ) ) {
+			error_log( '[PUNTWORK] [AJAX-LOAD] import_jobs_from_json function still not found after loading files' );
+			// List all functions that start with 'import_' to see what's available
+			$all_functions    = get_defined_functions();
+			$import_functions = array_filter(
+				$all_functions['user'],
+				function ( $func ) {
+					return strpos( $func, 'import_' ) === 0;
+				}
+			);
+			error_log( '[PUNTWORK] [AJAX-LOAD] Available import functions: ' . implode( ', ', $import_functions ) );
+			wp_send_json_error( array( 'message' => 'Import function not available - files could not be loaded' ) );
+
+			return;
+		}
+
+		error_log( '[PUNTWORK] [AJAX-LOAD] import_jobs_from_json function now available after loading files' );
 
 		// Use comprehensive security validation with field validation
 		error_log( '[PUNTWORK] [AJAX-SECURITY] About to validate AJAX request' );
