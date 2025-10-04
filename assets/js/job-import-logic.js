@@ -119,6 +119,10 @@ console.info("=== Job Import Logic Script Loaded ===");
                     PuntWorkJSLogger.debug('Initial current: ' + current + ', total: ' + total, 'LOGIC');
 
                     let batchCount = 0;
+                    let previousProcessed = 0;
+                    let noProgressCount = 0;
+                    const maxNoProgressBatches = 5; // Break loop if no progress for 5 consecutive batches
+                    
                     while (current < total && this.isImporting) {
                         batchCount++;
                         console.log('[PUNTWORK] ===== STARTING BATCH', batchCount, '=====');
@@ -145,8 +149,33 @@ console.info("=== Job Import Logic Script Loaded ===");
                             console.log('[PUNTWORK] Next batch response:', response);
 
                             if (response.success) {
+                                // Calculate how many items were processed in this batch
+                                const newProcessed = response.data.processed || 0;
+                                const batchProcessed = newProcessed - previousProcessed;
+                                
+                                // Update current position
+                                current += batchProcessed;
+                                previousProcessed = newProcessed;
+                                
+                                console.log('[PUNTWORK] Batch', batchCount, 'completed - batch processed:', batchProcessed, 'total processed so far:', current, 'batchCount:', batchCount, 'duration:', batchDuration.toFixed(2) + 's');
+
+                                // Check for progress
+                                if (batchProcessed === 0) {
+                                    noProgressCount++;
+                                    console.warn('[PUNTWORK] WARNING: Batch', batchCount, 'processed 0 items (no progress). Count:', noProgressCount);
+                                    
+                                    if (noProgressCount >= maxNoProgressBatches) {
+                                        console.error('[PUNTWORK] ERROR: No progress made in', maxNoProgressBatches, 'consecutive batches. Breaking loop to prevent infinite loop.');
+                                        JobImportUI.appendLogs(['ERROR: Import appears stuck - no progress made in ' + maxNoProgressBatches + ' consecutive batches']);
+                                        $('#status-message').text('Import stuck - no progress being made');
+                                        this.isImporting = false;
+                                        break;
+                                    }
+                                } else {
+                                    noProgressCount = 0; // Reset counter on successful progress
+                                }
+
                                 // Status polling handles UI updates, just update our local tracking
-                                current = response.data.processed || current;
                                 console.log('[PUNTWORK] Batch', batchCount, 'completed - current processed:', current, 'batchCount:', batchCount, 'duration:', batchDuration.toFixed(2) + 's');
 
                                 // Force a status update to ensure UI is current
