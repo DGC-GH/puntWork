@@ -65,19 +65,19 @@ if ( ! function_exists( 'get_json_item_count' ) ) {
 							$sample_lines[] = 'Line ' . $line_num . ': GUID=' . ( $item['guid'] ?? 'MISSING' ) . ', keys=' . implode( ',', array_keys( $item ) );
 						}
 					} else {
-						if ( $debug_mode ) {
-							error_log( '[PUNTWORK] get_json_item_count: Invalid JSON at line ' . $line_num . ': ' . json_last_error_msg() );
-						}
+						error_log( '[PUNTWORK] get_json_item_count: Invalid JSON at line ' . $line_num . ': ' . json_last_error_msg() . ' - Line preview: ' . substr( $line, 0, 100 ) );
 					}
+				} else {
+					error_log( '[PUNTWORK] get_json_item_count: Empty line at ' . $line_num );
 				}
 			}
 			fclose( $handle );
+		} else {
+			error_log( '[PUNTWORK] get_json_item_count: Cannot open file: ' . $json_path );
 		}
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] get_json_item_count: Total valid items: ' . $count . ' (file has ' . ( file_exists( $json_path ) ? 'exists' : 'does not exist' ) . ')' );
-			if ( ! empty( $sample_lines ) ) {
-				error_log( '[PUNTWORK] get_json_item_count: Sample items: ' . implode( ' | ', $sample_lines ) );
-			}
+		error_log( '[PUNTWORK] get_json_item_count: Total valid items: ' . $count . ' (file has ' . ( file_exists( $json_path ) ? 'exists' : 'does not exist' ) . ')' );
+		if ( ! empty( $sample_lines ) ) {
+			error_log( '[PUNTWORK] get_json_item_count: Sample items: ' . implode( ' | ', $sample_lines ) );
 		}
 
 		return $count;

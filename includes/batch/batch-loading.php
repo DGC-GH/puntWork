@@ -452,6 +452,21 @@ function load_json_batch( $json_path, $start_index, $batch_size ) {
 		}
 	}
 
+	// Always log critical information
+	error_log( '[PUNTWORK] load_json_batch: returning ' . count( $items ) . ' items (read ' . $lines_read . ' lines, empty: ' . $empty_lines . ', invalid JSON: ' . $invalid_json . ', start_index: ' . $start_index . ', batch_size: ' . $batch_size . ')' );
+
+	if ( empty( $items ) ) {
+		error_log( '[PUNTWORK] load_json_batch: WARNING - NO ITEMS LOADED! This will cause 0 processed items.' );
+		error_log( '[PUNTWORK] load_json_batch: DEBUG - start_index=' . $start_index . ', batch_size=' . $batch_size . ', lines_read=' . $lines_read . ', empty_lines=' . $empty_lines . ', invalid_json=' . $invalid_json );
+		// Try to read first line manually
+		$debug_handle = fopen( $json_path, 'r' );
+		if ( $debug_handle ) {
+			$first_line = fgets( $debug_handle );
+			error_log( '[PUNTWORK] load_json_batch: DEBUG - First line: ' . substr( trim( $first_line ), 0, 100 ) );
+			fclose( $debug_handle );
+		}
+	}
+
 	return array(
 		'items'      => $items,
 		'lines_read' => $lines_read,

@@ -403,6 +403,19 @@ function prepare_import_setup( $batch_start = 0 ) {
 		error_log( '[PUNTWORK] [SETUP-VALIDATION] JSONL file validation passed' );
 	}
 
+	// Add additional validation - check if we can actually read items
+	$test_read = load_json_batch( $json_path, 0, 1 );
+	$test_items = $test_read['items'] ?? $test_read;
+	if ( empty( $test_items ) ) {
+		error_log( '[PUNTWORK] [SETUP-ERROR] CRITICAL: Cannot read any items from JSONL file, even though validation passed. File may be corrupted.' );
+		return array(
+			'success' => false,
+			'message' => 'Cannot read items from JSONL file - file may be corrupted despite passing validation',
+			'logs'    => array( 'Cannot read items from JSONL file - file may be corrupted despite passing validation' ),
+		);
+	}
+	error_log( '[PUNTWORK] [SETUP-VALIDATION] Successfully read test item from JSONL file' );
+
 	try {
 		if ( $debug_mode ) {
 			error_log( '[PUNTWORK] [SETUP-COUNT] Starting JSONL item count...' );
