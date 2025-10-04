@@ -255,10 +255,18 @@ function handle_import_progress_sse( $request ) {
 				// Check if combined file exists and status seems incorrect
 				$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
 				if ( file_exists( $combined_file ) && filesize( $combined_file ) > 0 ) {
-					if ( empty( $current_status ) || ($current_status['total'] ?? 0) == 0 && ($current_status['complete'] ?? false) ) {
-						// Status seems incorrect - combined file exists but status shows total=0 complete=true
-						// This can happen if polling occurs before combine_jsonl_ajax completes, or if status was cleared
-						error_log( '[PUNTWORK] SSE: Combined file exists but status shows total=0, complete=true - correcting status' );
+					$current_total = $current_status['total'] ?? 0;
+					$current_complete = $current_status['complete'] ?? false;
+					$status_exists = isset( $current_status['total'] ) && isset( $current_status['complete'] );
+					
+					// Check if status needs correction:
+					// 1. Status is missing entirely (empty array), OR
+					// 2. Status exists but shows incorrect values (total=0 and complete=true)
+					$needs_correction = ( ! $status_exists ) || ( $current_total == 0 && $current_complete );
+					
+					if ( $needs_correction ) {
+						// Status needs correction - combined file exists but status is missing or incorrect
+						error_log( '[PUNTWORK] SSE: Combined file exists but status is missing or shows total=0, complete=true - correcting status' );
 						
 						// Try to get the actual count from the file
 						if ( function_exists( 'get_json_item_count' ) ) {

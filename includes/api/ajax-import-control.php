@@ -484,10 +484,16 @@ function get_job_import_status_ajax() {
 		if ( $file_exists && $file_size > 0 ) {
 			$current_total = $progress['total'] ?? 0;
 			$current_complete = $progress['complete'] ?? false;
-			error_log( '[PUNTWORK] [STATUS-CORRECTION] Current status - total: ' . $current_total . ', complete: ' . ($current_complete ? 'true' : 'false') );
+			$status_exists = isset( $progress['total'] ) && isset( $progress['complete'] );
+			error_log( '[PUNTWORK] [STATUS-CORRECTION] Current status - total: ' . $current_total . ', complete: ' . ($current_complete ? 'true' : 'false') . ', status_exists: ' . ($status_exists ? 'true' : 'false') );
 			
-			if ( ($current_total == 0) && $current_complete ) {
-				// Status seems incorrect - combined file exists but status shows complete with total=0
+			// Check if status needs correction:
+			// 1. Status is missing entirely (empty array), OR
+			// 2. Status exists but shows incorrect values (total=0 and complete=true)
+			$needs_correction = ( ! $status_exists ) || ( $current_total == 0 && $current_complete );
+			
+			if ( $needs_correction ) {
+				// Status needs correction - combined file exists but status is missing or incorrect
 				error_log( '[PUNTWORK] [STATUS-CORRECTION] Status correction condition met - correcting status' );
 				
 				// Try to get the actual count from the file
