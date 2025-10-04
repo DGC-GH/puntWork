@@ -137,6 +137,74 @@ function validate_jsonl_file( $json_path ) {
 }
 
 /**
+ * Count total number of valid JSON items in JSONL file.
+ *
+ * @param  string $json_path Path to JSONL file.
+ * @return int Number of valid items.
+ */
+function get_json_item_count( $json_path ) {
+	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
+
+	if ( $debug_mode ) {
+		error_log( '[PUNTWORK] [COUNT-START] ===== GET_JSON_ITEM_COUNT START =====' );
+		error_log( '[PUNTWORK] [COUNT-START] get_json_item_count: Counting items in ' . basename( $json_path ) );
+	}
+
+	if ( ! file_exists( $json_path ) ) {
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [COUNT-ERROR] get_json_item_count: File does not exist: ' . $json_path );
+		}
+		return 0;
+	}
+
+	if ( ! is_readable( $json_path ) ) {
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [COUNT-ERROR] get_json_item_count: File not readable: ' . $json_path );
+		}
+		return 0;
+	}
+
+	$count       = 0;
+	$bom         = "\xef\xbb\xbf";
+	$handle      = fopen( $json_path, 'r' );
+	$line_number = 0;
+
+	if ( $handle ) {
+		while ( ( $line = fgets( $handle ) ) !== false ) {
+			++$line_number;
+			$line = trim( $line );
+
+			// Remove BOM if present
+			if ( substr( $line, 0, 3 ) === $bom ) {
+				$line = substr( $line, 3 );
+			}
+
+			if ( ! empty( $line ) ) {
+				$item = json_decode( $line, true );
+				if ( $item !== null && isset( $item['guid'] ) && ! empty( $item['guid'] ) ) {
+					++$count;
+				} elseif ( $debug_mode && $item === null ) {
+					error_log( '[PUNTWORK] [COUNT-WARN] Invalid JSON at line ' . $line_number . ': ' . json_last_error_msg() );
+				}
+			}
+		}
+		fclose( $handle );
+	} else {
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [COUNT-ERROR] get_json_item_count: Cannot open file: ' . $json_path );
+		}
+		return 0;
+	}
+
+	if ( $debug_mode ) {
+		error_log( '[PUNTWORK] [COUNT-RESULT] get_json_item_count: Found ' . $count . ' valid items with GUIDs in ' . $line_number . ' total lines' );
+		error_log( '[PUNTWORK] [COUNT-END] ===== GET_JSON_ITEM_COUNT END =====' );
+	}
+
+	return $count;
+}
+
+/**
  * Prepare import setup and validate prerequisites.
  *
  * @param  int $batch_start Starting index for batch.
@@ -423,12 +491,40 @@ function prepare_import_setup( $batch_start = 0 ) {
 	try {
 		if ( $debug_mode ) {
 			error_log( '[PUNTWORK] [SETUP-COUNT] Starting JSONL item count...' );
+			error_log( '[PUNTWORK] [SETUP-COUNT] JSON path for counting: ' . $json_path );
+			error_log( '[PUNTWORK] [SETUP-COUNT] File exists: ' . ( file_exists( $json_path ) ? 'yes' : 'no' ) );
+			error_log( '[PUNTWORK] [SETUP-COUNT] File readable: ' . ( is_readable( $json_path ) ? 'yes' : 'no' ) );
+			if ( file_exists( $json_path ) ) {
+				error_log( '[PUNTWORK] [SETUP-COUNT] File size: ' . filesize( $json_path ) . ' bytes' );
+			}
 		}
 		$total = get_json_item_count( $json_path );
 		if ( $debug_mode ) {
 			error_log( '[PUNTWORK] [SETUP-COUNT] Total items in JSONL: ' . $total );
 			if ( $total === 0 ) {
-				error_log( '[PUNTWORK] [SETUP-WARNING] JSONL file exists but contains 0 valid items' );
+				error_log( '[PUNTWORK] [SETUP-WARNING] JSONL file exists but contains 0 valid items - checking file content...' );
+				// Debug: try to read first few lines manually
+				if ( file_exists( $json_path ) && is_readable( $json_path ) ) {
+					$debug_handle = fopen( $json_path, 'r' );
+					if ( $debug_handle ) {
+						$line_num = 0;
+						while ( ( $line = fgets( $debug_handle ) ) !== false && $line_num < 3 ) {
+							++$line_num;
+							$line = trim( $line );
+							if ( ! empty( $line ) ) {
+								$item = json_decode( $line, true );
+								if ( $item !== null ) {
+									error_log( '[PUNTWORK] [SETUP-DEBUG] Line ' . $line_num . ' is valid JSON with GUID: ' . ( $item['guid'] ?? 'MISSING' ) );
+								} else {
+									error_log( '[PUNTWORK] [SETUP-DEBUG] Line ' . $line_num . ' is INVALID JSON: ' . json_last_error_msg() . ' - Preview: ' . substr( $line, 0, 100 ) );
+								}
+							} else {
+								error_log( '[PUNTWORK] [SETUP-DEBUG] Line ' . $line_num . ' is empty' );
+							}
+						}
+						fclose( $debug_handle );
+					}
+				}
 			}
 		}
 	} catch ( \Exception $e ) {
