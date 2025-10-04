@@ -251,78 +251,28 @@ function handle_import_progress_sse( $request ) {
 				// Get current import status
 				$current_status = get_option( 'job_import_status', array() );
 				error_log( '[PUNTWORK] SSE: Raw current_status from get_option: ' . json_encode( $current_status ) );
-
-				// COMPREHENSIVE PATH DEBUGGING
-				error_log( '[PUNTWORK] SSE: ===== COMPREHENSIVE PATH DEBUGGING =====' );
-				error_log( '[PUNTWORK] SSE: ABSPATH = ' . ABSPATH );
-				error_log( '[PUNTWORK] SSE: getcwd() = ' . getcwd() );
-				error_log( '[PUNTWORK] SSE: DOCUMENT_ROOT = ' . ($_SERVER['DOCUMENT_ROOT'] ?? 'NOT SET') );
-				error_log( '[PUNTWORK] SSE: REQUEST_URI = ' . ($_SERVER['REQUEST_URI'] ?? 'NOT SET') );
-				error_log( '[PUNTWORK] SSE: SCRIPT_FILENAME = ' . ($_SERVER['SCRIPT_FILENAME'] ?? 'NOT SET') );
-				
-				// Test different path constructions
-				$path_abspath = ABSPATH . 'feeds/combined-jobs.jsonl';
-				$path_document_root = (isset($_SERVER['DOCUMENT_ROOT']) ? $_SERVER['DOCUMENT_ROOT'] . '/feeds/combined-jobs.jsonl' : 'N/A');
-				$path_cwd_relative = getcwd() . '/feeds/combined-jobs.jsonl';
-				
-				error_log( '[PUNTWORK] SSE: Path via ABSPATH: ' . $path_abspath );
-				error_log( '[PUNTWORK] SSE: Path via DOCUMENT_ROOT: ' . $path_document_root );
-				error_log( '[PUNTWORK] SSE: Path via getcwd()+relative: ' . $path_cwd_relative );
-				
-				// Test realpath for each
-				error_log( '[PUNTWORK] SSE: realpath(ABSPATH): ' . realpath(ABSPATH) );
-				error_log( '[PUNTWORK] SSE: realpath(ABSPATH + feeds/): ' . realpath(ABSPATH . 'feeds/') );
-				error_log( '[PUNTWORK] SSE: realpath(ABSPATH + feeds/combined-jobs.jsonl): ' . realpath($path_abspath) );
-				
-				// Test file_exists for each path
-				error_log( '[PUNTWORK] SSE: file_exists(ABSPATH path): ' . (file_exists($path_abspath) ? 'YES' : 'NO') );
-				if ($path_document_root !== 'N/A') {
-					error_log( '[PUNTWORK] SSE: file_exists(DOCUMENT_ROOT path): ' . (file_exists($path_document_root) ? 'YES' : 'NO') );
-				}
-				error_log( '[PUNTWORK] SSE: file_exists(cwd+relative path): ' . (file_exists($path_cwd_relative) ? 'YES' : 'NO') );
-				
-				// Check directory existence
-				error_log( '[PUNTWORK] SSE: is_dir(ABSPATH): ' . (is_dir(ABSPATH) ? 'YES' : 'NO') );
-				error_log( '[PUNTWORK] SSE: is_dir(ABSPATH + feeds/): ' . (is_dir(ABSPATH . 'feeds/') ? 'YES' : 'NO') );
-				
-				// Check file permissions if directory exists
-				$feeds_dir = ABSPATH . 'feeds/';
-				if (is_dir($feeds_dir)) {
-					error_log( '[PUNTWORK] SSE: Feeds directory permissions: ' . substr(sprintf('%o', fileperms($feeds_dir)), -4) );
-					if (file_exists($path_abspath)) {
-						error_log( '[PUNTWORK] SSE: Combined file permissions: ' . substr(sprintf('%o', fileperms($path_abspath)), -4) );
-						error_log( '[PUNTWORK] SSE: Combined file size: ' . filesize($path_abspath) . ' bytes' );
-					}
-				}
-				
-				error_log( '[PUNTWORK] SSE: ===== END COMPREHENSIVE PATH DEBUGGING =====' );
-
-				// DEBUG: Log ABSPATH and file path
-				error_log( '[PUNTWORK] SSE: ABSPATH = ' . ABSPATH );
-				$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
-				error_log( '[PUNTWORK] SSE: Constructed path: ' . $combined_file );
-				error_log( '[PUNTWORK] SSE: Real path: ' . realpath($combined_file) );
-				error_log( '[PUNTWORK] SSE: About to check combined file: ' . $combined_file );
 				
 				// Check if combined file exists and status seems incorrect
-				$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
-				error_log( '[PUNTWORK] SSE: Checking combined file: ' . $combined_file );
-				$file_exists = file_exists( $combined_file );
-				$file_size = $file_exists ? filesize( $combined_file ) : 0;
-				error_log( '[PUNTWORK] SSE: Combined file exists: ' . ($file_exists ? 'YES' : 'NO') . ', Size: ' . $file_size . ' bytes');
+				// FIRST TRY: Use DOCUMENT_ROOT if available (more reliable in REST context)
+				$combined_file = null;
+				$file_exists = false;
+				$file_size = 0;
 				
-				// FALLBACK: If ABSPATH path doesn't work, try DOCUMENT_ROOT
-				if (!$file_exists && isset($_SERVER['DOCUMENT_ROOT'])) {
-					$fallback_path = $_SERVER['DOCUMENT_ROOT'] . '/feeds/combined-jobs.jsonl';
-					error_log( '[PUNTWORK] SSE: Trying fallback path: ' . $fallback_path );
-					$fallback_exists = file_exists( $fallback_path );
-					error_log( '[PUNTWORK] SSE: Fallback file exists: ' . ($fallback_exists ? 'YES' : 'NO') );
-					if ($fallback_exists) {
-						$combined_file = $fallback_path;
-						$file_exists = true;
-						$file_size = filesize( $combined_file );
-						error_log( '[PUNTWORK] SSE: Using fallback path successfully, size: ' . $file_size . ' bytes' );
-					}
+				if (isset($_SERVER['DOCUMENT_ROOT'])) {
+					$combined_file = $_SERVER['DOCUMENT_ROOT'] . '/feeds/combined-jobs.jsonl';
+					error_log( '[PUNTWORK] SSE: Trying DOCUMENT_ROOT path: ' . $combined_file );
+					$file_exists = file_exists( $combined_file );
+					$file_size = $file_exists ? filesize( $combined_file ) : 0;
+					error_log( '[PUNTWORK] SSE: DOCUMENT_ROOT file exists: ' . ($file_exists ? 'YES' : 'NO') . ', Size: ' . $file_size . ' bytes');
+				}
+				
+				// FALLBACK: Try ABSPATH if DOCUMENT_ROOT didn't work
+				if (!$file_exists) {
+					$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
+					error_log( '[PUNTWORK] SSE: Trying ABSPATH fallback: ' . $combined_file );
+					$file_exists = file_exists( $combined_file );
+					$file_size = $file_exists ? filesize( $combined_file ) : 0;
+					error_log( '[PUNTWORK] SSE: ABSPATH file exists: ' . ($file_exists ? 'YES' : 'NO') . ', Size: ' . $file_size . ' bytes');
 				}
 				
 				if ( file_exists( $combined_file ) && filesize( $combined_file ) > 0 ) {
