@@ -1859,6 +1859,18 @@ function combine_jsonl_ajax() {
 			error_log( '[PUNTWORK] [COMBINE-STATUS] update_option result: ' . ( $update_result ? 'true' : 'false' ) . ', status set: ' . json_encode( $import_status ) );
 			error_log( '[PUNTWORK] [DEBUG-PHP] Import status initialized with total: ' . $total_items );
 
+			// Schedule the batch import to run asynchronously
+			if ( function_exists( 'as_schedule_single_action' ) ) {
+				$scheduled = as_schedule_single_action( time(), 'puntwork_start_batch_import', array() );
+				if ( $scheduled ) {
+					error_log( '[PUNTWORK] [COMBINE] Successfully scheduled batch import using Action Scheduler' );
+				} else {
+					error_log( '[PUNTWORK] [COMBINE] Failed to schedule batch import using Action Scheduler' );
+				}
+			} else {
+				error_log( '[PUNTWORK] [COMBINE] Action Scheduler not available, cannot schedule batch import' );
+			}
+
 			PuntWorkLogger::info(
 				'JSONL combination completed and import status initialized',
 				PuntWorkLogger::CONTEXT_AJAX,
@@ -1898,5 +1910,45 @@ function combine_jsonl_ajax() {
 		error_log( '[PUNTWORK] [DEBUG-PHP] Stack trace: ' . $e->getTraceAsString() );
 		PuntWorkLogger::error( 'Combine JSONL AJAX error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
 		wp_send_json_error( array( 'message' => 'Failed to combine JSONL files: ' . $e->getMessage() ) );
+	}
+}
+
+add_action( 'puntwork_start_batch_import', __NAMESPACE__ . '\\puntwork_start_batch_import_handler' );
+function puntwork_start_batch_import_handler() {
+	error_log( '[PUNTWORK] [BATCH-START] Starting batch import via Action Scheduler' );
+	
+	try {
+		// Load required files for batch processing
+		$import_files = array(
+			__DIR__ . '/../batch/batch-size-management.php',
+			__DIR__ . '/../import/import-setup.php',
+			__DIR__ . '/../batch/batch-processing.php',
+			__DIR__ . '/../import/import-finalization.php',
+			__DIR__ . '/../utilities/ErrorHandler.php',
+			__DIR__ . '/../exceptions/PuntworkExceptions.php',
+			__DIR__ . '/../import/import-batch.php',
+		);
+
+		foreach ( $import_files as $file ) {
+			if ( file_exists( $file ) ) {
+				require_once $file;
+			}
+		}
+
+		// Start the batch import
+		$result = import_jobs_from_json( false, 0 );
+		error_log( '[PUNTWORK] [BATCH-RESULT] Batch import result: ' . json_encode( $result ) );
+		
+		if ( isset( $result['success'] ) && $result['success'] ) {
+			error_log( '[PUNTWORK] [BATCH-SUCCESS] Batch import completed successfully' );
+		} else {
+			error_log( '[PUNTWORK] [BATCH-ERROR] Batch import failed or incomplete' );
+		}
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] [BATCH-EXCEPTION] Exception in batch import handler: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
+		error_log( '[PUNTWORK] [BATCH-EXCEPTION] Stack trace: ' . $e->getTraceAsString() );
+	} catch ( \Throwable $e ) {
+		error_log( '[PUNTWORK] [BATCH-FATAL] Fatal error in batch import handler: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
+		error_log( '[PUNTWORK] [BATCH-FATAL] Stack trace: ' . $e->getTraceAsString() );
 	}
 }
