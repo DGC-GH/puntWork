@@ -258,10 +258,10 @@ function prepare_import_setup( $batch_start = 0 ) {
 		}
 	}
 
-	$json_path = get_option( 'job_import_json_path', 'feeds/combined-jobs.jsonl' );
+	$json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
 	if ( ! file_exists( $json_path ) ) {
-		// Use the correct path where the combined file is actually created
-		$json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
+		// Fallback to option-based path
+		$json_path = get_option( 'job_import_json_path', 'feeds/combined-jobs.jsonl' );
 	}
 	if ( ! file_exists( $json_path ) ) {
 		// Try server root feeds directory (file is at /feeds/ from FTP root)
