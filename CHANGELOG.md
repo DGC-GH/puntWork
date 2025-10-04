@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Enhanced Error Handling and Recovery System**: Implemented comprehensive error recovery framework with automatic retry logic, hierarchical exception system, and system health monitoring. Added ErrorHandler class with recovery strategies for database, network, processing, and validation errors. Enhanced import functions with executeWithRecovery() calls and WordPress compatibility checks.
 
 ### Fixed
-- **Syntax Error Fix**: Fixed critical syntax error in feed-processor.php line 638 where incomplete date() function call was causing "unexpected identifier 'd', expecting ']'" fatal error during plugin initialization
+- Fixed 400 error on /jobs REST API endpoint by adding 'any' to the status parameter enum validation
 - **Progress Bar Visibility Issue**: Fixed progress bar not being visible during import by changing initial container width from 0% to 100% and ensuring progress segments use flexbox properly with `width: auto !important`
 - **Database Index Creation SQL Syntax Error**: Fixed CREATE INDEX queries with WHERE clauses that are not supported in older MariaDB/MySQL versions by removing WHERE conditions and adding table existence check for performance logs table
 - **Undefined Function get_or_create_api_key**: Fixed fatal error by adding proper namespace prefix \Puntwork\ and including rest-api.php in import-setup.php

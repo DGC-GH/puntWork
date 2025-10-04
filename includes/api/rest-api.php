@@ -193,7 +193,7 @@ function register_import_api_routes() {
 				'status'   => array(
 					'required'    => false,
 					'type'        => 'string',
-					'enum'        => array( 'publish', 'draft', 'pending', 'private' ),
+					'enum'        => array( 'publish', 'draft', 'pending', 'private', 'any' ),
 					'description' => 'Filter by post status',
 				),
 				'search'   => array(
