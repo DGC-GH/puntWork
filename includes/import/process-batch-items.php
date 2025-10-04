@@ -142,8 +142,6 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 				$processed_count++;
 			}
 
-			unset( $batch_items[ $guid ] );
-
 			// Clear cache periodically to prevent memory accumulation during large batch processing
 			if ( $processed_count % 10 === 0 ) {
 				$cache_clear_start = microtime( true );
@@ -179,6 +177,9 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 					flush();
 				}
 			}
+
+			// Unset the processed item AFTER processing is complete
+			unset( $batch_items[ $guid ] );
 		}
 		error_log( '[PUNTWORK] [ITEMS-DEBUG] process_batch_items completed processing all ' . $total_to_process . ' items' );
 		error_log( '[PUNTWORK] [ITEMS-DEBUG] Final counts: published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', processed_count=' . $processed_count );
