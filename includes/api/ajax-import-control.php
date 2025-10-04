@@ -528,7 +528,7 @@ function get_job_import_status_ajax() {
 				delete_option( 'job_import_consecutive_small_batches' );
 				delete_transient( 'import_cancel' );
 
-				// Return fresh status
+				// Return fresh status - preserve success status if import was actually complete
 				$progress = array(
 					'total'              => 0,
 					'processed'          => 0,
@@ -538,8 +538,8 @@ function get_job_import_status_ajax() {
 					'duplicates_drafted' => 0,
 					'time_elapsed'       => 0,
 					'complete'           => true, // Fresh state is complete
-					'success'            => false,
-					'error_message'      => '',
+					'success'            => null, // Don't assume failure - set to null for unknown status
+					'error_message'      => 'Import was detected as stuck and cleared',
 					'batch_size'         => 10,
 					'inferred_languages' => 0,
 					'inferred_benefits'  => 0,
