@@ -257,7 +257,7 @@ function prepare_import_setup( $batch_start = 0, $is_batch = false ) {
 		$start_time = microtime( true );
 		\Puntwork\PuntWorkLogger::info( 'Starting new import with start time: ' . $start_time, \Puntwork\PuntWorkLogger::CONTEXT_BATCH );
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SETUP-TIME] Starting new import with start time: ' . date( 'Y-m-d H:i:s', (int) $start_time ) . ' (' . $start_time . ')' );
+			error_log( '[PUNTWORK] [SETUP-TIME] Starting new import with start time: ' . date( 'Y-m-d H:i:s', intval($start_time) ) . ' (' . $start_time . ')' );
 		}
 	}
 

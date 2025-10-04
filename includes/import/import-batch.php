@@ -247,7 +247,7 @@ if ( ! function_exists( 'import_jobs_from_json' ) ) {
 			// Execute import setup with error recovery
 			$setup = \Puntwork\ErrorHandler::executeWithRecovery(
 				'import_setup',
-				function() use ( $batch_start, $debug_mode ) {
+				function() use ( $batch_start, $debug_mode, $is_batch ) {
 					if ( $debug_mode ) {
 						error_log( '[PUNTWORK] [IMPORT-SETUP] Calling prepare_import_setup...' );
 					}
