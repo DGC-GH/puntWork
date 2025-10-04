@@ -1,0 +1,4 @@
+get /var/log/php/error.log php_error.log
+get /var/log/apache2/error.log apache_error.log
+get /var/log/httpd/error_log httpd_error.log
+get /var/www/html/wp-content/debug.log wp_debug.log

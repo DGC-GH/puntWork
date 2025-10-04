@@ -1,0 +1,5 @@
+ls -la /var/log/
+ls -la /var/log/apache2/
+ls -la /var/log/httpd/
+ls -la /var/log/php/
+ls -la /var/log/php-fpm/

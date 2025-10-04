@@ -365,6 +365,7 @@ function process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updat
 				'post_author' => $user_id,
 			);
 
+			error_log('[PUNTWORK] [ITEM-DEBUG] About to call wp_insert_post for GUID: ' . $guid);
 			$post_id = wp_insert_post($post_data);
 			error_log('[PUNTWORK] [ITEM-DEBUG] wp_insert_post returned: ' . ($post_id ?: 'null/false') . ' for GUID: ' . $guid);
 
@@ -409,10 +410,12 @@ function process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updat
 		return $result;
 	} catch (Exception $e) {
 		error_log('[PUNTWORK] [ITEM-DEBUG] Exception in process_single_item for GUID: ' . $guid . ': ' . $e->getMessage() . ' at line ' . $e->getLine());
+		error_log('[PUNTWORK] [ITEM-DEBUG] Stack trace: ' . $e->getTraceAsString());
 		$result['error'] = 'Exception: ' . $e->getMessage();
 		return $result;
 	} catch (Throwable $e) {
 		error_log('[PUNTWORK] [ITEM-DEBUG] Throwable in process_single_item for GUID: ' . $guid . ': ' . $e->getMessage() . ' at line ' . $e->getLine());
+		error_log('[PUNTWORK] [ITEM-DEBUG] Stack trace: ' . $e->getTraceAsString());
 		$result['error'] = 'Throwable: ' . $e->getMessage();
 		return $result;
 	}
