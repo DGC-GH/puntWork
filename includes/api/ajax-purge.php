@@ -50,7 +50,13 @@ function job_import_cleanup_duplicates_ajax() {
 
 		error_log( '[PUNTWORK] [CLEANUP] All classes found, proceeding with validation' );
 
-		PuntWorkLogger::logAjaxRequest( 'job_import_cleanup_duplicates', $_POST );
+		// Safely log AJAX request with error handling
+		try {
+			PuntWorkLogger::logAjaxRequest( 'job_import_cleanup_duplicates', $_POST );
+		} catch ( \Throwable $e ) {
+			error_log( '[PUNTWORK] [CLEANUP] Error logging AJAX request: ' . $e->getMessage() );
+			// Continue without logging
+		}
 
 		// Use comprehensive security validation
 		$validation = SecurityUtils::validateAjaxRequest( 'job_import_cleanup_duplicates', 'job_import_nonce' );
@@ -64,18 +70,29 @@ function job_import_cleanup_duplicates_ajax() {
 
 		global $wpdb;
 
-		// Test database connection
-		if ( ! $wpdb || ! $wpdb->ready ) {
+		// Test database connection with better error handling
+		if ( ! $wpdb ) {
+			error_log( '[PUNTWORK] [CLEANUP] Database object not available' );
+			AjaxErrorHandler::sendError( 'Database connection error' );
+			return;
+		}
+
+		// Check if database is ready (safely)
+		$db_ready = true;
+		if ( property_exists( $wpdb, 'ready' ) ) {
+			$db_ready = $wpdb->ready;
+		}
+
+		if ( ! $db_ready ) {
 			error_log( '[PUNTWORK] [CLEANUP] Database not ready' );
 			AjaxErrorHandler::sendError( 'Database connection error' );
 			return;
 		}
 
 		// Increase memory limit for cleanup operations if possible
-		if ( function_exists( 'ini_set' ) ) {
+		if ( function_exists( 'ini_set' ) && function_exists( 'wp_convert_hr_to_bytes' ) ) {
 			$current_limit = ini_get( 'memory_limit' );
-			// Try to increase to 2GB if current is less
-			if ( wp_convert_hr_to_bytes( $current_limit ) < 2147483648 ) {
+			if ( $current_limit && wp_convert_hr_to_bytes( $current_limit ) < 2147483648 ) {
 				@ini_set( 'memory_limit', '2048M' );
 				error_log( '[PUNTWORK] [CLEANUP] Increased memory limit to 2048M for cleanup' );
 			}
@@ -237,13 +254,23 @@ function job_import_cleanup_duplicates_ajax() {
 			$current_memory = memory_get_usage();
 			$memory_limit = ini_get('memory_limit');
 			
-			// Simple memory limit parsing (handle M, G suffixes)
-			if (preg_match('/^(\d+)([MG])$/', $memory_limit, $matches)) {
+			// Safe memory limit parsing with fallbacks
+			if (function_exists('wp_convert_hr_to_bytes') && $memory_limit) {
+				$memory_limit_bytes = wp_convert_hr_to_bytes($memory_limit);
+			} elseif (preg_match('/^(\d+)([MG])$/', $memory_limit, $matches)) {
 				$value = (int)$matches[1];
 				$unit = $matches[2];
 				$memory_limit_bytes = $unit === 'G' ? $value * 1024 * 1024 * 1024 : $value * 1024 * 1024;
+			} elseif (is_numeric($memory_limit)) {
+				$memory_limit_bytes = (int)$memory_limit;
 			} else {
-				$memory_limit_bytes = (int)$memory_limit; // Assume bytes if no unit
+				// Default fallback: 128MB
+				$memory_limit_bytes = 128 * 1024 * 1024;
+			}
+			
+			// Handle unlimited memory (-1) or invalid values
+			if ($memory_limit_bytes <= 0) {
+				$memory_limit_bytes = 128 * 1024 * 1024; // Default to 128MB
 			}
 			
 			$memory_usage_percent = ($current_memory / $memory_limit_bytes) * 100;
@@ -764,13 +791,23 @@ function job_import_cleanup_continue_ajax() {
 			$current_memory = memory_get_usage();
 			$memory_limit = ini_get('memory_limit');
 			
-			// Simple memory limit parsing (handle M, G suffixes)
-			if (preg_match('/^(\d+)([MG])$/', $memory_limit, $matches)) {
+			// Safe memory limit parsing with fallbacks
+			if (function_exists('wp_convert_hr_to_bytes') && $memory_limit) {
+				$memory_limit_bytes = wp_convert_hr_to_bytes($memory_limit);
+			} elseif (preg_match('/^(\d+)([MG])$/', $memory_limit, $matches)) {
 				$value = (int)$matches[1];
 				$unit = $matches[2];
 				$memory_limit_bytes = $unit === 'G' ? $value * 1024 * 1024 * 1024 : $value * 1024 * 1024;
+			} elseif (is_numeric($memory_limit)) {
+				$memory_limit_bytes = (int)$memory_limit;
 			} else {
-				$memory_limit_bytes = (int)$memory_limit; // Assume bytes if no unit
+				// Default fallback: 128MB
+				$memory_limit_bytes = 128 * 1024 * 1024;
+			}
+			
+			// Handle unlimited memory (-1) or invalid values
+			if ($memory_limit_bytes <= 0) {
+				$memory_limit_bytes = 128 * 1024 * 1024; // Default to 128MB
 			}
 			
 			$memory_usage_percent = ($current_memory / $memory_limit_bytes) * 100;
