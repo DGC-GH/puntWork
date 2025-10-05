@@ -240,8 +240,9 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             var processed = data.processed || 0;
             var percent = 0;
 
-            // Detect if we should force phase to job-importing when total changes significantly (e.g., from feeds to jobs)
-            if ((this.currentPhase === 'feed-processing' || this.currentPhase === 'jsonl-combining') && total > 0) {
+            // Detect if we should force phase to job-importing when transitioning from feed-processing
+            // (jsonl-combining phase now handles its own transition)
+            if (this.currentPhase === 'feed-processing' && total > 0) {
                 console.log('[PUNTWORK] [UI-DEBUG] Phase transition triggered: current=' + this.currentPhase + ', total=' + total + ', processed=' + processed);
                 this.setPhase('job-importing');
                 PuntWorkJSLogger.debug('Forced transition to job-importing phase due to total > 0 (' + total + ')', 'UI');
@@ -284,13 +285,22 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 }
             } else if (this.currentPhase === 'jsonl-combining') {
                 // JSONL combining phase: 0-100% for this phase only
-                phaseProgress = Math.min(processed / 1, 1.0); // This phase processes 1 item (the combination)
+                // This phase is complete when total > 0 (JSONL files combined and ready for import)
+                var isJsonlComplete = total > 0 || (data.logs && data.logs.some(function(log) { return log.includes('JSONL files combined successfully'); }));
+                phaseProgress = isJsonlComplete ? 1.0 : 0.0;
                 percent = Math.floor(phaseProgress * 100);
 
+                // Update status message for JSONL combination
+                if (isJsonlComplete) {
+                    $('#status-message').text('JSONL files combined - 100%');
+                } else {
+                    $('#status-message').text('Combining JSONL files... - 0%');
+                }
+
                 // Only transition when actually complete
-                if (processed >= 1) {
+                if (isJsonlComplete) {
                     this.setPhase('job-importing');
-                    PuntWorkJSLogger.debug('Transitioned to job-importing phase', 'UI');
+                    PuntWorkJSLogger.debug('Transitioned to job-importing phase after JSONL combination', 'UI');
                     // Force a progress update to reflect the phase change
                     this.updateProgress(data);
                 }
@@ -382,8 +392,8 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             var is_feed_processing = (data.published === 0 && data.updated === 0 && data.skipped === 0 &&
                                     data.duplicates_drafted === 0);
 
-            // Check if we're in JSONL combination phase (total=1, processed=0 or 1, no job stats)
-            var is_jsonl_combining = (total === 1 && is_feed_processing);
+            // Check if we're in JSONL combination phase
+            var is_jsonl_combining = (this.currentPhase === 'jsonl-combining');
 
             if (is_feed_processing && !is_jsonl_combining && total > 1) {
                 // Feed processing phase - show feed progress
@@ -404,19 +414,14 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             } else if (is_jsonl_combining) {
                 // JSONL combination phase
                 $('#total-items').text('—');
-                $('#processed-items').text(processed ? 'Complete' : 'In Progress');
+                $('#processed-items').text('Combining');
                 $('#published-items').text('—');
                 $('#updated-items').text('—');
                 $('#skipped-items').text('—');
                 $('#duplicates-drafted').text('—');
-                $('#items-left').text(processed ? '0' : '1');
+                $('#items-left').text('—');
 
-                // Update status message for JSONL combination
-                if (processed === 0) {
-                    $('#status-message').text('Combining JSONL files... - 0%');
-                } else {
-                    $('#status-message').text('JSONL files combined - 100%');
-                }
+                // Status message is already updated in the phase calculation above
             } else {
                 // Job import phase - show normal stats
                 console.log('[PUNTWORK] UI UPDATE CHECK - Updating job import UI elements at ' + new Date().toISOString());
