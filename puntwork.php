@@ -182,9 +182,9 @@ if ( ! isset( $GLOBALS['puntwork_init_hook_added'] ) ) {
 	add_action( 'init', __NAMESPACE__ . '\\setup_job_import', 10 );
 	
 	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [INIT-DEBUG] Init hooks added: load_puntwork_includes and setup_job_import' );
-	}
+	// if ( $debug_mode ) {
+	// 	error_log( '[PUNTWORK] [INIT-DEBUG] Init hooks added: load_puntwork_includes and setup_job_import' );
+	// }
 }
 
 if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
@@ -206,13 +206,13 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 		// Define request_uri early to prevent undefined variable warnings
 		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
 
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] load_puntwork_includes() function called' );
-		}
+		// if ( $debug_mode ) {
+		// 	error_log( '[PUNTWORK] [INIT-DEBUG] load_puntwork_includes() function called' );
+		// }
 
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] Loading includes conditionally...' );
-		}
+		// if ( $debug_mode ) {
+		// 	error_log( '[PUNTWORK] [INIT-DEBUG] Loading includes conditionally...' );
+		// }
 
 		// Determine context for conditional loading
 		$is_admin    = is_admin();
@@ -226,11 +226,11 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 		$is_cron     = defined( 'DOING_CRON' ) && DOING_CRON;
 		$is_frontend = ! $is_admin && ! $is_ajax && ! $is_rest && ! $is_cron;
 
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] Context check: admin=' . ( $is_admin ? '1' : '0' ) . ', ajax=' . ( $is_ajax ? '1' : '0' ) . ', rest=' . ( $is_rest ? '1' : '0' ) . ', cron=' . ( $is_cron ? '1' : '0' ) );
-			error_log( '[PUNTWORK] [INIT-DEBUG] Current URL: ' . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : 'unknown' ) );
-			error_log( '[PUNTWORK] [INIT-DEBUG] is_admin() function available: ' . ( function_exists( 'is_admin' ) ? 'yes' : 'no' ) );
-		}
+		// if ( $debug_mode ) {
+		// 	error_log( '[PUNTWORK] [INIT-DEBUG] Context check: admin=' . ( $is_admin ? '1' : '0' ) . ', ajax=' . ( $is_ajax ? '1' : '0' ) . ', rest=' . ( $is_rest ? '1' : '0' ) . ', cron=' . ( $is_cron ? '1' : '0' ) );
+		// 	error_log( '[PUNTWORK] [INIT-DEBUG] Current URL: ' . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : 'unknown' ) );
+		// 	error_log( '[PUNTWORK] [INIT-DEBUG] is_admin() function available: ' . ( function_exists( 'is_admin' ) ? 'yes' : 'no' ) );
+		// }
 
 		// Always load core functionality
 		$includes = array(
@@ -266,9 +266,9 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 
 		// Admin-only includes
 		if ( $is_admin ) {
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [INIT-DEBUG] Loading admin includes...' );
-			}
+			// if ( $debug_mode ) {
+			// 	error_log( '[PUNTWORK] [INIT-DEBUG] Loading admin includes...' );
+			// }
 			$includes = array_merge(
 				$includes,
 				array(
@@ -424,9 +424,9 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 			if ( file_exists( $file ) ) {
 				include_once $file;
 				++$loaded_count;
-				if ( $debug_mode && $loaded_count % 10 == 0 ) {
-					error_log( '[PUNTWORK] [INIT-DEBUG] Loaded ' . $loaded_count . ' includes so far...' );
-				}
+				// if ( $debug_mode && $loaded_count % 10 == 0 ) {
+				// 	error_log( '[PUNTWORK] [INIT-DEBUG] Loaded ' . $loaded_count . ' includes so far...' );
+				// }
 			} else {
 				++$failed_count;
 				if ( $debug_mode ) {
@@ -436,8 +436,8 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 		}
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] Conditional include loading complete: ' . $loaded_count . ' loaded, ' . $failed_count . ' failed' );
-			error_log( '[PUNTWORK] [INIT-DEBUG] Context: admin=' . ( $is_admin ? '1' : '0' ) . ', ajax=' . ( $is_ajax ? '1' : '0' ) . ', rest=' . ( $is_rest ? '1' : '0' ) . ', cron=' . ( $is_cron ? '1' : '0' ) );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Conditional include loading complete: ' . $loaded_count . ' loaded, ' . $failed_count . ' failed' );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Context: admin=' . ( $is_admin ? '1' : '0' ) . ', ajax=' . ( $is_ajax ? '1' : '0' ) . ', rest=' . ( $is_rest ? '1' : '0' ) . ', cron=' . ( $is_cron ? '1' : '0' ) );
 		}
 
 		$GLOBALS['puntwork_includes_loaded'] = true;
@@ -493,13 +493,13 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 		$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-START] ===== SETUP_JOB_IMPORT START =====' );
-			error_log( '[PUNTWORK] [INIT-DEBUG] WordPress version: ' . get_bloginfo( 'version' ) );
-			error_log( '[PUNTWORK] [INIT-DEBUG] PHP version: ' . PHP_VERSION );
-			error_log( '[PUNTWORK] [INIT-DEBUG] Memory limit: ' . ini_get( 'memory_limit' ) );
-			error_log( '[PUNTWORK] [INIT-DEBUG] Max execution time: ' . ini_get( 'max_execution_time' ) );
-			error_log( '[PUNTWORK] [INIT-DEBUG] ABSPATH: ' . ABSPATH );
-			error_log( '[PUNTWORK] [INIT-DEBUG] Plugin path: ' . PUNTWORK_PATH );
+			// error_log( '[PUNTWORK] [INIT-START] ===== SETUP_JOB_IMPORT START =====' );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] WordPress version: ' . get_bloginfo( 'version' ) );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] PHP version: ' . PHP_VERSION );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Memory limit: ' . ini_get( 'memory_limit' ) );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Max execution time: ' . ini_get( 'max_execution_time' ) );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] ABSPATH: ' . ABSPATH );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Plugin path: ' . PUNTWORK_PATH );
 		}
 
 		// Test database connection
@@ -518,14 +518,14 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 					error_log( '[PUNTWORK] [INIT-ERROR] Database connection issues detected - this will cause AJAX failures' );
 				}
 			} elseif ( $debug_mode ) {
-					error_log( '[PUNTWORK] [INIT-DEBUG] Database connection test PASSED' );
+					// error_log( '[PUNTWORK] [INIT-DEBUG] Database connection test PASSED' );
 			}
 		} else {
 			// Fallback to simple test
 			try {
 				$test_query = $wpdb->get_var( 'SELECT 1' );
 				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [INIT-DEBUG] Database connection test successful' );
+					// error_log( '[PUNTWORK] [INIT-DEBUG] Database connection test successful' );
 				}
 			} catch ( \Exception $e ) {
 				error_log( '[PUNTWORK] [INIT-ERROR] Database connection test failed: ' . $e->getMessage() );
@@ -549,14 +549,14 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 		$job_import_batch_limit = 500;
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] Loading text domain...' );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Loading text domain...' );
 		}
 
 		// Load text domain for internationalization
 		load_plugin_textdomain( 'puntwork', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] Initializing scheduling...' );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Initializing scheduling...' );
 		}
 		// Initialize scheduling
 		if ( function_exists( __NAMESPACE__ . '\\init_scheduling' ) ) {
@@ -564,7 +564,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 		}
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] Initializing async processing...' );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Initializing async processing...' );
 		}
 		// Initialize async processing
 		if ( function_exists( __NAMESPACE__ . '\\init_async_processing' ) ) {
@@ -572,7 +572,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 		}
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] Initializing feed health monitoring...' );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Initializing feed health monitoring...' );
 		}
 		// Initialize feed health monitoring
 		if ( class_exists( __NAMESPACE__ . '\\FeedHealthMonitor' ) ) {
@@ -595,7 +595,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 		}
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] Initializing import analytics...' );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Initializing import analytics...' );
 		}
 		// Initialize import analytics
 		if ( class_exists( __NAMESPACE__ . '\\ImportAnalytics' ) ) {
@@ -603,7 +603,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 		}
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] Initializing social media functionality...' );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Initializing social media functionality...' );
 		}
 		// Initialize social media functionality
 		if ( class_exists( __NAMESPACE__ . '\\PuntworkSocialMediaAdmin' ) ) {
@@ -611,7 +611,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 		}
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] Initializing GraphQL API...' );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Initializing GraphQL API...' );
 		}
 		// Initialize GraphQL API
 		if ( class_exists( __NAMESPACE__ . '\\API\\GraphQLAPI' ) ) {
@@ -619,7 +619,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 		}
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] Initializing Webhook Manager...' );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Initializing Webhook Manager...' );
 		}
 		// Initialize Webhook Manager
 		if ( class_exists( __NAMESPACE__ . '\\API\\WebhookManager' ) ) {
@@ -627,7 +627,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 		}
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] Initializing Feed Optimizer...' );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Initializing Feed Optimizer...' );
 		}
 		// Initialize Feed Optimizer
 		if ( class_exists( __NAMESPACE__ . '\\AI\\FeedOptimizer' ) ) {
@@ -635,7 +635,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 		}
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-END] ===== SETUP_JOB_IMPORT COMPLETED =====' );
+			// error_log( '[PUNTWORK] [INIT-END] ===== SETUP_JOB_IMPORT COMPLETED =====' );
 		}
 	}
 }

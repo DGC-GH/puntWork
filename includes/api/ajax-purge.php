@@ -103,8 +103,8 @@ function perform_cleanup_operation( $batch_size, $offset, $is_continue ) {
 		$original_memory_limit = $current_memory_limit;
 
 		// Increase memory limit temporarily but keep it very conservative
-		if ( wp_convert_hr_to_bytes( $current_memory_limit ) < 134217728 ) { // 128MB
-			ini_set( 'memory_limit', '128M' );
+		if ( wp_convert_hr_to_bytes( $current_memory_limit ) < 268435456 ) { // 256MB
+			ini_set( 'memory_limit', '256M' );
 		}
 
 		// Set execution time limit
@@ -152,7 +152,7 @@ function perform_cleanup_operation( $batch_size, $offset, $is_continue ) {
 
 			error_log( '[PUNTWORK] [CLEANUP] Memory usage: ' . round( $memory_percent, 2 ) . '%' );
 
-			if ( $memory_percent > 50 ) {
+			if ( $memory_percent > 30 ) {
 				error_log( '[PUNTWORK] [CLEANUP] Memory usage too high, stopping batch early' );
 				break;
 			}
@@ -504,13 +504,13 @@ function job_import_cleanup_continue_ajax() {
 			return;
 		}
 
-		// Increase memory limit for cleanup operations if possible - more aggressive increase
+		// Increase memory limit for cleanup operations if possible - more conservative increase
 		if ( function_exists( 'ini_set' ) ) {
 			$current_limit = ini_get( 'memory_limit' );
-			// Try to increase to 4GB if current is less
-			if ( wp_convert_hr_to_bytes( $current_limit ) < 4294967296 ) {
-				@ini_set( 'memory_limit', '4096M' );
-				error_log( '[PUNTWORK] [CLEANUP] Increased memory limit to 4096M for cleanup continue' );
+			// Try to increase to 512MB max if current is less (much more conservative)
+			if ( wp_convert_hr_to_bytes( $current_limit ) < 536870912 ) { // 512MB
+				@ini_set( 'memory_limit', '512M' );
+				error_log( '[PUNTWORK] [CLEANUP] Increased memory limit to 512M for cleanup continue' );
 			}
 		}
 
@@ -560,8 +560,8 @@ function job_import_cleanup_continue_ajax() {
 		
 		$memory_usage_percent = ($current_memory / $memory_limit_bytes) * 100;
 		
-		// If memory usage is already over 10%, force batch size to 1
-		if ($memory_usage_percent > 10) {
+		// If memory usage is already over 5%, force batch size to 1
+		if ($memory_usage_percent > 5) {
 			$batch_size = 1;
 			error_log( '[PUNTWORK] [CLEANUP] Memory usage high (' . round($memory_usage_percent, 1) . '%), forcing batch_size=1 for continue' );
 		}
@@ -650,8 +650,8 @@ function job_import_cleanup_continue_ajax() {
 			
 			$memory_usage_percent = ($current_memory / $memory_limit_bytes) * 100;
 
-			// If memory usage is over 10%, stop processing this batch early (extremely conservative)
-			if ($memory_usage_percent > 10) {
+			// If memory usage is over 5%, stop processing this batch early (very conservative)
+			if ($memory_usage_percent > 5) {
 				error_log( '[PUNTWORK] [CLEANUP] Memory usage too high (' . round($memory_usage_percent, 1) . '%), stopping batch early in continue' );
 				break;
 			}
@@ -698,7 +698,7 @@ function job_import_cleanup_continue_ajax() {
 		$progress['last_batch_time'] = $batch_processing_time;
 
 		// Dynamic batch size adjustment (only for continuation batches) - skip if memory is high
-		if ( $memory_usage_percent < 8 ) {
+		if ( $memory_usage_percent < 3 ) {
 			$new_batch_size         = job_import_adjust_cleanup_batch_size( $batch_size, $batch_processing_time, count( $batch_jobs ), $progress );
 			$progress['batch_size'] = $new_batch_size;
 		}
@@ -854,7 +854,7 @@ function job_import_adjust_cleanup_batch_size( $current_batch_size, $processing_
 
 	// Calculate current performance metrics
 	$time_per_item = $processing_time / $items_processed;
-	$max_batch_size = get_option( 'puntwork_cleanup_batch_size', 100 ); // Increased default max
+	$max_batch_size = get_option( 'puntwork_cleanup_batch_size', 10 ); // Reduced default max to 10
 	$min_batch_size = 1;
 
 	// Store performance data

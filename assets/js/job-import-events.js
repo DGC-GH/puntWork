@@ -637,7 +637,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
                 // Store the polling function for reuse
                 JobImportEvents.pollStatus = function() {
-                    console.log('[PUNTWORK] Polling for status update (interval: ' + JobImportEvents.currentPollingInterval + 'ms)...');
+                    // console.log('[PUNTWORK] Polling for status update (interval: ' + JobImportEvents.currentPollingInterval + 'ms)...');
                     JobImportEvents.totalPollCount++;
                     console.log('[PUNTWORK] Total polls so far: ' + JobImportEvents.totalPollCount);
 

@@ -33,7 +33,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             // Ensure progress UI is visible during active import phases
             if (phase !== 'idle' && phase !== 'complete') {
                 if (!$('#import-progress').is(':visible')) {
-                    console.log('[PUNTWORK] [UI-VISIBILITY] Phase changed to ' + phase + ', ensuring progress UI is visible');
+                    // console.log('[PUNTWORK] [UI-VISIBILITY] Phase changed to ' + phase + ', ensuring progress UI is visible');
                     this.showImportUI();
                 }
             }
@@ -212,7 +212,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
         updateProgress: function(data) {
             // Ensure progress UI is visible during import
             if (!$('#import-progress').is(':visible')) {
-                console.log('[PUNTWORK] [UI-VISIBILITY] Progress UI was hidden, showing it now');
+                // console.log('[PUNTWORK] [UI-VISIBILITY] Progress UI was hidden, showing it now');
                 this.showImportUI();
             }
 
@@ -220,7 +220,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             data = this.normalizeResponseData(data);
 
             console.log('[PUNTWORK] JobImportUI.updateProgress called with data:', data);
-            console.log('[PUNTWORK] [PHASE-DEBUG] Current phase: ' + this.currentPhase + ', incoming total: ' + data.total + ', processed: ' + data.processed);
+            // console.log('[PUNTWORK] [PHASE-DEBUG] Current phase: ' + this.currentPhase + ', incoming total: ' + data.total + ', processed: ' + data.processed);
             PuntWorkJSLogger.debug('Updating progress with data', 'UI', data);
             console.log('[PUNTWORK] Progress data received:', data);
 
@@ -306,15 +306,15 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 }
             } else if (this.currentPhase === 'job-importing') {
                 // Job importing phase: 0-100% for this phase only
-                console.log('[PUNTWORK] UI UPDATE CHECK - Job importing phase detected at ' + new Date().toISOString());
-                console.log('[PUNTWORK] UI UPDATE CHECK - Data received:', {
-                    total: total,
-                    processed: processed,
-                    published: data.published,
-                    updated: data.updated,
-                    success: data.success,
-                    complete: data.complete
-                });
+                // console.log('[PUNTWORK] UI UPDATE CHECK - Job importing phase detected at ' + new Date().toISOString());
+                // console.log('[PUNTWORK] UI UPDATE CHECK - Data received:', {
+                //     total: total,
+                //     processed: processed,
+                //     published: data.published,
+                //     updated: data.updated,
+                //     success: data.success,
+                //     complete: data.complete
+                // });
                 
                 if (total > 0) {
                     if ((processed >= total && data.success === true) || data.complete === true) {
@@ -386,7 +386,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                     });
                 }
             });
-            console.log('[PUNTWORK] [PROGRESS-DEBUG] Progress bar updated: ' + percent + ' segments colored, color=' + barColor);
+            // console.log('[PUNTWORK] [PROGRESS-DEBUG] Progress bar updated: ' + percent + ' segments colored, color=' + barColor);
 
             // Check if we're in feed processing phase (no job stats yet)
             var is_feed_processing = (data.published === 0 && data.updated === 0 && data.skipped === 0 &&
@@ -424,16 +424,16 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 // Status message is already updated in the phase calculation above
             } else {
                 // Job import phase - show normal stats
-                console.log('[PUNTWORK] UI UPDATE CHECK - Updating job import UI elements at ' + new Date().toISOString());
-                console.log('[PUNTWORK] UI UPDATE CHECK - Setting UI values:', {
-                    total: total,
-                    processed: processed,
-                    published: data.published || 0,
-                    updated: data.updated || 0,
-                    skipped: data.skipped || 0,
-                    duplicates_drafted: data.duplicates_drafted || 0,
-                    percent: percent
-                });
+                // console.log('[PUNTWORK] UI UPDATE CHECK - Updating job import UI elements at ' + new Date().toISOString());
+                // console.log('[PUNTWORK] UI UPDATE CHECK - Setting UI values:', {
+                //     total: total,
+                //     processed: processed,
+                //     published: data.published || 0,
+                //     updated: data.updated || 0,
+                //     skipped: data.skipped || 0,
+                //     duplicates_drafted: data.duplicates_drafted || 0,
+                //     percent: percent
+                // });
                 
                 $('#total-items').text(total);
                 $('#processed-items').text(processed);
@@ -458,7 +458,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 $('#ui-update-indicator').show();
                 $('#last-ui-update').text(new Date().toLocaleTimeString());
                 
-                console.log('[PUNTWORK] UI UPDATE CHECK - UI elements updated successfully');
+                // console.log('[PUNTWORK] UI UPDATE CHECK - UI elements updated successfully');
             }
 
             // Update elapsed time - prioritize server-side calculation for consistency
@@ -711,10 +711,10 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
          * Show import UI elements
          */
         showImportUI: function() {
-            console.log('[PUNTWORK] [UI-VISIBILITY] showImportUI() called - showing import progress');
+            // console.log('[PUNTWORK] [UI-VISIBILITY] showImportUI() called - showing import progress');
             this.initializeProgressBar(); // Ensure progress bar segments are created
             $('#import-progress').show();
-            console.log('[PUNTWORK] [UI-VISIBILITY] Import progress should now be visible');
+            // console.log('[PUNTWORK] [UI-VISIBILITY] Import progress should now be visible');
         },
 
         /**
