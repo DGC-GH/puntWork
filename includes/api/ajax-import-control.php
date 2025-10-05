@@ -1897,15 +1897,20 @@ function combine_jsonl_ajax() {
 					__DIR__ . '/../import/import-batch.php',
 				);
 
+				error_log( '[PUNTWORK] [COMBINE] Loading import files: ' . json_encode( $import_files ) );
 				foreach ( $import_files as $file ) {
 					if ( file_exists( $file ) ) {
 						require_once $file;
+						error_log( '[PUNTWORK] [COMBINE] Successfully loaded: ' . $file );
+					} else {
+						error_log( '[PUNTWORK] [COMBINE] File not found: ' . $file );
 					}
 				}
 
+				error_log( '[PUNTWORK] [COMBINE] About to call import_all_jobs_from_json()' );
 				// Start the FULL import (all batches) synchronously
 				$result = import_all_jobs_from_json();
-				error_log( '[PUNTWORK] [COMBINE] Synchronous import result: ' . json_encode( $result ) );
+				error_log( '[PUNTWORK] [COMBINE] import_all_jobs_from_json() returned: ' . json_encode( $result ) );
 				
 				if ( isset( $result['success'] ) && $result['success'] ) {
 					error_log( '[PUNTWORK] [COMBINE] Synchronous import completed successfully' );
@@ -1946,9 +1951,10 @@ function combine_jsonl_ajax() {
 		wp_send_json_success(
 			array(
 				'total_items'          => $total_items,
-				'message'              => 'JSONL files combined successfully',
+				'message'              => 'JSONL files combined and import completed successfully',
 				'combined_file_exists' => file_exists( $combined_file ),
 				'combined_file_size'   => $file_size ?? 0,
+				'import_result'        => $result ?? null,
 			)
 		);
 	} catch ( \Exception $e ) {

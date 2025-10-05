@@ -45,6 +45,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
             $('#start-import').on('click', function(e) {
                 console.log('[PUNTWORK] Start button clicked!');
+                console.log('[PUNTWORK] DEBUG: Start import button click detected at ' + new Date().toISOString());
                 
                 // Prevent multiple rapid clicks
                 if ($(this).prop('disabled')) {
