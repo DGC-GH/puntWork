@@ -27,7 +27,7 @@ add_action( 'wp_ajax_job_import_cleanup_duplicates', __NAMESPACE__ . '\\job_impo
 function job_import_cleanup_duplicates_ajax() {
 	// Basic error handling for debugging
 	try {
-		error_log( '[PUNTWORK] [CLEANUP] AJAX handler called' );
+		error_log( '[PUNTWORK] [CLEANUP] AJAX handler called - using standalone approach' );
 
 		// Check if required classes exist
 		if ( ! class_exists( 'Puntwork\\SecurityUtils' ) ) {
@@ -50,15 +50,6 @@ function job_import_cleanup_duplicates_ajax() {
 
 		error_log( '[PUNTWORK] [CLEANUP] All classes found, proceeding with validation' );
 
-		// Safely log AJAX request with error handling
-		try {
-			// Skip heavy logging for cleanup operations to save memory
-			// PuntWorkLogger::logAjaxRequest( 'job_import_cleanup_duplicates', $_POST );
-		} catch ( \Throwable $e ) {
-			error_log( '[PUNTWORK] [CLEANUP] Error logging AJAX request: ' . $e->getMessage() );
-			// Continue without logging
-		}
-
 		// Use comprehensive security validation
 		$validation = SecurityUtils::validateAjaxRequest( 'job_import_cleanup_duplicates', 'job_import_nonce' );
 		if ( is_wp_error( $validation ) ) {
@@ -67,331 +58,106 @@ function job_import_cleanup_duplicates_ajax() {
 			return;
 		}
 
-		error_log( '[PUNTWORK] [CLEANUP] Security validation passed' );
+		error_log( '[PUNTWORK] [CLEANUP] Security validation passed, calling standalone cleanup' );
 
-		global $wpdb;
-
-		// Test database connection with better error handling
-		if ( ! $wpdb ) {
-			error_log( '[PUNTWORK] [CLEANUP] Database object not available' );
-			AjaxErrorHandler::sendError( 'Database connection error' );
-			return;
-		}
-
-		// Check if database is ready (safely)
-		$db_ready = true;
-		if ( property_exists( $wpdb, 'ready' ) ) {
-			$db_ready = $wpdb->ready;
-		}
-
-		if ( ! $db_ready ) {
-			error_log( '[PUNTWORK] [CLEANUP] Database not ready' );
-			AjaxErrorHandler::sendError( 'Database connection error' );
-			return;
-		}
-
-		// Increase memory limit for cleanup operations if possible - more aggressive increase
-		if ( function_exists( 'ini_set' ) && function_exists( 'wp_convert_hr_to_bytes' ) ) {
-			$current_limit = ini_get( 'memory_limit' );
-			if ( $current_limit && wp_convert_hr_to_bytes( $current_limit ) < 4294967296 ) { // 4GB
-				@ini_set( 'memory_limit', '4096M' );
-				error_log( '[PUNTWORK] [CLEANUP] Increased memory limit to 4096M for cleanup' );
-			}
-		}
-
-		error_log( '[PUNTWORK] [CLEANUP] Database connection OK' );
-
-		try {
-		// Get batch parameters with validation - start with extremely small batch size for maximum memory safety
-		$batch_size  = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 1; // Reduced to 1 for maximum memory safety
+		// Get parameters
+		$batch_size  = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 1;
 		$offset      = isset( $_POST['offset'] ) ? intval( $_POST['offset'] ) : 0;
 		$is_continue = isset( $_POST['is_continue'] ) ? filter_var( $_POST['is_continue'], FILTER_VALIDATE_BOOLEAN ) : false;
 
-		error_log( '[PUNTWORK] [CLEANUP] Batch parameters: batch_size=' . $batch_size . ', offset=' . $offset . ', is_continue=' . ($is_continue ? 'true' : 'false') );
+		// Path to standalone cleanup script
+		$standalone_script = dirname( __FILE__ ) . '/../standalone-cleanup.php';
 
-		// Skip ALL logging during cleanup to save memory
-		// PuntWorkLogger::info( 'Starting cleanup duplicates batch', PuntWorkLogger::CONTEXT_PURGE, array( ... ) );
-
-		// Initialize progress tracking for first batch - minimize memory usage
-		if ( ! $is_continue ) {
-			update_option(
-				'job_import_cleanup_progress',
-				array(
-					'total_processed' => 0,
-					'total_deleted'   => 0,
-					'current_offset'  => 0,
-					'complete'        => false,
-					'start_time'      => microtime( true ),
-					'batch_size'      => 1, // Start with very small batch size
-					'last_batch_time' => 0,
-					'logs'            => array(), // Keep logs minimal
-				),
-				false
-			);
-		}
-
-		$progress = get_option(
-			'job_import_cleanup_progress',
-			array(
-				'total_processed' => 0,
-				'total_deleted'   => 0,
-				'current_offset'  => 0,
-				'complete'        => false,
-				'start_time'      => microtime( true ),
-				'batch_size'      => 1,
-				'last_batch_time' => 0,
-				'logs'            => array(),
-			)
-		);
-
-		// Use dynamic batch size from progress if continuing
-		if ( $is_continue && isset( $progress['batch_size'] ) ) {
-			$batch_size = $progress['batch_size'];
-		}
-
-		// Set lock for this batch
-		$lock_start = microtime( true );
-		while ( get_transient( 'job_import_cleanup_lock' ) ) {
-			usleep( 50000 );
-			if ( microtime( true ) - $lock_start > 30 ) {
-				error_log( '[PUNTWORK] [CLEANUP] Cleanup lock timeout' );
-				AjaxErrorHandler::sendError( 'Cleanup lock timeout' );
-				return;
-			}
-		}
-		set_transient( 'job_import_cleanup_lock', true, 30 );
-
-		$logs             = $progress['logs'];
-		$deleted_count    = 0;
-		$batch_start_time = microtime( true );
-
-		// Get total count for progress calculation (only on first batch) - skip if memory is already high
-		$current_memory = memory_get_usage();
-		$memory_limit = ini_get('memory_limit');
-		
-		// Safe memory limit parsing with fallbacks
-		if (function_exists('wp_convert_hr_to_bytes') && $memory_limit) {
-			$memory_limit_bytes = wp_convert_hr_to_bytes($memory_limit);
-		} elseif (preg_match('/^(\d+)([MG])$/', $memory_limit, $matches)) {
-			$value = (int)$matches[1];
-			$unit = $matches[2];
-			$memory_limit_bytes = $unit === 'G' ? $value * 1024 * 1024 * 1024 : $value * 1024 * 1024;
-		} elseif (is_numeric($memory_limit)) {
-			$memory_limit_bytes = (int)$memory_limit;
-		} else {
-			$memory_limit_bytes = 128 * 1024 * 1024;
-		}
-		
-		if ($memory_limit_bytes <= 0) {
-			$memory_limit_bytes = 128 * 1024 * 1024;
-		}
-		
-		$memory_usage_percent = ($current_memory / $memory_limit_bytes) * 100;
-		
-		// If memory usage is already over 20%, skip total count query to save memory
-		if ( ! $is_continue && $memory_usage_percent < 20 ) {
-			$total_jobs             = $wpdb->get_var(
-				"
-                SELECT COUNT(*) FROM {$wpdb->posts} p
-                WHERE p.post_type = 'job'
-                AND p.post_status IN ('draft', 'trash')
-            "
-			);
-			error_log( '[PUNTWORK] [CLEANUP] Total jobs query result: ' . ($total_jobs !== null ? $total_jobs : 'NULL') );
-			$progress['total_jobs'] = $total_jobs;
-			update_option( 'job_import_cleanup_progress', $progress, false );
-		}
-
-		// Get batch of jobs - use extremely conservative batch size if memory is high
-		if ($memory_usage_percent > 15) {
-			$batch_size = 1; // Force batch size to 1 if memory usage is high
-			error_log( '[PUNTWORK] [CLEANUP] Memory usage high (' . round($memory_usage_percent, 1) . '%), forcing batch_size=1' );
-		}
-		
-		$batch_jobs = $wpdb->get_results(
-			$wpdb->prepare(
-				"
-            SELECT p.ID, p.post_status, p.post_title
-            FROM {$wpdb->posts} p
-            WHERE p.post_type = 'job'
-            AND p.post_status IN ('draft', 'trash')
-            ORDER BY p.ID
-            LIMIT %d OFFSET %d
-        ",
-				$batch_size,
-				$offset
-			)
-		);
-		error_log( '[PUNTWORK] [CLEANUP] Batch jobs query result: ' . (is_array($batch_jobs) ? count($batch_jobs) : 'NOT_ARRAY') . ' jobs found' );
-		if ( $batch_jobs === false ) {
-			error_log( '[PUNTWORK] [CLEANUP] Database error in batch jobs query: ' . $wpdb->last_error );
-		}
-
-		if ( empty( $batch_jobs ) ) {
-			// No more jobs to process
-			$progress['complete']     = true;
-			$progress['end_time']     = microtime( true );
-			$progress['time_elapsed'] = $progress['end_time'] - $progress['start_time'];
-			update_option( 'job_import_cleanup_progress', $progress, false );
-			delete_transient( 'job_import_cleanup_lock' );
-
-			$message = "Cleanup completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} draft/trash posts";
-			// Skip logging to save memory
-			// PuntWorkLogger::info( $message, PuntWorkLogger::CONTEXT_PURGE );
-
-			PuntWorkLogger::logAjaxResponse(
-				'job_import_cleanup_duplicates',
-				array(
-					'message'         => $message,
-					'complete'        => true,
-					'total_processed' => $progress['total_processed'],
-					'total_deleted'   => $progress['total_deleted'],
-					'time_elapsed'    => $progress['time_elapsed'],
-					'logs_count'      => count( $logs ),
-				)
-			);
-			AjaxErrorHandler::sendSuccess(
-				array(
-					'message'         => $message,
-					'complete'        => true,
-					'total_processed' => $progress['total_processed'],
-					'total_jobs'      => $progress['total_jobs'],
-					'total_deleted'   => $progress['total_deleted'],
-					'time_elapsed'    => $progress['time_elapsed'],
-					'logs'            => array_slice( $logs, -50 ),
-				)
-			);
-
+		if ( ! file_exists( $standalone_script ) ) {
+			error_log( '[PUNTWORK] [CLEANUP] Standalone cleanup script not found: ' . $standalone_script );
+			AjaxErrorHandler::sendError( 'Standalone cleanup script not found' );
 			return;
 		}
 
-		// Defer term and comment counting for better performance during bulk operations
-		wp_defer_term_counting( true );
-		wp_defer_comment_counting( true );
+		// Build command to execute standalone script
+		$php_executable = PHP_BINARY ?: 'php';
+		$cmd = escapeshellcmd( $php_executable ) . ' ' . escapeshellarg( $standalone_script ) .
+			   ' --batch-size=' . escapeshellarg( $batch_size ) .
+			   ' --offset=' . escapeshellarg( $offset ) .
+			   ' --continue=' . escapeshellarg( $is_continue ? '1' : '0' );
 
-		// Process this batch with extremely conservative memory monitoring
-		$initial_memory = memory_get_usage();
-		foreach ( $batch_jobs as $job ) {
-			// Check memory usage before each deletion - use 15% threshold for maximum safety
-			$current_memory = memory_get_usage();
-			$memory_limit = ini_get('memory_limit');
-			
-			// Safe memory limit parsing with fallbacks
-			if (function_exists('wp_convert_hr_to_bytes') && $memory_limit) {
-				$memory_limit_bytes = wp_convert_hr_to_bytes($memory_limit);
-			} elseif (preg_match('/^(\d+)([MG])$/', $memory_limit, $matches)) {
-				$value = (int)$matches[1];
-				$unit = $matches[2];
-				$memory_limit_bytes = $unit === 'G' ? $value * 1024 * 1024 * 1024 : $value * 1024 * 1024;
-			} elseif (is_numeric($memory_limit)) {
-				$memory_limit_bytes = (int)$memory_limit;
-			} else {
-				$memory_limit_bytes = 128 * 1024 * 1024;
-			}
-			
-			if ($memory_limit_bytes <= 0) {
-				$memory_limit_bytes = 128 * 1024 * 1024;
-			}
-			
-			$memory_usage_percent = ($current_memory / $memory_limit_bytes) * 100;
+		error_log( '[PUNTWORK] [CLEANUP] Executing command: ' . $cmd );
 
-			// If memory usage is over 15%, stop processing this batch early (extremely conservative)
-			if ($memory_usage_percent > 15) {
-				error_log( '[PUNTWORK] [CLEANUP] Memory usage too high (' . round($memory_usage_percent, 1) . '%), stopping batch early' );
-				break;
-			}
+		// Execute the standalone script
+		$descriptorspec = array(
+			0 => array( 'pipe', 'r' ), // stdin
+			1 => array( 'pipe', 'w' ), // stdout
+			2 => array( 'pipe', 'w' )  // stderr
+		);
 
-			// Use direct SQL deletion for memory efficiency
-			$result = job_import_delete_post_efficiently( $job->ID );
-			if ( $result ) {
-				++$deleted_count;
-				// Skip detailed logging to save memory - only keep minimal logs
-				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Deleted ' . $job->post_status . ' job ID: ' . $job->ID;
-				$logs[]    = $log_entry;
-				// Limit logs array to last 50 entries to prevent memory accumulation
-				if (count($logs) > 50) {
-					$logs = array_slice($logs, -50);
-				}
-				// Skip PuntWorkLogger calls to save memory
-			} else {
-				error_log( '[PUNTWORK] [CLEANUP] job_import_delete_post_efficiently failed for job ID: ' . $job->ID );
-				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Error: Failed to delete job ID: ' . $job->ID;
-				$logs[]    = $log_entry;
-				// Limit logs array to last 50 entries
-				if (count($logs) > 50) {
-					$logs = array_slice($logs, -50);
-				}
-			}
+		$process = proc_open( $cmd, $descriptorspec, $pipes, dirname( $standalone_script ) );
 
-			// Force garbage collection to prevent memory accumulation
-			if (function_exists('gc_collect_cycles')) {
-				gc_collect_cycles();
-			}
+		if ( ! is_resource( $process ) ) {
+			error_log( '[PUNTWORK] [CLEANUP] Failed to start standalone cleanup process' );
+			AjaxErrorHandler::sendError( 'Failed to start cleanup process' );
+			return;
 		}
 
-		// Re-enable term and comment counting
-		wp_defer_term_counting( false );
-		wp_defer_comment_counting( false );
+		// Close stdin
+		fclose( $pipes[0] );
 
-		// Update progress - minimize memory usage
-		$progress['total_processed'] += count( $batch_jobs );
-		$progress['total_deleted']   += $deleted_count;
-		$progress['current_offset']   = $offset + $batch_size;
-		$progress['logs']             = $logs;
+		// Read stdout
+		$output = stream_get_contents( $pipes[1] );
+		fclose( $pipes[1] );
 
-		// Calculate batch processing time and adjust batch size dynamically
-		$batch_end_time              = microtime( true );
-		$batch_processing_time       = $batch_end_time - $batch_start_time;
-		$progress['last_batch_time'] = $batch_processing_time;
+		// Read stderr
+		$errors = stream_get_contents( $pipes[2] );
+		fclose( $pipes[2] );
 
-		// Dynamic batch size adjustment (only for continuation batches) - skip if memory is high
-		if ( $is_continue && $memory_usage_percent < 10 ) {
-			$new_batch_size         = job_import_adjust_cleanup_batch_size( $batch_size, $batch_processing_time, count( $batch_jobs ), $progress );
-			$progress['batch_size'] = $new_batch_size;
+		// Get exit code
+		$exit_code = proc_close( $process );
+
+		error_log( '[PUNTWORK] [CLEANUP] Standalone script exit code: ' . $exit_code );
+		if ( ! empty( $errors ) ) {
+			error_log( '[PUNTWORK] [CLEANUP] Standalone script errors: ' . $errors );
 		}
 
-		update_option( 'job_import_cleanup_progress', $progress, false );
+		if ( $exit_code !== 0 ) {
+			error_log( '[PUNTWORK] [CLEANUP] Standalone cleanup failed with exit code: ' . $exit_code );
+			AjaxErrorHandler::sendError( 'Cleanup process failed' );
+			return;
+		}
 
-		delete_transient( 'job_import_cleanup_lock' );
+		// Parse JSON output from standalone script
+		$result = json_decode( $output, true );
 
-		// Calculate progress percentage
-		$progress_percentage = $progress['total_jobs'] > 0 ? round( ( $progress['total_processed'] / $progress['total_jobs'] ) * 100, 1 ) : 0;
+		if ( json_last_error() !== JSON_ERROR_NONE ) {
+			error_log( '[PUNTWORK] [CLEANUP] Failed to parse JSON output: ' . $output );
+			AjaxErrorHandler::sendError( 'Invalid response from cleanup process' );
+			return;
+		}
 
-		$message = "Batch processed: {$progress['total_processed']}/{$progress['total_jobs']} jobs ({$progress_percentage}%), deleted {$deleted_count} draft/trash posts this batch";
+		if ( isset( $result['error'] ) ) {
+			error_log( '[PUNTWORK] [CLEANUP] Standalone cleanup returned error: ' . $result['error'] );
+			AjaxErrorHandler::sendError( $result['error'] );
+			return;
+		}
 
+		// Log the response
 		PuntWorkLogger::logAjaxResponse(
 			'job_import_cleanup_duplicates',
 			array(
-				'message'             => $message,
-				'complete'            => false,
-				'next_offset'         => $progress['current_offset'],
-				'batch_size'          => $progress['batch_size'] ?? $batch_size,
-				'total_processed'     => $progress['total_processed'],
-				'total_deleted'       => $progress['total_deleted'],
-				'progress_percentage' => $progress_percentage,
-				'logs_count'          => count( $logs ),
+				'message'         => $result['message'] ?? 'Cleanup batch processed',
+				'complete'        => $result['complete'] ?? false,
+				'total_processed' => $result['total_processed'] ?? 0,
+				'total_deleted'   => $result['total_deleted'] ?? 0,
+				'progress_percentage' => $result['progress_percentage'] ?? 0,
+				'logs_count'      => count( $result['logs'] ?? array() ),
 			)
 		);
-		AjaxErrorHandler::sendSuccess(
-			array(
-				'message'             => $message,
-				'complete'            => false,
-				'next_offset'         => $progress['current_offset'],
-				'batch_size'          => $progress['batch_size'] ?? $batch_size,
-				'total_processed'     => $progress['total_processed'],
-				'total_jobs'          => $progress['total_jobs'],
-				'total_deleted'       => $progress['total_deleted'],
-				'progress_percentage' => $progress_percentage,
-				'logs'                => array_slice( $logs, -20 ),
-			)
-		);
-	} catch ( \Exception $e ) {
-		delete_transient( 'job_import_cleanup_lock' );
-		PuntWorkLogger::error( 'Cleanup failed: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_PURGE );
 
+		// Send success response
+		AjaxErrorHandler::sendSuccess( $result );
+
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] AJAX: Exception in job_import_cleanup_duplicates_ajax: ' . $e->getMessage() );
 		PuntWorkLogger::logAjaxResponse( 'job_import_cleanup_duplicates', array( 'message' => 'Cleanup failed: ' . $e->getMessage() ), false );
 		AjaxErrorHandler::sendError( 'Cleanup failed: ' . $e->getMessage() );
-	}
 	} catch ( \Throwable $e ) {
 		error_log( '[PUNTWORK] AJAX: Fatal error in job_import_cleanup_duplicates_ajax: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
 		error_log( '[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString() );
