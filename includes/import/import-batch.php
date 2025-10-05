@@ -521,6 +521,10 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 				// Try server root feeds directory (file is at /feeds/ from FTP root)
 				$json_path = '/feeds/combined-jobs.jsonl';
 			}
+			if ( ! file_exists( $json_path ) ) {
+				// Try domain root feeds directory
+				$json_path = '/home/u164580062/domains/belgiumjobs.work/feeds/combined-jobs.jsonl';
+			}
 			$total_items = get_json_item_count( $json_path );
 
 			// Set default batch size

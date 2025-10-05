@@ -57,7 +57,7 @@ if ( ! function_exists( 'process_batch_items_streaming' ) ) {
 		}
 
 		$total_to_process = count( $batch_guids );
-		$chunk_size = \Puntwork\Utilities\MemoryManager::getOptimalChunkSize();
+		$chunk_size = \Puntwork\Utilities\AdvancedMemoryManager::getOptimalChunkSize();
 		$processed_in_chunk = 0;
 
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {

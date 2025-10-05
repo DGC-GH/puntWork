@@ -113,10 +113,34 @@ class MemoryManager {
 	}
 
 	/**
-	 * Reset memory manager state.
+	 * Get optimal chunk size based on available memory.
+	 *
+	 * @return int Optimal chunk size for processing
 	 */
-	public static function reset(): void {
-		self::$processed_count = 0;
-		self::$last_gc_run     = 0;
+	public static function getOptimalChunkSize(): int {
+		$memory_limit = self::getMemoryLimitBytes();
+		$current_usage = memory_get_usage( true );
+
+		// Reserve 20% of memory for overhead
+		$available_memory = $memory_limit - $current_usage;
+		$safe_memory = $available_memory * 0.8;
+
+		// Estimate ~2KB per item (rough estimate for job data)
+		$estimated_item_size = 2048; // 2KB per item
+		$optimal_chunk_size = (int) floor( $safe_memory / $estimated_item_size );
+
+		// Set reasonable bounds
+		$optimal_chunk_size = max( 10, min( 100, $optimal_chunk_size ) );
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( sprintf(
+				'[PUNTWORK] [MEMORY] Optimal chunk size: %d (memory_limit: %.1fMB, current_usage: %.1fMB, available: %.1fMB)',
+				$optimal_chunk_size,
+				$memory_limit / 1024 / 1024,
+				$current_usage / 1024 / 1024,
+				$available_memory / 1024 / 1024
+			) );
+		}
+
+		return $optimal_chunk_size;
 	}
-}

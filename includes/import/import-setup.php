@@ -274,6 +274,10 @@ function prepare_import_setup( $batch_start = 0, $is_batch = false ) {
 		$json_path = '/feeds/combined-jobs.jsonl';
 	}
 	if ( ! file_exists( $json_path ) ) {
+		// Try domain root feeds directory
+		$json_path = '/home/u164580062/domains/belgiumjobs.work/feeds/combined-jobs.jsonl';
+	}
+	if ( ! file_exists( $json_path ) ) {
 		// Last resort: try relative to current directory
 		$json_path = __DIR__ . '/../../feeds/combined-jobs.jsonl';
 	}
