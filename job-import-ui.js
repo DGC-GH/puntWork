@@ -241,10 +241,10 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             var percent = 0;
 
             // Detect if we should force phase to job-importing when total changes significantly (e.g., from feeds to jobs)
-            if ((this.currentPhase === 'feed-processing' || this.currentPhase === 'jsonl-combining') && total > 10) {
+            if ((this.currentPhase === 'feed-processing' || this.currentPhase === 'jsonl-combining') && total > 0) {
                 console.log('[PUNTWORK] [UI-DEBUG] Phase transition triggered: current=' + this.currentPhase + ', total=' + total + ', processed=' + processed);
                 this.setPhase('job-importing');
-                PuntWorkJSLogger.debug('Forced transition to job-importing phase due to large total (' + total + ')', 'UI');
+                PuntWorkJSLogger.debug('Forced transition to job-importing phase due to total > 0 (' + total + ')', 'UI');
             }
 
             // Update success/failure state - only set to true when actually complete
