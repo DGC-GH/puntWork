@@ -6,6 +6,8 @@
 /* Added detailed debug logs and error handling for the import process */
 console.info("=== Job Import Logic Script Loaded ===");
 
+// Debug function disabled for production - uncomment only for debugging
+/*
 (function debugImportProcess(){
     console.info("Import process started at " + new Date().toISOString());
 
@@ -40,6 +42,7 @@ console.info("=== Job Import Logic Script Loaded ===");
 
     console.info("Import process ended at " + new Date().toISOString());
 })();
+*/
 
 (function($, window, document) {
     'use strict';

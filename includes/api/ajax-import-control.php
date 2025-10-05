@@ -647,7 +647,7 @@ function get_job_import_status_ajax() {
 				} else {
 					error_log( '[PUNTWORK] [STUCK-DETECTION] Not stuck: combined file exists (ready for batch processing)' );
 				}
-			} elseif ( ($progress['processed'] ?? 0) > 0 && $time_elapsed > 300 ) {
+			} elseif ( ($progress['processed'] ?? 0) > 0 && $time_since_last_update > 300 ) {
 				$is_stuck     = true;
 				$stuck_reason = 'no progress for 5+ minutes after starting';
 				error_log( '[PUNTWORK] [STUCK-DETECTION] Detected stuck: ' . $stuck_reason );
@@ -1904,14 +1904,26 @@ function combine_jsonl_ajax() {
 				'start_time'         => microtime( true ),
 				'end_time'           => null,
 				'last_update'        => time(),
-				'logs'               => array( 'JSONL files combined successfully - starting import' ),
+				'logs'               => array( 'JSONL files combined successfully - scheduling import' ),
 			);
 			error_log( '[PUNTWORK] [COMBINE-STATUS] About to set import status with total=' . $total_items . ', complete=false' );
 			$update_result = update_option( 'job_import_status', $import_status );
 			error_log( '[PUNTWORK] [COMBINE-STATUS] update_option result: ' . ( $update_result ? 'true' : 'false' ) . ', status set: ' . json_encode( $import_status ) );
 			error_log( '[PUNTWORK] [DEBUG-PHP] Import status initialized with total: ' . $total_items );
 
-			$scheduling_success = true; // Import will start directly
+			// Schedule the import to start using Action Scheduler
+			$scheduling_success = false;
+			if ( function_exists( 'as_schedule_single_action' ) ) {
+				$job_id = as_schedule_single_action( time() + 5, 'puntwork_start_batch_import' ); // Start in 5 seconds
+				if ( $job_id ) {
+					$scheduling_success = true;
+					error_log( '[PUNTWORK] [COMBINE-SCHEDULE] Import scheduled successfully with job ID: ' . $job_id );
+				} else {
+					error_log( '[PUNTWORK] [COMBINE-SCHEDULE-ERROR] Failed to schedule import using Action Scheduler' );
+				}
+			} else {
+				error_log( '[PUNTWORK] [COMBINE-SCHEDULE-ERROR] Action Scheduler not available for import scheduling' );
+			}
 
 			PuntWorkLogger::info(
 				'JSONL combination completed and import scheduled',
@@ -1933,7 +1945,7 @@ function combine_jsonl_ajax() {
 				'logs_count'           => count( $logs ),
 				'combined_file_exists' => file_exists( $combined_file ),
 				'combined_file_size'   => $file_size ?? 0,
-				'import_started'       => true,
+				'import_scheduled'     => $scheduling_success ?? false,
 			)
 		);
 
@@ -1944,10 +1956,10 @@ function combine_jsonl_ajax() {
 			'success' => true,
 			'data'    => array(
 				'total_items'          => $total_items,
-				'message'              => 'JSONL files combined successfully - import starting in background',
+				'message'              => 'JSONL files combined successfully - import scheduled in background',
 				'combined_file_exists' => file_exists( $combined_file ),
 				'combined_file_size'   => $file_size ?? 0,
-				'import_started'       => true,
+				'import_scheduled'     => $scheduling_success ?? false,
 			)
 		);
 
@@ -1972,36 +1984,8 @@ function combine_jsonl_ajax() {
 			flush();
 		}
 
-		// Start output buffering to capture any accidental output during background execution
-		ob_start();
-
-		// Script continues here - start the import directly
-		error_log( '[PUNTWORK] [COMBINE] AJAX response sent, starting import directly' );
-		
-		// Load required files for import processing
-		$import_files = array(
-			__DIR__ . '/../batch/batch-size-management.php',
-			__DIR__ . '/../import/import-setup.php',
-			__DIR__ . '/../batch/batch-processing.php',
-			__DIR__ . '/../import/import-finalization.php',
-			__DIR__ . '/../utilities/ErrorHandler.php',
-			__DIR__ . '/../exceptions/PuntworkExceptions.php',
-			__DIR__ . '/../import/import-batch.php',
-		);
-
-		foreach ( $import_files as $file ) {
-			if ( file_exists( $file ) ) {
-				require_once $file;
-			}
-		}
-
-		// Start the import
-		ignore_user_abort(true);
-		set_time_limit(0);
-		start_scheduled_import();
-
-		// Clean any output that might have been generated
-		ob_end_clean();
+		// Script continues here - but we don't run import directly anymore
+		// The import will be started by the scheduled Action Scheduler job
 	} catch ( \Exception $e ) {
 		// Clear combination processing lock on any error
 		delete_transient( $combine_lock_key );

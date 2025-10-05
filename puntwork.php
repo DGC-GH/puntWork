@@ -47,6 +47,11 @@ if ( file_exists( PUNTWORK_PATH . 'vendor/autoload.php' ) ) {
 	include_once PUNTWORK_PATH . 'vendor/autoload.php';
 }
 
+// Initialize Action Scheduler
+if ( file_exists( PUNTWORK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php' ) ) {
+	include_once PUNTWORK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php';
+}
+
 // =====================================================================================
 // PLUGIN INITIALIZATION - RUNS ONCE WHEN PLUGIN LOADS
 // =====================================================================================
