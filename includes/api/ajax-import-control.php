@@ -1943,6 +1943,9 @@ function combine_jsonl_ajax() {
 			flush();
 		}
 
+		// Start output buffering to capture any accidental output during background execution
+		ob_start();
+
 		// Script continues here - start the import directly
 		error_log( '[PUNTWORK] [COMBINE] AJAX response sent, starting import directly' );
 		
@@ -1967,6 +1970,9 @@ function combine_jsonl_ajax() {
 		ignore_user_abort(true);
 		set_time_limit(0);
 		start_scheduled_import();
+
+		// Clean any output that might have been generated
+		ob_end_clean();
 	} catch ( \Exception $e ) {
 		// Clear combination processing lock on any error
 		delete_transient( $combine_lock_key );
