@@ -52,7 +52,8 @@ function job_import_cleanup_duplicates_ajax() {
 
 		// Safely log AJAX request with error handling
 		try {
-			PuntWorkLogger::logAjaxRequest( 'job_import_cleanup_duplicates', $_POST );
+			// Skip heavy logging for cleanup operations to save memory
+			// PuntWorkLogger::logAjaxRequest( 'job_import_cleanup_duplicates', $_POST );
 		} catch ( \Throwable $e ) {
 			error_log( '[PUNTWORK] [CLEANUP] Error logging AJAX request: ' . $e->getMessage() );
 			// Continue without logging
@@ -296,6 +297,10 @@ function job_import_cleanup_duplicates_ajax() {
 				++$deleted_count;
 				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Permanently deleted ' . $job->post_status . ' job ID: ' . $job->ID . ' - ' . $job->post_title;
 				$logs[]    = $log_entry;
+				// Limit logs array to last 100 entries to prevent memory accumulation
+				if (count($logs) > 100) {
+					$logs = array_slice($logs, -100);
+				}
 				PuntWorkLogger::info(
 					'Deleted draft/trash job',
 					PuntWorkLogger::CONTEXT_PURGE,
@@ -309,6 +314,10 @@ function job_import_cleanup_duplicates_ajax() {
 				error_log( '[PUNTWORK] [CLEANUP] job_import_delete_post_efficiently failed for job ID: ' . $job->ID . ', post_status: ' . $job->post_status );
 				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Error: Failed to delete job ID: ' . $job->ID;
 				$logs[]    = $log_entry;
+				// Limit logs array to last 100 entries to prevent memory accumulation
+				if (count($logs) > 100) {
+					$logs = array_slice($logs, -100);
+				}
 				PuntWorkLogger::error( 'Failed to delete job', PuntWorkLogger::CONTEXT_PURGE, array( 'job_id' => $job->ID ) );
 			}
 
@@ -667,7 +676,7 @@ function job_import_purge_ajax() {
 
 add_action( 'wp_ajax_job_import_cleanup_continue', __NAMESPACE__ . '\\job_import_cleanup_continue_ajax' );
 function job_import_cleanup_continue_ajax() {
-	PuntWorkLogger::logAjaxRequest( 'job_import_cleanup_continue', $_POST );
+	// PuntWorkLogger::logAjaxRequest( 'job_import_cleanup_continue', $_POST );
 
 	// Use comprehensive security validation
 	$validation = SecurityUtils::validateAjaxRequest( 'job_import_cleanup_continue', 'job_import_nonce' );
@@ -832,6 +841,10 @@ function job_import_cleanup_continue_ajax() {
 				++$deleted_count;
 				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Permanently deleted ' . $job->post_status . ' job ID: ' . $job->ID . ' - ' . $job->post_title;
 				$logs[]    = $log_entry;
+				// Limit logs array to last 100 entries to prevent memory accumulation
+				if (count($logs) > 100) {
+					$logs = array_slice($logs, -100);
+				}
 				PuntWorkLogger::info(
 					'Deleted draft/trash job',
 					PuntWorkLogger::CONTEXT_PURGE,
@@ -844,6 +857,10 @@ function job_import_cleanup_continue_ajax() {
 			} else {
 				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Error: Failed to delete job ID: ' . $job->ID;
 				$logs[]    = $log_entry;
+				// Limit logs array to last 100 entries to prevent memory accumulation
+				if (count($logs) > 100) {
+					$logs = array_slice($logs, -100);
+				}
 				PuntWorkLogger::error( 'Failed to delete job', PuntWorkLogger::CONTEXT_PURGE, array( 'job_id' => $job->ID ) );
 			}
 
