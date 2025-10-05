@@ -512,6 +512,33 @@ function puntwork_dashboard_page() {
 		});
 	</script>
 
+	<!-- Debug Script for Import Issue -->
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			console.log('[DEBUG] Page loaded, checking JavaScript execution...');
+			console.log('[DEBUG] jQuery available:', typeof jQuery);
+			console.log('[DEBUG] jobImportData available:', typeof jobImportData);
+			if (typeof jobImportData !== 'undefined') {
+				console.log('[DEBUG] jobImportData contents:', jobImportData);
+			}
+			console.log('[DEBUG] JobImportEvents available:', typeof JobImportEvents);
+			console.log('[DEBUG] JobImportLogic available:', typeof JobImportLogic);
+			console.log('[DEBUG] JobImportAPI available:', typeof JobImportAPI);
+			console.log('[DEBUG] Start button exists:', document.getElementById('start-import') ? 'YES' : 'NO');
+
+			// Test if JavaScript files are loading
+			var testScript = document.createElement('script');
+			testScript.src = '<?php echo PUNTWORK_URL; ?>assets/js/job-import-events.js?test=' + Date.now();
+			testScript.onload = function() {
+				console.log('[DEBUG] job-import-events.js loaded successfully');
+			};
+			testScript.onerror = function() {
+				console.error('[DEBUG] Failed to load job-import-events.js');
+			};
+			document.head.appendChild(testScript);
+		});
+	</script>
+
 	<style>
 		.wrap > div:hover {
 			transform: translateY(-2px);
