@@ -33,8 +33,8 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
 
 	// Set batch size limits based on processing type
 	if ( $is_action_scheduler ) {
-		$min_batch_size = 50;
-		$max_batch_size = 500;
+		$min_batch_size = 25;
+		$max_batch_size = 100; // Reduced from 500 to prevent memory exhaustion
 	} else {
 		$min_batch_size = 10;
 		$max_batch_size = 25;
@@ -264,9 +264,9 @@ function validate_and_adjust_batch_size( array $setup ): array {
 	// Check if this is Action Scheduler processing (allows larger batches)
 	$is_action_scheduler = isset( $setup['is_action_scheduler'] ) && $setup['is_action_scheduler'];
 
-	// For Action Scheduler, allow much larger batches since each job has its own memory space
+	// For Action Scheduler, allow moderate batch sizes to prevent memory issues
 	if ( $is_action_scheduler ) {
-		$batch_size = max( 50, min( 500, (int) $batch_size ) ); // Allow 50-500 items per batch for Action Scheduler
+		$batch_size = max( 25, min( 100, (int) $batch_size ) ); // Reduced from 50-500 to 25-100 to prevent memory exhaustion
 	} else {
 		// For synchronous processing, keep smaller batches for memory safety
 		$batch_size = max( 5, min( 25, (int) $batch_size ) );
@@ -286,7 +286,7 @@ function validate_and_adjust_batch_size( array $setup ): array {
 
 	// Re-apply limits based on processing type
 	if ( $is_action_scheduler ) {
-		$batch_size = max( 50, min( 500, (int) $batch_size ) );
+		$batch_size = max( 25, min( 100, (int) $batch_size ) ); // Reduced limits to prevent memory exhaustion
 	} else {
 		$batch_size = max( 10, min( 25, (int) $batch_size ) ); // Ensure batch_size is at least 10 for real-time progress
 	}

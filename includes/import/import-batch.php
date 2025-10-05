@@ -587,8 +587,8 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 			// Check if Action Scheduler is available for async processing
 			if ( function_exists( 'as_schedule_single_action' ) ) {
 				// Use Action Scheduler for async batch processing
-				// Use larger batches to reduce the number of jobs and memory overhead
-				$batch_size = 200; // Increased from 50 to reduce number of jobs from ~145 to ~36
+				// Use smaller batches for Action Scheduler to prevent memory exhaustion
+				$batch_size = 50; // Reduced from 200 to prevent memory issues in individual jobs
 
 				// Calculate total number of batches needed
 				$total_batches = ceil( $total_items / $batch_size );
@@ -596,9 +596,7 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 				if ( $debug_mode ) {
 					error_log( '[PUNTWORK] [IMPORT-INIT] Total items: ' . $total_items . ', Batch size: ' . $batch_size . ', Total batches: ' . $total_batches );
 					error_log( '[PUNTWORK] [IMPORT-INIT] Using Action Scheduler for async processing' );
-				}
-
-				// Schedule individual batch jobs using Action Scheduler
+				}				// Schedule individual batch jobs using Action Scheduler
 				$scheduled_batches = 0;
 				for ( $batch_index = 0; $batch_index < $total_batches; $batch_index++ ) {
 					$batch_start = $batch_index * $batch_size;
@@ -992,6 +990,19 @@ function puntwork_process_batch_handler( $args ) {
 			}
 		}
 
+		// Memory management for Action Scheduler jobs
+		$current_memory = memory_get_usage( true );
+		$memory_limit = get_memory_limit_bytes();
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [BATCH-ASYNC] Memory check - Current: ' . round( $current_memory / 1024 / 1024, 2 ) . 'MB, Limit: ' . round( $memory_limit / 1024 / 1024, 2 ) . 'MB' );
+		}
+
+		// If memory usage is already high at start, this is a problem
+		if ( $current_memory > $memory_limit * 0.7 ) {
+			error_log( '[PUNTWORK] [BATCH-ASYNC-ERROR] Memory usage already high at batch start: ' . round( $current_memory / 1024 / 1024, 2 ) . 'MB of ' . round( $memory_limit / 1024 / 1024, 2 ) . 'MB' );
+			return; // Skip this batch to prevent memory exhaustion
+		}
+
 		// Prepare import setup for this specific batch
 		$setup = prepare_import_setup( $batch_start, true );
 		if ( is_wp_error( $setup ) ) {
@@ -1017,6 +1028,8 @@ function puntwork_process_batch_handler( $args ) {
 			if ( $debug_mode ) {
 				error_log( '[PUNTWORK] [BATCH-ASYNC-SUCCESS] Batch ' . ($batch_index + 1) . '/' . $total_batches . ' completed successfully' );
 				error_log( '[PUNTWORK] [BATCH-ASYNC-SUCCESS] Processed: ' . ( $batch_result['processed'] ?? 0 ) . ', Published: ' . ( $batch_result['published'] ?? 0 ) . ', Updated: ' . ( $batch_result['updated'] ?? 0 ) . ', Skipped: ' . ( $batch_result['skipped'] ?? 0 ) );
+				$final_memory = memory_get_usage( true );
+				error_log( '[PUNTWORK] [BATCH-ASYNC] Final memory usage: ' . round( $final_memory / 1024 / 1024, 2 ) . 'MB' );
 			}
 		} else {
 			if ( $debug_mode ) {
