@@ -1890,6 +1890,12 @@ function combine_jsonl_ajax() {
 				// Use register_shutdown_function to run import after response is sent
 				// This allows the import to continue even if AJAX times out
 				register_shutdown_function(function() {
+					error_log( '[PUNTWORK] [SHUTDOWN-FUNC] ===== SHUTDOWN FUNCTION STARTED =====' );
+					error_log( '[PUNTWORK] [SHUTDOWN-FUNC] Timestamp: ' . date( 'Y-m-d H:i:s T' ) );
+					error_log( '[PUNTWORK] [SHUTDOWN-FUNC] Memory usage: ' . memory_get_usage( true ) . ' bytes' );
+					error_log( '[PUNTWORK] [SHUTDOWN-FUNC] PHP version: ' . PHP_VERSION );
+					error_log( '[PUNTWORK] [SHUTDOWN-FUNC] WordPress version: ' . get_bloginfo( 'version' ) );
+					
 					ignore_user_abort(true);
 					set_time_limit(0);
 					
@@ -1914,6 +1920,8 @@ function combine_jsonl_ajax() {
 
 					// Start the import
 					start_scheduled_import();
+					
+					error_log( '[PUNTWORK] [SHUTDOWN-FUNC] ===== SHUTDOWN FUNCTION COMPLETED =====' );
 				});
 
 				$scheduling_success = true;
@@ -1949,8 +1957,11 @@ function combine_jsonl_ajax() {
 		);
 
 		error_log( '[PUNTWORK] [DEBUG-PHP] ===== COMBINE_JSONL_AJAX SUCCESS =====' );
-		wp_send_json_success(
-			array(
+
+		// Send JSON response manually without wp_die() to allow shutdown function to execute
+		$response = array(
+			'success' => true,
+			'data'    => array(
 				'total_items'          => $total_items,
 				'message'              => 'JSONL files combined successfully - import scheduled in background',
 				'combined_file_exists' => file_exists( $combined_file ),
@@ -1958,6 +1969,30 @@ function combine_jsonl_ajax() {
 				'import_scheduled'     => $scheduling_success ?? false,
 			)
 		);
+
+		// Send headers and JSON response
+		if ( ! headers_sent() ) {
+			header( 'Content-Type: application/json; charset=utf-8' );
+			header( 'X-Robots-Tag: noindex' );
+			header( 'X-Content-Type-Options: nosniff' );
+			status_header( 200 );
+		}
+
+		echo wp_json_encode( $response );
+
+		// Flush output buffers to ensure response is sent
+		if ( function_exists( 'fastcgi_finish_request' ) ) {
+			fastcgi_finish_request();
+		} else {
+			// Fallback: flush all output buffers
+			while ( ob_get_level() ) {
+				ob_end_flush();
+			}
+			flush();
+		}
+
+		// Script continues here - shutdown function will execute after this function returns
+		error_log( '[PUNTWORK] [COMBINE] AJAX response sent, script continuing for shutdown function' );
 	} catch ( \Exception $e ) {
 		// Clear combination processing lock on any error
 		delete_transient( $combine_lock_key );
