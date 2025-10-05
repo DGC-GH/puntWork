@@ -960,3 +960,56 @@ function job_import_delete_post_efficiently( $post_id ) {
 		return false;
 	}
 }
+
+/**
+ * Adjust cleanup batch size dynamically based on processing performance.
+ *
+ * @param int   $current_batch_size Current batch size
+ * @param float $processing_time    Time taken to process the batch in seconds
+ * @param int   $items_processed    Number of items actually processed
+ * @return int New batch size
+ */
+function job_import_adjust_cleanup_batch_size( $current_batch_size, $processing_time, $items_processed ) {
+	// If no items were processed, keep the same batch size
+	if ( $items_processed == 0 ) {
+		return $current_batch_size;
+	}
+
+	// Calculate processing time per item
+	$time_per_item = $processing_time / $items_processed;
+
+	// Target processing time per batch (5-10 seconds for cleanup operations)
+	$target_batch_time = 8.0;
+
+	// Calculate ideal batch size based on target time
+	$ideal_batch_size = (int) round( $target_batch_time / $time_per_item );
+
+	// Apply smoothing - don't change batch size too drastically
+	$max_change_factor = 2.0; // Maximum 2x increase or 0.5x decrease per adjustment
+	$min_batch_size    = 1;
+	$max_batch_size    = get_option( 'puntwork_cleanup_batch_size', 50 ); // Respect the configured max
+
+	// Calculate new batch size with smoothing
+	if ( $ideal_batch_size > $current_batch_size ) {
+		// Increase batch size, but not more than max_change_factor
+		$new_batch_size = min( $ideal_batch_size, (int) round( $current_batch_size * $max_change_factor ) );
+	} else {
+		// Decrease batch size, but not more than max_change_factor
+		$new_batch_size = max( $ideal_batch_size, (int) round( $current_batch_size / $max_change_factor ) );
+	}
+
+	// Ensure batch size stays within bounds
+	$new_batch_size = max( $min_batch_size, min( $max_batch_size, $new_batch_size ) );
+
+	// If processing time was very short (< 1 second) and we processed all items, we can be more aggressive
+	if ( $processing_time < 1.0 && $items_processed == $current_batch_size ) {
+		$new_batch_size = min( $max_batch_size, $current_batch_size * 2 );
+	}
+
+	// If processing time was very long (> 30 seconds), be more conservative
+	if ( $processing_time > 30.0 ) {
+		$new_batch_size = max( $min_batch_size, (int) round( $current_batch_size / 2 ) );
+	}
+
+	return $new_batch_size;
+}

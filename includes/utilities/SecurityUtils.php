@@ -242,8 +242,8 @@ class SecurityUtils {
 			PuntWorkLogger::debug( "AJAX request validation passed for action: {$action}", PuntWorkLogger::CONTEXT_SECURITY );
 
 			return true;
-		} catch ( \Exception $e ) {
-			PuntWorkLogger::error( "Exception during AJAX validation for {$action}: " . $e->getMessage(), PuntWorkLogger::CONTEXT_SECURITY );
+		} catch ( \Throwable $e ) {
+			PuntWorkLogger::error( "Throwable during AJAX validation for {$action}: " . $e->getMessage(), PuntWorkLogger::CONTEXT_SECURITY );
 
 			return new \WP_Error( 'exception', 'Validation error: ' . $e->getMessage() );
 		}
