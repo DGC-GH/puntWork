@@ -168,11 +168,19 @@ function prepare_import_setup( $batch_start = 0, $is_batch = false ) {
 		if ( $debug_mode ) {
 			error_log( '[PUNTWORK] [SETUP-ACF] Getting ACF fields...' );
 		}
-		$acf_fields = get_acf_fields();
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SETUP-ACF] Got ACF fields: ' . count( $acf_fields ) . ' fields' );
-			if ( empty( $acf_fields ) ) {
-				error_log( '[PUNTWORK] [SETUP-WARNING] No ACF fields found - this may cause import issues' );
+		// Skip ACF loading for batch processing to save memory
+		if ( $is_batch ) {
+			$acf_fields = array(); // Empty array for batch processing
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [SETUP-ACF] Skipping ACF field loading for batch processing to save memory' );
+			}
+		} else {
+			$acf_fields = get_acf_fields();
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [SETUP-ACF] Got ACF fields: ' . count( $acf_fields ) . ' fields' );
+				if ( empty( $acf_fields ) ) {
+					error_log( '[PUNTWORK] [SETUP-WARNING] No ACF fields found - this may cause import issues' );
+				}
 			}
 		}
 	} catch ( \Exception $e ) {

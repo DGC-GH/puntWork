@@ -69,19 +69,10 @@ function run_job_import_batch_ajax() {
 		// Log that we entered the function
 		error_log( '[PUNTWORK] [AJAX-ENTRY] AJAX handler entered successfully' );
 
-		// Ensure ACF is loaded for AJAX calls
+		// Skip ACF loading for batch processing to save memory
+		// ACF will be loaded conditionally in the import setup if needed
 		if ( ! function_exists( 'get_field' ) ) {
-			error_log( '[PUNTWORK] [AJAX-LOAD] ACF functions not available, attempting to load ACF plugin' );
-			// Try to load ACF if it's installed
-			if ( file_exists( WP_PLUGIN_DIR . '/advanced-custom-fields/acf.php' ) ) {
-				include_once WP_PLUGIN_DIR . '/advanced-custom-fields/acf.php';
-				error_log( '[PUNTWORK] [AJAX-LOAD] Loaded ACF from standard location' );
-			} elseif ( file_exists( WP_PLUGIN_DIR . '/advanced-custom-fields-pro/acf.php' ) ) {
-				include_once WP_PLUGIN_DIR . '/advanced-custom-fields-pro/acf.php';
-				error_log( '[PUNTWORK] [AJAX-LOAD] Loaded ACF Pro from standard location' );
-			} else {
-				error_log( '[PUNTWORK] [AJAX-LOAD] ACF plugin files not found in standard locations' );
-			}
+			error_log( '[PUNTWORK] [AJAX-LOAD] ACF functions not available - skipping for batch processing to save memory' );
 		} else {
 			error_log( '[PUNTWORK] [AJAX-LOAD] ACF functions already available' );
 		}
