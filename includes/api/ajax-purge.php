@@ -896,6 +896,12 @@ function job_import_cleanup_continue_ajax() {
  * @return bool True on success, false on failure
  */
 function job_import_delete_post_efficiently( $post_id ) {
+	// Call the centralized version from import-finalization.php (global namespace)
+	if ( function_exists( '\\job_import_delete_post_efficiently' ) ) {
+		return \job_import_delete_post_efficiently( $post_id );
+	}
+
+	// Fallback implementation if the global function isn't available
 	global $wpdb;
 
 	$post_id = (int) $post_id;

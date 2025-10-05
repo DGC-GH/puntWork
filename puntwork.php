@@ -115,6 +115,7 @@ function job_import_activate() {
 	add_option( 'puntwork_auto_purge_old_jobs', false ); // Disabled by default
 	add_option( 'puntwork_purge_age_threshold_days', 30 ); // Only purge jobs older than 30 days
 	add_option( 'puntwork_purge_min_jobs_threshold', 10 ); // Require at least 10 processed GUIDs
+	add_option( 'puntwork_cleanup_batch_size', 100 ); // Process max 100 draft/trash jobs per cleanup
 }
 
 // Deactivation hook

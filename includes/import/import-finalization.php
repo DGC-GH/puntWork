@@ -394,15 +394,22 @@ function cleanup_draft_trash_jobs_after_import() {
 	}
 
 	try {
+		// Get batch size limit to prevent timeouts (default 100 jobs per batch)
+		$batch_size_limit = get_option( 'puntwork_cleanup_batch_size', 100 );
+
 		// Get all draft and trash jobs
 		$draft_trash_jobs = $wpdb->get_results(
-			"
-			SELECT p.ID, p.post_status, p.post_title
-			FROM {$wpdb->posts} p
-			WHERE p.post_type = 'job'
-			AND p.post_status IN ('draft', 'trash')
-			ORDER BY p.ID
-		"
+			$wpdb->prepare(
+				"
+				SELECT p.ID, p.post_status, p.post_title
+				FROM {$wpdb->posts} p
+				WHERE p.post_type = 'job'
+				AND p.post_status IN ('draft', 'trash')
+				ORDER BY p.ID
+				LIMIT %d
+			",
+				$batch_size_limit
+			)
 		);
 
 		if ( empty( $draft_trash_jobs ) ) {
@@ -416,8 +423,24 @@ function cleanup_draft_trash_jobs_after_import() {
 			);
 		}
 
+		// Check if we hit the batch limit - log a warning
+		$total_available = $wpdb->get_var(
+			"
+			SELECT COUNT(*) FROM {$wpdb->posts} p
+			WHERE p.post_type = 'job'
+			AND p.post_status IN ('draft', 'trash')
+		"
+		);
+
+		if ( $total_available > $batch_size_limit ) {
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [CLEANUP-AFTER-IMPORT] Large cleanup detected: ' . $total_available . ' draft/trash jobs found, processing first ' . $batch_size_limit . ' in this batch' );
+			}
+			$logs[] = 'Large cleanup: ' . $total_available . ' draft/trash jobs found, processing ' . $batch_size_limit . ' in this batch. Remaining jobs will be cleaned up in subsequent operations.';
+		}
+
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [CLEANUP-AFTER-IMPORT] Found ' . count( $draft_trash_jobs ) . ' draft/trash jobs to delete' );
+			error_log( '[PUNTWORK] [CLEANUP-AFTER-IMPORT] Processing ' . count( $draft_trash_jobs ) . ' draft/trash jobs (batch size limit: ' . $batch_size_limit . ')' );
 		}
 
 		// Defer term and comment counting for better performance
