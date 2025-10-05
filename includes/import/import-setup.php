@@ -273,6 +273,15 @@ function prepare_import_setup( $batch_start = 0, $is_batch = false ) {
 		// Try server root feeds directory (file is at /feeds/ from FTP root)
 		$json_path = '/feeds/combined-jobs.jsonl';
 	}
+	if ( ! file_exists( $json_path ) ) {
+		// Last resort: try relative to current directory
+		$json_path = __DIR__ . '/../../feeds/combined-jobs.jsonl';
+	}
+
+	// Ensure the path is absolute for consistency
+	if ( ! str_starts_with( $json_path, '/' ) ) {
+		$json_path = realpath( $json_path ) ?: $json_path;
+	}
 	if ( $debug_mode ) {
 		error_log( '[PUNTWORK] [SETUP-FILE] JSONL path: ' . $json_path );
 		error_log( '[PUNTWORK] [SETUP-FILE] ABSPATH: ' . ABSPATH );
