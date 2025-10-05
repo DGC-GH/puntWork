@@ -92,7 +92,7 @@ class MemoryManager {
 	/**
 	 * Get memory limit in bytes.
 	 */
-	private static function getMemoryLimitBytes(): int {
+	protected static function getMemoryLimitBytes(): int {
 		$limit = ini_get( 'memory_limit' );
 		if ( preg_match( '/^(\d+)(.)$/', $limit, $matches ) ) {
 			$value = (int) $matches[1];

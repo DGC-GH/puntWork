@@ -232,7 +232,7 @@ class AdvancedMemoryManager extends MemoryManager {
 	/**
 	 * Get memory limit in bytes
 	 */
-	public static function getMemoryLimitBytes() {
+	public static function getMemoryLimitBytes(): int {
 		return parent::getMemoryLimitBytes();
 	}
 }

@@ -742,6 +742,7 @@ function preload_post_meta_batch( array $post_ids ): array {
         SELECT post_id, meta_key, meta_value
         FROM {$wpdb->postmeta}
         WHERE post_id IN ({$placeholders})
+        AND meta_key IN ('_import_hash', '_last_import_update', 'guid')
     ",
 		$post_ids
 	);
