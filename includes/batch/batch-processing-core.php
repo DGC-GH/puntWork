@@ -180,8 +180,10 @@ function process_batch_items_logic( array $setup ): array {
 		// Store original memory limit for restoration
 		$original_memory_limit = ini_get( 'memory_limit' );
 
-		// Increase memory limit for batch processing
-		ini_set( 'memory_limit', '1024M' );
+		// Increase memory limit for batch processing (but cap at 512MB for safety)
+		$current_limit = get_memory_limit_bytes();
+		$safe_limit = min( 512 * 1024 * 1024, $current_limit ); // Cap at 512MB
+		ini_set( 'memory_limit', $safe_limit / 1024 / 1024 . 'M' );
 
 		// Store original time limit for restoration
 		$original_time_limit = ini_get( 'max_execution_time' );
@@ -191,7 +193,7 @@ function process_batch_items_logic( array $setup ): array {
 
 		// Log limit changes for debugging
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [BATCH-LIMITS] Memory limit set to 1024M (was ' . $original_memory_limit . ')' );
+			error_log( '[PUNTWORK] [BATCH-LIMITS] Memory limit set to ' . ($safe_limit / 1024 / 1024) . 'M (was ' . $original_memory_limit . ')' );
 			error_log( '[PUNTWORK] [BATCH-LIMITS] Time limit set to unlimited (was ' . $original_time_limit . ')' );
 		}		// Clear analytics cache
 		if ( function_exists( 'wp_cache_flush' ) ) {
@@ -358,6 +360,13 @@ function process_batch_items_logic( array $setup ): array {
 
 			// Process batch data
 			$result = process_batch_data( $batch_guids, $batch_items, $logs, $published, $updated, $skipped, $duplicates_drafted, $start_index, $setup );
+
+			// Memory check after processing - if we're still high, log warning
+			$memory_after_processing = memory_get_usage( true );
+			$memory_limit_bytes = get_memory_limit_bytes();
+			if ( $memory_after_processing > $memory_limit_bytes * 0.9 ) {
+				error_log( '[PUNTWORK] [MEMORY-WARNING] Memory usage still high after batch processing: ' . round( $memory_after_processing / 1024 / 1024, 2 ) . 'MB of ' . round( $memory_limit_bytes / 1024 / 1024, 2 ) . 'MB' );
+			}
 
 			// Checkpoint: Batch processing complete
 			checkpoint_performance(

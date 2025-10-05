@@ -46,10 +46,9 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
 		// Getting high memory - prevent growth
 		$batch_size = max( 1, floor( $batch_size * 0.9 ) );
 		$reason     = 'memory usage approaching limit - preventing batch size growth';
-	} elseif ( $last_memory_ratio < 0.3 ) {
-		// Low memory usage - allow larger batches but be conservative
-		// Increase batch size when memory is low, but limit to 100 for complex job data
-		$new_size = min( 100, floor( $batch_size * 1.3 ) );
+		// Low memory usage - allow larger batches but be very conservative for memory safety
+		// Increase batch size when memory is low, but limit to 25 for complex job data
+		$new_size = min( 25, floor( $batch_size * 1.2 ) );
 		if ( $new_size > $batch_size ) {
 			$batch_size = $new_size;
 			$reason     = 'low memory usage allows larger batches, increasing batch size conservatively';
@@ -105,17 +104,17 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
 			$adaptive_state['previous_good_batch_size'] = $batch_size;
 			$adaptive_state['consecutive_slow_batches'] = 0;
 
-			// Exponentially increase batch size (multiply by 1.5 for faster growth)
-			$new_size = min( 100, floor( $batch_size * 1.5 ) );
+			// Conservatively increase batch size (multiply by 1.2 for slower growth)
+			$new_size = min( 25, floor( $batch_size * 1.2 ) );
 
-			// Ensure minimum increase of 5
+			// Ensure minimum increase of 2
 			if ( $new_size <= $batch_size ) {
-				$new_size = min( 100, $batch_size + 5 );
+				$new_size = min( 25, $batch_size + 2 );
 			}
 
-			if ( $new_size <= 200 ) {
+			if ( $new_size <= 25 ) {
 				$batch_size = $new_size;
-				$reason     = 'batch processing fast (' . number_format( $current_batch_time, 2 ) . 's), exponentially increasing batch size to ' . $batch_size;
+				$reason     = 'batch processing fast (' . number_format( $current_batch_time, 2 ) . 's), conservatively increasing batch size to ' . $batch_size;
 
 				// Gradually increase increment step for faster adaptation (keep for compatibility)
 				if ( $adaptive_state['current_increment_step'] < 10 ) {
@@ -128,11 +127,11 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
 
 		$adaptive_state['last_performance_check'] = time();
 	} elseif ( $last_memory_ratio < 0.6 && empty( $reason ) ) {
-		// First batch and memory is OK - allow initial increase
-		$new_size = min( 100, floor( $batch_size * 1.5 ) );
+		// First batch and memory is OK - allow conservative initial increase
+		$new_size = min( 25, floor( $batch_size * 1.2 ) );
 		if ( $new_size > $batch_size ) {
 			$batch_size                                 = $new_size;
-			$reason                                     = 'first batch with good memory, increasing batch size for initial adaptation';
+			$reason                                     = 'first batch with good memory, increasing batch size conservatively for initial adaptation';
 			$adaptive_state['previous_good_batch_size'] = $batch_size;
 		}
 	}
@@ -165,8 +164,8 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
 		update_option( 'job_import_consecutive_small_batches', 0, false );
 	}
 
-	// Ensure batch size never goes below 5 or above 100
-	$batch_size = max( 5, min( 100, $batch_size ) );
+	// Ensure batch size never goes below 5 or above 25 for memory safety
+	$batch_size = max( 5, min( 25, $batch_size ) );
 
 	// Cast to int to ensure type compatibility
 	$batch_size = (int) $batch_size;
@@ -250,10 +249,10 @@ function update_batch_metrics( $time_elapsed, $processed_count, $batch_size ) {
 function validate_and_adjust_batch_size( array $setup ): array {
 	$memory_limit_bytes = get_memory_limit_bytes();
 	$threshold          = 0.6 * $memory_limit_bytes;
-	$batch_size         = get_option( 'job_import_batch_size' ) ?: 25; // Starting batch size for real-time progress
+	$batch_size         = get_option( 'job_import_batch_size' ) ?: 10; // Starting batch size for memory safety
 
-	// Ensure batch_size is at least 10 for incremental updates
-	$batch_size = max( 10, (int) $batch_size );
+	// Ensure batch_size is at least 5 for incremental updates but cap at 25 for memory safety
+	$batch_size = max( 5, min( 25, (int) $batch_size ) );
 
 	$old_batch_size     = $batch_size;
 	$prev_time_per_item = get_option( 'job_import_time_per_job', 0 );

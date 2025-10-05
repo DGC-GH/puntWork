@@ -83,6 +83,9 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 		$intermediate_update_interval = 5; // Update status every 5 items for better UI responsiveness
 		$last_intermediate_update     = 0;
 		$item_timeout_limit          = 60; // 60 seconds per item max
+		$memory_limit_bytes          = get_memory_limit_bytes();
+		$memory_warning_threshold    = $memory_limit_bytes * 0.85; // Warn at 85%
+		$memory_critical_threshold   = $memory_limit_bytes * 0.95; // Critical at 95%
 
 		foreach ( $batch_guids as $guid ) {
 			// Check for import cancellation
@@ -100,6 +103,16 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 				error_log( '[PUNTWORK] [ITEMS-DEBUG] Processing GUID: ' . $guid );
 				error_log( '[PUNTWORK] [ITEMS-DEBUG] GUID exists in batch_items: ' . ( isset( $batch_items[ $guid ] ) ? 'yes' : 'no' ) );
+			}
+
+			// Check memory usage before processing each item
+			$current_memory = memory_get_usage( true );
+			if ( $current_memory > $memory_critical_threshold ) {
+				error_log( '[PUNTWORK] [MEMORY-CRITICAL] Memory usage critical before processing item ' . $item_counter . ': ' . round( $current_memory / 1024 / 1024, 2 ) . 'MB of ' . round( $memory_limit_bytes / 1024 / 1024, 2 ) . 'MB' );
+				$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Memory usage critical - stopping batch processing early';
+				break; // Stop processing to prevent crash
+			} elseif ( $current_memory > $memory_warning_threshold ) {
+				error_log( '[PUNTWORK] [MEMORY-WARNING] Memory usage high before processing item ' . $item_counter . ': ' . round( $current_memory / 1024 / 1024, 2 ) . 'MB of ' . round( $memory_limit_bytes / 1024 / 1024, 2 ) . 'MB' );
 			}
 
 			// Process item with fork-based timeout protection
@@ -180,6 +193,16 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 
 			// Unset the processed item AFTER processing is complete
 			unset( $batch_items[ $guid ] );
+
+			// Aggressive memory cleanup after each item
+			if ( $item_counter % 3 === 0 ) { // Every 3 items
+				if ( function_exists( 'gc_collect_cycles' ) ) {
+					gc_collect_cycles();
+				}
+				if ( function_exists( 'wp_cache_flush' ) ) {
+					wp_cache_flush();
+				}
+			}
 		}
 		error_log( '[PUNTWORK] [ITEMS-DEBUG] process_batch_items completed processing all ' . $total_to_process . ' items' );
 		error_log( '[PUNTWORK] [ITEMS-DEBUG] Final counts: published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', processed_count=' . $processed_count );
