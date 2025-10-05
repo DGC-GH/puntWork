@@ -68,20 +68,32 @@ function job_import_cleanup_duplicates_ajax() {
 		// Path to standalone cleanup script
 		$standalone_script = dirname( __FILE__ ) . '/../standalone-cleanup.php';
 
+		error_log( '[PUNTWORK] [CLEANUP] Checking standalone script path: ' . $standalone_script );
 		if ( ! file_exists( $standalone_script ) ) {
 			error_log( '[PUNTWORK] [CLEANUP] Standalone cleanup script not found: ' . $standalone_script );
 			AjaxErrorHandler::sendError( 'Standalone cleanup script not found' );
 			return;
 		}
 
+		error_log( '[PUNTWORK] [CLEANUP] Standalone script exists, checking permissions' );
+		if ( ! is_readable( $standalone_script ) ) {
+			error_log( '[PUNTWORK] [CLEANUP] Standalone script not readable: ' . $standalone_script );
+			AjaxErrorHandler::sendError( 'Standalone cleanup script not readable' );
+			return;
+		}
+
 		// Build command to execute standalone script
 		$php_executable = PHP_BINARY ?: 'php';
+		error_log( '[PUNTWORK] [CLEANUP] PHP_BINARY: ' . PHP_BINARY );
+		error_log( '[PUNTWORK] [CLEANUP] Using PHP executable: ' . $php_executable );
+
 		$cmd = escapeshellcmd( $php_executable ) . ' ' . escapeshellarg( $standalone_script ) .
 			   ' --batch-size=' . escapeshellarg( $batch_size ) .
 			   ' --offset=' . escapeshellarg( $offset ) .
 			   ' --continue=' . escapeshellarg( $is_continue ? '1' : '0' );
 
 		error_log( '[PUNTWORK] [CLEANUP] Executing command: ' . $cmd );
+		error_log( '[PUNTWORK] [CLEANUP] Working directory: ' . dirname( $standalone_script ) );
 
 		// Execute the standalone script
 		$descriptorspec = array(
@@ -90,6 +102,7 @@ function job_import_cleanup_duplicates_ajax() {
 			2 => array( 'pipe', 'w' )  // stderr
 		);
 
+		error_log( '[PUNTWORK] [CLEANUP] About to call proc_open' );
 		$process = proc_open( $cmd, $descriptorspec, $pipes, dirname( $standalone_script ) );
 
 		if ( ! is_resource( $process ) ) {
@@ -97,6 +110,8 @@ function job_import_cleanup_duplicates_ajax() {
 			AjaxErrorHandler::sendError( 'Failed to start cleanup process' );
 			return;
 		}
+
+		error_log( '[PUNTWORK] [CLEANUP] proc_open successful, reading output' );
 
 		// Close stdin
 		fclose( $pipes[0] );
@@ -113,8 +128,14 @@ function job_import_cleanup_duplicates_ajax() {
 		$exit_code = proc_close( $process );
 
 		error_log( '[PUNTWORK] [CLEANUP] Standalone script exit code: ' . $exit_code );
+		error_log( '[PUNTWORK] [CLEANUP] Output length: ' . strlen( $output ) );
 		if ( ! empty( $errors ) ) {
 			error_log( '[PUNTWORK] [CLEANUP] Standalone script errors: ' . $errors );
+		}
+		if ( ! empty( $output ) ) {
+			error_log( '[PUNTWORK] [CLEANUP] Standalone script output (first 500 chars): ' . substr( $output, 0, 500 ) );
+		} else {
+			error_log( '[PUNTWORK] [CLEANUP] No output from standalone script' );
 		}
 
 		if ( $exit_code !== 0 ) {
