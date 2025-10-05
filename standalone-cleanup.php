@@ -17,7 +17,17 @@ require_once($wp_config_path);
 
 // WordPress table prefix (get from wp-config.php if available, fallback to wp_)
 global $table_prefix;
-define('WP_PREFIX', $table_prefix ?? 'wp_');
+if (!isset($table_prefix) || empty($table_prefix)) {
+    $table_prefix = 'wp_'; // Default WordPress table prefix
+}
+define('WP_PREFIX', $table_prefix);
+
+// Debug logging function
+function debug_log($message) {
+    $log_file = dirname(__FILE__) . '/standalone-cleanup-debug.log';
+    $timestamp = date('Y-m-d H:i:s');
+    file_put_contents($log_file, "[$timestamp] $message\n", FILE_APPEND);
+}
 
 // Parse command line arguments
 $options = getopt('', ['batch-size:', 'offset:', 'continue:']);
@@ -45,13 +55,16 @@ class StandaloneCleanup {
 
     private function connect_db() {
         try {
+            debug_log("Connecting to database: " . DB_HOST . "/" . DB_NAME . " with user " . DB_USER);
+            debug_log("Table prefix: " . WP_PREFIX);
             $this->db = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME);
             if ($this->db->connect_error) {
                 throw new Exception("Database connection failed: " . $this->db->connect_error);
             }
             $this->db->set_charset(DB_CHARSET);
-            echo "Database connected successfully\n";
+            debug_log("Database connected successfully");
         } catch (Exception $e) {
+            debug_log("Database connection error: " . $e->getMessage());
             die("Database connection error: " . $e->getMessage() . "\n");
         }
     }
@@ -79,6 +92,7 @@ class StandaloneCleanup {
                  ORDER BY ID
                  LIMIT ? OFFSET ?";
 
+        debug_log("Executing query: $query with batch_size=" . $this->batch_size . ", offset=$offset");
         $stmt = $this->db->prepare($query);
         $stmt->bind_param('ii', $this->batch_size, $offset);
         $stmt->execute();
@@ -87,6 +101,11 @@ class StandaloneCleanup {
         $jobs = [];
         while ($row = $result->fetch_assoc()) {
             $jobs[] = $row;
+        }
+
+        debug_log("Found " . count($jobs) . " draft/trash job posts");
+        if (!empty($jobs)) {
+            debug_log("Sample posts: " . json_encode(array_slice($jobs, 0, 3)));
         }
 
         $stmt->close();
@@ -159,6 +178,7 @@ class StandaloneCleanup {
     }
 
     public function run_cleanup() {
+        debug_log("Starting cleanup with batch_size=" . $this->batch_size . ", offset=" . $this->offset . ", is_continue=" . ($this->is_continue ? 'true' : 'false'));
         $total_processed = 0;
         $total_deleted = 0;
         $start_time = microtime(true);
@@ -284,9 +304,11 @@ class StandaloneCleanup {
 
 // Run the cleanup
 try {
+    debug_log("Script started with batch_size=$batch_size, offset=$offset, is_continue=" . ($is_continue ? 'true' : 'false'));
     $cleanup = new StandaloneCleanup($batch_size, $offset, $is_continue);
     $cleanup->run_cleanup();
 } catch (Exception $e) {
+    debug_log("Fatal error: " . $e->getMessage());
     $result = [
         'error' => 'Fatal error: ' . $e->getMessage(),
         'complete' => false,
