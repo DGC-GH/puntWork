@@ -102,9 +102,9 @@ function perform_cleanup_operation( $batch_size, $offset, $is_continue ) {
 		$current_memory_limit = ini_get( 'memory_limit' );
 		$original_memory_limit = $current_memory_limit;
 
-		// Increase memory limit temporarily but keep it reasonable
-		if ( wp_convert_hr_to_bytes( $current_memory_limit ) < 256 * 1024 * 1024 ) {
-			ini_set( 'memory_limit', '256M' );
+		// Increase memory limit temporarily but keep it very conservative
+		if ( wp_convert_hr_to_bytes( $current_memory_limit ) < 134217728 ) { // 128MB
+			ini_set( 'memory_limit', '128M' );
 		}
 
 		// Set execution time limit
@@ -152,13 +152,13 @@ function perform_cleanup_operation( $batch_size, $offset, $is_continue ) {
 
 			error_log( '[PUNTWORK] [CLEANUP] Memory usage: ' . round( $memory_percent, 2 ) . '%' );
 
-			if ( $memory_percent > 70 ) {
+			if ( $memory_percent > 50 ) {
 				error_log( '[PUNTWORK] [CLEANUP] Memory usage too high, stopping batch early' );
 				break;
 			}
 
-			// Use WordPress function to delete the post permanently
-			$delete_result = wp_delete_post( $post_id, true ); // true = force delete (bypass trash)
+			// Use efficient SQL-based deletion to avoid loading post objects into memory
+			$delete_result = job_import_delete_post_efficiently( $post_id );
 
 			if ( $delete_result === false ) {
 				$error_msg = 'Failed to delete post ID ' . $post_id;
@@ -187,7 +187,7 @@ function perform_cleanup_operation( $batch_size, $offset, $is_continue ) {
 		// Calculate next batch size - increase gradually if successful
 		if ( $posts_deleted > 0 && count( $errors ) === 0 ) {
 			// Successful batch - increase batch size
-			$next_batch_size = min( $batch_size + 1, 10 ); // Max 10 posts per batch
+			$next_batch_size = min( $batch_size + 1, 5 ); // Max 5 posts per batch
 			error_log( '[PUNTWORK] [CLEANUP] Successful batch, increasing batch size to ' . $next_batch_size );
 		} elseif ( count( $errors ) > 0 ) {
 			// Had errors - reduce batch size
