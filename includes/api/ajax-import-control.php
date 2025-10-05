@@ -1918,13 +1918,22 @@ function combine_jsonl_ajax() {
 			require_once __DIR__ . '/../import/import-batch.php';
 			
 			// Start the import
-			$import_result = import_all_jobs_from_json( true ); // preserve status
-			
-			if ( $import_result['success'] ) {
-				error_log( '[PUNTWORK] [COMBINE-START] Import started successfully' );
-				$scheduling_success = true;
-			} else {
-				error_log( '[PUNTWORK] [COMBINE-START] Import failed to start: ' . ( $import_result['message'] ?? 'Unknown error' ) );
+			try {
+				$import_result = import_all_jobs_from_json( true ); // preserve status
+				
+				if ( $import_result['success'] ) {
+					error_log( '[PUNTWORK] [COMBINE-START] Import started successfully' );
+					$scheduling_success = true;
+				} else {
+					error_log( '[PUNTWORK] [COMBINE-START] Import failed to start: ' . ( $import_result['message'] ?? 'Unknown error' ) );
+					$scheduling_success = false;
+				}
+			} catch ( \Exception $import_exception ) {
+				error_log( '[PUNTWORK] [COMBINE-START] Exception during import start: ' . $import_exception->getMessage() );
+				error_log( '[PUNTWORK] [COMBINE-START] Exception trace: ' . $import_exception->getTraceAsString() );
+				$scheduling_success = false;
+			} catch ( \Throwable $import_error ) {
+				error_log( '[PUNTWORK] [COMBINE-START] Fatal error during import start: ' . $import_error->getMessage() );
 				$scheduling_success = false;
 			}
 
@@ -1960,14 +1969,6 @@ function combine_jsonl_ajax() {
 				}
 			}
 
-			// If Action Scheduler scheduling failed completely, return an error
-			if ( ! $scheduling_success ) {
-				delete_transient( $combine_lock_key ); // Clear lock
-				error_log( '[PUNTWORK] [COMBINE-ERROR] Failed to schedule import - Action Scheduler not available or failed' );
-				wp_send_json_error( array( 'message' => 'Failed to schedule import - background processing not available' ) );
-				return;
-			}
-
 			PuntWorkLogger::info(
 				'JSONL combination completed and import scheduled',
 				PuntWorkLogger::CONTEXT_AJAX,
@@ -1994,6 +1995,11 @@ function combine_jsonl_ajax() {
 
 		error_log( '[PUNTWORK] [DEBUG-PHP] ===== COMBINE_JSONL_AJAX SUCCESS =====' );
 
+		// Ensure clean response by clearing any output buffers
+		while (ob_get_level()) {
+			ob_end_clean();
+		}
+		
 		// Send standard WordPress AJAX success response
 		wp_send_json_success( array(
 			'total_items'          => $total_items,
@@ -2003,6 +2009,7 @@ function combine_jsonl_ajax() {
 			'import_scheduled'     => $scheduling_success,
 			'action_scheduler_reliable' => $action_scheduler_reliable,
 		) );
+		error_log( '[PUNTWORK] [DEBUG-PHP] Response sent successfully' );
 	} catch ( \Exception $e ) {
 		// Clear combination processing lock on any error
 		delete_transient( $combine_lock_key );
