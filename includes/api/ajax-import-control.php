@@ -1875,62 +1875,14 @@ function combine_jsonl_ajax() {
 				'start_time'         => microtime( true ),
 				'end_time'           => null,
 				'last_update'        => time(),
-				'logs'               => array( 'JSONL files combined successfully - scheduling import' ),
+				'logs'               => array( 'JSONL files combined successfully - starting import' ),
 			);
 			error_log( '[PUNTWORK] [COMBINE-STATUS] About to set import status with total=' . $total_items . ', complete=false' );
 			$update_result = update_option( 'job_import_status', $import_status );
 			error_log( '[PUNTWORK] [COMBINE-STATUS] update_option result: ' . ( $update_result ? 'true' : 'false' ) . ', status set: ' . json_encode( $import_status ) );
 			error_log( '[PUNTWORK] [DEBUG-PHP] Import status initialized with total: ' . $total_items );
 
-			// Schedule the import to run in background using shutdown function
-			// This ensures the import runs even if the AJAX connection is closed
-			error_log( '[PUNTWORK] [COMBINE] Scheduling background import after JSONL combination using shutdown function' );
-
-			try {
-				// Use register_shutdown_function to run import after response is sent
-				// This allows the import to continue even if AJAX times out
-				register_shutdown_function(function() {
-					error_log( '[PUNTWORK] [SHUTDOWN-FUNC] ===== SHUTDOWN FUNCTION STARTED =====' );
-					error_log( '[PUNTWORK] [SHUTDOWN-FUNC] Timestamp: ' . date( 'Y-m-d H:i:s T' ) );
-					error_log( '[PUNTWORK] [SHUTDOWN-FUNC] Memory usage: ' . memory_get_usage( true ) . ' bytes' );
-					error_log( '[PUNTWORK] [SHUTDOWN-FUNC] PHP version: ' . PHP_VERSION );
-					error_log( '[PUNTWORK] [SHUTDOWN-FUNC] WordPress version: ' . get_bloginfo( 'version' ) );
-					
-					ignore_user_abort(true);
-					set_time_limit(0);
-					
-					error_log( '[PUNTWORK] [SHUTDOWN-IMPORT] Starting import via shutdown function' );
-					
-					// Load required files for import processing
-					$import_files = array(
-						__DIR__ . '/../batch/batch-size-management.php',
-						__DIR__ . '/../import/import-setup.php',
-						__DIR__ . '/../batch/batch-processing.php',
-						__DIR__ . '/../import/import-finalization.php',
-						__DIR__ . '/../utilities/ErrorHandler.php',
-						__DIR__ . '/../exceptions/PuntworkExceptions.php',
-						__DIR__ . '/../import/import-batch.php',
-					);
-
-					foreach ( $import_files as $file ) {
-						if ( file_exists( $file ) ) {
-							require_once $file;
-						}
-					}
-
-					// Start the import
-					start_scheduled_import();
-					
-					error_log( '[PUNTWORK] [SHUTDOWN-FUNC] ===== SHUTDOWN FUNCTION COMPLETED =====' );
-				});
-
-				$scheduling_success = true;
-				error_log( '[PUNTWORK] [COMBINE] Shutdown function registered for background import' );
-			} catch ( \Exception $e ) {
-				error_log( '[PUNTWORK] [COMBINE] Exception registering shutdown function: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
-				error_log( '[PUNTWORK] [COMBINE] Stack trace: ' . $e->getTraceAsString() );
-				$scheduling_success = false;
-			}
+			$scheduling_success = true; // Import will start directly
 
 			PuntWorkLogger::info(
 				'JSONL combination completed and import scheduled',
@@ -1952,21 +1904,21 @@ function combine_jsonl_ajax() {
 				'logs_count'           => count( $logs ),
 				'combined_file_exists' => file_exists( $combined_file ),
 				'combined_file_size'   => $file_size ?? 0,
-				'import_scheduled'     => $scheduling_success ?? false,
+				'import_started'       => true,
 			)
 		);
 
 		error_log( '[PUNTWORK] [DEBUG-PHP] ===== COMBINE_JSONL_AJAX SUCCESS =====' );
 
-		// Send JSON response manually without wp_die() to allow shutdown function to execute
+		// Send JSON response manually without wp_die() to allow import to continue
 		$response = array(
 			'success' => true,
 			'data'    => array(
 				'total_items'          => $total_items,
-				'message'              => 'JSONL files combined successfully - import scheduled in background',
+				'message'              => 'JSONL files combined successfully - import starting in background',
 				'combined_file_exists' => file_exists( $combined_file ),
 				'combined_file_size'   => $file_size ?? 0,
-				'import_scheduled'     => $scheduling_success ?? false,
+				'import_started'       => true,
 			)
 		);
 
@@ -1991,8 +1943,30 @@ function combine_jsonl_ajax() {
 			flush();
 		}
 
-		// Script continues here - shutdown function will execute after this function returns
-		error_log( '[PUNTWORK] [COMBINE] AJAX response sent, script continuing for shutdown function' );
+		// Script continues here - start the import directly
+		error_log( '[PUNTWORK] [COMBINE] AJAX response sent, starting import directly' );
+		
+		// Load required files for import processing
+		$import_files = array(
+			__DIR__ . '/../batch/batch-size-management.php',
+			__DIR__ . '/../import/import-setup.php',
+			__DIR__ . '/../batch/batch-processing.php',
+			__DIR__ . '/../import/import-finalization.php',
+			__DIR__ . '/../utilities/ErrorHandler.php',
+			__DIR__ . '/../exceptions/PuntworkExceptions.php',
+			__DIR__ . '/../import/import-batch.php',
+		);
+
+		foreach ( $import_files as $file ) {
+			if ( file_exists( $file ) ) {
+				require_once $file;
+			}
+		}
+
+		// Start the import
+		ignore_user_abort(true);
+		set_time_limit(0);
+		start_scheduled_import();
 	} catch ( \Exception $e ) {
 		// Clear combination processing lock on any error
 		delete_transient( $combine_lock_key );
