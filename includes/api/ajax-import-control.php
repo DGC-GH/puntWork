@@ -1911,18 +1911,21 @@ function combine_jsonl_ajax() {
 			error_log( '[PUNTWORK] [COMBINE-STATUS] update_option result: ' . ( $update_result ? 'true' : 'false' ) . ', status set: ' . json_encode( $import_status ) );
 			error_log( '[PUNTWORK] [DEBUG-PHP] Import status initialized with total: ' . $total_items );
 
-			// Schedule the import to start using Action Scheduler
-			$scheduling_success = false;
-			if ( function_exists( 'as_schedule_single_action' ) ) {
-				$job_id = as_schedule_single_action( time() + 5, 'puntwork_start_batch_import' ); // Start in 5 seconds
-				if ( $job_id ) {
-					$scheduling_success = true;
-					error_log( '[PUNTWORK] [COMBINE-SCHEDULE] Import scheduled successfully with job ID: ' . $job_id );
-				} else {
-					error_log( '[PUNTWORK] [COMBINE-SCHEDULE-ERROR] Failed to schedule import using Action Scheduler' );
-				}
+			// Start the import immediately instead of scheduling
+			error_log( '[PUNTWORK] [COMBINE-START] Starting import immediately' );
+			
+			// Include the import functions
+			require_once __DIR__ . '/../import/import-batch.php';
+			
+			// Start the import
+			$import_result = import_all_jobs_from_json( true ); // preserve status
+			
+			if ( $import_result['success'] ) {
+				error_log( '[PUNTWORK] [COMBINE-START] Import started successfully' );
+				$scheduling_success = true;
 			} else {
-				error_log( '[PUNTWORK] [COMBINE-SCHEDULE-ERROR] Action Scheduler not available for import scheduling' );
+				error_log( '[PUNTWORK] [COMBINE-START] Import failed to start: ' . ( $import_result['message'] ?? 'Unknown error' ) );
+				$scheduling_success = false;
 			}
 
 			// Check if Action Scheduler is working by testing a simple job execution
@@ -1935,15 +1938,13 @@ function combine_jsonl_ajax() {
 						$runner = ActionScheduler::runner();
 						
 						// Check if there are any pending jobs
-						$pending_jobs = $store->query_actions( array( 'status' => 'pending', 'per_page' => 1 ) );
+						$pending_jobs = $store->query_actions( array( 'status' => 'pending', 'per_page' => 5 ) );
 						
 						if ( ! empty( $pending_jobs ) ) {
-							// Try to run one job to test if Action Scheduler is working
+							// Try to run the first few jobs to start the import immediately
 							$runner->run();
-							
-							// Check if the job was processed
-							$still_pending = $store->query_actions( array( 'status' => 'pending', 'per_page' => 1 ) );
-							$action_scheduler_reliable = empty( $still_pending );
+							$action_scheduler_reliable = true;
+							error_log( '[PUNTWORK] [COMBINE-SCHEDULE] Triggered Action Scheduler to run pending jobs immediately' );
 						} else {
 							// No pending jobs, assume it's working
 							$action_scheduler_reliable = true;

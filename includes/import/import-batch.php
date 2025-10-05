@@ -955,6 +955,35 @@ add_action( 'puntwork_continue_import', 'continue_paused_import' );
 // Register the scheduled import start hook
 add_action( 'puntwork_start_scheduled_import', 'start_scheduled_import' );
 
+// Register the batch import start hook (used by combine_jsonl_ajax)
+add_action( 'puntwork_start_batch_import', __NAMESPACE__ . '\\start_batch_import' );
+function start_batch_import() {
+	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
+
+	if ( $debug_mode ) {
+		error_log( '[PUNTWORK] [START-BATCH-IMPORT] ===== START_BATCH_IMPORT START =====' );
+		error_log( '[PUNTWORK] [START-BATCH-IMPORT] Current timestamp: ' . date( 'Y-m-d H:i:s T' ) );
+		error_log( '[PUNTWORK] [START-BATCH-IMPORT] Memory usage: ' . memory_get_usage( true ) . ' bytes' );
+	}
+
+	// Start the batch import process
+	$result = import_all_jobs_from_json( true ); // preserve status
+
+	if ( $result['success'] ) {
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [START-BATCH-IMPORT] Batch import completed successfully' );
+			error_log( '[PUNTWORK] [START-BATCH-IMPORT] Result summary: processed=' . ( $result['processed'] ?? 0 ) . ', total=' . ( $result['total'] ?? 0 ) . ', published=' . ( $result['published'] ?? 0 ) . ', updated=' . ( $result['updated'] ?? 0 ) . ', skipped=' . ( $result['skipped'] ?? 0 ) );
+		}
+	} elseif ( $debug_mode ) {
+		error_log( '[PUNTWORK] [START-BATCH-IMPORT] Batch import failed: ' . ( $result['message'] ?? 'Unknown error' ) );
+		error_log( '[PUNTWORK] [START-BATCH-IMPORT] Result details: ' . json_encode( $result ) );
+	}
+
+	if ( $debug_mode ) {
+		error_log( '[PUNTWORK] [START-BATCH-IMPORT] ===== START_BATCH_IMPORT END =====' );
+	}
+}
+
 // Register the individual batch processing hook
 add_action( 'puntwork_process_batch', __NAMESPACE__ . '\\puntwork_process_batch_handler' );
 function puntwork_process_batch_handler( $args ) {
