@@ -1884,40 +1884,14 @@ function combine_jsonl_ajax() {
 
 			// For now, always run the import synchronously to ensure it works
 			// TODO: Fix Action Scheduler integration later
-			error_log( '[PUNTWORK] [COMBINE] Running import synchronously (bypassing Action Scheduler for now)' );
+			error_log( '[PUNTWORK] [COMBINE] Scheduling import asynchronously using wp_schedule_single_event' );
 			
-			// Run the import synchronously
-			try {
-				// Load required files for batch processing
-				$import_files = array(
-					__DIR__ . '/../batch/batch-size-management.php',
-					__DIR__ . '/../import/import-setup.php',
-					__DIR__ . '/../batch/batch-processing.php',
-					__DIR__ . '/../import/import-finalization.php',
-					__DIR__ . '/../utilities/ErrorHandler.php',
-					__DIR__ . '/../exceptions/PuntworkExceptions.php',
-					__DIR__ . '/../import/import-batch.php',
-				);
-
-				foreach ( $import_files as $file ) {
-					if ( file_exists( $file ) ) {
-						require_once $file;
-					}
-				}
-
-				// Run the full import synchronously
-				$result = import_all_jobs_from_json();
-				error_log( '[PUNTWORK] [COMBINE] Synchronous import result: ' . json_encode( $result ) );
-				
-				if ( isset( $result['success'] ) && $result['success'] ) {
-					error_log( '[PUNTWORK] [COMBINE] Synchronous import completed successfully' );
-				} else {
-					error_log( '[PUNTWORK] [COMBINE] Synchronous import failed: ' . json_encode( $result ) );
-				}
-			} catch ( \Exception $e ) {
-				error_log( '[PUNTWORK] [COMBINE] Synchronous import exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
-			} catch ( \Throwable $e ) {
-				error_log( '[PUNTWORK] [COMBINE] Synchronous import fatal error: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
+			// Schedule the import asynchronously using WordPress cron
+			$scheduled = wp_schedule_single_event( time() + 5, 'puntwork_start_batch_import' );
+			if ( $scheduled ) {
+				error_log( '[PUNTWORK] [COMBINE] Import scheduled successfully for ' . ( time() + 5 ) );
+			} else {
+				error_log( '[PUNTWORK] [COMBINE] Failed to schedule import' );
 			}
 
 			PuntWorkLogger::info(
