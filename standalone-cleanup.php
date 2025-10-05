@@ -12,15 +12,12 @@ if (!file_exists($wp_config_path)) {
 
 require_once($wp_config_path);
 
-// Use WordPress database constants
-define('DB_HOST', DB_HOST);
-define('DB_NAME', DB_NAME);
-define('DB_USER', DB_USER);
-define('DB_PASSWORD', DB_PASSWORD);
-define('DB_CHARSET', 'utf8mb4');
+// Use WordPress database constants (already defined by wp-config.php)
+// DB_HOST, DB_NAME, DB_USER, DB_PASSWORD are already defined
 
-// WordPress table prefix
-define('WP_PREFIX', $table_prefix);
+// WordPress table prefix (get from wp-config.php if available, fallback to wp_)
+global $table_prefix;
+define('WP_PREFIX', $table_prefix ?? 'wp_');
 
 // Parse command line arguments
 $options = getopt('', ['batch-size:', 'offset:', 'continue:']);
