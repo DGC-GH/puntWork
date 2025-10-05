@@ -168,6 +168,23 @@ function finalize_batch_import( $result ) {
 				error_log( '[PUNTWORK] [FINALIZE-PURGE] Safe purge failed: ' . ( $purge_result['error'] ?? 'Unknown error' ) );
 			}
 		}
+
+		// Aggressive cleanup: Delete jobs not in current feed (user requested this)
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( '[PUNTWORK] [FINALIZE-AGGRESSIVE-CLEANUP] Starting aggressive cleanup of jobs not in current feed' );
+		}
+		$aggressive_cleanup_result = cleanup_jobs_not_in_current_feed();
+		if ( $aggressive_cleanup_result['success'] ) {
+			$result['aggressive_cleanup_deleted'] = $aggressive_cleanup_result['deleted'];
+			$result['aggressive_cleanup_duration'] = $aggressive_cleanup_result['duration'];
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( '[PUNTWORK] [FINALIZE-AGGRESSIVE-CLEANUP] Aggressive cleanup completed, deleted ' . $aggressive_cleanup_result['deleted'] . ' jobs in ' . number_format( $aggressive_cleanup_result['duration'], 2 ) . 's' );
+			}
+		} else {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( '[PUNTWORK] [FINALIZE-AGGRESSIVE-CLEANUP] Aggressive cleanup failed: ' . ( $aggressive_cleanup_result['error'] ?? 'Unknown error' ) );
+			}
+		}
 	} elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 		error_log( '[PUNTWORK] [FINALIZE-INCOMPLETE] Import not complete or failed, skipping history logging, social media posting, and cleanup' );
 	}
@@ -705,6 +722,165 @@ function purge_old_jobs_not_in_feeds_after_import() {
 		if ( class_exists( '\\Puntwork\\PuntWorkLogger' ) ) {
 			\Puntwork\PuntWorkLogger::error(
 				'Exception during old jobs purge after import',
+				\Puntwork\PuntWorkLogger::CONTEXT_PURGE,
+				array( 'error' => $e->getMessage() )
+			);
+		}
+
+		return array(
+			'success' => false,
+			'deleted' => $deleted_count,
+			'error' => $e->getMessage(),
+			'logs' => $logs,
+		);
+	}
+}
+
+/**
+ * Aggressively clean up jobs that are no longer present in the current feed.
+ * This function deletes (not just drafts) jobs that are not in the current feed,
+ * addressing the user's need to remove old jobs they don't want.
+ *
+ * @return array Cleanup result with deleted count and logs.
+ */
+function cleanup_jobs_not_in_current_feed() {
+	global $wpdb;
+
+	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
+	$start_time = microtime( true );
+	$deleted_count = 0;
+	$logs = array();
+
+	if ( $debug_mode ) {
+		error_log( '[PUNTWORK] [AGGRESSIVE-CLEANUP] Starting aggressive cleanup of jobs not in current feed' );
+	}
+
+	try {
+		// Get processed GUIDs from the import (these are the jobs currently in the feed)
+		$processed_guids = get_option( 'job_import_processed_guids', array() );
+
+		if ( empty( $processed_guids ) ) {
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [AGGRESSIVE-CLEANUP] No processed GUIDs found, cannot determine current feed contents' );
+			}
+			return array(
+				'success' => true,
+				'deleted' => 0,
+				'logs' => array( 'No processed GUIDs found - cannot determine current feed contents' ),
+			);
+		}
+
+		// SAFETY CHECK: Validate that import was complete and successful
+		$import_status = get_option( 'job_import_status', array() );
+		if ( empty( $import_status ) || ! isset( $import_status['complete'] ) || ! $import_status['complete'] ) {
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [AGGRESSIVE-CLEANUP] Import not marked as complete, skipping aggressive cleanup' );
+			}
+			return array(
+				'success' => true,
+				'deleted' => 0,
+				'logs' => array( 'Import not marked as complete, skipping aggressive cleanup' ),
+			);
+		}
+
+		// Get all published jobs with GUIDs
+		$all_published_jobs = $wpdb->get_results(
+			"
+			SELECT p.ID, pm.meta_value AS guid, p.post_title, p.post_date
+			FROM {$wpdb->posts} p
+			JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
+			WHERE p.post_type = 'job'
+			AND p.post_status = 'publish'
+			ORDER BY p.ID
+			"
+		);
+
+		if ( empty( $all_published_jobs ) ) {
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [AGGRESSIVE-CLEANUP] No published jobs found to check' );
+			}
+			return array(
+				'success' => true,
+				'deleted' => 0,
+				'logs' => array( 'No published jobs found to check' ),
+			);
+		}
+
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [AGGRESSIVE-CLEANUP] Found ' . count( $all_published_jobs ) . ' published jobs, checking against ' . count( $processed_guids ) . ' current feed GUIDs' );
+		}
+
+		// Defer term and comment counting for better performance
+		wp_defer_term_counting( true );
+		wp_defer_comment_counting( true );
+
+		foreach ( $all_published_jobs as $job ) {
+			// Check if this job's GUID is in the current feed
+			if ( ! in_array( $job->guid, $processed_guids ) ) {
+				// Job is not in current feed - delete it permanently
+				$delete_result = job_import_delete_post_efficiently( $job->ID );
+
+				if ( $delete_result ) {
+					++$deleted_count;
+					$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'DELETED ID: ' . $job->ID . ' GUID: ' . $job->guid . ' - No longer in current feed - ' . $job->post_title;
+					$logs[] = $log_entry;
+
+					if ( class_exists( '\\Puntwork\\PuntWorkLogger' ) ) {
+						\Puntwork\PuntWorkLogger::info(
+							'Deleted job not in current feed during aggressive cleanup',
+							\Puntwork\PuntWorkLogger::CONTEXT_PURGE,
+							array(
+								'job_id' => $job->ID,
+								'guid'   => $job->guid,
+								'title'  => $job->post_title,
+								'reason' => 'not_in_current_feed',
+							)
+						);
+					}
+				} else {
+					$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Failed to delete ID: ' . $job->ID . ' GUID: ' . $job->guid;
+					$logs[] = $log_entry;
+
+					if ( class_exists( '\\Puntwork\\PuntWorkLogger' ) ) {
+						\Puntwork\PuntWorkLogger::error(
+							'Failed to delete job during aggressive cleanup',
+							\Puntwork\PuntWorkLogger::CONTEXT_PURGE,
+							array(
+								'job_id' => $job->ID,
+								'guid'   => $job->guid,
+							)
+						);
+					}
+				}
+			}
+		}
+
+		// Re-enable term and comment counting
+		wp_defer_term_counting( false );
+		wp_defer_comment_counting( false );
+
+		$end_time = microtime( true );
+		$duration = $end_time - $start_time;
+
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [AGGRESSIVE-CLEANUP] Aggressive cleanup completed in ' . number_format( $duration, 2 ) . 's, deleted ' . $deleted_count . ' jobs' );
+		}
+
+		return array(
+			'success' => true,
+			'deleted' => $deleted_count,
+			'duration' => $duration,
+			'logs' => $logs,
+		);
+
+	} catch ( \Exception $e ) {
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [AGGRESSIVE-CLEANUP] Exception during aggressive cleanup: ' . $e->getMessage() );
+		}
+
+		if ( class_exists( '\\Puntwork\\PuntWorkLogger' ) ) {
+			\Puntwork\PuntWorkLogger::error(
+				'Exception during aggressive cleanup after import',
 				\Puntwork\PuntWorkLogger::CONTEXT_PURGE,
 				array( 'error' => $e->getMessage() )
 			);
