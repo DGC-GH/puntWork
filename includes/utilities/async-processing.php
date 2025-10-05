@@ -280,7 +280,7 @@ function prepare_feeds_for_import(): array {
 			return $result;
 		}
 
-		$jsonl_path = ABSPATH . 'feeds/combined-jobs.jsonl';
+		$jsonl_path = puntwork_get_combined_jsonl_path();
 		if ( ! file_exists( $jsonl_path ) ) {
 			return array(
 				'success' => false,

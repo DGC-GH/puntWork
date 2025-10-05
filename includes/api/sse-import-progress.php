@@ -273,7 +273,7 @@ function handle_import_progress_sse( $request ) {
 				
 				// FALLBACK: Try ABSPATH if DOCUMENT_ROOT didn't work
 				if (!$file_exists && defined('ABSPATH')) {
-					$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
+					$combined_file = puntwork_get_combined_jsonl_path();
 					error_log( '[PUNTWORK] SSE: Trying ABSPATH fallback: ' . $combined_file );
 					$file_exists = file_exists( $combined_file );
 					$file_size = $file_exists ? filesize( $combined_file ) : 0;

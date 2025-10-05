@@ -577,7 +577,7 @@ function run_scheduled_import( bool $test_mode = false, string $trigger_type = '
 		}
 
 		// Step 2: Process all feeds (download and convert to JSONL)
-		$output_dir      = ABSPATH . 'feeds/';
+		$output_dir      = puntwork_get_feeds_directory();
 		$fallback_domain = 'belgiumjobs.work';
 		$total_items     = 0;
 		$all_logs        = array();

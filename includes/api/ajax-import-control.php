@@ -422,7 +422,7 @@ function reset_job_import_status_ajax() {
 		error_log( '[PUNTWORK] [DEBUG-PHP] Deleted all related import options and transients' );
 
 		// Delete the combined file to prevent status correction from recreating the import status
-		$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
+		$combined_file = puntwork_get_combined_jsonl_path();
 		if ( file_exists( $combined_file ) ) {
 			$deleted = unlink( $combined_file );
 			error_log( '[PUNTWORK] [DEBUG-PHP] Combined file deletion: ' . ($deleted ? 'SUCCESS' : 'FAILED') . ' - ' . $combined_file );
@@ -517,7 +517,7 @@ function get_job_import_status_ajax() {
 		error_log( '[PUNTWORK] [STATUS-CORRECTION] ===== STATUS CORRECTION LOGIC START =====' );
 
 		// Check if combined file exists and status seems incorrect
-		$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
+		$combined_file = puntwork_get_combined_jsonl_path();
 		error_log( '[PUNTWORK] [STATUS-CORRECTION] Checking combined file: ' . $combined_file );
 		$file_exists = file_exists( $combined_file );
 		$file_size = $file_exists ? filesize( $combined_file ) : 0;
@@ -631,7 +631,7 @@ function get_job_import_status_ajax() {
 			$stuck_reason = '';
 
 			// Check if this is a fresh import ready for batch processing (JSONL combined but not started)
-			$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
+			$combined_file = puntwork_get_combined_jsonl_path();
 			$has_jsonl_success = isset($progress['logs']) && is_array($progress['logs']) && 
 				in_array('JSONL files combined successfully - ready for import', $progress['logs']);
 			$combined_file_exists = file_exists($combined_file) && filesize($combined_file) > 0;
@@ -676,7 +676,7 @@ function get_job_import_status_ajax() {
 				);
 				
 				// Check if combined file exists - if so, don't clear status completely, just reset progress
-				$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
+				$combined_file = puntwork_get_combined_jsonl_path();
 				if ( file_exists( $combined_file ) && filesize( $combined_file ) > 0 && function_exists( 'get_json_item_count' ) ) {
 					$actual_total = get_json_item_count( $combined_file );
 					if ( $actual_total > 0 ) {
@@ -1587,7 +1587,7 @@ function process_feed_ajax() {
 		}
 
 		$feed_url        = $feeds[ $feed_key ];
-		$output_dir      = ABSPATH . 'feeds/';
+		$output_dir      = puntwork_get_feeds_directory();
 		$fallback_domain = 'belgiumjobs.work';
 
 		error_log( '[PUNTWORK] [DEBUG-PHP] Feed URL: ' . $feed_url . ', Output dir: ' . $output_dir );
@@ -1749,7 +1749,7 @@ function combine_jsonl_ajax() {
 	try {
 		$total_items = intval( $_POST['total_items'] );
 		$feeds       = get_feeds();
-		$output_dir  = ABSPATH . 'feeds/';
+		$output_dir  = puntwork_get_feeds_directory();
 
 		// Check if combination is already in progress
 		$combine_lock_key = 'puntwork_combine_processing';
@@ -2192,7 +2192,7 @@ function puntwork_process_feed_handler( $feed_key ) {
 		}
 
 		$feed_url        = $feeds[ $feed_key ];
-		$output_dir      = ABSPATH . 'feeds/';
+		$output_dir      = puntwork_get_feeds_directory();
 		$fallback_domain = 'belgiumjobs.work';
 
 		// Include feed processor
@@ -2262,7 +2262,7 @@ function initialize_import_from_existing_data_ajax() {
 
 	try {
 		$total_items = intval( $_POST['total_items'] );
-		$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
+		$combined_file = puntwork_get_combined_jsonl_path();
 
 		// Verify the combined file exists
 		if ( ! file_exists( $combined_file ) || filesize( $combined_file ) === 0 ) {

@@ -446,6 +446,7 @@ $includes = array(
 
 	// Utilities - only load essential ones
 	'utilities/PuntWorkLogger.php',
+	'utilities/feeds-path-utils.php',
 	'utilities/handle-duplicates.php',
 	'utilities/performance-functions.php',
 	'utilities/PuntworkHorizontalScalingManager.php',

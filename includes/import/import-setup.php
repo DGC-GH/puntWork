@@ -272,23 +272,7 @@ function prepare_import_setup( $batch_start = 0, $is_batch = false ) {
 		}
 	}
 
-	$json_path = __DIR__ . '/../../feeds/combined-jobs.jsonl'; // Check plugin feeds directory first
-	if ( ! file_exists( $json_path ) ) {
-		// Fallback to WordPress root feeds directory
-		$json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
-	}
-	if ( ! file_exists( $json_path ) ) {
-		// Fallback to option-based path
-		$json_path = get_option( 'job_import_json_path', 'feeds/combined-jobs.jsonl' );
-	}
-	if ( ! file_exists( $json_path ) ) {
-		// Try server root feeds directory (file is at /feeds/ from FTP root)
-		$json_path = '/feeds/combined-jobs.jsonl';
-	}
-	if ( ! file_exists( $json_path ) ) {
-		// Try domain root feeds directory
-		$json_path = '/home/u164580062/domains/belgiumjobs.work/feeds/combined-jobs.jsonl';
-	}
+	$json_path = puntwork_get_combined_jsonl_path();
 
 	// Ensure the path is absolute for consistency
 	if ( ! str_starts_with( $json_path, '/' ) ) {
@@ -299,60 +283,29 @@ function prepare_import_setup( $batch_start = 0, $is_batch = false ) {
 		error_log( '[PUNTWORK] [SETUP-FILE] ABSPATH: ' . ABSPATH );
 	}
 
-	// Ensure feeds directory exists
-	$feeds_dir = dirname( $json_path );
-	if ( ! is_dir( $feeds_dir ) ) {
+	// Ensure feeds directory exists and is writable
+	$ensure_result = puntwork_ensure_feeds_directory();
+	if ( is_wp_error( $ensure_result ) ) {
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SETUP-FILE] Feeds directory does not exist, creating it...' );
-		}
-		if ( ! wp_mkdir_p( $feeds_dir ) ) {
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [SETUP-ERROR] Failed to create feeds directory: ' . $feeds_dir );
-			}
-
-			return array(
-				'success' => false,
-				'message' => 'Cannot create feeds directory',
-				'logs'    => array( 'Failed to create feeds directory: ' . $feeds_dir ),
-			);
-		}
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SETUP-FILE] Feeds directory created successfully' );
-		}
-	}
-
-	// Check if feeds directory is writable
-	if ( ! is_writable( $feeds_dir ) ) {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SETUP-ERROR] Feeds directory is not writable: ' . $feeds_dir );
+			error_log( '[PUNTWORK] [SETUP-ERROR] ' . $ensure_result->get_error_message() );
 		}
 
 		return array(
 			'success' => false,
-			'message' => 'Feeds directory is not writable',
-			'logs'    => array( 'Feeds directory is not writable: ' . $feeds_dir ),
+			'message' => $ensure_result->get_error_message(),
+			'logs'    => array( $ensure_result->get_error_message() ),
 		);
 	}
 
 	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [SETUP-FILE] feeds/ directory exists (plugin): ' . ( is_dir( __DIR__ . '/../../feeds/' ) ? 'yes' : 'no' ) );
-		error_log( '[PUNTWORK] [SETUP-FILE] feeds/ directory writable (plugin): ' . ( is_writable( __DIR__ . '/../../feeds/' ) ? 'yes' : 'no' ) );
-		error_log( '[PUNTWORK] [SETUP-FILE] feeds/ directory exists (WP root): ' . ( is_dir( ABSPATH . 'feeds/' ) ? 'yes' : 'no' ) );
-		error_log( '[PUNTWORK] [SETUP-FILE] feeds/ directory writable (WP root): ' . ( is_writable( ABSPATH . 'feeds/' ) ? 'yes' : 'no' ) );
+		$feeds_dir = puntwork_get_feeds_directory();
+		error_log( '[PUNTWORK] [SETUP-FILE] feeds/ directory exists: ' . ( is_dir( $feeds_dir ) ? 'yes' : 'no' ) );
+		error_log( '[PUNTWORK] [SETUP-FILE] feeds/ directory writable: ' . ( is_writable( $feeds_dir ) ? 'yes' : 'no' ) );
 
-		$files_in_plugin_feeds = glob( __DIR__ . '/../../feeds/*' );
-		error_log( '[PUNTWORK] [SETUP-FILE] Files in plugin feeds/ directory: ' . ( is_array( $files_in_plugin_feeds ) ? count( $files_in_plugin_feeds ) : 'glob_failed' ) . ' files' );
-		if ( is_array( $files_in_plugin_feeds ) && ! empty( $files_in_plugin_feeds ) ) {
-			foreach ( $files_in_plugin_feeds as $file ) {
-				$size = file_exists( $file ) ? filesize( $file ) : 'N/A';
-				error_log( '[PUNTWORK] [SETUP-FILE]   - ' . basename( $file ) . ' (' . $size . ' bytes)' );
-			}
-		}
-
-		$files_in_wp_feeds = glob( ABSPATH . 'feeds/*' );
-		error_log( '[PUNTWORK] [SETUP-FILE] Files in WP root feeds/ directory: ' . ( is_array( $files_in_wp_feeds ) ? count( $files_in_wp_feeds ) : 'glob_failed' ) . ' files' );
-		if ( is_array( $files_in_wp_feeds ) && ! empty( $files_in_wp_feeds ) ) {
-			foreach ( $files_in_wp_feeds as $file ) {
+		$files_in_feeds = glob( $feeds_dir . '*' );
+		error_log( '[PUNTWORK] [SETUP-FILE] Files in feeds/ directory: ' . ( is_array( $files_in_feeds ) ? count( $files_in_feeds ) : 'glob_failed' ) . ' files' );
+		if ( is_array( $files_in_feeds ) && ! empty( $files_in_feeds ) ) {
+			foreach ( $files_in_feeds as $file ) {
 				$size = file_exists( $file ) ? filesize( $file ) : 'N/A';
 				error_log( '[PUNTWORK] [SETUP-FILE]   - ' . basename( $file ) . ' (' . $size . ' bytes)' );
 			}
@@ -405,12 +358,8 @@ function prepare_import_setup( $batch_start = 0, $is_batch = false ) {
 		if ( $debug_mode ) {
 			error_log( '[PUNTWORK] [SETUP-ERROR] JSONL file not found: ' . $json_path . ' - checking if feeds need to be processed first' );
 
-			// Check if there are any individual feed files in plugin feeds directory first
-			$feed_files = glob( __DIR__ . '/../../feeds/*.jsonl' );
-			if ( ! is_array( $feed_files ) || empty( $feed_files ) ) {
-				// Fallback to WordPress root feeds directory
-				$feed_files = glob( ABSPATH . 'feeds/*.jsonl' );
-			}
+			// Check if there are any individual feed files
+			$feed_files = glob( puntwork_get_feeds_directory() . '*.jsonl' );
 			error_log( '[PUNTWORK] [SETUP-ERROR] Individual feed files found: ' . ( is_array( $feed_files ) ? count( $feed_files ) : 'glob_failed' ) );
 			if ( is_array( $feed_files ) && ! empty( $feed_files ) ) {
 				error_log( '[PUNTWORK] [SETUP-ERROR] Individual feeds exist but combined file missing - need to run combine_jsonl_files' );

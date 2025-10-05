@@ -83,7 +83,7 @@ function process_batch_enhanced( array $batch_guids, array $batch_items, array &
 		);
 
 		// Leverage JSONL optimization index for enhanced processing
-		$jsonl_file            = ABSPATH . 'feeds/combined-jobs.jsonl';
+		$jsonl_file            = puntwork_get_combined_jsonl_path();
 		$batch_recommendations = \Puntwork\Utilities\JsonlOptimizer::getBatchRecommendations( $jsonl_file, count( $batch_guids ) );
 
 		if ( ! isset( $batch_recommendations['use_standard_batching'] ) ) {

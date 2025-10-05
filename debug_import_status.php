@@ -123,7 +123,7 @@ if (file_exists($mappings_path)) {
 }
 
 // Check combined JSONL file
-$jsonl_path = ABSPATH . 'feeds/combined-jobs.jsonl';
+$jsonl_path = puntwork_get_combined_jsonl_path();
 echo "\n=== JSONL FILE CHECK ===\n";
 if (file_exists($jsonl_path)) {
     echo "Combined JSONL file exists: YES\n";

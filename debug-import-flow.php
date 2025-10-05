@@ -32,17 +32,17 @@ echo "\n";
 
 // Test 2: Check file paths
 echo "2. Testing file paths:\n";
-$json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
+$json_path = puntwork_get_combined_jsonl_path();
 echo "   - JSONL path: $json_path\n";
 echo '   - File exists: ' . ( file_exists( $json_path ) ? '✅ Yes' : '❌ No' ) . "\n";
 if ( file_exists( $json_path ) ) {
 	echo '   - File size: ' . filesize( $json_path ) . " bytes\n";
 	echo '   - File readable: ' . ( is_readable( $json_path ) ? '✅ Yes' : '❌ No' ) . "\n";
 }
-echo '   - Feeds directory exists: ' . ( is_dir( ABSPATH . 'feeds/' ) ? '✅ Yes' : '❌ No' ) . "\n";
-echo '   - Feeds directory writable: ' . ( is_writable( ABSPATH . 'feeds/' ) ? '✅ Yes' : '❌ No' ) . "\n";
+echo '   - Feeds directory exists: ' . ( is_dir( puntwork_get_feeds_directory() ) ? '✅ Yes' : '❌ No' ) . "\n";
+echo '   - Feeds directory writable: ' . ( is_writable( puntwork_get_feeds_directory() ) ? '✅ Yes' : '❌ No' ) . "\n";
 
-$feed_files = glob( ABSPATH . 'feeds/*.jsonl' );
+$feed_files = glob( puntwork_get_feeds_directory() . '*.jsonl' );
 echo '   - Individual feed files: ' . count( $feed_files ) . " found\n";
 if ( ! empty( $feed_files ) ) {
 	echo '   - Feed files: ' . implode( ', ', array_map( 'basename', $feed_files ) ) . "\n";

@@ -74,7 +74,7 @@ function get_feeds(): array {
 
 		// For testing: if no feeds configured, return test feeds
 		if ( empty( $feeds ) ) {
-			$test_feeds_dir = ABSPATH . 'feeds/';
+			$test_feeds_dir = puntwork_get_feeds_directory();
 			$feeds = array(
 				'test_feed_1' => $test_feeds_dir . 'test_feed_1.xml',
 				'test_feed_2' => $test_feeds_dir . 'test_feed_2.xml',
@@ -792,7 +792,7 @@ function fetch_and_generate_combined_json(): array {
 		ini_set( 'memory_limit', '1024M' ); // Increased from 512M to handle large datasets
 		set_time_limit( 1800 );
 		$feeds      = get_feeds();
-		$output_dir = ABSPATH . 'feeds/';
+		$output_dir = puntwork_get_feeds_directory();
 		if ( ! wp_mkdir_p( $output_dir ) || ! is_writable( $output_dir ) ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 				error_log( "[PUNTWORK] Directory $output_dir not writable" );

@@ -3,7 +3,7 @@ require_once 'wp-load.php';
 require_once 'includes/import/import-batch.php';
 
 // Check if combined file exists
-$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
+$combined_file = puntwork_get_combined_jsonl_path();
 if (file_exists($combined_file)) {
     echo 'Combined file exists: ' . $combined_file . PHP_EOL;
     echo 'File size: ' . filesize($combined_file) . ' bytes' . PHP_EOL;

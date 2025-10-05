@@ -171,7 +171,7 @@ function render_main_import_ui(): void {
 	error_log( '[PUNTWORK] [UI-RENDER] Rendering main import UI elements' );
 
 	// Check if combined JSONL file exists and if there are feeds configured
-	$jsonl_path   = ABSPATH . 'feeds/combined-jobs.jsonl';
+	$jsonl_path   = puntwork_get_combined_jsonl_path();
 	$jsonl_exists = file_exists( $jsonl_path );
 	$jsonl_size   = $jsonl_exists ? filesize( $jsonl_path ) : 0;
 	$feeds        = get_feeds();

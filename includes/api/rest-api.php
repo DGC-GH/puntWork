@@ -519,7 +519,7 @@ function handle_trigger_import( $request ) {
 		}
 
 		// Get total items count for proper status initialization
-		$json_path   = ABSPATH . 'feeds/combined-jobs.jsonl';
+		$json_path   = puntwork_get_combined_jsonl_path();
 		$total_items = 0;
 		if ( file_exists( $json_path ) ) {
 			$total_items = get_json_item_count( $json_path );
@@ -566,7 +566,7 @@ function handle_trigger_import( $request ) {
 		// Check if async processing is enabled and available
 		if ( is_async_processing_enabled() ) {
 			// Get estimated item count to determine if async is beneficial
-			$jsonl_path = ABSPATH . 'feeds/combined-jobs.jsonl';
+			$jsonl_path = puntwork_get_combined_jsonl_path();
 			if ( file_exists( $jsonl_path ) ) {
 				$estimated_count = get_json_item_count( $jsonl_path );
 				// Use async for imports larger than 500 items or when explicitly requested
@@ -636,10 +636,10 @@ function handle_trigger_import( $request ) {
 
 			// Add debug information
 			$debug_info = array(
-				'jsonl_path'     => ABSPATH . 'feeds/combined-jobs.jsonl',
-				'jsonl_exists'   => file_exists( ABSPATH . 'feeds/combined-jobs.jsonl' ),
-				'jsonl_size'     => file_exists( ABSPATH . 'feeds/combined-jobs.jsonl' ) ? filesize( ABSPATH . 'feeds/combined-jobs.jsonl' ) : 0,
-				'jsonl_readable' => is_readable( ABSPATH . 'feeds/combined-jobs.jsonl' ),
+				'jsonl_path'     => puntwork_get_combined_jsonl_path(),
+				'jsonl_exists'   => file_exists( puntwork_get_combined_jsonl_path() ),
+				'jsonl_size'     => file_exists( puntwork_get_combined_jsonl_path() ) ? filesize( puntwork_get_combined_jsonl_path() ) : 0,
+				'jsonl_readable' => is_readable( puntwork_get_combined_jsonl_path() ),
 				'feeds_count'    => count( get_feeds() ),
 				'wp_abspath'     => ABSPATH,
 			);

@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 
 echo "=== PUNTWORK IMPORT DEBUG ===\n\n";
 
-$json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
+$json_path = puntwork_get_combined_jsonl_path();
 
 echo "Checking file: $json_path\n";
 echo "File exists: " . (file_exists($json_path) ? 'YES' : 'NO') . "\n";
