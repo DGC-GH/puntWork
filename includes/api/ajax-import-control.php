@@ -1882,16 +1882,25 @@ function combine_jsonl_ajax() {
 			error_log( '[PUNTWORK] [COMBINE-STATUS] update_option result: ' . ( $update_result ? 'true' : 'false' ) . ', status set: ' . json_encode( $import_status ) );
 			error_log( '[PUNTWORK] [DEBUG-PHP] Import status initialized with total: ' . $total_items );
 
-			// For now, always run the import synchronously to ensure it works
-			// TODO: Fix Action Scheduler integration later
-			error_log( '[PUNTWORK] [COMBINE] Scheduling import asynchronously using wp_schedule_single_event' );
+			// Schedule the import asynchronously using Action Scheduler (more reliable than WP cron)
+			error_log( '[PUNTWORK] [COMBINE] Scheduling import asynchronously using Action Scheduler' );
 			
-			// Schedule the import asynchronously using WordPress cron
-			$scheduled = wp_schedule_single_event( time() + 5, 'puntwork_start_batch_import' );
-			if ( $scheduled ) {
-				error_log( '[PUNTWORK] [COMBINE] Import scheduled successfully for ' . ( time() + 5 ) );
+			if ( function_exists( 'as_schedule_single_action' ) ) {
+				$scheduled = as_schedule_single_action( time() + 5, 'puntwork_start_batch_import' );
+				if ( $scheduled ) {
+					error_log( '[PUNTWORK] [COMBINE] Import scheduled successfully with Action Scheduler for ' . ( time() + 5 ) );
+				} else {
+					error_log( '[PUNTWORK] [COMBINE] Failed to schedule import with Action Scheduler' );
+				}
 			} else {
-				error_log( '[PUNTWORK] [COMBINE] Failed to schedule import' );
+				// Fallback to WP cron if Action Scheduler not available
+				error_log( '[PUNTWORK] [COMBINE] Action Scheduler not available, falling back to WP cron' );
+				$scheduled = wp_schedule_single_event( time() + 5, 'puntwork_start_batch_import' );
+				if ( $scheduled ) {
+					error_log( '[PUNTWORK] [COMBINE] Import scheduled successfully with WP cron for ' . ( time() + 5 ) );
+				} else {
+					error_log( '[PUNTWORK] [COMBINE] Failed to schedule import with WP cron' );
+				}
 			}
 
 			PuntWorkLogger::info(
