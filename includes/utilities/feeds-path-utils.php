@@ -14,29 +14,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Get the feeds directory path with fallback logic.
+ * Get the feeds directory path.
  *
- * Priority order:
- * 1. Plugin feeds directory (preferred - moved from WP root for better organization)
- * 2. WordPress root feeds directory (legacy support)
- * 3. Configured option path
- * 4. Server root feeds directory
- * 5. Domain root feeds directory
+ * Returns the feeds directory path within the Puntwork plugin directory.
  *
  * @return string The feeds directory path
  */
 function puntwork_get_feeds_directory() {
-	static $feeds_dir = null;
-
-	if ( $feeds_dir !== null ) {
-		return $feeds_dir;
-	}
-
-	// Priority 1: Plugin feeds directory (preferred location - always use this for new operations)
+	// Return the feeds directory path within the Puntwork plugin directory
 	$plugin_dir = dirname( plugin_dir_path( __FILE__ ), 2 );
-	$plugin_feeds_dir = $plugin_dir . '/feeds/';
-	$feeds_dir = $plugin_feeds_dir;
-	return $feeds_dir;
+	return $plugin_dir . '/feeds/';
 }
 
 /**
@@ -87,76 +74,6 @@ function puntwork_ensure_feeds_directory() {
 	if ( ! is_writable( $feeds_dir ) ) {
 		return new WP_Error( 'feeds_dir_not_writable', 'Feeds directory is not writable: ' . $feeds_dir );
 	}
-
-	return true;
-}
-
-/**
- * Migrate feeds directory from WordPress root to plugin directory.
- *
- * This function moves existing feeds files from the WordPress root feeds/
- * directory to the plugin's feeds/ directory for better organization.
- *
- * @return bool|WP_Error True on success, WP_Error on failure
- */
-function puntwork_migrate_feeds_directory() {
-	$old_feeds_dir = ABSPATH . 'feeds/';
-	$plugin_dir = dirname( plugin_dir_path( __FILE__ ), 2 );
-	$new_feeds_dir = $plugin_dir . '/feeds/';
-
-	// Check if old directory exists
-	if ( ! is_dir( $old_feeds_dir ) ) {
-		return new WP_Error( 'old_feeds_dir_not_found', 'Old feeds directory not found: ' . $old_feeds_dir );
-	}
-
-	// Check if new directory already exists and has content
-	if ( is_dir( $new_feeds_dir ) && count( scandir( $new_feeds_dir ) ) > 2 ) {
-		return new WP_Error( 'new_feeds_dir_not_empty', 'New feeds directory already contains files: ' . $new_feeds_dir );
-	}
-
-	// Ensure new directory exists
-	if ( ! is_dir( $new_feeds_dir ) ) {
-		if ( ! wp_mkdir_p( $new_feeds_dir ) ) {
-			return new WP_Error( 'new_feeds_dir_create_failed', 'Failed to create new feeds directory: ' . $new_feeds_dir );
-		}
-	}
-
-	// Get list of files to migrate
-	$files = scandir( $old_feeds_dir );
-	$migrated_files = 0;
-	$errors = array();
-
-	foreach ( $files as $file ) {
-		if ( $file === '.' || $file === '..' ) {
-			continue;
-		}
-
-		$old_path = $old_feeds_dir . $file;
-		$new_path = $new_feeds_dir . $file;
-
-		// Skip if it's a directory (we only want files)
-		if ( is_dir( $old_path ) ) {
-			continue;
-		}
-
-		// Attempt to copy the file
-		if ( copy( $old_path, $new_path ) ) {
-			$migrated_files++;
-		} else {
-			$errors[] = 'Failed to copy: ' . $file;
-		}
-	}
-
-	// Log migration results
-	if ( ! empty( $errors ) ) {
-		error_log( '[PUNTWORK] [MIGRATION] Feeds migration completed with errors. Migrated: ' . $migrated_files . ', Errors: ' . count( $errors ) );
-		foreach ( $errors as $error ) {
-			error_log( '[PUNTWORK] [MIGRATION-ERROR] ' . $error );
-		}
-		return new WP_Error( 'migration_errors', 'Migration completed with errors. Check logs for details.' );
-	}
-
-	error_log( '[PUNTWORK] [MIGRATION] Successfully migrated ' . $migrated_files . ' files from ' . $old_feeds_dir . ' to ' . $new_feeds_dir );
 
 	return true;
 }

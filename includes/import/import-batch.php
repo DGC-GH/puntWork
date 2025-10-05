@@ -514,18 +514,6 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 		try {
 			// Get total items first
 			$json_path = puntwork_get_combined_jsonl_path();
-			if ( ! file_exists( $json_path ) ) {
-				// Fallback to option-based path
-				$json_path = get_option( 'job_import_json_path', 'feeds/combined-jobs.jsonl' );
-			}
-			if ( ! file_exists( $json_path ) ) {
-				// Try server root feeds directory (file is at /feeds/ from FTP root)
-				$json_path = '/feeds/combined-jobs.jsonl';
-			}
-			if ( ! file_exists( $json_path ) ) {
-				// Try domain root feeds directory
-				$json_path = '/home/u164580062/domains/belgiumjobs.work/feeds/combined-jobs.jsonl';
-			}
 			$total_items = get_json_item_count( $json_path );
 
 			// Check if Action Scheduler is available for async processing
