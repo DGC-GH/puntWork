@@ -884,7 +884,14 @@ console.info("=== Job Import Logic Script Loaded ===");
                     $('#start-import').show().text('Start Import').prop('disabled', false);
                     $('#resume-import').hide();
                     $('#cancel-import').hide();
-                    $('#reset-import').hide().prop('disabled', false);
+                    $('#reset-import').hide().prop('disabled', false).text('Reset Import');
+
+                    console.log('[PUNTWORK] Button states updated - reset-import should be hidden and re-enabled');
+                    console.log('[PUNTWORK] reset-import button state:', {
+                        visible: $('#reset-import').is(':visible'),
+                        disabled: $('#reset-import').prop('disabled'),
+                        text: $('#reset-import').text()
+                    });
 
                     // Force a fresh status check to ensure UI reflects the reset state
                     console.log('[PUNTWORK] Reset completed, forcing fresh status check');

@@ -430,6 +430,15 @@ function reset_job_import_status_ajax() {
 		delete_transient( 'import_cancel' );
 		error_log( '[PUNTWORK] [DEBUG-PHP] Deleted all related import options and transients' );
 
+		// Delete the combined file to prevent status correction from recreating the import status
+		$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
+		if ( file_exists( $combined_file ) ) {
+			$deleted = unlink( $combined_file );
+			error_log( '[PUNTWORK] [DEBUG-PHP] Combined file deletion: ' . ($deleted ? 'SUCCESS' : 'FAILED') . ' - ' . $combined_file );
+		} else {
+			error_log( '[PUNTWORK] [DEBUG-PHP] Combined file does not exist, no deletion needed' );
+		}
+
 		PuntWorkLogger::info( 'Import status and progress completely reset', PuntWorkLogger::CONTEXT_BATCH );
 
 		PuntWorkLogger::logAjaxResponse( 'reset_job_import_status', array( 'message' => 'Import status reset' ) );
