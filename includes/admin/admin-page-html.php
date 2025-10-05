@@ -174,72 +174,90 @@ function feed_config_page() {
 function render_javascript_init() {
 	?>
 	<script type="text/javascript">
-		jQuery(document).ready(function($) {
-			console.log('[PUNTWORK] Inline script: Document ready, checking modules...');
-			console.log('[PUNTWORK] Inline script: JobImportEvents available:', typeof JobImportEvents);
-			console.log('[PUNTWORK] Inline script: JobImportUI available:', typeof JobImportUI);
-			console.log('[PUNTWORK] Inline script: JobImportAPI available:', typeof JobImportAPI);
-			console.log('[PUNTWORK] Inline script: JobImportLogic available:', typeof JobImportLogic);
-			console.log('[PUNTWORK] Inline script: jobImportInitialized:', typeof window.jobImportInitialized);
+		// Wait for all scripts to load before initializing
+		function checkScriptsLoaded() {
+			console.log('[PUNTWORK] Checking if all scripts are loaded...');
+			console.log('[PUNTWORK] jQuery available:', typeof jQuery);
+			console.log('[PUNTWORK] jobImportData available:', typeof jobImportData);
+			console.log('[PUNTWORK] JobImportEvents available:', typeof JobImportEvents);
+			console.log('[PUNTWORK] JobImportUI available:', typeof JobImportUI);
+			console.log('[PUNTWORK] JobImportAPI available:', typeof JobImportAPI);
+			console.log('[PUNTWORK] JobImportLogic available:', typeof JobImportLogic);
+			console.log('[PUNTWORK] PuntWorkJSLogger available:', typeof PuntWorkJSLogger);
+
+			return typeof jQuery !== 'undefined' &&
+				   typeof jobImportData !== 'undefined' &&
+				   typeof JobImportEvents !== 'undefined' &&
+				   typeof JobImportUI !== 'undefined' &&
+				   typeof JobImportAPI !== 'undefined' &&
+				   typeof JobImportLogic !== 'undefined' &&
+				   typeof PuntWorkJSLogger !== 'undefined';
+		}
+
+		function initializeJobImport() {
+			console.log('[PUNTWORK] All scripts loaded, initializing job import system...');
 
 			// Check if buttons exist
-			console.log('[PUNTWORK] Inline script: cleanup-duplicates button exists:', $('#cleanup-duplicates').length);
-			console.log('[PUNTWORK] Inline script: test-single-job button exists:', $('#test-single-job').length);
+			console.log('[PUNTWORK] Start button exists:', jQuery('#start-import').length);
+			console.log('[PUNTWORK] Cleanup button exists:', jQuery('#cleanup-duplicates').length);
+			console.log('[PUNTWORK] Test single job button exists:', jQuery('#test-single-job').length);
 
 			// Add a simple test function to global scope
 			window.testButtons = function() {
 				console.log('[PUNTWORK] Testing buttons...');
-				console.log('Cleanup button found:', $('#cleanup-duplicates').length);
-				console.log('Test single job button found:', $('#test-single-job').length);
+				console.log('Start button found:', jQuery('#start-import').length);
+				console.log('Cleanup button found:', jQuery('#cleanup-duplicates').length);
+				console.log('Test single job button found:', jQuery('#test-single-job').length);
 
-				if ($('#cleanup-duplicates').length > 0) {
-					console.log('Cleanup button HTML:', $('#cleanup-duplicates')[0].outerHTML);
+				if (jQuery('#start-import').length > 0) {
+					console.log('Start button HTML:', jQuery('#start-import')[0].outerHTML);
 				}
-				if ($('#test-single-job').length > 0) {
-					console.log('Test single job button HTML:', $('#test-single-job')[0].outerHTML);
+				if (jQuery('#cleanup-duplicates').length > 0) {
+					console.log('Cleanup button HTML:', jQuery('#cleanup-duplicates')[0].outerHTML);
+				}
+				if (jQuery('#test-single-job').length > 0) {
+					console.log('Test single job button HTML:', jQuery('#test-single-job')[0].outerHTML);
 				}
 
 				// Test click events
-				$('#cleanup-duplicates').trigger('click');
-				$('#test-single-job').trigger('click');
+				jQuery('#start-import').trigger('click');
+				jQuery('#cleanup-duplicates').trigger('click');
+				jQuery('#test-single-job').trigger('click');
 			};
 
 			console.log('[PUNTWORK] Run testButtons() in console to test button functionality');
 
 			// Only initialize if not already initialized
 			if (typeof window.jobImportInitialized == 'undefined') {
-				console.log('[PUNTWORK] Inline script: Initializing job import system...');
+				console.log('[PUNTWORK] Initializing job import system...');
 
 				// Initialize the job import system
 				if (typeof JobImportEvents !== 'undefined') {
-					console.log('[PUNTWORK] Inline script: Calling JobImportEvents.init()');
+					console.log('[PUNTWORK] Calling JobImportEvents.init()');
 					JobImportEvents.init();
 				} else {
-					console.error('[PUNTWORK] Inline script: JobImportEvents not available!');
+					console.error('[PUNTWORK] JobImportEvents not available!');
 				}
 
 				// Initialize UI components
 				if (typeof JobImportUI !== 'undefined') {
-					console.log('[PUNTWORK] Inline script: Calling JobImportUI.clearProgress()');
+					console.log('[PUNTWORK] Calling JobImportUI.clearProgress()');
 					JobImportUI.clearProgress();
 				}
 
-				// Note: Import status checking is now handled by JobImportEvents.checkInitialStatus()
-				// to avoid duplicate checks and potential race conditions
-
 				// Initialize scheduling if available
 				if (typeof JobImportScheduling !== 'undefined') {
-					console.log('[PUNTWORK] Inline script: Calling JobImportScheduling.init()');
+					console.log('[PUNTWORK] Calling JobImportScheduling.init()');
 					JobImportScheduling.init();
 				}
 
 				// Bind refresh button for main import history section
-				$('#refresh-history-main').on('click', function(e) {
+				jQuery('#refresh-history-main').on('click', function(e) {
 					e.preventDefault();
 					console.log('[PUNTWORK] Main history refresh clicked');
 					if (typeof JobImportScheduling !== 'undefined' &&
 						typeof JobImportScheduling.loadRunHistory == 'function') {
-						$(this).addClass('manual-refresh');
+						jQuery(this).addClass('manual-refresh');
 						JobImportScheduling.loadRunHistory('#refresh-history-main');
 					}
 				});
@@ -253,11 +271,39 @@ function render_javascript_init() {
 
 				// Mark as initialized to prevent double initialization
 				window.jobImportInitialized = true;
-				console.log('[PUNTWORK] Inline script: Admin page JavaScript initialized');
+				console.log('[PUNTWORK] Job import system initialized successfully');
 			} else {
-				console.log('[PUNTWORK] Inline script: Job import already initialized, skipping...');
+				console.log('[PUNTWORK] Job import already initialized, skipping...');
 			}
-		});
+		}
+
+		// Check immediately
+		if (checkScriptsLoaded()) {
+			initializeJobImport();
+		} else {
+			// Wait for scripts to load
+			console.log('[PUNTWORK] Scripts not loaded yet, waiting...');
+			var checkInterval = setInterval(function() {
+				if (checkScriptsLoaded()) {
+					clearInterval(checkInterval);
+					initializeJobImport();
+				}
+			}, 100);
+
+			// Timeout after 10 seconds
+			setTimeout(function() {
+				clearInterval(checkInterval);
+				console.error('[PUNTWORK] Timeout waiting for scripts to load');
+				console.log('[PUNTWORK] Final script availability check:');
+				console.log('jQuery:', typeof jQuery);
+				console.log('jobImportData:', typeof jobImportData);
+				console.log('JobImportEvents:', typeof JobImportEvents);
+				console.log('JobImportUI:', typeof JobImportUI);
+				console.log('JobImportAPI:', typeof JobImportAPI);
+				console.log('JobImportLogic:', typeof JobImportLogic);
+				console.log('PuntWorkJSLogger:', typeof PuntWorkJSLogger);
+			}, 10000);
+		}
 	</script>
 	<?php
 }

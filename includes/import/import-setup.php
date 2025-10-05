@@ -254,13 +254,13 @@ function prepare_import_setup( $batch_start = 0, $is_batch = false ) {
 		$start_time = $existing_status['start_time'];
 		\Puntwork\PuntWorkLogger::info( 'Using existing import start time: ' . $start_time, \Puntwork\PuntWorkLogger::CONTEXT_BATCH );
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SETUP-TIME] Using existing import start time: ' . date( 'Y-m-d H:i:s', $start_time ) . ' (' . $start_time . ')' );
+			error_log( '[PUNTWORK] [SETUP-TIME] Using existing import start time: ' . date( 'Y-m-d H:i:s', (int) $start_time ) . ' (' . $start_time . ')' );
 		}
 	} else {
 		$start_time = microtime( true );
 		\Puntwork\PuntWorkLogger::info( 'Starting new import with start time: ' . $start_time, \Puntwork\PuntWorkLogger::CONTEXT_BATCH );
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SETUP-TIME] Starting new import with start time: ' . date( 'Y-m-d H:i:s', $start_time ) . ' (' . $start_time . ')' );
+			error_log( '[PUNTWORK] [SETUP-TIME] Starting new import with start time: ' . date( 'Y-m-d H:i:s', (int) $start_time ) . ' (' . $start_time . ')' );
 		}
 	}
 
