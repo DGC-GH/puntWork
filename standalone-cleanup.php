@@ -4,13 +4,36 @@
  * This script runs outside of WordPress to avoid memory issues
  */
 
-// Load WordPress configuration
-$wp_config_path = dirname(__FILE__) . '/../wp-config.php';
-if (!file_exists($wp_config_path)) {
-    die("Error: wp-config.php not found at $wp_config_path\n");
+// Load WordPress configuration - try multiple possible paths
+$possible_paths = [
+    dirname(__FILE__) . '/../wp-config.php',           // From includes/ up to root
+    dirname(__FILE__) . '/../../wp-config.php',        // From includes/ up 2 levels
+    dirname(__FILE__) . '/../../../wp-config.php',     // From includes/ up 3 levels
+    dirname(__FILE__) . '/../../../../wp-config.php',  // From includes/ up 4 levels
+    dirname(__FILE__) . '/../../../../../wp-config.php', // From includes/ up 5 levels
+    '/public_html/wp-config.php',                      // Absolute path for common hosting
+    $_SERVER['DOCUMENT_ROOT'] . '/wp-config.php',      // Document root
+];
+
+$wp_config_found = false;
+foreach ($possible_paths as $path) {
+    debug_log("Checking wp-config.php at: $path");
+    if (file_exists($path)) {
+        $wp_config_path = $path;
+        $wp_config_found = true;
+        debug_log("Found wp-config.php at: $path");
+        break;
+    }
 }
 
+if (!$wp_config_found) {
+    debug_log("wp-config.php not found in any expected location");
+    die("Error: wp-config.php not found in any of the expected locations\n");
+}
+
+debug_log("Loading wp-config.php from: $wp_config_path");
 require_once($wp_config_path);
+debug_log("wp-config.php loaded successfully");
 
 // Use WordPress database constants (already defined by wp-config.php)
 // DB_HOST, DB_NAME, DB_USER, DB_PASSWORD are already defined
@@ -21,6 +44,7 @@ if (!isset($table_prefix) || empty($table_prefix)) {
     $table_prefix = 'wp_'; // Default WordPress table prefix
 }
 define('WP_PREFIX', $table_prefix);
+debug_log("Table prefix set to: " . WP_PREFIX);
 
 // Debug logging function
 function debug_log($message) {
