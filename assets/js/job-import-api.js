@@ -429,6 +429,72 @@ console.log('[PUNTWORK] job-import-api.js loaded');
         },
 
         /**
+         * Schedule feed processing using Action Scheduler
+         * @param {Array} feedKeys - Array of feed key identifiers
+         * @returns {Promise} AJAX promise
+         */
+        scheduleFeedProcessing: function(feedKeys) {
+            console.log('[PUNTWORK] ===== API.scheduleFeedProcessing DEBUG =====');
+            console.log('[PUNTWORK] Scheduling feed processing for:', feedKeys);
+            console.log('[PUNTWORK] AJAX URL:', jobImportData.ajaxurl);
+            console.log('[PUNTWORK] Nonce:', jobImportData.nonce);
+            console.log('[PUNTWORK] Timestamp:', new Date().toISOString());
+
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'schedule_feed_processing',
+                    feed_keys: feedKeys,
+                    nonce: jobImportData.nonce
+                },
+                timeout: 30000, // 30 seconds for scheduling
+                success: function(response) {
+                    console.log('[PUNTWORK] AJAX success for scheduleFeedProcessing:', response);
+                    if (!response || !response.success) {
+                        console.error('[PUNTWORK] ERROR: scheduleFeedProcessing AJAX returned unsuccessful response:', response);
+                    } else {
+                        console.log('[PUNTWORK] SUCCESS: Feed processing scheduled for', response.data && response.data.scheduled_jobs ? response.data.scheduled_jobs.length : 0, 'feeds');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('[PUNTWORK] AJAX error for scheduleFeedProcessing:', {
+                        xhr: xhr,
+                        status: status,
+                        error: error,
+                        statusCode: xhr.status,
+                        responseText: xhr.responseText,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+            });
+        },
+
+        /**
+         * Get feed processing status
+         * @param {Array} feedKeys - Array of feed key identifiers
+         * @returns {Promise} AJAX promise
+         */
+        getFeedProcessingStatus: function(feedKeys) {
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'get_feed_processing_status',
+                    feed_keys: feedKeys,
+                    nonce: jobImportData.nonce,
+                    _cache_bust: Date.now() // Prevent caching
+                },
+                success: function(response) {
+                    PuntWorkJSLogger.debug('Get feed processing status response', 'API', response);
+                },
+                error: function(xhr, status, error) {
+                    PuntWorkJSLogger.error('Get feed processing status error: ' + error, 'API');
+                }
+            });
+        },
+
+        /**
          * Determine if an AJAX error should be retried
          * @param {object} xhr - XMLHttpRequest object
          * @param {string} status - Error status

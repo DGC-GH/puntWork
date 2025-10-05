@@ -501,38 +501,80 @@ console.info("=== Job Import Logic Script Loaded ===");
                 JobImportUI.appendLogs(['Starting feed processing...']);
                 $('#status-message').text('Processing feeds...');
 
-                // Process feeds
-                const feeds = jobImportData.feeds;
-                console.log('[PUNTWORK] [DEBUG-IMPORT] Processing feeds:', feeds);
-                console.log('[PUNTWORK] [DEBUG-IMPORT] Number of feeds to process:', Object.keys(feeds).length);
+                // Process feeds using Action Scheduler
+                const feedKeys = Object.keys(feeds);
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Scheduling feed processing for:', feedKeys);
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Number of feeds to process:', feedKeys.length);
+
+                JobImportUI.appendLogs(['Scheduling ' + feedKeys.length + ' feeds for background processing...']);
+
+                // Schedule feed processing
+                const scheduleStartTime = Date.now();
+                const scheduleResponse = await JobImportAPI.scheduleFeedProcessing(feedKeys);
+                const scheduleEndTime = Date.now();
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Schedule feed processing took:', (scheduleEndTime - scheduleStartTime), 'ms');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Schedule response:', scheduleResponse);
+
+                if (!scheduleResponse.success) {
+                    console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: Feed scheduling failed:', scheduleResponse);
+                    throw new Error('Feed scheduling failed: ' + (scheduleResponse.message || 'Unknown error'));
+                }
+
+                JobImportUI.appendLogs(['Feed processing scheduled successfully']);
+                JobImportUI.appendLogs(['Monitoring feed processing progress...']);
+
+                // Monitor feed processing progress
                 let total_items = 0;
-                const total_feeds = Object.keys(feeds).length;
+                const maxWaitTime = 15 * 60 * 1000; // 15 minutes max wait
+                const checkInterval = 5000; // Check every 5 seconds
+                const startWaitTime = Date.now();
 
-                JobImportUI.appendLogs(['Processing ' + total_feeds + ' feeds...']);
+                while (true) {
+                    const elapsed = Date.now() - startWaitTime;
+                    if (elapsed > maxWaitTime) {
+                        console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: Feed processing timeout after', elapsed / 1000, 'seconds');
+                        throw new Error('Feed processing timed out after ' + Math.round(elapsed / 1000) + ' seconds');
+                    }
 
-                // Initialize progress for feed processing phase
-                JobImportUI.updateProgress({
-                    total: total_feeds,
-                    processed: 0,
-                    published: 0,
-                    updated: 0,
-                    skipped: 0,
-                    duplicates_drafted: 0,
-                    drafted_old: 0,
-                    time_elapsed: this.getElapsedTime() / 1000,
-                    complete: false
-                });
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Checking feed processing status...');
+                    const statusResponse = await JobImportAPI.getFeedProcessingStatus(feedKeys);
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Feed status response:', statusResponse);
 
-                for (let i = 0; i < Object.keys(feeds).length; i++) {
-                    const feed = Object.keys(feeds)[i];
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PROCESSING FEED', (i + 1) + '/' + total_feeds + ':', feed, '=====');
+                    if (!statusResponse.success) {
+                        console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: Failed to get feed status:', statusResponse);
+                        throw new Error('Failed to get feed processing status: ' + (statusResponse.message || 'Unknown error'));
+                    }
 
-                    // Update progress for current feed
-                    const current_feed_num = i + 1;
-                    $('#status-message').text(`Processing feed ${current_feed_num}/${total_feeds}: ${feed}`);
+                    let allComplete = true;
+                    let processingCount = 0;
+                    let completedCount = 0;
+                    total_items = 0;
+
+                    for (const feedKey of feedKeys) {
+                        const status = statusResponse.data[feedKey];
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] Feed', feedKey, 'status:', status);
+
+                        if (status && status.success) {
+                            completedCount++;
+                            total_items += status.item_count || 0;
+                            JobImportUI.appendLogs(['Feed ' + feedKey + ' completed: ' + (status.item_count || 0) + ' items']);
+                        } else if (status && status.status === 'processing') {
+                            processingCount++;
+                            allComplete = false;
+                        } else if (!status || status.status === 'pending') {
+                            allComplete = false;
+                        } else if (status && !status.success) {
+                            console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: Feed', feedKey, 'failed:', status.error);
+                            throw new Error('Feed ' + feedKey + ' processing failed: ' + (status.error || 'Unknown error'));
+                        }
+                    }
+
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Feed progress: completed=' + completedCount + ', processing=' + processingCount + ', total_feeds=' + feedKeys.length);
+
+                    // Update progress UI
                     JobImportUI.updateProgress({
-                        total: total_feeds,
-                        processed: current_feed_num - 1,
+                        total: feedKeys.length,
+                        processed: completedCount,
                         published: 0,
                         updated: 0,
                         skipped: 0,
@@ -542,47 +584,15 @@ console.info("=== Job Import Logic Script Loaded ===");
                         complete: false
                     });
 
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] Feed URL:', feeds[feed]);
-                console.log('[PUNTWORK] [DEBUG-IMPORT] About to call JobImportAPI.processFeed...');
+                    $('#status-message').text(`Processing feeds: ${completedCount}/${feedKeys.length} completed`);
 
-                    const feedStartTime = Date.now();
-                    const response = await JobImportAPI.processFeed(feed);
-                    const feedEndTime = Date.now();
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] Feed processing took:', (feedEndTime - feedStartTime), 'ms');
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] Process feed response:', response);
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] Response success:', response.success);
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] Response data:', response.data);
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] Response message:', response.message);
-
-                    PuntWorkJSLogger.debug(`Process feed ${feed} response`, 'LOGIC', response);
-
-                    if (response.success) {
-                        const itemCount = (response.data && response.data.item_count) || 0;
-                        if (itemCount === 0) {
-                            console.warn('[PUNTWORK] [DEBUG-IMPORT] WARNING: Feed', feed, 'processed with success but item_count is 0!');
-                            PuntWorkJSLogger.warn(`Feed ${feed} processed with success but item_count is 0`, 'LOGIC', response);
-                        }
-                        console.log('[PUNTWORK] [DEBUG-IMPORT] Feed', feed, 'processed successfully - items found:', itemCount);
-                        JobImportUI.appendLogs((response.data && response.data.logs) || []);
-                        total_items += itemCount;
-
-                        // Update progress after successful feed processing
-                        JobImportUI.updateProgress({
-                            total: total_feeds,
-                            processed: current_feed_num,
-                            published: 0,
-                            updated: 0,
-                            skipped: 0,
-                            duplicates_drafted: 0,
-                            drafted_old: 0,
-                            time_elapsed: this.getElapsedTime() / 1000,
-                            complete: false
-                        });
-                    } else {
-                        console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: Processing feed', feed, 'failed:', response);
-                        PuntWorkJSLogger.error(`Processing feed ${feed} failed`, 'LOGIC', response);
-                        throw new Error(`Processing feed ${feed} failed: ` + (response.message || 'Unknown error'));
+                    if (allComplete) {
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] All feeds completed successfully');
+                        break;
                     }
+
+                    // Wait before checking again
+                    await new Promise(resolve => setTimeout(resolve, checkInterval));
                 }
 
                 console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 1 COMPLETE =====');
@@ -590,8 +600,6 @@ console.info("=== Job Import Logic Script Loaded ===");
 
                 if (total_items === 0) {
                     console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: No items found in feeds after processing');
-                    console.error('[PUNTWORK] [DEBUG-IMPORT] Feeds processed:', feeds);
-                    PuntWorkLogger.error('No items found in feeds after processing', 'LOGIC', feeds);
                     throw new Error('No items found in feeds. Please check that feeds are configured and accessible.');
                 }
 

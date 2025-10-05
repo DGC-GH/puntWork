@@ -2061,3 +2061,190 @@ function puntwork_start_batch_import_handler() {
 		error_log( '[PUNTWORK] [BATCH-FATAL] Stack trace: ' . $e->getTraceAsString() );
 	}
 }
+
+/*
+ * AJAX handlers for feed processing
+ * Handles scheduling and status retrieval for feed processing.
+ */
+
+add_action( 'wp_ajax_schedule_feed_processing', __NAMESPACE__ . '\\schedule_feed_processing_ajax' );
+function schedule_feed_processing_ajax() {
+	error_log( '[PUNTWORK] [DEBUG-PHP] ===== SCHEDULE_FEED_PROCESSING_AJAX START =====' );
+	
+	PuntWorkLogger::logAjaxRequest( 'schedule_feed_processing', $_POST );
+
+	// Basic security validation
+	if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'job_import_nonce' ) ) {
+		wp_send_json_error( array( 'message' => 'Security check failed' ) );
+		return;
+	}
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => 'Insufficient permissions' ) );
+		return;
+	}
+
+	if ( ! isset( $_POST['feed_keys'] ) || ! is_array( $_POST['feed_keys'] ) ) {
+		wp_send_json_error( array( 'message' => 'Missing or invalid feed_keys parameter' ) );
+		return;
+	}
+
+	try {
+		$feed_keys = array_map( 'sanitize_text_field', $_POST['feed_keys'] );
+		
+		// Check if Action Scheduler is available
+		if ( ! function_exists( 'as_schedule_single_action' ) ) {
+			wp_send_json_error( array( 'message' => 'Action Scheduler not available' ) );
+			return;
+		}
+		
+		$scheduled_jobs = array();
+		
+		foreach ( $feed_keys as $feed_key ) {
+			// Check if this feed is already being processed
+			$feed_lock_key = 'puntwork_feed_processing_' . $feed_key;
+			if ( get_transient( $feed_lock_key ) ) {
+				error_log( '[PUNTWORK] [SCHEDULE] Feed ' . $feed_key . ' already being processed, skipping' );
+				continue;
+			}
+			
+			// Set lock
+			set_transient( $feed_lock_key, true, 900 ); // 15 minutes
+			
+			// Schedule the feed processing
+			$job_id = as_schedule_single_action( time(), 'puntwork_process_feed', array( $feed_key ) );
+			
+			if ( $job_id ) {
+				$scheduled_jobs[] = array(
+					'feed_key' => $feed_key,
+					'job_id' => $job_id,
+				);
+				error_log( '[PUNTWORK] [SCHEDULE] Scheduled feed processing for ' . $feed_key . ', job ID: ' . $job_id );
+			} else {
+				error_log( '[PUNTWORK] [SCHEDULE-ERROR] Failed to schedule feed processing for ' . $feed_key );
+			}
+		}
+		
+		PuntWorkLogger::logAjaxResponse( 'schedule_feed_processing', array( 'scheduled_count' => count( $scheduled_jobs ) ) );
+		
+		wp_send_json_success( array(
+			'message' => 'Feed processing scheduled for ' . count( $scheduled_jobs ) . ' feeds',
+			'scheduled_jobs' => $scheduled_jobs,
+		) );
+		
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] [SCHEDULE-EXCEPTION] Exception in schedule_feed_processing_ajax: ' . $e->getMessage() );
+		PuntWorkLogger::error( 'Schedule feed processing error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
+		wp_send_json_error( array( 'message' => 'Failed to schedule feed processing: ' . $e->getMessage() ) );
+	}
+}
+
+add_action( 'wp_ajax_get_feed_processing_status', __NAMESPACE__ . '\\get_feed_processing_status_ajax' );
+function get_feed_processing_status_ajax() {
+	PuntWorkLogger::logAjaxRequest( 'get_feed_processing_status', $_POST );
+
+	// Basic security validation
+	if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'job_import_nonce' ) ) {
+		wp_send_json_error( array( 'message' => 'Security check failed' ) );
+		return;
+	}
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => 'Insufficient permissions' ) );
+		return;
+	}
+
+	if ( ! isset( $_POST['feed_keys'] ) || ! is_array( $_POST['feed_keys'] ) ) {
+		wp_send_json_error( array( 'message' => 'Missing or invalid feed_keys parameter' ) );
+		return;
+	}
+
+	try {
+		$feed_keys = array_map( 'sanitize_text_field', $_POST['feed_keys'] );
+		$status = array();
+		
+		foreach ( $feed_keys as $feed_key ) {
+			$feed_result_key = 'puntwork_feed_result_' . $feed_key;
+			$result = get_transient( $feed_result_key );
+			
+			if ( $result ) {
+				$status[ $feed_key ] = $result;
+			} else {
+				// Check if still processing
+				$feed_lock_key = 'puntwork_feed_processing_' . $feed_key;
+				if ( get_transient( $feed_lock_key ) ) {
+					$status[ $feed_key ] = array( 'status' => 'processing' );
+				} else {
+					$status[ $feed_key ] = array( 'status' => 'pending' );
+				}
+			}
+		}
+		
+		wp_send_json_success( $status );
+		
+	} catch ( \Exception $e ) {
+		PuntWorkLogger::error( 'Get feed processing status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
+		wp_send_json_error( array( 'message' => 'Failed to get feed processing status: ' . $e->getMessage() ) );
+	}
+}
+
+add_action( 'puntwork_process_feed', __NAMESPACE__ . '\\puntwork_process_feed_handler' );
+function puntwork_process_feed_handler( $feed_key ) {
+	error_log( '[PUNTWORK] [FEED-ASYNC] Processing feed via Action Scheduler: ' . $feed_key );
+	
+	try {
+		// Get feeds and find the URL for this feed key
+		$feeds = get_feeds();
+		if ( ! isset( $feeds[ $feed_key ] ) ) {
+			error_log( '[PUNTWORK] [FEED-ASYNC-ERROR] Feed not found: ' . $feed_key );
+			return;
+		}
+
+		$feed_url        = $feeds[ $feed_key ];
+		$output_dir      = ABSPATH . 'feeds/';
+		$fallback_domain = 'belgiumjobs.work';
+
+		// Include feed processor
+		include_once dirname( __DIR__ ) . '/import/feed-processor.php';
+
+		// Increase memory limit and execution time for large feeds
+		ini_set( 'memory_limit', '2048M' );
+		set_time_limit( 900 ); // 15 minutes
+
+		$logs = array();
+		$item_count = process_one_feed( $feed_key, $feed_url, $output_dir, $fallback_domain, $logs );
+		
+		error_log( '[PUNTWORK] [FEED-ASYNC-SUCCESS] Feed ' . $feed_key . ' processed successfully, items: ' . $item_count );
+		
+		// Store the result in a transient for the UI to check
+		$feed_result_key = 'puntwork_feed_result_' . $feed_key;
+		set_transient( $feed_result_key, array(
+			'success' => true,
+			'item_count' => $item_count,
+			'logs' => $logs,
+			'processed_at' => time(),
+		), 3600 ); // 1 hour
+		
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] [FEED-ASYNC-EXCEPTION] Exception processing feed ' . $feed_key . ': ' . $e->getMessage() );
+		error_log( '[PUNTWORK] [FEED-ASYNC-EXCEPTION] Stack trace: ' . $e->getTraceAsString() );
+		
+		// Store error result
+		$feed_result_key = 'puntwork_feed_result_' . $feed_key;
+		set_transient( $feed_result_key, array(
+			'success' => false,
+			'error' => $e->getMessage(),
+			'processed_at' => time(),
+		), 3600 );
+	} catch ( \Throwable $e ) {
+		error_log( '[PUNTWORK] [FEED-ASYNC-FATAL] Fatal error processing feed ' . $feed_key . ': ' . $e->getMessage() );
+		
+		// Store error result
+		$feed_result_key = 'puntwork_feed_result_' . $feed_key;
+		set_transient( $feed_result_key, array(
+			'success' => false,
+			'error' => $e->getMessage(),
+			'processed_at' => time(),
+		), 3600 );
+	}
+}
