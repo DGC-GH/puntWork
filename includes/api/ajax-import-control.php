@@ -2023,44 +2023,17 @@ function combine_jsonl_ajax() {
 
 		error_log( '[PUNTWORK] [DEBUG-PHP] ===== COMBINE_JSONL_AJAX SUCCESS =====' );
 
-		// Send JSON response manually without wp_die() to allow import to continue
-		$response = array(
-			'success' => true,
-			'data'    => array(
-				'total_items'          => $total_items,
-				'message'              => $action_scheduler_reliable ? 
-					'JSONL files combined successfully - import scheduled in background' : 
-					'JSONL files combined successfully - import running synchronously',
-				'combined_file_exists' => file_exists( $combined_file ),
-				'combined_file_size'   => $file_size ?? 0,
-				'import_scheduled'     => $scheduling_success ?? false,
-				'action_scheduler_reliable' => $action_scheduler_reliable,
-			)
-		);
-
-		// Send headers and JSON response
-		if ( ! headers_sent() ) {
-			header( 'Content-Type: application/json; charset=utf-8' );
-			header( 'X-Robots-Tag: noindex' );
-			header( 'X-Content-Type-Options: nosniff' );
-			status_header( 200 );
-		}
-
-		echo wp_json_encode( $response );
-
-		// Flush output buffers to ensure response is sent
-		if ( function_exists( 'fastcgi_finish_request' ) ) {
-			fastcgi_finish_request();
-		} else {
-			// Fallback: flush all output buffers
-			while ( ob_get_level() ) {
-				ob_end_flush();
-			}
-			flush();
-		}
-
-		// Terminate the script to prevent any additional output
-		wp_die();
+		// Send standard WordPress AJAX success response
+		wp_send_json_success( array(
+			'total_items'          => $total_items,
+			'message'              => $action_scheduler_reliable ? 
+				'JSONL files combined successfully - import scheduled in background' : 
+				'JSONL files combined successfully - import running synchronously',
+			'combined_file_exists' => file_exists( $combined_file ),
+			'combined_file_size'   => $file_size ?? 0,
+			'import_scheduled'     => $scheduling_success ?? false,
+			'action_scheduler_reliable' => $action_scheduler_reliable,
+		) );
 	} catch ( \Exception $e ) {
 		// Clear combination processing lock on any error
 		delete_transient( $combine_lock_key );
