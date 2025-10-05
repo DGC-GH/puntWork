@@ -645,40 +645,15 @@ console.info("=== Job Import Logic Script Loaded ===");
                     JobImportUI.appendLogs(['Using existing processed feed data']);
                 }
 
-                console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 2: JSONL COMBINATION =====');
-                $('#status-message').text('Combining JSONL files...');
-                JobImportUI.appendLogs(['Starting JSONL combination...']);
+                // Only combine JSONL if we processed feeds (skipFeedProcessing is false)
+                if (!skipFeedProcessing) {
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 2: JSONL COMBINATION =====');
+                    $('#status-message').text('Combining JSONL files...');
+                    JobImportUI.appendLogs(['Starting JSONL combination...']);
 
-                // Show progress for JSONL combination phase
-                JobImportUI.updateProgress({
-                    total: 1,
-                    processed: 0,
-                    published: 0,
-                    updated: 0,
-                    skipped: 0,
-                    duplicates_drafted: 0,
-                    drafted_old: 0,
-                    time_elapsed: this.getElapsedTime() / 1000,
-                    complete: false
-                });
-
-                console.log('[PUNTWORK] [DEBUG-IMPORT] About to call JobImportAPI.combineJsonl with total_items=' + total_items);
-                const combineStartTime = Date.now();
-                const combineResponse = await JobImportAPI.combineJsonl(total_items);
-                const combineEndTime = Date.now();
-                console.log('[PUNTWORK] [DEBUG-IMPORT] Combine JSONL call took:', (combineEndTime - combineStartTime), 'ms');
-                console.log('[PUNTWORK] [DEBUG-IMPORT] Combine JSONL response:', combineResponse);
-                console.log('[PUNTWORK] [DEBUG-IMPORT] Combine response success:', combineResponse.success);
-
-                PuntWorkJSLogger.debug('Combine JSONL response', 'LOGIC', combineResponse);
-
-                if (combineResponse.success) {
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] JSONL combination successful - import scheduled in background');
-                    JobImportUI.appendLogs(combineResponse.data.logs || []);
-
-                    // Update progress to show JSONL combination complete and import scheduled
+                    // Show progress for JSONL combination phase
                     JobImportUI.updateProgress({
-                        total: total_items,
+                        total: 1,
                         processed: 0,
                         published: 0,
                         updated: 0,
@@ -686,28 +661,94 @@ console.info("=== Job Import Logic Script Loaded ===");
                         duplicates_drafted: 0,
                         drafted_old: 0,
                         time_elapsed: this.getElapsedTime() / 1000,
-                        complete: false,
-                        phase: 'jsonl-combining'
+                        complete: false
                     });
 
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 3: BACKGROUND IMPORT =====');
-                    $('#status-message').text('JSONL combined - starting background import...');
-                    JobImportUI.appendLogs(['JSONL files combined successfully']);
-                    JobImportUI.appendLogs(['Background import scheduled and starting...']);
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] About to call JobImportAPI.combineJsonl with total_items=' + total_items);
+                    const combineStartTime = Date.now();
+                    const combineResponse = await JobImportAPI.combineJsonl(total_items);
+                    const combineEndTime = Date.now();
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Combine JSONL call took:', (combineEndTime - combineStartTime), 'ms');
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Combine JSONL response:', combineResponse);
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Combine response success:', combineResponse.success);
 
-                    // Start status polling to monitor the background import progress
-                    if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
-                        console.log('[PUNTWORK] [DEBUG-IMPORT] Starting status polling for background import progress');
-                        window.JobImportEvents.startStatusPolling();
-                        console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling started successfully');
+                    PuntWorkJSLogger.debug('Combine JSONL response', 'LOGIC', combineResponse);
+
+                    if (combineResponse.success) {
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] JSONL combination successful - import scheduled in background');
+                        JobImportUI.appendLogs(combineResponse.data.logs || []);
+
+                        // Update progress to show JSONL combination complete and import scheduled
+                        JobImportUI.updateProgress({
+                            total: total_items,
+                            processed: 0,
+                            published: 0,
+                            updated: 0,
+                            skipped: 0,
+                            duplicates_drafted: 0,
+                            drafted_old: 0,
+                            time_elapsed: this.getElapsedTime() / 1000,
+                            complete: false,
+                            phase: 'jsonl-combining'
+                        });
+
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 3: BACKGROUND IMPORT =====');
+                        $('#status-message').text('JSONL combined - starting background import...');
+                        JobImportUI.appendLogs(['JSONL files combined successfully']);
+                        JobImportUI.appendLogs(['Background import scheduled and starting...']);
+
+                        // Start status polling to monitor the background import progress
+                        if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
+                            console.log('[PUNTWORK] [DEBUG-IMPORT] Starting status polling for background import progress');
+                            window.JobImportEvents.startStatusPolling();
+                            console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling started successfully');
+                        } else {
+                            console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling not available');
+                        }
+
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] ===== START IMPORT PROCESS COMPLETE =====');
                     } else {
-                        console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling not available');
+                        console.error('[PUNTWORK] [DEBUG-IMPORT] JSONL combination failed:', combineResponse);
+                        throw new Error('Combining JSONL failed: ' + (combineResponse.message || 'Unknown error'));
                     }
-
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== START IMPORT PROCESS COMPLETE =====');
                 } else {
-                    console.error('[PUNTWORK] [DEBUG-IMPORT] JSONL combination failed:', combineResponse);
-                    throw new Error('Combining JSONL failed: ' + (combineResponse.message || 'Unknown error'));
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 2 SKIPPED =====');
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Combined JSONL file already exists - skipping combination');
+                    JobImportUI.appendLogs(['Combined JSONL file already exists - skipping combination']);
+                    JobImportUI.appendLogs(['Starting direct import from existing data...']);
+
+                    // For existing data, we need to start the import directly
+                    // The combined file exists, so we can start the batch import immediately
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 3: DIRECT IMPORT =====');
+                    $('#status-message').text('Starting import from existing data...');
+
+                    // Initialize import status for existing data
+                    const initStatusResponse = await $.ajax({
+                        url: jobImportData.ajaxurl,
+                        type: 'POST',
+                        data: {
+                            action: 'initialize_import_from_existing_data',
+                            nonce: jobImportData.nonce,
+                            total_items: total_items
+                        },
+                        timeout: 30000
+                    });
+
+                    if (initStatusResponse.success) {
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] Import initialized from existing data');
+                        JobImportUI.appendLogs(['Import initialized from existing data']);
+                        JobImportUI.appendLogs(['Starting background import process...']);
+
+                        // Start status polling to monitor the import progress
+                        if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
+                            console.log('[PUNTWORK] [DEBUG-IMPORT] Starting status polling for direct import');
+                            window.JobImportEvents.startStatusPolling();
+                            console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling started for direct import');
+                        }
+                    } else {
+                        console.error('[PUNTWORK] [DEBUG-IMPORT] Failed to initialize import from existing data:', initStatusResponse);
+                        throw new Error('Failed to initialize import from existing data: ' + (initStatusResponse.message || 'Unknown error'));
+                    }
                 }
 
                 console.log('[PUNTWORK] [DEBUG-IMPORT] About to clear import cancel');
