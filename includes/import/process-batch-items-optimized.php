@@ -36,6 +36,9 @@ if ( ! function_exists( 'process_batch_items_streaming' ) ) {
 	function process_batch_items_streaming( $json_path, $batch_guids, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count, &$processed_guids = array() ) {
 		$script_start_time = microtime( true );
 
+		// Optimize memory for large batch operations
+		\Puntwork\Utilities\MemoryManager::optimizeForLargeBatch();
+
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( '[PUNTWORK] [STREAMING] process_batch_items_streaming called with ' . count( $batch_guids ) . ' GUIDs' );
 		}
@@ -101,9 +104,12 @@ if ( ! function_exists( 'process_batch_items_streaming' ) ) {
 
 			$processed_in_chunk += $chunk_processed;
 
-			// Memory management checkpoint
-			if ( $processed_in_chunk % 100 === 0 ) {
-				\Puntwork\Utilities\MemoryManager::checkMemoryUsage();
+			// Memory management checkpoint - check more frequently for memory issues
+			if ( $processed_in_chunk % 50 === 0 ) {
+				$memory_check = \Puntwork\Utilities\MemoryManager::checkMemoryUsage( $processed_count, 0.7 );
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG && ! empty( $memory_check['actions_taken'] ) ) {
+					error_log( '[PUNTWORK] [MEMORY] Memory management actions taken: ' . implode( ', ', $memory_check['actions_taken'] ) . ' (usage: ' . $memory_check['memory_usage_mb'] . 'MB/' . $memory_check['memory_limit_mb'] . 'MB)' );
+				}
 			}
 
 			// Update progress every chunk

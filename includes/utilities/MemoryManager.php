@@ -44,7 +44,7 @@ class MemoryManager {
 			$actions[]         = 'garbage_collection';
 		}
 
-		// Memory pressure detected
+		// Memory pressure detected - use lower threshold for more aggressive cleanup
 		if ( $memory_ratio > $threshold ) {
 			// Aggressive cleanup
 			if ( function_exists( 'wp_cache_flush' ) ) {
@@ -52,14 +52,27 @@ class MemoryManager {
 				$actions[] = 'cache_flush';
 			}
 
-			// Force immediate GC
+			// Force immediate GC multiple times
 			gc_collect_cycles();
-			$actions[] = 'forced_gc';
+			gc_collect_cycles();
+			$actions[] = 'forced_gc_double';
 
 			// Clear any large static caches if they exist
 			if ( isset( $GLOBALS['wp_object_cache'] ) && method_exists( $GLOBALS['wp_object_cache'], 'flush' ) ) {
 				$GLOBALS['wp_object_cache']->flush();
 				$actions[] = 'object_cache_flush';
+			}
+
+			// Clear OPcache if available
+			if ( function_exists( 'opcache_reset' ) ) {
+				opcache_reset();
+				$actions[] = 'opcache_reset';
+			}
+
+			// Clear any large global variables that might be holding memory
+			if ( isset( $GLOBALS['wp_query'] ) ) {
+				unset( $GLOBALS['wp_query'] );
+				$actions[] = 'wp_query_cleanup';
 			}
 		}
 
