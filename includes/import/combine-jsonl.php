@@ -127,19 +127,16 @@ function combine_jsonl_files( $feeds, $output_dir, $total_items, &$logs, $chunk_
 
 	if ( ! $success ) {
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [JSONL-COMBINE-ERROR] Advanced processing failed, falling back to original method' );
+			error_log( '[PUNTWORK] [JSONL-COMBINE-ERROR] Advanced processing failed, this indicates a problem with the feed data or system configuration' );
+			error_log( '[PUNTWORK] [JSONL-COMBINE-ERROR] Advanced error: ' . ( $processing_stats['error'] ?? 'Unknown error' ) );
 		}
 
-		// Fallback to original method if advanced processing fails
-		try {
-			return combine_jsonl_files_fallback( $feeds, $output_dir, $total_items, $logs );
-		} catch ( \Exception $fallback_exception ) {
-			$error_msg = 'Both advanced and fallback JSONL combination methods failed. Advanced error: ' . ( $processing_stats['error'] ?? 'Unknown' ) . '. Fallback error: ' . $fallback_exception->getMessage();
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [JSONL-COMBINE-FATAL] ' . $error_msg );
-			}
-			throw new \Exception( $error_msg );
+		// Do not fallback to old method - if advanced processing fails, there's likely a data integrity issue
+		$error_msg = 'JSONL combination failed: ' . ( $processing_stats['error'] ?? 'Unknown error' ) . '. Import cannot proceed safely.';
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [JSONL-COMBINE-FATAL] ' . $error_msg );
 		}
+		throw new \Exception( $error_msg );
 	}
 
 	// Log results
