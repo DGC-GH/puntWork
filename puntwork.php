@@ -232,6 +232,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 			'utilities/utility-helpers.php',
 			'utilities/database-optimization.php',
 			'utilities/performance-functions.php',
+			'utilities/feeds-path-utils.php',
 		);
 
 		// Social Media includes (load on admin or cron) - moved before admin includes
