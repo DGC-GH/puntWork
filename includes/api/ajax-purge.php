@@ -27,7 +27,7 @@ add_action( 'wp_ajax_job_import_cleanup_duplicates', __NAMESPACE__ . '\\job_impo
 function job_import_cleanup_duplicates_ajax() {
 	// Basic error handling for debugging
 	try {
-		error_log( '[PUNTWORK] [CLEANUP] AJAX handler called - using standalone approach' );
+		error_log( '[PUNTWORK] [CLEANUP] AJAX handler called - using direct WordPress approach' );
 
 		// Check if required classes exist
 		if ( ! class_exists( 'Puntwork\\SecurityUtils' ) ) {
@@ -42,12 +42,6 @@ function job_import_cleanup_duplicates_ajax() {
 			return;
 		}
 
-		if ( ! class_exists( 'Puntwork\\PuntWorkLogger' ) ) {
-			error_log( '[PUNTWORK] [CLEANUP] PuntWorkLogger class not found' );
-			wp_send_json_error( 'PuntWorkLogger class not found' );
-			return;
-		}
-
 		error_log( '[PUNTWORK] [CLEANUP] All classes found, proceeding with validation' );
 
 		// Use comprehensive security validation
@@ -58,131 +52,181 @@ function job_import_cleanup_duplicates_ajax() {
 			return;
 		}
 
-		error_log( '[PUNTWORK] [CLEANUP] Security validation passed, calling standalone cleanup' );
+		error_log( '[PUNTWORK] [CLEANUP] Security validation passed, starting cleanup' );
 
 		// Get parameters
 		$batch_size  = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 1;
 		$offset      = isset( $_POST['offset'] ) ? intval( $_POST['offset'] ) : 0;
 		$is_continue = isset( $_POST['is_continue'] ) ? filter_var( $_POST['is_continue'], FILTER_VALIDATE_BOOLEAN ) : false;
 
-		// Path to standalone cleanup script - it's in the plugin root directory
-		$standalone_script = dirname( dirname( __FILE__ ) ) . '/standalone-cleanup.php';
+		// Start with small batch size if not continuing
+		if ( ! $is_continue ) {
+			$batch_size = 1; // Start with 1 post at a time
+			$offset = 0;
+		}
 
-		error_log( '[PUNTWORK] [CLEANUP] Checking standalone script path: ' . $standalone_script );
-		if ( ! file_exists( $standalone_script ) ) {
-			error_log( '[PUNTWORK] [CLEANUP] Standalone cleanup script not found: ' . $standalone_script );
-			AjaxErrorHandler::sendError( 'Standalone cleanup script not found' );
+		error_log( '[PUNTWORK] [CLEANUP] Starting cleanup with batch_size=' . $batch_size . ', offset=' . $offset . ', continue=' . ($is_continue ? 'true' : 'false') );
+
+		// Perform the cleanup using direct WordPress functions
+		$result = perform_cleanup_operation( $batch_size, $offset, $is_continue );
+
+		if ( is_wp_error( $result ) ) {
+			error_log( '[PUNTWORK] [CLEANUP] Cleanup operation failed: ' . $result->get_error_message() );
+			AjaxErrorHandler::sendError( $result->get_error_message() );
 			return;
 		}
 
-		error_log( '[PUNTWORK] [CLEANUP] Standalone script exists, checking permissions' );
-		if ( ! is_readable( $standalone_script ) ) {
-			error_log( '[PUNTWORK] [CLEANUP] Standalone script not readable: ' . $standalone_script );
-			AjaxErrorHandler::sendError( 'Standalone cleanup script not readable' );
-			return;
+		error_log( '[PUNTWORK] [CLEANUP] Cleanup operation completed successfully' );
+		wp_send_json_success( $result );
+
+	} catch ( Throwable $e ) {
+		error_log( '[PUNTWORK] [CLEANUP] Exception in cleanup handler: ' . $e->getMessage() );
+		error_log( '[PUNTWORK] [CLEANUP] Stack trace: ' . $e->getTraceAsString() );
+		AjaxErrorHandler::sendError( 'Cleanup operation failed: ' . $e->getMessage() );
+	}
+}
+
+/**
+ * Perform the actual cleanup operation using WordPress functions
+ */
+function perform_cleanup_operation( $batch_size, $offset, $is_continue ) {
+	global $wpdb;
+
+	$start_time = microtime( true );
+	$posts_deleted = 0;
+	$errors = [];
+	$next_batch_size = $batch_size;
+
+	try {
+		// Set memory limit for this operation
+		$current_memory_limit = ini_get( 'memory_limit' );
+		$original_memory_limit = $current_memory_limit;
+
+		// Increase memory limit temporarily but keep it reasonable
+		if ( wp_convert_hr_to_bytes( $current_memory_limit ) < 256 * 1024 * 1024 ) {
+			ini_set( 'memory_limit', '256M' );
 		}
 
-		// Build command to execute standalone script
-		$php_executable = PHP_BINARY ?: 'php';
-		error_log( '[PUNTWORK] [CLEANUP] PHP_BINARY: ' . PHP_BINARY );
-		error_log( '[PUNTWORK] [CLEANUP] Using PHP executable: ' . $php_executable );
+		// Set execution time limit
+		$original_time_limit = ini_set( 'max_execution_time', 120 ); // 2 minutes
 
-		$cmd = escapeshellcmd( $php_executable ) . ' ' . escapeshellarg( $standalone_script ) .
-			   ' --batch-size=' . escapeshellarg( $batch_size ) .
-			   ' --offset=' . escapeshellarg( $offset ) .
-			   ' --continue=' . escapeshellarg( $is_continue ? '1' : '0' );
+		error_log( '[PUNTWORK] [CLEANUP] Memory limit set to: ' . ini_get( 'memory_limit' ) );
+		error_log( '[PUNTWORK] [CLEANUP] Time limit set to: ' . ini_get( 'max_execution_time' ) );
 
-		error_log( '[PUNTWORK] [CLEANUP] Executing command: ' . $cmd );
-		error_log( '[PUNTWORK] [CLEANUP] Working directory: ' . dirname( $standalone_script ) );
-
-		// Execute the standalone script
-		$descriptorspec = array(
-			0 => array( 'pipe', 'r' ), // stdin
-			1 => array( 'pipe', 'w' ), // stdout
-			2 => array( 'pipe', 'w' )  // stderr
+		// Get draft and trash job posts
+		$query = $wpdb->prepare(
+			"SELECT ID, post_title, post_status FROM {$wpdb->posts}
+			 WHERE post_type = 'job'
+			 AND post_status IN ('draft', 'trash')
+			 ORDER BY ID ASC
+			 LIMIT %d OFFSET %d",
+			$batch_size,
+			$offset
 		);
 
-		error_log( '[PUNTWORK] [CLEANUP] About to call proc_open' );
-		$process = proc_open( $cmd, $descriptorspec, $pipes, dirname( $standalone_script ) );
+		$posts = $wpdb->get_results( $query );
 
-		if ( ! is_resource( $process ) ) {
-			error_log( '[PUNTWORK] [CLEANUP] Failed to start standalone cleanup process' );
-			AjaxErrorHandler::sendError( 'Failed to start cleanup process' );
-			return;
+		error_log( '[PUNTWORK] [CLEANUP] Found ' . count( $posts ) . ' posts to process' );
+
+		if ( empty( $posts ) ) {
+			// No more posts to process
+			return array(
+				'completed' => true,
+				'posts_deleted' => 0,
+				'total_processed' => $offset,
+				'next_batch_size' => $batch_size,
+				'message' => 'Cleanup completed - no more draft/trash posts found'
+			);
 		}
 
-		error_log( '[PUNTWORK] [CLEANUP] proc_open successful, reading output' );
+		// Process posts one by one
+		foreach ( $posts as $post ) {
+			$post_id = $post->ID;
 
-		// Close stdin
-		fclose( $pipes[0] );
+			error_log( '[PUNTWORK] [CLEANUP] Processing post ID ' . $post_id . ' (' . $post->post_title . ' - ' . $post->post_status . ')' );
 
-		// Read stdout
-		$output = stream_get_contents( $pipes[1] );
-		fclose( $pipes[1] );
+			// Check memory usage before each deletion
+			$memory_usage = memory_get_usage( true );
+			$memory_limit = wp_convert_hr_to_bytes( ini_get( 'memory_limit' ) );
+			$memory_percent = ( $memory_usage / $memory_limit ) * 100;
 
-		// Read stderr
-		$errors = stream_get_contents( $pipes[2] );
-		fclose( $pipes[2] );
+			error_log( '[PUNTWORK] [CLEANUP] Memory usage: ' . round( $memory_percent, 2 ) . '%' );
 
-		// Get exit code
-		$exit_code = proc_close( $process );
+			if ( $memory_percent > 70 ) {
+				error_log( '[PUNTWORK] [CLEANUP] Memory usage too high, stopping batch early' );
+				break;
+			}
 
-		error_log( '[PUNTWORK] [CLEANUP] Standalone script exit code: ' . $exit_code );
-		error_log( '[PUNTWORK] [CLEANUP] Output length: ' . strlen( $output ) );
-		if ( ! empty( $errors ) ) {
-			error_log( '[PUNTWORK] [CLEANUP] Standalone script errors: ' . $errors );
-		}
-		if ( ! empty( $output ) ) {
-			error_log( '[PUNTWORK] [CLEANUP] Standalone script output (first 500 chars): ' . substr( $output, 0, 500 ) );
-		} else {
-			error_log( '[PUNTWORK] [CLEANUP] No output from standalone script' );
-		}
+			// Use WordPress function to delete the post permanently
+			$delete_result = wp_delete_post( $post_id, true ); // true = force delete (bypass trash)
 
-		if ( $exit_code !== 0 ) {
-			error_log( '[PUNTWORK] [CLEANUP] Standalone cleanup failed with exit code: ' . $exit_code );
-			AjaxErrorHandler::sendError( 'Cleanup process failed' );
-			return;
-		}
+			if ( $delete_result === false ) {
+				$error_msg = 'Failed to delete post ID ' . $post_id;
+				error_log( '[PUNTWORK] [CLEANUP] ' . $error_msg );
+				$errors[] = $error_msg;
+				// Continue with next post instead of failing completely
+				continue;
+			}
 
-		// Parse JSON output from standalone script
-		$result = json_decode( $output, true );
+			$posts_deleted++;
+			error_log( '[PUNTWORK] [CLEANUP] Successfully deleted post ID ' . $post_id );
 
-		if ( json_last_error() !== JSON_ERROR_NONE ) {
-			error_log( '[PUNTWORK] [CLEANUP] Failed to parse JSON output: ' . $output );
-			AjaxErrorHandler::sendError( 'Invalid response from cleanup process' );
-			return;
-		}
+			// Clean up memory after each deletion
+			if ( function_exists( 'gc_collect_cycles' ) ) {
+				gc_collect_cycles();
+			}
 
-		if ( isset( $result['error'] ) ) {
-			error_log( '[PUNTWORK] [CLEANUP] Standalone cleanup returned error: ' . $result['error'] );
-			AjaxErrorHandler::sendError( $result['error'] );
-			return;
+			// Check if we're approaching time limit
+			$elapsed_time = microtime( true ) - $start_time;
+			if ( $elapsed_time > 90 ) { // 90 seconds (leaving 30 seconds buffer)
+				error_log( '[PUNTWORK] [CLEANUP] Approaching time limit, stopping batch early' );
+				break;
+			}
 		}
 
-		// Log the response
-		PuntWorkLogger::logAjaxResponse(
-			'job_import_cleanup_duplicates',
-			array(
-				'message'         => $result['message'] ?? 'Cleanup batch processed',
-				'complete'        => $result['complete'] ?? false,
-				'total_processed' => $result['total_processed'] ?? 0,
-				'total_deleted'   => $result['total_deleted'] ?? 0,
-				'progress_percentage' => $result['progress_percentage'] ?? 0,
-				'logs_count'      => count( $result['logs'] ?? array() ),
+		// Calculate next batch size - increase gradually if successful
+		if ( $posts_deleted > 0 && count( $errors ) === 0 ) {
+			// Successful batch - increase batch size
+			$next_batch_size = min( $batch_size + 1, 10 ); // Max 10 posts per batch
+			error_log( '[PUNTWORK] [CLEANUP] Successful batch, increasing batch size to ' . $next_batch_size );
+		} elseif ( count( $errors ) > 0 ) {
+			// Had errors - reduce batch size
+			$next_batch_size = max( 1, $batch_size - 1 );
+			error_log( '[PUNTWORK] [CLEANUP] Errors occurred, reducing batch size to ' . $next_batch_size );
+		}
+
+		// Restore original limits
+		if ( $original_memory_limit ) {
+			ini_set( 'memory_limit', $original_memory_limit );
+		}
+		if ( $original_time_limit !== false ) {
+			ini_set( 'max_execution_time', $original_time_limit );
+		}
+
+		$elapsed_time = microtime( true ) - $start_time;
+
+		return array(
+			'completed' => false,
+			'posts_deleted' => $posts_deleted,
+			'total_processed' => $offset + $posts_deleted,
+			'next_offset' => $offset + $posts_deleted,
+			'next_batch_size' => $next_batch_size,
+			'errors' => $errors,
+			'execution_time' => round( $elapsed_time, 2 ),
+			'memory_peak' => round( memory_get_peak_usage( true ) / 1024 / 1024, 2 ) . ' MB',
+			'message' => sprintf(
+				'Processed %d posts (%d deleted, %d errors) in %.2f seconds',
+				count( $posts ),
+				$posts_deleted,
+				count( $errors ),
+				$elapsed_time
 			)
 		);
 
-		// Send success response
-		AjaxErrorHandler::sendSuccess( $result );
-
-	} catch ( \Exception $e ) {
-		error_log( '[PUNTWORK] AJAX: Exception in job_import_cleanup_duplicates_ajax: ' . $e->getMessage() );
-		PuntWorkLogger::logAjaxResponse( 'job_import_cleanup_duplicates', array( 'message' => 'Cleanup failed: ' . $e->getMessage() ), false );
-		AjaxErrorHandler::sendError( 'Cleanup failed: ' . $e->getMessage() );
-	} catch ( \Throwable $e ) {
-		error_log( '[PUNTWORK] AJAX: Fatal error in job_import_cleanup_duplicates_ajax: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
-		error_log( '[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString() );
-		wp_die( 'Internal server error', '500 Internal Server Error', array( 'response' => 500 ) );
+	} catch ( Throwable $e ) {
+		error_log( '[PUNTWORK] [CLEANUP] Exception in cleanup operation: ' . $e->getMessage() );
+		error_log( '[PUNTWORK] [CLEANUP] Stack trace: ' . $e->getTraceAsString() );
+		return new WP_Error( 'cleanup_failed', 'Cleanup operation failed: ' . $e->getMessage() );
 	}
 }
 
