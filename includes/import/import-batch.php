@@ -508,6 +508,7 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 				'[PUNTWORK] import_all_jobs_from_json started with preserve_status=' .
 				( $preserve_status ? 'true' : 'false' )
 			);
+			error_log( '[PUNTWORK] Action Scheduler available: ' . ( function_exists( 'as_schedule_single_action' ) ? 'YES' : 'NO' ) );
 		}
 
 		try {
@@ -527,57 +528,192 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 			}
 			$total_items = get_json_item_count( $json_path );
 
-			// Set default batch size
-			$batch_size = 50; // Increased from 10 for better performance while maintaining timeout protection
+			// Check if Action Scheduler is available for async processing
+			if ( function_exists( 'as_schedule_single_action' ) ) {
+				// Use Action Scheduler for async batch processing
+				$batch_size = 50; // Increased from 10 for better performance while maintaining timeout protection
 
-			// Calculate total number of batches needed
-			$total_batches = ceil( $total_items / $batch_size );
+				// Calculate total number of batches needed
+				$total_batches = ceil( $total_items / $batch_size );
 
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [IMPORT-INIT] Total items: ' . $total_items . ', Batch size: ' . $batch_size . ', Total batches: ' . $total_batches );
-			}
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [IMPORT-INIT] Total items: ' . $total_items . ', Batch size: ' . $batch_size . ', Total batches: ' . $total_batches );
+					error_log( '[PUNTWORK] [IMPORT-INIT] Using Action Scheduler for async processing' );
+				}
 
-			// Schedule individual batch jobs using Action Scheduler
-			$scheduled_batches = 0;
-			for ( $batch_index = 0; $batch_index < $total_batches; $batch_index++ ) {
-				$batch_start = $batch_index * $batch_size;
+				// Schedule individual batch jobs using Action Scheduler
+				$scheduled_batches = 0;
+				for ( $batch_index = 0; $batch_index < $total_batches; $batch_index++ ) {
+					$batch_start = $batch_index * $batch_size;
 
-				// Schedule each batch with a small delay to prevent overwhelming the system
-				$delay = $batch_index * 5; // 5 seconds between batches
-				$job_id = as_schedule_single_action( time() + $delay, 'puntwork_process_batch', array(
-					'batch_start' => $batch_start,
-					'batch_size' => $batch_size,
-					'batch_index' => $batch_index,
-					'total_batches' => $total_batches,
-					'import_id' => uniqid( 'import_', true )
-				) );
+					// Schedule each batch with a small delay to prevent overwhelming the system
+					$delay = $batch_index * 5; // 5 seconds between batches
+					$job_id = as_schedule_single_action( time() + $delay, 'puntwork_process_batch', array(
+						'batch_start' => $batch_start,
+						'batch_size' => $batch_size,
+						'batch_index' => $batch_index,
+						'total_batches' => $total_batches,
+						'import_id' => uniqid( 'import_', true )
+					) );
 
-				if ( $job_id ) {
-					$scheduled_batches++;
-					if ( $debug_mode ) {
-						error_log( '[PUNTWORK] [BATCH-SCHEDULE] Scheduled batch ' . ($batch_index + 1) . '/' . $total_batches . ' starting at ' . $batch_start . ', job ID: ' . $job_id );
-					}
-				} else {
-					if ( $debug_mode ) {
-						error_log( '[PUNTWORK] [BATCH-SCHEDULE-ERROR] Failed to schedule batch ' . ($batch_index + 1) . ' starting at ' . $batch_start );
+					if ( $job_id ) {
+						$scheduled_batches++;
+						if ( $debug_mode ) {
+							error_log( '[PUNTWORK] [BATCH-SCHEDULE] Scheduled batch ' . ($batch_index + 1) . '/' . $total_batches . ' starting at ' . $batch_start . ', job ID: ' . $job_id );
+						}
+					} else {
+						if ( $debug_mode ) {
+							error_log( '[PUNTWORK] [BATCH-SCHEDULE-ERROR] Failed to schedule batch ' . ($batch_index + 1) . ' starting at ' . $batch_start );
+						}
 					}
 				}
-			}
 
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [IMPORT-SCHEDULE] Successfully scheduled ' . $scheduled_batches . ' out of ' . $total_batches . ' batches' );
-			}
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [IMPORT-SCHEDULE] Successfully scheduled ' . $scheduled_batches . ' out of ' . $total_batches . ' batches' );
+				}
 
-			// Return success with scheduling information
-			return array(
-				'success' => true,
-				'message' => 'Import scheduled successfully - ' . $scheduled_batches . ' batches scheduled for processing',
-				'total' => $total_items,
-				'batches_scheduled' => $scheduled_batches,
-				'total_batches' => $total_batches,
-				'batch_size' => $batch_size,
-				'logs' => array( 'Import scheduled with ' . $scheduled_batches . ' batches using Action Scheduler' ),
-			);
+				// Return success with scheduling information
+				return array(
+					'success' => true,
+					'message' => 'Import scheduled successfully - ' . $scheduled_batches . ' batches scheduled for processing',
+					'total' => $total_items,
+					'batches_scheduled' => $scheduled_batches,
+					'total_batches' => $total_batches,
+					'batch_size' => $batch_size,
+					'logs' => array( 'Import scheduled with ' . $scheduled_batches . ' batches using Action Scheduler' ),
+				);
+			} else {
+				// Fallback to synchronous processing when Action Scheduler is not available
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [IMPORT-FALLBACK] Action Scheduler not available, falling back to synchronous processing' );
+					error_log( '[PUNTWORK] [IMPORT-FALLBACK] Total items: ' . $total_items );
+				}
+
+				// Process synchronously in batches to avoid timeouts
+				$batch_size = 25; // Smaller batches for synchronous processing
+				$total_processed = 0;
+				$total_published = 0;
+				$total_updated = 0;
+				$total_skipped = 0;
+				$total_duplicates_drafted = 0;
+				$all_logs = array();
+				$batch_count = 0;
+
+				for ( $batch_start = 0; $batch_start < $total_items; $batch_start += $batch_size ) {
+					if ( $debug_mode ) {
+						error_log( '[PUNTWORK] [SYNC-BATCH] Processing batch starting at ' . $batch_start . ' (batch ' . ($batch_count + 1) . ')' );
+					}
+
+					// Check for timeout before processing each batch
+					if ( import_time_exceeded() ) {
+						if ( $debug_mode ) {
+							error_log( '[PUNTWORK] [SYNC-BATCH] Time limit exceeded, pausing import' );
+						}
+
+						// Update status with current progress
+						$import_status = get_option( 'job_import_status', array() );
+						$import_status['processed'] = $total_processed;
+						$import_status['published'] = $total_published;
+						$import_status['updated'] = $total_updated;
+						$import_status['skipped'] = $total_skipped;
+						$import_status['duplicates_drafted'] = $total_duplicates_drafted;
+						$import_status['paused'] = true;
+						$import_status['pause_reason'] = 'Time limit exceeded during synchronous processing';
+						$import_status['last_update'] = time();
+						$import_status['logs'] = array_slice( $all_logs, -50 );
+						update_option( 'job_import_status', $import_status, false );
+
+						return array(
+							'success' => false,
+							'message' => 'Import paused due to time limit - processed ' . $total_processed . ' of ' . $total_items . ' items',
+							'processed' => $total_processed,
+							'total' => $total_items,
+							'paused' => true,
+							'logs' => array_slice( $all_logs, -10 ),
+						);
+					}
+
+					// Process this batch synchronously
+					$batch_result = import_jobs_from_json( true, $batch_start );
+
+					if ( $batch_result['success'] ) {
+						$total_processed += $batch_result['processed'] ?? 0;
+						$total_published += $batch_result['published'] ?? 0;
+						$total_updated += $batch_result['updated'] ?? 0;
+						$total_skipped += $batch_result['skipped'] ?? 0;
+						$total_duplicates_drafted += $batch_result['duplicates_drafted'] ?? 0;
+
+						if ( isset( $batch_result['logs'] ) && is_array( $batch_result['logs'] ) ) {
+							$all_logs = array_merge( $all_logs, $batch_result['logs'] );
+						}
+
+						$batch_count++;
+
+						if ( $debug_mode ) {
+							error_log( '[PUNTWORK] [SYNC-BATCH] Batch ' . $batch_count . ' completed: processed=' . ($batch_result['processed'] ?? 0) . ', published=' . ($batch_result['published'] ?? 0) );
+						}
+					} else {
+						if ( $debug_mode ) {
+							error_log( '[PUNTWORK] [SYNC-BATCH-ERROR] Batch failed: ' . ($batch_result['message'] ?? 'Unknown error') );
+						}
+
+						// Update status with error
+						$import_status = get_option( 'job_import_status', array() );
+						$import_status['processed'] = $total_processed;
+						$import_status['published'] = $total_published;
+						$import_status['updated'] = $total_updated;
+						$import_status['skipped'] = $total_skipped;
+						$import_status['duplicates_drafted'] = $total_duplicates_drafted;
+						$import_status['complete'] = false;
+						$import_status['success'] = false;
+						$import_status['error_message'] = $batch_result['message'] ?? 'Batch processing failed';
+						$import_status['last_update'] = time();
+						$import_status['logs'] = array_slice( $all_logs, -50 );
+						update_option( 'job_import_status', $import_status, false );
+
+						return array(
+							'success' => false,
+							'message' => 'Import failed during batch processing: ' . ($batch_result['message'] ?? 'Unknown error'),
+							'processed' => $total_processed,
+							'total' => $total_items,
+							'logs' => array_slice( $all_logs, -10 ),
+						);
+					}
+				}
+
+				// All batches completed successfully
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [SYNC-COMPLETE] All batches completed synchronously' );
+				}
+
+				// Update final status
+				$import_status = get_option( 'job_import_status', array() );
+				$import_status['processed'] = $total_processed;
+				$import_status['published'] = $total_published;
+				$import_status['updated'] = $total_updated;
+				$import_status['skipped'] = $total_skipped;
+				$import_status['duplicates_drafted'] = $total_duplicates_drafted;
+				$import_status['complete'] = true;
+				$import_status['success'] = true;
+				$import_status['time_elapsed'] = microtime( true ) - $start_time;
+				$import_status['end_time'] = microtime( true );
+				$import_status['last_update'] = time();
+				$import_status['logs'] = array_slice( $all_logs, -50 );
+				update_option( 'job_import_status', $import_status, false );
+
+				return array(
+					'success' => true,
+					'message' => 'Import completed successfully - processed ' . $total_processed . ' of ' . $total_items . ' items',
+					'processed' => $total_processed,
+					'published' => $total_published,
+					'updated' => $total_updated,
+					'skipped' => $total_skipped,
+					'duplicates_drafted' => $total_duplicates_drafted,
+					'total' => $total_items,
+					'complete' => true,
+					'logs' => array_slice( $all_logs, -10 ),
+				);
+			}
 
 		} catch ( \Puntwork\Exceptions\PuntworkException $e ) {
 			// Handle custom PuntWork exceptions with enhanced logging
