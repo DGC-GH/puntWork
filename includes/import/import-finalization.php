@@ -152,20 +152,20 @@ function finalize_batch_import( $result ) {
 			}
 		}
 
-		// Purge old jobs not present in feeds after successful import
+		// Purge old jobs not present in feeds after successful import (now safe - drafts instead of deletes)
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [FINALIZE-PURGE] Starting purge of old jobs not in feeds after import' );
+			error_log( '[PUNTWORK] [FINALIZE-PURGE] Starting safe purge of old jobs not in feeds after import' );
 		}
 		$purge_result = purge_old_jobs_not_in_feeds_after_import();
 		if ( $purge_result['success'] ) {
 			$result['purge_deleted'] = $purge_result['deleted'];
 			$result['purge_duration'] = $purge_result['duration'];
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[PUNTWORK] [FINALIZE-PURGE] Old jobs purge completed, deleted ' . $purge_result['deleted'] . ' jobs in ' . number_format( $purge_result['duration'], 2 ) . 's' );
+				error_log( '[PUNTWORK] [FINALIZE-PURGE] Safe purge completed, drafted ' . $purge_result['deleted'] . ' jobs in ' . number_format( $purge_result['duration'], 2 ) . 's' );
 			}
 		} else {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[PUNTWORK] [FINALIZE-PURGE] Old jobs purge failed: ' . ( $purge_result['error'] ?? 'Unknown error' ) );
+				error_log( '[PUNTWORK] [FINALIZE-PURGE] Safe purge failed: ' . ( $purge_result['error'] ?? 'Unknown error' ) );
 			}
 		}
 	} elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -498,6 +498,7 @@ function cleanup_draft_trash_jobs_after_import() {
 
 /**
  * Remove jobs that are no longer present in the feeds after import completion.
+ * This function is now much more conservative to prevent accidental data loss.
  *
  * @return array Purge result with deleted count and logs.
  */
@@ -514,6 +515,19 @@ function purge_old_jobs_not_in_feeds_after_import() {
 	}
 
 	try {
+		// SAFETY CHECK 1: Check if automatic purging is enabled
+		$auto_purge_enabled = get_option( 'puntwork_auto_purge_old_jobs', false );
+		if ( ! $auto_purge_enabled ) {
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [PURGE-AFTER-IMPORT] Automatic purging disabled, skipping purge' );
+			}
+			return array(
+				'success' => true,
+				'deleted' => 0,
+				'logs' => array( 'Automatic purging disabled - use manual purge if needed' ),
+			);
+		}
+
 		// Get processed GUIDs from the import
 		$processed_guids = get_option( 'job_import_processed_guids', array() );
 
@@ -528,35 +542,70 @@ function purge_old_jobs_not_in_feeds_after_import() {
 			);
 		}
 
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [PURGE-AFTER-IMPORT] Found ' . count( $processed_guids ) . ' processed GUIDs' );
-		}
-
-		// Get all published jobs with GUIDs
-		$all_jobs = $wpdb->get_results(
-			"
-			SELECT p.ID, pm.meta_value AS guid, p.post_title
-			FROM {$wpdb->posts} p
-			JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
-			WHERE p.post_type = 'job'
-			AND p.post_status = 'publish'
-			ORDER BY p.ID
-		"
-		);
-
-		if ( empty( $all_jobs ) ) {
+		// SAFETY CHECK 2: Validate that import was complete and successful
+		$import_status = get_option( 'job_import_status', array() );
+		if ( empty( $import_status ) || ! isset( $import_status['complete'] ) || ! $import_status['complete'] ) {
 			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [PURGE-AFTER-IMPORT] No published jobs found to check' );
+				error_log( '[PUNTWORK] [PURGE-AFTER-IMPORT] Import not marked as complete, skipping purge' );
 			}
 			return array(
 				'success' => true,
 				'deleted' => 0,
-				'logs' => array( 'No published jobs found to check' ),
+				'logs' => array( 'Import not marked as complete, skipping purge' ),
+			);
+		}
+
+		// SAFETY CHECK 3: Ensure we processed a reasonable number of jobs (not a failed partial import)
+		$min_jobs_threshold = get_option( 'puntwork_purge_min_jobs_threshold', 10 );
+		if ( count( $processed_guids ) < $min_jobs_threshold ) {
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [PURGE-AFTER-IMPORT] Only ' . count( $processed_guids ) . ' GUIDs processed, below threshold of ' . $min_jobs_threshold . ', skipping purge' );
+			}
+			return array(
+				'success' => true,
+				'deleted' => 0,
+				'logs' => array( 'Too few GUIDs processed (' . count( $processed_guids ) . '), below safety threshold' ),
 			);
 		}
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [PURGE-AFTER-IMPORT] Found ' . count( $all_jobs ) . ' published jobs to check' );
+			error_log( '[PUNTWORK] [PURGE-AFTER-IMPORT] Found ' . count( $processed_guids ) . ' processed GUIDs' );
+		}
+
+		// Get purge age threshold (default 30 days)
+		$purge_age_days = get_option( 'puntwork_purge_age_threshold_days', 30 );
+		$purge_age_seconds = $purge_age_days * 24 * 60 * 60;
+		$cutoff_date = date( 'Y-m-d H:i:s', time() - $purge_age_seconds );
+
+		// Get all published jobs with GUIDs that are older than the threshold
+		$all_jobs = $wpdb->get_results(
+			$wpdb->prepare(
+				"
+				SELECT p.ID, pm.meta_value AS guid, p.post_title, p.post_date
+				FROM {$wpdb->posts} p
+				JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
+				WHERE p.post_type = 'job'
+				AND p.post_status = 'publish'
+				AND p.post_date < %s
+				ORDER BY p.ID
+			",
+				$cutoff_date
+			)
+		);
+
+		if ( empty( $all_jobs ) ) {
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [PURGE-AFTER-IMPORT] No published jobs older than ' . $purge_age_days . ' days found to check' );
+			}
+			return array(
+				'success' => true,
+				'deleted' => 0,
+				'logs' => array( 'No jobs older than ' . $purge_age_days . ' days found to check' ),
+			);
+		}
+
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [PURGE-AFTER-IMPORT] Found ' . count( $all_jobs ) . ' published jobs older than ' . $purge_age_days . ' days to check' );
 		}
 
 		// Defer term and comment counting for better performance
@@ -565,31 +614,37 @@ function purge_old_jobs_not_in_feeds_after_import() {
 
 		foreach ( $all_jobs as $job ) {
 			if ( ! in_array( $job->guid, $processed_guids ) ) {
-				// This job is no longer in the feed, delete it
-				$result = wp_delete_post( $job->ID, true ); // true = force delete, skip trash
-				if ( $result ) {
-					++$deleted_count;
-					$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Permanently deleted ID: ' . $job->ID . ' GUID: ' . $job->guid . ' - No longer in feed - ' . $job->post_title;
+				// SAFETY: Instead of immediate deletion, draft the job first
+				// This allows recovery if the purge was incorrect
+				$draft_result = wp_update_post( array(
+					'ID' => $job->ID,
+					'post_status' => 'draft'
+				) );
+
+				if ( $draft_result ) {
+					++$deleted_count; // Count as "deleted" for compatibility, but it's actually drafted
+					$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'DRAFTED (not deleted) ID: ' . $job->ID . ' GUID: ' . $job->guid . ' - No longer in feed (aged ' . $purge_age_days . '+ days) - ' . $job->post_title;
 					$logs[] = $log_entry;
 
 					if ( class_exists( '\\Puntwork\\PuntWorkLogger' ) ) {
 						\Puntwork\PuntWorkLogger::info(
-							'Deleted old job not in feeds during import cleanup',
+							'Drafted old job not in feeds during import cleanup (safe purge)',
 							\Puntwork\PuntWorkLogger::CONTEXT_PURGE,
 							array(
 								'job_id' => $job->ID,
 								'guid'   => $job->guid,
 								'title'  => $job->post_title,
+								'age_days' => $purge_age_days,
 							)
 						);
 					}
 				} else {
-					$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Failed to delete ID: ' . $job->ID . ' GUID: ' . $job->guid;
+					$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Failed to draft ID: ' . $job->ID . ' GUID: ' . $job->guid;
 					$logs[] = $log_entry;
 
 					if ( class_exists( '\\Puntwork\\PuntWorkLogger' ) ) {
 						\Puntwork\PuntWorkLogger::error(
-							'Failed to delete old job during import cleanup',
+							'Failed to draft old job during import cleanup',
 							\Puntwork\PuntWorkLogger::CONTEXT_PURGE,
 							array(
 								'job_id' => $job->ID,
@@ -609,7 +664,7 @@ function purge_old_jobs_not_in_feeds_after_import() {
 		$duration = $end_time - $start_time;
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [PURGE-AFTER-IMPORT] Purge completed in ' . number_format( $duration, 2 ) . 's, deleted ' . $deleted_count . ' jobs' );
+			error_log( '[PUNTWORK] [PURGE-AFTER-IMPORT] Safe purge completed in ' . number_format( $duration, 2 ) . 's, drafted ' . $deleted_count . ' jobs' );
 		}
 
 		return array(

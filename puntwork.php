@@ -110,6 +110,11 @@ function job_import_activate() {
 	if ( function_exists( __NAMESPACE__ . '\\get_or_create_api_key' ) ) {
 		call_user_func( __NAMESPACE__ . '\\get_or_create_api_key' );
 	}
+
+	// Initialize safe purge options (disabled by default for safety)
+	add_option( 'puntwork_auto_purge_old_jobs', false ); // Disabled by default
+	add_option( 'puntwork_purge_age_threshold_days', 30 ); // Only purge jobs older than 30 days
+	add_option( 'puntwork_purge_min_jobs_threshold', 10 ); // Require at least 10 processed GUIDs
 }
 
 // Deactivation hook
