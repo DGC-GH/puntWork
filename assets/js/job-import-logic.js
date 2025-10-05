@@ -502,7 +502,7 @@ console.info("=== Job Import Logic Script Loaded ===");
                 $('#status-message').text('Processing feeds...');
 
                 // Process feeds using Action Scheduler
-                const feedKeys = Object.keys(feeds);
+                const feedKeys = Object.keys(jobImportData.feeds);
                 console.log('[PUNTWORK] [DEBUG-IMPORT] Scheduling feed processing for:', feedKeys);
                 console.log('[PUNTWORK] [DEBUG-IMPORT] Number of feeds to process:', feedKeys.length);
 
