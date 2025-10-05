@@ -38,6 +38,12 @@ require_once __DIR__ . '/import-finalization.php';
 require_once __DIR__ . '/../utilities/ErrorHandler.php';
 require_once __DIR__ . '/../exceptions/PuntworkExceptions.php';
 
+// Include JSONL combination utilities
+require_once __DIR__ . '/combine-jsonl.php';
+
+// Include core structure logic for get_feeds function
+require_once __DIR__ . '/../core/core-structure-logic.php';
+
 /**
  * Check if the current import process has exceeded time limits
  * Similar to WooCommerce's time_exceeded() method.
@@ -512,8 +518,70 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 		}
 
 		try {
-			// Get total items first
+			// Check prerequisites before starting import
 			$json_path = puntwork_get_combined_jsonl_path();
+
+			// Ensure combined JSONL file exists
+			if ( ! file_exists( $json_path ) ) {
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [IMPORT-PREREQ] Combined JSONL file not found: ' . $json_path );
+					error_log( '[PUNTWORK] [IMPORT-PREREQ] Checking for individual feed files...' );
+
+					// Check if there are individual feed files that need to be combined
+					$feed_files = glob( puntwork_get_feeds_directory() . '*.jsonl' );
+					$individual_feeds = array_filter( $feed_files, function( $file ) {
+						return basename( $file ) !== 'combined-jobs.jsonl';
+					} );
+
+					error_log( '[PUNTWORK] [IMPORT-PREREQ] Found ' . count( $individual_feeds ) . ' individual feed files' );
+					if ( ! empty( $individual_feeds ) ) {
+						error_log( '[PUNTWORK] [IMPORT-PREREQ] Individual feeds exist but combined file missing - automatically combining feeds' );
+
+						// Automatically combine the feeds
+						$feeds = get_feeds();
+						$import_logs = array(); // Reset logs for combination
+						combine_jsonl_files( $feeds, puntwork_get_feeds_directory(), 0, $import_logs );
+
+						// Check if combination was successful
+						if ( ! file_exists( $json_path ) || filesize( $json_path ) === 0 ) {
+							error_log( '[PUNTWORK] [IMPORT-PREREQ] Automatic feed combination failed' );
+							return array(
+								'success' => false,
+								'message' => 'Combined JSONL file not found and automatic combination failed. Please run feed processing to download and convert feeds to JSONL format.',
+								'logs' => array( 'Combined JSONL file not found - automatic combination failed' ),
+							);
+						}
+
+						error_log( '[PUNTWORK] [IMPORT-PREREQ] Automatic feed combination completed successfully' );
+					} else {
+						error_log( '[PUNTWORK] [IMPORT-PREREQ] No feed files found - feeds may need to be processed first' );
+					}
+				}
+
+				// Check again after potential automatic combination
+				if ( ! file_exists( $json_path ) ) {
+					return array(
+						'success' => false,
+						'message' => 'Combined JSONL file not found - feeds may need to be processed first. Run feed processing to download and convert feeds to JSONL format, then combine them.',
+						'logs' => array( 'Combined JSONL file not found - run feed processing first' ),
+					);
+				}
+			}
+
+			// Ensure combined file is not empty
+			if ( filesize( $json_path ) === 0 ) {
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [IMPORT-PREREQ] Combined JSONL file exists but is empty: ' . $json_path );
+				}
+
+				return array(
+					'success' => false,
+					'message' => 'Combined JSONL file is empty - feeds may need to be processed first',
+					'logs' => array( 'Combined JSONL file is empty - run feed processing first' ),
+				);
+			}
+
+			// Get total items first
 			$total_items = get_json_item_count( $json_path );
 
 			// Check if Action Scheduler is available for async processing
