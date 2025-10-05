@@ -1565,6 +1565,14 @@ function process_feed_ajax() {
 		$feed_key = sanitize_text_field( $_POST['feed_key'] );
 		error_log( '[PUNTWORK] [DEBUG-PHP] Processing feed: ' . $feed_key );
 
+		// Increase memory limit and execution time for large feeds
+		$current_memory = ini_get( 'memory_limit' );
+		$current_time   = ini_get( 'max_execution_time' );
+		ini_set( 'memory_limit', '2048M' ); // Increased to 2GB for large feeds
+		set_time_limit( 900 ); // 15 minutes for large feeds
+		error_log( '[PUNTWORK] [DEBUG-PHP] Memory limit increased from ' . $current_memory . ' to 2048M' );
+		error_log( '[PUNTWORK] [DEBUG-PHP] Time limit increased from ' . $current_time . ' to 900 seconds' );
+
 		// Check if this feed is already being processed
 		$feed_lock_key = 'puntwork_feed_processing_' . $feed_key;
 		if ( get_transient( $feed_lock_key ) ) {
@@ -1573,8 +1581,8 @@ function process_feed_ajax() {
 			return;
 		}
 
-		// Set feed processing lock (5 minute timeout)
-		set_transient( $feed_lock_key, true, 300 );
+		// Set feed processing lock (15 minute timeout for large feeds)
+		set_transient( $feed_lock_key, true, 900 );
 
 		// Get feeds and find the URL for this feed key
 		$feeds = get_feeds();

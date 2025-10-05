@@ -80,7 +80,7 @@ console.log('[PUNTWORK] job-import-api.js loaded');
                 url: jobImportData.ajaxurl,
                 type: 'POST',
                 data: ajaxData,
-                timeout: 60000, // 60 seconds for feed processing
+                timeout: 900000, // 15 minutes for large feed processing (increased from 60 seconds)
                 success: function(response) {
                     console.log('[PUNTWORK] AJAX success for processFeed:', response);
                     console.log('[PUNTWORK] Response timestamp:', new Date().toISOString());
