@@ -65,8 +65,8 @@ function job_import_cleanup_duplicates_ajax() {
 		$offset      = isset( $_POST['offset'] ) ? intval( $_POST['offset'] ) : 0;
 		$is_continue = isset( $_POST['is_continue'] ) ? filter_var( $_POST['is_continue'], FILTER_VALIDATE_BOOLEAN ) : false;
 
-		// Path to standalone cleanup script
-		$standalone_script = dirname( __FILE__ ) . '/../standalone-cleanup.php';
+		// Path to standalone cleanup script - it's in the plugin root directory
+		$standalone_script = dirname( dirname( __FILE__ ) ) . '/standalone-cleanup.php';
 
 		error_log( '[PUNTWORK] [CLEANUP] Checking standalone script path: ' . $standalone_script );
 		if ( ! file_exists( $standalone_script ) ) {
