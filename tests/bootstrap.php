@@ -38,6 +38,23 @@ if ( ! defined( 'OBJECT' ) ) {
 	define( 'OBJECT', 'OBJECT' );
 }
 
+// Define PuntWork constants for testing
+if ( ! defined( 'PUNTWORK_PATH' ) ) {
+	define( 'PUNTWORK_PATH', dirname( __DIR__ ) . '/' );
+}
+
+if ( ! defined( 'PUNTWORK_URL' ) ) {
+	define( 'PUNTWORK_URL', 'http://example.com/wp-content/plugins/puntwork/' );
+}
+
+if ( ! defined( 'PUNTWORK_LOGS' ) ) {
+	define( 'PUNTWORK_LOGS', PUNTWORK_PATH . 'logs/import.log' );
+}
+
+if ( ! defined( 'PUNTWORK_VERSION' ) ) {
+	define( 'PUNTWORK_VERSION', '0.0.6' );
+}
+
 // Load WordPress test functions
 if ( file_exists( '/tmp/wordpress-tests-lib/includes/functions.php' ) ) {
 	include_once '/tmp/wordpress-tests-lib/includes/functions.php';
@@ -375,9 +392,6 @@ if ( ! class_exists( 'wpdb' ) ) {
 	$wpdb = $GLOBALS['wpdb'];
 }
 
-// Load the plugin
-require_once dirname( __DIR__ ) . '/puntwork.php';
-
 // Define essential functions that may be needed by included files
 if ( ! function_exists( 'is_admin' ) ) {
 	function is_admin() {
@@ -396,6 +410,210 @@ if ( ! function_exists( 'handle_get_import_status' ) ) {
 			),
 			200
 		);
+	}
+}
+
+// Mock WordPress plugin functions
+if ( ! function_exists( 'register_activation_hook' ) ) {
+	function register_activation_hook( $file, $function ) {
+		// Mock - do nothing in test environment
+	}
+}
+
+if ( ! function_exists( 'register_deactivation_hook' ) ) {
+	function register_deactivation_hook( $file, $function ) {
+		// Mock - do nothing in test environment
+	}
+}
+
+if ( ! function_exists( 'register_uninstall_hook' ) ) {
+	function register_uninstall_hook( $file, $function ) {
+		// Mock - do nothing in test environment
+	}
+}
+
+if ( ! function_exists( 'add_action' ) ) {
+	function add_action( $tag, $function, $priority = 10, $accepted_args = 1 ) {
+		// Mock - do nothing in test environment
+	}
+}
+
+if ( ! function_exists( 'add_filter' ) ) {
+	function add_filter( $tag, $function, $priority = 10, $accepted_args = 1 ) {
+		// Mock - do nothing in test environment
+	}
+}
+
+if ( ! function_exists( 'did_action' ) ) {
+	function did_action( $tag ) {
+		return 0; // Mock - action hasn't been fired
+	}
+}
+
+if ( ! function_exists( 'has_action' ) ) {
+	function has_action( $tag, $function_to_check = false ) {
+		return false; // Mock - no actions registered
+	}
+}
+
+if ( ! function_exists( 'has_filter' ) ) {
+	function has_filter( $tag, $function_to_check = false ) {
+		return false; // Mock - no filters registered
+	}
+}
+
+if ( ! function_exists( 'do_action' ) ) {
+	function do_action( $tag, ...$args ) {
+		// Mock - do nothing in test environment
+	}
+}
+
+if ( ! function_exists( 'apply_filters' ) ) {
+	function apply_filters( $tag, $value, ...$args ) {
+		return $value; // Mock - return value unchanged
+	}
+}
+
+if ( ! function_exists( 'wp_schedule_event' ) ) {
+	function wp_schedule_event( $timestamp, $recurrence, $hook, $args = array() ) {
+		// Mock - do nothing in test environment
+		return true;
+	}
+}
+
+if ( ! function_exists( 'wp_next_scheduled' ) ) {
+	function wp_next_scheduled( $hook, $args = array() ) {
+		return false; // Mock - no events scheduled
+	}
+}
+
+if ( ! function_exists( 'wp_clear_scheduled_hook' ) ) {
+	function wp_clear_scheduled_hook( $hook, $args = array() ) {
+		// Mock - do nothing in test environment
+	}
+}
+
+if ( ! function_exists( 'wp_unschedule_event' ) ) {
+	function wp_unschedule_event( $timestamp, $hook, $args = array() ) {
+		// Mock - do nothing in test environment
+	}
+}
+
+if ( ! function_exists( 'current_time' ) ) {
+	function current_time( $type, $gmt = 0 ) {
+		return time(); // Mock - return current timestamp
+	}
+}
+
+if ( ! function_exists( 'wp_mkdir_p' ) ) {
+	function wp_mkdir_p( $dir ) {
+		return mkdir( $dir, 0755, true ); // Use PHP's mkdir
+	}
+}
+
+if ( ! function_exists( 'flush_rewrite_rules' ) ) {
+	function flush_rewrite_rules( $hard = true ) {
+		// Mock - do nothing in test environment
+	}
+}
+
+if ( ! function_exists( 'wp_cache_flush' ) ) {
+	function wp_cache_flush() {
+		// Mock - do nothing in test environment
+		return true;
+	}
+}
+
+if ( ! function_exists( 'add_option' ) ) {
+	function add_option( $option, $value = '', $deprecated = '', $autoload = 'yes' ) {
+		global $mock_options;
+		if ( ! isset( $mock_options[ $option ] ) ) {
+			$mock_options[ $option ] = $value;
+		}
+		return true;
+	}
+}
+
+if ( ! function_exists( 'update_option' ) ) {
+	function update_option( $option, $value, $autoload = null ) {
+		global $mock_options;
+		$mock_options[ $option ] = $value;
+		return true;
+	}
+}
+
+if ( ! function_exists( 'get_option' ) ) {
+	function get_option( $option, $default = false ) {
+		global $mock_options;
+		return $mock_options[ $option ] ?? $default;
+	}
+}
+
+if ( ! function_exists( 'delete_option' ) ) {
+	function delete_option( $option ) {
+		global $mock_options;
+		unset( $mock_options[ $option ] );
+		return true;
+	}
+}
+
+if ( ! function_exists( 'load_plugin_textdomain' ) ) {
+	function load_plugin_textdomain( $domain, $deprecated = false, $plugin_rel_path = false ) {
+		// Mock - do nothing in test environment
+		return true;
+	}
+}
+
+if ( ! function_exists( '__' ) ) {
+	function __( $text, $domain = 'default' ) {
+		return $text; // Mock - return text unchanged
+	}
+}
+
+if ( ! function_exists( 'plugin_basename' ) ) {
+	function plugin_basename( $file ) {
+		return basename( $file ); // Mock - return basename
+	}
+}
+
+if ( ! function_exists( 'plugin_dir_path' ) ) {
+	function plugin_dir_path( $file ) {
+		return dirname( $file ) . '/'; // Mock - return directory path
+	}
+}
+
+if ( ! function_exists( 'plugin_dir_url' ) ) {
+	function plugin_dir_url( $file ) {
+		return 'http://example.com/wp-content/plugins/' . basename( dirname( $file ) ) . '/'; // Mock URL
+	}
+}
+
+if ( ! function_exists( 'wp_kses' ) ) {
+	function wp_kses( $string, $allowed_html = array() ) {
+		// Simple mock - just return the string for testing
+		return $string;
+	}
+}
+
+if ( ! function_exists( 'wp_kses_allowed_html' ) ) {
+	function wp_kses_allowed_html( $context = 'post' ) {
+		// Return basic allowed HTML tags for testing
+		return array(
+			'a'      => array(
+				'href'  => array(),
+				'title' => array(),
+			),
+			'br'     => array(),
+			'em'     => array(),
+			'strong' => array(),
+			'p'      => array(),
+		);
+	}
+}
+
+if ( ! function_exists( 'wp_kses_post' ) ) {
+	function wp_kses_post( $content ) {
+		return wp_kses( $content, wp_kses_allowed_html( 'post' ) );
 	}
 }
 
@@ -921,3 +1139,6 @@ if ( ! function_exists( 'update_network_option' ) ) {
 		return true;
 	}
 }
+
+// Load the plugin AFTER all mocks are defined
+require_once dirname( __DIR__ ) . '/puntwork.php';
