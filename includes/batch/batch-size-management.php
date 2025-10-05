@@ -25,13 +25,23 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @param  float $last_memory_ratio   Last memory ratio.
  * @param  float $current_batch_time  Current batch completion time.
  * @param  float $previous_batch_time Previous batch completion time.
+ * @param  bool  $is_action_scheduler Whether this is Action Scheduler processing.
  * @return array Array with 'batch_size' and 'reason' keys.
  */
-function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time ) {
+function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time, $is_action_scheduler = false ) {
 	$old_batch_size = $batch_size;
 
+	// Set batch size limits based on processing type
+	if ( $is_action_scheduler ) {
+		$min_batch_size = 50;
+		$max_batch_size = 500;
+	} else {
+		$min_batch_size = 10;
+		$max_batch_size = 25;
+	}
+
 	// Ensure batch size is within reasonable bounds
-	$batch_size = max( 10, min( 200, $batch_size ) );
+	$batch_size = max( $min_batch_size, min( $max_batch_size, $batch_size ) );
 
 	// Memory-based adjustment (most critical - always override other adjustments)
 	if ( $last_memory_ratio > 0.85 ) {
@@ -47,8 +57,8 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
 		$batch_size = max( 1, floor( $batch_size * 0.9 ) );
 		$reason     = 'memory usage approaching limit - preventing batch size growth';
 		// Low memory usage - allow larger batches but be very conservative for memory safety
-		// Increase batch size when memory is low, but limit to 25 for complex job data
-		$new_size = min( 25, floor( $batch_size * 1.2 ) );
+		// Increase batch size when memory is low, but limit appropriately
+		$new_size = min( $max_batch_size, floor( $batch_size * 1.2 ) );
 		if ( $new_size > $batch_size ) {
 			$batch_size = $new_size;
 			$reason     = 'low memory usage allows larger batches, increasing batch size conservatively';
@@ -63,7 +73,7 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
 	$adaptive_state = get_option(
 		'job_import_adaptive_batch_state',
 		array(
-			'previous_good_batch_size' => 10,
+			'previous_good_batch_size' => $min_batch_size,
 			'current_increment_step'   => 1,
 			'last_performance_check'   => 0,
 			'consecutive_slow_batches' => 0,
@@ -105,14 +115,14 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
 			$adaptive_state['consecutive_slow_batches'] = 0;
 
 			// Conservatively increase batch size (multiply by 1.2 for slower growth)
-			$new_size = min( 25, floor( $batch_size * 1.2 ) );
+			$new_size = min( $max_batch_size, floor( $batch_size * 1.2 ) );
 
-			// Ensure minimum increase of 2
+			// Ensure minimum increase
 			if ( $new_size <= $batch_size ) {
-				$new_size = min( 25, $batch_size + 2 );
+				$new_size = min( $max_batch_size, $batch_size + max( 5, floor( $batch_size * 0.1 ) ) );
 			}
 
-			if ( $new_size <= 25 ) {
+			if ( $new_size <= $max_batch_size ) {
 				$batch_size = $new_size;
 				$reason     = 'batch processing fast (' . number_format( $current_batch_time, 2 ) . 's), conservatively increasing batch size to ' . $batch_size;
 
@@ -128,7 +138,7 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
 		$adaptive_state['last_performance_check'] = time();
 	} elseif ( $last_memory_ratio < 0.6 && empty( $reason ) ) {
 		// First batch and memory is OK - allow conservative initial increase
-		$new_size = min( 25, floor( $batch_size * 1.2 ) );
+		$new_size = min( $max_batch_size, floor( $batch_size * 1.2 ) );
 		if ( $new_size > $batch_size ) {
 			$batch_size                                 = $new_size;
 			$reason                                     = 'first batch with good memory, increasing batch size conservatively for initial adaptation';
@@ -164,8 +174,8 @@ function adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio
 		update_option( 'job_import_consecutive_small_batches', 0, false );
 	}
 
-	// Ensure batch size never goes below 5 or above 25 for memory safety
-	$batch_size = max( 5, min( 25, $batch_size ) );
+	// Ensure batch size never goes below minimum or above maximum for the processing type
+	$batch_size = max( $min_batch_size, min( $max_batch_size, $batch_size ) );
 
 	// Cast to int to ensure type compatibility
 	$batch_size = (int) $batch_size;
@@ -251,8 +261,16 @@ function validate_and_adjust_batch_size( array $setup ): array {
 	$threshold          = 0.6 * $memory_limit_bytes;
 	$batch_size         = get_option( 'job_import_batch_size' ) ?: 10; // Starting batch size for memory safety
 
-	// Ensure batch_size is at least 5 for incremental updates but cap at 25 for memory safety
-	$batch_size = max( 5, min( 25, (int) $batch_size ) );
+	// Check if this is Action Scheduler processing (allows larger batches)
+	$is_action_scheduler = isset( $setup['is_action_scheduler'] ) && $setup['is_action_scheduler'];
+
+	// For Action Scheduler, allow much larger batches since each job has its own memory space
+	if ( $is_action_scheduler ) {
+		$batch_size = max( 50, min( 500, (int) $batch_size ) ); // Allow 50-500 items per batch for Action Scheduler
+	} else {
+		// For synchronous processing, keep smaller batches for memory safety
+		$batch_size = max( 5, min( 25, (int) $batch_size ) );
+	}
 
 	$old_batch_size     = $batch_size;
 	$prev_time_per_item = get_option( 'job_import_time_per_job', 0 );
@@ -263,9 +281,15 @@ function validate_and_adjust_batch_size( array $setup ): array {
 	$current_batch_time  = get_option( 'job_import_last_batch_time', 0 );
 	$previous_batch_time = get_option( 'job_import_previous_batch_time', 0 );
 
-	$adjustment_result = adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time );
+	$adjustment_result = adjust_batch_size( $batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time, $is_action_scheduler );
 	$batch_size        = $adjustment_result['batch_size'];
-	$batch_size        = max( 10, (int) $batch_size ); // Ensure batch_size is at least 10 for real-time progress
+
+	// Re-apply limits based on processing type
+	if ( $is_action_scheduler ) {
+		$batch_size = max( 50, min( 500, (int) $batch_size ) );
+	} else {
+		$batch_size = max( 10, min( 25, (int) $batch_size ) ); // Ensure batch_size is at least 10 for real-time progress
+	}
 
 	$logs = array();
 	if ( $batch_size !== $old_batch_size ) {

@@ -587,7 +587,8 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 			// Check if Action Scheduler is available for async processing
 			if ( function_exists( 'as_schedule_single_action' ) ) {
 				// Use Action Scheduler for async batch processing
-				$batch_size = 50; // Increased from 10 for better performance while maintaining timeout protection
+				// Use larger batches to reduce the number of jobs and memory overhead
+				$batch_size = 200; // Increased from 50 to reduce number of jobs from ~145 to ~36
 
 				// Calculate total number of batches needed
 				$total_batches = ceil( $total_items / $batch_size );
@@ -1005,6 +1006,9 @@ function puntwork_process_batch_handler( $args ) {
 			}
 			return;
 		}
+
+		// Mark this as Action Scheduler processing to allow larger batches
+		$setup['is_action_scheduler'] = true;
 
 		// Process this batch
 		$batch_result = process_batch_items_logic( $setup );
