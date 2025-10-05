@@ -344,7 +344,7 @@ function job_import_cleanup_duplicates_ajax() {
 
 		// Dynamic batch size adjustment (only for continuation batches)
 		if ( $is_continue ) {
-			$new_batch_size         = job_import_adjust_cleanup_batch_size( $batch_size, $batch_processing_time, count( $batch_jobs ) );
+			$new_batch_size         = job_import_adjust_cleanup_batch_size( $batch_size, $batch_processing_time, count( $batch_jobs ), $progress );
 			$progress['batch_size'] = $new_batch_size;
 			PuntWorkLogger::info(
 				'Batch size adjusted',
@@ -886,7 +886,7 @@ function job_import_cleanup_continue_ajax() {
 		$progress['last_batch_time'] = $batch_processing_time;
 
 		// Dynamic batch size adjustment (only for continuation batches)
-		$new_batch_size         = job_import_adjust_cleanup_batch_size( $batch_size, $batch_processing_time, count( $batch_jobs ) );
+		$new_batch_size         = job_import_adjust_cleanup_batch_size( $batch_size, $batch_processing_time, count( $batch_jobs ), $progress );
 		$progress['batch_size'] = $new_batch_size;
 		PuntWorkLogger::info(
 			'Batch size adjusted',
@@ -1016,53 +1016,169 @@ function job_import_delete_post_efficiently( $post_id ) {
 }
 
 /**
- * Adjust cleanup batch size dynamically based on processing performance.
+ * Advanced dynamic batch size adjustment for cleanup operations using exponential growth with backoff.
+ * Starts from 1 item per batch and exponentially increases until performance degrades,
+ * then backtracks to find the optimal batch size.
  *
  * @param int   $current_batch_size Current batch size
  * @param float $processing_time    Time taken to process the batch in seconds
  * @param int   $items_processed    Number of items actually processed
+ * @param array $progress          Current progress array (passed by reference for state management)
  * @return int New batch size
  */
-function job_import_adjust_cleanup_batch_size( $current_batch_size, $processing_time, $items_processed ) {
+function job_import_adjust_cleanup_batch_size( $current_batch_size, $processing_time, $items_processed, &$progress ) {
 	// If no items were processed, keep the same batch size
 	if ( $items_processed == 0 ) {
 		return $current_batch_size;
 	}
 
-	// Calculate processing time per item
+	// Initialize optimization state if not exists
+	if ( ! isset( $progress['batch_optimization'] ) ) {
+		$progress['batch_optimization'] = array(
+			'phase'              => 'exploring', // 'exploring', 'backtracking', 'optimizing'
+			'performance_history' => array(),   // Array of [batch_size => time_per_item]
+			'last_batch_size'    => 1,
+			'best_batch_size'    => 1,
+			'best_time_per_item' => PHP_FLOAT_MAX,
+			'exploration_step'   => 0,
+			'backtrack_count'    => 0,
+			'stable_count'       => 0,
+		);
+	}
+
+	$opt = &$progress['batch_optimization'];
+
+	// Calculate current performance metrics
 	$time_per_item = $processing_time / $items_processed;
+	$max_batch_size = get_option( 'puntwork_cleanup_batch_size', 100 ); // Increased default max
+	$min_batch_size = 1;
 
-	// Target processing time per batch (5-10 seconds for cleanup operations)
-	$target_batch_time = 8.0;
+	// Store performance data
+	$opt['performance_history'][$current_batch_size] = $time_per_item;
+	$opt['last_batch_size'] = $current_batch_size;
 
-	// Calculate ideal batch size based on target time
-	$ideal_batch_size = (int) round( $target_batch_time / $time_per_item );
-
-	// Apply smoothing - don't change batch size too drastically
-	$max_change_factor = 2.0; // Maximum 2x increase or 0.5x decrease per adjustment
-	$min_batch_size    = 1;
-	$max_batch_size    = get_option( 'puntwork_cleanup_batch_size', 50 ); // Respect the configured max
-
-	// Calculate new batch size with smoothing
-	if ( $ideal_batch_size > $current_batch_size ) {
-		// Increase batch size, but not more than max_change_factor
-		$new_batch_size = min( $ideal_batch_size, (int) round( $current_batch_size * $max_change_factor ) );
+	// Update best performance if this is better
+	if ( $time_per_item < $opt['best_time_per_item'] ) {
+		$opt['best_time_per_item'] = $time_per_item;
+		$opt['best_batch_size'] = $current_batch_size;
+		$opt['stable_count'] = 0; // Reset stability counter when we find better performance
 	} else {
-		// Decrease batch size, but not more than max_change_factor
-		$new_batch_size = max( $ideal_batch_size, (int) round( $current_batch_size / $max_change_factor ) );
+		$opt['stable_count']++;
+	}
+
+	// Determine next batch size based on current phase
+	$new_batch_size = $current_batch_size;
+
+	switch ( $opt['phase'] ) {
+		case 'exploring':
+			// Exponential growth phase: double the batch size each time
+			$new_batch_size = min( $max_batch_size, $current_batch_size * 2 );
+
+			// Check if we should stop exploring and start backtracking
+			// If current performance is significantly worse than best performance (>20% degradation)
+			if ( $time_per_item > $opt['best_time_per_item'] * 1.2 && $current_batch_size > 1 ) {
+				$opt['phase'] = 'backtracking';
+				$opt['backtrack_count'] = 0;
+				// Go back to the best performing batch size
+				$new_batch_size = $opt['best_batch_size'];
+				PuntWorkLogger::info(
+					'Switching to backtracking phase - performance degradation detected',
+					PuntWorkLogger::CONTEXT_PURGE,
+					array(
+						'current_time_per_item' => round($time_per_item, 4),
+						'best_time_per_item' => round($opt['best_time_per_item'], 4),
+						'current_batch_size' => $current_batch_size,
+						'best_batch_size' => $opt['best_batch_size'],
+					)
+				);
+			} elseif ( $new_batch_size >= $max_batch_size ) {
+				// Reached maximum batch size, switch to optimizing
+				$opt['phase'] = 'optimizing';
+				$new_batch_size = $opt['best_batch_size'];
+				PuntWorkLogger::info(
+					'Switching to optimizing phase - reached maximum batch size',
+					PuntWorkLogger::CONTEXT_PURGE,
+					array(
+						'max_batch_size' => $max_batch_size,
+						'best_batch_size' => $opt['best_batch_size'],
+					)
+				);
+			}
+			break;
+
+		case 'backtracking':
+			// Backtracking phase: try smaller increments around the best batch size
+			$opt['backtrack_count']++;
+
+			if ( $opt['backtrack_count'] >= 3 ) {
+				// After 3 backtrack attempts, switch to optimizing
+				$opt['phase'] = 'optimizing';
+				$new_batch_size = $opt['best_batch_size'];
+				PuntWorkLogger::info(
+					'Switching to optimizing phase after backtracking',
+					PuntWorkLogger::CONTEXT_PURGE,
+					array(
+						'backtrack_attempts' => $opt['backtrack_count'],
+						'optimal_batch_size' => $opt['best_batch_size'],
+					)
+				);
+			} else {
+				// Try a batch size between current and best
+				$range = abs( $current_batch_size - $opt['best_batch_size'] );
+				if ( $range > 1 ) {
+					// Try halfway between current and best
+					$new_batch_size = (int) round( ( $current_batch_size + $opt['best_batch_size'] ) / 2 );
+				} else {
+					// Try small variations around the best
+					$variation = $opt['backtrack_count'] % 2 == 0 ? 1 : -1;
+					$new_batch_size = max( $min_batch_size, min( $max_batch_size, $opt['best_batch_size'] + $variation ) );
+				}
+			}
+			break;
+
+		case 'optimizing':
+		default:
+			// Optimization phase: stay at the best batch size with small adjustments
+			$new_batch_size = $opt['best_batch_size'];
+
+			// Occasionally test if we can do better (every 10 batches)
+			if ( $opt['stable_count'] > 0 && $opt['stable_count'] % 10 == 0 ) {
+				// Test a slightly larger batch size
+				$test_batch_size = min( $max_batch_size, $opt['best_batch_size'] + 1 );
+				if ( $test_batch_size != $opt['best_batch_size'] ) {
+					$new_batch_size = $test_batch_size;
+					PuntWorkLogger::info(
+						'Testing potential optimization',
+						PuntWorkLogger::CONTEXT_PURGE,
+						array(
+							'current_best' => $opt['best_batch_size'],
+							'test_batch_size' => $test_batch_size,
+							'stable_batches' => $opt['stable_count'],
+						)
+					);
+				}
+			}
+			break;
 	}
 
 	// Ensure batch size stays within bounds
 	$new_batch_size = max( $min_batch_size, min( $max_batch_size, $new_batch_size ) );
 
-	// If processing time was very short (< 1 second) and we processed all items, we can be more aggressive
-	if ( $processing_time < 1.0 && $items_processed == $current_batch_size ) {
-		$new_batch_size = min( $max_batch_size, $current_batch_size * 2 );
-	}
-
-	// If processing time was very long (> 30 seconds), be more conservative
-	if ( $processing_time > 30.0 ) {
-		$new_batch_size = max( $min_batch_size, (int) round( $current_batch_size / 2 ) );
+	// Log optimization progress
+	if ( $new_batch_size != $current_batch_size ) {
+		PuntWorkLogger::info(
+			'Batch size optimization',
+			PuntWorkLogger::CONTEXT_PURGE,
+			array(
+				'phase' => $opt['phase'],
+				'old_batch_size' => $current_batch_size,
+				'new_batch_size' => $new_batch_size,
+				'best_batch_size' => $opt['best_batch_size'],
+				'current_time_per_item' => round($time_per_item, 4),
+				'best_time_per_item' => round($opt['best_time_per_item'], 4),
+				'stable_count' => $opt['stable_count'],
+			)
+		);
 	}
 
 	return $new_batch_size;
