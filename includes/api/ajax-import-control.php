@@ -1984,8 +1984,8 @@ function combine_jsonl_ajax() {
 			flush();
 		}
 
-		// Script continues here - but we don't run import directly anymore
-		// The import will be started by the scheduled Action Scheduler job
+		// Terminate the script to prevent any additional output
+		wp_die();
 	} catch ( \Exception $e ) {
 		// Clear combination processing lock on any error
 		delete_transient( $combine_lock_key );
