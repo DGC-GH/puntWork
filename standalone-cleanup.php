@@ -4,6 +4,13 @@
  * This script runs outside of WordPress to avoid memory issues
  */
 
+// Debug logging function
+function debug_log($message) {
+    $log_file = dirname(__FILE__) . '/standalone-cleanup-debug.log';
+    $timestamp = date('Y-m-d H:i:s');
+    file_put_contents($log_file, "[$timestamp] $message\n", FILE_APPEND);
+}
+
 // Load WordPress configuration - try multiple possible paths
 $possible_paths = [
     dirname(__FILE__) . '/../wp-config.php',           // From includes/ up to root
@@ -35,8 +42,12 @@ debug_log("Loading wp-config.php from: $wp_config_path");
 require_once($wp_config_path);
 debug_log("wp-config.php loaded successfully");
 
-// Use WordPress database constants (already defined by wp-config.php)
-// DB_HOST, DB_NAME, DB_USER, DB_PASSWORD are already defined
+// Ensure required constants are defined with fallbacks
+if (!defined('DB_HOST')) define('DB_HOST', 'localhost');
+if (!defined('DB_NAME')) define('DB_NAME', '');
+if (!defined('DB_USER')) define('DB_USER', '');
+if (!defined('DB_PASSWORD')) define('DB_PASSWORD', '');
+if (!defined('DB_CHARSET')) define('DB_CHARSET', 'utf8mb4');
 
 // WordPress table prefix (get from wp-config.php if available, fallback to wp_)
 global $table_prefix;
@@ -45,13 +56,6 @@ if (!isset($table_prefix) || empty($table_prefix)) {
 }
 define('WP_PREFIX', $table_prefix);
 debug_log("Table prefix set to: " . WP_PREFIX);
-
-// Debug logging function
-function debug_log($message) {
-    $log_file = dirname(__FILE__) . '/standalone-cleanup-debug.log';
-    $timestamp = date('Y-m-d H:i:s');
-    file_put_contents($log_file, "[$timestamp] $message\n", FILE_APPEND);
-}
 
 // Parse command line arguments
 $options = getopt('', ['batch-size:', 'offset:', 'continue:']);
