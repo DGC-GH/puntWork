@@ -1925,6 +1925,78 @@ function combine_jsonl_ajax() {
 				error_log( '[PUNTWORK] [COMBINE-SCHEDULE-ERROR] Action Scheduler not available for import scheduling' );
 			}
 
+			// Check if Action Scheduler is working by testing a simple job execution
+			$action_scheduler_reliable = false;
+			if ( $scheduling_success ) {
+				// Try to execute Action Scheduler queue manually to test if it works
+				if ( class_exists( 'ActionScheduler' ) ) {
+					try {
+						$store = ActionScheduler::store();
+						$runner = ActionScheduler::runner();
+						
+						// Check if there are any pending jobs
+						$pending_jobs = $store->query_actions( array( 'status' => 'pending', 'per_page' => 1 ) );
+						
+						if ( ! empty( $pending_jobs ) ) {
+							// Try to run one job to test if Action Scheduler is working
+							$runner->run();
+							
+							// Check if the job was processed
+							$still_pending = $store->query_actions( array( 'status' => 'pending', 'per_page' => 1 ) );
+							$action_scheduler_reliable = empty( $still_pending );
+						} else {
+							// No pending jobs, assume it's working
+							$action_scheduler_reliable = true;
+						}
+					} catch ( \Exception $e ) {
+						error_log( '[PUNTWORK] [COMBINE-SCHEDULE] Action Scheduler test failed: ' . $e->getMessage() );
+						$action_scheduler_reliable = false;
+					}
+				}
+				
+				if ( ! $action_scheduler_reliable ) {
+					error_log( '[PUNTWORK] [COMBINE] WARNING: Action Scheduler detected as unreliable on this server - forcing synchronous import' );
+				}
+			}
+
+			// If Action Scheduler is not reliable, run the import synchronously
+			if ( ! $action_scheduler_reliable ) {
+				error_log( '[PUNTWORK] [COMBINE] Action Scheduler scheduling failed or forced synchronous fallback - running synchronous import' );
+				
+				try {
+					// Load required files for batch processing
+					$import_files = array(
+						__DIR__ . '/../batch/batch-size-management.php',
+						__DIR__ . '/../import/import-setup.php',
+						__DIR__ . '/../batch/batch-processing.php',
+						__DIR__ . '/../import/import-finalization.php',
+						__DIR__ . '/../utilities/ErrorHandler.php',
+						__DIR__ . '/../exceptions/PuntworkExceptions.php',
+						__DIR__ . '/../import/import-batch.php',
+					);
+
+					foreach ( $import_files as $file ) {
+						if ( file_exists( $file ) ) {
+							require_once $file;
+						}
+					}
+
+					// Start the import synchronously
+					$sync_result = import_all_jobs_from_json();
+					error_log( '[PUNTWORK] [COMBINE-SYNC] Synchronous import result: ' . json_encode( $sync_result ) );
+					
+					if ( isset( $sync_result['success'] ) && $sync_result['success'] ) {
+						error_log( '[PUNTWORK] [COMBINE-SYNC-SUCCESS] Synchronous import completed successfully' );
+					} else {
+						error_log( '[PUNTWORK] [COMBINE-SYNC-ERROR] Synchronous import failed' );
+					}
+				} catch ( \Exception $e ) {
+					error_log( '[PUNTWORK] [COMBINE-SYNC-EXCEPTION] Exception in synchronous import: ' . $e->getMessage() );
+				} catch ( \Throwable $e ) {
+					error_log( '[PUNTWORK] [COMBINE-SYNC-FATAL] Fatal error in synchronous import: ' . $e->getMessage() );
+				}
+			}
+
 			PuntWorkLogger::info(
 				'JSONL combination completed and import scheduled',
 				PuntWorkLogger::CONTEXT_AJAX,
@@ -1956,10 +2028,13 @@ function combine_jsonl_ajax() {
 			'success' => true,
 			'data'    => array(
 				'total_items'          => $total_items,
-				'message'              => 'JSONL files combined successfully - import scheduled in background',
+				'message'              => $action_scheduler_reliable ? 
+					'JSONL files combined successfully - import scheduled in background' : 
+					'JSONL files combined successfully - import running synchronously',
 				'combined_file_exists' => file_exists( $combined_file ),
 				'combined_file_size'   => $file_size ?? 0,
 				'import_scheduled'     => $scheduling_success ?? false,
+				'action_scheduler_reliable' => $action_scheduler_reliable,
 			)
 		);
 
