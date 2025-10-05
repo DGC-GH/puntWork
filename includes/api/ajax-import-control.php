@@ -1882,39 +1882,44 @@ function combine_jsonl_ajax() {
 			error_log( '[PUNTWORK] [COMBINE-STATUS] update_option result: ' . ( $update_result ? 'true' : 'false' ) . ', status set: ' . json_encode( $import_status ) );
 			error_log( '[PUNTWORK] [DEBUG-PHP] Import status initialized with total: ' . $total_items );
 
-			// Schedule the import to run in background using Action Scheduler
-			// This follows WordPress best practices for long-running operations
-			error_log( '[PUNTWORK] [COMBINE] Scheduling background import after JSONL combination' );
+			// Schedule the import to run in background using shutdown function
+			// This ensures the import runs even if the AJAX connection is closed
+			error_log( '[PUNTWORK] [COMBINE] Scheduling background import after JSONL combination using shutdown function' );
 
 			try {
-				// Check if Action Scheduler is available
-				if ( class_exists( 'ActionScheduler' ) ) {
-					error_log( '[PUNTWORK] [COMBINE] Using Action Scheduler for background import' );
-
-					// Schedule the import to run immediately in background
-					$action_id = as_schedule_single_action(
-						time(), // Run immediately
-						'puntwork_start_scheduled_import',
-						array(),
-						'puntwork-import'
+				// Use register_shutdown_function to run import after response is sent
+				// This allows the import to continue even if AJAX times out
+				register_shutdown_function(function() {
+					ignore_user_abort(true);
+					set_time_limit(0);
+					
+					error_log( '[PUNTWORK] [SHUTDOWN-IMPORT] Starting import via shutdown function' );
+					
+					// Load required files for import processing
+					$import_files = array(
+						__DIR__ . '/../batch/batch-size-management.php',
+						__DIR__ . '/../import/import-setup.php',
+						__DIR__ . '/../batch/batch-processing.php',
+						__DIR__ . '/../import/import-finalization.php',
+						__DIR__ . '/../utilities/ErrorHandler.php',
+						__DIR__ . '/../exceptions/PuntworkExceptions.php',
+						__DIR__ . '/../import/import-batch.php',
 					);
 
-					error_log( '[PUNTWORK] [COMBINE] Action Scheduler job scheduled with ID: ' . $action_id );
-				} else {
-					error_log( '[PUNTWORK] [COMBINE] Action Scheduler not available, falling back to WP Cron' );
+					foreach ( $import_files as $file ) {
+						if ( file_exists( $file ) ) {
+							require_once $file;
+						}
+					}
 
-					// Fallback to WP Cron if Action Scheduler is not available
-					wp_schedule_single_event(
-						time(), // Run immediately
-						'puntwork_start_scheduled_import'
-					);
-
-					error_log( '[PUNTWORK] [COMBINE] WP Cron job scheduled' );
-				}
+					// Start the import
+					start_scheduled_import();
+				});
 
 				$scheduling_success = true;
+				error_log( '[PUNTWORK] [COMBINE] Shutdown function registered for background import' );
 			} catch ( \Exception $e ) {
-				error_log( '[PUNTWORK] [COMBINE] Exception scheduling import: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
+				error_log( '[PUNTWORK] [COMBINE] Exception registering shutdown function: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
 				error_log( '[PUNTWORK] [COMBINE] Stack trace: ' . $e->getTraceAsString() );
 				$scheduling_success = false;
 			}
