@@ -144,3 +144,5 @@ class MemoryManager {
 
 		return $optimal_chunk_size;
 	}
+
+}

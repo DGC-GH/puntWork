@@ -199,7 +199,7 @@ class AdvancedMemoryManager extends MemoryManager {
 	/**
 	 * Get optimal chunk size based on current memory usage and performance history
 	 */
-	public static function getOptimalChunkSize() {
+	public static function getOptimalChunkSize(): int {
 		$current_memory_usage = self::getCurrentMemoryUsage();
 		$memory_limit = self::getMemoryLimitBytes();
 
