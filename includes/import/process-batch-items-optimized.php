@@ -325,6 +325,11 @@ if ( ! function_exists( 'process_guid_chunk' ) ) {
 
 				++$processed_count;
 
+				// Update intermediate status every 50 items for real-time UI updates
+				if ( $processed_count % 50 === 0 ) {
+					update_intermediate_batch_status( $processed_count, $total_to_process, $published, $updated, $skipped, $logs );
+				}
+
 			} catch ( \Exception $e ) {
 				$error_msg = 'Error processing GUID ' . $guid . ': ' . $e->getMessage();
 				$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . $error_msg;

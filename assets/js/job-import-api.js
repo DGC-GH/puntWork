@@ -551,8 +551,9 @@ console.log('[PUNTWORK] job-import-api.js loaded');
                 url: jobImportData.ajaxurl,
                 type: 'POST',
                 data: {
-                    action: 'get_import_status',
-                    nonce: jobImportData.nonce
+                    action: 'get_job_import_status',
+                    nonce: jobImportData.nonce,
+                    _cache_bust: Date.now() // Prevent caching
                 },
                 success: function(response) {
                     PuntWorkJSLogger.debug('Get import status response', 'API', response);

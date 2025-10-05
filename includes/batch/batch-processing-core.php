@@ -411,7 +411,7 @@ function process_batch_items_logic( array $setup ): array {
 			// Check if there's a recent intermediate update that should be preserved
 			$has_recent_intermediate = isset( $current_status['is_intermediate_update'] ) &&
 										isset( $current_status['intermediate_update_time'] ) &&
-										( microtime( true ) - $current_status['intermediate_update_time'] ) < 2; // Within last 2 seconds
+										( microtime( true ) - $current_status['intermediate_update_time'] ) < 10; // Within last 10 seconds
 
 			if ( $has_recent_intermediate ) {
 				error_log( '[PUNTWORK] [UI-STATUS] Preserving recent intermediate update from ' . round( microtime( true ) - $current_status['intermediate_update_time'], 2 ) . ' seconds ago' );
@@ -663,6 +663,19 @@ function update_intermediate_batch_status( int $processed_count, int $total_in_b
 
 	update_option( 'job_import_status', $intermediate_status, false );
 	error_log( '[PUNTWORK] [UI-STATUS] Status saved to database' );
+
+	// Force database commit to ensure immediate visibility across processes
+	global $wpdb;
+	if ( isset( $wpdb ) && method_exists( $wpdb, 'query' ) ) {
+		$wpdb->query( 'COMMIT' );
+		error_log( '[PUNTWORK] [UI-STATUS] Database commit forced' );
+	}
+
+	// Also try to commit any pending transactions
+	if ( function_exists( 'db_commit_pending_transactions' ) ) {
+		db_commit_pending_transactions();
+		error_log( '[PUNTWORK] [UI-STATUS] Pending transactions committed' );
+	}
 
 	// Flush cache for real-time status updates
 	if ( function_exists( 'wp_cache_flush' ) ) {
