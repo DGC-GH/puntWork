@@ -623,44 +623,42 @@ console.info("=== Job Import Logic Script Loaded ===");
                 PuntWorkJSLogger.debug('Combine JSONL response', 'LOGIC', combineResponse);
 
                 if (combineResponse.success) {
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] JSONL combination successful');
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] JSONL combination successful - import should now run synchronously');
                     JobImportUI.appendLogs(combineResponse.data.logs || []);
 
                     // Update progress to show JSONL combination complete
                     JobImportUI.updateProgress({
-                        total: 1,
-                        processed: 1,
+                        total: total_items,
+                        processed: 0,
                         published: 0,
                         updated: 0,
                         skipped: 0,
                         duplicates_drafted: 0,
                         drafted_old: 0,
                         time_elapsed: this.getElapsedTime() / 1000,
-                        complete: false
+                        complete: false,
+                        phase: 'job-importing'
                     });
+
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 3: BATCH IMPORT =====');
+                    $('#status-message').text('Starting import...');
+                    JobImportUI.appendLogs(['Starting batch import processing...']);
+
+                    // The import is now running synchronously in the AJAX handler
+                    // Start status polling to show progress
+                    if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] Starting status polling for real-time UI updates');
+                        window.JobImportEvents.startStatusPolling();
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling started successfully');
+                    } else {
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling not available');
+                    }
+
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== START IMPORT PROCESS COMPLETE =====');
                 } else {
                     console.error('[PUNTWORK] [DEBUG-IMPORT] JSONL combination failed:', combineResponse);
                     throw new Error('Combining JSONL failed: ' + (combineResponse.message || 'Unknown error'));
                 }
-
-                console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 2 COMPLETE =====');
-                console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 3: BATCH IMPORT =====');
-                $('#status-message').text('Starting import...');
-                JobImportUI.appendLogs(['Starting batch import processing...']);
-
-                // Update progress bar for batch processing phase
-                JobImportUI.updateProgress({
-                    total: total_items,
-                    processed: 0,
-                    published: 0,
-                    updated: 0,
-                    skipped: 0,
-                    duplicates_drafted: 0,
-                    drafted_old: 0,
-                    time_elapsed: this.getElapsedTime() / 1000,
-                    complete: false,
-                    phase: 'job-importing'
-                });
 
                 console.log('[PUNTWORK] [DEBUG-IMPORT] About to clear import cancel');
                 await JobImportAPI.clearImportCancel();
