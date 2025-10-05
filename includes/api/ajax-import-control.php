@@ -1882,25 +1882,42 @@ function combine_jsonl_ajax() {
 			error_log( '[PUNTWORK] [COMBINE-STATUS] update_option result: ' . ( $update_result ? 'true' : 'false' ) . ', status set: ' . json_encode( $import_status ) );
 			error_log( '[PUNTWORK] [DEBUG-PHP] Import status initialized with total: ' . $total_items );
 
-			// Schedule the import asynchronously using Action Scheduler (more reliable than WP cron)
-			error_log( '[PUNTWORK] [COMBINE] Scheduling import asynchronously using Action Scheduler' );
+			// Run the import synchronously after JSONL combination
+			error_log( '[PUNTWORK] [COMBINE] Starting import synchronously after JSONL combination' );
 			
-			if ( function_exists( 'as_schedule_single_action' ) ) {
-				$scheduled = as_schedule_single_action( time() + 5, 'puntwork_start_batch_import' );
-				if ( $scheduled ) {
-					error_log( '[PUNTWORK] [COMBINE] Import scheduled successfully with Action Scheduler for ' . ( time() + 5 ) );
-				} else {
-					error_log( '[PUNTWORK] [COMBINE] Failed to schedule import with Action Scheduler' );
+			try {
+				// Load required files for batch processing
+				$import_files = array(
+					__DIR__ . '/../batch/batch-size-management.php',
+					__DIR__ . '/../import/import-setup.php',
+					__DIR__ . '/../batch/batch-processing.php',
+					__DIR__ . '/../import/import-finalization.php',
+					__DIR__ . '/../utilities/ErrorHandler.php',
+					__DIR__ . '/../exceptions/PuntworkExceptions.php',
+					__DIR__ . '/../import/import-batch.php',
+				);
+
+				foreach ( $import_files as $file ) {
+					if ( file_exists( $file ) ) {
+						require_once $file;
+					}
 				}
-			} else {
-				// Fallback to WP cron if Action Scheduler not available
-				error_log( '[PUNTWORK] [COMBINE] Action Scheduler not available, falling back to WP cron' );
-				$scheduled = wp_schedule_single_event( time() + 5, 'puntwork_start_batch_import' );
-				if ( $scheduled ) {
-					error_log( '[PUNTWORK] [COMBINE] Import scheduled successfully with WP cron for ' . ( time() + 5 ) );
+
+				// Start the FULL import (all batches) synchronously
+				$result = import_all_jobs_from_json();
+				error_log( '[PUNTWORK] [COMBINE] Synchronous import result: ' . json_encode( $result ) );
+				
+				if ( isset( $result['success'] ) && $result['success'] ) {
+					error_log( '[PUNTWORK] [COMBINE] Synchronous import completed successfully' );
 				} else {
-					error_log( '[PUNTWORK] [COMBINE] Failed to schedule import with WP cron' );
+					error_log( '[PUNTWORK] [COMBINE] Synchronous import failed or incomplete' );
 				}
+			} catch ( \Exception $e ) {
+				error_log( '[PUNTWORK] [COMBINE] Exception in synchronous import: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
+				error_log( '[PUNTWORK] [COMBINE] Stack trace: ' . $e->getTraceAsString() );
+			} catch ( \Throwable $e ) {
+				error_log( '[PUNTWORK] [COMBINE] Fatal error in synchronous import: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
+				error_log( '[PUNTWORK] [COMBINE] Stack trace: ' . $e->getTraceAsString() );
 			}
 
 			PuntWorkLogger::info(
