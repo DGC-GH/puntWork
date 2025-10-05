@@ -4,15 +4,29 @@
  * This script runs outside of WordPress to avoid memory issues
  */
 
-// Database configuration - update these values for your environment
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'your_database_name');
-define('DB_USER', 'your_database_user');
-define('DB_PASSWORD', 'your_database_password');
+// Load WordPress configuration
+$wp_config_path = dirname(__FILE__) . '/../wp-config.php';
+if (!file_exists($wp_config_path)) {
+    die("Error: wp-config.php not found at $wp_config_path\n");
+}
+
+require_once($wp_config_path);
+
+// Use WordPress database constants
+define('DB_HOST', DB_HOST);
+define('DB_NAME', DB_NAME);
+define('DB_USER', DB_USER);
+define('DB_PASSWORD', DB_PASSWORD);
 define('DB_CHARSET', 'utf8mb4');
 
 // WordPress table prefix
-define('WP_PREFIX', 'wp_');
+define('WP_PREFIX', $table_prefix);
+
+// Parse command line arguments
+$options = getopt('', ['batch-size:', 'offset:', 'continue:']);
+$batch_size = isset($options['batch-size']) ? (int)$options['batch-size'] : 1;
+$offset = isset($options['offset']) ? (int)$options['offset'] : 0;
+$is_continue = isset($options['continue']) && $options['continue'] === '1';
 
 // Memory limit for this script (keep it low to avoid server issues)
 ini_set('memory_limit', '256M');
@@ -20,10 +34,15 @@ ini_set('max_execution_time', 300); // 5 minutes
 
 class StandaloneCleanup {
     private $db;
-    private $batch_size = 1; // Process 1 post at a time
+    private $batch_size;
     private $max_memory_percent = 50; // Stop at 50% memory usage
+    private $offset;
+    private $is_continue;
 
-    public function __construct() {
+    public function __construct($batch_size = 1, $offset = 0, $is_continue = false) {
+        $this->batch_size = $batch_size;
+        $this->offset = $offset;
+        $this->is_continue = $is_continue;
         $this->connect_db();
     }
 
@@ -143,49 +162,90 @@ class StandaloneCleanup {
     }
 
     public function run_cleanup() {
-        echo "Starting standalone cleanup operation...\n";
-        echo "Memory limit: " . ini_get('memory_limit') . "\n";
-        echo "Batch size: {$this->batch_size}\n";
-        echo "Max memory threshold: {$this->max_memory_percent}%\n\n";
-
-        $offset = 0;
         $total_processed = 0;
         $total_deleted = 0;
         $start_time = microtime(true);
+        $logs = [];
+
+        // If continuing, get progress from WordPress options
+        if ($this->is_continue) {
+            $progress = $this->get_progress_from_wp();
+            $total_processed = $progress['total_processed'] ?? 0;
+            $total_deleted = $progress['total_deleted'] ?? 0;
+            $logs = $progress['logs'] ?? [];
+        }
+
+        $current_offset = $this->offset;
 
         while (true) {
             // Check memory usage
             $memory_percent = $this->get_memory_usage_percent();
             if ($memory_percent > $this->max_memory_percent) {
-                echo "Memory usage too high ({$memory_percent}%), stopping for safety\n";
-                break;
+                $result = [
+                    'complete' => false,
+                    'error' => "Memory usage too high ({$memory_percent}%), stopping for safety",
+                    'total_processed' => $total_processed,
+                    'total_deleted' => $total_deleted,
+                    'progress_percentage' => 0,
+                    'logs' => array_slice($logs, -50)
+                ];
+                echo json_encode($result);
+                return;
             }
 
             // Get batch of jobs
-            $jobs = $this->get_draft_trash_jobs($offset);
+            $jobs = $this->get_draft_trash_jobs($current_offset);
 
             if (empty($jobs)) {
-                echo "No more jobs to process\n";
-                break;
-            }
+                // No more jobs to process - cleanup completed
+                $end_time = microtime(true);
+                $duration = $end_time - $start_time;
 
-            echo "Processing batch at offset $offset (memory: " . round($memory_percent, 1) . "%)\n";
+                $result = [
+                    'complete' => true,
+                    'message' => "Cleanup completed: Processed {$total_processed} jobs, deleted {$total_deleted} draft/trash posts",
+                    'total_processed' => $total_processed,
+                    'total_deleted' => $total_deleted,
+                    'time_elapsed' => $duration,
+                    'progress_percentage' => 100,
+                    'logs' => array_slice($logs, -50)
+                ];
+                echo json_encode($result);
+                return;
+            }
 
             $batch_deleted = 0;
             foreach ($jobs as $job) {
                 // Double-check memory before each deletion
                 $memory_percent = $this->get_memory_usage_percent();
                 if ($memory_percent > $this->max_memory_percent) {
-                    echo "Memory usage too high during batch ({$memory_percent}%), stopping\n";
-                    break 2;
+                    $result = [
+                        'complete' => false,
+                        'error' => "Memory usage too high during batch ({$memory_percent}%), stopping",
+                        'total_processed' => $total_processed,
+                        'total_deleted' => $total_deleted,
+                        'progress_percentage' => 0,
+                        'logs' => array_slice($logs, -50)
+                    ];
+                    echo json_encode($result);
+                    return;
                 }
 
                 $result = $this->delete_post_efficiently($job['ID']);
                 if ($result) {
                     $batch_deleted++;
-                    echo "  Deleted {$job['post_status']} job ID: {$job['ID']}\n";
+                    $log_entry = '[' . date('d-M-Y H:i:s') . ' UTC] Deleted ' . $job['post_status'] . ' job ID: ' . $job['ID'];
+                    $logs[] = $log_entry;
+                    // Limit logs array to prevent memory issues
+                    if (count($logs) > 50) {
+                        $logs = array_slice($logs, -50);
+                    }
                 } else {
-                    echo "  Failed to delete job ID: {$job['ID']}\n";
+                    $log_entry = '[' . date('d-M-Y H:i:s') . ' UTC] Error: Failed to delete job ID: ' . $job['ID'];
+                    $logs[] = $log_entry;
+                    if (count($logs) > 50) {
+                        $logs = array_slice($logs, -50);
+                    }
                 }
 
                 // Force garbage collection
@@ -196,22 +256,26 @@ class StandaloneCleanup {
 
             $total_processed += count($jobs);
             $total_deleted += $batch_deleted;
-            $offset += $this->batch_size;
+            $current_offset += $this->batch_size;
 
-            echo "Batch completed: processed " . count($jobs) . ", deleted $batch_deleted\n";
-
-            // Small delay to prevent overwhelming the server
-            usleep(100000); // 0.1 seconds
+            // Update progress in WordPress options
+            $this->update_progress_in_wp($total_processed, $total_deleted, $current_offset, $logs);
         }
+    }
 
-        $end_time = microtime(true);
-        $duration = $end_time - $start_time;
+    private function get_progress_from_wp() {
+        // This would need to be implemented to get progress from WordPress options
+        // For now, return empty progress
+        return [
+            'total_processed' => 0,
+            'total_deleted' => 0,
+            'logs' => []
+        ];
+    }
 
-        echo "\nCleanup completed!\n";
-        echo "Total processed: $total_processed\n";
-        echo "Total deleted: $total_deleted\n";
-        echo "Duration: " . round($duration, 2) . " seconds\n";
-        echo "Final memory usage: " . round($this->get_memory_usage_percent(), 1) . "%\n";
+    private function update_progress_in_wp($total_processed, $total_deleted, $current_offset, $logs) {
+        // This would need to be implemented to update progress in WordPress options
+        // For now, we'll skip this as the standalone script doesn't have access to WP functions
     }
 
     public function __destruct() {
@@ -223,12 +287,17 @@ class StandaloneCleanup {
 
 // Run the cleanup
 try {
-    $cleanup = new StandaloneCleanup();
+    $cleanup = new StandaloneCleanup($batch_size, $offset, $is_continue);
     $cleanup->run_cleanup();
 } catch (Exception $e) {
-    echo "Fatal error: " . $e->getMessage() . "\n";
+    $result = [
+        'error' => 'Fatal error: ' . $e->getMessage(),
+        'complete' => false,
+        'total_processed' => 0,
+        'total_deleted' => 0,
+        'logs' => []
+    ];
+    echo json_encode($result);
     exit(1);
 }
-
-echo "\nScript completed successfully\n";
 ?>
