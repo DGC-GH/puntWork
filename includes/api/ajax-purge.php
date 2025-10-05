@@ -90,36 +90,29 @@ function job_import_cleanup_duplicates_ajax() {
 			return;
 		}
 
-		// Increase memory limit for cleanup operations if possible
+		// Increase memory limit for cleanup operations if possible - more aggressive increase
 		if ( function_exists( 'ini_set' ) && function_exists( 'wp_convert_hr_to_bytes' ) ) {
 			$current_limit = ini_get( 'memory_limit' );
-			if ( $current_limit && wp_convert_hr_to_bytes( $current_limit ) < 2147483648 ) {
-				@ini_set( 'memory_limit', '2048M' );
-				error_log( '[PUNTWORK] [CLEANUP] Increased memory limit to 2048M for cleanup' );
+			if ( $current_limit && wp_convert_hr_to_bytes( $current_limit ) < 4294967296 ) { // 4GB
+				@ini_set( 'memory_limit', '4096M' );
+				error_log( '[PUNTWORK] [CLEANUP] Increased memory limit to 4096M for cleanup' );
 			}
 		}
 
 		error_log( '[PUNTWORK] [CLEANUP] Database connection OK' );
 
 		try {
-		// Get batch parameters with validation - start with very small batch size for memory safety
+		// Get batch parameters with validation - start with extremely small batch size for maximum memory safety
 		$batch_size  = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 1; // Reduced to 1 for maximum memory safety
 		$offset      = isset( $_POST['offset'] ) ? intval( $_POST['offset'] ) : 0;
 		$is_continue = isset( $_POST['is_continue'] ) ? filter_var( $_POST['is_continue'], FILTER_VALIDATE_BOOLEAN ) : false;
 
 		error_log( '[PUNTWORK] [CLEANUP] Batch parameters: batch_size=' . $batch_size . ', offset=' . $offset . ', is_continue=' . ($is_continue ? 'true' : 'false') );
 
-		PuntWorkLogger::info(
-			'Starting cleanup duplicates batch',
-			PuntWorkLogger::CONTEXT_PURGE,
-			array(
-				'batch_size'  => $batch_size,
-				'offset'      => $offset,
-				'is_continue' => $is_continue,
-			)
-		);
+		// Skip ALL logging during cleanup to save memory
+		// PuntWorkLogger::info( 'Starting cleanup duplicates batch', PuntWorkLogger::CONTEXT_PURGE, array( ... ) );
 
-		// Initialize progress tracking for first batch
+		// Initialize progress tracking for first batch - minimize memory usage
 		if ( ! $is_continue ) {
 			update_option(
 				'job_import_cleanup_progress',
@@ -131,7 +124,7 @@ function job_import_cleanup_duplicates_ajax() {
 					'start_time'      => microtime( true ),
 					'batch_size'      => 1, // Start with very small batch size
 					'last_batch_time' => 0,
-					'logs'            => array(),
+					'logs'            => array(), // Keep logs minimal
 				),
 				false
 			);
@@ -161,9 +154,8 @@ function job_import_cleanup_duplicates_ajax() {
 		while ( get_transient( 'job_import_cleanup_lock' ) ) {
 			usleep( 50000 );
 			if ( microtime( true ) - $lock_start > 30 ) {
-				PuntWorkLogger::error( 'Cleanup lock timeout', PuntWorkLogger::CONTEXT_PURGE );
+				error_log( '[PUNTWORK] [CLEANUP] Cleanup lock timeout' );
 				AjaxErrorHandler::sendError( 'Cleanup lock timeout' );
-
 				return;
 			}
 		}
@@ -173,8 +165,31 @@ function job_import_cleanup_duplicates_ajax() {
 		$deleted_count    = 0;
 		$batch_start_time = microtime( true );
 
-		// Get total count for progress calculation (only on first batch)
-		if ( ! $is_continue ) {
+		// Get total count for progress calculation (only on first batch) - skip if memory is already high
+		$current_memory = memory_get_usage();
+		$memory_limit = ini_get('memory_limit');
+		
+		// Safe memory limit parsing with fallbacks
+		if (function_exists('wp_convert_hr_to_bytes') && $memory_limit) {
+			$memory_limit_bytes = wp_convert_hr_to_bytes($memory_limit);
+		} elseif (preg_match('/^(\d+)([MG])$/', $memory_limit, $matches)) {
+			$value = (int)$matches[1];
+			$unit = $matches[2];
+			$memory_limit_bytes = $unit === 'G' ? $value * 1024 * 1024 * 1024 : $value * 1024 * 1024;
+		} elseif (is_numeric($memory_limit)) {
+			$memory_limit_bytes = (int)$memory_limit;
+		} else {
+			$memory_limit_bytes = 128 * 1024 * 1024;
+		}
+		
+		if ($memory_limit_bytes <= 0) {
+			$memory_limit_bytes = 128 * 1024 * 1024;
+		}
+		
+		$memory_usage_percent = ($current_memory / $memory_limit_bytes) * 100;
+		
+		// If memory usage is already over 20%, skip total count query to save memory
+		if ( ! $is_continue && $memory_usage_percent < 20 ) {
 			$total_jobs             = $wpdb->get_var(
 				"
                 SELECT COUNT(*) FROM {$wpdb->posts} p
@@ -187,7 +202,12 @@ function job_import_cleanup_duplicates_ajax() {
 			update_option( 'job_import_cleanup_progress', $progress, false );
 		}
 
-		// Get batch of jobs
+		// Get batch of jobs - use extremely conservative batch size if memory is high
+		if ($memory_usage_percent > 15) {
+			$batch_size = 1; // Force batch size to 1 if memory usage is high
+			error_log( '[PUNTWORK] [CLEANUP] Memory usage high (' . round($memory_usage_percent, 1) . '%), forcing batch_size=1' );
+		}
+		
 		$batch_jobs = $wpdb->get_results(
 			$wpdb->prepare(
 				"
@@ -216,7 +236,8 @@ function job_import_cleanup_duplicates_ajax() {
 			delete_transient( 'job_import_cleanup_lock' );
 
 			$message = "Cleanup completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} draft/trash posts";
-			PuntWorkLogger::info( $message, PuntWorkLogger::CONTEXT_PURGE );
+			// Skip logging to save memory
+			// PuntWorkLogger::info( $message, PuntWorkLogger::CONTEXT_PURGE );
 
 			PuntWorkLogger::logAjaxResponse(
 				'job_import_cleanup_duplicates',
@@ -248,10 +269,10 @@ function job_import_cleanup_duplicates_ajax() {
 		wp_defer_term_counting( true );
 		wp_defer_comment_counting( true );
 
-		// Process this batch with memory monitoring
+		// Process this batch with extremely conservative memory monitoring
 		$initial_memory = memory_get_usage();
 		foreach ( $batch_jobs as $job ) {
-			// Check memory usage before each deletion
+			// Check memory usage before each deletion - use 15% threshold for maximum safety
 			$current_memory = memory_get_usage();
 			$memory_limit = ini_get('memory_limit');
 			
@@ -265,60 +286,41 @@ function job_import_cleanup_duplicates_ajax() {
 			} elseif (is_numeric($memory_limit)) {
 				$memory_limit_bytes = (int)$memory_limit;
 			} else {
-				// Default fallback: 128MB
 				$memory_limit_bytes = 128 * 1024 * 1024;
 			}
 			
-			// Handle unlimited memory (-1) or invalid values
 			if ($memory_limit_bytes <= 0) {
-				$memory_limit_bytes = 128 * 1024 * 1024; // Default to 128MB
+				$memory_limit_bytes = 128 * 1024 * 1024;
 			}
 			
 			$memory_usage_percent = ($current_memory / $memory_limit_bytes) * 100;
 
-			// If memory usage is over 30%, stop processing this batch early (more conservative)
-			if ($memory_usage_percent > 30) {
-				PuntWorkLogger::warning(
-					'Memory usage too high during cleanup, stopping batch early',
-					PuntWorkLogger::CONTEXT_PURGE,
-					array(
-						'memory_usage_percent' => round($memory_usage_percent, 1),
-						'current_memory_mb' => round($current_memory / 1024 / 1024, 1),
-						'memory_limit_mb' => round($memory_limit_bytes / 1024 / 1024, 1),
-						'jobs_processed_in_batch' => $deleted_count,
-					)
-				);
+			// If memory usage is over 15%, stop processing this batch early (extremely conservative)
+			if ($memory_usage_percent > 15) {
+				error_log( '[PUNTWORK] [CLEANUP] Memory usage too high (' . round($memory_usage_percent, 1) . '%), stopping batch early' );
 				break;
 			}
 
-			// Use direct SQL deletion for memory efficiency instead of wp_delete_post()
+			// Use direct SQL deletion for memory efficiency
 			$result = job_import_delete_post_efficiently( $job->ID );
 			if ( $result ) {
 				++$deleted_count;
-				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Permanently deleted ' . $job->post_status . ' job ID: ' . $job->ID . ' - ' . $job->post_title;
+				// Skip detailed logging to save memory - only keep minimal logs
+				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Deleted ' . $job->post_status . ' job ID: ' . $job->ID;
 				$logs[]    = $log_entry;
-				// Limit logs array to last 100 entries to prevent memory accumulation
-				if (count($logs) > 100) {
-					$logs = array_slice($logs, -100);
+				// Limit logs array to last 50 entries to prevent memory accumulation
+				if (count($logs) > 50) {
+					$logs = array_slice($logs, -50);
 				}
-				PuntWorkLogger::info(
-					'Deleted draft/trash job',
-					PuntWorkLogger::CONTEXT_PURGE,
-					array(
-						'job_id'      => $job->ID,
-						'post_status' => $job->post_status,
-						'title'       => $job->post_title,
-					)
-				);
+				// Skip PuntWorkLogger calls to save memory
 			} else {
-				error_log( '[PUNTWORK] [CLEANUP] job_import_delete_post_efficiently failed for job ID: ' . $job->ID . ', post_status: ' . $job->post_status );
+				error_log( '[PUNTWORK] [CLEANUP] job_import_delete_post_efficiently failed for job ID: ' . $job->ID );
 				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Error: Failed to delete job ID: ' . $job->ID;
 				$logs[]    = $log_entry;
-				// Limit logs array to last 100 entries to prevent memory accumulation
-				if (count($logs) > 100) {
-					$logs = array_slice($logs, -100);
+				// Limit logs array to last 50 entries
+				if (count($logs) > 50) {
+					$logs = array_slice($logs, -50);
 				}
-				PuntWorkLogger::error( 'Failed to delete job', PuntWorkLogger::CONTEXT_PURGE, array( 'job_id' => $job->ID ) );
 			}
 
 			// Force garbage collection to prevent memory accumulation
@@ -331,7 +333,7 @@ function job_import_cleanup_duplicates_ajax() {
 		wp_defer_term_counting( false );
 		wp_defer_comment_counting( false );
 
-		// Update progress
+		// Update progress - minimize memory usage
 		$progress['total_processed'] += count( $batch_jobs );
 		$progress['total_deleted']   += $deleted_count;
 		$progress['current_offset']   = $offset + $batch_size;
@@ -342,20 +344,10 @@ function job_import_cleanup_duplicates_ajax() {
 		$batch_processing_time       = $batch_end_time - $batch_start_time;
 		$progress['last_batch_time'] = $batch_processing_time;
 
-		// Dynamic batch size adjustment (only for continuation batches)
-		if ( $is_continue ) {
+		// Dynamic batch size adjustment (only for continuation batches) - skip if memory is high
+		if ( $is_continue && $memory_usage_percent < 10 ) {
 			$new_batch_size         = job_import_adjust_cleanup_batch_size( $batch_size, $batch_processing_time, count( $batch_jobs ), $progress );
 			$progress['batch_size'] = $new_batch_size;
-			PuntWorkLogger::info(
-				'Batch size adjusted',
-				PuntWorkLogger::CONTEXT_PURGE,
-				array(
-					'old_batch_size'  => $batch_size,
-					'new_batch_size'  => $new_batch_size,
-					'processing_time' => $batch_processing_time,
-					'items_processed' => count( $batch_jobs ),
-				)
-			);
 		}
 
 		update_option( 'job_import_cleanup_progress', $progress, false );
@@ -366,7 +358,6 @@ function job_import_cleanup_duplicates_ajax() {
 		$progress_percentage = $progress['total_jobs'] > 0 ? round( ( $progress['total_processed'] / $progress['total_jobs'] ) * 100, 1 ) : 0;
 
 		$message = "Batch processed: {$progress['total_processed']}/{$progress['total_jobs']} jobs ({$progress_percentage}%), deleted {$deleted_count} draft/trash posts this batch";
-		PuntWorkLogger::info( $message, PuntWorkLogger::CONTEXT_PURGE );
 
 		PuntWorkLogger::logAjaxResponse(
 			'job_import_cleanup_duplicates',
@@ -374,7 +365,7 @@ function job_import_cleanup_duplicates_ajax() {
 				'message'             => $message,
 				'complete'            => false,
 				'next_offset'         => $progress['current_offset'],
-				'batch_size'          => $progress['batch_size'] ?? $batch_size, // Use adjusted batch size for next batch
+				'batch_size'          => $progress['batch_size'] ?? $batch_size,
 				'total_processed'     => $progress['total_processed'],
 				'total_deleted'       => $progress['total_deleted'],
 				'progress_percentage' => $progress_percentage,
@@ -386,7 +377,7 @@ function job_import_cleanup_duplicates_ajax() {
 				'message'             => $message,
 				'complete'            => false,
 				'next_offset'         => $progress['current_offset'],
-				'batch_size'          => $progress['batch_size'] ?? $batch_size, // Use adjusted batch size for next batch
+				'batch_size'          => $progress['batch_size'] ?? $batch_size,
 				'total_processed'     => $progress['total_processed'],
 				'total_jobs'          => $progress['total_jobs'],
 				'total_deleted'       => $progress['total_deleted'],
@@ -431,15 +422,7 @@ function job_import_purge_ajax() {
 		$offset      = isset( $_POST['offset'] ) ? intval( $_POST['offset'] ) : 0;
 		$is_continue = isset( $_POST['is_continue'] ) ? filter_var( $_POST['is_continue'], FILTER_VALIDATE_BOOLEAN ) : false;
 
-		PuntWorkLogger::info(
-			'Starting purge batch',
-			PuntWorkLogger::CONTEXT_PURGE,
-			array(
-				'batch_size'  => $batch_size,
-				'offset'      => $offset,
-				'is_continue' => $is_continue,
-			)
-		);
+		// PuntWorkLogger::info( 'Starting purge batch', PuntWorkLogger::CONTEXT_PURGE, array( ... ) ); // Disabled for memory optimization
 
 		// Initialize progress tracking for first batch
 		if ( ! $is_continue ) {
@@ -557,7 +540,7 @@ function job_import_purge_ajax() {
 			delete_option( 'job_existing_guids' );
 
 			$message = "Purge completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} old jobs";
-			PuntWorkLogger::info( $message, PuntWorkLogger::CONTEXT_PURGE );
+			// PuntWorkLogger::info( $message, PuntWorkLogger::CONTEXT_PURGE ); // Disabled for memory optimization
 
 			PuntWorkLogger::logAjaxResponse(
 				'job_import_purge',
@@ -598,14 +581,7 @@ function job_import_purge_ajax() {
 					++$deleted_count;
 					$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Permanently deleted ID: ' . $job->ID . ' GUID: ' . $job->guid . ' - No longer in feed';
 					$logs[]    = $log_entry;
-					PuntWorkLogger::info(
-						'Deleted old job',
-						PuntWorkLogger::CONTEXT_PURGE,
-						array(
-							'job_id' => $job->ID,
-							'guid'   => $job->guid,
-						)
-					);
+					// PuntWorkLogger::info( 'Deleted old job', PuntWorkLogger::CONTEXT_PURGE, array( 'job_id' => $job->ID, 'guid' => $job->guid, ) ); // Disabled for memory optimization
 				} else {
 					$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Failed to delete ID: ' . $job->ID . ' GUID: ' . $job->guid;
 					$logs[]    = $log_entry;
@@ -638,7 +614,7 @@ function job_import_purge_ajax() {
 		$progress_percentage = $progress['total_jobs'] > 0 ? round( ( $progress['total_processed'] / $progress['total_jobs'] ) * 100, 1 ) : 0;
 
 		$message = "Batch processed: {$progress['total_processed']}/{$progress['total_jobs']} jobs ({$progress_percentage}%), deleted {$deleted_count} old jobs this batch";
-		PuntWorkLogger::info( $message, PuntWorkLogger::CONTEXT_PURGE );
+		// PuntWorkLogger::info( $message, PuntWorkLogger::CONTEXT_PURGE ); // Disabled for memory optimization
 
 		PuntWorkLogger::logAjaxResponse(
 			'job_import_purge',
@@ -697,27 +673,21 @@ function job_import_cleanup_continue_ajax() {
 			return;
 		}
 
-		// Increase memory limit for cleanup operations if possible
+		// Increase memory limit for cleanup operations if possible - more aggressive increase
 		if ( function_exists( 'ini_set' ) ) {
 			$current_limit = ini_get( 'memory_limit' );
-			// Try to increase to 2GB if current is less
-			if ( wp_convert_hr_to_bytes( $current_limit ) < 2147483648 ) {
-				@ini_set( 'memory_limit', '2048M' );
-				error_log( '[PUNTWORK] [CLEANUP] Increased memory limit to 2048M for cleanup continue' );
+			// Try to increase to 4GB if current is less
+			if ( wp_convert_hr_to_bytes( $current_limit ) < 4294967296 ) {
+				@ini_set( 'memory_limit', '4096M' );
+				error_log( '[PUNTWORK] [CLEANUP] Increased memory limit to 4096M for cleanup continue' );
 			}
 		}
 
 		// Get batch parameters with validation
 		$batch_size = isset( $_POST['batch_size'] ) ? intval( $_POST['batch_size'] ) : 1;
 
-		PuntWorkLogger::info(
-			'Continuing cleanup operation',
-			PuntWorkLogger::CONTEXT_PURGE,
-			array(
-				'batch_size'     => $batch_size,
-				'current_offset' => $progress['current_offset'],
-			)
-		);
+		// Skip logging to save memory
+		// PuntWorkLogger::info( 'Continuing cleanup operation', PuntWorkLogger::CONTEXT_PURGE, array( ... ) );
 
 		// Set lock for this batch
 		$lock_start = microtime( true );
@@ -736,7 +706,35 @@ function job_import_cleanup_continue_ajax() {
 		$deleted_count    = 0;
 		$batch_start_time = microtime( true );
 
-		// Get batch of jobs
+		// Get batch of jobs - use extremely conservative batch size if memory is high
+		$current_memory = memory_get_usage();
+		$memory_limit = ini_get('memory_limit');
+		
+		// Safe memory limit parsing with fallbacks
+		if (function_exists('wp_convert_hr_to_bytes') && $memory_limit) {
+			$memory_limit_bytes = wp_convert_hr_to_bytes($memory_limit);
+		} elseif (preg_match('/^(\d+)([MG])$/', $memory_limit, $matches)) {
+			$value = (int)$matches[1];
+			$unit = $matches[2];
+			$memory_limit_bytes = $unit === 'G' ? $value * 1024 * 1024 * 1024 : $value * 1024 * 1024;
+		} elseif (is_numeric($memory_limit)) {
+			$memory_limit_bytes = (int)$memory_limit;
+		} else {
+			$memory_limit_bytes = 128 * 1024 * 1024;
+		}
+		
+		if ($memory_limit_bytes <= 0) {
+			$memory_limit_bytes = 128 * 1024 * 1024;
+		}
+		
+		$memory_usage_percent = ($current_memory / $memory_limit_bytes) * 100;
+		
+		// If memory usage is already over 10%, force batch size to 1
+		if ($memory_usage_percent > 10) {
+			$batch_size = 1;
+			error_log( '[PUNTWORK] [CLEANUP] Memory usage high (' . round($memory_usage_percent, 1) . '%), forcing batch_size=1 for continue' );
+		}
+
 		$batch_jobs = $wpdb->get_results(
 			$wpdb->prepare(
 				"
@@ -761,7 +759,7 @@ function job_import_cleanup_continue_ajax() {
 			delete_transient( 'job_import_cleanup_lock' );
 
 			$message = "Cleanup completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} draft/trash posts";
-			PuntWorkLogger::info( $message, PuntWorkLogger::CONTEXT_PURGE );
+			// Skip logging to save memory
 
 			PuntWorkLogger::logAjaxResponse(
 				'job_import_cleanup_continue',
@@ -821,47 +819,30 @@ function job_import_cleanup_continue_ajax() {
 			
 			$memory_usage_percent = ($current_memory / $memory_limit_bytes) * 100;
 
-			// If memory usage is over 30%, stop processing this batch early
-			if ($memory_usage_percent > 30) {
-				PuntWorkLogger::warning(
-					'Memory usage too high during cleanup continue, stopping batch early',
-					PuntWorkLogger::CONTEXT_PURGE,
-					array(
-						'memory_usage_percent' => round($memory_usage_percent, 1),
-						'current_memory_mb' => round($current_memory / 1024 / 1024, 1),
-						'memory_limit_mb' => round($memory_limit_bytes / 1024 / 1024, 1),
-						'jobs_processed_in_batch' => $deleted_count,
-					)
-				);
+			// If memory usage is over 10%, stop processing this batch early (extremely conservative)
+			if ($memory_usage_percent > 10) {
+				error_log( '[PUNTWORK] [CLEANUP] Memory usage too high (' . round($memory_usage_percent, 1) . '%), stopping batch early in continue' );
 				break;
 			}
 
 			$result = job_import_delete_post_efficiently( $job->ID );
 			if ( $result ) {
 				++$deleted_count;
-				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Permanently deleted ' . $job->post_status . ' job ID: ' . $job->ID . ' - ' . $job->post_title;
+				// Skip detailed logging to save memory - only keep minimal logs
+				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Deleted ' . $job->post_status . ' job ID: ' . $job->ID;
 				$logs[]    = $log_entry;
-				// Limit logs array to last 100 entries to prevent memory accumulation
-				if (count($logs) > 100) {
-					$logs = array_slice($logs, -100);
+				// Limit logs array to last 50 entries to prevent memory accumulation
+				if (count($logs) > 50) {
+					$logs = array_slice($logs, -50);
 				}
-				PuntWorkLogger::info(
-					'Deleted draft/trash job',
-					PuntWorkLogger::CONTEXT_PURGE,
-					array(
-						'job_id'      => $job->ID,
-						'post_status' => $job->post_status,
-						'title'       => $job->post_title,
-					)
-				);
 			} else {
+				error_log( '[PUNTWORK] [CLEANUP] job_import_delete_post_efficiently failed for job ID: ' . $job->ID );
 				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Error: Failed to delete job ID: ' . $job->ID;
 				$logs[]    = $log_entry;
-				// Limit logs array to last 100 entries to prevent memory accumulation
-				if (count($logs) > 100) {
-					$logs = array_slice($logs, -100);
+				// Limit logs array to last 50 entries
+				if (count($logs) > 50) {
+					$logs = array_slice($logs, -50);
 				}
-				PuntWorkLogger::error( 'Failed to delete job', PuntWorkLogger::CONTEXT_PURGE, array( 'job_id' => $job->ID ) );
 			}
 
 			// Force garbage collection to prevent memory accumulation
@@ -885,19 +866,11 @@ function job_import_cleanup_continue_ajax() {
 		$batch_processing_time       = $batch_end_time - $batch_start_time;
 		$progress['last_batch_time'] = $batch_processing_time;
 
-		// Dynamic batch size adjustment (only for continuation batches)
-		$new_batch_size         = job_import_adjust_cleanup_batch_size( $batch_size, $batch_processing_time, count( $batch_jobs ), $progress );
-		$progress['batch_size'] = $new_batch_size;
-		PuntWorkLogger::info(
-			'Batch size adjusted',
-			PuntWorkLogger::CONTEXT_PURGE,
-			array(
-				'old_batch_size'  => $batch_size,
-				'new_batch_size'  => $new_batch_size,
-				'processing_time' => $batch_processing_time,
-				'items_processed' => count( $batch_jobs ),
-			)
-		);
+		// Dynamic batch size adjustment (only for continuation batches) - skip if memory is high
+		if ( $memory_usage_percent < 8 ) {
+			$new_batch_size         = job_import_adjust_cleanup_batch_size( $batch_size, $batch_processing_time, count( $batch_jobs ), $progress );
+			$progress['batch_size'] = $new_batch_size;
+		}
 
 		update_option( 'job_import_cleanup_progress', $progress, false );
 
@@ -907,7 +880,7 @@ function job_import_cleanup_continue_ajax() {
 		$progress_percentage = $progress['total_jobs'] > 0 ? round( ( $progress['total_processed'] / $progress['total_jobs'] ) * 100, 1 ) : 0;
 
 		$message = "Batch processed: {$progress['total_processed']}/{$progress['total_jobs']} jobs ({$progress_percentage}%), deleted {$deleted_count} draft/trash posts this batch";
-		PuntWorkLogger::info( $message, PuntWorkLogger::CONTEXT_PURGE );
+		// PuntWorkLogger::info( $message, PuntWorkLogger::CONTEXT_PURGE ); // Disabled for memory optimization
 
 		PuntWorkLogger::logAjaxResponse(
 			'job_import_cleanup_continue',
@@ -1081,28 +1054,12 @@ function job_import_adjust_cleanup_batch_size( $current_batch_size, $processing_
 				$opt['backtrack_count'] = 0;
 				// Go back to the best performing batch size
 				$new_batch_size = $opt['best_batch_size'];
-				PuntWorkLogger::info(
-					'Switching to backtracking phase - performance degradation detected',
-					PuntWorkLogger::CONTEXT_PURGE,
-					array(
-						'current_time_per_item' => round($time_per_item, 4),
-						'best_time_per_item' => round($opt['best_time_per_item'], 4),
-						'current_batch_size' => $current_batch_size,
-						'best_batch_size' => $opt['best_batch_size'],
-					)
-				);
+				// PuntWorkLogger::info( 'Switching to backtracking phase - performance degradation detected', PuntWorkLogger::CONTEXT_PURGE, array( ... ) ); // Disabled for memory optimization
 			} elseif ( $new_batch_size >= $max_batch_size ) {
 				// Reached maximum batch size, switch to optimizing
 				$opt['phase'] = 'optimizing';
 				$new_batch_size = $opt['best_batch_size'];
-				PuntWorkLogger::info(
-					'Switching to optimizing phase - reached maximum batch size',
-					PuntWorkLogger::CONTEXT_PURGE,
-					array(
-						'max_batch_size' => $max_batch_size,
-						'best_batch_size' => $opt['best_batch_size'],
-					)
-				);
+				// PuntWorkLogger::info( 'Switching to optimizing phase - reached maximum batch size', PuntWorkLogger::CONTEXT_PURGE, array( ... ) ); // Disabled for memory optimization
 			}
 			break;
 
@@ -1114,14 +1071,7 @@ function job_import_adjust_cleanup_batch_size( $current_batch_size, $processing_
 				// After 3 backtrack attempts, switch to optimizing
 				$opt['phase'] = 'optimizing';
 				$new_batch_size = $opt['best_batch_size'];
-				PuntWorkLogger::info(
-					'Switching to optimizing phase after backtracking',
-					PuntWorkLogger::CONTEXT_PURGE,
-					array(
-						'backtrack_attempts' => $opt['backtrack_count'],
-						'optimal_batch_size' => $opt['best_batch_size'],
-					)
-				);
+				// PuntWorkLogger::info( 'Switching to optimizing phase after backtracking', PuntWorkLogger::CONTEXT_PURGE, array( ... ) ); // Disabled for memory optimization
 			} else {
 				// Try a batch size between current and best
 				$range = abs( $current_batch_size - $opt['best_batch_size'] );
@@ -1147,15 +1097,7 @@ function job_import_adjust_cleanup_batch_size( $current_batch_size, $processing_
 				$test_batch_size = min( $max_batch_size, $opt['best_batch_size'] + 1 );
 				if ( $test_batch_size != $opt['best_batch_size'] ) {
 					$new_batch_size = $test_batch_size;
-					PuntWorkLogger::info(
-						'Testing potential optimization',
-						PuntWorkLogger::CONTEXT_PURGE,
-						array(
-							'current_best' => $opt['best_batch_size'],
-							'test_batch_size' => $test_batch_size,
-							'stable_batches' => $opt['stable_count'],
-						)
-					);
+					// PuntWorkLogger::info( 'Testing potential optimization', PuntWorkLogger::CONTEXT_PURGE, array( ... ) ); // Disabled for memory optimization
 				}
 			}
 			break;
@@ -1166,19 +1108,7 @@ function job_import_adjust_cleanup_batch_size( $current_batch_size, $processing_
 
 	// Log optimization progress
 	if ( $new_batch_size != $current_batch_size ) {
-		PuntWorkLogger::info(
-			'Batch size optimization',
-			PuntWorkLogger::CONTEXT_PURGE,
-			array(
-				'phase' => $opt['phase'],
-				'old_batch_size' => $current_batch_size,
-				'new_batch_size' => $new_batch_size,
-				'best_batch_size' => $opt['best_batch_size'],
-				'current_time_per_item' => round($time_per_item, 4),
-				'best_time_per_item' => round($opt['best_time_per_item'], 4),
-				'stable_count' => $opt['stable_count'],
-			)
-		);
+		// PuntWorkLogger::info( 'Batch size optimization', PuntWorkLogger::CONTEXT_PURGE, array( ... ) ); // Disabled for memory optimization
 	}
 
 	return $new_batch_size;
