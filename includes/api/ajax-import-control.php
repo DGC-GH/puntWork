@@ -519,10 +519,13 @@ function get_job_import_status_ajax() {
 			
 			// Check if status needs correction:
 			// 1. Status is missing entirely (empty array), OR
-			// 2. Status exists but shows incorrect values (total=0 and complete=true) AND it's not the default fresh state
-			$needs_correction = ( ! $status_exists ) || ( $current_total == 0 && $current_complete && ! $is_default_fresh_state );
+			// 2. Status exists but shows incorrect values (total=0 and complete=true) AND it's not the default fresh state, OR
+			// 3. Status exists but shows total=0 even though there's a combined file with content (this indicates status was never properly initialized)
+			$needs_correction = ( ! $status_exists ) ||
+				( $current_total == 0 && $current_complete && ! $is_default_fresh_state ) ||
+				( $current_total == 0 && $file_exists && $file_size > 0 );
 			
-			error_log( '[PUNTWORK] [STATUS-CORRECTION] needs_correction calculation: !status_exists=' . (!$status_exists ? 'true' : 'false') . ', current_total==0=' . ($current_total == 0 ? 'true' : 'false') . ', current_complete=' . ($current_complete ? 'true' : 'false') . ', !is_default_fresh_state=' . (!$is_default_fresh_state ? 'true' : 'false') . ', needs_correction=' . ($needs_correction ? 'true' : 'false') );
+			error_log( '[PUNTWORK] [STATUS-CORRECTION] needs_correction calculation: !status_exists=' . (!$status_exists ? 'true' : 'false') . ', current_total==0=' . ($current_total == 0 ? 'true' : 'false') . ', current_complete=' . ($current_complete ? 'true' : 'false') . ', !is_default_fresh_state=' . (!$is_default_fresh_state ? 'true' : 'false') . ', file_exists_and_has_content=' . (($file_exists && $file_size > 0) ? 'true' : 'false') . ', needs_correction=' . ($needs_correction ? 'true' : 'false') );
 			
 			if ( $needs_correction ) {
 				// Check if there was a recent successful import that completed

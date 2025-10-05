@@ -357,7 +357,7 @@ function process_batch_items_logic( array $setup ): array {
 	// error_log( '[PUNTWORK] [BATCH-PROCESS] Results: published=' . $published . ', updated=' . $updated . ', skipped=' . $skipped . ', duplicates_drafted=' . $duplicates_drafted );
 
 			// Process batch data
-			$result = process_batch_data( $batch_guids, $batch_items, $logs, $published, $updated, $skipped, $duplicates_drafted, $start_index );
+			$result = process_batch_data( $batch_guids, $batch_items, $logs, $published, $updated, $skipped, $duplicates_drafted, $start_index, $setup );
 
 			// Checkpoint: Batch processing complete
 			checkpoint_performance(
@@ -663,7 +663,7 @@ function update_intermediate_batch_status( int $processed_count, int $total_in_b
 		error_log( '[PUNTWORK] [UI-STATUS] wp_cache_flush not available' );
 	}
 }
-function process_batch_data( array $batch_guids, array $batch_items, array &$logs, int &$published, int &$updated, int &$skipped, int &$duplicates_drafted, int $start_index ): array {
+function process_batch_data( array $batch_guids, array $batch_items, array &$logs, int &$published, int &$updated, int &$skipped, int &$duplicates_drafted, int $start_index, array $setup ): array {
 	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
 	// Temporarily disable spam logging - uncomment for debugging
