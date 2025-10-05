@@ -543,26 +543,26 @@ console.log('[PUNTWORK] job-import-api.js loaded');
         },
 
         /**
-         * Get current import status
+         * Check import data status (combined file and feed files)
          * @returns {Promise} AJAX promise
          */
-        getImportStatus: function() {
+        checkImportDataStatus: function() {
             return $.ajax({
                 url: jobImportData.ajaxurl,
                 type: 'POST',
-                data: {
-                    action: 'get_job_import_status',
+                data: { 
+                    action: 'check_import_data_status', 
                     nonce: jobImportData.nonce,
                     _cache_bust: Date.now() // Prevent caching
                 },
                 success: function(response) {
-                    PuntWorkJSLogger.debug('Get import status response', 'API', response);
+                    PuntWorkJSLogger.debug('Check import data status response', 'API', response);
                 },
                 error: function(xhr, status, error) {
-                    PuntWorkJSLogger.error('Get import status error: ' + error, 'API');
+                    PuntWorkJSLogger.error('Check import data status error: ' + error, 'API');
                 }
             });
-        }
+        },
     };
 
     // Expose to global scope

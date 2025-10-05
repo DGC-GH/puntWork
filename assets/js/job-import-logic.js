@@ -500,9 +500,9 @@ console.info("=== Job Import Logic Script Loaded ===");
                     console.warn('[PUNTWORK] [DEBUG-IMPORT] Status reset failed:', statusResetResponse);
                 }
 
-                // Check if combined JSONL file exists and is valid
+                // Always update combined JSONL from feeds - never skip feed processing
                 console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 0.3: CHECK EXISTING DATA =====');
-                console.log('[PUNTWORK] [DEBUG-IMPORT] Checking if combined JSONL file exists and feeds are processed');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Checking if combined JSONL file exists (but will always process feeds)');
 
                 const checkDataStartTime = Date.now();
                 const checkDataResponse = await $.ajax({
@@ -515,149 +515,100 @@ console.info("=== Job Import Logic Script Loaded ===");
                 console.log('[PUNTWORK] [DEBUG-IMPORT] Check data status API call took:', (checkDataEndTime - checkDataStartTime), 'ms');
                 console.log('[PUNTWORK] [DEBUG-IMPORT] Check data response:', checkDataResponse);
 
-                let skipFeedProcessing = false;
+                let skipFeedProcessing = false; // Always process feeds to update combined JSONL
                 let total_items = 0;
 
                 if (checkDataResponse.success && checkDataResponse.data) {
                     const dataStatus = checkDataResponse.data;
                     console.log('[PUNTWORK] [DEBUG-IMPORT] Data status check results:', dataStatus);
 
-                    if (dataStatus.combined_file_exists && dataStatus.combined_file_size > 0 && dataStatus.feed_files_exist) {
-                        console.log('[PUNTWORK] [DEBUG-IMPORT] Combined JSONL file exists and feed files are present - can skip feed processing');
-                        skipFeedProcessing = true;
-                        total_items = dataStatus.estimated_total_items || 0;
-                        JobImportUI.appendLogs(['Found existing processed data - skipping feed processing']);
-                        console.log('[PUNTWORK] [DEBUG-IMPORT] Estimated total items from existing data:', total_items);
-                    } else {
-                        console.log('[PUNTWORK] [DEBUG-IMPORT] Combined file or feed files missing - need to process feeds');
-                        skipFeedProcessing = false;
-                    }
+                    // Always process feeds to ensure combined JSONL is fresh from feeds
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Always processing feeds to update combined JSONL from latest feed data');
+                    skipFeedProcessing = false;
+                    JobImportUI.appendLogs(['Updating combined JSONL from feeds (always fresh data)']);
                 } else {
                     console.log('[PUNTWORK] [DEBUG-IMPORT] Could not check data status - proceeding with feed processing');
                     skipFeedProcessing = false;
                 }
 
-                if (!skipFeedProcessing) {
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 1: FEED PROCESSING =====');
-                    JobImportUI.appendLogs(['Starting feed processing...']);
-                    $('#status-message').text('Processing feeds...');
+                // Always process feeds to update combined JSONL from feeds
+                console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 1: FEED PROCESSING =====');
+                JobImportUI.appendLogs(['Starting feed processing...']);
+                $('#status-message').text('Processing feeds...');
 
-                    // Process feeds using Action Scheduler
-                    const feedKeys = Object.keys(jobImportData.feeds);
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] Scheduling feed processing for:', feedKeys);
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] Number of feeds to process:', feedKeys.length);
+                // Process feeds using Action Scheduler
+                const feedKeys = Object.keys(jobImportData.feeds);
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Scheduling feed processing for:', feedKeys);
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Number of feeds to process:', feedKeys.length);
 
-                    JobImportUI.appendLogs(['Scheduling ' + feedKeys.length + ' feeds for background processing...']);
+                JobImportUI.appendLogs(['Scheduling ' + feedKeys.length + ' feeds for background processing...']);
 
-                    // Schedule feed processing
-                    const scheduleStartTime = Date.now();
-                    const scheduleResponse = await JobImportAPI.scheduleFeedProcessing(feedKeys);
-                    const scheduleEndTime = Date.now();
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] Schedule feed processing took:', (scheduleEndTime - scheduleStartTime), 'ms');
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] Schedule response:', scheduleResponse);
+                // Schedule feed processing
+                const scheduleStartTime = Date.now();
+                const scheduleResponse = await JobImportAPI.scheduleFeedProcessing(feedKeys);
+                const scheduleEndTime = Date.now();
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Schedule feed processing took:', (scheduleEndTime - scheduleStartTime), 'ms');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Schedule response:', scheduleResponse);
 
-                    if (!scheduleResponse.success) {
-                        console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: Feed scheduling failed:', scheduleResponse);
-                        throw new Error('Feed scheduling failed: ' + (scheduleResponse.message || 'Unknown error'));
-                    }
-
-                    JobImportUI.appendLogs(['Feed processing scheduled successfully']);
-                    JobImportUI.appendLogs(['Monitoring feed processing progress...']);
-
-                    // Monitor feed processing progress
-                    const maxWaitTime = 15 * 60 * 1000; // 15 minutes max wait
-                    const checkInterval = 5000; // Check every 5 seconds
-                    const startWaitTime = Date.now();
-
-                    while (true) {
-                        const elapsed = Date.now() - startWaitTime;
-                        if (elapsed > maxWaitTime) {
-                            console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: Feed processing timeout after', elapsed / 1000, 'seconds');
-                            throw new Error('Feed processing timed out after ' + Math.round(elapsed / 1000) + ' seconds');
-                        }
-
-                        console.log('[PUNTWORK] [DEBUG-IMPORT] Checking feed processing status...');
-                        const statusResponse = await JobImportAPI.getFeedProcessingStatus(feedKeys);
-                        console.log('[PUNTWORK] [DEBUG-IMPORT] Feed status response:', statusResponse);
-
-                        if (!statusResponse.success) {
-                            console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: Failed to get feed status:', statusResponse);
-                            throw new Error('Failed to get feed processing status: ' + (statusResponse.message || 'Unknown error'));
-                        }
-
-                        let allComplete = true;
-                        let processingCount = 0;
-                        let completedCount = 0;
-                        total_items = 0;
-
-                        for (const feedKey of feedKeys) {
-                            const status = statusResponse.data[feedKey];
-                            console.log('[PUNTWORK] [DEBUG-IMPORT] Feed', feedKey, 'status:', status);
-
-                            if (status && status.success) {
-                                completedCount++;
-                                total_items += status.item_count || 0;
-                                JobImportUI.appendLogs(['Feed ' + feedKey + ' completed: ' + (status.item_count || 0) + ' items']);
-                            } else if (status && status.status === 'processing') {
-                                processingCount++;
-                                allComplete = false;
-                            } else if (!status || status.status === 'pending') {
-                                allComplete = false;
-                            } else if (status && !status.success) {
-                                console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: Feed', feedKey, 'failed:', status.error);
-                                throw new Error('Feed ' + feedKey + ' processing failed: ' + (status.error || 'Unknown error'));
-                            }
-                        }
-
-                        console.log('[PUNTWORK] [DEBUG-IMPORT] Feed progress: completed=' + completedCount + ', processing=' + processingCount + ', total_feeds=' + feedKeys.length);
-
-                        // Update progress UI
-                        JobImportUI.updateProgress({
-                            total: feedKeys.length,
-                            processed: completedCount,
-                            published: 0,
-                            updated: 0,
-                            skipped: 0,
-                            duplicates_drafted: 0,
-                            drafted_old: 0,
-                            time_elapsed: this.getElapsedTime() / 1000,
-                            complete: false
-                        });
-
-                        $('#status-message').text(`Processing feeds: ${completedCount}/${feedKeys.length} completed`);
-
-                        if (allComplete) {
-                            console.log('[PUNTWORK] [DEBUG-IMPORT] All feeds completed successfully');
-                            break;
-                        }
-
-                        // Wait before checking again
-                        await new Promise(resolve => setTimeout(resolve, checkInterval));
-                    }
-
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 1 COMPLETE =====');
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] Total items after feed processing:', total_items);
-
-                    if (total_items === 0) {
-                        console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: No items found in feeds after processing');
-                        throw new Error('No items found in feeds. Please check that feeds are configured and accessible.');
-                    }
-                } else {
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 1 SKIPPED =====');
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] Using existing processed data with', total_items, 'items');
-                    JobImportUI.appendLogs(['Using existing processed feed data']);
+                if (!scheduleResponse.success) {
+                    console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: Feed scheduling failed:', scheduleResponse);
+                    throw new Error('Feed scheduling failed: ' + (scheduleResponse.message || 'Unknown error'));
                 }
 
-                // Only combine JSONL if we processed feeds (skipFeedProcessing is false)
-                if (!skipFeedProcessing) {
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 2: JSONL COMBINATION =====');
-                    $('#status-message').text('Combining JSONL files...');
-                    JobImportUI.appendLogs(['Starting JSONL combination...']);
+                JobImportUI.appendLogs(['Feed processing scheduled successfully']);
+                JobImportUI.appendLogs(['Monitoring feed processing progress...']);
 
-                    // Show progress for JSONL combination phase
+                // Monitor feed processing progress
+                const maxWaitTime = 15 * 60 * 1000; // 15 minutes max wait
+                const checkInterval = 5000; // Check every 5 seconds
+                const startWaitTime = Date.now();
+
+                while (true) {
+                    const elapsed = Date.now() - startWaitTime;
+                    if (elapsed > maxWaitTime) {
+                        console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: Feed processing timeout after', elapsed / 1000, 'seconds');
+                        throw new Error('Feed processing timed out after ' + Math.round(elapsed / 1000) + ' seconds');
+                    }
+
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Checking feed processing status...');
+                    const statusResponse = await JobImportAPI.getFeedProcessingStatus(feedKeys);
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Feed status response:', statusResponse);
+
+                    if (!statusResponse.success) {
+                        console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: Failed to get feed status:', statusResponse);
+                        throw new Error('Failed to get feed processing status: ' + (statusResponse.message || 'Unknown error'));
+                    }
+
+                    let allComplete = true;
+                    let processingCount = 0;
+                    let completedCount = 0;
+                    total_items = 0;
+
+                    for (const feedKey of feedKeys) {
+                        const status = statusResponse.data[feedKey];
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] Feed', feedKey, 'status:', status);
+
+                        if (status && status.success) {
+                            completedCount++;
+                            total_items += status.item_count || 0;
+                            JobImportUI.appendLogs(['Feed ' + feedKey + ' completed: ' + (status.item_count || 0) + ' items']);
+                        } else if (status && status.status === 'processing') {
+                            processingCount++;
+                            allComplete = false;
+                        } else if (!status || status.status === 'pending') {
+                            allComplete = false;
+                        } else if (status && !status.success) {
+                            console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: Feed', feedKey, 'failed:', status.error);
+                            throw new Error('Feed ' + feedKey + ' processing failed: ' + (status.error || 'Unknown error'));
+                        }
+                    }
+
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Feed progress: completed=' + completedCount + ', processing=' + processingCount + ', total_feeds=' + feedKeys.length);
+
+                    // Update progress UI
                     JobImportUI.updateProgress({
-                        total: 1,
-                        processed: 0,
+                        total: feedKeys.length,
+                        processed: completedCount,
                         published: 0,
                         updated: 0,
                         skipped: 0,
@@ -667,91 +618,89 @@ console.info("=== Job Import Logic Script Loaded ===");
                         complete: false
                     });
 
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] About to call JobImportAPI.combineJsonl with total_items=' + total_items);
-                    const combineStartTime = Date.now();
-                    const combineResponse = await JobImportAPI.combineJsonl(total_items);
-                    const combineEndTime = Date.now();
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] Combine JSONL call took:', (combineEndTime - combineStartTime), 'ms');
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] Combine JSONL response:', combineResponse);
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] Combine response success:', combineResponse.success);
+                    $('#status-message').text(`Processing feeds: ${completedCount}/${feedKeys.length} completed`);
 
-                    PuntWorkJSLogger.debug('Combine JSONL response', 'LOGIC', combineResponse);
-
-                    if (combineResponse.success) {
-                        console.log('[PUNTWORK] [DEBUG-IMPORT] JSONL combination successful - import scheduled in background');
-                        JobImportUI.appendLogs(combineResponse.data.logs || []);
-
-                        // Update progress to show JSONL combination complete and import scheduled
-                        JobImportUI.updateProgress({
-                            total: total_items,
-                            processed: 0,
-                            published: 0,
-                            updated: 0,
-                            skipped: 0,
-                            duplicates_drafted: 0,
-                            drafted_old: 0,
-                            time_elapsed: this.getElapsedTime() / 1000,
-                            complete: false,
-                            phase: 'jsonl-combining'
-                        });
-
-                        console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 3: BACKGROUND IMPORT =====');
-                        $('#status-message').text('JSONL combined - starting background import...');
-                        JobImportUI.appendLogs(['JSONL files combined successfully']);
-                        JobImportUI.appendLogs(['Background import scheduled and starting...']);
-
-                        // Start status polling to monitor the background import progress
-                        if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
-                            console.log('[PUNTWORK] [DEBUG-IMPORT] Starting status polling for background import progress');
-                            window.JobImportEvents.startStatusPolling();
-                            console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling started successfully');
-                        } else {
-                            console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling not available');
-                        }
-
-                        console.log('[PUNTWORK] [DEBUG-IMPORT] ===== START IMPORT PROCESS COMPLETE =====');
-                    } else {
-                        console.error('[PUNTWORK] [DEBUG-IMPORT] JSONL combination failed:', combineResponse);
-                        throw new Error('Combining JSONL failed: ' + (combineResponse.message || 'Unknown error'));
+                    if (allComplete) {
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] All feeds completed successfully');
+                        break;
                     }
-                } else {
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 2 SKIPPED =====');
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] Combined JSONL file already exists - skipping combination');
-                    JobImportUI.appendLogs(['Combined JSONL file already exists - skipping combination']);
-                    JobImportUI.appendLogs(['Starting direct import from existing data...']);
 
-                    // For existing data, we need to start the import directly
-                    // The combined file exists, so we can start the batch import immediately
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 3: DIRECT IMPORT =====');
-                    $('#status-message').text('Starting import from existing data...');
+                    // Wait before checking again
+                    await new Promise(resolve => setTimeout(resolve, checkInterval));
+                }
 
-                    // Initialize import status for existing data
-                    const initStatusResponse = await $.ajax({
-                        url: jobImportData.ajaxurl,
-                        type: 'POST',
-                        data: {
-                            action: 'initialize_import_from_existing_data',
-                            nonce: jobImportData.nonce,
-                            total_items: total_items
-                        },
-                        timeout: 30000
+                console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 1 COMPLETE =====');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Total items after feed processing:', total_items);
+
+                if (total_items === 0) {
+                    console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: No items found in feeds after processing');
+                    throw new Error('No items found in feeds. Please check that feeds are configured and accessible.');
+                }
+
+                // Always combine JSONL after feed processing
+                console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 2: JSONL COMBINATION =====');
+                $('#status-message').text('Combining JSONL files...');
+                JobImportUI.appendLogs(['Starting JSONL combination...']);
+
+                // Show progress for JSONL combination phase
+                JobImportUI.updateProgress({
+                    total: 1,
+                    processed: 0,
+                    published: 0,
+                    updated: 0,
+                    skipped: 0,
+                    duplicates_drafted: 0,
+                    drafted_old: 0,
+                    time_elapsed: this.getElapsedTime() / 1000,
+                    complete: false
+                });
+
+                console.log('[PUNTWORK] [DEBUG-IMPORT] About to call JobImportAPI.combineJsonl with total_items=' + total_items);
+                const combineStartTime = Date.now();
+                const combineResponse = await JobImportAPI.combineJsonl(total_items);
+                const combineEndTime = Date.now();
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Combine JSONL call took:', (combineEndTime - combineStartTime), 'ms');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Combine JSONL response:', combineResponse);
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Combine response success:', combineResponse.success);
+
+                PuntWorkJSLogger.debug('Combine JSONL response', 'LOGIC', combineResponse);
+
+                if (combineResponse.success) {
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] JSONL combination successful - import scheduled in background');
+                    JobImportUI.appendLogs(combineResponse.data.logs || []);
+
+                    // Update progress to show JSONL combination complete and import scheduled
+                    JobImportUI.updateProgress({
+                        total: total_items,
+                        processed: 0,
+                        published: 0,
+                        updated: 0,
+                        skipped: 0,
+                        duplicates_drafted: 0,
+                        drafted_old: 0,
+                        time_elapsed: this.getElapsedTime() / 1000,
+                        complete: false,
+                        phase: 'jsonl-combining'
                     });
 
-                    if (initStatusResponse.success) {
-                        console.log('[PUNTWORK] [DEBUG-IMPORT] Import initialized from existing data');
-                        JobImportUI.appendLogs(['Import initialized from existing data']);
-                        JobImportUI.appendLogs(['Starting background import process...']);
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 3: BACKGROUND IMPORT =====');
+                    $('#status-message').text('JSONL combined - starting background import...');
+                    JobImportUI.appendLogs(['JSONL files combined successfully']);
+                    JobImportUI.appendLogs(['Background import scheduled and starting...']);
 
-                        // Start status polling to monitor the import progress
-                        if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
-                            console.log('[PUNTWORK] [DEBUG-IMPORT] Starting status polling for direct import');
-                            window.JobImportEvents.startStatusPolling();
-                            console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling started for direct import');
-                        }
+                    // Start status polling to monitor the background import progress
+                    if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] Starting status polling for background import progress');
+                        window.JobImportEvents.startStatusPolling();
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling started successfully');
                     } else {
-                        console.error('[PUNTWORK] [DEBUG-IMPORT] Failed to initialize import from existing data:', initStatusResponse);
-                        throw new Error('Failed to initialize import from existing data: ' + (initStatusResponse.message || 'Unknown error'));
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling not available');
                     }
+
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== START IMPORT PROCESS COMPLETE =====');
+                } else {
+                    console.error('[PUNTWORK] [DEBUG-IMPORT] JSONL combination failed:', combineResponse);
+                    throw new Error('Combining JSONL failed: ' + (combineResponse.message || 'Unknown error'));
                 }
 
                 console.log('[PUNTWORK] [DEBUG-IMPORT] About to clear import cancel');

@@ -2240,96 +2240,82 @@ function puntwork_process_feed_handler( $feed_key ) {
 	}
 }
 
-add_action( 'wp_ajax_initialize_import_from_existing_data', __NAMESPACE__ . '\\initialize_import_from_existing_data_ajax' );
-function initialize_import_from_existing_data_ajax() {
-	PuntWorkLogger::logAjaxRequest( 'initialize_import_from_existing_data', $_POST );
+add_action( 'wp_ajax_check_import_data_status', __NAMESPACE__ . '\\check_import_data_status_ajax' );
+function check_import_data_status_ajax() {
+	error_log( '[PUNTWORK] [DEBUG-PHP] ===== CHECK_IMPORT_DATA_STATUS_AJAX START =====' );
+	error_log( '[PUNTWORK] [DEBUG-PHP] Timestamp: ' . date( 'Y-m-d H:i:s T' ) );
+	error_log( '[PUNTWORK] [DEBUG-PHP] POST data: ' . json_encode( $_POST ) );
+	error_log( '[PUNTWORK] [DEBUG-PHP] Memory usage: ' . memory_get_usage( true ) . ' bytes' );
+
+	PuntWorkLogger::logAjaxRequest( 'check_import_data_status', $_POST );
 
 	// Basic security validation
 	if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'job_import_nonce' ) ) {
+		error_log( '[PUNTWORK] [DEBUG-PHP] Nonce verification failed' );
 		wp_send_json_error( array( 'message' => 'Security check failed' ) );
+
 		return;
 	}
 
 	if ( ! current_user_can( 'manage_options' ) ) {
+		error_log( '[PUNTWORK] [DEBUG-PHP] Insufficient permissions' );
 		wp_send_json_error( array( 'message' => 'Insufficient permissions' ) );
-		return;
-	}
 
-	if ( ! isset( $_POST['total_items'] ) || ! is_numeric( $_POST['total_items'] ) ) {
-		wp_send_json_error( array( 'message' => 'Missing or invalid total_items parameter' ) );
 		return;
 	}
 
 	try {
-		$total_items = intval( $_POST['total_items'] );
+		$feeds_dir = puntwork_get_feeds_directory();
 		$combined_file = puntwork_get_combined_jsonl_path();
-
-		// Verify the combined file exists
-		if ( ! file_exists( $combined_file ) || filesize( $combined_file ) === 0 ) {
-			wp_send_json_error( array( 'message' => 'Combined JSONL file does not exist or is empty' ) );
-			return;
+		
+		// Check if combined file exists and get its size
+		$combined_file_exists = file_exists( $combined_file );
+		$combined_file_size = $combined_file_exists ? filesize( $combined_file ) : 0;
+		
+		// Check if individual feed files exist
+		$feed_files_exist = false;
+		$estimated_total_items = 0;
+		
+		if ( is_dir( $feeds_dir ) ) {
+			$feed_files = glob( $feeds_dir . '*.jsonl' );
+			$feed_files_exist = ! empty( $feed_files );
+			
+			// If combined file exists, try to get item count
+			if ( $combined_file_exists && $combined_file_size > 0 && function_exists( 'get_json_item_count' ) ) {
+				$estimated_total_items = get_json_item_count( $combined_file );
+			}
 		}
+		
+		$data_status = array(
+			'combined_file_exists' => $combined_file_exists,
+			'combined_file_size' => $combined_file_size,
+			'feed_files_exist' => $feed_files_exist,
+			'estimated_total_items' => $estimated_total_items,
+		);
+		
+		error_log( '[PUNTWORK] [DEBUG-PHP] Data status check results: ' . json_encode( $data_status ) );
 
-		// Initialize import status for existing data
-		$import_status = array(
-			'total'              => $total_items,
-			'processed'          => 0,
-			'published'          => 0,
-			'updated'            => 0,
-			'skipped'            => 0,
-			'duplicates_drafted' => 0,
-			'time_elapsed'       => 0,
-			'complete'           => false, // Set to false so import can start
-			'success'            => false,
-			'error_message'      => '',
-			'batch_size'         => 10,
-			'inferred_languages' => 0,
-			'inferred_benefits'  => 0,
-			'schema_generated'   => 0,
-			'start_time'         => microtime( true ),
-			'end_time'           => null,
-			'last_update'        => time(),
-			'logs'               => array( 'Import initialized from existing combined data' ),
+		PuntWorkLogger::logAjaxResponse(
+			'check_import_data_status',
+			array(
+				'combined_file_exists' => $combined_file_exists,
+				'combined_file_size' => $combined_file_size,
+				'feed_files_exist' => $feed_files_exist,
+				'estimated_total_items' => $estimated_total_items,
+			)
 		);
 
-		$update_result = update_option( 'job_import_status', $import_status );
-
-		if ( ! $update_result ) {
-			wp_send_json_error( array( 'message' => 'Failed to initialize import status' ) );
-			return;
-		}
-
-		// Schedule the import to start immediately using Action Scheduler
-		if ( function_exists( 'as_schedule_single_action' ) ) {
-			$job_id = as_schedule_single_action( time(), 'puntwork_start_batch_import' );
-			if ( $job_id ) {
-				PuntWorkLogger::info(
-					'Import from existing data scheduled',
-					PuntWorkLogger::CONTEXT_AJAX,
-					array(
-						'total_items' => $total_items,
-						'job_id' => $job_id,
-					)
-				);
-			} else {
-				PuntWorkLogger::error( 'Failed to schedule import from existing data', PuntWorkLogger::CONTEXT_AJAX );
-				wp_send_json_error( array( 'message' => 'Failed to schedule import' ) );
-				return;
-			}
-		} else {
-			PuntWorkLogger::error( 'Action Scheduler not available for import scheduling', PuntWorkLogger::CONTEXT_AJAX );
-			wp_send_json_error( array( 'message' => 'Action Scheduler not available' ) );
-			return;
-		}
-
-		PuntWorkLogger::logAjaxResponse( 'initialize_import_from_existing_data', array( 'total_items' => $total_items ) );
-		wp_send_json_success( array(
-			'message' => 'Import initialized from existing data',
-			'total_items' => $total_items,
-		) );
-
+		error_log( '[PUNTWORK] [DEBUG-PHP] ===== CHECK_IMPORT_DATA_STATUS_AJAX SUCCESS =====' );
+		wp_send_json_success( $data_status );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'Initialize import from existing data error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
-		wp_send_json_error( array( 'message' => 'Failed to initialize import from existing data: ' . $e->getMessage() ) );
+		error_log( '[PUNTWORK] [DEBUG-PHP] check_import_data_status_ajax exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
+		error_log( '[PUNTWORK] [DEBUG-PHP] Stack trace: ' . $e->getTraceAsString() );
+		PuntWorkLogger::error( 'Check import data status AJAX error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
+		wp_send_json_error( array( 'message' => 'Failed to check import data status: ' . $e->getMessage() ) );
+	} catch ( \Throwable $e ) {
+		error_log( '[PUNTWORK] [DEBUG-PHP] check_import_data_status_ajax throwable: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
+		error_log( '[PUNTWORK] [DEBUG-PHP] Stack trace: ' . $e->getTraceAsString() );
+		PuntWorkLogger::error( 'Check import data status AJAX throwable: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
+		wp_send_json_error( array( 'message' => 'Failed to check import data status: ' . $e->getMessage() ) );
 	}
 }
