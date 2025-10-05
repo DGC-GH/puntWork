@@ -623,10 +623,10 @@ console.info("=== Job Import Logic Script Loaded ===");
                 PuntWorkJSLogger.debug('Combine JSONL response', 'LOGIC', combineResponse);
 
                 if (combineResponse.success) {
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] JSONL combination successful - import should now run synchronously');
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] JSONL combination successful - import scheduled in background');
                     JobImportUI.appendLogs(combineResponse.data.logs || []);
 
-                    // Update progress to show JSONL combination complete
+                    // Update progress to show JSONL combination complete and import scheduled
                     JobImportUI.updateProgress({
                         total: total_items,
                         processed: 0,
@@ -637,17 +637,17 @@ console.info("=== Job Import Logic Script Loaded ===");
                         drafted_old: 0,
                         time_elapsed: this.getElapsedTime() / 1000,
                         complete: false,
-                        phase: 'job-importing'
+                        phase: 'jsonl-combining'
                     });
 
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 3: BATCH IMPORT =====');
-                    $('#status-message').text('Starting import...');
-                    JobImportUI.appendLogs(['Starting batch import processing...']);
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 3: BACKGROUND IMPORT =====');
+                    $('#status-message').text('JSONL combined - starting background import...');
+                    JobImportUI.appendLogs(['JSONL files combined successfully']);
+                    JobImportUI.appendLogs(['Background import scheduled and starting...']);
 
-                    // The import is now running synchronously in the AJAX handler
-                    // Start status polling to show progress
+                    // Start status polling to monitor the background import progress
                     if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
-                        console.log('[PUNTWORK] [DEBUG-IMPORT] Starting status polling for real-time UI updates');
+                        console.log('[PUNTWORK] [DEBUG-IMPORT] Starting status polling for background import progress');
                         window.JobImportEvents.startStatusPolling();
                         console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling started successfully');
                     } else {

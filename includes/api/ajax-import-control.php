@@ -1875,62 +1875,57 @@ function combine_jsonl_ajax() {
 				'start_time'         => microtime( true ),
 				'end_time'           => null,
 				'last_update'        => time(),
-				'logs'               => array( 'JSONL files combined successfully - ready for import' ),
+				'logs'               => array( 'JSONL files combined successfully - scheduling import' ),
 			);
 			error_log( '[PUNTWORK] [COMBINE-STATUS] About to set import status with total=' . $total_items . ', complete=false' );
 			$update_result = update_option( 'job_import_status', $import_status );
 			error_log( '[PUNTWORK] [COMBINE-STATUS] update_option result: ' . ( $update_result ? 'true' : 'false' ) . ', status set: ' . json_encode( $import_status ) );
 			error_log( '[PUNTWORK] [DEBUG-PHP] Import status initialized with total: ' . $total_items );
 
-			// Run the import synchronously after JSONL combination
-			error_log( '[PUNTWORK] [COMBINE] Starting import synchronously after JSONL combination' );
-			
+			// Schedule the import to run in background using Action Scheduler
+			// This follows WordPress best practices for long-running operations
+			error_log( '[PUNTWORK] [COMBINE] Scheduling background import after JSONL combination' );
+
 			try {
-				// Load required files for batch processing
-				$import_files = array(
-					__DIR__ . '/../batch/batch-size-management.php',
-					__DIR__ . '/../import/import-setup.php',
-					__DIR__ . '/../batch/batch-processing.php',
-					__DIR__ . '/../import/import-finalization.php',
-					__DIR__ . '/../utilities/ErrorHandler.php',
-					__DIR__ . '/../exceptions/PuntworkExceptions.php',
-					__DIR__ . '/../import/import-batch.php',
-				);
+				// Check if Action Scheduler is available
+				if ( class_exists( 'ActionScheduler' ) ) {
+					error_log( '[PUNTWORK] [COMBINE] Using Action Scheduler for background import' );
 
-				error_log( '[PUNTWORK] [COMBINE] Loading import files: ' . json_encode( $import_files ) );
-				foreach ( $import_files as $file ) {
-					if ( file_exists( $file ) ) {
-						require_once $file;
-						error_log( '[PUNTWORK] [COMBINE] Successfully loaded: ' . $file );
-					} else {
-						error_log( '[PUNTWORK] [COMBINE] File not found: ' . $file );
-					}
-				}
+					// Schedule the import to run immediately in background
+					$action_id = as_schedule_single_action(
+						time(), // Run immediately
+						'puntwork_start_scheduled_import',
+						array(),
+						'puntwork-import'
+					);
 
-				error_log( '[PUNTWORK] [COMBINE] About to call import_all_jobs_from_json()' );
-				// Start the FULL import (all batches) synchronously
-				$result = import_all_jobs_from_json();
-				error_log( '[PUNTWORK] [COMBINE] import_all_jobs_from_json() returned: ' . json_encode( $result ) );
-				
-				if ( isset( $result['success'] ) && $result['success'] ) {
-					error_log( '[PUNTWORK] [COMBINE] Synchronous import completed successfully' );
+					error_log( '[PUNTWORK] [COMBINE] Action Scheduler job scheduled with ID: ' . $action_id );
 				} else {
-					error_log( '[PUNTWORK] [COMBINE] Synchronous import failed or incomplete' );
+					error_log( '[PUNTWORK] [COMBINE] Action Scheduler not available, falling back to WP Cron' );
+
+					// Fallback to WP Cron if Action Scheduler is not available
+					wp_schedule_single_event(
+						time(), // Run immediately
+						'puntwork_start_scheduled_import'
+					);
+
+					error_log( '[PUNTWORK] [COMBINE] WP Cron job scheduled' );
 				}
+
+				$scheduling_success = true;
 			} catch ( \Exception $e ) {
-				error_log( '[PUNTWORK] [COMBINE] Exception in synchronous import: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
+				error_log( '[PUNTWORK] [COMBINE] Exception scheduling import: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
 				error_log( '[PUNTWORK] [COMBINE] Stack trace: ' . $e->getTraceAsString() );
-			} catch ( \Throwable $e ) {
-				error_log( '[PUNTWORK] [COMBINE] Fatal error in synchronous import: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
-				error_log( '[PUNTWORK] [COMBINE] Stack trace: ' . $e->getTraceAsString() );
+				$scheduling_success = false;
 			}
 
 			PuntWorkLogger::info(
-				'JSONL combination completed and import status initialized',
+				'JSONL combination completed and import scheduled',
 				PuntWorkLogger::CONTEXT_AJAX,
 				array(
 					'total_items'        => $total_items,
 					'combined_file_size' => $file_size,
+					'scheduling_success' => $scheduling_success,
 				)
 			);
 		} else {
@@ -1944,6 +1939,7 @@ function combine_jsonl_ajax() {
 				'logs_count'           => count( $logs ),
 				'combined_file_exists' => file_exists( $combined_file ),
 				'combined_file_size'   => $file_size ?? 0,
+				'import_scheduled'     => $scheduling_success ?? false,
 			)
 		);
 
@@ -1951,10 +1947,10 @@ function combine_jsonl_ajax() {
 		wp_send_json_success(
 			array(
 				'total_items'          => $total_items,
-				'message'              => 'JSONL files combined and import completed successfully',
+				'message'              => 'JSONL files combined successfully - import scheduled in background',
 				'combined_file_exists' => file_exists( $combined_file ),
 				'combined_file_size'   => $file_size ?? 0,
-				'import_result'        => $result ?? null,
+				'import_scheduled'     => $scheduling_success ?? false,
 			)
 		);
 	} catch ( \Exception $e ) {

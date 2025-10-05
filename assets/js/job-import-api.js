@@ -128,7 +128,7 @@ console.log('[PUNTWORK] job-import-api.js loaded');
                 url: jobImportData.ajaxurl,
                 type: 'POST',
                 data: ajaxData,
-                timeout: 1800000, // 30 minutes for JSONL combination and synchronous import
+                timeout: 300000, // 5 minutes for JSONL combination (reduced from 30 minutes since import is now background)
                 success: function(response) {
                     console.log('[PUNTWORK] AJAX success for combineJsonl:', response);
                     console.log('[PUNTWORK] Response timestamp:', new Date().toISOString());
