@@ -280,6 +280,16 @@ function handle_import_progress_sse( $request ) {
 					error_log( '[PUNTWORK] SSE: ABSPATH file exists: ' . ($file_exists ? 'YES' : 'NO') . ', Size: ' . $file_size . ' bytes');
 				}
 				
+				// ADDITIONAL FALLBACK: Try domain root feeds directory (file uploaded via FTP to /feeds/)
+				if (!$file_exists) {
+					$domain_root = dirname($_SERVER['DOCUMENT_ROOT'] ?? ABSPATH);
+					$combined_file = $domain_root . '/feeds/combined-jobs.jsonl';
+					error_log( '[PUNTWORK] SSE: Trying domain root path: ' . $combined_file );
+					$file_exists = file_exists( $combined_file );
+					$file_size = $file_exists ? filesize( $combined_file ) : 0;
+					error_log( '[PUNTWORK] SSE: Domain root file exists: ' . ($file_exists ? 'YES' : 'NO') . ', Size: ' . $file_size . ' bytes');
+				}
+				
 				if ( file_exists( $combined_file ) && filesize( $combined_file ) > 0 ) {
 					$current_total = $current_status['total'] ?? 0;
 					$current_complete = $current_status['complete'] ?? false;
