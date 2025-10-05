@@ -434,17 +434,35 @@ function reset_job_import_status_ajax() {
 
 		PuntWorkLogger::logAjaxResponse( 'reset_job_import_status', array( 'message' => 'Import status reset' ) );
 		error_log( '[PUNTWORK] [DEBUG-PHP] Sending success response' );
+		
+		// Ensure clean response by clearing any output buffers
+		while (ob_get_level()) {
+			ob_end_clean();
+		}
+		
 		wp_send_json_success( array( 'message' => 'Import status reset' ) );
 		error_log( '[PUNTWORK] [DEBUG-PHP] ===== RESET_JOB_IMPORT_STATUS_AJAX SUCCESS =====' );
 	} catch ( \Exception $e ) {
 		error_log( '[PUNTWORK] [DEBUG-PHP] Exception in reset_job_import_status_ajax: ' . $e->getMessage() );
 		error_log( '[PUNTWORK] [DEBUG-PHP] Stack trace: ' . $e->getTraceAsString() );
 		PuntWorkLogger::error( 'Reset import status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
+		
+		// Ensure clean response even on error
+		while (ob_get_level()) {
+			ob_end_clean();
+		}
+		
 		wp_send_json_error( array( 'message' => 'Failed to reset import status: ' . $e->getMessage() ) );
 	} catch ( \Throwable $e ) {
 		error_log( '[PUNTWORK] [DEBUG-PHP] Fatal error in reset_job_import_status_ajax: ' . $e->getMessage() );
 		error_log( '[PUNTWORK] [DEBUG-PHP] Fatal stack trace: ' . $e->getTraceAsString() );
 		PuntWorkLogger::error( 'Reset import status fatal error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
+		
+		// Ensure clean response even on fatal error
+		while (ob_get_level()) {
+			ob_end_clean();
+		}
+		
 		wp_send_json_error( array( 'message' => 'Failed to reset import status with fatal error: ' . $e->getMessage() ) );
 	}
 }

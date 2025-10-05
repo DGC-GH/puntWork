@@ -854,11 +854,25 @@ console.info("=== Job Import Logic Script Loaded ===");
             // Show loading state
             $('#reset-import').prop('disabled', true).text('Resetting...');
 
+            console.log('[PUNTWORK] About to call JobImportAPI.resetImport()');
+            PuntWorkJSLogger.info('Calling reset API', 'LOGIC');
+
+            // Set a fallback timeout to reset button state if AJAX hangs
+            var resetTimeout = setTimeout(function() {
+                console.log('[PUNTWORK] Reset timeout reached - forcing button reset');
+                PuntWorkJSLogger.warn('Reset timeout reached - forcing button reset', 'LOGIC');
+                $('#reset-import').prop('disabled', false).text('Reset Import');
+                $('#status-message').text('Reset timed out - please try again');
+                JobImportUI.appendLogs(['Reset timed out - please try again']);
+            }, 35000); // 35 seconds (longer than AJAX timeout)
+
             JobImportAPI.resetImport().then(function(response) {
+                clearTimeout(resetTimeout); // Clear the fallback timeout
+                console.log('[PUNTWORK] Reset API success response:', response);
                 PuntWorkJSLogger.debug('Reset response', 'LOGIC', response);
-                console.log('[PUNTWORK] Reset API response:', response);
 
                 if (response.success) {
+                    console.log('[PUNTWORK] Reset successful, updating UI');
                     JobImportUI.appendLogs(['Import system completely reset']);
                     $('#status-message').text('Import system reset - ready to start fresh');
 
@@ -879,19 +893,26 @@ console.info("=== Job Import Logic Script Loaded ===");
                     }, 500);
 
                     console.log('[PUNTWORK] Reset completed successfully');
+                    PuntWorkJSLogger.info('Reset completed successfully', 'LOGIC');
                 } else {
+                    console.log('[PUNTWORK] Reset API returned unsuccessful response:', response);
                     // Reset failed - show error but don't change UI state
                     JobImportUI.appendLogs(['Reset failed: ' + (response.message || 'Unknown error')]);
                     $('#status-message').text('Reset failed - please try again');
-                    $('#reset-import').prop('disabled', false);
-                    console.log('[PUNTWORK] Reset failed:', response);
+                    $('#reset-import').prop('disabled', false).text('Reset Import');
+                    PuntWorkJSLogger.error('Reset API returned unsuccessful response', 'LOGIC', response);
                 }
             }).catch(function(xhr, status, error) {
-                PuntWorkJSLogger.error('Reset AJAX error', 'LOGIC', error);
+                clearTimeout(resetTimeout); // Clear the fallback timeout
+                console.log('[PUNTWORK] Reset API error caught:', {xhr: xhr, status: status, error: error});
+                PuntWorkJSLogger.error('Reset AJAX error', 'LOGIC', {xhr: xhr, status: status, error: error});
+                
+                // Always reset button state on error
+                $('#reset-import').prop('disabled', false).text('Reset Import');
+                
                 JobImportUI.appendLogs(['Reset AJAX error: ' + error]);
                 $('#status-message').text('Reset failed - please try again');
-                $('#reset-import').prop('disabled', false);
-                console.log('[PUNTWORK] Reset AJAX error:', error);
+                console.log('[PUNTWORK] Reset AJAX error handled, button re-enabled');
             });
         },
 

@@ -51,6 +51,7 @@ console.log('[PUNTWORK] job-import-api.js loaded');
             return $.ajax({
                 url: jobImportData.ajaxurl,
                 type: 'POST',
+                timeout: 30000, // 30 second timeout
                 data: { action: 'reset_job_import', nonce: jobImportData.nonce }
             });
         },
