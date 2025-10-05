@@ -2248,3 +2248,58 @@ function puntwork_process_feed_handler( $feed_key ) {
 		), 3600 );
 	}
 }
+
+add_action( 'wp_ajax_check_import_data_status', __NAMESPACE__ . '\\check_import_data_status_ajax' );
+function check_import_data_status_ajax() {
+	PuntWorkLogger::logAjaxRequest( 'check_import_data_status', $_POST );
+
+	// Basic security validation
+	if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'job_import_nonce' ) ) {
+		wp_send_json_error( array( 'message' => 'Security check failed' ) );
+		return;
+	}
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => 'Insufficient permissions' ) );
+		return;
+	}
+
+	try {
+		$feeds = get_feeds();
+		$combined_file = ABSPATH . 'feeds/combined-jobs.jsonl';
+		
+		// Check if combined file exists and has content
+		$combined_file_exists = file_exists( $combined_file );
+		$combined_file_size = $combined_file_exists ? filesize( $combined_file ) : 0;
+		
+		// Check if feed files exist
+		$feed_files_exist = true;
+		foreach ( $feeds as $feed_key => $url ) {
+			$feed_file = ABSPATH . 'feeds/' . $feed_key . '.jsonl';
+			if ( ! file_exists( $feed_file ) ) {
+				$feed_files_exist = false;
+				break;
+			}
+		}
+		
+		// Estimate total items if combined file exists
+		$estimated_total_items = 0;
+		if ( $combined_file_exists && $combined_file_size > 0 && function_exists( 'get_json_item_count' ) ) {
+			$estimated_total_items = get_json_item_count( $combined_file );
+		}
+		
+		$status = array(
+			'combined_file_exists' => $combined_file_exists,
+			'combined_file_size' => $combined_file_size,
+			'feed_files_exist' => $feed_files_exist,
+			'estimated_total_items' => $estimated_total_items,
+		);
+		
+		PuntWorkLogger::logAjaxResponse( 'check_import_data_status', $status );
+		wp_send_json_success( $status );
+		
+	} catch ( \Exception $e ) {
+		PuntWorkLogger::error( 'Check import data status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
+		wp_send_json_error( array( 'message' => 'Failed to check import data status: ' . $e->getMessage() ) );
+	}
+}
