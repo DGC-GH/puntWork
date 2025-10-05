@@ -181,7 +181,19 @@ function process_batch_items_logic( array $setup ): array {
 		$original_memory_limit = ini_get( 'memory_limit' );
 
 		// Increase memory limit for batch processing
-		ini_set( 'memory_limit', '1024M' );		// Clear analytics cache
+		ini_set( 'memory_limit', '1024M' );
+
+		// Store original time limit for restoration
+		$original_time_limit = ini_get( 'max_execution_time' );
+
+		// Increase time limit for batch processing (0 = unlimited)
+		ini_set( 'max_execution_time', 0 );
+
+		// Log limit changes for debugging
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( '[PUNTWORK] [BATCH-LIMITS] Memory limit set to 1024M (was ' . $original_memory_limit . ')' );
+			error_log( '[PUNTWORK] [BATCH-LIMITS] Time limit set to unlimited (was ' . $original_time_limit . ')' );
+		}		// Clear analytics cache
 		if ( function_exists( 'wp_cache_flush' ) ) {
 			wp_cache_flush();
 		}
@@ -300,6 +312,9 @@ function process_batch_items_logic( array $setup ): array {
 
 				// Restore memory limit
 				ini_set( 'memory_limit', $original_memory_limit );
+
+				// Restore time limit
+				ini_set( 'max_execution_time', $original_time_limit );
 
 				return array(
 					'success'            => true,
@@ -550,6 +565,9 @@ function process_batch_items_logic( array $setup ): array {
 			// Restore memory limit
 			ini_set( 'memory_limit', $original_memory_limit );
 
+			// Restore time limit
+			ini_set( 'max_execution_time', $original_time_limit );
+
 			return array(
 				'success'     => false,
 				'message'     => 'Batch failed: ' . $e->getMessage(),
@@ -573,6 +591,9 @@ function process_batch_items_logic( array $setup ): array {
 
 		// Restore memory limit
 		ini_set( 'memory_limit', $original_memory_limit ?? '512M' );
+
+		// Restore time limit
+		ini_set( 'max_execution_time', $original_time_limit ?? 30 );
 
 		return array(
 			'success'     => false,

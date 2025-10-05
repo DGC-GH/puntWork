@@ -296,6 +296,23 @@ function process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updat
 
 		$item = $batch_items[$guid]['item'];
 		error_log('[PUNTWORK] [ITEM-DEBUG] Retrieved item data for GUID: ' . $guid . ', item keys: ' . implode(', ', array_keys($item)));
+
+		// Validate required data before processing
+		if (empty($item['functiontitle']) || empty($item['guid'])) {
+			$result['error'] = 'Missing required fields: functiontitle or guid';
+			error_log('[PUNTWORK] [VALIDATION-ERROR] Missing required fields for GUID: ' . $guid . ' - title: ' . ($item['functiontitle'] ?? 'missing') . ', guid: ' . ($item['guid'] ?? 'missing'));
+			return $result;
+		}
+
+		// Check memory usage before heavy operations
+		$current_memory = memory_get_usage(true);
+		$memory_limit = get_memory_limit_bytes();
+		if ($current_memory > $memory_limit * 0.8) {
+			$result['error'] = 'Memory limit approaching - skipping item';
+			error_log('[PUNTWORK] [MEMORY-WARNING] Memory usage high (' . $current_memory . ' bytes) for GUID: ' . $guid);
+			return $result;
+		}
+
 		$xml_updated = isset($item['updated']) ? $item['updated'] : '';
 		$xml_updated_ts = strtotime($xml_updated);
 		$post_id = isset($post_ids_by_guid[$guid]) ? $post_ids_by_guid[$guid] : null;
@@ -338,21 +355,27 @@ function process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updat
 
 			// Prepare ACF updates
 			try {
-				$acf_fields = get_acf_fields();
-				$zero_empty_fields = get_zero_empty_fields();
-				$acf_updates = array();
-				foreach ($acf_fields as $field) {
-					$value = $item[$field] ?? '';
-					$is_special = in_array($field, $zero_empty_fields);
-					$set_value = $is_special && $value == '0' ? '' : $value;
-					$acf_updates[$field] = $set_value;
+				if (!function_exists('get_acf_fields') || !function_exists('update_field')) {
+					error_log('[PUNTWORK] [ACF-WARNING] ACF functions not available for existing post ID: ' . $post_id . ' GUID: ' . $guid);
+					$result['acf_updates'] = null; // Skip ACF updates
+				} else {
+					$acf_fields = get_acf_fields();
+					$zero_empty_fields = get_zero_empty_fields();
+					$acf_updates = array();
+					foreach ($acf_fields as $field) {
+						$value = $item[$field] ?? '';
+						$is_special = in_array($field, $zero_empty_fields);
+						$set_value = $is_special && $value == '0' ? '' : $value;
+						$acf_updates[$field] = $set_value;
+					}
+					error_log('[PUNTWORK] [ACF-PREPARED] Prepared ' . count($acf_updates) . ' ACF fields for existing post ID: ' . $post_id . ' GUID: ' . $guid);
 				}
 			} catch (Exception $e) {
-				error_log('[PUNTWORK] [ITEM-DEBUG] Exception preparing ACF updates for existing post ID: ' . $post_id . ' for GUID: ' . $guid . ': ' . $e->getMessage());
+				error_log('[PUNTWORK] [ACF-EXCEPTION] Exception preparing ACF updates for existing post ID: ' . $post_id . ' GUID: ' . $guid . ': ' . $e->getMessage());
 				$result['error'] = 'Existing post ACF preparation exception: ' . $e->getMessage();
 				return $result;
 			} catch (Throwable $e) {
-				error_log('[PUNTWORK] [ITEM-DEBUG] Throwable preparing ACF updates for existing post ID: ' . $post_id . ' for GUID: ' . $guid . ': ' . $e->getMessage());
+				error_log('[PUNTWORK] [ACF-THROWABLE] Throwable preparing ACF updates for existing post ID: ' . $post_id . ' GUID: ' . $guid . ': ' . $e->getMessage());
 				$result['error'] = 'Existing post ACF preparation throwable: ' . $e->getMessage();
 				return $result;
 			}
@@ -389,26 +412,25 @@ function process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updat
 			error_log('[PUNTWORK] [ITEM-DEBUG] About to call wp_insert_post for GUID: ' . $guid);
 			try {
 				$post_id = wp_insert_post($post_data);
-				error_log('[PUNTWORK] [ITEM-DEBUG] wp_insert_post returned: ' . ($post_id ?: 'null/false') . ' for GUID: ' . $guid);
+				error_log('[PUNTWORK] [DB-INSERT] wp_insert_post result for GUID ' . $guid . ': ' . var_export($post_id, true));
+				if (is_wp_error($post_id)) {
+					$result['error'] = 'wp_insert_post failed: ' . $post_id->get_error_message();
+					error_log('[PUNTWORK] [DB-ERROR] wp_insert_post error for GUID ' . $guid . ': ' . $post_id->get_error_message());
+					return $result;
+				}
+				if (!$post_id || $post_id <= 0) {
+					$result['error'] = 'wp_insert_post returned invalid ID: ' . $post_id;
+					error_log('[PUNTWORK] [DB-ERROR] Invalid post ID returned for GUID ' . $guid . ': ' . $post_id);
+					return $result;
+				}
+				error_log('[PUNTWORK] [DB-SUCCESS] Successfully created post ID ' . $post_id . ' for GUID: ' . $guid);
 			} catch (Exception $e) {
-				error_log('[PUNTWORK] [ITEM-DEBUG] Exception in wp_insert_post for GUID: ' . $guid . ': ' . $e->getMessage());
+				error_log('[PUNTWORK] [DB-EXCEPTION] Exception in wp_insert_post for GUID: ' . $guid . ': ' . $e->getMessage());
 				$result['error'] = 'wp_insert_post exception: ' . $e->getMessage();
 				return $result;
 			} catch (Throwable $e) {
-				error_log('[PUNTWORK] [ITEM-DEBUG] Throwable in wp_insert_post for GUID: ' . $guid . ': ' . $e->getMessage());
+				error_log('[PUNTWORK] [DB-THROWABLE] Throwable in wp_insert_post for GUID: ' . $guid . ': ' . $e->getMessage());
 				$result['error'] = 'wp_insert_post throwable: ' . $e->getMessage();
-				return $result;
-			}
-
-			if (is_wp_error($post_id)) {
-				$result['error'] = 'Create failed: ' . $post_id->get_error_message();
-				error_log('[PUNTWORK] [ITEM-DEBUG] wp_insert_post failed for GUID: ' . $guid . ': ' . $post_id->get_error_message());
-				return $result;
-			}
-
-			if (!$post_id || $post_id <= 0) {
-				$result['error'] = 'Create failed: wp_insert_post returned invalid post ID: ' . $post_id;
-				error_log('[PUNTWORK] [ITEM-DEBUG] wp_insert_post returned invalid post ID for GUID: ' . $guid . ': ' . $post_id);
 				return $result;
 			}
 
@@ -428,23 +450,29 @@ function process_single_item($guid, $batch_items, $post_ids_by_guid, $last_updat
 				return $result;
 			}
 
-			// Prepare ACF updates
+			// Prepare ACF updates with availability check
 			try {
-				$acf_fields = get_acf_fields();
-				$zero_empty_fields = get_zero_empty_fields();
-				$acf_updates = array();
-				foreach ($acf_fields as $field) {
-					$value = $item[$field] ?? '';
-					$is_special = in_array($field, $zero_empty_fields);
-					$set_value = $is_special && $value == '0' ? '' : $value;
-					$acf_updates[$field] = $set_value;
+				if (!function_exists('get_acf_fields') || !function_exists('update_field')) {
+					error_log('[PUNTWORK] [ACF-WARNING] ACF functions not available for post ID: ' . $post_id . ' GUID: ' . $guid);
+					$result['acf_updates'] = null; // Skip ACF updates
+				} else {
+					$acf_fields = get_acf_fields();
+					$zero_empty_fields = get_zero_empty_fields();
+					$acf_updates = array();
+					foreach ($acf_fields as $field) {
+						$value = $item[$field] ?? '';
+						$is_special = in_array($field, $zero_empty_fields);
+						$set_value = $is_special && $value == '0' ? '' : $value;
+						$acf_updates[$field] = $set_value;
+					}
+					error_log('[PUNTWORK] [ACF-PREPARED] Prepared ' . count($acf_updates) . ' ACF fields for post ID: ' . $post_id . ' GUID: ' . $guid);
 				}
 			} catch (Exception $e) {
-				error_log('[PUNTWORK] [ITEM-DEBUG] Exception preparing ACF updates for post ID: ' . $post_id . ' for GUID: ' . $guid . ': ' . $e->getMessage());
+				error_log('[PUNTWORK] [ACF-EXCEPTION] Exception preparing ACF updates for post ID: ' . $post_id . ' GUID: ' . $guid . ': ' . $e->getMessage());
 				$result['error'] = 'ACF preparation exception: ' . $e->getMessage();
 				return $result;
 			} catch (Throwable $e) {
-				error_log('[PUNTWORK] [ITEM-DEBUG] Throwable preparing ACF updates for post ID: ' . $post_id . ' for GUID: ' . $guid . ': ' . $e->getMessage());
+				error_log('[PUNTWORK] [ACF-THROWABLE] Throwable preparing ACF updates for post ID: ' . $post_id . ' GUID: ' . $guid . ': ' . $e->getMessage());
 				$result['error'] = 'ACF preparation throwable: ' . $e->getMessage();
 				return $result;
 			}

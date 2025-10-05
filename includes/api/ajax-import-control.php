@@ -278,7 +278,29 @@ function run_job_import_batch_ajax() {
 			);
 
 			PuntWorkLogger::logAjaxResponse( 'run_job_import_batch', $log_summary, isset( $result['success'] ) && $result['success'] );
-			AjaxErrorHandler::sendSuccess( $result );
+
+			// Enhance response with additional debugging information
+			$enhanced_result = $result;
+			$enhanced_result['debug_info'] = array(
+				'memory_peak' => memory_get_peak_usage( true ),
+				'memory_current' => memory_get_usage( true ),
+				'execution_time' => microtime( true ) - ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime( true )),
+				'php_version' => PHP_VERSION,
+				'wp_version' => get_bloginfo( 'version' ),
+				'acf_available' => function_exists( 'get_field' ),
+				'response_timestamp' => time(),
+			);
+
+			// Add error details if import failed
+			if ( ! isset( $result['success'] ) || ! $result['success'] ) {
+				$enhanced_result['debug_info']['error_details'] = array(
+					'last_error' => error_get_last(),
+					'wp_debug' => defined( 'WP_DEBUG' ) && WP_DEBUG,
+					'error_reporting' => error_reporting(),
+				);
+			}
+
+			AjaxErrorHandler::sendSuccess( $enhanced_result );
 		} catch ( \Exception $e ) {
 			PuntWorkLogger::error( 'Batch import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
 			error_log( '[PUNTWORK] AJAX: Batch import exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
