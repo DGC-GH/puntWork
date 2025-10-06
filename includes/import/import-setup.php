@@ -22,9 +22,6 @@ require_once __DIR__ . '/../mappings/mappings-fields.php';
 // Include utility helpers
 require_once __DIR__ . '/../utilities/utility-helpers.php';
 
-// Include batch loading utilities
-require_once __DIR__ . '/../batch/batch-loading.php';
-
 /**
  * Prepare import setup and validate prerequisites.
  *

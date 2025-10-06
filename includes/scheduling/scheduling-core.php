@@ -146,12 +146,12 @@ function update_cron_schedule( $schedule_data ) {
 		$next_run_timestamp = calculate_next_run_time( $schedule_data );
 		$cron_interval      = get_cron_interval( $schedule_data );
 
-		// DISABLED: Background processing disabled - no scheduling allowed
-		// if ( wp_schedule_event( $next_run_timestamp, $cron_interval, $hook ) ) {
-		// 	error_log( '[PUNTWORK] Scheduled import hook registered for: ' . wp_date( 'Y-m-d H:i:s', $next_run_timestamp ) . ' (' . wp_timezone_string() . ') with interval: ' . $cron_interval );
-		// } else {
-		// 	error_log( '[PUNTWORK] Failed to register scheduled import hook with interval: ' . $cron_interval );
-		// }
+		// Re-enabled: Background processing restored for automated imports
+		if ( wp_schedule_event( $next_run_timestamp, $cron_interval, $hook ) ) {
+			error_log( '[PUNTWORK] Scheduled import hook registered for: ' . wp_date( 'Y-m-d H:i:s', $next_run_timestamp ) . ' (' . wp_timezone_string() . ') with interval: ' . $cron_interval );
+		} else {
+			error_log( '[PUNTWORK] Failed to register scheduled import hook with interval: ' . $cron_interval );
+		}
 	}
 }
 
@@ -245,349 +245,49 @@ function get_schedule_status() {
 }
 
 /**
- * Health check for stuck imports
- * Similar to WooCommerce's cron healthcheck system.
- */
-function check_import_health() {
-	$status = get_option( 'job_import_status', array() );
-
-	// Check if there's an active import that's been running too long
-	if ( isset( $status['complete'] ) && ! $status['complete'] && ! isset( $status['paused'] ) ) {
-		$start_time   = $status['start_time'] ?? 0;
-		$current_time = time();
-
-		// If import has been running for more than 10 minutes without update, consider it stuck
-		if ( ( $current_time - $start_time ) > 600 ) { // 10 minutes
-			error_log( '[PUNTWORK] Detected stuck import - resetting status' );
-
-			$status['error_message'] = 'Import appears to be stuck - reset by health check';
-			$status['complete']      = true;
-			$status['success']       = false;
-			$status['last_update']   = $current_time;
-			update_option( 'job_import_status', $status, false );
-
-			// Clear any scheduled continuations
-			wp_clear_scheduled_hook( 'puntwork_continue_import' );
-		}
-	}
-
-	// Check for paused imports that should be continued
-	if ( isset( $status['paused'] ) && $status['paused'] ) {
-		$last_update  = $status['last_update'] ?? 0;
-		$current_time = time();
-
-		// If paused for more than 5 minutes, try to continue
-		if ( ( $current_time - $last_update ) > 300 ) { // 5 minutes
-			error_log( '[PUNTWORK] Attempting to continue long-paused import' );
-			wp_schedule_single_event( time() + 10, 'puntwork_continue_import' );
-		}
-	}
-}
-
-// Schedule health check to run every 5 minutes - DISABLED: Background processing disabled
-// add_action(
-// 	'wp',
-// 	function () {
-// 		if ( ! wp_next_scheduled( 'puntwork_import_health_check' ) ) {
-// 			wp_schedule_event( time(), 'puntwork_5min', 'puntwork_import_health_check' );
-// 		}
-// 	}
-// );
-// add_action( 'puntwork_import_health_check', __NAMESPACE__ . '\\check_import_health' );
-
-/**
  * Initialize scheduling system
  * Called during plugin setup to ensure scheduling is properly configured.
- * DISABLED: Background processing disabled to prevent persistent PHP processes
  */
 function init_scheduling() {
 	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
 	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [SCHEDULING-INIT] Scheduling system DISABLED - Background processing disabled' );
+		error_log( '[PUNTWORK] [SCHEDULING-INIT] Scheduling system ENABLED - Background processing restored' );
 	}
 
-	// DISABLED: Background processing disabled to prevent persistent PHP processes
-	// All scheduling functionality has been disabled
+	// Initialize scheduling functionality
 
-	// Clear any existing scheduled imports to ensure no background processing
-	wp_clear_scheduled_hook( 'puntwork_scheduled_import' );
-	wp_clear_scheduled_hook( 'puntwork_scheduled_import_async' );
-	wp_clear_scheduled_hook( 'puntwork_continue_import' );
-
-	// Clear any other puntwork cron jobs that might exist
-	$cron_jobs = _get_cron_array();
-	if ( is_array( $cron_jobs ) ) {
-		foreach ( $cron_jobs as $timestamp => $cron ) {
-			if ( is_array( $cron ) ) {
-				foreach ( $cron as $hook => $jobs ) {
-					if ( strpos( $hook, 'puntwork_' ) === 0 ) {
-						wp_clear_scheduled_hook( $hook );
-						if ( $debug_mode ) {
-							error_log( '[PUNTWORK] [SCHEDULING-INIT] Cleared cron job: ' . $hook );
-						}
-					}
-				}
-			}
-		}
+	// Check if automated schedules are already configured
+	$existing_schedule = get_option( 'puntwork_import_schedule', false );
+	if ( ! $existing_schedule || ! isset( $existing_schedule['enabled'] ) || ! $existing_schedule['enabled'] ) {
+		// Set up automated import schedules for the first time
+		setup_automated_import_schedules();
+	} else {
+		// Load current schedule settings and update cron
+		update_cron_schedule( $existing_schedule );
 	}
 
 	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [SCHEDULING-INIT] All scheduled imports and cron jobs cleared - no background processing allowed' );
+		error_log( '[PUNTWORK] [SCHEDULING-INIT] Scheduling system initialized successfully' );
 	}
 }
 
 /**
- * Advanced scheduling with dependency management and intelligent timing.
+ * Set up automated import schedules for multiple daily runs
+ * Configures the system to run imports several times per day automatically
  */
-class AdvancedScheduler {
+function setup_automated_import_schedules() {
+	// Set up a schedule for multiple daily imports
+	$schedule_data = array(
+		'enabled'   => true,
+		'frequency' => '6hours', // Run every 6 hours = 4 times per day
+		'hour'      => 6,        // Start at 6 AM
+		'minute'    => 0,        // At the top of the hour
+		'interval'  => 6,        // Every 6 hours
+	);
 
-	private static array $jobDependencies = array();
-	private static array $jobPriorities   = array();
-	private static array $jobConditions   = array();
+	update_option( 'puntwork_import_schedule', $schedule_data );
+	update_cron_schedule( $schedule_data );
 
-	/**
-	 * Schedule a job with dependencies and conditions.
-	 * DISABLED: Background processing disabled to prevent persistent PHP processes
-	 *
-	 * @param  string $jobId        Unique job identifier
-	 * @param  array  $schedule     Schedule configuration
-	 * @param  array  $dependencies Array of job IDs this job depends on
-	 * @param  array  $conditions   Conditional execution rules
-	 * @param  int    $priority     Job priority (1-10, higher = more important)
-	 * @return bool Success
-	 */
-	public static function scheduleWithDependencies(
-		string $jobId,
-		array $schedule,
-		array $dependencies = array(),
-		array $conditions = array(),
-		int $priority = 5
-	): bool {
-		// DISABLED: Background processing disabled to prevent persistent PHP processes
-		error_log( '[PUNTWORK] [SCHEDULER] Job scheduling DISABLED - Background processing disabled for ' . $jobId );
-		return false;
-	}
-
-	/**
-	 * Calculate next run time considering dependencies.
-	 */
-	private static function calculateNextRunWithDependencies( string $jobId, array $schedule ): ?int {
-		$baseTime = calculate_next_run_time( $schedule );
-
-		// Check if all dependencies are satisfied
-		if ( ! self::areDependenciesSatisfied( $jobId ) ) {
-			// Schedule for later when dependencies might be met
-			return $baseTime + ( 6 * HOUR_IN_SECONDS ); // Check again in 6 hours
-		}
-
-		// Check conditional execution
-		if ( ! self::areConditionsMet( $jobId ) ) {
-			// Skip this run, schedule next regular interval
-			return $baseTime + self::getIntervalSeconds( $schedule );
-		}
-
-		return $baseTime;
-	}
-
-	/**
-	 * Check if all job dependencies are satisfied.
-	 */
-	private static function areDependenciesSatisfied( string $jobId ): bool {
-		$dependencies = self::$jobDependencies[ $jobId ] ?? array();
-
-		foreach ( $dependencies as $depJobId ) {
-			// Check if dependency job completed successfully recently
-			$lastRun     = get_option( "puntwork_job_{$depJobId}_last_success" );
-			$lastFailure = get_option( "puntwork_job_{$depJobId}_last_failure" );
-
-			// If dependency failed more recently than succeeded, it's not satisfied
-			if ( $lastFailure && ( ! $lastRun || $lastFailure > $lastRun ) ) {
-				return false;
-			}
-
-			// If dependency never ran successfully, it's not satisfied
-			if ( ! $lastRun ) {
-				return false;
-			}
-
-			// Check if dependency ran within reasonable time (last 24 hours)
-			if ( $lastRun < ( time() - DAY_IN_SECONDS ) ) {
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	/**
-	 * Check if conditional execution rules are met.
-	 */
-	private static function areConditionsMet( string $jobId ): bool {
-		$conditions = self::$jobConditions[ $jobId ] ?? array();
-
-		foreach ( $conditions as $condition ) {
-			if ( ! self::evaluateCondition( $condition ) ) {
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	/**
-	 * Evaluate a single condition.
-	 */
-	private static function evaluateCondition( array $condition ): bool {
-		$type     = $condition['type'] ?? '';
-		$value    = $condition['value'] ?? null;
-		$operator = $condition['operator'] ?? 'equals';
-
-		switch ( $type ) {
-			case 'time_range':
-				$currentHour = (int) wp_date( 'H' );
-				$startHour   = $value['start'] ?? 0;
-				$endHour     = $value['end'] ?? 23;
-
-				return $currentHour >= $startHour && $currentHour <= $endHour;
-
-			case 'day_of_week':
-				$currentDay  = (int) wp_date( 'w' ); // 0 = Sunday
-				$allowedDays = is_array( $value ) ? $value : array( $value );
-
-				return in_array( $currentDay, $allowedDays );
-
-			case 'server_load':
-				$load = sys_getloadavg()[0] ?? 0;
-
-				return self::compareValues( $load, $value, $operator );
-
-			case 'memory_usage':
-				$usage        = memory_get_usage( true ) / 1024 / 1024; // MB
-				$limit        = ini_get( 'memory_limit' );
-				$limitMB      = self::parseMemoryLimit( $limit );
-				$usagePercent = ( $usage / $limitMB ) * 100;
-
-				return self::compareValues( $usagePercent, $value, $operator );
-
-			case 'feed_health':
-				// Check if feeds are healthy
-				$healthy = true;
-
-				// Implementation would check feed health status
-				return $healthy;
-
-			case 'custom':
-				// Allow custom condition callbacks
-				if ( is_callable( $value ) ) {
-					return (bool) call_user_func( $value );
-				}
-
-				return false;
-
-			default:
-				return true;
-		}
-	}
-
-	/**
-	 * Compare values with different operators.
-	 */
-	private static function compareValues( $actual, $expected, string $operator ): bool {
-		switch ( $operator ) {
-			case 'equals':
-				return $actual === $expected;
-			case 'not_equals':
-				return $actual !== $expected;
-			case 'greater':
-				return $actual > $expected;
-			case 'less':
-				return $actual < $expected;
-			case 'greater_equal':
-				return $actual >= $expected;
-			case 'less_equal':
-				return $actual <= $expected;
-			default:
-				return true;
-		}
-	}
-
-	/**
-	 * Parse memory limit string to MB.
-	 */
-	private static function parseMemoryLimit( string $limit ): float {
-		if ( preg_match( '/^(\d+)(.)$/', $limit, $matches ) ) {
-			$value = (int) $matches[1];
-			$unit  = strtoupper( $matches[2] );
-			switch ( $unit ) {
-				case 'G':
-					return $value * 1024;
-				case 'M':
-					return $value;
-				case 'K':
-					return $value / 1024;
-				default:
-					return $value;
-			}
-		}
-
-		return 128; // Default 128MB
-	}
-
-	/**
-	 * Get interval in seconds from schedule.
-	 */
-	private static function getIntervalSeconds( array $schedule ): int {
-		$frequency = $schedule['frequency'] ?? 'daily';
-
-		switch ( $frequency ) {
-			case 'hourly':
-				return HOUR_IN_SECONDS;
-			case '3hours':
-				return 3 * HOUR_IN_SECONDS;
-			case '6hours':
-				return 6 * HOUR_IN_SECONDS;
-			case '12hours':
-				return 12 * HOUR_IN_SECONDS;
-			case 'custom':
-				return ( $schedule['interval'] ?? 24 ) * HOUR_IN_SECONDS;
-			default:
-				return DAY_IN_SECONDS;
-		}
-	}
-
-	/**
-	 * Execute a scheduled job with dependency checking.
-	 * DISABLED: Background processing disabled to prevent persistent PHP processes
-	 */
-	public static function executeJob( string $jobId ): bool {
-		// DISABLED: Background processing disabled to prevent persistent PHP processes
-		error_log( '[PUNTWORK] [SCHEDULER] Job execution DISABLED - Background processing disabled for ' . $jobId );
-		return false;
-	}
-
-	/**
-	 * Run job implementation (to be overridden).
-	 */
-	protected static function runJobImplementation( string $jobId ): bool {
-		// Default implementation - override in subclasses
-		do_action( 'puntwork_execute_scheduled_job', $jobId );
-
-		return true;
-	}
-
-	/**
-	 * Get job status and next run time.
-	 */
-	public static function getJobStatus( string $jobId ): array {
-		return array(
-			'job_id'       => $jobId,
-			'next_run'     => get_option( "puntwork_job_{$jobId}_next_run" ),
-			'last_success' => get_option( "puntwork_job_{$jobId}_last_success" ),
-			'last_failure' => get_option( "puntwork_job_{$jobId}_last_failure" ),
-			'dependencies' => self::$jobDependencies[ $jobId ] ?? array(),
-			'priority'     => self::$jobPriorities[ $jobId ] ?? 5,
-			'conditions'   => self::$jobConditions[ $jobId ] ?? array(),
-		);
-	}
+	error_log( '[PUNTWORK] Automated import schedules configured: 4 times per day (every 6 hours starting at 6 AM)' );
 }

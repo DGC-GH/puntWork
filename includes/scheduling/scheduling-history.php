@@ -153,12 +153,66 @@ function log_manual_import_run( $details ) {
 }
 
 /**
- * Cleanup scheduled imports on plugin deactivation.
+ * Run a scheduled import
+ * This function is called by the cron system to execute automated imports.
  */
-function cleanup_scheduled_imports() {
-	wp_clear_scheduled_hook( 'puntwork_scheduled_import' );
-	delete_option( 'puntwork_import_schedule' );
-	delete_option( 'puntwork_last_import_run' );
-	delete_option( 'puntwork_last_import_details' );
-	delete_option( 'puntwork_import_run_history' );
+function run_scheduled_import( $test_mode = false, $trigger = 'scheduled' ) {
+	// Set test mode if requested
+	if ( $test_mode ) {
+		update_option( 'puntwork_test_mode', true );
+	}
+
+	// Log the import start
+	log_manual_import_run( array(
+		'timestamp'     => time(),
+		'success'       => false, // Will be updated
+		'processed'     => 0,
+		'total'         => 0,
+		'published'     => 0,
+		'updated'       => 0,
+		'skipped'       => 0,
+		'error_message' => '',
+	) );
+
+	try {
+		// Run the import
+		$result = import_all_jobs_from_json();
+
+		// Update the last run time
+		update_option( 'puntwork_last_import_run', time() );
+
+		// Log the completion
+		if ( $result['success'] ) {
+			log_scheduled_run( array(
+				'timestamp'     => time(),
+				'success'       => true,
+				'processed'     => $result['processed'] ?? 0,
+				'total'         => $result['total'] ?? 0,
+				'published'     => $result['published'] ?? 0,
+				'updated'       => $result['updated'] ?? 0,
+				'skipped'       => $result['skipped'] ?? 0,
+				'error_message' => '',
+			), $test_mode, $trigger );
+		}
+
+		return $result;
+
+	} catch ( \Exception $e ) {
+		// Log the error
+		log_scheduled_run( array(
+			'timestamp'     => time(),
+			'success'       => false,
+			'processed'     => 0,
+			'total'         => 0,
+			'published'     => 0,
+			'updated'       => 0,
+			'skipped'       => 0,
+			'error_message' => $e->getMessage(),
+		), $test_mode, $trigger );
+
+		return array(
+			'success' => false,
+			'message' => 'Scheduled import failed: ' . $e->getMessage(),
+		);
+	}
 }

@@ -289,7 +289,6 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 			$includes = array_merge( $includes, array(
 				'api/ajax-feed-processing.php',
 				'api/ajax-handlers.php',
-				'api/ajax-import-control.php',
 				'api/ajax-purge.php',
 				'api/ajax-db-optimization.php',
 				'api/ajax-feed-health.php',
