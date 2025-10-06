@@ -246,8 +246,6 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 				'admin/admin-ajax-monitoring.php',
 				'admin/admin-feed-config.php',
 				'admin/admin-modern-styles.php',
-				'admin/social-media-admin.php',
-				'admin/social-media-test.php',
 				'mappings/mappings-constants.php',
 				'mappings/mappings-fields.php',
 				'mappings/mappings-geographic.php',
