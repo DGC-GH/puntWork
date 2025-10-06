@@ -19,9 +19,6 @@ require_once __DIR__ . '/admin-ui-main.php';
 require_once __DIR__ . '/admin-api-settings.php';
 require_once __DIR__ . '/admin-feed-config.php';
 
-// Load queue management components
-require_once __DIR__ . '/../queue/queue-manager.php';
-
 function feeds_dashboard_page() {
 	// Ensure API key exists for SSE functionality
 	if ( function_exists( __NAMESPACE__ . '\\get_or_create_api_key' ) ) {

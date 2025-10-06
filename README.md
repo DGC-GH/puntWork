@@ -69,7 +69,6 @@ puntwork/
 │   ├── import/            # Import functionality
 │   ├── mappings/             # Data mappings (geographic, salary, etc.)
 │   ├── multisite/            # Multi-site support
-│   ├── queue/                # Queue management
 │   ├── reporting/            # Analytics, reporting
 │   ├── scheduling/           # Cron jobs, scheduling
 │   ├── socialmedia/          # Social media posting (classes)

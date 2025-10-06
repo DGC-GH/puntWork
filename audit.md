@@ -24,7 +24,7 @@ This is a WordPress plugin named "puntWork" designed to import job feeds from va
   - `ai/`: 3 files (feed optimizer, ML engine, duplicate detector).
   - `crm/`: 5 files (integrations with HubSpot, Salesforce, etc.).
   - `socialmedia/`: 6 files (Facebook, TikTok, Twitter ads managers/platforms).
-  - Other: `admin/`, `exceptions/`, `mappings/`, `queue/`, `reporting/`, `scheduling/`, `timeout-protection.php`.
+  - Other: `admin/`, `exceptions/`, `mappings/`, `reporting/`, `scheduling/`, `timeout-protection.php`.
 
 - **Assets**: `css/`, `js/`, `images/`.
 - **Languages**: `puntwork.pot`.
@@ -250,7 +250,7 @@ Based on the test files in tests, here's an analysis of what they cover, with a 
 - **Other Coverage**:
   - CRMIntegrationTest.php: Likely tests CRM syncing structures.
   - ChaosEngineeringTest.php, HorizontalScalingTest.php, LoadBalancerTest.php: Test scaling/load balancing schemas.
-  - QueueTest.php, `ReportingTest.php`: Test queue/reporting data structures.
+  - `ReportingTest.php`: Test queue/reporting data structures.
   - AccessibilityTest.php, JavaScriptTest.php: Test UI/accessibility schemas.
   - `OnboardingTest.php`: Test onboarding flows.
   - Many tests are placeholders or schema validators (e.g., asserting array keys exist).
