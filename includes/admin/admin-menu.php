@@ -50,49 +50,89 @@ add_action(
 		);
 		error_log( '[PUNTWORK] [ADMIN-MENU] Main menu page added: puntwork-dashboard' );
 
+		// Register the page handlers without adding to menu
 		add_submenu_page(
-			'puntwork-dashboard',
+			null, // Don't show in menu
 			__( 'Feeds Dashboard', 'puntwork' ),
-			__( 'Feeds', 'puntwork' ),
+			'',
 			'manage_options',
 			'job-feed-dashboard',
 			'Puntwork\\feeds_dashboard_page'
 		);
-		error_log( '[PUNTWORK] [ADMIN-MENU] Feeds dashboard submenu added' );
 
 		add_submenu_page(
-			'puntwork-dashboard',
+			null, // Don't show in menu
 			__( 'Jobs Dashboard', 'puntwork' ),
-			__( 'Jobs', 'puntwork' ),
+			'',
 			'manage_options',
 			'jobs-dashboard',
 			'Puntwork\\jobs_dashboard_page'
 		);
-		error_log( '[PUNTWORK] [ADMIN-MENU] Jobs dashboard submenu added' );
 
 		add_submenu_page(
-			'puntwork-dashboard',
+			null, // Don't show in menu
 			__( 'Feed Configuration', 'puntwork' ),
-			__( 'Feed Config', 'puntwork' ),
+			'',
 			'manage_options',
 			'puntwork-feed-config',
 			'Puntwork\\feed_config_page'
 		);
-		error_log( '[PUNTWORK] [ADMIN-MENU] Feed configuration submenu added' );
 
 		add_submenu_page(
-			'puntwork-dashboard',
+			null, // Don't show in menu
 			__( 'API Settings', 'puntwork' ),
-			__( 'API Settings', 'puntwork' ),
+			'',
 			'manage_options',
 			'puntwork-api-settings',
 			'Puntwork\\api_settings_page'
 		);
-		error_log( '[PUNTWORK] [ADMIN-MENU] API settings submenu added' );
+
+		// Register submenu pages with different approach
+		global $submenu;
+		
+		// Add submenus manually to ensure they work
+		if (!isset($submenu['puntwork-dashboard'])) {
+			$submenu['puntwork-dashboard'] = array();
+		}
+
+		// Add the main dashboard as first submenu (this replaces the parent menu)
+		$submenu['puntwork-dashboard'][] = array(
+			__( 'Dashboard', 'puntwork' ),
+			'manage_options',
+			'admin.php?page=puntwork-dashboard'
+		);
+
+		// Add other submenus
+		$submenu['puntwork-dashboard'][] = array(
+			__( 'Feeds', 'puntwork' ),
+			'manage_options',
+			'admin.php?page=job-feed-dashboard'
+		);
+
+		$submenu['puntwork-dashboard'][] = array(
+			__( 'Jobs', 'puntwork' ),
+			'manage_options',
+			'admin.php?page=jobs-dashboard'
+		);
+
+		$submenu['puntwork-dashboard'][] = array(
+			__( 'Feed Config', 'puntwork' ),
+			'manage_options',
+			'admin.php?page=puntwork-feed-config'
+		);
+
+		$submenu['puntwork-dashboard'][] = array(
+			__( 'API Settings', 'puntwork' ),
+			'manage_options',
+			'admin.php?page=puntwork-api-settings'
+		);
+
+		error_log( '[PUNTWORK] [ADMIN-MENU] Submenus added manually' );
 
 		PuntWorkLogger::info( 'Admin menu registration completed', PuntWorkLogger::CONTEXT_ADMIN );
 		error_log( '[PUNTWORK] [ADMIN-MENU] Admin menu registration completed' );
-	}
+	},
+	99
 );
 
 // Add setup wizard as the last menu item with high priority
