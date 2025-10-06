@@ -58,6 +58,14 @@ function init_action_scheduler() {
 		return;
 	}
 
+	// Check if Action Scheduler is already loaded by another plugin
+	if ( function_exists( 'as_schedule_single_action' ) || class_exists( '\\ActionScheduler', false ) ) {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( '[PUNTWORK] [ACTION-SCHEDULER] Action Scheduler already loaded by another plugin, skipping bundled version' );
+		}
+		return;
+	}
+
 	// Try to load bundled Action Scheduler
 	$action_scheduler_path = PUNTWORK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php';
 	if ( file_exists( $action_scheduler_path ) ) {
