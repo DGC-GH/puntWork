@@ -32,10 +32,7 @@
             "includes/utilities/DatabasePerformanceMonitor.php",
             "includes/utilities/CircuitBreaker.php",
             "includes/utilities/AdvancedMemoryManager.php",
-            "includes/import/feed-processor.php",
-            "includes/ai/job-categorizer.php",
-            "includes/ai/duplicate-detector.php",
-            "includes/ai/content-quality-scorer.php"
+            "includes/import/feed-processor.php"
         ]
     },
     "config": {

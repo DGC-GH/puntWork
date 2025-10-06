@@ -19,7 +19,6 @@ require_once __DIR__ . '/admin-ui-main.php';
 require_once __DIR__ . '/admin-ui-scheduling.php';
 require_once __DIR__ . '/admin-api-settings.php';
 require_once __DIR__ . '/admin-feed-config.php';
-require_once __DIR__ . '/job-board-admin.php';
 
 // Load queue management components
 require_once __DIR__ . '/../queue/queue-manager.php';

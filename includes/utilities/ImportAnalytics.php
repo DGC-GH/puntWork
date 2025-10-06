@@ -427,69 +427,60 @@ class ImportAnalytics {
 	 * Get predictive analytics data.
 	 */
 	private static function getPredictiveAnalytics( $period ) {
-		// Import the PredictiveAnalytics class
-		if ( ! class_exists( '\Puntwork\AI\PredictiveAnalytics' ) ) {
-			include_once plugin_dir_path( dirname( __DIR__, 1 ) ) . 'includes/ai/predictive-analytics.php';
-		}
-
-		$predictions = array();
-
-		try {
-			// Get import volume predictions
-			$predictions['import_volume'] = AI\PredictiveAnalytics::predictImportVolume(
-				AI\PredictiveAnalytics::PERIOD_DAY
-			);
-
-			// Get content quality predictions
-			$predictions['content_quality'] = AI\PredictiveAnalytics::predictContentQualityTrends(
-				self::getPeriodDays( $period )
-			);
-
-			// Get duplicate pattern predictions
-			$predictions['duplicate_patterns'] = AI\PredictiveAnalytics::predictDuplicatePatterns(
-				self::getPeriodDays( $period )
-			);
-
-			// Get feed reliability predictions for top feeds
-			$predictions['feed_reliability'] = self::getFeedReliabilityPredictions();
-		} catch ( \Exception $e ) {
-			PuntWorkLogger::error(
-				'Error generating predictive analytics',
-				PuntWorkLogger::CONTEXT_ANALYTICS,
-				array(
-					'error' => $e->getMessage(),
-				)
-			);
-
-			$predictions = array(
-				'error' => 'Unable to generate predictions: ' . $e->getMessage(),
-			);
-		}
-
-		return $predictions;
+		// AI functionality removed - return basic mock predictions
+		return array(
+			'import_volume'     => array(
+				'predicted' => self::getRecentAverageVolume(),
+				'trend'     => 'stable',
+				'confidence' => 0.5,
+			),
+			'content_quality'   => array(
+				'trend' => 'stable',
+				'score' => 7.5,
+			),
+			'duplicate_patterns' => array(
+				'predicted_duplicates' => 0,
+				'trend' => 'stable',
+			),
+			'feed_reliability'  => self::getBasicFeedReliability(),
+		);
 	}
 
 	/**
-	 * Get feed reliability predictions for active feeds.
+	 * Get basic feed reliability data (non-AI version).
 	 */
-	private static function getFeedReliabilityPredictions() {
-		$feeds       = get_feeds();
-		$predictions = array();
-
-		if ( ! class_exists( 'AI\PredictiveAnalytics' ) ) {
-			include_once plugin_dir_path( dirname( __DIR__, 1 ) ) . 'includes/ai/predictive-analytics.php';
-		}
+	private static function getBasicFeedReliability() {
+		$feeds = get_feeds();
+		$reliability = array();
 
 		foreach ( array_keys( $feeds ) as $feed_key ) {
-			try {
-				$predictions[ $feed_key ] = AI\PredictiveAnalytics::predictFeedReliability( $feed_key );
-			} catch ( \Exception $e ) {
-				// Skip feeds with prediction errors
-				continue;
-			}
+			$reliability[ $feed_key ] = array(
+				'reliability_score' => 0.85, // Default 85% reliability
+				'trend' => 'stable',
+				'last_success' => true,
+			);
 		}
 
-		return $predictions;
+		return $reliability;
+	}
+
+	/**
+	 * Get recent average import volume.
+	 */
+	private static function getRecentAverageVolume() {
+		global $wpdb;
+
+		$table_name = $wpdb->prefix . self::TABLE_NAME;
+		$cutoff_date = date( 'Y-m-d H:i:s', strtotime( '-30 days' ) );
+
+		$result = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT AVG(processed_jobs) as avg_volume FROM $table_name WHERE end_time >= %s",
+				$cutoff_date
+			)
+		);
+
+		return $result ? (int) $result->avg_volume : 0;
 	}
 
 	/**
