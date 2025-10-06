@@ -1649,7 +1649,7 @@ function process_feed_ajax() {
 				)
 			);
 			delete_transient( $feed_lock_key ); // Clear lock
-			wp_send_json_error( array( 'message' => 'Feed processing failed: ' . $e->getMessage() ?: 'Unknown error - check server logs for details' ) );
+			wp_send_json_error( array( 'message' => 'Feed processing failed: ' . ( $e->getMessage() ?: 'Unknown error - check server logs for details' ) ) );
 
 			return;
 		}

@@ -244,7 +244,7 @@ function download_feed( $url, $feed_path, $output_dir, &$logs, &$format = null )
 				$span->end();
 			}
 
-			return false;
+			throw $e; // Re-throw exception instead of returning false
 		}
 	} catch ( \Exception $e ) {
 		error_log( '[PUNTWORK] [DOWNLOAD-ERROR] Outer download exception: ' . $e->getMessage() );
@@ -255,6 +255,6 @@ function download_feed( $url, $feed_path, $output_dir, &$logs, &$format = null )
 			$span->end();
 		}
 
-		return false;
+		throw $e; // Re-throw exception instead of returning false
 	}
 }
