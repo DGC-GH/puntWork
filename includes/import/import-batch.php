@@ -957,7 +957,29 @@ function import_all_jobs_from_json_sync( int $expected_total_items = 0 ): array 
 			}
 
 			// Process this batch synchronously
-			$batch_result = import_jobs_from_json( true, $batch_start );
+			$setup = prepare_import_setup( $batch_start, true );
+			if ( is_wp_error( $setup ) ) {
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [SYNC-FALLBACK-ERROR] Setup failed for batch ' . ($batch_count + 1) . ': ' . $setup->get_error_message() );
+				}
+				$batch_result = array(
+					'success' => false,
+					'message' => 'Setup failed: ' . $setup->get_error_message(),
+					'logs' => array( 'Setup failed for batch ' . ($batch_count + 1) ),
+				);
+			} elseif ( isset( $setup['success'] ) && ! $setup['success'] ) {
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [SYNC-FALLBACK-ERROR] Setup returned early for batch ' . ($batch_count + 1) . ': ' . ( $setup['message'] ?? 'Unknown' ) );
+				}
+				$batch_result = array(
+					'success' => false,
+					'message' => $setup['message'] ?? 'Setup failed',
+					'logs' => array( 'Setup failed for batch ' . ($batch_count + 1) ),
+				);
+			} else {
+				// Process the batch using the same logic as Action Scheduler
+				$batch_result = process_batch_items_logic( $setup );
+			}
 
 			if ( $batch_result['success'] ) {
 				$total_processed += $batch_result['processed'] ?? 0;
