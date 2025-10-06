@@ -1923,17 +1923,21 @@ function combine_jsonl_ajax() {
 				if ( $import_result['success'] ) {
 					error_log( '[PUNTWORK] [COMBINE-START] Import started successfully' );
 					$scheduling_success = true;
+					$async_mode = $import_result['async_mode'] ?? false;
 				} else {
 					error_log( '[PUNTWORK] [COMBINE-START] Import failed to start: ' . ( $import_result['message'] ?? 'Unknown error' ) );
 					$scheduling_success = false;
+					$async_mode = false;
 				}
 			} catch ( \Exception $import_exception ) {
 				error_log( '[PUNTWORK] [COMBINE-START] Exception during import start: ' . $import_exception->getMessage() );
 				error_log( '[PUNTWORK] [COMBINE-START] Exception trace: ' . $import_exception->getTraceAsString() );
 				$scheduling_success = false;
+				$async_mode = false;
 			} catch ( \Throwable $import_error ) {
 				error_log( '[PUNTWORK] [COMBINE-START] Fatal error during import start: ' . $import_error->getMessage() );
 				$scheduling_success = false;
+				$async_mode = false;
 			}
 
 			// Check if Action Scheduler is working by testing a simple job execution
@@ -2006,6 +2010,7 @@ function combine_jsonl_ajax() {
 			'combined_file_exists' => file_exists( $combined_file ),
 			'combined_file_size'   => $file_size ?? 0,
 			'import_scheduled'     => $scheduling_success,
+			'async_mode'           => $async_mode ?? false,
 			'action_scheduler_reliable' => $action_scheduler_reliable,
 		) );
 		error_log( '[PUNTWORK] [DEBUG-PHP] Response sent successfully' );

@@ -596,8 +596,11 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 				if ( $debug_mode ) {
 					error_log( '[PUNTWORK] [IMPORT-INIT] Total items: ' . $total_items . ', Batch size: ' . $batch_size . ', Total batches: ' . $total_batches );
 					error_log( '[PUNTWORK] [IMPORT-INIT] Using Action Scheduler for async processing' );
-				}				// Schedule individual batch jobs using Action Scheduler
+				}
+
+				// Schedule individual batch jobs using Action Scheduler
 				$scheduled_batches = 0;
+				$job_ids = array();
 				for ( $batch_index = 0; $batch_index < $total_batches; $batch_index++ ) {
 					$batch_start = $batch_index * $batch_size;
 
@@ -613,6 +616,7 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 
 					if ( $job_id ) {
 						$scheduled_batches++;
+						$job_ids[] = $job_id;
 						if ( $debug_mode ) {
 							error_log( '[PUNTWORK] [BATCH-SCHEDULE] Scheduled batch ' . ($batch_index + 1) . '/' . $total_batches . ' starting at ' . $batch_start . ', job ID: ' . $job_id );
 						}
@@ -627,6 +631,24 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 					error_log( '[PUNTWORK] [IMPORT-SCHEDULE] Successfully scheduled ' . $scheduled_batches . ' out of ' . $total_batches . ' batches' );
 				}
 
+				// Store job IDs for monitoring
+				update_option( 'puntwork_scheduled_import_jobs', array(
+					'job_ids' => $job_ids,
+					'scheduled_at' => time(),
+					'total_batches' => $total_batches,
+					'batch_size' => $batch_size,
+					'total_items' => $total_items
+				), false );
+
+				// Schedule a fallback check in 30 seconds to see if ActionScheduler is working
+				$fallback_check_id = as_schedule_single_action( time() + 30, 'puntwork_check_async_fallback', array(
+					'import_id' => uniqid( 'fallback_', true )
+				) );
+
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [IMPORT-FALLBACK] Scheduled fallback check in 30 seconds, job ID: ' . $fallback_check_id );
+				}
+
 				// Return success with scheduling information
 				return array(
 					'success' => true,
@@ -635,6 +657,7 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 					'batches_scheduled' => $scheduled_batches,
 					'total_batches' => $total_batches,
 					'batch_size' => $batch_size,
+					'async_mode' => true,
 					'logs' => array( 'Import scheduled with ' . $scheduled_batches . ' batches using Action Scheduler' ),
 				);
 			} else {
@@ -826,6 +849,187 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 }
 
 /**
+ * Synchronous version of import_all_jobs_from_json for fallback when ActionScheduler fails
+ *
+ * @param  int $expected_total_items Expected total items to process
+ * @return array Import result
+ */
+function import_all_jobs_from_json_sync( int $expected_total_items = 0 ): array {
+	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
+	$start_time = microtime( true );
+
+	if ( $debug_mode ) {
+		error_log( '[PUNTWORK] [SYNC-FALLBACK] ===== SYNCHRONOUS IMPORT FALLBACK START =====' );
+		error_log( '[PUNTWORK] [SYNC-FALLBACK] Expected total items: ' . $expected_total_items );
+	}
+
+	try {
+		// Get the combined JSONL file path
+		$json_path = puntwork_get_combined_jsonl_path();
+
+		if ( ! file_exists( $json_path ) ) {
+			return array(
+				'success' => false,
+				'message' => 'Combined JSONL file not found for synchronous fallback',
+				'logs' => array( 'Combined JSONL file not found' ),
+			);
+		}
+
+		// Get actual total items from file
+		$total_items = get_json_item_count( $json_path );
+
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [SYNC-FALLBACK] Actual total items in file: ' . $total_items );
+		}
+
+		// Use smaller batches for synchronous processing to avoid timeouts
+		$batch_size = 25;
+		$total_processed = 0;
+		$total_published = 0;
+		$total_updated = 0;
+		$total_skipped = 0;
+		$total_duplicates_drafted = 0;
+		$all_logs = array();
+		$batch_count = 0;
+
+		// Update status to show fallback mode
+		$import_status = get_option( 'job_import_status', array() );
+		$import_status['fallback_mode'] = true;
+		$import_status['fallback_reason'] = 'ActionScheduler not executing jobs';
+		$import_status['last_update'] = time();
+		$import_status['logs'][] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] Falling back to synchronous processing';
+		update_option( 'job_import_status', $import_status, false );
+
+		for ( $batch_start = 0; $batch_start < $total_items; $batch_start += $batch_size ) {
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [SYNC-FALLBACK] Processing batch starting at ' . $batch_start . ' (batch ' . ($batch_count + 1) . ')' );
+			}
+
+			// Check for timeout before processing each batch
+			if ( import_time_exceeded() ) {
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [SYNC-FALLBACK] Time limit exceeded, pausing import' );
+				}
+
+				// Update status with current progress
+				$import_status = get_option( 'job_import_status', array() );
+				$import_status['processed'] = $total_processed;
+				$import_status['published'] = $total_published;
+				$import_status['updated'] = $total_updated;
+				$import_status['skipped'] = $total_skipped;
+				$import_status['duplicates_drafted'] = $total_duplicates_drafted;
+				$import_status['paused'] = true;
+				$import_status['pause_reason'] = 'Time limit exceeded during synchronous fallback';
+				$import_status['last_update'] = time();
+				$import_status['logs'] = array_slice( $all_logs, -50 );
+				update_option( 'job_import_status', $import_status, false );
+
+				return array(
+					'success' => false,
+					'message' => 'Import paused due to time limit - processed ' . $total_processed . ' of ' . $total_items . ' items',
+					'processed' => $total_processed,
+					'total' => $total_items,
+					'paused' => true,
+					'logs' => array_slice( $all_logs, -10 ),
+				);
+			}
+
+			// Process this batch synchronously
+			$batch_result = import_jobs_from_json( true, $batch_start );
+
+			if ( $batch_result['success'] ) {
+				$total_processed += $batch_result['processed'] ?? 0;
+				$total_published += $batch_result['published'] ?? 0;
+				$total_updated += $batch_result['updated'] ?? 0;
+				$total_skipped += $batch_result['skipped'] ?? 0;
+				$total_duplicates_drafted += $batch_result['duplicates_drafted'] ?? 0;
+
+				if ( isset( $batch_result['logs'] ) && is_array( $batch_result['logs'] ) ) {
+					$all_logs = array_merge( $all_logs, $batch_result['logs'] );
+				}
+
+				$batch_count++;
+
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [SYNC-FALLBACK] Batch ' . $batch_count . ' completed: processed=' . ($batch_result['processed'] ?? 0) . ', published=' . ($batch_result['published'] ?? 0) );
+				}
+			} else {
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [SYNC-FALLBACK-ERROR] Batch failed: ' . ($batch_result['message'] ?? 'Unknown error') );
+				}
+
+				// Update status with error
+				$import_status = get_option( 'job_import_status', array() );
+				$import_status['processed'] = $total_processed;
+				$import_status['published'] = $total_published;
+				$import_status['updated'] = $total_updated;
+				$import_status['skipped'] = $total_skipped;
+				$import_status['duplicates_drafted'] = $total_duplicates_drafted;
+				$import_status['complete'] = false;
+				$import_status['success'] = false;
+				$import_status['error_message'] = $batch_result['message'] ?? 'Batch processing failed during fallback';
+				$import_status['last_update'] = time();
+				$import_status['logs'] = array_slice( $all_logs, -50 );
+				update_option( 'job_import_status', $import_status, false );
+
+				return array(
+					'success' => false,
+					'message' => 'Import failed during synchronous fallback: ' . ($batch_result['message'] ?? 'Unknown error'),
+					'processed' => $total_processed,
+					'total' => $total_items,
+					'logs' => array_slice( $all_logs, -10 ),
+				);
+			}
+		}
+
+		// All batches completed successfully
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [SYNC-FALLBACK] All batches completed synchronously' );
+		}
+
+		// Update final status
+		$import_status = get_option( 'job_import_status', array() );
+		$import_status['processed'] = $total_processed;
+		$import_status['published'] = $total_published;
+		$import_status['updated'] = $total_updated;
+		$import_status['skipped'] = $total_skipped;
+		$import_status['duplicates_drafted'] = $total_duplicates_drafted;
+		$import_status['complete'] = true;
+		$import_status['success'] = true;
+		$import_status['time_elapsed'] = microtime( true ) - $start_time;
+		$import_status['end_time'] = microtime( true );
+		$import_status['last_update'] = time();
+		$import_status['logs'] = array_slice( $all_logs, -50 );
+		update_option( 'job_import_status', $import_status, false );
+
+		return array(
+			'success' => true,
+			'message' => 'Synchronous import completed successfully - processed ' . $total_processed . ' of ' . $total_items . ' items',
+			'processed' => $total_processed,
+			'published' => $total_published,
+			'updated' => $total_updated,
+			'skipped' => $total_skipped,
+			'duplicates_drafted' => $total_duplicates_drafted,
+			'total' => $total_items,
+			'complete' => true,
+			'fallback_mode' => true,
+			'logs' => array_slice( $all_logs, -10 ),
+		);
+
+	} catch ( \Exception $e ) {
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [SYNC-FALLBACK-EXCEPTION] Exception during synchronous fallback: ' . $e->getMessage() );
+		}
+
+		return array(
+			'success' => false,
+			'message' => 'Synchronous fallback failed: ' . $e->getMessage(),
+			'logs' => array( 'Exception during synchronous fallback: ' . $e->getMessage() ),
+		);
+	}
+}
+
+/**
  * Continue a paused import process
  * Called by WordPress cron when import needs to resume after timeout.
  *
@@ -981,6 +1185,96 @@ function start_batch_import() {
 
 	if ( $debug_mode ) {
 		error_log( '[PUNTWORK] [START-BATCH-IMPORT] ===== START_BATCH_IMPORT END =====' );
+	}
+}
+
+// Register the async fallback check hook
+add_action( 'puntwork_check_async_fallback', __NAMESPACE__ . '\\check_async_fallback' );
+function check_async_fallback( $args ) {
+	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
+	$import_id = $args['import_id'] ?? 'unknown';
+
+	if ( $debug_mode ) {
+		error_log( '[PUNTWORK] [FALLBACK-CHECK] ===== ASYNC FALLBACK CHECK START =====' );
+		error_log( '[PUNTWORK] [FALLBACK-CHECK] Import ID: ' . $import_id );
+	}
+
+	// Get the scheduled jobs info
+	$scheduled_jobs = get_option( 'puntwork_scheduled_import_jobs', array() );
+	if ( empty( $scheduled_jobs ) || ! isset( $scheduled_jobs['job_ids'] ) ) {
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [FALLBACK-CHECK] No scheduled jobs found - skipping fallback check' );
+		}
+		return;
+	}
+
+	// Check if import has already started (look for processed items in status)
+	$import_status = get_option( 'job_import_status', array() );
+	$processed = $import_status['processed'] ?? 0;
+
+	if ( $processed > 0 ) {
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [FALLBACK-CHECK] Import already started (processed: ' . $processed . ') - ActionScheduler is working' );
+		}
+		// Clean up the scheduled jobs info since import is proceeding
+		delete_option( 'puntwork_scheduled_import_jobs' );
+		return;
+	}
+
+	// Check if any ActionScheduler jobs are still pending
+	$jobs_still_pending = false;
+	if ( function_exists( 'as_get_scheduled_actions' ) ) {
+		$pending_jobs = as_get_scheduled_actions( array(
+			'hook' => 'puntwork_process_batch',
+			'status' => 'pending'
+		) );
+		$jobs_still_pending = ! empty( $pending_jobs );
+	}
+
+	if ( $jobs_still_pending ) {
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [FALLBACK-CHECK] ActionScheduler jobs still pending - may be delayed but could still execute' );
+			error_log( '[PUNTWORK] [FALLBACK-CHECK] Will check again in 60 seconds' );
+		}
+		// Schedule another check in 60 seconds
+		as_schedule_single_action( time() + 60, 'puntwork_check_async_fallback', array(
+			'import_id' => $import_id . '_retry'
+		) );
+		return;
+	}
+
+	// No jobs processed and no pending jobs - ActionScheduler is not working
+	if ( $debug_mode ) {
+		error_log( '[PUNTWORK] [FALLBACK-CHECK] ActionScheduler appears to be failing - no jobs processed and no pending jobs found' );
+		error_log( '[PUNTWORK] [FALLBACK-CHECK] Falling back to synchronous processing' );
+	}
+
+	// Cancel any remaining scheduled jobs
+	if ( function_exists( 'as_unschedule_all_actions' ) ) {
+		as_unschedule_all_actions( 'puntwork_process_batch' );
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [FALLBACK-CHECK] Cancelled remaining ActionScheduler jobs' );
+		}
+	}
+
+	// Clean up scheduled jobs info
+	delete_option( 'puntwork_scheduled_import_jobs' );
+
+	// Fall back to synchronous processing
+	$sync_result = import_all_jobs_from_json_sync( $scheduled_jobs['total_items'] ?? 0 );
+
+	if ( $sync_result['success'] ) {
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [FALLBACK-CHECK] Synchronous fallback completed successfully' );
+		}
+	} else {
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [FALLBACK-CHECK] Synchronous fallback failed: ' . ( $sync_result['message'] ?? 'Unknown error' ) );
+		}
+	}
+
+	if ( $debug_mode ) {
+		error_log( '[PUNTWORK] [FALLBACK-CHECK] ===== ASYNC FALLBACK CHECK END =====' );
 	}
 }
 
