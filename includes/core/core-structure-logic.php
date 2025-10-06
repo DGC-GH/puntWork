@@ -140,27 +140,6 @@ function get_feeds(): array {
 				if ( $debug_mode ) {
 					error_log( '[PUNTWORK] [FEEDS-ADDED] get_feeds: Added feed ' . $post->post_name . ' -> ' . $feed_url );
 				}
-			} elseif ( $feed_type == 'job_board' ) {
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [FEEDS-JOBBOARD] get_feeds: Handling job board feed for post ' . $post_id );
-				}
-				// Handle job board feeds
-				$board_id     = get_post_meta( $post_id, 'job_board_id', true );
-				$board_params = get_post_meta( $post_id, 'job_board_params', true ) ?: array();
-
-				if ( ! empty( $board_id ) ) {
-					// Create job board URL: job_board://board_id?param1=value1&...
-					$job_board_url = 'job_board://' . $board_id;
-					if ( ! empty( $board_params ) ) {
-						$job_board_url .= '?' . http_build_query( $board_params );
-					}
-					$feeds[ $post->post_name ] = $job_board_url;
-					if ( $debug_mode ) {
-						error_log( '[PUNTWORK] [FEEDS-JOBBOARD] get_feeds: Added job board feed ' . $post->post_name . ' -> ' . $job_board_url );
-					}
-				} elseif ( $debug_mode ) {
-					error_log( '[PUNTWORK] [FEEDS-JOBBOARD] get_feeds: No board_id for job board post ' . $post_id );
-				}
 			} elseif ( $debug_mode ) {
 				error_log( '[PUNTWORK] [FEEDS-SKIP] get_feeds: No feed_url for post ' . $post_id . ', feed_type: ' . $feed_type );
 			}
@@ -168,16 +147,6 @@ function get_feeds(): array {
 	} elseif ( $debug_mode ) {
 		error_log( '[PUNTWORK] [FEEDS-QUERY] get_feeds: No published job-feed posts found' );
 	}
-
-	// Add configured job boards as additional feeds
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [FEEDS-JOBBOARDS] get_feeds: Adding job board feeds' );
-	}
-	$job_board_feeds = get_job_board_feeds();
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [FEEDS-JOBBOARDS] get_feeds: Job board feeds: ' . json_encode( $job_board_feeds ) );
-	}
-	$feeds = array_merge( $feeds, $job_board_feeds );
 
 	// Cache for 1 hour
 	// CacheManager::set($cache_key, $feeds, CacheManager::GROUP_MAPPINGS, HOUR_IN_SECONDS);
@@ -192,29 +161,6 @@ function get_feeds(): array {
 	}
 
 	return $feeds;
-}
-
-/**
- * Get configured job board feeds.
- *
- * @return array Array of job board feed URLs
- */
-function get_job_board_feeds(): array {
-	$job_board_feeds = array();
-
-	// Include the JobBoardManager
-	include_once plugin_dir_path( __FILE__ ) . '../jobboards/jobboard-manager.php';
-
-	$board_manager     = new \Puntwork\JobBoards\JobBoardManager();
-	$configured_boards = $board_manager->getConfiguredBoards();
-
-	foreach ( $configured_boards as $board_id ) {
-		// Create job board URL for each configured board
-		$job_board_url                               = 'job_board://' . $board_id;
-		$job_board_feeds[ 'job_board_' . $board_id ] = $job_board_url;
-	}
-
-	return $job_board_feeds;
 }
 
 // Clear feeds cache when job-feed post is updated

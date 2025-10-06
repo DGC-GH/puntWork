@@ -134,7 +134,6 @@ DEBUG
      - `SecurityUtils.php`, `PuntWorkLogger.php`, `CacheManager.php`, `AjaxErrorHandler.php`
      - `DynamicRateLimiter.php`, `core-structure-logic.php`, `feed-processor.php`
      - `download-feed.php`, `gzip-file.php`, `combine-jsonl.php`
-     - Jobboard classes: `jobboard.php`, `jobboard-manager.php`, etc.
    - DEBUG
      - debug.log:
        - `[PUNTWORK] [FUNCTION-LOAD] Loading core classes: SecurityUtils, PuntWorkLogger, CacheManager...`

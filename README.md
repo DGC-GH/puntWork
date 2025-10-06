@@ -66,8 +66,7 @@ puntwork/
 │   ├── core/                 # Init, enqueues, core setup
 │   ├── crm/                  # CRM integrations (classes)
 │   ├── database/             # DB operations
-│   ├── import/               # Feed processing, XML/JSON parsing
-│   ├── jobboards/            # Job board integrations
+│   ├── import/            # Import functionality
 │   ├── mappings/             # Data mappings (geographic, salary, etc.)
 │   ├── multisite/            # Multi-site support
 │   ├── queue/                # Queue management

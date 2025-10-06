@@ -24,7 +24,7 @@ This is a WordPress plugin named "puntWork" designed to import job feeds from va
   - `ai/`: 3 files (feed optimizer, ML engine, duplicate detector).
   - `crm/`: 5 files (integrations with HubSpot, Salesforce, etc.).
   - `socialmedia/`: 6 files (Facebook, TikTok, Twitter ads managers/platforms).
-  - Other: `admin/`, `exceptions/`, `jobboards/`, `mappings/`, `queue/`, `reporting/`, `scheduling/`, `timeout-protection.php`.
+  - Other: `admin/`, `exceptions/`, `mappings/`, `queue/`, `reporting/`, `scheduling/`, `timeout-protection.php`.
 
 - **Assets**: `css/`, `js/`, `images/`.
 - **Languages**: `puntwork.pot`.
@@ -42,7 +42,7 @@ This is a WordPress plugin named "puntWork" designed to import job feeds from va
   - `prepare_import_setup()` (import-setup.php): Initializes import (memory raise, feed download, setup).
   - `finalize_batch_import()` (import-finalization.php): Cleans up, posts to social media, purges old jobs.
   - `run_job_import_batch_ajax()` (ajax-import-control.php): AJAX handler for batch import.
-  - `processFeed()`, `processXmlFeed()`, `processJsonFeed()`, `processCsvFeed()`, `processJobBoardFeed()` (`FeedProcessor`): Feed-specific processing.
+  - `processFeed()`, `processXmlFeed()`, `processJsonFeed()`, `processCsvFeed()` (`FeedProcessor`): Feed-specific processing.
   - `continue_paused_import()`, `start_scheduled_import()` (import-batch.php): Resume/schedule imports.
   - `post_new_jobs_to_social_media()`, `cleanup_draft_trash_jobs_after_import()`, `purge_old_jobs_not_in_feeds_after_import()` (import-finalization.php): Post-import actions.
   - Utility: `import_time_exceeded()`, `import_memory_exceeded()` (checks for limits).
