@@ -152,37 +152,45 @@ function finalize_batch_import( $result ) {
 			}
 		}
 
-		// Purge old jobs not present in feeds after successful import (now safe - drafts instead of deletes)
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [FINALIZE-PURGE] Starting safe purge of old jobs not in feeds after import' );
-		}
-		$purge_result = purge_old_jobs_not_in_feeds_after_import();
-		if ( $purge_result['success'] ) {
-			$result['purge_deleted'] = $purge_result['deleted'];
-			$result['purge_duration'] = $purge_result['duration'];
+		// Only run purge operations if memory usage is acceptable (< 600MB)
+		$current_memory_mb = memory_get_usage(true) / 1024 / 1024;
+		if ($current_memory_mb < 600) {
+			// Purge old jobs not present in feeds after successful import (now safe - drafts instead of deletes)
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[PUNTWORK] [FINALIZE-PURGE] Safe purge completed, drafted ' . $purge_result['deleted'] . ' jobs in ' . number_format( $purge_result['duration'], 2 ) . 's' );
+				error_log( '[PUNTWORK] [FINALIZE-PURGE] Starting safe purge of old jobs not in feeds after import' );
 			}
-		} else {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[PUNTWORK] [FINALIZE-PURGE] Safe purge failed: ' . ( $purge_result['error'] ?? 'Unknown error' ) );
+			$purge_result = purge_old_jobs_not_in_feeds_after_import();
+			if ( $purge_result['success'] ) {
+				$result['purge_deleted'] = $purge_result['deleted'];
+				$result['purge_duration'] = $purge_result['duration'];
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( '[PUNTWORK] [FINALIZE-PURGE] Safe purge completed, drafted ' . $purge_result['deleted'] . ' jobs in ' . number_format( $purge_result['duration'], 2 ) . 's' );
+				}
+			} else {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( '[PUNTWORK] [FINALIZE-PURGE] Safe purge failed: ' . ( $purge_result['error'] ?? 'Unknown error' ) );
+				}
 			}
-		}
 
-		// Aggressive cleanup: Delete jobs not in current feed (user requested this)
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [FINALIZE-AGGRESSIVE-CLEANUP] Starting aggressive cleanup of jobs not in current feed' );
-		}
-		$aggressive_cleanup_result = cleanup_jobs_not_in_current_feed();
-		if ( $aggressive_cleanup_result['success'] ) {
-			$result['aggressive_cleanup_deleted'] = $aggressive_cleanup_result['deleted'];
-			$result['aggressive_cleanup_duration'] = $aggressive_cleanup_result['duration'];
+			// Aggressive cleanup: Delete jobs not in current feed (user requested this)
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[PUNTWORK] [FINALIZE-AGGRESSIVE-CLEANUP] Aggressive cleanup completed, deleted ' . $aggressive_cleanup_result['deleted'] . ' jobs in ' . number_format( $aggressive_cleanup_result['duration'], 2 ) . 's' );
+				error_log( '[PUNTWORK] [FINALIZE-AGGRESSIVE-CLEANUP] Starting aggressive cleanup of jobs not in current feed' );
+			}
+			$aggressive_cleanup_result = cleanup_jobs_not_in_current_feed();
+			if ( $aggressive_cleanup_result['success'] ) {
+				$result['aggressive_cleanup_deleted'] = $aggressive_cleanup_result['deleted'];
+				$result['aggressive_cleanup_duration'] = $aggressive_cleanup_result['duration'];
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( '[PUNTWORK] [FINALIZE-AGGRESSIVE-CLEANUP] Aggressive cleanup completed, deleted ' . $aggressive_cleanup_result['deleted'] . ' jobs in ' . number_format( $aggressive_cleanup_result['duration'], 2 ) . 's' );
+				}
+			} else {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( '[PUNTWORK] [FINALIZE-AGGRESSIVE-CLEANUP] Aggressive cleanup failed: ' . ( $aggressive_cleanup_result['error'] ?? 'Unknown error' ) );
+				}
 			}
 		} else {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[PUNTWORK] [FINALIZE-AGGRESSIVE-CLEANUP] Aggressive cleanup failed: ' . ( $aggressive_cleanup_result['error'] ?? 'Unknown error' ) );
+				error_log( '[PUNTWORK] [FINALIZE-SKIP] Skipping purge operations due to high memory usage: ' . number_format( $current_memory_mb, 1 ) . 'MB' );
 			}
 		}
 	} elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -411,94 +419,103 @@ function cleanup_draft_trash_jobs_after_import() {
 	}
 
 	try {
-		// Get batch size limit to prevent timeouts (default 100 jobs per batch)
-		$batch_size_limit = get_option( 'puntwork_cleanup_batch_size', 100 );
+		// Get batch size limit to prevent timeouts (default 50 jobs per batch)
+		$batch_size_limit = get_option( 'puntwork_cleanup_batch_size', 25 ); // Reduced from 50 to 25 for memory safety
 
-		// Get all draft and trash jobs
-		$draft_trash_jobs = $wpdb->get_results(
-			$wpdb->prepare(
-				"
-				SELECT p.ID, p.post_status, p.post_title
-				FROM {$wpdb->posts} p
-				WHERE p.post_type = 'job'
-				AND p.post_status IN ('draft', 'trash')
-				ORDER BY p.ID
-				LIMIT %d
-			",
-				$batch_size_limit
-			)
-		);
+		// Get all draft and trash jobs in batches
+		$offset = 0;
+		$total_processed = 0;
 
-		if ( empty( $draft_trash_jobs ) ) {
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [CLEANUP-AFTER-IMPORT] No draft/trash jobs found to clean up' );
+		while ( true ) {
+			// Memory checkpoint before processing batch
+			if ( function_exists( 'memory_get_usage' ) && memory_get_usage( true ) > 700 * 1024 * 1024 ) { // 700MB - higher threshold
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [CLEANUP-MEMORY] Memory usage high, forcing garbage collection' );
+				}
+				if ( function_exists( 'gc_collect_cycles' ) ) {
+					gc_collect_cycles();
+				}
+				// If still high after GC, break to prevent fatal error
+				if ( memory_get_usage( true ) > 800 * 1024 * 1024 ) { // 800MB
+					if ( $debug_mode ) {
+						error_log( '[PUNTWORK] [CLEANUP-MEMORY] Memory still high after GC, stopping cleanup to prevent fatal error' );
+					}
+					break;
+				}
 			}
-			return array(
-				'success' => true,
-				'deleted' => 0,
-				'logs' => array( 'No draft/trash jobs found to clean up' ),
+
+			$draft_trash_jobs = $wpdb->get_results(
+				$wpdb->prepare(
+					"
+					SELECT p.ID, p.post_status, p.post_title
+					FROM {$wpdb->posts} p
+					WHERE p.post_type = 'job'
+					AND p.post_status IN ('draft', 'trash')
+					ORDER BY p.ID
+					LIMIT %d OFFSET %d
+				",
+					$batch_size_limit,
+					$offset
+				)
 			);
-		}
 
-		// Check if we hit the batch limit - log a warning
-		$total_available = $wpdb->get_var(
-			"
-			SELECT COUNT(*) FROM {$wpdb->posts} p
-			WHERE p.post_type = 'job'
-			AND p.post_status IN ('draft', 'trash')
-		"
-		);
+			if ( empty( $draft_trash_jobs ) ) {
+				break; // No more jobs to process
+			}
 
-		if ( $total_available > $batch_size_limit ) {
 			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [CLEANUP-AFTER-IMPORT] Large cleanup detected: ' . $total_available . ' draft/trash jobs found, processing first ' . $batch_size_limit . ' in this batch' );
+				error_log( '[PUNTWORK] [CLEANUP-AFTER-IMPORT] Processing batch of ' . count( $draft_trash_jobs ) . ' draft/trash jobs (offset: ' . $offset . ')' );
 			}
-			$logs[] = 'Large cleanup: ' . $total_available . ' draft/trash jobs found, processing ' . $batch_size_limit . ' in this batch. Remaining jobs will be cleaned up in subsequent operations.';
-		}
 
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [CLEANUP-AFTER-IMPORT] Processing ' . count( $draft_trash_jobs ) . ' draft/trash jobs (batch size limit: ' . $batch_size_limit . ')' );
-		}
+			// Defer term and comment counting for better performance
+			wp_defer_term_counting( true );
+			wp_defer_comment_counting( true );
 
-		// Defer term and comment counting for better performance
-		wp_defer_term_counting( true );
-		wp_defer_comment_counting( true );
+			foreach ( $draft_trash_jobs as $job ) {
+				$result = job_import_delete_post_efficiently( $job->ID );
+				if ( $result ) {
+					++$deleted_count;
+					$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Permanently deleted ' . $job->post_status . ' job ID: ' . $job->ID . ' - ' . $job->post_title;
+					$logs[] = $log_entry;
 
-		foreach ( $draft_trash_jobs as $job ) {
-			$result = job_import_delete_post_efficiently( $job->ID );
-			if ( $result ) {
-				++$deleted_count;
-				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Permanently deleted ' . $job->post_status . ' job ID: ' . $job->ID . ' - ' . $job->post_title;
-				$logs[] = $log_entry;
+					if ( class_exists( '\\Puntwork\\PuntWorkLogger' ) ) {
+						\Puntwork\PuntWorkLogger::info(
+							'Deleted draft/trash job during import cleanup',
+							\Puntwork\PuntWorkLogger::CONTEXT_PURGE,
+							array(
+								'job_id'      => $job->ID,
+								'post_status' => $job->post_status,
+								'title'       => $job->post_title,
+							)
+						);
+					}
+				} else {
+					$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Error: Failed to delete job ID: ' . $job->ID;
+					$logs[] = $log_entry;
 
-				if ( class_exists( '\\Puntwork\\PuntWorkLogger' ) ) {
-					\Puntwork\PuntWorkLogger::info(
-						'Deleted draft/trash job during import cleanup',
-						\Puntwork\PuntWorkLogger::CONTEXT_PURGE,
-						array(
-							'job_id'      => $job->ID,
-							'post_status' => $job->post_status,
-							'title'       => $job->post_title,
-						)
-					);
-				}
-			} else {
-				$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Error: Failed to delete job ID: ' . $job->ID;
-				$logs[] = $log_entry;
-
-				if ( class_exists( '\\Puntwork\\PuntWorkLogger' ) ) {
-					\Puntwork\PuntWorkLogger::error(
-						'Failed to delete draft/trash job during import cleanup',
-						\Puntwork\PuntWorkLogger::CONTEXT_PURGE,
-						array( 'job_id' => $job->ID )
-					);
+					if ( class_exists( '\\Puntwork\\PuntWorkLogger' ) ) {
+						\Puntwork\PuntWorkLogger::error(
+							'Failed to delete draft/trash job during import cleanup',
+							\Puntwork\PuntWorkLogger::CONTEXT_PURGE,
+							array( 'job_id' => $job->ID )
+						);
+					}
 				}
 			}
-		}
 
-		// Re-enable term and comment counting
-		wp_defer_term_counting( false );
-		wp_defer_comment_counting( false );
+			// Re-enable term and comment counting
+			wp_defer_term_counting( false );
+			wp_defer_comment_counting( false );
+
+			$offset += $batch_size_limit;
+			$total_processed += count( $draft_trash_jobs );
+
+			// Safety check to prevent infinite loops
+			if ( $total_processed > 10000 ) { // Emergency brake
+				error_log( '[PUNTWORK] [CLEANUP-EMERGENCY] Emergency stop: processed ' . $total_processed . ' jobs' );
+				break;
+			}
+		}
 
 		$end_time = microtime( true );
 		$duration = $end_time - $start_time;
@@ -617,88 +634,117 @@ function purge_old_jobs_not_in_feeds_after_import() {
 		$purge_age_seconds = $purge_age_days * 24 * 60 * 60;
 		$cutoff_date = date( 'Y-m-d H:i:s', time() - $purge_age_seconds );
 
-		// Get all published jobs with GUIDs that are older than the threshold
-		$all_jobs = $wpdb->get_results(
-			$wpdb->prepare(
-				"
-				SELECT p.ID, pm.meta_value AS guid, p.post_title, p.post_date
-				FROM {$wpdb->posts} p
-				JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
-				WHERE p.post_type = 'job'
-				AND p.post_status = 'publish'
-				AND p.post_date < %s
-				ORDER BY p.ID
-			",
-				$cutoff_date
-			)
-		);
+		// Process in batches to prevent memory exhaustion
+		$batch_size = 25; // Smaller batches for memory safety (reduced from 50)
+		$offset = 0;
+		$total_processed = 0;
 
-		if ( empty( $all_jobs ) ) {
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [PURGE-AFTER-IMPORT] No published jobs older than ' . $purge_age_days . ' days found to check' );
-			}
-			return array(
-				'success' => true,
-				'deleted' => 0,
-				'logs' => array( 'No jobs older than ' . $purge_age_days . ' days found to check' ),
-			);
-		}
-
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [PURGE-AFTER-IMPORT] Found ' . count( $all_jobs ) . ' published jobs older than ' . $purge_age_days . ' days to check' );
-		}
-
-		// Defer term and comment counting for better performance
-		wp_defer_term_counting( true );
-		wp_defer_comment_counting( true );
-
-		foreach ( $all_jobs as $job ) {
-			if ( ! in_array( $job->guid, $processed_guids ) ) {
-				// SAFETY: Instead of immediate deletion, draft the job first
-				// This allows recovery if the purge was incorrect
-				$draft_result = wp_update_post( array(
-					'ID' => $job->ID,
-					'post_status' => 'draft'
-				) );
-
-				if ( $draft_result ) {
-					++$deleted_count; // Count as "deleted" for compatibility, but it's actually drafted
-					$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'DRAFTED (not deleted) ID: ' . $job->ID . ' GUID: ' . $job->guid . ' - No longer in feed (aged ' . $purge_age_days . '+ days) - ' . $job->post_title;
-					$logs[] = $log_entry;
-
-					if ( class_exists( '\\Puntwork\\PuntWorkLogger' ) ) {
-						\Puntwork\PuntWorkLogger::info(
-							'Drafted old job not in feeds during import cleanup (safe purge)',
-							\Puntwork\PuntWorkLogger::CONTEXT_PURGE,
-							array(
-								'job_id' => $job->ID,
-								'guid'   => $job->guid,
-								'title'  => $job->post_title,
-								'age_days' => $purge_age_days,
-							)
-						);
+		while ( true ) {
+			// Memory checkpoint
+			if ( function_exists( 'memory_get_usage' ) && memory_get_usage( true ) > 700 * 1024 * 1024 ) { // 700MB - higher threshold
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [PURGE-MEMORY] Memory usage high, forcing garbage collection' );
+				}
+				if ( function_exists( 'gc_collect_cycles' ) ) {
+					gc_collect_cycles();
+				}
+				// If still high after GC, break to prevent fatal error
+				if ( memory_get_usage( true ) > 800 * 1024 * 1024 ) { // 800MB
+					if ( $debug_mode ) {
+						error_log( '[PUNTWORK] [PURGE-MEMORY] Memory still high after GC, stopping purge to prevent fatal error' );
 					}
-				} else {
-					$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Failed to draft ID: ' . $job->ID . ' GUID: ' . $job->guid;
-					$logs[] = $log_entry;
+					break;
+				}
+			}
 
-					if ( class_exists( '\\Puntwork\\PuntWorkLogger' ) ) {
-						\Puntwork\PuntWorkLogger::error(
-							'Failed to draft old job during import cleanup',
-							\Puntwork\PuntWorkLogger::CONTEXT_PURGE,
-							array(
-								'job_id' => $job->ID,
-								'guid'   => $job->guid,
-							)
-						);
+			// Get batch of old published jobs
+			$old_jobs = $wpdb->get_results(
+				$wpdb->prepare(
+					"
+					SELECT p.ID, pm.meta_value AS guid, p.post_title, p.post_date
+					FROM {$wpdb->posts} p
+					JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
+					WHERE p.post_type = 'job'
+					AND p.post_status = 'publish'
+					AND p.post_date < %s
+					ORDER BY p.ID
+					LIMIT %d OFFSET %d
+				",
+					$cutoff_date,
+					$batch_size,
+					$offset
+				)
+			);
+
+			if ( empty( $old_jobs ) ) {
+				break; // No more jobs to process
+			}
+
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [PURGE-AFTER-IMPORT] Processing batch of ' . count( $old_jobs ) . ' old jobs (offset: ' . $offset . ')' );
+			}
+
+			// Defer term and comment counting for better performance
+			wp_defer_term_counting( true );
+			wp_defer_comment_counting( true );
+
+			foreach ( $old_jobs as $job ) {
+				if ( ! in_array( $job->guid, $processed_guids ) ) {
+					// SAFETY: Instead of immediate deletion, draft the job first
+					// This allows recovery if the purge was incorrect
+					$draft_result = wp_update_post( array(
+						'ID' => $job->ID,
+						'post_status' => 'draft'
+					) );
+
+					if ( $draft_result ) {
+						++$deleted_count; // Count as "deleted" for compatibility, but it's actually drafted
+						$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'DRAFTED (not deleted) ID: ' . $job->ID . ' GUID: ' . $job->guid . ' - No longer in feed (aged ' . $purge_age_days . '+ days) - ' . $job->post_title;
+						$logs[] = $log_entry;
+
+						if ( class_exists( '\\Puntwork\\PuntWorkLogger' ) ) {
+							\Puntwork\PuntWorkLogger::info(
+								'Drafted old job not in feeds during import cleanup (safe purge)',
+								\Puntwork\PuntWorkLogger::CONTEXT_PURGE,
+								array(
+									'job_id' => $job->ID,
+									'guid'   => $job->guid,
+									'title'  => $job->post_title,
+									'age_days' => $purge_age_days,
+								)
+							);
+						}
+					} else {
+						$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Failed to draft ID: ' . $job->ID . ' GUID: ' . $job->guid;
+						$logs[] = $log_entry;
+
+						if ( class_exists( '\\Puntwork\\PuntWorkLogger' ) ) {
+							\Puntwork\PuntWorkLogger::error(
+								'Failed to draft old job during import cleanup',
+								\Puntwork\PuntWorkLogger::CONTEXT_PURGE,
+								array(
+									'job_id' => $job->ID,
+									'guid'   => $job->guid,
+								)
+							);
+						}
 					}
 				}
 			}
-		}
 
-		// Re-enable term and comment counting
-		wp_defer_term_counting( false );
-		wp_defer_comment_counting( false );
+			// Re-enable term and comment counting
+			wp_defer_term_counting( false );
+			wp_defer_comment_counting( false );
+
+			$offset += $batch_size;
+			$total_processed += count( $old_jobs );
+
+			// Safety check to prevent infinite loops
+			if ( $total_processed > 10000 ) { // Emergency brake
+				error_log( '[PUNTWORK] [PURGE-EMERGENCY] Emergency stop: processed ' . $total_processed . ' jobs' );
+				break;
+			}
+		}
 
 		$end_time = microtime( true );
 		$duration = $end_time - $start_time;
@@ -783,81 +829,112 @@ function cleanup_jobs_not_in_current_feed() {
 			);
 		}
 
-		// Get all published jobs with GUIDs
-		$all_published_jobs = $wpdb->get_results(
-			"
-			SELECT p.ID, pm.meta_value AS guid, p.post_title, p.post_date
-			FROM {$wpdb->posts} p
-			JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
-			WHERE p.post_type = 'job'
-			AND p.post_status = 'publish'
-			ORDER BY p.ID
-			"
-		);
+		// Process in batches to prevent memory exhaustion
+		$batch_size = 25; // Smaller batches for memory safety (reduced from 50)
+		$offset = 0;
+		$total_processed = 0;
 
-		if ( empty( $all_published_jobs ) ) {
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [AGGRESSIVE-CLEANUP] No published jobs found to check' );
-			}
-			return array(
-				'success' => true,
-				'deleted' => 0,
-				'logs' => array( 'No published jobs found to check' ),
-			);
-		}
-
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [AGGRESSIVE-CLEANUP] Found ' . count( $all_published_jobs ) . ' published jobs, checking against ' . count( $processed_guids ) . ' current feed GUIDs' );
-		}
-
-		// Defer term and comment counting for better performance
-		wp_defer_term_counting( true );
-		wp_defer_comment_counting( true );
-
-		foreach ( $all_published_jobs as $job ) {
-			// Check if this job's GUID is in the current feed
-			if ( ! in_array( $job->guid, $processed_guids ) ) {
-				// Job is not in current feed - delete it permanently
-				$delete_result = job_import_delete_post_efficiently( $job->ID );
-
-				if ( $delete_result ) {
-					++$deleted_count;
-					$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'DELETED ID: ' . $job->ID . ' GUID: ' . $job->guid . ' - No longer in current feed - ' . $job->post_title;
-					$logs[] = $log_entry;
-
-					if ( class_exists( '\\Puntwork\\PuntWorkLogger' ) ) {
-						\Puntwork\PuntWorkLogger::info(
-							'Deleted job not in current feed during aggressive cleanup',
-							\Puntwork\PuntWorkLogger::CONTEXT_PURGE,
-							array(
-								'job_id' => $job->ID,
-								'guid'   => $job->guid,
-								'title'  => $job->post_title,
-								'reason' => 'not_in_current_feed',
-							)
-						);
+		while ( true ) {
+			// Memory checkpoint
+			if ( function_exists( 'memory_get_usage' ) && memory_get_usage( true ) > 700 * 1024 * 1024 ) { // 700MB - higher threshold
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [AGGRESSIVE-CLEANUP] Memory usage high, forcing garbage collection' );
+				}
+				if ( function_exists( 'gc_collect_cycles' ) ) {
+					gc_collect_cycles();
+				}
+				// If still high after GC, break to prevent fatal error
+				if ( memory_get_usage( true ) > 800 * 1024 * 1024 ) { // 800MB
+					if ( $debug_mode ) {
+						error_log( '[PUNTWORK] [AGGRESSIVE-CLEANUP] Memory still high after GC, stopping cleanup to prevent fatal error' );
 					}
-				} else {
-					$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Failed to delete ID: ' . $job->ID . ' GUID: ' . $job->guid;
-					$logs[] = $log_entry;
+					break;
+				}
+			}
 
-					if ( class_exists( '\\Puntwork\\PuntWorkLogger' ) ) {
-						\Puntwork\PuntWorkLogger::error(
-							'Failed to delete job during aggressive cleanup',
-							\Puntwork\PuntWorkLogger::CONTEXT_PURGE,
-							array(
-								'job_id' => $job->ID,
-								'guid'   => $job->guid,
-							)
-						);
+			// Get batch of published jobs
+			$published_jobs = $wpdb->get_results(
+				$wpdb->prepare(
+					"
+					SELECT p.ID, pm.meta_value AS guid, p.post_title, p.post_date
+					FROM {$wpdb->posts} p
+					JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
+					WHERE p.post_type = 'job'
+					AND p.post_status = 'publish'
+					ORDER BY p.ID
+					LIMIT %d OFFSET %d
+				",
+					$batch_size,
+					$offset
+				)
+			);
+
+			if ( empty( $published_jobs ) ) {
+				break; // No more jobs to process
+			}
+
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [AGGRESSIVE-CLEANUP] Processing batch of ' . count( $published_jobs ) . ' published jobs (offset: ' . $offset . ')' );
+			}
+
+			// Defer term and comment counting for better performance
+			wp_defer_term_counting( true );
+			wp_defer_comment_counting( true );
+
+			foreach ( $published_jobs as $job ) {
+				// Check if this job's GUID is in the current feed
+				if ( ! in_array( $job->guid, $processed_guids ) ) {
+					// Job is not in current feed - delete it permanently
+					$delete_result = job_import_delete_post_efficiently( $job->ID );
+
+					if ( $delete_result ) {
+						++$deleted_count;
+						$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'DELETED ID: ' . $job->ID . ' GUID: ' . $job->guid . ' - No longer in current feed - ' . $job->post_title;
+						$logs[] = $log_entry;
+
+						if ( class_exists( '\\Puntwork\\PuntWorkLogger' ) ) {
+							\Puntwork\PuntWorkLogger::info(
+								'Deleted job not in current feed during aggressive cleanup',
+								\Puntwork\PuntWorkLogger::CONTEXT_PURGE,
+								array(
+									'job_id' => $job->ID,
+									'guid'   => $job->guid,
+									'title'  => $job->post_title,
+									'reason' => 'not_in_current_feed',
+								)
+							);
+						}
+					} else {
+						$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Failed to delete ID: ' . $job->ID . ' GUID: ' . $job->guid;
+						$logs[] = $log_entry;
+
+						if ( class_exists( '\\Puntwork\\PuntWorkLogger' ) ) {
+							\Puntwork\PuntWorkLogger::error(
+								'Failed to delete job during aggressive cleanup',
+								\Puntwork\PuntWorkLogger::CONTEXT_PURGE,
+								array(
+									'job_id' => $job->ID,
+									'guid'   => $job->guid,
+								)
+							);
+						}
 					}
 				}
 			}
-		}
 
-		// Re-enable term and comment counting
-		wp_defer_term_counting( false );
-		wp_defer_comment_counting( false );
+			// Re-enable term and comment counting
+			wp_defer_term_counting( false );
+			wp_defer_comment_counting( false );
+
+			$offset += $batch_size;
+			$total_processed += count( $published_jobs );
+
+			// Safety check to prevent infinite loops
+			if ( $total_processed > 10000 ) { // Emergency brake
+				error_log( '[PUNTWORK] [AGGRESSIVE-CLEANUP-EMERGENCY] Emergency stop: processed ' . $total_processed . ' jobs' );
+				break;
+			}
+		}
 
 		$end_time = microtime( true );
 		$duration = $end_time - $start_time;

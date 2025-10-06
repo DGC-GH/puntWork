@@ -406,8 +406,8 @@ function job_import_purge_ajax() {
 		$deleted_count = 0;
 		foreach ( $batch_jobs as $job ) {
 			if ( ! in_array( $job->guid, $processed_guids ) ) {
-				// This job is no longer in the feed, delete it
-				$result = wp_delete_post( $job->ID, true ); // true = force delete, skip trash
+				// This job is no longer in the feed, delete it using efficient SQL method
+				$result = job_import_delete_post_efficiently( $job->ID );
 				if ( $result ) {
 					++$deleted_count;
 					$log_entry = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Permanently deleted ID: ' . $job->ID . ' GUID: ' . $job->guid . ' - No longer in feed';

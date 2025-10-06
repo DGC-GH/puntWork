@@ -19,27 +19,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Handles batch processing, cancellation, and status retrieval.
  */
 
-// Explicitly load required utility classes for AJAX context
+// Load only essential utility classes for AJAX context - others loaded on-demand
 require_once __DIR__ . '/../utilities/SecurityUtils.php';
 require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
-require_once __DIR__ . '/../utilities/CacheManager.php';
-require_once __DIR__ . '/../utilities/EnhancedCacheManager.php';
 require_once __DIR__ . '/../utilities/AjaxErrorHandler.php';
-require_once __DIR__ . '/../utilities/DynamicRateLimiter.php';
-require_once __DIR__ . '/../utilities/AdvancedJsonlProcessor.php';
-require_once __DIR__ . '/../utilities/JsonlOptimizer.php';
 require_once __DIR__ . '/../utilities/utility-helpers.php';
-require_once __DIR__ . '/../import/feed-processor.php';  // Load FeedProcessor before core-structure-logic.php
-require_once __DIR__ . '/../core/core-structure-logic.php';
-require_once __DIR__ . '/../import/download-feed.php';
-require_once __DIR__ . '/../utilities/gzip-file.php';
-require_once __DIR__ . '/../import/combine-jsonl.php';
-require_once __DIR__ . '/../jobboards/jobboard.php';
-require_once __DIR__ . '/../jobboards/jobboard-manager.php';
-require_once __DIR__ . '/../jobboards/indeed-board.php';
-require_once __DIR__ . '/../jobboards/linkedin-board.php';
-require_once __DIR__ . '/../jobboards/glassdoor-board.php';
-require_once __DIR__ . '/../utilities/ImportAnalytics.php';  // Load ImportAnalytics to prevent class not found errors
 
 /*
  * AJAX handlers for import control operations
@@ -488,6 +472,11 @@ function get_job_import_status_ajax() {
 	}
 
 	try {
+		// Force garbage collection before processing to free up memory
+		if ( function_exists( 'gc_collect_cycles' ) ) {
+			gc_collect_cycles();
+		}
+		
 		$raw_status = get_option( 'job_import_status' );
 		error_log( '[PUNTWORK] [STATUS-DEBUG] Raw job_import_status from get_option: ' . json_encode( $raw_status ) );
 		
@@ -828,6 +817,11 @@ function get_job_import_status_ajax() {
 
 		PuntWorkLogger::logAjaxResponse( 'get_job_import_status', $log_summary );
 		wp_send_json_success( $progress );
+		
+		// Force garbage collection after processing to free up memory
+		if ( function_exists( 'gc_collect_cycles' ) ) {
+			gc_collect_cycles();
+		}
 	} catch ( \Exception $e ) {
 		PuntWorkLogger::error( 'Get import status error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
 		wp_send_json_error( array( 'message' => 'Failed to get import status: ' . $e->getMessage() ) );
@@ -2091,13 +2085,22 @@ function schedule_feed_processing_ajax() {
 	try {
 		$feed_keys = array_map( 'sanitize_text_field', $_POST['feed_keys'] );
 		
-		// Check if Action Scheduler is available
-		if ( ! function_exists( 'as_schedule_single_action' ) ) {
-			wp_send_json_error( array( 'message' => 'Action Scheduler not available' ) );
-			return;
+		// Check if Action Scheduler is available and working
+		$use_async = function_exists( 'as_schedule_single_action' );
+		if ( $use_async ) {
+			// Test Action Scheduler by trying to schedule a test job
+			$test_job_id = as_schedule_single_action( time() + 300, 'puntwork_test_action_scheduler', array() );
+			if ( $test_job_id ) {
+				// Clean up test job
+				as_unschedule_action( 'puntwork_test_action_scheduler', array() );
+			} else {
+				$use_async = false;
+				error_log( '[PUNTWORK] [SCHEDULE] Action Scheduler test failed, falling back to synchronous processing' );
+			}
 		}
 		
 		$scheduled_jobs = array();
+		$processed_feeds = array();
 		
 		foreach ( $feed_keys as $feed_key ) {
 			// Check if this feed is already being processed
@@ -2107,28 +2110,109 @@ function schedule_feed_processing_ajax() {
 				continue;
 			}
 			
-			// Set lock
-			set_transient( $feed_lock_key, true, 900 ); // 15 minutes
-			
-			// Schedule the feed processing
-			$job_id = as_schedule_single_action( time(), 'puntwork_process_feed', array( $feed_key ) );
-			
-			if ( $job_id ) {
-				$scheduled_jobs[] = array(
-					'feed_key' => $feed_key,
-					'job_id' => $job_id,
-				);
-				error_log( '[PUNTWORK] [SCHEDULE] Scheduled feed processing for ' . $feed_key . ', job ID: ' . $job_id );
+			if ( $use_async ) {
+				// Set lock
+				set_transient( $feed_lock_key, true, 900 ); // 15 minutes
+				
+				// Schedule the feed processing
+				$job_id = as_schedule_single_action( time(), 'puntwork_process_feed', array( $feed_key ) );
+				
+				if ( $job_id ) {
+					$scheduled_jobs[] = array(
+						'feed_key' => $feed_key,
+						'job_id' => $job_id,
+					);
+					error_log( '[PUNTWORK] [SCHEDULE] Scheduled feed processing for ' . $feed_key . ', job ID: ' . $job_id );
+				} else {
+					error_log( '[PUNTWORK] [SCHEDULE-ERROR] Failed to schedule feed processing for ' . $feed_key );
+				}
 			} else {
-				error_log( '[PUNTWORK] [SCHEDULE-ERROR] Failed to schedule feed processing for ' . $feed_key );
+				// Synchronous fallback: process the feed immediately
+				error_log( '[PUNTWORK] [SCHEDULE] Processing feed ' . $feed_key . ' synchronously' );
+				
+				// Set lock
+				set_transient( $feed_lock_key, true, 900 ); // 15 minutes
+				
+				try {
+					// Get feeds and find the URL for this feed key
+					$feeds = get_feeds();
+					if ( ! isset( $feeds[ $feed_key ] ) ) {
+						error_log( '[PUNTWORK] [SCHEDULE-ERROR] Feed not found: ' . $feed_key );
+						continue;
+					}
+
+					$feed_url        = $feeds[ $feed_key ];
+					$output_dir      = puntwork_get_feeds_directory();
+					$fallback_domain = 'belgiumjobs.work';
+
+					// Include feed processor if not already loaded
+					include_once dirname( __DIR__ ) . '/import/feed-processor.php';
+
+					// Increase memory limit and execution time for large feeds
+					ini_set( 'memory_limit', '2048M' );
+					set_time_limit( 900 ); // 15 minutes
+
+					$logs = array();
+					$item_count = process_one_feed( $feed_key, $feed_url, $output_dir, $fallback_domain, $logs );
+					
+					error_log( '[PUNTWORK] [SCHEDULE-SUCCESS] Feed ' . $feed_key . ' processed synchronously, items: ' . $item_count );
+					
+					// Store the result in a transient for the UI to check
+					$feed_result_key = 'puntwork_feed_result_' . $feed_key;
+					set_transient( $feed_result_key, array(
+						'success' => true,
+						'item_count' => $item_count,
+						'logs' => $logs,
+						'processed_at' => time(),
+					), 3600 ); // 1 hour
+					
+					$processed_feeds[] = array(
+						'feed_key' => $feed_key,
+						'item_count' => $item_count,
+					);
+					
+				} catch ( \Exception $e ) {
+					error_log( '[PUNTWORK] [SCHEDULE-EXCEPTION] Exception processing feed ' . $feed_key . ' synchronously: ' . $e->getMessage() );
+					
+					// Store error result
+					$feed_result_key = 'puntwork_feed_result_' . $feed_key;
+					set_transient( $feed_result_key, array(
+						'success' => false,
+						'error' => $e->getMessage(),
+						'processed_at' => time(),
+					), 3600 );
+				} catch ( \Throwable $e ) {
+					error_log( '[PUNTWORK] [SCHEDULE-FATAL] Fatal error processing feed ' . $feed_key . ' synchronously: ' . $e->getMessage() );
+					
+					// Store error result
+					$feed_result_key = 'puntwork_feed_result_' . $feed_key;
+					set_transient( $feed_result_key, array(
+						'success' => false,
+						'error' => $e->getMessage(),
+						'processed_at' => time(),
+					), 3600 );
+				}
 			}
 		}
 		
-		PuntWorkLogger::logAjaxResponse( 'schedule_feed_processing', array( 'scheduled_count' => count( $scheduled_jobs ) ) );
+		$message = '';
+		if ( $use_async ) {
+			$message = 'Feed processing scheduled for ' . count( $scheduled_jobs ) . ' feeds using Action Scheduler';
+		} else {
+			$message = 'Feed processing completed synchronously for ' . count( $processed_feeds ) . ' feeds';
+		}
+		
+		PuntWorkLogger::logAjaxResponse( 'schedule_feed_processing', array( 
+			'scheduled_count' => count( $scheduled_jobs ),
+			'processed_count' => count( $processed_feeds ),
+			'use_async' => $use_async
+		) );
 		
 		wp_send_json_success( array(
-			'message' => 'Feed processing scheduled for ' . count( $scheduled_jobs ) . ' feeds',
+			'message' => $message,
 			'scheduled_jobs' => $scheduled_jobs,
+			'processed_feeds' => $processed_feeds,
+			'use_async' => $use_async,
 		) );
 		
 	} catch ( \Exception $e ) {

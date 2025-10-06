@@ -248,6 +248,14 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 PuntWorkJSLogger.debug('Forced transition to job-importing phase due to total > 0 (' + total + ')', 'UI');
             }
 
+            // CRITICAL FIX: Detect active import and force phase to job-importing
+            // This handles cases where import starts directly without going through feed-processing/jsonl-combining phases
+            if (this.currentPhase === 'idle' && processed > 0 && total > 0 && !data.complete) {
+                console.log('[PUNTWORK] [UI-DEBUG] Active import detected in idle phase, forcing to job-importing: processed=' + processed + ', total=' + total + ', complete=' + data.complete);
+                this.setPhase('job-importing');
+                PuntWorkJSLogger.debug('Forced transition to job-importing phase due to active import in idle state', 'UI');
+            }
+
             // Update success/failure state - only set to true when actually complete
             if (data.success !== null) {
                 // Only set importSuccess to true when the import is actually complete
