@@ -759,6 +759,7 @@ function process_batch_data( array $batch_guids, array $batch_items, array &$log
 	if ( $debug_mode ) {
 		error_log( '[PUNTWORK] [BATCH-DEBUG] Batch change check: ' . ( $batch_change_check['has_changes'] ? 'CHANGES DETECTED' : 'NO CHANGES' ) );
 		error_log( '[PUNTWORK] [BATCH-DEBUG] Batch change details: ' . json_encode( $batch_change_check ) );
+		error_log( '[PUNTWORK] [BATCH-DEBUG] Existing posts count: ' . count( $post_ids_by_guid ) . ', Stored hash exists: ' . ( $batch_change_check['stored_hash'] ? 'YES' : 'NO' ) );
 	}
 
 	// Re-enabled: Batch-level optimization to skip unchanged batches
@@ -768,6 +769,8 @@ function process_batch_data( array $batch_guids, array $batch_items, array &$log
 		$skipped += count( $batch_guids );
 		$logs[]   = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Batch optimization: Skipped entire batch of ' . count( $batch_guids ) . ' items (no changes detected)';
 		error_log( '[PUNTWORK] [BATCH-OPTIMIZATION] Skipped entire batch of ' . count( $batch_guids ) . ' items - no changes detected' );
+		error_log( '[PUNTWORK] [BATCH-OPTIMIZATION] Batch identifier: ' . $batch_change_check['batch_identifier'] );
+		error_log( '[PUNTWORK] [BATCH-OPTIMIZATION] Existing posts: ' . count( $post_ids_by_guid ) . ', Stored hash: ' . ( $batch_change_check['stored_hash'] ? substr( $batch_change_check['stored_hash'], 0, 8 ) . '...' : 'none' ) );
 
 		// Update status immediately when batch is skipped to prevent stuck detection
 		$current_status = get_option( 'job_import_status', array() );
@@ -967,15 +970,31 @@ function queue_batch_items( array $batch_guids, array $batch_items, array $batch
 }
 
 /**
- * Check if an entire batch has changes before processing individual items.
- * This optimization can skip entire batches that haven't changed.
- *
- * @param array $batch_guids     GUIDs in this batch
- * @param array $batch_items     Batch items data
- * @param array $batch_metadata  Prepared batch metadata
- * @param array $post_ids_by_guid Post IDs mapped by GUID
- * @return array Change detection result
+ * Clear all batch hash transients to force fresh import processing.
+ * This is useful for debugging import issues where batches are incorrectly skipped.
  */
+function clear_batch_hash_transients() {
+	global $wpdb;
+
+	if ( ! $wpdb ) {
+		error_log( '[PUNTWORK] [BATCH-CLEAR] Database not available' );
+		return false;
+	}
+
+	// Get all batch hash transients
+	$transients = $wpdb->get_results( "SELECT option_name FROM $wpdb->options WHERE option_name LIKE '%puntwork_batch_hash_%'" );
+
+	$cleared = 0;
+	foreach ( $transients as $transient ) {
+		$transient_name = str_replace( '_transient_', '', $transient->option_name );
+		if ( delete_transient( $transient_name ) ) {
+			$cleared++;
+		}
+	}
+
+	error_log( '[PUNTWORK] [BATCH-CLEAR] Cleared ' . $cleared . ' batch hash transients' );
+	return $cleared;
+}
 function check_batch_for_changes( array $batch_guids, array $batch_items, array $batch_metadata, array $post_ids_by_guid ): array {
 	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
@@ -1031,6 +1050,15 @@ function check_batch_for_changes( array $batch_guids, array $batch_items, array 
 
 	// Check if batch has changed
 	$has_changes = ( $stored_batch_hash !== $current_batch_hash );
+
+	// TEMPORARY DEBUG: Force processing for new imports by checking if any jobs exist for these GUIDs
+	// If no existing posts found for any GUID in the batch, this is a new import and should always process
+	$existing_posts_count = count( $post_ids_by_guid );
+	if ( $existing_posts_count === 0 && $stored_batch_hash === null ) {
+		// This is a fresh import with no existing jobs - force processing
+		$has_changes = true;
+		error_log( '[PUNTWORK] [BATCH-CHANGE-DEBUG] Fresh import detected (0 existing posts, no stored hash) - forcing processing' );
+	}
 
 	// Store current hash for future comparisons (expires in 24 hours)
 	set_transient( $batch_hash_key, $current_batch_hash, 24 * HOUR_IN_SECONDS );

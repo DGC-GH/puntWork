@@ -557,6 +557,14 @@ function prepare_import_setup( $batch_start = 0, $is_batch = false ) {
 		$start_time = microtime( true );
 		\Puntwork\PuntWorkLogger::info( 'Fresh import start - resetting status and progress to 0', \Puntwork\PuntWorkLogger::CONTEXT_BATCH );
 
+		// Clear batch hash transients for fresh import
+		if ( function_exists( 'clear_batch_hash_transients' ) ) {
+			$cleared = clear_batch_hash_transients();
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [SETUP-FRESH] Cleared ' . $cleared . ' batch hash transients for fresh import' );
+			}
+		}
+
 		// Initialize status for manual import
 		$initial_status = array(
 			'total'              => $total,
@@ -592,6 +600,15 @@ function prepare_import_setup( $batch_start = 0, $is_batch = false ) {
 		delete_option( 'job_import_batch_size' );
 		// Reset progress for restart
 		update_option( 'job_import_progress', 0, false );
+
+		// Clear batch hash transients for restart
+		if ( function_exists( 'clear_batch_hash_transients' ) ) {
+			$cleared = clear_batch_hash_transients();
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [SETUP-RESUME] Cleared ' . $cleared . ' batch hash transients for restart' );
+			}
+		}
+
 		// Update existing status for restart
 		$existing_status['processed'] = 0;
 		$existing_status['published'] = 0;

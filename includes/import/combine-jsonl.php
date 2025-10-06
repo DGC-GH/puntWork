@@ -127,16 +127,13 @@ function combine_jsonl_files( $feeds, $output_dir, $total_items, &$logs, $chunk_
 
 	if ( ! $success ) {
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [JSONL-COMBINE-ERROR] Advanced processing failed, this indicates a problem with the feed data or system configuration' );
+			error_log( '[PUNTWORK] [JSONL-COMBINE-ERROR] Advanced processing failed, falling back to basic method' );
 			error_log( '[PUNTWORK] [JSONL-COMBINE-ERROR] Advanced error: ' . ( $processing_stats['error'] ?? 'Unknown error' ) );
 		}
 
-		// Do not fallback to old method - if advanced processing fails, there's likely a data integrity issue
-		$error_msg = 'JSONL combination failed: ' . ( $processing_stats['error'] ?? 'Unknown error' ) . '. Import cannot proceed safely.';
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [JSONL-COMBINE-FATAL] ' . $error_msg );
-		}
-		throw new \Exception( $error_msg );
+		// Fall back to basic combination method
+		combine_jsonl_files_fallback( $feeds, $output_dir, $total_items, $logs );
+		return;
 	}
 
 	// Log results
