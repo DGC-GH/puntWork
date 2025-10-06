@@ -209,52 +209,20 @@ if ( ! isset( $GLOBALS['puntwork_init_hook_added'] ) ) {
 
 if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 	function load_puntwork_includes() {
-		// Prevent multiple include loading with static flag (more reliable than global)
+		// Prevent multiple include loading
 		static $includes_loaded = false;
 		if ( $includes_loaded ) {
 			return;
 		}
 		$includes_loaded = true;
 
-		// Prevent multiple include loading with a global flag
-		if ( isset( $GLOBALS['puntwork_includes_loaded'] ) && $GLOBALS['puntwork_includes_loaded'] ) {
-			return;
-		}
-
-		$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
-
-		// Define request_uri early to prevent undefined variable warnings
-		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
-
-		if ( $debug_mode ) {
-			// error_log( '[PUNTWORK] [INIT-DEBUG] load_puntwork_includes() function called' );
-		}
-
-		if ( $debug_mode ) {
-			// error_log( '[PUNTWORK] [INIT-DEBUG] Loading includes conditionally...' );
-		}
-
 		// Determine context for conditional loading
-		$is_admin    = is_admin();
-		$is_ajax     = defined( 'DOING_AJAX' ) && DOING_AJAX;
-               $is_rest     = false;
-               if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
-                   $is_rest = true;
-               } elseif ( is_string( $request_uri ) && strpos( $request_uri, '/wp-json/' ) !== false ) {
-                   $is_rest = true;
-               }
-		$is_cron     = defined( 'DOING_CRON' ) && DOING_CRON;
-		$is_frontend = ! $is_admin && ! $is_ajax && ! $is_rest && ! $is_cron;
-
-		if ( $debug_mode ) {
-			// error_log( '[PUNTWORK] [INIT-DEBUG] Context check: admin=' . ( $is_admin ? '1' : '0' ) . ', ajax=' . ( $is_ajax ? '1' : '0' ) . ', rest=' . ( $is_rest ? '1' : '0' ) . ', cron=' . ( $is_cron ? '1' : '0' ) );
-			// error_log( '[PUNTWORK] [INIT-DEBUG] Current URL: ' . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : 'unknown' ) );
-			// error_log( '[PUNTWORK] [INIT-DEBUG] is_admin() function available: ' . ( function_exists( 'is_admin' ) ? 'yes' : 'no' ) );
-		}
+		$is_admin = is_admin();
+		$is_ajax  = defined( 'DOING_AJAX' ) && DOING_AJAX;
+		$is_cron  = defined( 'DOING_CRON' ) && DOING_CRON;
 
 		// Always load core functionality
 		$includes = array(
-			// Core functionality (always needed)
 			'core/core-structure-logic.php',
 			'core/enqueue-scripts-js.php',
 			'utilities/CacheManager.php',
@@ -266,413 +234,185 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 			'utilities/feeds-path-utils.php',
 		);
 
-		// Social Media includes (load on admin or cron) - moved before admin includes
-		if ( $is_admin || $is_cron ) {
-			$includes = array_merge(
-				$includes,
-				array(
-					'socialmedia/social-media-platform.php',
-					'socialmedia/twitter-platform.php',
-					'socialmedia/twitter-ads-manager.php',
-					'socialmedia/facebook-platform.php',
-					'socialmedia/facebook-ads-manager.php',
-					'socialmedia/tiktok-platform.php',
-					'socialmedia/tiktok-ads-manager.php',
-					'socialmedia/social-media-manager.php',
-					'database/social-media-db.php',
-				)
-			);
-		}
-
 		// Admin-only includes
 		if ( $is_admin ) {
-			if ( $debug_mode ) {
-				// error_log( '[PUNTWORK] [INIT-DEBUG] Loading admin includes...' );
-			}
-			$includes = array_merge(
-				$includes,
-				array(
-					'admin/admin-menu.php',
-					'admin/admin-page-html.php',
-					'admin/admin-ui-debug.php',
-					'admin/admin-ui-main.php',
-					'admin/admin-ui-scheduling.php',
-					'admin/admin-api-settings.php',
-					'admin/admin-ui-feed-health.php',
-					'admin/admin-ui-analytics.php',
-					'admin/admin-ui-performance.php',
-					'admin/admin-ui-monitoring.php',
-					'admin/admin-ajax-monitoring.php',
-					'admin/admin-feed-config.php',
-					'admin/admin-modern-styles.php',
-					'admin/onboarding-wizard.php',
-					'admin/social-media-admin.php',
-					'admin/social-media-test.php',
-					'admin/crm-admin.php',
-				)
-			);
+			$includes = array_merge( $includes, array(
+				'admin/admin-menu.php',
+				'admin/admin-page-html.php',
+				'admin/admin-ui-debug.php',
+				'admin/admin-ui-main.php',
+				'admin/admin-ui-scheduling.php',
+				'admin/admin-api-settings.php',
+				'admin/admin-ui-feed-health.php',
+				'admin/admin-ui-analytics.php',
+				'admin/admin-ui-performance.php',
+				'admin/admin-ui-monitoring.php',
+				'admin/admin-ajax-monitoring.php',
+				'admin/admin-feed-config.php',
+				'admin/admin-modern-styles.php',
+				'admin/onboarding-wizard.php',
+				'admin/social-media-admin.php',
+				'admin/social-media-test.php',
+				'admin/crm-admin.php',
+				'socialmedia/social-media-platform.php',
+				'socialmedia/twitter-platform.php',
+				'socialmedia/twitter-ads-manager.php',
+				'socialmedia/facebook-platform.php',
+				'socialmedia/facebook-ads-manager.php',
+				'socialmedia/tiktok-platform.php',
+				'socialmedia/tiktok-ads-manager.php',
+				'socialmedia/social-media-manager.php',
+				'database/social-media-db.php',
+				'crm/crm-integration.php',
+				'crm/hubspot-integration.php',
+				'crm/salesforce-integration.php',
+				'crm/zoho-integration.php',
+				'crm/pipedrive-integration.php',
+				'crm/crm-manager.php',
+				'database/crm-db.php',
+				'mappings/mappings-constants.php',
+				'mappings/mappings-fields.php',
+				'mappings/mappings-geographic.php',
+				'mappings/mappings-icons.php',
+				'mappings/mappings-salary.php',
+				'mappings/mappings-schema.php',
+				'scheduling/scheduling-ajax.php',
+				'scheduling/scheduling-core.php',
+				'scheduling/scheduling-history.php',
+				'scheduling/scheduling-triggers.php',
+				'scheduling/test-scheduling.php',
+			) );
 		}
 
-		// CRM includes (load on admin)
-		if ( $is_admin ) {
-			$includes = array_merge(
-				$includes,
-				array(
-					'crm/crm-integration.php',
-					'crm/hubspot-integration.php',
-					'crm/salesforce-integration.php',
-					'crm/zoho-integration.php',
-					'crm/pipedrive-integration.php',
-					'crm/crm-manager.php',
-					'database/crm-db.php',
-				)
-			);
-		}
-
-		// API/AJAX includes (load on AJAX, REST, or admin)
-		if ( $is_ajax || $is_rest || $is_admin ) {
-			$includes = array_merge(
-				$includes,
-				array(
-					'api/ajax-feed-processing.php',
-					'api/ajax-handlers.php',
-					'api/ajax-import-control.php',
-					'api/ajax-purge.php',
-					'api/ajax-db-optimization.php',
-					'api/ajax-feed-health.php',
-					'api/rest-api.php',
-				)
-			);
-		}
-
-		// SSE endpoint (always load since REST_REQUEST may not be set during init)
-		$includes = array_merge(
-			$includes,
-			array(
+		// AJAX/REST includes
+		if ( $is_ajax ) {
+			$includes = array_merge( $includes, array(
+				'api/ajax-feed-processing.php',
+				'api/ajax-handlers.php',
+				'api/ajax-import-control.php',
+				'api/ajax-purge.php',
+				'api/ajax-db-optimization.php',
+				'api/ajax-feed-health.php',
+				'api/rest-api.php',
 				'api/sse-import-progress.php',
-			)
-		);
+				'queue/queue-manager.php',
+				'queue/queue-ajax.php',
+			) );
+		}
 
-		// Batch/Import includes (load on AJAX, cron, or when explicitly needed)
-		// BUT exclude lightweight status polling requests to prevent memory bloat
-		$exclude_status_actions = array(
-			'get_import_status',
-			'get_job_import_status',
-			'get_async_status',
-			'get_feed_processing_status',
-			'check_import_data_status',
-			'get_rate_limit_status',
-			'get_dynamic_rate_status',
-			'get_api_key'
-		);
-		
+		// Import/batch processing includes (load on AJAX, cron, or explicit import requests)
 		$current_action = isset( $_REQUEST['action'] ) ? $_REQUEST['action'] : '';
-		$is_status_polling = in_array( $current_action, $exclude_status_actions );
-		
-		if ( ( $is_ajax && ! $is_status_polling ) || $is_cron || isset( $_REQUEST['puntwork_import'] ) || ( isset( $_REQUEST['action'] ) && strpos( $_REQUEST['action'], 'puntwork' ) === 0 && ! $is_status_polling ) ) {
-			$includes = array_merge(
-				$includes,
-				array(
-					'utilities/ErrorHandler.php',
-					'batch/batch-core.php',
-					'batch/batch-data.php',
-					'batch/batch-loading.php',
-					'batch/batch-processing.php',
-					'batch/batch-duplicates.php',
-					'batch/batch-metadata.php',
-					'batch/batch-size-management.php',
-					'batch/batch-utils.php',
-					'utilities/async-processing.php',
-					'batch/batch-processing-core.php',
-					'import/combine-jsonl.php',
-					'import/download-feed.php',
-					'import/parallel-feed-downloader.php',
-					'import/import-batch.php',
-					'import/import-finalization.php',
-					'import/import-setup.php',
-					'import/process-batch-items.php',
-					'import/process-xml-batch.php',
-					'utilities/JobDeduplicator.php',
-					'utilities/EnhancedCacheManager.php',
-					'utilities/AdaptiveResourceManager.php',
-					'utilities/BatchPrioritizer.php',
-					'utilities/AdvancedJsonlProcessor.php',
-					'utilities/IterativeLearner.php',
-					'utilities/MemoryManager.php',
-					'utilities/item-cleaning.php',
-					'utilities/gzip-file.php',
-					'utilities/ImportAnalytics.php',
-					'utilities/FeedHealthMonitor.php',
-					'utilities/heartbeat-control.php',
-					'utilities/PuntworkTracing.php',
-					'utilities/AjaxErrorHandler.php',
-					'utilities/item-inference.php',
-					'utilities/handle-duplicates.php',
-				)
-			);
+		$is_import_request = isset( $_REQUEST['puntwork_import'] ) ||
+		                    ( strpos( $current_action, 'puntwork' ) === 0 );
+
+		if ( $is_ajax && $is_import_request || $is_cron ) {
+			$includes = array_merge( $includes, array(
+				'utilities/ErrorHandler.php',
+				'batch/batch-core.php',
+				'batch/batch-data.php',
+				'batch/batch-loading.php',
+				'batch/batch-processing.php',
+				'batch/batch-duplicates.php',
+				'batch/batch-metadata.php',
+				'batch/batch-size-management.php',
+				'batch/batch-utils.php',
+				'utilities/async-processing.php',
+				'batch/batch-processing-core.php',
+				'import/combine-jsonl.php',
+				'import/download-feed.php',
+				'import/parallel-feed-downloader.php',
+				'import/import-batch.php',
+				'import/import-finalization.php',
+				'import/import-setup.php',
+				'import/process-batch-items.php',
+				'import/process-xml-batch.php',
+				'utilities/JobDeduplicator.php',
+				'utilities/EnhancedCacheManager.php',
+				'utilities/AdaptiveResourceManager.php',
+				'utilities/BatchPrioritizer.php',
+				'utilities/AdvancedJsonlProcessor.php',
+				'utilities/IterativeLearner.php',
+				'utilities/MemoryManager.php',
+				'utilities/item-cleaning.php',
+				'utilities/gzip-file.php',
+				'utilities/ImportAnalytics.php',
+				'utilities/FeedHealthMonitor.php',
+				'utilities/heartbeat-control.php',
+				'utilities/PuntworkTracing.php',
+				'utilities/AjaxErrorHandler.php',
+				'utilities/item-inference.php',
+				'utilities/handle-duplicates.php',
+			) );
 		}
 
-		// Queue includes (load on AJAX or cron)
-		if ( $is_ajax || $is_cron ) {
-			$includes = array_merge(
-				$includes,
-				array(
-					'queue/queue-manager.php',
-					'queue/queue-ajax.php',
-				)
-			);
-		}
-
-		// Mapping includes (load on admin or import operations)
-		// BUT exclude lightweight status polling requests
-		if ( $is_admin || ( $is_ajax && ! $is_status_polling ) || isset( $_REQUEST['puntwork_import'] ) ) {
-			$includes = array_merge(
-				$includes,
-				array(
-					'mappings/mappings-constants.php',
-					'mappings/mappings-fields.php',
-					'mappings/mappings-geographic.php',
-					'mappings/mappings-icons.php',
-					'mappings/mappings-salary.php',
-					'mappings/mappings-schema.php',
-				)
-			);
-		}
-
-		// Scheduling includes (load on admin, cron, or AJAX)
-		// BUT exclude lightweight status polling requests
-		if ( $is_admin || $is_cron || ( $is_ajax && ! $is_status_polling ) ) {
-			$includes = array_merge(
-				$includes,
-				array(
-					'scheduling/scheduling-ajax.php',
-					'scheduling/scheduling-core.php',
-					'scheduling/scheduling-history.php',
-					'scheduling/scheduling-triggers.php',
-					'scheduling/test-scheduling.php',
-				)
-			);
-		}
-
-		$loaded_count = 0;
-		$failed_count = 0;
+		// Load includes
 		foreach ( $includes as $include ) {
 			$file = PUNTWORK_PATH . 'includes/' . $include;
 			if ( file_exists( $file ) ) {
 				include_once $file;
-				++$loaded_count;
-				if ( $debug_mode && $loaded_count % 10 == 0 ) {
-					// error_log( '[PUNTWORK] [INIT-DEBUG] Loaded ' . $loaded_count . ' includes so far...' );
-				}
-			} else {
-				++$failed_count;
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [INIT-WARN] Include file not found: ' . $file );
-				}
 			}
 		}
-
-		if ( $debug_mode ) {
-			// error_log( '[PUNTWORK] [INIT-DEBUG] Conditional include loading complete: ' . $loaded_count . ' loaded, ' . $failed_count . ' failed' );
-			// error_log( '[PUNTWORK] [INIT-DEBUG] Context: admin=' . ( $is_admin ? '1' : '0' ) . ', ajax=' . ( $is_ajax ? '1' : '0' ) . ', rest=' . ( $is_rest ? '1' : '0' ) . ', cron=' . ( $is_cron ? '1' : '0' ) );
-		}
-
-		$GLOBALS['puntwork_includes_loaded'] = true;
 	}
 }
 
 if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 	function setup_job_import() {
-		// Prevent multiple initialization with static flag
+		// Prevent multiple initialization
 		static $setup_completed = false;
 		if ( $setup_completed ) {
 			return;
 		}
 
-		// Skip initialization on AJAX requests to prevent duplicate loading
+		// Skip initialization on AJAX/REST requests
 		if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				// error_log( '[PUNTWORK] [INIT-SKIP] Skipping initialization on AJAX request' );
-			}
-
 			return;
 		}
 
-		// Skip initialization on REST API requests to prevent duplicate loading
 		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
-		if ( ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || ( is_string( $request_uri ) && strpos( $request_uri, '/wp-json/' ) !== false ) ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				// error_log( '[PUNTWORK] [INIT-SKIP] Skipping initialization on REST API request: ' . $request_uri );
-			}
+		if ( ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ||
+		     ( strpos( $request_uri, '/wp-json/' ) !== false ) ) {
 			return;
 		}
 
-		// Prevent multiple initialization across requests using WordPress option
+		// Prevent multiple initialization across requests
 		$init_option_key = 'puntwork_setup_done';
-		$setup_done      = get_option( $init_option_key, false );
-		// if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-		// 	error_log( '[PUNTWORK] [OPTION-DEBUG] Key: ' . $init_option_key . ', Value: ' . var_export( $setup_done, true ) . ', Type: ' . gettype( $setup_done ) );
-		// }
-		if ( $setup_done ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				// error_log( '[PUNTWORK] [INIT-SKIP] Setup already completed globally, skipping...' );
-			}
-
+		if ( get_option( $init_option_key, false ) ) {
 			return;
 		}
+
 		$setup_completed = true;
 		update_option( $init_option_key, true );
-		// error_log( '[PUNTWORK] [OPTION-DEBUG] Set option for key: ' . $init_option_key );
 
-		// Increase memory limit to prevent exhaustion
-		ini_set( 'memory_limit', '1024M' );
-
-		$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
-
-		if ( $debug_mode ) {
-			// error_log( '[PUNTWORK] [INIT-START] ===== SETUP_JOB_IMPORT START =====' );
-			// error_log( '[PUNTWORK] [INIT-DEBUG] WordPress version: ' . get_bloginfo( 'version' ) );
-			// error_log( '[PUNTWORK] [INIT-DEBUG] PHP version: ' . PHP_VERSION );
-			// error_log( '[PUNTWORK] [INIT-DEBUG] Memory limit: ' . ini_get( 'memory_limit' ) );
-			// error_log( '[PUNTWORK] [INIT-DEBUG] Max execution time: ' . ini_get( 'max_execution_time' ) );
-			// error_log( '[PUNTWORK] [INIT-DEBUG] ABSPATH: ' . ABSPATH );
-			// error_log( '[PUNTWORK] [INIT-DEBUG] Plugin path: ' . PUNTWORK_PATH );
-		}
-
-		// Test database connection
-		global $wpdb;
-		if ( $debug_mode ) {
-			// error_log( '[PUNTWORK] [INIT-DEBUG] Testing database connection...' );
-		}
-
-		// Use comprehensive database connection test
-		if ( function_exists( __NAMESPACE__ . '\\test_database_connection' ) ) {
-			$db_test_results = call_user_func( __NAMESPACE__ . '\\test_database_connection' );
-			if ( ! $db_test_results['connected'] ) {
-				error_log( '[PUNTWORK] [INIT-ERROR] Database connection test FAILED' );
-				error_log( '[PUNTWORK] [INIT-ERROR] Connection details: ' . json_encode( $db_test_results ) );
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [INIT-ERROR] Database connection issues detected - this will cause AJAX failures' );
-				}
-			} elseif ( $debug_mode ) {
-					// error_log( '[PUNTWORK] [INIT-DEBUG] Database connection test PASSED' );
-			}
-		} else {
-			// Fallback to simple test
-			try {
-				$test_query = $wpdb->get_var( 'SELECT 1' );
-				if ( $debug_mode ) {
-					// error_log( '[PUNTWORK] [INIT-DEBUG] Database connection test successful' );
-				}
-			} catch ( \Exception $e ) {
-				error_log( '[PUNTWORK] [INIT-ERROR] Database connection test failed: ' . $e->getMessage() );
-				if ( $debug_mode ) {
-					error_log(
-						'[PUNTWORK] [INIT-ERROR] Database error details: ' . json_encode(
-							array(
-								'host'  => DB_HOST,
-								'name'  => DB_NAME,
-								'user'  => DB_USER,
-								'error' => $e->getMessage(),
-							)
-						)
-					);
-				}
-			}
-		}
-
-		// Global batch limit (from old 1)
-		global $job_import_batch_limit;
-		$job_import_batch_limit = 500;
-
-		if ( $debug_mode ) {
-			// error_log( '[PUNTWORK] [INIT-DEBUG] Loading text domain...' );
-		}
-
-		// Load text domain for internationalization
+		// Load text domain
 		load_plugin_textdomain( 'puntwork', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 
-		if ( $debug_mode ) {
-			// error_log( '[PUNTWORK] [INIT-DEBUG] Initializing scheduling...' );
-		}
-		// Initialize scheduling
+		// Initialize core systems
 		if ( function_exists( __NAMESPACE__ . '\\init_scheduling' ) ) {
 			call_user_func( __NAMESPACE__ . '\\init_scheduling' );
 		}
 
-		if ( $debug_mode ) {
-			// error_log( '[PUNTWORK] [INIT-DEBUG] Initializing async processing...' );
-		}
-		// Initialize async processing
 		if ( function_exists( __NAMESPACE__ . '\\init_async_processing' ) ) {
 			call_user_func( __NAMESPACE__ . '\\init_async_processing' );
 		}
 
-		if ( $debug_mode ) {
-			// error_log( '[PUNTWORK] [INIT-DEBUG] Initializing feed health monitoring...' );
-		}
-		// Initialize feed health monitoring
 		if ( class_exists( __NAMESPACE__ . '\\FeedHealthMonitor' ) ) {
 			call_user_func( array( __NAMESPACE__ . '\\FeedHealthMonitor', 'init' ) );
 		}
 
-		// Ensure database indexes exist (call during setup, not just activation)
 		if ( function_exists( __NAMESPACE__ . '\\create_database_indexes' ) ) {
 			call_user_func( __NAMESPACE__ . '\\create_database_indexes' );
 		}
 
-		// Ensure performance logs table exists (call during setup, not just activation)
 		if ( function_exists( __NAMESPACE__ . '\\create_performance_logs_table' ) ) {
 			call_user_func( __NAMESPACE__ . '\\create_performance_logs_table' );
 		}
 
-		// Ensure API key exists for SSE and REST API authentication
 		if ( function_exists( __NAMESPACE__ . '\\get_or_create_api_key' ) ) {
 			call_user_func( __NAMESPACE__ . '\\get_or_create_api_key' );
 		}
 
-		if ( $debug_mode ) {
-			// error_log( '[PUNTWORK] [INIT-DEBUG] Initializing import analytics...' );
-		}
-		// Initialize import analytics
 		if ( class_exists( __NAMESPACE__ . '\\ImportAnalytics' ) ) {
 			call_user_func( array( __NAMESPACE__ . '\\ImportAnalytics', 'init' ) );
-		}
-
-		if ( $debug_mode ) {
-			// error_log( '[PUNTWORK] [INIT-DEBUG] Initializing social media functionality...' );
-		}
-		// Initialize social media functionality
-		if ( class_exists( __NAMESPACE__ . '\\PuntworkSocialMediaAdmin' ) ) {
-			// Admin interface is initialized in the class constructor
-		}
-
-		if ( $debug_mode ) {
-			// error_log( '[PUNTWORK] [INIT-DEBUG] Initializing GraphQL API...' );
-		}
-		// Initialize GraphQL API
-		if ( class_exists( __NAMESPACE__ . '\\API\\GraphQLAPI' ) ) {
-			call_user_func( array( __NAMESPACE__ . '\\API\\GraphQLAPI', 'init' ) );
-		}
-
-		if ( $debug_mode ) {
-			// error_log( '[PUNTWORK] [INIT-DEBUG] Initializing Webhook Manager...' );
-		}
-		// Initialize Webhook Manager
-		if ( class_exists( __NAMESPACE__ . '\\API\\WebhookManager' ) ) {
-			call_user_func( array( __NAMESPACE__ . '\\API\\WebhookManager', 'init' ) );
-		}
-
-			if ( $debug_mode ) {
-			// error_log( '[PUNTWORK] [INIT-DEBUG] Initializing Feed Optimizer...' );
-		}
-		// Initialize Feed Optimizer
-		if ( class_exists( __NAMESPACE__ . '\\AI\\FeedOptimizer' ) ) {
-			call_user_func( array( __NAMESPACE__ . '\\AI\\FeedOptimizer', 'init' ) );
-		}
-
-		if ( $debug_mode ) {
-			// error_log( '[PUNTWORK] [INIT-END] ===== SETUP_JOB_IMPORT COMPLETED =====' );
 		}
 	}
 }

@@ -158,91 +158,10 @@ if ( ! function_exists( 'import_jobs_from_json' ) ) {
 	function import_jobs_from_json( bool $is_batch = false, int $batch_start = 0 ): array {
 		$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
-		// Define import lock key
-		$import_lock_key = 'puntwork_import_lock';
-
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [IMPORT-ENTRY] ===== IMPORT_JOBS_FROM_JSON ENTRY POINT =====' );
-			error_log( '[PUNTWORK] [IMPORT-ENTRY] import_jobs_from_json ENTRY POINT - is_batch=' . ( $is_batch ? 'true' : 'false' ) . ', batch_start=' . $batch_start );
-			error_log( '[PUNTWORK] [IMPORT-ENTRY] Memory usage at start: ' . memory_get_usage( true ) . ' bytes' );
-			error_log( '[PUNTWORK] [IMPORT-ENTRY] Peak memory usage: ' . memory_get_peak_usage( true ) . ' bytes' );
-			error_log( '[PUNTWORK] [IMPORT-ENTRY] PHP version: ' . PHP_VERSION );
-			error_log( '[PUNTWORK] [IMPORT-ENTRY] WordPress version: ' . get_bloginfo( 'version' ) );
-			error_log( '[PUNTWORK] [IMPORT-ENTRY] Current user: ' . get_current_user_id() );
-			error_log( '[PUNTWORK] [IMPORT-ENTRY] Server: ' . $_SERVER['SERVER_SOFTWARE'] ?? 'unknown' );
-			error_log( '[PUNTWORK] [IMPORT-ENTRY] Request method: ' . $_SERVER['REQUEST_METHOD'] ?? 'unknown' );
-			error_log( '[PUNTWORK] [IMPORT-ENTRY] Timestamp: ' . date( 'Y-m-d H:i:s T' ) );
-		}
-
 		try {
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [IMPORT-START] Starting import_jobs_from_json with is_batch=' . ( $is_batch ? 'true' : 'false' ) . ', batch_start=' . $batch_start );
-			}
-
-			// Check for concurrent import lock with recovery
-			$result = \Puntwork\ErrorHandler::executeWithRecovery(
-				'import_lock_check',
-				function() use ( $import_lock_key, $debug_mode, $is_batch ) {
-					// Skip lock check for batch processing (lock already set by caller)
-					if ( $is_batch ) {
-						if ( $debug_mode ) {
-							error_log( '[PUNTWORK] [IMPORT-LOCK] Skipping lock check for batch processing' );
-						}
-						return true;
-					}
-
-					if ( get_transient( $import_lock_key ) ) {
-						if ( $debug_mode ) {
-							error_log( '[PUNTWORK] [IMPORT-LOCK] Import lock detected: ' . $import_lock_key );
-						}
-
-						// Check if the lock is stale (import status shows complete or last update > 30 minutes ago)
-						$import_status = get_option( 'job_import_status', array() );
-						if ( $debug_mode ) {
-							error_log( '[PUNTWORK] [IMPORT-LOCK] Current import status: ' . json_encode( $import_status ) );
-						}
-						$is_stale = false;
-
-						if ( ! empty( $import_status ) ) {
-							$last_update       = $import_status['last_update'] ?? 0;
-							$is_complete       = $import_status['complete'] ?? false;
-							$time_since_update = time() - $last_update;
-							if ( $debug_mode ) {
-								error_log( '[PUNTWORK] [IMPORT-LOCK] Lock check: last_update=' . $last_update . ', is_complete=' . ( $is_complete ? 'true' : 'false' ) . ', time_since_update=' . $time_since_update . 's' );
-							}
-
-							if ( $is_complete || $time_since_update > 1800 ) { // 30 minutes
-								$is_stale = true;
-								delete_transient( $import_lock_key );
-								if ( $debug_mode ) {
-									error_log( '[PUNTWORK] [IMPORT-LOCK] Cleared stale import lock (complete: ' . ( $is_complete ? 'yes' : 'no' ) . ', time since update: ' . $time_since_update . 's)' );
-								}
-							}
-						} else {
-							if ( $debug_mode ) {
-								error_log( '[PUNTWORK] [IMPORT-LOCK] No import status found, considering lock stale' );
-							}
-							$is_stale = true;
-							delete_transient( $import_lock_key );
-						}
-
-						if ( ! $is_stale ) {
-							throw new \Puntwork\Exceptions\ImportException( 'Import already running - concurrent imports not allowed' );
-						}
-					}
-
-					// Set import lock
-					set_transient( $import_lock_key, true, 1200 ); // 20 minutes timeout
-					if ( $debug_mode ) {
-						error_log( '[PUNTWORK] [IMPORT-LOCK] Import lock set successfully' );
-					}
-
-					return true;
-				},
-				array( 'lock_key' => $import_lock_key )
-			);
-
-			if ( ! $result ) {
+			// Check for concurrent import lock
+			$import_lock_key = 'puntwork_import_lock';
+			if ( ! $is_batch && get_transient( $import_lock_key ) ) {
 				return array(
 					'success' => false,
 					'message' => 'Import already running',
@@ -250,229 +169,39 @@ if ( ! function_exists( 'import_jobs_from_json' ) ) {
 				);
 			}
 
-			// Execute import setup with error recovery
-			$setup = \Puntwork\ErrorHandler::executeWithRecovery(
-				'import_setup',
-				function() use ( $batch_start, $debug_mode, $is_batch ) {
-					if ( $debug_mode ) {
-						error_log( '[PUNTWORK] [IMPORT-SETUP] Calling prepare_import_setup...' );
-					}
-
-					$setup = prepare_import_setup( $batch_start, $is_batch );
-					if ( $debug_mode ) {
-						error_log( '[PUNTWORK] [IMPORT-SETUP] prepare_import_setup returned: ' . json_encode( $setup ) );
-						error_log( '[PUNTWORK] [IMPORT-SETUP] isset(setup[success]) = ' . ( isset( $setup['success'] ) ? 'true' : 'false' ) );
-					}
-
-					// Add setup completion log
-					error_log( '[PUNTWORK] [SETUP-COMPLETE] Setup completed - Feeds: ' . ( $setup['feed_count'] ?? 'unknown' ) . ', Batch size: ' . ( $setup['batch_size'] ?? 'unknown' ) . ', GUID cache: initialized' );
-
-					if ( is_wp_error( $setup ) ) {
-						throw new \Puntwork\Exceptions\ImportException( 'Setup failed: ' . $setup->get_error_message() );
-					}
-
-					return $setup;
-				},
-				array( 'batch_start' => $batch_start )
-			);
-
-			if ( ! $setup ) {
-				return array(
-					'success' => false,
-					'message' => 'Import setup failed',
-					'logs'    => array( 'Setup failed with unrecoverable error' ),
-				);
+			// Set import lock
+			if ( ! $is_batch ) {
+				set_transient( $import_lock_key, true, 1200 );
 			}
 
-			// Check for critical setup failures that should stop the import
+			// Setup import
+			$setup = prepare_import_setup( $batch_start, $is_batch );
 			if ( isset( $setup['success'] ) && $setup['success'] === false ) {
-				$error_message = $setup['message'] ?? 'Import setup failed with unknown error';
-				$error_logs = $setup['logs'] ?? array( 'Critical setup failure' );
-
-				// Log the critical failure
-				error_log( '[PUNTWORK] [IMPORT-CRITICAL-FAILURE] Import stopped due to critical setup failure: ' . $error_message );
-				\Puntwork\PuntWorkLogger::error(
-					'Import stopped due to critical setup failure',
-					\Puntwork\PuntWorkLogger::CONTEXT_IMPORT,
-					array(
-						'error_message' => $error_message,
-						'error_logs' => $error_logs,
-						'batch_start' => $batch_start,
-						'is_batch' => $is_batch
-					)
-				);
-
-				// Update import status to reflect the critical failure
-				$current_status = get_option( 'job_import_status', array() );
-				$current_status['success'] = false;
-				$current_status['complete'] = true; // Mark as complete since we can't proceed
-				$current_status['error_message'] = $error_message;
-				$current_status['last_update'] = time();
-				$current_status['logs'] = array_merge( $current_status['logs'] ?? array(), $error_logs );
-				update_option( 'job_import_status', $current_status, false );
-
-				// Flush cache for real-time status updates
-				if ( function_exists( 'wp_cache_flush' ) ) {
-					wp_cache_flush();
-				}
-
 				return array(
 					'success' => false,
-					'message' => $error_message,
-					'logs'    => $error_logs,
+					'message' => $setup['message'] ?? 'Import setup failed',
+					'logs'    => $setup['logs'] ?? array( 'Setup failed' ),
 				);
 			}
 
-			// Execute batch processing with error recovery
-			$result = \Puntwork\ErrorHandler::executeWithRecovery(
-				'batch_processing',
-				function() use ( $setup, $debug_mode ) {
-					if ( $debug_mode ) {
-						error_log( '[PUNTWORK] [IMPORT-PROCESS] Setup successful, calling process_batch_items_logic...' );
-					}
-					$result = process_batch_items_logic( $setup );
-					if ( $debug_mode ) {
-						error_log( '[PUNTWORK] [IMPORT-PROCESS] process_batch_items_logic completed, success=' . ( isset( $result['success'] ) ? $result['success'] : 'not set' ) );
-						error_log(
-							'[PUNTWORK] [IMPORT-PROCESS] process_batch_items_logic result summary: ' . json_encode(
-								array(
-									'success'    => $result['success'] ?? false,
-									'processed'  => $result['processed'] ?? 0,
-									'total'      => $result['total'] ?? 0,
-									'published'  => $result['published'] ?? 0,
-									'updated'    => $result['updated'] ?? 0,
-									'skipped'    => $result['skipped'] ?? 0,
-									'complete'   => $result['complete'] ?? false,
-									'logs_count' => isset( $result['logs'] ) ? count( $result['logs'] ) : 0,
-								)
-							)
-						);
-					}
-					return $result;
-				},
-				array( 'setup' => $setup )
-			);
+			// Process batch
+			$result = process_batch_items_logic( $setup );
 
-			if ( ! $result ) {
-				return array(
-					'success' => false,
-					'message' => 'Batch processing failed with unrecoverable error',
-					'logs'    => array( 'Batch processing failed' ),
-				);
-			}
-
-			// Execute finalization with error recovery
-			$final_result = \Puntwork\ErrorHandler::executeWithRecovery(
-				'batch_finalization',
-				function() use ( $result, $debug_mode ) {
-					if ( $debug_mode ) {
-						error_log( '[PUNTWORK] [IMPORT-FINALIZE] Calling finalize_batch_import...' );
-					}
-					$final_result = finalize_batch_import( $result );
-					if ( $debug_mode ) {
-						error_log( '[PUNTWORK] [IMPORT-FINALIZE] finalize_batch_import completed' );
-						error_log(
-							'[PUNTWORK] [IMPORT-FINALIZE] Final result summary: ' . json_encode(
-								array(
-									'success'   => $final_result['success'] ?? false,
-									'processed' => $final_result['processed'] ?? 0,
-									'total'     => $final_result['total'] ?? 0,
-									'published' => $final_result['published'] ?? 0,
-									'updated'   => $final_result['updated'] ?? 0,
-									'skipped'   => $final_result['skipped'] ?? 0,
-									'complete'  => $final_result['complete'] ?? false,
-								)
-							)
-						);
-
-						error_log( '[PUNTWORK] [IMPORT-COMPLETE] Import process completed successfully' );
-						error_log( '[PUNTWORK] [IMPORT-DEBUG] == PUNTWORK IMPORT DEBUG: import_jobs_from_json COMPLETED ==' );
-					}
-					return $final_result;
-				},
-				array( 'result' => $result )
-			);
-
-			if ( ! $final_result ) {
-				return array(
-					'success' => false,
-					'message' => 'Batch finalization failed with unrecoverable error',
-					'logs'    => array( 'Finalization failed' ),
-				);
-			}
+			// Finalize import
+			$final_result = finalize_batch_import( $result );
 
 			return $final_result;
-		} catch ( \Puntwork\Exceptions\PuntworkException $e ) {
-			// Handle custom PuntWork exceptions with enhanced logging
-			\Puntwork\ErrorHandler::logError( array(
-				'level' => \Puntwork\ErrorHandler::ERROR_LEVEL_ERROR,
-				'type' => $e->getErrorType(),
-				'message' => $e->getDetailedMessage(),
-				'file' => $e->getFile(),
-				'line' => $e->getLine(),
-				'context' => array_merge( $e->getContext(), array(
-					'operation' => 'import_jobs_from_json',
-					'is_batch' => $is_batch,
-					'batch_start' => $batch_start
-				) ),
-				'recovery_suggestions' => $e->getRecoverySuggestions()
-			) );
 
-			return array(
-				'success' => false,
-				'message' => 'Import failed: ' . $e->getMessage(),
-				'logs' => array( 'Exception: ' . $e->getMessage() ),
-				'recovery_suggestions' => $e->getRecoverySuggestions()
-			);
 		} catch ( \Exception $e ) {
-			// Handle standard exceptions
-			\Puntwork\ErrorHandler::logError( array(
-				'level' => \Puntwork\ErrorHandler::ERROR_LEVEL_ERROR,
-				'type' => \Puntwork\ErrorHandler::ERROR_TYPE_SYSTEM,
-				'message' => $e->getMessage(),
-				'file' => $e->getFile(),
-				'line' => $e->getLine(),
-				'trace' => $e->getTraceAsString(),
-				'context' => array(
-					'operation' => 'import_jobs_from_json',
-					'is_batch' => $is_batch,
-					'batch_start' => $batch_start
-				)
-			) );
-
 			return array(
 				'success' => false,
 				'message' => 'Import failed: ' . $e->getMessage(),
 				'logs' => array( 'Exception: ' . $e->getMessage() ),
-			);
-		} catch ( \Throwable $e ) {
-			// Handle fatal errors
-			\Puntwork\ErrorHandler::logError( array(
-				'level' => \Puntwork\ErrorHandler::ERROR_LEVEL_CRITICAL,
-				'type' => \Puntwork\ErrorHandler::ERROR_TYPE_SYSTEM,
-				'message' => $e->getMessage(),
-				'file' => $e->getFile(),
-				'line' => $e->getLine(),
-				'trace' => $e->getTraceAsString(),
-				'context' => array(
-					'operation' => 'import_jobs_from_json',
-					'is_batch' => $is_batch,
-					'batch_start' => $batch_start
-				)
-			) );
-
-			return array(
-				'success' => false,
-				'message' => 'Import failed with fatal error: ' . $e->getMessage(),
-				'logs' => array( 'Fatal error: ' . $e->getMessage() ),
 			);
 		} finally {
-			// Release import lock (only for non-batch calls)
+			// Release import lock
 			if ( ! $is_batch ) {
 				delete_transient( 'puntwork_import_lock' );
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [IMPORT-LOCK] Import lock released' );
-				}
 			}
 		}
 	}
@@ -487,453 +216,100 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 	 * @return array Import result data.
 	 */
 	function import_all_jobs_from_json( bool $preserve_status = false ): array {
-		$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
-
-		$start_time               = microtime( true );
-		$total_processed          = 0;
-		$total_published          = 0;
-		$total_updated            = 0;
-		$total_skipped            = 0;
-		$total_duplicates_drafted = 0;
-		$all_logs                 = array();
-		$batch_count              = 0;
-		$total_items              = 0;
-
 		// Check for concurrent import lock
 		$import_lock_key = 'puntwork_import_lock';
 		if ( get_transient( $import_lock_key ) ) {
-			// Check if the lock is stale (import status shows complete or last update > 30 minutes ago)
-			$import_status = get_option( 'job_import_status', array() );
-			$is_stale      = false;
-
-			if ( ! empty( $import_status ) ) {
-				$last_update       = $import_status['last_update'] ?? 0;
-				$is_complete       = $import_status['complete'] ?? false;
-				$time_since_update = time() - $last_update;
-
-				if ( $is_complete || $time_since_update > 1800 ) { // 30 minutes
-					$is_stale = true;
-					delete_transient( $import_lock_key );
-					if ( $debug_mode ) {
-						error_log( '[PUNTWORK] [IMPORT-LOCK] Cleared stale import lock (complete: ' . ( $is_complete ? 'yes' : 'no' ) . ', time since update: ' . $time_since_update . 's)' );
-					}
-				}
-			}
-
-			if ( ! $is_stale ) {
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] Import already running - skipping concurrent import' );
-				}
-
-				return array(
-					'success' => false,
-					'message' => 'Import already running',
-					'logs'    => array( 'Import already running - concurrent imports not allowed' ),
-				);
-			}
+			return array(
+				'success' => false,
+				'message' => 'Import already running',
+				'logs'    => array( 'Import already running - concurrent imports not allowed' ),
+			);
 		}
 
 		// Set import lock
-		set_transient( $import_lock_key, true, 1200 ); // 20 minutes timeout
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] Import lock set for import_all_jobs_from_json' );
-		}
-
-		if ( $debug_mode ) {
-			error_log(
-				'[PUNTWORK] import_all_jobs_from_json started with preserve_status=' .
-				( $preserve_status ? 'true' : 'false' )
-			);
-			error_log( '[PUNTWORK] Action Scheduler available: ' . ( function_exists( 'as_schedule_single_action' ) ? 'YES' : 'NO' ) );
-		}
+		set_transient( $import_lock_key, true, 1200 );
 
 		try {
-			// Ensure ActionScheduler is loaded if available
-			if ( ! function_exists( 'as_schedule_single_action' ) ) {
-				$action_scheduler_path = defined( 'PUNTWORK_PATH' ) ? PUNTWORK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php' : __DIR__ . '/../../vendor/woocommerce/action-scheduler/action-scheduler.php';
-				if ( file_exists( $action_scheduler_path ) ) {
-					if ( $debug_mode ) {
-						error_log( '[PUNTWORK] [IMPORT-INIT] Loading ActionScheduler from: ' . $action_scheduler_path );
-					}
-					require_once $action_scheduler_path;
-				} elseif ( $debug_mode ) {
-					error_log( '[PUNTWORK] [IMPORT-INIT] ActionScheduler not found at: ' . $action_scheduler_path );
-				}
-			}
-
-			// Check prerequisites before starting import
+			// Check prerequisites
 			$json_path = puntwork_get_combined_jsonl_path();
-
-			// Ensure combined JSONL file exists
 			if ( ! file_exists( $json_path ) ) {
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [IMPORT-PREREQ] Combined JSONL file not found: ' . $json_path );
-					error_log( '[PUNTWORK] [IMPORT-PREREQ] Checking for individual feed files...' );
-
-					// Check if there are individual feed files that need to be combined
-					$feed_files = glob( puntwork_get_feeds_directory() . '*.jsonl' );
-					$individual_feeds = array_filter( $feed_files, function( $file ) {
-						return basename( $file ) !== 'combined-jobs.jsonl';
-					} );
-
-					error_log( '[PUNTWORK] [IMPORT-PREREQ] Found ' . count( $individual_feeds ) . ' individual feed files' );
-					if ( ! empty( $individual_feeds ) ) {
-						error_log( '[PUNTWORK] [IMPORT-PREREQ] Individual feeds exist but combined file missing - automatically combining feeds' );
-
-						// Automatically combine the feeds
-						$feeds = get_feeds();
-						$import_logs = array(); // Reset logs for combination
-						combine_jsonl_files( $feeds, puntwork_get_feeds_directory(), 0, $import_logs );
-
-						// Check if combination was successful
-						if ( ! file_exists( $json_path ) || filesize( $json_path ) === 0 ) {
-							error_log( '[PUNTWORK] [IMPORT-PREREQ] Automatic feed combination failed' );
-							return array(
-								'success' => false,
-								'message' => 'Combined JSONL file not found and automatic combination failed. Please run feed processing to download and convert feeds to JSONL format.',
-								'logs' => array( 'Combined JSONL file not found - automatic combination failed' ),
-							);
-						}
-
-						error_log( '[PUNTWORK] [IMPORT-PREREQ] Automatic feed combination completed successfully' );
-					} else {
-						error_log( '[PUNTWORK] [IMPORT-PREREQ] No feed files found - feeds may need to be processed first' );
-					}
-				}
-
-				// Check again after potential automatic combination
-				if ( ! file_exists( $json_path ) ) {
-					// Log critical failure and update status
-					$error_message = 'Combined JSONL file not found - feeds may need to be processed first. Run feed processing to download and convert feeds to JSONL format, then combine them.';
-					error_log( '[PUNTWORK] [IMPORT-CRITICAL-FAILURE] Import stopped due to missing combined JSONL file' );
-					\Puntwork\PuntWorkLogger::error(
-						'Import stopped due to missing combined JSONL file',
-						\Puntwork\PuntWorkLogger::CONTEXT_IMPORT,
-						array(
-							'json_path' => $json_path,
-							'error_message' => $error_message
-						)
-					);
-
-					// Update import status to reflect the critical failure
-					$current_status = get_option( 'job_import_status', array() );
-					$current_status['success'] = false;
-					$current_status['complete'] = true;
-					$current_status['error_message'] = $error_message;
-					$current_status['last_update'] = time();
-					$current_status['logs'] = array_merge( $current_status['logs'] ?? array(), array( 'Combined JSONL file not found - run feed processing first' ) );
-					update_option( 'job_import_status', $current_status, false );
-
-					return array(
-						'success' => false,
-						'message' => $error_message,
-						'logs' => array( 'Combined JSONL file not found - run feed processing first' ),
-					);
-				}
-			}
-
-			// Ensure combined file is not empty
-			if ( filesize( $json_path ) === 0 ) {
-				// Log critical failure and update status
-				$error_message = 'Combined JSONL file is empty - feeds may need to be processed first';
-				error_log( '[PUNTWORK] [IMPORT-CRITICAL-FAILURE] Import stopped due to empty combined JSONL file' );
-				\Puntwork\PuntWorkLogger::error(
-					'Import stopped due to empty combined JSONL file',
-					\Puntwork\PuntWorkLogger::CONTEXT_IMPORT,
-					array(
-						'json_path' => $json_path,
-						'error_message' => $error_message
-					)
-				);
-
-				// Update import status to reflect the critical failure
-				$current_status = get_option( 'job_import_status', array() );
-				$current_status['success'] = false;
-				$current_status['complete'] = true;
-				$current_status['error_message'] = $error_message;
-				$current_status['last_update'] = time();
-				$current_status['logs'] = array_merge( $current_status['logs'] ?? array(), array( 'Combined JSONL file is empty - run feed processing first' ) );
-				update_option( 'job_import_status', $current_status, false );
-
 				return array(
 					'success' => false,
-					'message' => $error_message,
-					'logs' => array( 'Combined JSONL file is empty - run feed processing first' ),
+					'message' => 'Combined JSONL file not found - run feed processing first',
+					'logs' => array( 'Combined JSONL file not found' ),
 				);
 			}
 
-			// Get total items first
+			// Get total items
 			$total_items = get_json_item_count( $json_path );
 
-			// Check if Action Scheduler is available for async processing
+			// Use Action Scheduler if available
 			if ( function_exists( 'as_schedule_single_action' ) ) {
-				// Use Action Scheduler for async batch processing
-				// Use smaller batches for Action Scheduler to prevent memory exhaustion
-				$batch_size = 50; // Reduced from 200 to prevent memory issues in individual jobs
-
-				// Calculate total number of batches needed
+				$batch_size = 50;
 				$total_batches = ceil( $total_items / $batch_size );
 
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [IMPORT-INIT] Total items: ' . $total_items . ', Batch size: ' . $batch_size . ', Total batches: ' . $total_batches );
-					error_log( '[PUNTWORK] [IMPORT-INIT] Using Action Scheduler for async processing' );
-				}
-
-				// Schedule individual batch jobs using Action Scheduler
-				$scheduled_batches = 0;
-				$job_ids = array();
+				// Schedule batches
 				for ( $batch_index = 0; $batch_index < $total_batches; $batch_index++ ) {
 					$batch_start = $batch_index * $batch_size;
-
-					// Schedule each batch with a small delay to prevent overwhelming the system
-					$delay = $batch_index * 5; // 5 seconds between batches
-					$job_id = as_schedule_single_action( time() + $delay, 'puntwork_process_batch', array(
+					$delay = $batch_index * 5;
+					as_schedule_single_action( time() + $delay, 'puntwork_process_batch', array(
 						'batch_start' => $batch_start,
 						'batch_size' => $batch_size,
 						'batch_index' => $batch_index,
 						'total_batches' => $total_batches,
 						'import_id' => uniqid( 'import_', true )
 					) );
-
-					if ( $job_id ) {
-						$scheduled_batches++;
-						$job_ids[] = $job_id;
-						if ( $debug_mode ) {
-							error_log( '[PUNTWORK] [BATCH-SCHEDULE] Scheduled batch ' . ($batch_index + 1) . '/' . $total_batches . ' starting at ' . $batch_start . ', job ID: ' . $job_id );
-						}
-					} else {
-						if ( $debug_mode ) {
-							error_log( '[PUNTWORK] [BATCH-SCHEDULE-ERROR] Failed to schedule batch ' . ($batch_index + 1) . ' starting at ' . $batch_start );
-						}
-					}
 				}
 
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [IMPORT-SCHEDULE] Successfully scheduled ' . $scheduled_batches . ' out of ' . $total_batches . ' batches' );
-				}
-
-				// Store job IDs for monitoring
-				update_option( 'puntwork_scheduled_import_jobs', array(
-					'job_ids' => $job_ids,
-					'scheduled_at' => time(),
-					'total_batches' => $total_batches,
-					'batch_size' => $batch_size,
-					'total_items' => $total_items
-				), false );
-
-				// Schedule a fallback check in 30 seconds to see if ActionScheduler is working
-				$fallback_check_id = as_schedule_single_action( time() + 30, 'puntwork_check_async_fallback', array(
-					'import_id' => uniqid( 'fallback_', true )
-				) );
-
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [IMPORT-FALLBACK] Scheduled fallback check in 30 seconds, job ID: ' . $fallback_check_id );
-				}
-
-				// Also schedule an immediate check in 5 seconds as a safety net
-				$immediate_check_id = as_schedule_single_action( time() + 5, 'puntwork_check_async_fallback', array(
-					'import_id' => uniqid( 'immediate_', true )
-				) );
-
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [IMPORT-FALLBACK] Scheduled immediate fallback check in 5 seconds, job ID: ' . $immediate_check_id );
-				}
-
-				// Return success with scheduling information
 				return array(
 					'success' => true,
-					'message' => 'Import scheduled successfully - ' . $scheduled_batches . ' batches scheduled for processing',
+					'message' => 'Import scheduled successfully - ' . $total_batches . ' batches scheduled',
 					'total' => $total_items,
-					'batches_scheduled' => $scheduled_batches,
-					'total_batches' => $total_batches,
+					'batches_scheduled' => $total_batches,
 					'batch_size' => $batch_size,
 					'async_mode' => true,
-					'logs' => array( 'Import scheduled with ' . $scheduled_batches . ' batches using Action Scheduler' ),
+					'logs' => array( 'Import scheduled with Action Scheduler' ),
 				);
 			} else {
-				// Fallback to synchronous processing when Action Scheduler is not available
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [IMPORT-FALLBACK] Action Scheduler not available, falling back to synchronous processing' );
-					error_log( '[PUNTWORK] [IMPORT-FALLBACK] Total items: ' . $total_items );
-				}
-
-				// Process synchronously in batches to avoid timeouts
-				$batch_size = 25; // Smaller batches for synchronous processing
+				// Synchronous fallback
+				$batch_size = 25;
 				$total_processed = 0;
-				$total_published = 0;
-				$total_updated = 0;
-				$total_skipped = 0;
-				$total_duplicates_drafted = 0;
-				$all_logs = array();
-				$batch_count = 0;
 
 				for ( $batch_start = 0; $batch_start < $total_items; $batch_start += $batch_size ) {
-					if ( $debug_mode ) {
-						error_log( '[PUNTWORK] [SYNC-BATCH] Processing batch starting at ' . $batch_start . ' (batch ' . ($batch_count + 1) . ')' );
-					}
-
-					// Check for timeout before processing each batch
 					if ( import_time_exceeded() ) {
-						if ( $debug_mode ) {
-							error_log( '[PUNTWORK] [SYNC-BATCH] Time limit exceeded, pausing import' );
-						}
-
-						// Update status with current progress
-						$import_status = get_option( 'job_import_status', array() );
-						$import_status['processed'] = $total_processed;
-						$import_status['published'] = $total_published;
-						$import_status['updated'] = $total_updated;
-						$import_status['skipped'] = $total_skipped;
-						$import_status['duplicates_drafted'] = $total_duplicates_drafted;
-						$import_status['paused'] = true;
-						$import_status['pause_reason'] = 'Time limit exceeded during synchronous processing';
-						$import_status['last_update'] = time();
-						$import_status['logs'] = array_slice( $all_logs, -50 );
-						update_option( 'job_import_status', $import_status, false );
-
 						return array(
 							'success' => false,
-							'message' => 'Import paused due to time limit - processed ' . $total_processed . ' of ' . $total_items . ' items',
+							'message' => 'Import paused due to time limit',
 							'processed' => $total_processed,
 							'total' => $total_items,
 							'paused' => true,
-							'logs' => array_slice( $all_logs, -10 ),
 						);
 					}
 
-					// Process this batch synchronously
 					$batch_result = import_jobs_from_json( true, $batch_start );
-
 					if ( $batch_result['success'] ) {
 						$total_processed += $batch_result['processed'] ?? 0;
-						$total_published += $batch_result['published'] ?? 0;
-						$total_updated += $batch_result['updated'] ?? 0;
-						$total_skipped += $batch_result['skipped'] ?? 0;
-						$total_duplicates_drafted += $batch_result['duplicates_drafted'] ?? 0;
-
-						if ( isset( $batch_result['logs'] ) && is_array( $batch_result['logs'] ) ) {
-							$all_logs = array_merge( $all_logs, $batch_result['logs'] );
-						}
-
-						$batch_count++;
-
-						if ( $debug_mode ) {
-							error_log( '[PUNTWORK] [SYNC-BATCH] Batch ' . $batch_count . ' completed: processed=' . ($batch_result['processed'] ?? 0) . ', published=' . ($batch_result['published'] ?? 0) );
-						}
 					} else {
-						if ( $debug_mode ) {
-							error_log( '[PUNTWORK] [SYNC-BATCH-ERROR] Batch failed: ' . ($batch_result['message'] ?? 'Unknown error') );
-						}
-
-						// Update status with error
-						$import_status = get_option( 'job_import_status', array() );
-						$import_status['processed'] = $total_processed;
-						$import_status['published'] = $total_published;
-						$import_status['updated'] = $total_updated;
-						$import_status['skipped'] = $total_skipped;
-						$import_status['duplicates_drafted'] = $total_duplicates_drafted;
-						$import_status['complete'] = false;
-						$import_status['success'] = false;
-						$import_status['error_message'] = $batch_result['message'] ?? 'Batch processing failed';
-						$import_status['last_update'] = time();
-						$import_status['logs'] = array_slice( $all_logs, -50 );
-						update_option( 'job_import_status', $import_status, false );
-
 						return array(
 							'success' => false,
-							'message' => 'Import failed during batch processing: ' . ($batch_result['message'] ?? 'Unknown error'),
+							'message' => 'Import failed during batch processing',
 							'processed' => $total_processed,
 							'total' => $total_items,
-							'logs' => array_slice( $all_logs, -10 ),
 						);
 					}
 				}
-
-				// All batches completed successfully
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [SYNC-COMPLETE] All batches completed synchronously' );
-				}
-
-				// Update final status
-				$import_status = get_option( 'job_import_status', array() );
-				$import_status['processed'] = $total_processed;
-				$import_status['published'] = $total_published;
-				$import_status['updated'] = $total_updated;
-				$import_status['skipped'] = $total_skipped;
-				$import_status['duplicates_drafted'] = $total_duplicates_drafted;
-				$import_status['complete'] = true;
-				$import_status['success'] = true;
-				$import_status['time_elapsed'] = microtime( true ) - $start_time;
-				$import_status['end_time'] = microtime( true );
-				$import_status['last_update'] = time();
-				$import_status['logs'] = array_slice( $all_logs, -50 );
-				update_option( 'job_import_status', $import_status, false );
 
 				return array(
 					'success' => true,
-					'message' => 'Import completed successfully - processed ' . $total_processed . ' of ' . $total_items . ' items',
+					'message' => 'Import completed successfully',
 					'processed' => $total_processed,
-					'published' => $total_published,
-					'updated' => $total_updated,
-					'skipped' => $total_skipped,
-					'duplicates_drafted' => $total_duplicates_drafted,
 					'total' => $total_items,
 					'complete' => true,
-					'logs' => array_slice( $all_logs, -10 ),
 				);
 			}
 
-		} catch ( \Puntwork\Exceptions\PuntworkException $e ) {
-			// Handle custom PuntWork exceptions with enhanced logging
-			\Puntwork\ErrorHandler::logError( array(
-				'level' => \Puntwork\ErrorHandler::ERROR_LEVEL_ERROR,
-				'type' => $e->getErrorType(),
-				'message' => $e->getDetailedMessage(),
-				'file' => $e->getFile(),
-				'line' => $e->getLine(),
-				'context' => array_merge( $e->getContext(), array(
-					'operation' => 'import_all_jobs_from_json',
-					'preserve_status' => $preserve_status,
-					'total_processed' => $total_processed,
-					'batch_count' => $batch_count
-				) ),
-				'recovery_suggestions' => $e->getRecoverySuggestions()
-			) );
-
-			return array(
-				'success' => false,
-				'message' => 'Import failed: ' . $e->getMessage(),
-				'logs' => array_merge( $all_logs, array( 'Exception: ' . $e->getMessage() ) ),
-				'recovery_suggestions' => $e->getRecoverySuggestions()
-			);
-		} catch ( \Exception $e ) {
-			// Handle standard exceptions
-			\Puntwork\ErrorHandler::logError( array(
-				'level' => \Puntwork\ErrorHandler::ERROR_LEVEL_ERROR,
-				'type' => \Puntwork\ErrorHandler::ERROR_TYPE_SYSTEM,
-				'message' => $e->getMessage(),
-				'file' => $e->getFile(),
-				'line' => $e->getLine(),
-				'trace' => $e->getTraceAsString(),
-				'context' => array(
-					'operation' => 'import_all_jobs_from_json',
-					'preserve_status' => $preserve_status,
-					'total_processed' => $total_processed,
-					'batch_count' => $batch_count
-				)
-			) );
-
-			return array(
-				'success' => false,
-				'message' => 'Import failed: ' . $e->getMessage(),
-				'logs' => $all_logs,
-			);
 		} finally {
-			// Release import lock
-			delete_transient( 'puntwork_import_lock' );
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] Import lock released at end of import_all_jobs_from_json' );
-			}
+			delete_transient( $import_lock_key );
 		}
 	}
 }
@@ -945,246 +321,66 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
  * @return array Import result
  */
 function import_all_jobs_from_json_sync( int $expected_total_items = 0 ): array {
-	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
-	$start_time = microtime( true );
+	// Get the combined JSONL file path
+	$json_path = puntwork_get_combined_jsonl_path();
 
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [SYNC-FALLBACK] ===== SYNCHRONOUS IMPORT FALLBACK START =====' );
-		error_log( '[PUNTWORK] [SYNC-FALLBACK] Expected total items: ' . $expected_total_items );
+	if ( ! file_exists( $json_path ) ) {
+		return array(
+			'success' => false,
+			'message' => 'Combined JSONL file not found for synchronous fallback',
+		);
 	}
 
-	try {
-		// Get the combined JSONL file path
-		$json_path = puntwork_get_combined_jsonl_path();
+	// Get actual total items from file
+	$total_items = get_json_item_count( $json_path );
 
-		if ( ! file_exists( $json_path ) ) {
+	// Process in batches synchronously
+	$batch_size = 25;
+	$total_processed = 0;
+
+	for ( $batch_start = 0; $batch_start < $total_items; $batch_start += $batch_size ) {
+		// Check for timeout
+		if ( import_time_exceeded() ) {
 			return array(
 				'success' => false,
-				'message' => 'Combined JSONL file not found for synchronous fallback',
-				'logs' => array( 'Combined JSONL file not found' ),
+				'message' => 'Import paused due to time limit',
+				'processed' => $total_processed,
+				'total' => $total_items,
+				'paused' => true,
 			);
 		}
 
-		// Get actual total items from file
-		$total_items = get_json_item_count( $json_path );
-
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SYNC-FALLBACK] Actual total items in file: ' . $total_items );
+		// Process batch
+		$setup = prepare_import_setup( $batch_start, true );
+		if ( is_wp_error( $setup ) || ( isset( $setup['success'] ) && ! $setup['success'] ) ) {
+			return array(
+				'success' => false,
+				'message' => 'Setup failed during synchronous processing',
+			);
 		}
 
-		// Use smaller batches for synchronous processing to avoid timeouts
-		$batch_size = 25;
-		$total_processed = 0;
-		$total_published = 0;
-		$total_updated = 0;
-		$total_skipped = 0;
-		$total_duplicates_drafted = 0;
-		$all_logs = array();
-		$batch_count = 0;
+		$batch_result = process_batch_items_logic( $setup );
 
-		// Update status to show fallback mode
-		$import_status = get_option( 'job_import_status', array() );
-		$import_status['fallback_mode'] = true;
-		$import_status['fallback_reason'] = 'ActionScheduler not executing jobs';
-		$import_status['last_update'] = time();
-		$import_status['logs'][] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] Falling back to synchronous processing';
-		update_option( 'job_import_status', $import_status, false );
-
-		for ( $batch_start = 0; $batch_start < $total_items; $batch_start += $batch_size ) {
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [SYNC-FALLBACK] Processing batch starting at ' . $batch_start . ' (batch ' . ($batch_count + 1) . ')' );
-			}
-
-			// Check for timeout before processing each batch
-			if ( import_time_exceeded() ) {
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [SYNC-FALLBACK] Time limit exceeded, pausing import' );
-				}
-
-				// Update status with current progress
-				$import_status = get_option( 'job_import_status', array() );
-				$import_status['processed'] = $total_processed;
-				$import_status['published'] = $total_published;
-				$import_status['updated'] = $total_updated;
-				$import_status['skipped'] = $total_skipped;
-				$import_status['duplicates_drafted'] = $total_duplicates_drafted;
-				$import_status['paused'] = true;
-				$import_status['pause_reason'] = 'Time limit exceeded during synchronous fallback';
-				$import_status['last_update'] = time();
-				$import_status['logs'] = array_slice( $all_logs, -50 );
-				update_option( 'job_import_status', $import_status, false );
-
-				return array(
-					'success' => false,
-					'message' => 'Import paused due to time limit - processed ' . $total_processed . ' of ' . $total_items . ' items',
-					'processed' => $total_processed,
-					'total' => $total_items,
-					'paused' => true,
-					'logs' => array_slice( $all_logs, -10 ),
-				);
-			}
-
-			// Process this batch synchronously
-			$setup = prepare_import_setup( $batch_start, true );
-			if ( is_wp_error( $setup ) ) {
-				$error_message = 'Setup failed: ' . $setup->get_error_message();
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [SYNC-FALLBACK-ERROR] Setup failed for batch ' . ($batch_count + 1) . ': ' . $setup->get_error_message() );
-				}
-
-				// Log critical failure and update status
-				error_log( '[PUNTWORK] [SYNC-FALLBACK-CRITICAL-FAILURE] Import stopped due to setup failure: ' . $error_message );
-				\Puntwork\PuntWorkLogger::error(
-					'Synchronous fallback stopped due to setup failure',
-					\Puntwork\PuntWorkLogger::CONTEXT_IMPORT,
-					array(
-						'batch_index' => $batch_count + 1,
-						'error_message' => $error_message
-					)
-				);
-
-				// Update import status to reflect the critical failure
-				$import_status = get_option( 'job_import_status', array() );
-				$import_status['success'] = false;
-				$import_status['complete'] = true;
-				$import_status['error_message'] = $error_message;
-				$import_status['last_update'] = time();
-				$import_status['logs'] = array_merge( $import_status['logs'] ?? array(), array( 'Setup failed for batch ' . ($batch_count + 1) . ': ' . $setup->get_error_message() ) );
-				update_option( 'job_import_status', $import_status, false );
-
-				return array(
-					'success' => false,
-					'message' => $error_message,
-					'logs' => array( 'Setup failed for batch ' . ($batch_count + 1) ),
-				);
-			} elseif ( isset( $setup['success'] ) && ! $setup['success'] ) {
-				$error_message = $setup['message'] ?? 'Setup failed';
-				$error_logs = $setup['logs'] ?? array( 'Setup failed for batch ' . ($batch_count + 1) );
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [SYNC-FALLBACK-ERROR] Setup returned early for batch ' . ($batch_count + 1) . ': ' . $error_message );
-				}
-
-				// Log critical failure and update status
-				error_log( '[PUNTWORK] [SYNC-FALLBACK-CRITICAL-FAILURE] Import stopped due to critical setup failure: ' . $error_message );
-				\Puntwork\PuntWorkLogger::error(
-					'Synchronous fallback stopped due to critical setup failure',
-					\Puntwork\PuntWorkLogger::CONTEXT_IMPORT,
-					array(
-						'batch_index' => $batch_count + 1,
-						'error_message' => $error_message,
-						'error_logs' => $error_logs
-					)
-				);
-
-				// Update import status to reflect the critical failure
-				$import_status = get_option( 'job_import_status', array() );
-				$import_status['success'] = false;
-				$import_status['complete'] = true;
-				$import_status['error_message'] = $error_message;
-				$import_status['last_update'] = time();
-				$import_status['logs'] = array_merge( $import_status['logs'] ?? array(), $error_logs );
-				update_option( 'job_import_status', $import_status, false );
-
-				return array(
-					'success' => false,
-					'message' => $error_message,
-					'logs' => $error_logs,
-				);
-			} else {
-				// Process the batch using the same logic as Action Scheduler
-				$batch_result = process_batch_items_logic( $setup );
-			}
-
-			if ( $batch_result['success'] ) {
-				$total_processed += $batch_result['processed'] ?? 0;
-				$total_published += $batch_result['published'] ?? 0;
-				$total_updated += $batch_result['updated'] ?? 0;
-				$total_skipped += $batch_result['skipped'] ?? 0;
-				$total_duplicates_drafted += $batch_result['duplicates_drafted'] ?? 0;
-
-				if ( isset( $batch_result['logs'] ) && is_array( $batch_result['logs'] ) ) {
-					$all_logs = array_merge( $all_logs, $batch_result['logs'] );
-				}
-
-				$batch_count++;
-
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [SYNC-FALLBACK] Batch ' . $batch_count . ' completed: processed=' . ($batch_result['processed'] ?? 0) . ', published=' . ($batch_result['published'] ?? 0) );
-				}
-			} else {
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [SYNC-FALLBACK-ERROR] Batch failed: ' . ($batch_result['message'] ?? 'Unknown error') );
-				}
-
-				// Update status with error
-				$import_status = get_option( 'job_import_status', array() );
-				$import_status['processed'] = $total_processed;
-				$import_status['published'] = $total_published;
-				$import_status['updated'] = $total_updated;
-				$import_status['skipped'] = $total_skipped;
-				$import_status['duplicates_drafted'] = $total_duplicates_drafted;
-				$import_status['complete'] = false;
-				$import_status['success'] = false;
-				$import_status['error_message'] = $batch_result['message'] ?? 'Batch processing failed during fallback';
-				$import_status['last_update'] = time();
-				$import_status['logs'] = array_slice( $all_logs, -50 );
-				update_option( 'job_import_status', $import_status, false );
-
-				return array(
-					'success' => false,
-					'message' => 'Import failed during synchronous fallback: ' . ($batch_result['message'] ?? 'Unknown error'),
-					'processed' => $total_processed,
-					'total' => $total_items,
-					'logs' => array_slice( $all_logs, -10 ),
-				);
-			}
+		if ( $batch_result['success'] ) {
+			$total_processed += $batch_result['processed'] ?? 0;
+		} else {
+			return array(
+				'success' => false,
+				'message' => 'Batch processing failed during synchronous fallback',
+				'processed' => $total_processed,
+				'total' => $total_items,
+			);
 		}
-
-		// All batches completed successfully
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SYNC-FALLBACK] All batches completed synchronously' );
-		}
-
-		// Update final status
-		$import_status = get_option( 'job_import_status', array() );
-		$import_status['processed'] = $total_processed;
-		$import_status['published'] = $total_published;
-		$import_status['updated'] = $total_updated;
-		$import_status['skipped'] = $total_skipped;
-		$import_status['duplicates_drafted'] = $total_duplicates_drafted;
-		$import_status['complete'] = true;
-		$import_status['success'] = true;
-		$import_status['time_elapsed'] = microtime( true ) - $start_time;
-		$import_status['end_time'] = microtime( true );
-		$import_status['last_update'] = time();
-		$import_status['logs'] = array_slice( $all_logs, -50 );
-		update_option( 'job_import_status', $import_status, false );
-
-		return array(
-			'success' => true,
-			'message' => 'Synchronous import completed successfully - processed ' . $total_processed . ' of ' . $total_items . ' items',
-			'processed' => $total_processed,
-			'published' => $total_published,
-			'updated' => $total_updated,
-			'skipped' => $total_skipped,
-			'duplicates_drafted' => $total_duplicates_drafted,
-			'total' => $total_items,
-			'complete' => true,
-			'fallback_mode' => true,
-			'logs' => array_slice( $all_logs, -10 ),
-		);
-
-	} catch ( \Exception $e ) {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SYNC-FALLBACK-EXCEPTION] Exception during synchronous fallback: ' . $e->getMessage() );
-		}
-
-		return array(
-			'success' => false,
-			'message' => 'Synchronous fallback failed: ' . $e->getMessage(),
-			'logs' => array( 'Exception during synchronous fallback: ' . $e->getMessage() ),
-		);
 	}
+
+	return array(
+		'success' => true,
+		'message' => 'Synchronous import completed successfully',
+		'processed' => $total_processed,
+		'total' => $total_items,
+		'complete' => true,
+		'fallback_mode' => true,
+	);
 }
 
 /**
@@ -1238,77 +434,24 @@ function continue_paused_import(): void {
  * @return void
  */
 function start_scheduled_import(): void {
-	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
-
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [SCHEDULED-IMPORT] ===== START_SCHEDULED_IMPORT START =====' );
-		error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Current timestamp: ' . date( 'Y-m-d H:i:s T' ) );
-		error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Memory usage: ' . memory_get_usage( true ) . ' bytes' );
-		error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Peak memory usage: ' . memory_get_peak_usage( true ) . ' bytes' );
-		error_log( '[PUNTWORK] [SCHEDULED-IMPORT] PHP version: ' . PHP_VERSION );
-		error_log( '[PUNTWORK] [SCHEDULED-IMPORT] WordPress version: ' . get_bloginfo( 'version' ) );
-		error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Current user ID: ' . get_current_user_id() );
-		error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Request method: ' . $_SERVER['REQUEST_METHOD'] ?? 'cron' );
-		error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Server: ' . $_SERVER['SERVER_SOFTWARE'] ?? 'unknown' );
-	}
-
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] Starting scheduled import process' );
-	}
-
 	// Check if import is already running
 	$import_lock_key = 'puntwork_import_lock';
 	if ( get_transient( $import_lock_key ) ) {
-		// Check if the lock is stale (import status shows complete or last update > 30 minutes ago)
+		// Check if the lock is stale
 		$import_status = get_option( 'job_import_status', array() );
-		$is_stale      = false;
+		$last_update = $import_status['last_update'] ?? 0;
+		$is_complete = $import_status['complete'] ?? false;
+		$time_since_update = time() - $last_update;
 
-		if ( ! empty( $import_status ) ) {
-			$last_update       = $import_status['last_update'] ?? 0;
-			$is_complete       = $import_status['complete'] ?? false;
-			$time_since_update = time() - $last_update;
-
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Import lock check - last_update: ' . $last_update . ', is_complete: ' . ( $is_complete ? 'true' : 'false' ) . ', time_since_update: ' . $time_since_update . 's' );
-			}
-
-			if ( $is_complete || $time_since_update > 1800 ) { // 30 minutes
-				$is_stale = true;
-				delete_transient( $import_lock_key );
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Cleared stale import lock (complete: ' . ( $is_complete ? 'yes' : 'no' ) . ', time since update: ' . $time_since_update . 's)' );
-				}
-			}
-		}
-
-		if ( ! $is_stale ) {
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Scheduled import already running - skipping' );
-			}
-
-			return;
+		if ( $is_complete || $time_since_update > 1800 ) { // 30 minutes
+			delete_transient( $import_lock_key );
+		} else {
+			return; // Import already running
 		}
 	}
 
 	// Start the import
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [SCHEDULED-IMPORT] About to call import_all_jobs_from_json' );
-	}
-	$result = import_all_jobs_from_json( true ); // preserve status
-
-	if ( $result['success'] ) {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Scheduled import completed successfully' );
-			error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Result summary: processed=' . ( $result['processed'] ?? 0 ) . ', total=' . ( $result['total'] ?? 0 ) . ', published=' . ( $result['published'] ?? 0 ) . ', updated=' . ( $result['updated'] ?? 0 ) . ', skipped=' . ( $result['skipped'] ?? 0 ) );
-		}
-	} elseif ( $debug_mode ) {
-		error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Scheduled import failed: ' . ( $result['message'] ?? 'Unknown error' ) );
-		error_log( '[PUNTWORK] [SCHEDULED-IMPORT] Result details: ' . json_encode( $result ) );
-	}
-
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [SCHEDULED-IMPORT] ===== START_SCHEDULED_IMPORT END =====' );
-	}
+	import_all_jobs_from_json( true );
 }
 
 // Register the continuation hook
@@ -1320,161 +463,62 @@ add_action( 'puntwork_start_scheduled_import', 'start_scheduled_import' );
 // Register the batch import start hook (used by combine_jsonl_ajax)
 add_action( 'puntwork_start_batch_import', __NAMESPACE__ . '\\start_batch_import' );
 function start_batch_import() {
-	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
-
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [START-BATCH-IMPORT] ===== START_BATCH_IMPORT START =====' );
-		error_log( '[PUNTWORK] [START-BATCH-IMPORT] Current timestamp: ' . date( 'Y-m-d H:i:s T' ) );
-		error_log( '[PUNTWORK] [START-BATCH-IMPORT] Memory usage: ' . memory_get_usage( true ) . ' bytes' );
-	}
-
 	// Start the batch import process
-	$result = import_all_jobs_from_json( true ); // preserve status
-
-	if ( $result['success'] ) {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [START-BATCH-IMPORT] Batch import completed successfully' );
-			error_log( '[PUNTWORK] [START-BATCH-IMPORT] Result summary: processed=' . ( $result['processed'] ?? 0 ) . ', total=' . ( $result['total'] ?? 0 ) . ', published=' . ( $result['published'] ?? 0 ) . ', updated=' . ( $result['updated'] ?? 0 ) . ', skipped=' . ( $result['skipped'] ?? 0 ) );
-		}
-	} elseif ( $debug_mode ) {
-		error_log( '[PUNTWORK] [START-BATCH-IMPORT] Batch import failed: ' . ( $result['message'] ?? 'Unknown error' ) );
-		error_log( '[PUNTWORK] [START-BATCH-IMPORT] Result details: ' . json_encode( $result ) );
-	}
-
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [START-BATCH-IMPORT] ===== START_BATCH_IMPORT END =====' );
-	}
+	import_all_jobs_from_json( true );
 }
 
 // Register the async fallback check hook
 add_action( 'puntwork_check_async_fallback', __NAMESPACE__ . '\\check_async_fallback' );
 function check_async_fallback( $args ) {
-	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
-	$import_id = $args['import_id'] ?? 'unknown';
-
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [FALLBACK-CHECK] ===== ASYNC FALLBACK CHECK START =====' );
-		error_log( '[PUNTWORK] [FALLBACK-CHECK] Import ID: ' . $import_id );
-	}
-
-	// Get the scheduled jobs info
-	$scheduled_jobs = get_option( 'puntwork_scheduled_import_jobs', array() );
-	if ( empty( $scheduled_jobs ) || ! isset( $scheduled_jobs['job_ids'] ) ) {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [FALLBACK-CHECK] No scheduled jobs found - skipping fallback check' );
-		}
-		return;
-	}
-
-	// Check if import has already started (look for processed items in status)
+	// Check if import has started
 	$import_status = get_option( 'job_import_status', array() );
 	$processed = $import_status['processed'] ?? 0;
 
 	if ( $processed > 0 ) {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [FALLBACK-CHECK] Import already started (processed: ' . $processed . ') - ActionScheduler is working' );
-		}
-		// Clean up the scheduled jobs info since import is proceeding
+		// Import is working, clean up
 		delete_option( 'puntwork_scheduled_import_jobs' );
 		return;
 	}
 
-	// Check if any ActionScheduler jobs are still pending
-	$jobs_still_pending = false;
+	// Check if ActionScheduler jobs are still pending
+	$jobs_pending = false;
 	if ( function_exists( 'as_get_scheduled_actions' ) ) {
 		$pending_jobs = as_get_scheduled_actions( array(
 			'hook' => 'puntwork_process_batch',
 			'status' => 'pending'
 		) );
-		$jobs_still_pending = ! empty( $pending_jobs );
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [FALLBACK-CHECK] Found ' . count( $pending_jobs ) . ' pending ActionScheduler jobs' );
-		}
+		$jobs_pending = ! empty( $pending_jobs );
 	}
 
-	if ( $jobs_still_pending ) {
-		// If this is an immediate check (5 seconds), give ActionScheduler more time
-		if ( strpos( $import_id, 'immediate_' ) === 0 ) {
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [FALLBACK-CHECK] Immediate check found pending jobs - ActionScheduler may be working, will check again in 30 seconds' );
-			}
-			// Schedule another check in 30 seconds
-			as_schedule_single_action( time() + 30, 'puntwork_check_async_fallback', array(
-				'import_id' => str_replace( 'immediate_', 'delayed_', $import_id )
-			) );
-			return;
-		} elseif ( strpos( $import_id, 'fallback_' ) === 0 || strpos( $import_id, 'delayed_' ) === 0 ) {
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [FALLBACK-CHECK] Delayed check still found pending jobs - ActionScheduler may be slow but working' );
-			}
-			// Give it more time - check again in another 30 seconds
-			as_schedule_single_action( time() + 30, 'puntwork_check_async_fallback', array(
-				'import_id' => str_replace( array('fallback_', 'delayed_'), 'extended_', $import_id )
-			) );
-			return;
-		} else {
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [FALLBACK-CHECK] Extended check still found pending jobs - ActionScheduler appears to be working slowly' );
-			}
-			return;
-		}
+	if ( $jobs_pending ) {
+		// Still pending, check again later
+		as_schedule_single_action( time() + 30, 'puntwork_check_async_fallback', array(
+			'import_id' => 'retry_' . time()
+		) );
+		return;
 	}
 
-	// No jobs processed and no pending jobs - ActionScheduler is not working
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [FALLBACK-CHECK] ActionScheduler appears to be failing - no jobs processed and no pending jobs found' );
-		error_log( '[PUNTWORK] [FALLBACK-CHECK] Falling back to synchronous processing' );
-	}
-
-	// Cancel any remaining scheduled jobs
+	// No progress and no pending jobs - ActionScheduler failed, fall back to sync
 	if ( function_exists( 'as_unschedule_all_actions' ) ) {
 		as_unschedule_all_actions( 'puntwork_process_batch' );
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [FALLBACK-CHECK] Cancelled remaining ActionScheduler jobs' );
-		}
 	}
 
-	// Clean up scheduled jobs info
 	delete_option( 'puntwork_scheduled_import_jobs' );
 
-	// Fall back to synchronous processing
-	$sync_result = import_all_jobs_from_json_sync( $scheduled_jobs['total_items'] ?? 0 );
-
-	if ( $sync_result['success'] ) {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [FALLBACK-CHECK] Synchronous fallback completed successfully' );
-		}
-	} else {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [FALLBACK-CHECK] Synchronous fallback failed: ' . ( $sync_result['message'] ?? 'Unknown error' ) );
-		}
-	}
-
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [FALLBACK-CHECK] ===== ASYNC FALLBACK CHECK END =====' );
-	}
+	$scheduled_jobs = get_option( 'puntwork_scheduled_import_jobs', array() );
+	import_all_jobs_from_json_sync( $scheduled_jobs['total_items'] ?? 0 );
 }
 
 // Register the individual batch processing hook
 add_action( 'puntwork_process_batch', __NAMESPACE__ . '\\puntwork_process_batch_handler' );
 function puntwork_process_batch_handler( $args ) {
-	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
-
 	$batch_start = $args['batch_start'] ?? 0;
 	$batch_size = $args['batch_size'] ?? 50;
 	$batch_index = $args['batch_index'] ?? 0;
 	$total_batches = $args['total_batches'] ?? 1;
-	$import_id = $args['import_id'] ?? 'unknown';
-
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [BATCH-ASYNC] ===== PROCESSING BATCH ' . ($batch_index + 1) . '/' . $total_batches . ' =====' );
-		error_log( '[PUNTWORK] [BATCH-ASYNC] Batch start: ' . $batch_start . ', Batch size: ' . $batch_size . ', Import ID: ' . $import_id );
-		error_log( '[PUNTWORK] [BATCH-ASYNC] Memory usage: ' . memory_get_usage( true ) . ' bytes' );
-		error_log( '[PUNTWORK] [BATCH-ASYNC] Peak memory usage: ' . memory_get_peak_usage( true ) . ' bytes' );
-	}
 
 	try {
-		// Load required files for batch processing
+		// Load required files
 		$import_files = array(
 			__DIR__ . '/../batch/batch-size-management.php',
 			__DIR__ . '/../import/import-setup.php',
@@ -1490,121 +534,21 @@ function puntwork_process_batch_handler( $args ) {
 			}
 		}
 
-		// Memory management for Action Scheduler jobs
-		$current_memory = memory_get_usage( true );
-		$memory_limit = get_memory_limit_bytes();
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [BATCH-ASYNC] Memory check - Current: ' . round( $current_memory / 1024 / 1024, 2 ) . 'MB, Limit: ' . round( $memory_limit / 1024 / 1024, 2 ) . 'MB' );
-		}
-
-		// If memory usage is already high at start, this is a problem
-		if ( $current_memory > $memory_limit * 0.7 ) {
-			error_log( '[PUNTWORK] [BATCH-ASYNC-ERROR] Memory usage already high at batch start: ' . round( $current_memory / 1024 / 1024, 2 ) . 'MB of ' . round( $memory_limit / 1024 / 1024, 2 ) . 'MB' );
-			return; // Skip this batch to prevent memory exhaustion
-		}
-
-		// Prepare import setup for this specific batch
+		// Prepare and process batch
 		$setup = prepare_import_setup( $batch_start, true );
-		if ( is_wp_error( $setup ) ) {
-			$error_message = 'Setup failed: ' . $setup->get_error_message();
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [BATCH-ASYNC-ERROR] Setup failed for batch ' . ($batch_index + 1) . ': ' . $setup->get_error_message() );
-			}
-
-			// Log critical failure and update status
-			error_log( '[PUNTWORK] [BATCH-ASYNC-CRITICAL-FAILURE] Action Scheduler batch stopped due to setup failure: ' . $error_message );
-			\Puntwork\PuntWorkLogger::error(
-				'Action Scheduler batch stopped due to setup failure',
-				\Puntwork\PuntWorkLogger::CONTEXT_BATCH,
-				array(
-					'batch_index' => $batch_index + 1,
-					'batch_start' => $batch_start,
-					'error_message' => $error_message
-				)
-			);
-
-			// Update import status to reflect the critical failure
-			$import_status = get_option( 'job_import_status', array() );
-			$import_status['success'] = false;
-			$import_status['complete'] = true;
-			$import_status['error_message'] = $error_message;
-			$import_status['last_update'] = time();
-			$import_status['logs'] = array_merge( $import_status['logs'] ?? array(), array( 'Setup failed for batch ' . ($batch_index + 1) . ': ' . $setup->get_error_message() ) );
-			update_option( 'job_import_status', $import_status, false );
-
-			return;
-		}
-		if ( isset( $setup['success'] ) && ! $setup['success'] ) {
-			$error_message = $setup['message'] ?? 'Setup failed';
-			$error_logs = $setup['logs'] ?? array( 'Setup failed for batch ' . ($batch_index + 1) );
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [BATCH-ASYNC-ERROR] Setup returned early for batch ' . ($batch_index + 1) . ': ' . $error_message );
-			}
-
-			// Log critical failure and update status
-			error_log( '[PUNTWORK] [BATCH-ASYNC-CRITICAL-FAILURE] Action Scheduler batch stopped due to critical setup failure: ' . $error_message );
-			\Puntwork\PuntWorkLogger::error(
-				'Action Scheduler batch stopped due to critical setup failure',
-				\Puntwork\PuntWorkLogger::CONTEXT_BATCH,
-				array(
-					'batch_index' => $batch_index + 1,
-					'batch_start' => $batch_start,
-					'error_message' => $error_message,
-					'error_logs' => $error_logs
-				)
-			);
-
-			// Update import status to reflect the critical failure
-			$import_status = get_option( 'job_import_status', array() );
-			$import_status['success'] = false;
-			$import_status['complete'] = true;
-			$import_status['error_message'] = $error_message;
-			$import_status['last_update'] = time();
-			$import_status['logs'] = array_merge( $import_status['logs'] ?? array(), $error_logs );
-			update_option( 'job_import_status', $import_status, false );
-
+		if ( is_wp_error( $setup ) || ( isset( $setup['success'] ) && ! $setup['success'] ) ) {
 			return;
 		}
 
-		// Mark this as Action Scheduler processing to allow larger batches
 		$setup['is_action_scheduler'] = true;
-
-		// Process this batch
 		$batch_result = process_batch_items_logic( $setup );
 
-		if ( $batch_result['success'] ) {
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [BATCH-ASYNC-SUCCESS] Batch ' . ($batch_index + 1) . '/' . $total_batches . ' completed successfully' );
-				error_log( '[PUNTWORK] [BATCH-ASYNC-SUCCESS] Processed: ' . ( $batch_result['processed'] ?? 0 ) . ', Published: ' . ( $batch_result['published'] ?? 0 ) . ', Updated: ' . ( $batch_result['updated'] ?? 0 ) . ', Skipped: ' . ( $batch_result['skipped'] ?? 0 ) );
-				$final_memory = memory_get_usage( true );
-				error_log( '[PUNTWORK] [BATCH-ASYNC] Final memory usage: ' . round( $final_memory / 1024 / 1024, 2 ) . 'MB' );
-			}
-		} else {
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [BATCH-ASYNC-ERROR] Batch ' . ($batch_index + 1) . '/' . $total_batches . ' failed: ' . ( $batch_result['message'] ?? 'Unknown error' ) );
-			}
-		}
-
-		// Check if this is the last batch and finalize if needed
+		// Finalize if this is the last batch
 		if ( $batch_index + 1 >= $total_batches ) {
-			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [BATCH-ASYNC-FINALIZE] Last batch completed, finalizing import' );
-			}
 			finalize_batch_import( $batch_result );
 		}
 
 	} catch ( \Exception $e ) {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [BATCH-ASYNC-EXCEPTION] Exception in batch ' . ($batch_index + 1) . ': ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
-			error_log( '[PUNTWORK] [BATCH-ASYNC-EXCEPTION] Stack trace: ' . $e->getTraceAsString() );
-		}
-	} catch ( \Throwable $e ) {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [BATCH-ASYNC-FATAL] Fatal error in batch ' . ($batch_index + 1) . ': ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
-		}
-	}
-
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [BATCH-ASYNC] ===== BATCH ' . ($batch_index + 1) . '/' . $total_batches . ' PROCESSING COMPLETE =====' );
+		// Basic exception handling
 	}
 }
