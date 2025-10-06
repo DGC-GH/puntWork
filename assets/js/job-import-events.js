@@ -384,12 +384,13 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             // Load database optimization status first (non-blocking)
             JobImportAPI.getDbOptimizationStatus().then(function(dbResponse) {
                 console.log('[PUNTWORK] DB status response:', dbResponse);
-                if (dbResponse.success) {
+                if (dbResponse.success && dbResponse.data && dbResponse.data.status) {
                     				JobImportEvents.updateDbStatusDisplay(dbResponse.data.status);
                 } else {
+                    console.log('[PUNTWORK] DB status response invalid or missing status data');
                     // Show error state
                     $('#db-status-badge').removeClass('success warning error').addClass('error').html('<i class="fas fa-exclamation-triangle" style="margin-right: 4px;"></i>Error');
-                    $('#db-indexes-list').html('<div style="color: #ff3b30;">Failed to load database status</div>');
+                    $('#db-indexes-list').html('<div style="color: #ff3b30;">Unable to load database status</div>');
                 }
             }).catch(function(error) {
                 console.log('[PUNTWORK] DB status load error:', error);
@@ -785,7 +786,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             JobImportAPI.getDbOptimizationStatus().then(function(response) {
                 console.log('[PUNTWORK] DB status response:', response);
 
-                if (response.success) {
+                if (response.success && response.data && response.data.status) {
                     JobImportEvents.updateDbStatusDisplay(response.data.status);
                     $('#db-optimization-status-msg').text('Status updated');
                 } else {
@@ -809,6 +810,14 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
          */
         updateDbStatusDisplay: function(status) {
             console.log('[PUNTWORK] Updating DB status display:', status);
+
+            // Check if status object is valid
+            if (!status || typeof status !== 'object') {
+                console.error('[PUNTWORK] Invalid status object passed to updateDbStatusDisplay:', status);
+                $('#db-status-badge').removeClass('success warning error').addClass('error').html('<i class="fas fa-exclamation-triangle" style="margin-right: 4px;"></i>Error');
+                $('#db-indexes-list').html('<div style="color: #ff3b30;">Invalid status data</div>');
+                return;
+            }
 
             // Update badge
             var badgeElement = $('#db-status-badge');
