@@ -624,6 +624,26 @@ function handle_trigger_import( $request ) {
 				);
 			}
 
+			// In test mode, return mock success without actually running import
+			if ( defined( 'PUNTWORK_TESTING' ) && PUNTWORK_TESTING ) {
+				return new \WP_REST_Response(
+					array(
+						'success' => true,
+						'message' => 'Import triggered successfully (test mode)',
+						'data'    => array(
+							'processed' => 0,
+							'total'     => 0,
+							'published' => 0,
+							'updated'   => 0,
+							'skipped'   => 0,
+						),
+						'async'   => false,
+						'test_mode' => true,
+					),
+					200
+				);
+			}
+
 			$result = run_scheduled_import( $test_mode, 'api' );
 			if ( ! defined( 'PUNTWORK_TESTING' ) || ! PUNTWORK_TESTING ) {
 				error_log( '[PUNTWORK] API: run_scheduled_import returned: ' . json_encode( $result ) );
