@@ -106,55 +106,6 @@ console.log('[PUNTWORK] job-import-api.js loaded');
         },
 
         /**
-         * Combine JSONL files
-         * @param {number} totalItems - Total number of items
-         * @returns {Promise} AJAX promise
-         */
-        combineJsonl: function(totalItems) {
-            console.log('[PUNTWORK] ===== API.combineJsonl DEBUG =====');
-            console.log('[PUNTWORK] Combining JSONL files for total items:', totalItems);
-            console.log('[PUNTWORK] AJAX URL:', jobImportData.ajaxurl);
-            console.log('[PUNTWORK] Nonce:', jobImportData.nonce);
-            console.log('[PUNTWORK] Timestamp:', new Date().toISOString());
-            console.log('[PUNTWORK] Browser info:', navigator.userAgent);
-
-            const ajaxData = {
-                action: 'combine_jsonl',
-                total_items: totalItems,
-                nonce: jobImportData.nonce
-            };
-            console.log('[PUNTWORK] AJAX data being sent:', ajaxData);
-
-            return $.ajax({
-                url: jobImportData.ajaxurl,
-                type: 'POST',
-                data: ajaxData,
-                timeout: 300000, // 5 minutes for JSONL combination (reduced from 30 minutes since import is now background)
-                success: function(response) {
-                    console.log('[PUNTWORK] AJAX success for combineJsonl:', response);
-                    console.log('[PUNTWORK] Response timestamp:', new Date().toISOString());
-                    if (!response || !response.success) {
-                        console.error('[PUNTWORK] ERROR: combineJsonl AJAX returned unsuccessful response:', response);
-                    } else {
-                        console.log('[PUNTWORK] SUCCESS: combineJsonl completed');
-                        console.log('[PUNTWORK] Combined file exists:', response.data && response.data.combined_file_exists);
-                        console.log('[PUNTWORK] Combined file size:', response.data && response.data.combined_file_size);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('[PUNTWORK] AJAX error for combineJsonl:', {
-                        xhr: xhr,
-                        status: status,
-                        error: error,
-                        statusCode: xhr.status,
-                        responseText: xhr.responseText,
-                        timestamp: new Date().toISOString()
-                    });
-                }
-            });
-        },
-
-        /**
          * Cancel import process
          * @returns {Promise} AJAX promise
          */

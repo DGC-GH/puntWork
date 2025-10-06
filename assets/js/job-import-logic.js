@@ -655,53 +655,20 @@ console.info("=== Job Import Logic Script Loaded ===");
                     complete: false
                 });
 
-                console.log('[PUNTWORK] [DEBUG-IMPORT] About to call JobImportAPI.combineJsonl with total_items=' + total_items);
-                const combineStartTime = Date.now();
-                const combineResponse = await JobImportAPI.combineJsonl(total_items);
-                const combineEndTime = Date.now();
-                console.log('[PUNTWORK] [DEBUG-IMPORT] Combine JSONL call took:', (combineEndTime - combineStartTime), 'ms');
-                console.log('[PUNTWORK] [DEBUG-IMPORT] Combine JSONL response:', combineResponse);
-                console.log('[PUNTWORK] [DEBUG-IMPORT] Combine response success:', combineResponse.success);
+                console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 3: BACKGROUND IMPORT =====');
+                $('#status-message').text('Starting background import...');
+                JobImportUI.appendLogs(['Starting background import...']);
 
-                PuntWorkJSLogger.debug('Combine JSONL response', 'LOGIC', combineResponse);
-
-                if (combineResponse.success) {
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] JSONL combination successful - import scheduled in background');
-                    JobImportUI.appendLogs(combineResponse.data.logs || []);
-
-                    // Update progress to show JSONL combination complete and import scheduled
-                    JobImportUI.updateProgress({
-                        total: total_items,
-                        processed: 0,
-                        published: 0,
-                        updated: 0,
-                        skipped: 0,
-                        duplicates_drafted: 0,
-                        drafted_old: 0,
-                        time_elapsed: this.getElapsedTime() / 1000,
-                        complete: false,
-                        phase: 'jsonl-combining'
-                    });
-
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 3: BACKGROUND IMPORT =====');
-                    $('#status-message').text('JSONL combined - starting background import...');
-                    JobImportUI.appendLogs(['JSONL files combined successfully']);
-                    JobImportUI.appendLogs(['Background import scheduled and starting...']);
-
-                    // Start status polling to monitor the background import progress
-                    if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
-                        console.log('[PUNTWORK] [DEBUG-IMPORT] Starting status polling for background import progress');
-                        window.JobImportEvents.startStatusPolling();
-                        console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling started successfully');
-                    } else {
-                        console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling not available');
-                    }
-
-                    console.log('[PUNTWORK] [DEBUG-IMPORT] ===== START IMPORT PROCESS COMPLETE =====');
+                // Start status polling to monitor the background import progress
+                if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Starting status polling for background import progress');
+                    window.JobImportEvents.startStatusPolling();
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling started successfully');
                 } else {
-                    console.error('[PUNTWORK] [DEBUG-IMPORT] JSONL combination failed:', combineResponse);
-                    throw new Error('Combining JSONL failed: ' + (combineResponse.message || 'Unknown error'));
+                    console.log('[PUNTWORK] [DEBUG-IMPORT] Status polling not available');
                 }
+
+                console.log('[PUNTWORK] [DEBUG-IMPORT] ===== START IMPORT PROCESS COMPLETE =====');
 
                 console.log('[PUNTWORK] [DEBUG-IMPORT] About to clear import cancel');
                 await JobImportAPI.clearImportCancel();
