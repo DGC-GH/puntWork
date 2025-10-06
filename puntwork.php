@@ -58,12 +58,18 @@ function init_action_scheduler() {
 		return;
 	}
 
-	// Skip loading bundled Action Scheduler to avoid conflicts with other plugins
-	// The plugin will use external ActionScheduler if available, or fall back to WP-Cron
-	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-		error_log( '[PUNTWORK] [ACTION-SCHEDULER] Skipping bundled Action Scheduler to avoid conflicts' );
+	// Load bundled Action Scheduler since it's not available from external sources
+	$action_scheduler_path = PUNTWORK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php';
+	if ( file_exists( $action_scheduler_path ) ) {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( '[PUNTWORK] [ACTION-SCHEDULER] Loading bundled Action Scheduler from: ' . $action_scheduler_path );
+		}
+		require_once $action_scheduler_path;
+	} else {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( '[PUNTWORK] [ACTION-SCHEDULER] ERROR: Bundled Action Scheduler not found at: ' . $action_scheduler_path );
+		}
 	}
-	return;
 }
 
 // =====================================================================================

@@ -1916,6 +1916,14 @@ function combine_jsonl_ajax() {
 			// Include the import functions
 			require_once __DIR__ . '/../import/import-batch.php';
 			
+			// Check if ActionScheduler is available
+			$action_scheduler_available = function_exists( 'as_schedule_single_action' );
+			$async_mode = $action_scheduler_available;
+			
+			if ( !$action_scheduler_available ) {
+				error_log( '[PUNTWORK] [COMBINE-START] ActionScheduler not available, will use synchronous processing' );
+			}
+			
 			// Start the import
 			try {
 				$import_result = import_all_jobs_from_json( true ); // preserve status
@@ -1923,7 +1931,7 @@ function combine_jsonl_ajax() {
 				if ( $import_result['success'] ) {
 					error_log( '[PUNTWORK] [COMBINE-START] Import started successfully' );
 					$scheduling_success = true;
-					$async_mode = $import_result['async_mode'] ?? false;
+					$async_mode = $import_result['async_mode'] ?? $async_mode;
 				} else {
 					error_log( '[PUNTWORK] [COMBINE-START] Import failed to start: ' . ( $import_result['message'] ?? 'Unknown error' ) );
 					$scheduling_success = false;
@@ -1941,8 +1949,8 @@ function combine_jsonl_ajax() {
 			}
 
 			// Check if Action Scheduler is working by testing a simple job execution
-			$action_scheduler_reliable = false;
-			if ( $scheduling_success ) {
+			$action_scheduler_reliable = $action_scheduler_available;
+			if ( $action_scheduler_available ) {
 				// Try to execute Action Scheduler queue manually to test if it works
 				if ( class_exists( '\\ActionScheduler' ) ) {
 					try {

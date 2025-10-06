@@ -518,6 +518,19 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 		}
 
 		try {
+			// Ensure ActionScheduler is loaded if available
+			if ( ! function_exists( 'as_schedule_single_action' ) ) {
+				$action_scheduler_path = defined( 'PUNTWORK_PATH' ) ? PUNTWORK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php' : __DIR__ . '/../../vendor/woocommerce/action-scheduler/action-scheduler.php';
+				if ( file_exists( $action_scheduler_path ) ) {
+					if ( $debug_mode ) {
+						error_log( '[PUNTWORK] [IMPORT-INIT] Loading ActionScheduler from: ' . $action_scheduler_path );
+					}
+					require_once $action_scheduler_path;
+				} elseif ( $debug_mode ) {
+					error_log( '[PUNTWORK] [IMPORT-INIT] ActionScheduler not found at: ' . $action_scheduler_path );
+				}
+			}
+
 			// Check prerequisites before starting import
 			$json_path = puntwork_get_combined_jsonl_path();
 
@@ -647,6 +660,15 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 
 				if ( $debug_mode ) {
 					error_log( '[PUNTWORK] [IMPORT-FALLBACK] Scheduled fallback check in 30 seconds, job ID: ' . $fallback_check_id );
+				}
+
+				// Also schedule an immediate check in 5 seconds as a safety net
+				$immediate_check_id = as_schedule_single_action( time() + 5, 'puntwork_check_async_fallback', array(
+					'import_id' => uniqid( 'immediate_', true )
+				) );
+
+				if ( $debug_mode ) {
+					error_log( '[PUNTWORK] [IMPORT-FALLBACK] Scheduled immediate fallback check in 5 seconds, job ID: ' . $immediate_check_id );
 				}
 
 				// Return success with scheduling information
@@ -1229,18 +1251,37 @@ function check_async_fallback( $args ) {
 			'status' => 'pending'
 		) );
 		$jobs_still_pending = ! empty( $pending_jobs );
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [FALLBACK-CHECK] Found ' . count( $pending_jobs ) . ' pending ActionScheduler jobs' );
+		}
 	}
 
 	if ( $jobs_still_pending ) {
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [FALLBACK-CHECK] ActionScheduler jobs still pending - may be delayed but could still execute' );
-			error_log( '[PUNTWORK] [FALLBACK-CHECK] Will check again in 60 seconds' );
+		// If this is an immediate check (5 seconds), give ActionScheduler more time
+		if ( strpos( $import_id, 'immediate_' ) === 0 ) {
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [FALLBACK-CHECK] Immediate check found pending jobs - ActionScheduler may be working, will check again in 30 seconds' );
+			}
+			// Schedule another check in 30 seconds
+			as_schedule_single_action( time() + 30, 'puntwork_check_async_fallback', array(
+				'import_id' => str_replace( 'immediate_', 'delayed_', $import_id )
+			) );
+			return;
+		} elseif ( strpos( $import_id, 'fallback_' ) === 0 || strpos( $import_id, 'delayed_' ) === 0 ) {
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [FALLBACK-CHECK] Delayed check still found pending jobs - ActionScheduler may be slow but working' );
+			}
+			// Give it more time - check again in another 30 seconds
+			as_schedule_single_action( time() + 30, 'puntwork_check_async_fallback', array(
+				'import_id' => str_replace( array('fallback_', 'delayed_'), 'extended_', $import_id )
+			) );
+			return;
+		} else {
+			if ( $debug_mode ) {
+				error_log( '[PUNTWORK] [FALLBACK-CHECK] Extended check still found pending jobs - ActionScheduler appears to be working slowly' );
+			}
+			return;
 		}
-		// Schedule another check in 60 seconds
-		as_schedule_single_action( time() + 60, 'puntwork_check_async_fallback', array(
-			'import_id' => $import_id . '_retry'
-		) );
-		return;
 	}
 
 	// No jobs processed and no pending jobs - ActionScheduler is not working
