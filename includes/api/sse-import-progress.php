@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-error_log( '[PUNTWORK] SSE: sse-import-progress.php file loaded successfully' );
+// error_log( '[PUNTWORK] SSE: sse-import-progress.php file loaded successfully' );
 
 // Explicitly load required utility classes for SSE context
 require_once __DIR__ . '/../utilities/async-processing.php';
@@ -80,7 +80,7 @@ function deep_sanitize_for_json( $data ) {
  */
 add_action( 'rest_api_init', __NAMESPACE__ . '\\register_sse_import_progress_route' );
 function register_sse_import_progress_route() {
-	error_log( '[PUNTWORK] SSE: register_sse_import_progress_route called' );
+	// error_log( '[PUNTWORK] SSE: register_sse_import_progress_route called' );
 	
 	// Check if verify_api_key function exists
 	if ( ! function_exists( __NAMESPACE__ . '\\verify_api_key' ) ) {
@@ -104,7 +104,7 @@ function register_sse_import_progress_route() {
 			),
 		)
 	);
-	error_log( '[PUNTWORK] SSE: SSE route registered successfully' );
+	// error_log( '[PUNTWORK] SSE: SSE route registered successfully' );
 }
 
 /*
@@ -112,7 +112,7 @@ function register_sse_import_progress_route() {
  */
 add_action( 'rest_api_init', __NAMESPACE__ . '\\register_sse_monitoring_route' );
 function register_sse_monitoring_route() {
-	error_log( '[PUNTWORK] SSE: register_sse_monitoring_route called' );
+	// error_log( '[PUNTWORK] SSE: register_sse_monitoring_route called' );
 	
 	// Check if verify_api_key function exists
 	if ( ! function_exists( __NAMESPACE__ . '\\verify_api_key' ) ) {
@@ -136,7 +136,7 @@ function register_sse_monitoring_route() {
 			),
 		)
 	);
-	error_log( '[PUNTWORK] SSE: Monitoring SSE route registered successfully' );
+	// error_log( '[PUNTWORK] SSE: Monitoring SSE route registered successfully' );
 }
 
 /**
@@ -144,10 +144,10 @@ function register_sse_monitoring_route() {
  */
 function handle_import_progress_sse( $request ) {
 	try {
-		error_log( '[PUNTWORK] SSE: handle_import_progress_sse called at ' . date( 'Y-m-d H:i:s' ) );
+		// error_log( '[PUNTWORK] SSE: handle_import_progress_sse called at ' . date( 'Y-m-d H:i:s' ) );
 
 		$api_key = $request->get_param( 'api_key' );
-		error_log( '[PUNTWORK] SSE: API key from request: ' . ( empty( $api_key ) ? 'empty' : 'provided' ) );
+		// error_log( '[PUNTWORK] SSE: API key from request: ' . ( empty( $api_key ) ? 'empty' : 'provided' ) );
 
 		// Verify API key
 		if ( empty( $api_key ) ) {
@@ -199,7 +199,7 @@ function handle_import_progress_sse( $request ) {
 			exit();
 		}
 
-		error_log( '[PUNTWORK] SSE: API key verified, starting SSE connection' );
+		// error_log( '[PUNTWORK] SSE: API key verified, starting SSE connection' );
 
 		// Set headers for Server-Sent Events
 		header( 'Content-Type: text/event-stream' );
@@ -223,7 +223,7 @@ function handle_import_progress_sse( $request ) {
 		) . "\n\n";
 		flush();
 
-		error_log( '[PUNTWORK] SSE: Initial connection event sent' );
+		// error_log( '[PUNTWORK] SSE: Initial connection event sent' );
 
 		$last_status         = null;
 		$last_update         = 0;
@@ -943,7 +943,7 @@ function get_activity_logs_for_sse( $limit = 20 ) {
  */
 add_action( 'rest_api_init', __NAMESPACE__ . '\\register_monitoring_api_routes' );
 function register_monitoring_api_routes() {
-	error_log( '[PUNTWORK] SSE: register_monitoring_api_routes called' );
+	// error_log( '[PUNTWORK] SSE: register_monitoring_api_routes called' );
 	
 	// Activity logs endpoint
 	register_rest_route(
@@ -1020,5 +1020,5 @@ function register_monitoring_api_routes() {
 		)
 	);
 	
-	error_log( '[PUNTWORK] SSE: Monitoring API routes registered successfully' );
+	// error_log( '[PUNTWORK] SSE: Monitoring API routes registered successfully' );
 }

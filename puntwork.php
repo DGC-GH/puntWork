@@ -53,7 +53,7 @@ function init_action_scheduler() {
 	// Check if Action Scheduler is already available (from WooCommerce or another plugin)
 	if ( function_exists( 'as_schedule_single_action' ) ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [ACTION-SCHEDULER] Action Scheduler already available from another source' );
+			// error_log( '[PUNTWORK] [ACTION-SCHEDULER] Action Scheduler already available from another source' );
 		}
 		return;
 	}
@@ -62,12 +62,12 @@ function init_action_scheduler() {
 	$action_scheduler_path = PUNTWORK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php';
 	if ( file_exists( $action_scheduler_path ) ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [ACTION-SCHEDULER] Loading bundled Action Scheduler from: ' . $action_scheduler_path );
+			// error_log( '[PUNTWORK] [ACTION-SCHEDULER] Loading bundled Action Scheduler from: ' . $action_scheduler_path );
 		}
 		require_once $action_scheduler_path;
 	} else {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [ACTION-SCHEDULER] ERROR: Bundled Action Scheduler not found at: ' . $action_scheduler_path );
+			// error_log( '[PUNTWORK] [ACTION-SCHEDULER] ERROR: Bundled Action Scheduler not found at: ' . $action_scheduler_path );
 		}
 	}
 }
@@ -203,7 +203,7 @@ if ( ! isset( $GLOBALS['puntwork_init_hook_added'] ) ) {
 
 	$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [INIT-DEBUG] Init hooks added: load_puntwork_includes and setup_job_import' );
+		// error_log( '[PUNTWORK] [INIT-DEBUG] Init hooks added: load_puntwork_includes and setup_job_import' );
 	}
 }
 
@@ -227,11 +227,11 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] load_puntwork_includes() function called' );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] load_puntwork_includes() function called' );
 		}
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] Loading includes conditionally...' );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Loading includes conditionally...' );
 		}
 
 		// Determine context for conditional loading
@@ -247,9 +247,9 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 		$is_frontend = ! $is_admin && ! $is_ajax && ! $is_rest && ! $is_cron;
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] Context check: admin=' . ( $is_admin ? '1' : '0' ) . ', ajax=' . ( $is_ajax ? '1' : '0' ) . ', rest=' . ( $is_rest ? '1' : '0' ) . ', cron=' . ( $is_cron ? '1' : '0' ) );
-			error_log( '[PUNTWORK] [INIT-DEBUG] Current URL: ' . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : 'unknown' ) );
-			error_log( '[PUNTWORK] [INIT-DEBUG] is_admin() function available: ' . ( function_exists( 'is_admin' ) ? 'yes' : 'no' ) );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Context check: admin=' . ( $is_admin ? '1' : '0' ) . ', ajax=' . ( $is_ajax ? '1' : '0' ) . ', rest=' . ( $is_rest ? '1' : '0' ) . ', cron=' . ( $is_cron ? '1' : '0' ) );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Current URL: ' . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : 'unknown' ) );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] is_admin() function available: ' . ( function_exists( 'is_admin' ) ? 'yes' : 'no' ) );
 		}
 
 		// Always load core functionality
@@ -287,7 +287,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 		// Admin-only includes
 		if ( $is_admin ) {
 			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [INIT-DEBUG] Loading admin includes...' );
+				// error_log( '[PUNTWORK] [INIT-DEBUG] Loading admin includes...' );
 			}
 			$includes = array_merge(
 				$includes,
@@ -462,7 +462,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 				include_once $file;
 				++$loaded_count;
 				if ( $debug_mode && $loaded_count % 10 == 0 ) {
-					error_log( '[PUNTWORK] [INIT-DEBUG] Loaded ' . $loaded_count . ' includes so far...' );
+					// error_log( '[PUNTWORK] [INIT-DEBUG] Loaded ' . $loaded_count . ' includes so far...' );
 				}
 			} else {
 				++$failed_count;
@@ -473,8 +473,8 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 		}
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] Conditional include loading complete: ' . $loaded_count . ' loaded, ' . $failed_count . ' failed' );
-			error_log( '[PUNTWORK] [INIT-DEBUG] Context: admin=' . ( $is_admin ? '1' : '0' ) . ', ajax=' . ( $is_ajax ? '1' : '0' ) . ', rest=' . ( $is_rest ? '1' : '0' ) . ', cron=' . ( $is_cron ? '1' : '0' ) );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Conditional include loading complete: ' . $loaded_count . ' loaded, ' . $failed_count . ' failed' );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Context: admin=' . ( $is_admin ? '1' : '0' ) . ', ajax=' . ( $is_ajax ? '1' : '0' ) . ', rest=' . ( $is_rest ? '1' : '0' ) . ', cron=' . ( $is_cron ? '1' : '0' ) );
 		}
 
 		$GLOBALS['puntwork_includes_loaded'] = true;
@@ -492,7 +492,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 		// Skip initialization on AJAX requests to prevent duplicate loading
 		if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[PUNTWORK] [INIT-SKIP] Skipping initialization on AJAX request' );
+				// error_log( '[PUNTWORK] [INIT-SKIP] Skipping initialization on AJAX request' );
 			}
 
 			return;
@@ -502,7 +502,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
 		if ( ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || ( is_string( $request_uri ) && strpos( $request_uri, '/wp-json/' ) !== false ) ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[PUNTWORK] [INIT-SKIP] Skipping initialization on REST API request: ' . $request_uri );
+				// error_log( '[PUNTWORK] [INIT-SKIP] Skipping initialization on REST API request: ' . $request_uri );
 			}
 			return;
 		}
@@ -510,19 +510,19 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 		// Prevent multiple initialization across requests using WordPress option
 		$init_option_key = 'puntwork_setup_done';
 		$setup_done      = get_option( $init_option_key, false );
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [OPTION-DEBUG] Key: ' . $init_option_key . ', Value: ' . var_export( $setup_done, true ) . ', Type: ' . gettype( $setup_done ) );
-		}
+		// if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		// 	error_log( '[PUNTWORK] [OPTION-DEBUG] Key: ' . $init_option_key . ', Value: ' . var_export( $setup_done, true ) . ', Type: ' . gettype( $setup_done ) );
+		// }
 		if ( $setup_done ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[PUNTWORK] [INIT-SKIP] Setup already completed globally, skipping...' );
+				// error_log( '[PUNTWORK] [INIT-SKIP] Setup already completed globally, skipping...' );
 			}
 
 			return;
 		}
 		$setup_completed = true;
 		update_option( $init_option_key, true );
-		error_log( '[PUNTWORK] [OPTION-DEBUG] Set option for key: ' . $init_option_key );
+		// error_log( '[PUNTWORK] [OPTION-DEBUG] Set option for key: ' . $init_option_key );
 
 		// Increase memory limit to prevent exhaustion
 		ini_set( 'memory_limit', '1024M' );
@@ -530,19 +530,19 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 		$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-START] ===== SETUP_JOB_IMPORT START =====' );
-			error_log( '[PUNTWORK] [INIT-DEBUG] WordPress version: ' . get_bloginfo( 'version' ) );
-			error_log( '[PUNTWORK] [INIT-DEBUG] PHP version: ' . PHP_VERSION );
-			error_log( '[PUNTWORK] [INIT-DEBUG] Memory limit: ' . ini_get( 'memory_limit' ) );
-			error_log( '[PUNTWORK] [INIT-DEBUG] Max execution time: ' . ini_get( 'max_execution_time' ) );
-			error_log( '[PUNTWORK] [INIT-DEBUG] ABSPATH: ' . ABSPATH );
-			error_log( '[PUNTWORK] [INIT-DEBUG] Plugin path: ' . PUNTWORK_PATH );
+			// error_log( '[PUNTWORK] [INIT-START] ===== SETUP_JOB_IMPORT START =====' );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] WordPress version: ' . get_bloginfo( 'version' ) );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] PHP version: ' . PHP_VERSION );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Memory limit: ' . ini_get( 'memory_limit' ) );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Max execution time: ' . ini_get( 'max_execution_time' ) );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] ABSPATH: ' . ABSPATH );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Plugin path: ' . PUNTWORK_PATH );
 		}
 
 		// Test database connection
 		global $wpdb;
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [INIT-DEBUG] Testing database connection...' );
+			// error_log( '[PUNTWORK] [INIT-DEBUG] Testing database connection...' );
 		}
 
 		// Use comprehensive database connection test
@@ -663,7 +663,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\setup_job_import' ) ) {
 			call_user_func( array( __NAMESPACE__ . '\\API\\WebhookManager', 'init' ) );
 		}
 
-		if ( $debug_mode ) {
+			if ( $debug_mode ) {
 			// error_log( '[PUNTWORK] [INIT-DEBUG] Initializing Feed Optimizer...' );
 		}
 		// Initialize Feed Optimizer
