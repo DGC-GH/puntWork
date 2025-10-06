@@ -356,90 +356,14 @@ function prepare_import_setup( $batch_start = 0, $is_batch = false ) {
 
 	if ( ! file_exists( $json_path ) ) {
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SETUP-ERROR] JSONL file not found: ' . $json_path . ' - checking if feeds need to be processed first' );
-
-			// Check if there are any individual feed files
-			$feed_files = glob( puntwork_get_feeds_directory() . '*.jsonl' );
-			error_log( '[PUNTWORK] [SETUP-ERROR] Individual feed files found: ' . ( is_array( $feed_files ) ? count( $feed_files ) : 'glob_failed' ) );
-			if ( is_array( $feed_files ) && ! empty( $feed_files ) ) {
-				error_log( '[PUNTWORK] [SETUP-ERROR] Individual feeds exist but combined file missing - attempting to combine JSONL files' );
-				foreach ( $feed_files as $feed_file ) {
-					$size = file_exists( $feed_file ) ? filesize( $feed_file ) : 'N/A';
-					error_log( '[PUNTWORK] [SETUP-ERROR]   - ' . basename( $feed_file ) . ' (' . $size . ' bytes)' );
-				}
-
-				// Attempt to combine the JSONL files
-				try {
-					// Build feeds array from existing files
-					$feeds = array();
-					foreach ( $feed_files as $feed_file ) {
-						if ( basename( $feed_file ) !== 'combined-jobs.jsonl' ) {
-							$feed_key = basename( $feed_file, '.jsonl' );
-							$feeds[ $feed_key ] = ''; // URL not needed for combination
-						}
-					}
-					if ( ! empty( $feeds ) ) {
-						$combine_logs = array();
-						$total_items  = 0;
-						foreach ( $feed_files as $feed_file ) {
-							if ( basename( $feed_file ) !== 'combined-jobs.jsonl' ) {
-								// Count items in each feed file
-								$handle = fopen( $feed_file, 'r' );
-								if ( $handle ) {
-									while ( ( $line = fgets( $handle ) ) !== false ) {
-										$line = trim( $line );
-										if ( ! empty( $line ) ) {
-											++$total_items;
-										}
-									}
-									fclose( $handle );
-								}
-							}
-						}
-
-						// Include combine-jsonl.php if not already included
-						if ( ! function_exists( 'combine_jsonl_files' ) ) {
-							require_once __DIR__ . '/combine-jsonl.php';
-						}
-
-						combine_jsonl_files( $feeds, puntwork_get_feeds_directory(), $total_items, $combine_logs );
-
-						if ( file_exists( $json_path ) ) {
-							error_log( '[PUNTWORK] [SETUP-SUCCESS] Combined JSONL file created successfully during import setup' );
-							$combine_logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'JSONL files combined successfully - ready for import';
-						} else {
-							error_log( '[PUNTWORK] [SETUP-ERROR] Failed to create combined JSONL file' );
-							return array(
-								'success' => false,
-								'message' => 'Failed to combine JSONL files - combined file not created',
-								'logs'    => array_merge( array( 'Failed to combine JSONL files' ), $combine_logs ),
-							);
-						}
-					} else {
-						error_log( '[PUNTWORK] [SETUP-ERROR] No feeds configuration found' );
-						return array(
-							'success' => false,
-							'message' => 'No feeds configuration found',
-							'logs'    => array( 'No feeds configuration found - cannot combine files' ),
-						);
-					}
-				} catch ( \Exception $e ) {
-					error_log( '[PUNTWORK] [SETUP-ERROR] Exception during JSONL combination: ' . $e->getMessage() );
-					return array(
-						'success' => false,
-						'message' => 'Exception during JSONL combination: ' . $e->getMessage(),
-						'logs'    => array( 'Exception during JSONL combination: ' . $e->getMessage() ),
-					);
-				}
-			} else {
-				error_log( '[PUNTWORK] [SETUP-ERROR] No individual feed files found - feeds may not be configured or processed' );
-				return array(
-					'success' => false,
-					'message' => 'JSONL file not found - feeds may need to be processed first. Run feed processing to download and convert feeds to JSONL format.',
-					'logs'    => array( 'JSONL file not found - run feed processing first to create individual feed files, then combine them' ),
-				);
-			}
+			error_log( '[PUNTWORK] [SETUP-ERROR] JSONL file not found: ' . $json_path );
 		}
+
+		return array(
+			'success' => false,
+			'message' => 'JSONL file not found - feeds may need to be processed first. Run feed processing to download and convert feeds to JSONL format.',
+			'logs'    => array( 'JSONL file not found - run feed processing first to create individual feed files, then combine them' ),
+		);
 	}
 
 	if ( ! is_readable( $json_path ) ) {
@@ -698,16 +622,6 @@ function prepare_import_setup( $batch_start = 0, $is_batch = false ) {
 		error_log( '[PUNTWORK] [SETUP-EARLY-CHECK] Checking for early return: start_index=' . $start_index . ', total=' . $total . ', start_index >= total = ' . ( $start_index >= $total ? 'true' : 'false' ) );
 	}
 
-// Don't do early return if the logs indicate this is a fresh import ready to start
-$current_logs = $existing_status['logs'] ?? array();
-$is_ready_for_import = in_array('JSONL files combined successfully - ready for import', $current_logs);
-if ( $is_ready_for_import ) {
-	// This is a fresh import ready to start, don't do early return even if start_index >= total
-	// (which shouldn't happen anyway for fresh imports)
-	if ( $debug_mode ) {
-		error_log( '[PUNTWORK] [SETUP-READY] Import is ready for batch processing, skipping early return check' );
-	}
-} else {
 	// Check for early return
 	if ( $start_index >= $total ) {
 		if ( $debug_mode ) {
@@ -733,7 +647,6 @@ if ( $is_ready_for_import ) {
 			'batch_processed'    => 0,
 		);
 	}
-}
 
 if ( $debug_mode ) {
 	error_log( '[PUNTWORK] [SETUP-FINAL] NORMAL RETURN - start_index=' . $start_index . ', total=' . $total . ', json_path=' . $json_path . ', processed_guids_count=' . count( $processed_guids ) );
