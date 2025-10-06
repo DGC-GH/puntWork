@@ -2,17 +2,7 @@
 
 /**
  * Plugin Name: puntWork
- * Description: Advanced job import plugin with multi-format feed support,
- // Deactivation hook
-register_deactivation_hook( __FILE__, __NAMESPACE__ . '\\job_import_deactivate' );
-function job_import_deactivate() {
-	wp_clear_scheduled_hook( 'job_import_cron' );
-	wp_clear_scheduled_hook( 'puntwork_social_cron' );
-	
-	// Clear plugin loading flags to allow fresh load on reactivation
-	delete_option( 'puntwork_setup_done' );
-}time analytics, health monitoring, AI-powered features, CRM integrations,
- *     multi-site support, horizontal scaling, GraphQL API, webhooks, and mobile app.
+ * Description: Advanced job import plugin with multi-format feed support, time analytics, health monitoring, AI-powered features, CRM integrations, multi-site support, horizontal scaling, GraphQL API, webhooks, and mobile app.
  * Version: 0.0.6
  * Author: DGC-GH
  * Requires at least: 5.0
@@ -241,7 +231,6 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 				'admin/admin-page-html.php',
 				'admin/admin-ui-debug.php',
 				'admin/admin-ui-main.php',
-				'admin/admin-ui-scheduling.php',
 				'admin/admin-api-settings.php',
 				'admin/admin-ajax-monitoring.php',
 				'admin/admin-feed-config.php',

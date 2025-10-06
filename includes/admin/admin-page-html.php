@@ -16,7 +16,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Load admin UI components
 require_once __DIR__ . '/admin-ui-main.php';
-require_once __DIR__ . '/admin-ui-scheduling.php';
 require_once __DIR__ . '/admin-api-settings.php';
 require_once __DIR__ . '/admin-feed-config.php';
 
@@ -139,9 +138,6 @@ function feeds_dashboard_page() {
 
 	// Render main import UI
 	render_main_import_ui();
-
-	// Render scheduling UI
-	render_scheduling_ui();
 
 	// Render import history UI
 	render_import_history_ui();

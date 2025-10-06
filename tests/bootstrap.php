@@ -628,7 +628,6 @@ $includes = array(
 	'admin/admin-page-html.php',
 	'admin/admin-ui-debug.php',
 	'admin/admin-ui-main.php',
-	'admin/admin-ui-scheduling.php',
 	'admin/admin-api-settings.php',
 	'admin/admin-ui-feed-health.php',
 	'admin/admin-ui-analytics.php',
