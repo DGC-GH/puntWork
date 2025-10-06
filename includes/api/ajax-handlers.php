@@ -92,7 +92,9 @@ function ajax_get_import_schedule() {
 			'last_run' => $last_run,
 			'last_run_details' => $last_run_details,
 		);
+		wp_send_json_success( $response );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to get import schedule: ' . $e->getMessage() ) );
 	}
 }
 
@@ -137,7 +139,9 @@ function ajax_save_import_schedule() {
 			'schedule' => $schedule,
 			'next_run' => $next_run,
 		);
+		wp_send_json_success( $response );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to save import schedule: ' . $e->getMessage() ) );
 	}
 }
 
@@ -166,6 +170,7 @@ function ajax_test_import_schedule() {
 			'result' => $result,
 		) );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Test import failed: ' . $e->getMessage() ) );
 	}
 }
 
@@ -197,6 +202,7 @@ function ajax_get_import_run_history() {
 			'count' => $count,
 		) );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to get import history: ' . $e->getMessage() ) );
 	}
 }
 
@@ -219,6 +225,7 @@ function ajax_get_job_import_status() {
 			'progress' => $progress,
 		) );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to get job import status: ' . $e->getMessage() ) );
 	}
 }
 
@@ -256,6 +263,7 @@ function ajax_get_async_status() {
 			'running_jobs' => $running_jobs,
 		) );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to get async status: ' . $e->getMessage() ) );
 	}
 }
 
@@ -277,6 +285,7 @@ function ajax_run_job_import_batch() {
 
 		wp_send_json_success( $result );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to run import batch: ' . $e->getMessage() ) );
 	}
 }
 
@@ -299,6 +308,7 @@ function ajax_run_scheduled_import() {
 			'async' => false, // This is synchronous for now
 		) );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to run scheduled import: ' . $e->getMessage() ) );
 	}
 }
 
@@ -317,6 +327,7 @@ function ajax_cancel_job_import() {
 
 		wp_send_json_success( array( 'message' => 'Import cancelled' ) );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to cancel import: ' . $e->getMessage() ) );
 	}
 }
 
@@ -338,6 +349,7 @@ function ajax_reset_job_import() {
 
 		wp_send_json_success( array( 'message' => 'Import reset successfully' ) );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to reset import: ' . $e->getMessage() ) );
 	}
 }
 
@@ -363,6 +375,7 @@ function ajax_get_api_key() {
 
 		wp_send_json_success( array( 'api_key' => $api_key ) );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to get API key: ' . $e->getMessage() ) );
 	}
 }
 
@@ -386,7 +399,9 @@ function ajax_check_import_data_status() {
 			'feeds_count' => count( $feeds ),
 			'feeds_available' => ! empty( $feeds ),
 		);
+		wp_send_json_success( $status );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to check import data status: ' . $e->getMessage() ) );
 	}
 }
 
@@ -409,7 +424,9 @@ function ajax_get_db_optimization_status() {
 				'job_posts' => $wpdb->get_var( "SHOW TABLE STATUS LIKE '{$wpdb->posts}'" ),
 			),
 		);
+		wp_send_json_success( $status );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to get DB optimization status: ' . $e->getMessage() ) );
 	}
 }
 
@@ -431,6 +448,7 @@ function ajax_create_database_indexes() {
 			'result' => $result,
 		) );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to create database indexes: ' . $e->getMessage() ) );
 	}
 }
 
@@ -454,6 +472,7 @@ function ajax_save_async_settings() {
 			'enabled' => $enabled,
 		) );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to save async settings: ' . $e->getMessage() ) );
 	}
 }
 
@@ -485,6 +504,7 @@ function ajax_process_feed() {
 
 		wp_send_json_success( $result );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to process feed: ' . $e->getMessage() ) );
 	}
 }
 
@@ -525,6 +545,7 @@ function ajax_schedule_feed_processing() {
 			'scheduled_jobs' => $scheduled_jobs,
 		) );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to schedule feed processing: ' . $e->getMessage() ) );
 	}
 }
 
@@ -587,6 +608,7 @@ function ajax_cleanup_duplicates() {
 			'result' => $result,
 		) );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to cleanup duplicates: ' . $e->getMessage() ) );
 	}
 }
 
@@ -608,6 +630,7 @@ function ajax_cleanup_continue() {
 
 		wp_send_json_success( $result );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to continue cleanup: ' . $e->getMessage() ) );
 	}
 }
 
@@ -626,6 +649,7 @@ function ajax_clear_import_cancel() {
 
 		wp_send_json_success( array( 'message' => 'Import cancel flag cleared' ) );
 	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to clear import cancel flag: ' . $e->getMessage() ) );
 	}
 }
 
