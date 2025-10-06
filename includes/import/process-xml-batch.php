@@ -48,21 +48,38 @@ function process_xml_batch( $xml_path, $handle, $feed_key, $output_dir, $fallbac
 
 	try {
 		$reader = new \XMLReader();
-		if ( ! $reader->open( $xml_path ) ) {
-			throw new \Exception( 'Invalid XML' );
+		try {
+			if ( ! $reader->open( $xml_path ) ) {
+				throw new \Exception( 'Invalid XML' );
+			}
+		} catch ( \Exception $open_error ) {
+			throw new \Exception( 'Failed to open XML file: ' . $open_error->getMessage() );
 		}
 
 		// Possible job element names in feeds
 		$job_element_names = array( 'item', 'job', 'vacancy', 'position', 'entry', 'listing' );
 
-		while ( $reader->read() ) {
+		while ( true ) {
+			try {
+				if ( ! $reader->read() ) {
+					break;
+				}
+			} catch ( \Exception $read_error ) {
+				$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: XMLReader read() failed: " . $read_error->getMessage();
+				break;
+			}
 			if ( $reader->nodeType === \XMLReader::ELEMENT && in_array( strtolower( $reader->name ), $job_element_names ) ) {
 				try {
 					$item         = new \stdClass();
 					$element_name = strtolower( $reader->name );
 
 					// Use expand() to get the full element as DOMElement for safer parsing
-					$dom_element = $reader->expand();
+					try {
+						$dom_element = $reader->expand();
+					} catch ( \Exception $expand_error ) {
+						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: XMLReader expand() failed: " . $expand_error->getMessage();
+						$dom_element = false;
+					}
 					if ( $dom_element ) {
 						// Extract all child elements and text content
 						foreach ( $dom_element->childNodes as $child ) {
@@ -92,7 +109,18 @@ function process_xml_batch( $xml_path, $handle, $feed_key, $output_dir, $fallbac
 					} else {
 						// Fallback to the old method if expand() fails
 						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Using fallback XML parsing for item";
-						while ( $reader->read() && ! ( $reader->nodeType === \XMLReader::END_ELEMENT && strtolower( $reader->name ) === $element_name ) ) {
+						while ( true ) {
+							try {
+								if ( ! $reader->read() ) {
+									break;
+								}
+								if ( $reader->nodeType === \XMLReader::END_ELEMENT && strtolower( $reader->name ) === $element_name ) {
+									break;
+								}
+							} catch ( \Exception $read_error ) {
+								$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: XMLReader read() failed in fallback: " . $read_error->getMessage();
+								break;
+							}
 							if ( $reader->nodeType === \XMLReader::ELEMENT ) {
 								$name = strtolower( preg_replace( '/^.*:/', '', $reader->name ) );
 								if ( $reader->isEmptyElement ) {
@@ -116,7 +144,15 @@ function process_xml_batch( $xml_path, $handle, $feed_key, $output_dir, $fallbac
 						continue;
 					}
 
-					clean_item_fields( $item );
+					try {
+						clean_item_fields( $item );
+					} catch ( \Exception $clean_error ) {
+						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Error in clean_item_fields: " . $clean_error->getMessage();
+						if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+							error_log( "$feed_key: Error in clean_item_fields: " . $clean_error->getMessage() );
+						}
+						continue; // Skip this item
+					}
 
 					// Generate GUID if missing
 					if ( ! isset( $item->guid ) || empty( $item->guid ) ) {
@@ -153,8 +189,26 @@ function process_xml_batch( $xml_path, $handle, $feed_key, $output_dir, $fallbac
 						$lang = 'en';
 					}
 
-					$job_obj = json_decode( json_encode( $item ), true );
-					infer_item_details( $item, $fallback_domain, $lang, $job_obj );
+					// Convert item to job_obj array
+					$item_json = json_encode( $item );
+					if ( $item_json === false ) {
+						$json_error = json_last_error_msg();
+						$logs[]     = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: JSON encoding failed for item with GUID {$item->guid}: $json_error";
+						if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+							error_log( "$feed_key: JSON encoding failed: $json_error" );
+						}
+						continue; // Skip this item
+					}
+					$job_obj = json_decode( $item_json, true );
+					try {
+						infer_item_details( $item, $fallback_domain, $lang, $job_obj );
+					} catch ( \Exception $infer_error ) {
+						$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . "$feed_key: Error in infer_item_details for GUID {$item->guid}: " . $infer_error->getMessage();
+						if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+							error_log( "$feed_key: Error in infer_item_details: " . $infer_error->getMessage() );
+						}
+						continue; // Skip this item
+					}
 
 					// Validate JSON encoding before adding to batch
 					$json_line = json_encode( $job_obj, JSON_UNESCAPED_UNICODE );

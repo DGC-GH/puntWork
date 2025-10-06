@@ -220,10 +220,10 @@ function run_job_import_batch_ajax() {
 						) );
 					} catch ( \Exception $e ) {
 						error_log( '[PUNTWORK] [AJAX-FINALIZE] Exception during finalization: ' . $e->getMessage() );
-						$result['finalization_error'] = $e->getMessage();
+						$result['finalization_error'] = $e->getMessage() ?: 'Finalization failed with unknown error (check server logs for details)';
 					} catch ( \Throwable $e ) {
 						error_log( '[PUNTWORK] [AJAX-FINALIZE] Fatal error during finalization: ' . $e->getMessage() );
-						$result['finalization_error'] = $e->getMessage();
+						$result['finalization_error'] = $e->getMessage() ?: 'Finalization failed with unknown error (check server logs for details)';
 					}
 				} else {
 					error_log( '[PUNTWORK] [AJAX-FINALIZE] Import batch not complete yet (complete: ' . ( $result['complete'] ?? false ) . ', success: ' . ( $result['success'] ?? false ) . ')' );
@@ -231,13 +231,13 @@ function run_job_import_batch_ajax() {
 			} catch ( \Exception $e ) {
 				error_log( '[PUNTWORK] [AJAX-EXECUTE] Exception in import_jobs_from_json: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
 				error_log( '[PUNTWORK] [AJAX-EXECUTE] Stack trace: ' . $e->getTraceAsString() );
-				AjaxErrorHandler::sendError( 'Import failed with exception: ' . $e->getMessage() );
+				AjaxErrorHandler::sendError( 'Import failed with exception: ' . ($e->getMessage() ?: 'Unknown error - check server logs for details') );
 
 				return;
 			} catch ( \Throwable $e ) {
 				error_log( '[PUNTWORK] [AJAX-EXECUTE] Fatal error in import_jobs_from_json: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
 				error_log( '[PUNTWORK] [AJAX-EXECUTE] Stack trace: ' . $e->getTraceAsString() );
-				AjaxErrorHandler::sendError( 'Import failed with fatal error: ' . $e->getMessage() );
+				AjaxErrorHandler::sendError( 'Import failed with fatal error: ' . ($e->getMessage() ?: 'Unknown error - check server logs for details') );
 
 				return;
 			}
@@ -283,7 +283,7 @@ function run_job_import_batch_ajax() {
 			PuntWorkLogger::error( 'Batch import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
 			error_log( '[PUNTWORK] AJAX: Batch import exception: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
 			error_log( '[PUNTWORK] AJAX: Stack trace: ' . $e->getTraceAsString() );
-			AjaxErrorHandler::sendError( 'Batch import failed: ' . $e->getMessage() );
+			AjaxErrorHandler::sendError( 'Batch import failed: ' . ($e->getMessage() ?: 'Unknown error - check server logs for details') );
 		}
 	} catch ( \Throwable $e ) {
 		error_log( '[PUNTWORK] AJAX: Fatal error in run_job_import_batch_ajax: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() );
@@ -315,7 +315,7 @@ function cancel_job_import_ajax() {
 		wp_send_json_success( null, array( 'message' => 'Import cancelled' ) );
 	} catch ( \Exception $e ) {
 		PuntWorkLogger::error( 'Cancel import error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
-		wp_send_json_error( array( 'message' => 'Failed to cancel import: ' . $e->getMessage() ) );
+		wp_send_json_error( array( 'message' => 'Failed to cancel import: ' . ($e->getMessage() ?: 'Unknown error - check server logs for details') ) );
 	}
 }
 
@@ -341,7 +341,7 @@ function clear_import_cancel_ajax() {
 		wp_send_json_success( null, array( 'message' => 'Cancellation cleared' ) );
 	} catch ( \Exception $e ) {
 		PuntWorkLogger::error( 'Clear import cancel error: ' . $e->getMessage(), PuntWorkLogger::CONTEXT_AJAX );
-		wp_send_json_error( array( 'message' => 'Failed to clear cancellation: ' . $e->getMessage() ) );
+		wp_send_json_error( array( 'message' => 'Failed to clear cancellation: ' . ($e->getMessage() ?: 'Unknown error - check server logs for details') ) );
 	}
 }
 
@@ -1617,45 +1617,47 @@ function process_feed_ajax() {
 			$processing_time = $end_time - $start_time;
 			error_log( '[PUNTWORK] [DEBUG-PHP] process_one_feed completed in ' . round( $processing_time, 2 ) . ' seconds' );
 			error_log( '[PUNTWORK] [DEBUG-PHP] process_one_feed returned item_count: ' . $item_count );
-		} catch ( \Exception $e ) {
-			error_log( '[PUNTWORK] [DEBUG-PHP] process_one_feed threw exception: ' . $e->getMessage() );
-			error_log( '[PUNTWORK] [DEBUG-PHP] Exception file: ' . $e->getFile() . ':' . $e->getLine() );
-			error_log( '[PUNTWORK] [DEBUG-PHP] Exception trace: ' . $e->getTraceAsString() );
-			\Puntwork\PuntWorkLogger::error(
-				'Feed processing failed with exception',
-				\Puntwork\PuntWorkLogger::CONTEXT_AJAX,
-				array(
-					'feed_key'   => $feed_key,
-					'feed_url'   => $feed_url,
-					'error'      => $e->getMessage(),
-					'error_file' => $e->getFile(),
-					'error_line' => $e->getLine(),
-				)
-			);
-			delete_transient( $feed_lock_key ); // Clear lock
-			wp_send_json_error( array( 'message' => 'Feed processing failed: ' . ( $e->getMessage() ?: 'Unknown error - check server logs for details' ) ) );
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] [DEBUG-PHP] process_one_feed threw exception: ' . $e->getMessage() );
+		error_log( '[PUNTWORK] [DEBUG-PHP] Exception file: ' . $e->getFile() . ':' . $e->getLine() );
+		error_log( '[PUNTWORK] [DEBUG-PHP] Exception trace: ' . $e->getTraceAsString() );
+		\Puntwork\PuntWorkLogger::error(
+			'Feed processing failed with exception',
+			\Puntwork\PuntWorkLogger::CONTEXT_AJAX,
+			array(
+				'feed_key'   => $feed_key,
+				'feed_url'   => $feed_url,
+				'error'      => $e->getMessage(),
+				'error_file' => $e->getFile(),
+				'error_line' => $e->getLine(),
+			)
+		);
+		delete_transient( $feed_lock_key ); // Clear lock
+		$error_message = $e->getMessage() ?: 'Feed processing failed with unknown error (check server logs for details)';
+		wp_send_json_error( array( 'message' => 'Feed processing failed: ' . $error_message ) );
 
-			return;
-		} catch ( \Throwable $e ) {
-			error_log( '[PUNTWORK] [DEBUG-PHP] process_one_feed threw throwable: ' . $e->getMessage() );
-			error_log( '[PUNTWORK] [DEBUG-PHP] Throwable file: ' . $e->getFile() . ':' . $e->getLine() );
-			error_log( '[PUNTWORK] [DEBUG-PHP] Throwable trace: ' . $e->getTraceAsString() );
-			\Puntwork\PuntWorkLogger::error(
-				'Feed processing failed with throwable',
-				\Puntwork\PuntWorkLogger::CONTEXT_AJAX,
-				array(
-					'feed_key'   => $feed_key,
-					'feed_url'   => $feed_url,
-					'error'      => $e->getMessage(),
-					'error_file' => $e->getFile(),
-					'error_line' => $e->getLine(),
-				)
-			);
-			delete_transient( $feed_lock_key ); // Clear lock
-			wp_send_json_error( array( 'message' => 'Feed processing failed: ' . ( $e->getMessage() ?: 'Unknown error - check server logs for details' ) ) );
+		return;
+	} catch ( \Throwable $e ) {
+		error_log( '[PUNTWORK] [DEBUG-PHP] process_one_feed threw throwable: ' . $e->getMessage() );
+		error_log( '[PUNTWORK] [DEBUG-PHP] Throwable file: ' . $e->getFile() . ':' . $e->getLine() );
+		error_log( '[PUNTWORK] [DEBUG-PHP] Throwable trace: ' . $e->getTraceAsString() );
+		\Puntwork\PuntWorkLogger::error(
+			'Feed processing failed with throwable',
+			\Puntwork\PuntWorkLogger::CONTEXT_AJAX,
+			array(
+				'feed_key'   => $feed_key,
+				'feed_url'   => $feed_url,
+				'error'      => $e->getMessage(),
+				'error_file' => $e->getFile(),
+				'error_line' => $e->getLine(),
+			)
+		);
+		delete_transient( $feed_lock_key ); // Clear lock
+		$error_message = $e->getMessage() ?: 'Feed processing failed with unknown error (check server logs for details)';
+		wp_send_json_error( array( 'message' => 'Feed processing failed: ' . $error_message ) );
 
-			return;
-		}
+		return;
+	}
 		// Clear feed processing lock
 		delete_transient( $feed_lock_key );
 
@@ -2179,9 +2181,10 @@ function schedule_feed_processing_ajax() {
 					
 					// Store error result
 					$feed_result_key = 'puntwork_feed_result_' . $feed_key;
+					$error_message = $e->getMessage() ?: 'Feed processing failed with unknown error (check server logs for details)';
 					set_transient( $feed_result_key, array(
 						'success' => false,
-						'error' => $e->getMessage(),
+						'error' => $error_message,
 						'processed_at' => time(),
 					), 3600 );
 				} catch ( \Throwable $e ) {
@@ -2189,9 +2192,10 @@ function schedule_feed_processing_ajax() {
 					
 					// Store error result
 					$feed_result_key = 'puntwork_feed_result_' . $feed_key;
+					$error_message = $e->getMessage() ?: 'Feed processing failed with unknown error (check server logs for details)';
 					set_transient( $feed_result_key, array(
 						'success' => false,
-						'error' => $e->getMessage(),
+						'error' => $error_message,
 						'processed_at' => time(),
 					), 3600 );
 				}
@@ -2317,9 +2321,10 @@ function puntwork_process_feed_handler( $feed_key ) {
 		
 		// Store error result
 		$feed_result_key = 'puntwork_feed_result_' . $feed_key;
+		$error_message = $e->getMessage() ?: 'Feed processing failed with unknown error (check server logs for details)';
 		set_transient( $feed_result_key, array(
 			'success' => false,
-			'error' => $e->getMessage(),
+			'error' => $error_message,
 			'processed_at' => time(),
 		), 3600 );
 	} catch ( \Throwable $e ) {
@@ -2327,9 +2332,10 @@ function puntwork_process_feed_handler( $feed_key ) {
 		
 		// Store error result
 		$feed_result_key = 'puntwork_feed_result_' . $feed_key;
+		$error_message = $e->getMessage() ?: 'Feed processing failed with unknown error (check server logs for details)';
 		set_transient( $feed_result_key, array(
 			'success' => false,
-			'error' => $e->getMessage(),
+			'error' => $error_message,
 			'processed_at' => time(),
 		), 3600 );
 	}
