@@ -332,7 +332,7 @@ function handle_import_progress_sse( $request ) {
 									'start_time'         => microtime( true ),
 									'end_time'           => null,
 									'last_update'        => time(),
-									'logs'               => array( 'Import status corrected - combined file exists with ' . $actual_total . ' items' ),
+									//'logs'               => array( 'Import status corrected - combined file exists with ' . $actual_total . ' items' ),
 								);
 								update_option( 'job_import_status', $current_status );
 								error_log( '[PUNTWORK] SSE: STATUS-CORRECTION: Status corrected: total=' . $actual_total . ', complete=false' );

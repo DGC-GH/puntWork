@@ -572,7 +572,7 @@ function get_job_import_status_ajax() {
 						$progress['complete'] = $has_recent_successful_import && !$is_ready_for_import;
 						$progress['start_time'] = ($has_recent_successful_import && !$is_ready_for_import) ? null : microtime( true );
 						$progress['last_update'] = time();
-						$progress['logs'] = $is_ready_for_import ? $current_logs : array( 'Import status corrected - combined file exists with ' . $actual_total . ' items' . ($has_recent_successful_import ? ' (import appears complete)' : '') );
+						//$progress['logs'] = $is_ready_for_import ? $current_logs : array( 'Import status corrected - combined file exists with ' . $actual_total . ' items' . ($has_recent_successful_import ? ' (import appears complete)' : '') );
 						$update_result = update_option( 'job_import_status', $progress );
 						error_log( '[PUNTWORK] [STATUS-CORRECTION] Status corrected: total=' . $actual_total . ', complete=' . (($has_recent_successful_import && !$is_ready_for_import) ? 'true' : 'false') . ', is_ready_for_import=' . ($is_ready_for_import ? 'true' : 'false') . ', update_result=' . ($update_result ? 'true' : 'false') );
 					} else {
