@@ -446,6 +446,46 @@ console.log('[PUNTWORK] job-import-api.js loaded');
         },
 
         /**
+         * Run scheduled import (full process: feeds -> combine -> import)
+         * @returns {Promise} AJAX promise
+         */
+        runScheduledImport: function() {
+            console.log('[PUNTWORK] ===== API.runScheduledImport DEBUG =====');
+            console.log('[PUNTWORK] Running scheduled import (full process)');
+            console.log('[PUNTWORK] AJAX URL:', jobImportData.ajaxurl);
+            console.log('[PUNTWORK] Nonce:', jobImportData.nonce);
+            console.log('[PUNTWORK] Timestamp:', new Date().toISOString());
+
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'run_scheduled_import',
+                    nonce: jobImportData.nonce
+                },
+                timeout: 30000, // 30 seconds for scheduling
+                success: function(response) {
+                    console.log('[PUNTWORK] AJAX success for runScheduledImport:', response);
+                    if (!response || !response.success) {
+                        console.error('[PUNTWORK] ERROR: runScheduledImport AJAX returned unsuccessful response:', response);
+                    } else {
+                        console.log('[PUNTWORK] SUCCESS: Scheduled import started');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('[PUNTWORK] AJAX error for runScheduledImport:', {
+                        xhr: xhr,
+                        status: status,
+                        error: error,
+                        statusCode: xhr.status,
+                        responseText: xhr.responseText,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+            });
+        },
+
+        /**
          * Determine if an AJAX error should be retried
          * @param {object} xhr - XMLHttpRequest object
          * @param {string} status - Error status
