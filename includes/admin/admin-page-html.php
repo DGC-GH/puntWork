@@ -283,18 +283,48 @@ function render_javascript_init() {
 				}
 			}, 100);
 
-			// Timeout after 10 seconds
+			// Timeout after 10 seconds - but continue checking if scripts load later
 			setTimeout(function() {
 				clearInterval(checkInterval);
-				console.error('[PUNTWORK] Timeout waiting for scripts to load');
-				console.log('[PUNTWORK] Final script availability check:');
-				console.log('jQuery:', typeof jQuery);
-				console.log('jobImportData:', typeof jobImportData);
-				console.log('JobImportEvents:', typeof JobImportEvents);
-				console.log('JobImportUI:', typeof JobImportUI);
-				console.log('JobImportAPI:', typeof JobImportAPI);
-				console.log('JobImportLogic:', typeof JobImportLogic);
-				console.log('PuntWorkJSLogger:', typeof PuntWorkJSLogger);
+				if (!checkScriptsLoaded()) {
+					console.warn('[PUNTWORK] Initial timeout waiting for scripts - continuing to check...');
+					console.log('[PUNTWORK] Current script availability:');
+					console.log('jQuery:', typeof jQuery);
+					console.log('jobImportData:', typeof jobImportData);
+					console.log('JobImportEvents:', typeof JobImportEvents);
+					console.log('JobImportUI:', typeof JobImportUI);
+					console.log('JobImportAPI:', typeof JobImportAPI);
+					console.log('JobImportLogic:', typeof JobImportLogic);
+					console.log('PuntWorkJSLogger:', typeof PuntWorkJSLogger);
+
+					// Continue checking every 500ms for another 10 seconds
+					var extendedCheckInterval = setInterval(function() {
+						if (checkScriptsLoaded()) {
+							clearInterval(extendedCheckInterval);
+							console.log('[PUNTWORK] Scripts loaded successfully after extended check');
+							initializeJobImport();
+						}
+					}, 500);
+
+					// Final timeout after 20 seconds total
+					setTimeout(function() {
+						clearInterval(extendedCheckInterval);
+						if (!checkScriptsLoaded()) {
+							console.error('[PUNTWORK] Final timeout - scripts failed to load');
+							console.log('[PUNTWORK] Final script availability check:');
+							console.log('jQuery:', typeof jQuery);
+							console.log('jobImportData:', typeof jobImportData);
+							console.log('JobImportEvents:', typeof JobImportEvents);
+							console.log('JobImportUI:', typeof JobImportUI);
+							console.log('JobImportAPI:', typeof JobImportAPI);
+							console.log('JobImportLogic:', typeof JobImportLogic);
+							console.log('PuntWorkJSLogger:', typeof PuntWorkJSLogger);
+						}
+					}, 10000);
+				} else {
+					console.log('[PUNTWORK] Scripts loaded successfully within timeout');
+					initializeJobImport();
+				}
 			}, 10000);
 		}
 	</script>

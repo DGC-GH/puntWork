@@ -423,8 +423,10 @@ function ajax_get_db_optimization_status() {
 			'table_optimization' => array(
 				'job_posts' => $wpdb->get_var( "SHOW TABLE STATUS LIKE '{$wpdb->posts}'" ),
 			),
+			'optimization_complete' => get_option( 'puntwork_db_indexes_created', false ), // Same as indexes_created for now
+			'indexes_html' => '', // Placeholder for HTML display
 		);
-		wp_send_json_success( $status );
+		wp_send_json_success( array( 'status' => $status ) );
 	} catch ( \Exception $e ) {
 		wp_send_json_error( array( 'message' => 'Failed to get DB optimization status: ' . $e->getMessage() ) );
 	}
@@ -446,6 +448,11 @@ function ajax_create_database_indexes() {
 		wp_send_json_success( array(
 			'message' => 'Database indexes created successfully',
 			'result' => $result,
+			'status' => array(
+				'indexes_created' => true,
+				'optimization_complete' => true,
+				'indexes_html' => '', // Placeholder for HTML display
+			),
 		) );
 	} catch ( \Exception $e ) {
 		wp_send_json_error( array( 'message' => 'Failed to create database indexes: ' . $e->getMessage() ) );

@@ -385,7 +385,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             JobImportAPI.getDbOptimizationStatus().then(function(dbResponse) {
                 console.log('[PUNTWORK] DB status response:', dbResponse);
                 if (dbResponse.success) {
-                    JobImportEvents.updateDbStatusDisplay(dbResponse.data.status);
+                    				JobImportEvents.updateDbStatusDisplay(dbResponse.data.status);
                 } else {
                     // Show error state
                     $('#db-status-badge').removeClass('success warning error').addClass('error').html('<i class="fas fa-exclamation-triangle" style="margin-right: 4px;"></i>Error');
@@ -818,7 +818,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             if (status.optimization_complete) {
                 badgeClass = 'success';
                 badgeText = 'Optimized';
-            } else if (status.indexes_created > 0) {
+            } else if (status.indexes_created) {
                 badgeClass = 'warning';
                 badgeText = 'Partial';
             }
