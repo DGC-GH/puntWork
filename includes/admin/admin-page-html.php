@@ -25,7 +25,6 @@ require_once __DIR__ . '/accessibility.php';
 
 // Load queue management components
 require_once __DIR__ . '/../queue/queue-manager.php';
-require_once __DIR__ . '/../queue/queue-ajax.php';
 
 function feeds_dashboard_page() {
 	// Ensure API key exists for SSE functionality

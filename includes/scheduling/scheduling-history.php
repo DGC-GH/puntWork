@@ -60,8 +60,8 @@ function mark_existing_jobs_as_processed() {
 function log_scheduled_run( $details, $test_mode = false, $trigger_type = 'scheduled' ) {
 	$run_entry = array(
 		'timestamp'      => $details['timestamp'],
-		'formatted_date' => wp_date( 'M j, Y H:i', $details['timestamp'] ),
-		'duration'       => $details['duration'],
+		'formatted_date' => date( 'M j, Y H:i', $details['timestamp'] ),
+		'duration'       => $details['duration'] ?? 0,
 		'success'        => $details['success'],
 		'processed'      => $details['processed'],
 		'total'          => $details['total'],
@@ -110,8 +110,8 @@ function log_scheduled_run( $details, $test_mode = false, $trigger_type = 'sched
 function log_manual_import_run( $details ) {
 	$run_entry = array(
 		'timestamp'      => $details['timestamp'],
-		'formatted_date' => wp_date( 'M j, Y H:i', $details['timestamp'] ),
-		'duration'       => $details['duration'],
+		'formatted_date' => date( 'M j, Y H:i', $details['timestamp'] ),
+		'duration'       => $details['duration'] ?? 0,
 		'success'        => $details['success'],
 		'processed'      => $details['processed'],
 		'total'          => $details['total'],
@@ -165,6 +165,7 @@ function run_scheduled_import( $test_mode = false, $trigger = 'scheduled' ) {
 	// Log the import start
 	log_manual_import_run( array(
 		'timestamp'     => time(),
+		'duration'      => 0,
 		'success'       => false, // Will be updated
 		'processed'     => 0,
 		'total'         => 0,
@@ -185,6 +186,7 @@ function run_scheduled_import( $test_mode = false, $trigger = 'scheduled' ) {
 		if ( $result['success'] ) {
 			log_scheduled_run( array(
 				'timestamp'     => time(),
+				'duration'      => 0,
 				'success'       => true,
 				'processed'     => $result['processed'] ?? 0,
 				'total'         => $result['total'] ?? 0,
@@ -201,6 +203,7 @@ function run_scheduled_import( $test_mode = false, $trigger = 'scheduled' ) {
 		// Log the error
 		log_scheduled_run( array(
 			'timestamp'     => time(),
+			'duration'      => 0,
 			'success'       => false,
 			'processed'     => 0,
 			'total'         => 0,
