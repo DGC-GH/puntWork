@@ -58,63 +58,12 @@ function init_action_scheduler() {
 		return;
 	}
 
-	// Check if Action Scheduler is already loaded by another plugin
-	if ( function_exists( 'as_schedule_single_action' ) || class_exists( '\\ActionScheduler', false ) ) {
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [ACTION-SCHEDULER] Action Scheduler already loaded by another plugin, skipping bundled version' );
-		}
-		return;
+	// Skip loading bundled Action Scheduler to avoid conflicts with other plugins
+	// The plugin will use external ActionScheduler if available, or fall back to WP-Cron
+	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		error_log( '[PUNTWORK] [ACTION-SCHEDULER] Skipping bundled Action Scheduler to avoid conflicts' );
 	}
-
-	// Try to load bundled Action Scheduler
-	$action_scheduler_path = PUNTWORK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php';
-	if ( file_exists( $action_scheduler_path ) ) {
-		include_once $action_scheduler_path;
-
-		// Debug logging
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [ACTION-SCHEDULER] Action Scheduler file included' );
-			error_log( '[PUNTWORK] [ACTION-SCHEDULER] ActionScheduler class exists: ' . ( class_exists( '\\ActionScheduler', false ) ? 'YES' : 'NO' ) );
-			error_log( '[PUNTWORK] [ACTION-SCHEDULER] as_schedule_single_action function exists: ' . ( function_exists( 'as_schedule_single_action' ) ? 'YES' : 'NO' ) );
-		}
-
-		// Force initialization if the function exists but class doesn't
-		if ( ! class_exists( '\\ActionScheduler', false ) ) {
-			// Try to initialize using the versions system
-			if ( class_exists( '\\ActionScheduler_Versions', false ) && method_exists( '\\ActionScheduler_Versions', 'initialize_latest_version' ) ) {
-				\ActionScheduler_Versions::initialize_latest_version();
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( '[PUNTWORK] [ACTION-SCHEDULER] Initialized Action Scheduler using versions system' );
-				}
-			} elseif ( function_exists( 'action_scheduler_initialize_3_dot_9_dot_3' ) ) {
-				action_scheduler_initialize_3_dot_9_dot_3();
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( '[PUNTWORK] [ACTION-SCHEDULER] Forced initialization of Action Scheduler using version-specific function' );
-				}
-			} else {
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( '[PUNTWORK] [ACTION-SCHEDULER] WARNING: Could not initialize Action Scheduler - async processing will not be available' );
-				}
-			}
-		}
-
-		// Ensure Action Scheduler is initialized if not already done
-		if ( class_exists( '\\ActionScheduler', false ) && method_exists( '\\ActionScheduler', 'is_initialized' ) && ! \ActionScheduler::is_initialized() ) {
-			// Manually initialize if not done automatically
-			\ActionScheduler::init( $action_scheduler_path );
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[PUNTWORK] [ACTION-SCHEDULER] Manually initialized Action Scheduler' );
-			}
-		}
-
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && class_exists( '\\ActionScheduler', false ) && method_exists( '\\ActionScheduler', 'is_initialized' ) ) {
-			error_log( '[PUNTWORK] [ACTION-SCHEDULER] ActionScheduler is_initialized: ' . ( \ActionScheduler::is_initialized() ? 'YES' : 'NO' ) );
-		}
-	} else {
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [ACTION-SCHEDULER] Action Scheduler file not found at: ' . $action_scheduler_path );
-		}
-	}
+	return;
 }
 
 // =====================================================================================
