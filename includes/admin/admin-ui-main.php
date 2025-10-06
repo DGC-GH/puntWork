@@ -156,6 +156,240 @@ function render_jobs_dashboard_ui(): void {
 					</div>
 				</div>
 			</div>
+
+			<!-- Job Listings Section -->
+			<div id="job-listings-container" class="puntwork-card" style="margin-bottom: var(--spacing-xl);">
+				<div class="puntwork-card__header">
+					<h2 class="puntwork-card__title">Job Listings</h2>
+					<p class="puntwork-card__subtitle">Browse and manage imported job posts.</p>
+				</div>
+
+				<!-- Job Filters -->
+				<div class="puntwork-card__body">
+					<div style="display: flex; gap: var(--spacing-md); align-items: center; margin-bottom: var(--spacing-lg); flex-wrap: wrap;">
+						<div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+							<label for="job-status-filter" style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">Status:</label>
+							<select id="job-status-filter" class="puntwork-select">
+								<option value="any">All Status</option>
+								<option value="publish">Published</option>
+								<option value="draft">Draft</option>
+								<option value="trash">Trash</option>
+							</select>
+						</div>
+						<div style="display: flex; align-items: center; gap: var(--spacing-sm); flex: 1; min-width: 200px;">
+							<label for="job-search" style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">Search:</label>
+							<input type="text" id="job-search" class="puntwork-input" placeholder="Search job titles..." style="flex: 1;">
+						</div>
+						<button id="apply-job-filters" class="puntwork-btn puntwork-btn--primary">
+							<i class="fas fa-search puntwork-btn__icon"></i>Apply Filters
+						</button>
+						<button id="clear-job-filters" class="puntwork-btn puntwork-btn--outline">
+							<i class="fas fa-times puntwork-btn__icon"></i>Clear
+						</button>
+					</div>
+				</div>
+
+				<!-- Loading State -->
+				<div id="job-listings-loading" class="puntwork-card__body" style="text-align: center; padding: var(--spacing-xl); display: none;">
+					<i class="fas fa-spinner fa-spin" style="font-size: 24px; color: var(--color-primary); margin-bottom: var(--spacing-md);"></i>
+					<div style="font-size: var(--font-size-base); color: var(--color-gray-600);">Loading job listings...</div>
+				</div>
+
+				<!-- Job Listings Table -->
+				<div id="job-listings-table" style="display: none;">
+					<div class="puntwork-table">
+						<div class="puntwork-table__header">
+							<div class="puntwork-table__row">
+								<div class="puntwork-table__cell puntwork-table__cell--header">Job Title</div>
+								<div class="puntwork-table__cell puntwork-table__cell--header">Status</div>
+								<div class="puntwork-table__cell puntwork-table__cell--header">Created</div>
+								<div class="puntwork-table__cell puntwork-table__cell--header">Modified</div>
+								<div class="puntwork-table__cell puntwork-table__cell--header">Actions</div>
+							</div>
+						</div>
+						<div id="job-listings-body" class="puntwork-table__body">
+							<!-- Job rows will be inserted here -->
+						</div>
+					</div>
+				</div>
+
+				<!-- Empty State -->
+				<div id="job-listings-empty" class="puntwork-card__body" style="text-align: center; padding: var(--spacing-xl); display: none;">
+					<i class="fas fa-briefcase" style="font-size: 48px; color: var(--color-gray-400); margin-bottom: var(--spacing-md);"></i>
+					<div style="font-size: var(--font-size-lg); font-weight: var(--font-weight-medium); color: var(--color-gray-600); margin-bottom: var(--spacing-sm);">No jobs found</div>
+					<div style="font-size: var(--font-size-sm); color: var(--color-gray-500);">Try adjusting your filters or import some jobs first.</div>
+				</div>
+
+				<!-- Pagination -->
+				<div id="job-pagination" class="puntwork-card__footer" style="display: none;">
+					<div style="display: flex; justify-content: space-between; align-items: center;">
+						<button id="job-prev-page" class="puntwork-btn puntwork-btn--outline" disabled>
+							<i class="fas fa-chevron-left puntwork-btn__icon"></i>Previous
+						</button>
+						<span id="job-page-info" style="font-size: var(--font-size-sm); color: var(--color-gray-600);">Page 1 of 1</span>
+						<button id="job-next-page" class="puntwork-btn puntwork-btn--outline" disabled>
+							Next<i class="fas fa-chevron-right puntwork-btn__icon"></i>
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<script>
+				// Job Listings Lazy Loading
+				let currentJobPage = 1;
+				let totalJobPages = 1;
+				let currentJobFilters = {
+					status: 'any',
+					search: ''
+				};
+
+				function loadJobListings(page, filters) {
+					const loading = document.getElementById('job-listings-loading');
+					const empty = document.getElementById('job-listings-empty');
+					const table = document.getElementById('job-listings-table');
+					const body = document.getElementById('job-listings-body');
+
+					loading.style.display = 'block';
+					empty.style.display = 'none';
+					table.style.display = 'none';
+
+					// Get or create API key
+					<?php
+					$api_key = get_option( 'puntwork_api_key', '' );
+					if ( empty( $api_key ) ) {
+						$api_key = wp_generate_password( 32, false );
+						update_option( 'puntwork_api_key', $api_key );
+					}
+					?>
+					const apiKey = '<?php echo esc_js( $api_key ); ?>';
+					const apiUrl = `${window.location.origin}/wp-json/puntwork/v1/jobs?api_key=${encodeURIComponent(apiKey)}&page=${page}&per_page=20&status=${encodeURIComponent(filters.status || 'any')}&search=${encodeURIComponent(filters.search || '')}`;
+
+					// Make REST API request
+					fetch(apiUrl, {
+						method: 'GET',
+						headers: {
+							'Content-Type': 'application/json',
+						}
+					})
+					.then(response => response.json())
+					.then(data => {
+						loading.style.display = 'none';
+
+						if (data.success && data.data && data.data.length > 0) {
+							// Render job listings
+							body.innerHTML = '';
+							data.data.forEach(job => {
+								const row = document.createElement('div');
+								row.className = 'job-listings-row';
+								row.innerHTML = `
+									<div class="job-listings-title">
+										<a href="${job.permalink}" target="_blank">${job.title}</a>
+									</div>
+									<div class="job-listings-meta">
+										<span class="job-status status-${job.status}">${job.status}</span>
+									</div>
+									<div class="job-listings-meta">${new Date(job.date_created).toLocaleDateString()}</div>
+									<div class="job-listings-meta">${new Date(job.date_modified).toLocaleDateString()}</div>
+									<div class="job-listings-actions">
+										<button class="job-action job-action--edit" data-id="${job.id}" title="Edit Job">
+											<i class="fas fa-edit"></i>
+										</button>
+										<button class="job-action job-action--view" data-id="${job.id}" title="View Job">
+											<i class="fas fa-eye"></i>
+										</button>
+									</div>
+								`;
+								body.appendChild(row);
+							});
+
+							table.style.display = 'block';
+
+							// Update pagination
+							currentJobPage = page;
+							totalJobPages = data.pagination.total_pages;
+							updateJobPagination(data.pagination);
+
+						} else {
+							empty.style.display = 'block';
+						}
+					})
+					.catch(error => {
+						console.error('Error loading job listings:', error);
+						loading.style.display = 'none';
+						empty.innerHTML = `
+							<i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #ffc107; margin-bottom: 16px;"></i>
+							<div style="font-size: 18px; font-weight: 500; color: #6c757d; margin-bottom: 8px;">Error loading jobs</div>
+							<div style="font-size: 14px; color: #8e8e93;">Please try again or check the console for details.</div>
+						`;
+						empty.style.display = 'block';
+					});
+				}		function updateJobPagination(pagination) {
+					const paginationEl = document.getElementById('job-pagination');
+					const pageInfo = document.getElementById('job-page-info');
+					const prevBtn = document.getElementById('job-prev-page');
+					const nextBtn = document.getElementById('job-next-page');
+
+					if (pagination.total_pages > 1) {
+						pageInfo.textContent = `Page ${pagination.page} of ${pagination.total_pages}`;
+						prevBtn.disabled = pagination.page <= 1;
+						nextBtn.disabled = pagination.page >= pagination.total_pages;
+						paginationEl.style.display = 'block';
+					} else {
+						paginationEl.style.display = 'none';
+					}
+				}
+
+				// Initialize job listings on page load
+				document.addEventListener('DOMContentLoaded', function() {
+					loadJobListings(1, currentJobFilters);
+
+					// Job filter event listeners
+					document.getElementById('apply-job-filters').addEventListener('click', function() {
+						currentJobFilters.status = document.getElementById('job-status-filter').value;
+						currentJobFilters.search = document.getElementById('job-search').value.trim();
+						loadJobListings(1, currentJobFilters);
+					});
+
+					document.getElementById('clear-job-filters').addEventListener('click', function() {
+						document.getElementById('job-status-filter').selectedIndex = 0;
+						document.getElementById('job-search').value = '';
+						currentJobFilters = { status: 'any', search: '' };
+						loadJobListings(1, currentJobFilters);
+					});
+
+					document.getElementById('job-search').addEventListener('keypress', function(e) {
+						if (e.key == 'Enter') {
+							document.getElementById('apply-job-filters').click();
+						}
+					});
+
+					// Pagination event listeners
+					document.getElementById('job-prev-page').addEventListener('click', function() {
+						if (currentJobPage > 1) {
+							loadJobListings(currentJobPage - 1, currentJobFilters);
+						}
+					});
+
+					document.getElementById('job-next-page').addEventListener('click', function() {
+						if (currentJobPage < totalJobPages) {
+							loadJobListings(currentJobPage + 1, currentJobFilters);
+						}
+					});
+
+					// Job action event listeners (delegated)
+					document.getElementById('job-listings-body').addEventListener('click', function(e) {
+						const target = e.target.closest('.job-action');
+						if (!target) return;
+
+						const jobId = target.dataset.id;
+						if (target.classList.contains('edit-job')) {
+							window.open(`<?php echo admin_url( 'post.php?action=edit&post=' ); ?>\${jobId}`, '_blank');
+						} else if (target.classList.contains('view-job')) {
+							window.open(`<?php echo get_permalink(); ?>?p=\${jobId}`, '_blank');
+						}
+					});
+				});
+			</script>
 		</div>
 	</div>
 	<?php
@@ -243,106 +477,6 @@ function render_main_import_ui(): void {
 							<i class="fas fa-undo puntwork-btn__icon"></i>Reset Import
 						</button>
 						<span id="import-status" style="font-size: var(--font-size-sm); color: var(--color-gray-600);"></span>
-					</div>
-				</div>
-			</div>
-
-			<!-- Cleanup Operations Section -->
-			<div class="puntwork-card" style="margin-bottom: var(--spacing-xl);">
-				<div class="puntwork-card__header">
-					<h2 class="puntwork-card__title">Cleanup Operations</h2>
-					<p class="puntwork-card__subtitle">Permanently delete all job posts that are in Draft or Trash status. This action cannot be undone.</p>
-				</div>
-
-				<!-- Cleanup Progress Section -->
-				<div id="cleanup-progress" class="puntwork-card" style="margin-bottom: var(--spacing-xl); display: none;">
-					<div class="puntwork-card__header">
-						<div style="display: flex; justify-content: space-between; align-items: center;">
-							<div>
-								<h2 class="puntwork-card__title">Cleanup Progress</h2>
-								<div style="display: flex; align-items: baseline; gap: var(--spacing-md); margin-top: var(--spacing-xs);">
-									<span id="cleanup-progress-percent" style="font-size: var(--font-size-3xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">0%</span>
-									<span style="font-size: var(--font-size-sm); color: var(--color-gray-600);">complete</span>
-								</div>
-							</div>
-						</div>
-					</div>
-
-					<div class="puntwork-card__body">
-						<!-- Progress Bar -->
-						<div class="puntwork-progress" style="margin-bottom: var(--spacing-lg);">
-							<div id="cleanup-progress-bar" class="puntwork-progress__bar" style="width: 100%;"></div>
-						</div>
-
-						<!-- Time Counters -->
-						<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xl); font-size: var(--font-size-sm); color: var(--color-gray-600);">
-							<span>Elapsed: <span id="cleanup-time-elapsed" style="font-weight: var(--font-weight-medium);">0s</span></span>
-							<span>Remaining: <span id="cleanup-time-left" style="font-weight: var(--font-weight-medium);">Calculating...</span></span>
-						</div>
-
-						<!-- Statistics Grid -->
-						<div class="puntwork-stats" style="margin-bottom: var(--spacing-lg);">
-							<!-- Progress Overview -->
-							<div class="puntwork-stat">
-								<div class="puntwork-stat__icon">
-									<i class="fas fa-chart-line"></i>
-								</div>
-								<div class="puntwork-stat__value" id="cleanup-processed-items">0</div>
-								<div class="puntwork-stat__label">of <span id="cleanup-total-items">0</span> processed</div>
-							</div>
-
-							<!-- Deleted Items -->
-							<div class="puntwork-stat puntwork-stat--danger">
-								<div class="puntwork-stat__icon">
-									<i class="fas fa-trash-alt"></i>
-								</div>
-								<div class="puntwork-stat__value" id="cleanup-deleted-items">0</div>
-								<div class="puntwork-stat__label">deleted</div>
-							</div>
-
-							<!-- Items Left -->
-							<div class="puntwork-stat puntwork-stat--info">
-								<div class="puntwork-stat__icon">
-									<i class="fas fa-clock"></i>
-								</div>
-								<div class="puntwork-stat__value" id="cleanup-items-left">0</div>
-								<div class="puntwork-stat__label">remaining</div>
-							</div>
-						</div>
-
-						<!-- Status Message -->
-						<div style="background-color: var(--color-gray-50); border-radius: var(--radius-md); padding: var(--spacing-md); text-align: center; margin-bottom: var(--spacing-lg);">
-							<span id="cleanup-status-message" style="font-size: var(--font-size-sm); color: var(--color-gray-600);">Ready to start.</span>
-							<div id="cleanup-ui-update-indicator" style="font-size: var(--font-size-xs); color: var(--color-gray-500); margin-top: var(--spacing-xs); display: none;">
-								<i class="fas fa-clock" style="margin-right: var(--spacing-xs);"></i>
-								Last UI update: <span id="cleanup-last-ui-update">Never</span>
-							</div>
-						</div>
-
-					<!-- Integrated Log Section -->
-					<div id="cleanup-integrated-log" style="margin-top: var(--spacing-lg);">
-						<div style="display: flex; align-items: center; margin-bottom: var(--spacing-md);">
-							<div style="width: 6px; height: 6px; border-radius: 50%; background-color: var(--color-primary); margin-right: 10px;"></div>
-							<h3 style="font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); margin: 0; color: var(--color-black);">Cleanup Details</h3>
-							<div style="margin-left: auto; font-size: var(--font-size-xs); color: var(--color-gray-600);">
-								<i class="fas fa-terminal" style="margin-right: var(--spacing-xs);"></i>
-								Live Log
-							</div>
-						</div>
-						<textarea id="cleanup-log-textarea" readonly style="width: 100%; height: 180px; padding: var(--spacing-md); border: 1px solid var(--color-gray-300); border-radius: var(--radius-md); font-family: var(--font-family-mono); font-size: var(--font-size-xs); line-height: var(--line-height-normal); resize: vertical; background-color: var(--color-gray-50); transition: var(--transition-fast);"></textarea>
-					</div>
-				</div>
-			</div>
-
-				<div class="puntwork-card__footer">
-					<div style="display: flex; gap: var(--spacing-md); align-items: center;">
-						<button id="cleanup-duplicates" class="puntwork-btn puntwork-btn--danger">
-							<i class="fas fa-trash-alt puntwork-btn__icon"></i>
-							<span id="cleanup-text">Delete Drafts & Trash</span>
-							<span id="cleanup-loading" style="display: none;">Deleting...</span>
-						</button>
-						<span id="cleanup-status"
-							style="font-size: var(--font-size-sm); color: var(--color-gray-600);"></span>
 					</div>
 				</div>
 			</div>
@@ -454,238 +588,5 @@ function render_main_import_ui(): void {
 		</div>
 	</div>
 
-	<!-- Job Listings Section -->
-	<div id="job-listings-container" class="puntwork-card" style="margin-bottom: var(--spacing-xl);">
-		<div class="puntwork-card__header">
-			<h2 class="puntwork-card__title">Job Listings</h2>
-			<p class="puntwork-card__subtitle">Browse and manage imported job posts.</p>
-		</div>
-
-		<!-- Job Filters -->
-		<div class="puntwork-card__body">
-			<div style="display: flex; gap: var(--spacing-md); align-items: center; margin-bottom: var(--spacing-lg); flex-wrap: wrap;">
-				<div style="display: flex; align-items: center; gap: var(--spacing-sm);">
-					<label for="job-status-filter" style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">Status:</label>
-					<select id="job-status-filter" class="puntwork-select">
-						<option value="any">All Status</option>
-						<option value="publish">Published</option>
-						<option value="draft">Draft</option>
-						<option value="trash">Trash</option>
-					</select>
-				</div>
-				<div style="display: flex; align-items: center; gap: var(--spacing-sm); flex: 1; min-width: 200px;">
-					<label for="job-search" style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">Search:</label>
-					<input type="text" id="job-search" class="puntwork-input" placeholder="Search job titles..." style="flex: 1;">
-				</div>
-				<button id="apply-job-filters" class="puntwork-btn puntwork-btn--primary">
-					<i class="fas fa-search puntwork-btn__icon"></i>Apply Filters
-				</button>
-				<button id="clear-job-filters" class="puntwork-btn puntwork-btn--outline">
-					<i class="fas fa-times puntwork-btn__icon"></i>Clear
-				</button>
-			</div>
-		</div>
-
-		<!-- Loading State -->
-		<div id="job-listings-loading" class="puntwork-card__body" style="text-align: center; padding: var(--spacing-xl); display: none;">
-			<i class="fas fa-spinner fa-spin" style="font-size: 24px; color: var(--color-primary); margin-bottom: var(--spacing-md);"></i>
-			<div style="font-size: var(--font-size-base); color: var(--color-gray-600);">Loading job listings...</div>
-		</div>
-
-		<!-- Job Listings Table -->
-		<div id="job-listings-table" style="display: none;">
-			<div class="puntwork-table">
-				<div class="puntwork-table__header">
-					<div class="puntwork-table__row">
-						<div class="puntwork-table__cell puntwork-table__cell--header">Job Title</div>
-						<div class="puntwork-table__cell puntwork-table__cell--header">Status</div>
-						<div class="puntwork-table__cell puntwork-table__cell--header">Created</div>
-						<div class="puntwork-table__cell puntwork-table__cell--header">Modified</div>
-						<div class="puntwork-table__cell puntwork-table__cell--header">Actions</div>
-					</div>
-				</div>
-				<div id="job-listings-body" class="puntwork-table__body">
-					<!-- Job rows will be inserted here -->
-				</div>
-			</div>
-		</div>
-
-		<!-- Empty State -->
-		<div id="job-listings-empty" class="puntwork-card__body" style="text-align: center; padding: var(--spacing-xl); display: none;">
-			<i class="fas fa-briefcase" style="font-size: 48px; color: var(--color-gray-400); margin-bottom: var(--spacing-md);"></i>
-			<div style="font-size: var(--font-size-lg); font-weight: var(--font-weight-medium); color: var(--color-gray-600); margin-bottom: var(--spacing-sm);">No jobs found</div>
-			<div style="font-size: var(--font-size-sm); color: var(--color-gray-500);">Try adjusting your filters or import some jobs first.</div>
-		</div>
-
-		<!-- Pagination -->
-		<div id="job-pagination" class="puntwork-card__footer" style="display: none;">
-			<div style="display: flex; justify-content: space-between; align-items: center;">
-				<button id="job-prev-page" class="puntwork-btn puntwork-btn--outline" disabled>
-					<i class="fas fa-chevron-left puntwork-btn__icon"></i>Previous
-				</button>
-				<span id="job-page-info" style="font-size: var(--font-size-sm); color: var(--color-gray-600);">Page 1 of 1</span>
-				<button id="job-next-page" class="puntwork-btn puntwork-btn--outline" disabled>
-					Next<i class="fas fa-chevron-right puntwork-btn__icon"></i>
-				</button>
-			</div>
-		</div>
-	</div>
-
-	<script>
-		// Job Listings Lazy Loading
-		let currentJobPage = 1;
-		let totalJobPages = 1;
-		let currentJobFilters = {
-			status: 'any',
-			search: ''
-		};
-
-		function loadJobListings(page, filters) {
-			const loading = document.getElementById('job-listings-loading');
-			const empty = document.getElementById('job-listings-empty');
-			const table = document.getElementById('job-listings-table');
-			const body = document.getElementById('job-listings-body');
-
-			loading.style.display = 'block';
-			empty.style.display = 'none';
-			table.style.display = 'none';
-
-			// Get or create API key
-			<?php
-			$api_key = get_option( 'puntwork_api_key', '' );
-			if ( empty( $api_key ) ) {
-				$api_key = wp_generate_password( 32, false );
-				update_option( 'puntwork_api_key', $api_key );
-			}
-			?>
-			const apiKey = '<?php echo esc_js( $api_key ); ?>';
-			const apiUrl = `${window.location.origin}/wp-json/puntwork/v1/jobs?api_key=${encodeURIComponent(apiKey)}&page=${page}&per_page=20&status=${encodeURIComponent(filters.status || 'any')}&search=${encodeURIComponent(filters.search || '')}`;
-
-			// Make REST API request
-			fetch(apiUrl, {
-				method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-				}
-			})
-			.then(response => response.json())
-			.then(data => {
-				loading.style.display = 'none';
-
-				if (data.success && data.data && data.data.length > 0) {
-					// Render job listings
-					body.innerHTML = '';
-					data.data.forEach(job => {
-						const row = document.createElement('div');
-						row.className = 'job-listings-row';
-						row.innerHTML = `
-							<div class="job-listings-title">
-								<a href="${job.permalink}" target="_blank">${job.title}</a>
-							</div>
-							<div class="job-listings-meta">
-								<span class="job-status status-${job.status}">${job.status}</span>
-							</div>
-							<div class="job-listings-meta">${new Date(job.date_created).toLocaleDateString()}</div>
-							<div class="job-listings-meta">${new Date(job.date_modified).toLocaleDateString()}</div>
-							<div class="job-listings-actions">
-								<button class="job-action job-action--edit" data-id="${job.id}" title="Edit Job">
-									<i class="fas fa-edit"></i>
-								</button>
-								<button class="job-action job-action--view" data-id="${job.id}" title="View Job">
-									<i class="fas fa-eye"></i>
-								</button>
-							</div>
-						`;
-						body.appendChild(row);
-					});
-
-					table.style.display = 'block';
-
-					// Update pagination
-					currentJobPage = page;
-					totalJobPages = data.pagination.total_pages;
-					updateJobPagination(data.pagination);
-
-				} else {
-					empty.style.display = 'block';
-				}
-			})
-			.catch(error => {
-				console.error('Error loading job listings:', error);
-				loading.style.display = 'none';
-				empty.innerHTML = `
-					<i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #ffc107; margin-bottom: 16px;"></i>
-					<div style="font-size: 18px; font-weight: 500; color: #6c757d; margin-bottom: 8px;">Error loading jobs</div>
-					<div style="font-size: 14px; color: #8e8e93;">Please try again or check the console for details.</div>
-				`;
-				empty.style.display = 'block';
-			});
-		}		function updateJobPagination(pagination) {
-			const paginationEl = document.getElementById('job-pagination');
-			const pageInfo = document.getElementById('job-page-info');
-			const prevBtn = document.getElementById('job-prev-page');
-			const nextBtn = document.getElementById('job-next-page');
-
-			if (pagination.total_pages > 1) {
-				pageInfo.textContent = `Page ${pagination.page} of ${pagination.total_pages}`;
-				prevBtn.disabled = pagination.page <= 1;
-				nextBtn.disabled = pagination.page >= pagination.total_pages;
-				paginationEl.style.display = 'block';
-			} else {
-				paginationEl.style.display = 'none';
-			}
-		}
-
-		// Initialize job listings on page load
-		document.addEventListener('DOMContentLoaded', function() {
-			loadJobListings(1, currentJobFilters);
-
-			// Job filter event listeners
-			document.getElementById('apply-job-filters').addEventListener('click', function() {
-				currentJobFilters.status = document.getElementById('job-status-filter').value;
-				currentJobFilters.search = document.getElementById('job-search').value.trim();
-				loadJobListings(1, currentJobFilters);
-			});
-
-			document.getElementById('clear-job-filters').addEventListener('click', function() {
-				document.getElementById('job-status-filter').selectedIndex = 0;
-				document.getElementById('job-search').value = '';
-				currentJobFilters = { status: 'any', search: '' };
-				loadJobListings(1, currentJobFilters);
-			});
-
-			document.getElementById('job-search').addEventListener('keypress', function(e) {
-				if (e.key == 'Enter') {
-					document.getElementById('apply-job-filters').click();
-				}
-			});
-
-			// Pagination event listeners
-			document.getElementById('job-prev-page').addEventListener('click', function() {
-				if (currentJobPage > 1) {
-					loadJobListings(currentJobPage - 1, currentJobFilters);
-				}
-			});
-
-			document.getElementById('job-next-page').addEventListener('click', function() {
-				if (currentJobPage < totalJobPages) {
-					loadJobListings(currentJobPage + 1, currentJobFilters);
-				}
-			});
-
-			// Job action event listeners (delegated)
-			document.getElementById('job-listings-body').addEventListener('click', function(e) {
-				const target = e.target.closest('.job-action');
-				if (!target) return;
-
-				const jobId = target.dataset.id;
-				if (target.classList.contains('edit-job')) {
-					window.open(`<?php echo admin_url( 'post.php?action=edit&post=' ); ?>\${jobId}`, '_blank');
-				} else if (target.classList.contains('view-job')) {
-					window.open(`<?php echo get_permalink(); ?>?p=\${jobId}`, '_blank');
-				}
-			});
-		});
-	</script>
 	<?php
 }
