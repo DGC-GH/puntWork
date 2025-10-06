@@ -552,6 +552,8 @@ function prepare_import_setup( $batch_start = 0, $is_batch = false ) {
 		delete_option( 'job_import_status' );
 		// Clear progress for fresh start
 		update_option( 'job_import_progress', 0, false );
+		// Reset batch size for fresh start to allow dynamic adjustment
+		delete_option( 'job_import_batch_size' );
 		$start_time = microtime( true );
 		\Puntwork\PuntWorkLogger::info( 'Fresh import start - resetting status and progress to 0', \Puntwork\PuntWorkLogger::CONTEXT_BATCH );
 
@@ -581,10 +583,34 @@ function prepare_import_setup( $batch_start = 0, $is_batch = false ) {
 			error_log( '[PUNTWORK] [SETUP-FRESH] Initialized fresh import status with total=' . $total . ', batch_size=' . $initial_status['batch_size'] );
 		}
 	} elseif ( $batch_start == 0 && $has_valid_status ) {
-		// Resuming from existing status - don't reset anything
-		$start_index = $existing_status['processed'] ?? 0;
+		// Resuming from existing status - reset batch size for dynamic adjustment but keep other status
+		$start_index = 0; // Reset to start from beginning
 		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [SETUP-RESUME] Resuming import from existing status, start_index=' . $start_index . ', total=' . $existing_status['total'] );
+			error_log( '[PUNTWORK] [SETUP-RESUME] Restarting import from beginning, resetting batch size for dynamic adjustment' );
+		}
+		// Reset batch size to allow dynamic adjustment to start fresh
+		delete_option( 'job_import_batch_size' );
+		// Reset progress for restart
+		update_option( 'job_import_progress', 0, false );
+		// Update existing status for restart
+		$existing_status['processed'] = 0;
+		$existing_status['published'] = 0;
+		$existing_status['updated'] = 0;
+		$existing_status['skipped'] = 0;
+		$existing_status['duplicates_drafted'] = 0;
+		$existing_status['time_elapsed'] = 0;
+		$existing_status['complete'] = false;
+		$existing_status['success'] = false;
+		$existing_status['error_message'] = '';
+		$existing_status['start_time'] = microtime( true );
+		$existing_status['end_time'] = null;
+		$existing_status['last_update'] = time();
+		$existing_status['logs'][] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Import restarted from beginning';
+		update_option( 'job_import_status', $existing_status, false );
+	} else {
+		// Batch processing or continuation - don't reset batch size
+		if ( $debug_mode ) {
+			error_log( '[PUNTWORK] [SETUP-BATCH] Batch processing mode, not resetting batch size' );
 		}
 	}
 
