@@ -69,7 +69,7 @@ function register_ajax_handlers() {
 function ajax_get_import_schedule() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -92,13 +92,7 @@ function ajax_get_import_schedule() {
 			'last_run' => $last_run,
 			'last_run_details' => $last_run_details,
 		);
-
-		wp_send_json_success( $response );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX get_import_schedule error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -108,7 +102,7 @@ function ajax_get_import_schedule() {
 function ajax_save_import_schedule() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -127,8 +121,6 @@ function ajax_save_import_schedule() {
 			'minute' => $minute,
 		);
 
-		update_option( 'puntwork_import_schedule', $schedule );
-
 		// Clear existing schedule
 		wp_clear_scheduled_hook( 'puntwork_scheduled_import' );
 
@@ -145,13 +137,7 @@ function ajax_save_import_schedule() {
 			'schedule' => $schedule,
 			'next_run' => $next_run,
 		);
-
-		wp_send_json_success( $response );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX save_import_schedule error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -161,7 +147,7 @@ function ajax_save_import_schedule() {
 function ajax_test_import_schedule() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -180,10 +166,6 @@ function ajax_test_import_schedule() {
 			'result' => $result,
 		) );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX test_import_schedule error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -193,7 +175,7 @@ function ajax_test_import_schedule() {
 function ajax_get_import_run_history() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -215,10 +197,6 @@ function ajax_get_import_run_history() {
 			'count' => $count,
 		) );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX get_import_run_history error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -228,7 +206,7 @@ function ajax_get_import_run_history() {
 function ajax_get_job_import_status() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -241,10 +219,6 @@ function ajax_get_job_import_status() {
 			'progress' => $progress,
 		) );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX get_job_import_status error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -254,7 +228,7 @@ function ajax_get_job_import_status() {
 function ajax_get_async_status() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -282,10 +256,6 @@ function ajax_get_async_status() {
 			'running_jobs' => $running_jobs,
 		) );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX get_async_status error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -295,7 +265,7 @@ function ajax_get_async_status() {
 function ajax_run_job_import_batch() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -307,10 +277,6 @@ function ajax_run_job_import_batch() {
 
 		wp_send_json_success( $result );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX run_job_import_batch error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -320,7 +286,7 @@ function ajax_run_job_import_batch() {
 function ajax_run_scheduled_import() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -333,10 +299,6 @@ function ajax_run_scheduled_import() {
 			'async' => false, // This is synchronous for now
 		) );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX run_scheduled_import error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -346,7 +308,7 @@ function ajax_run_scheduled_import() {
 function ajax_cancel_job_import() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -355,10 +317,6 @@ function ajax_cancel_job_import() {
 
 		wp_send_json_success( array( 'message' => 'Import cancelled' ) );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX cancel_job_import error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -368,7 +326,7 @@ function ajax_cancel_job_import() {
 function ajax_reset_job_import() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -380,10 +338,6 @@ function ajax_reset_job_import() {
 
 		wp_send_json_success( array( 'message' => 'Import reset successfully' ) );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX reset_job_import error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -400,7 +354,7 @@ function ajax_reset_job_import_status() {
 function ajax_get_api_key() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -409,10 +363,6 @@ function ajax_get_api_key() {
 
 		wp_send_json_success( array( 'api_key' => $api_key ) );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX get_api_key error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -422,7 +372,7 @@ function ajax_get_api_key() {
 function ajax_check_import_data_status() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -436,13 +386,7 @@ function ajax_check_import_data_status() {
 			'feeds_count' => count( $feeds ),
 			'feeds_available' => ! empty( $feeds ),
 		);
-
-		wp_send_json_success( $status );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX check_import_data_status error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -452,7 +396,7 @@ function ajax_check_import_data_status() {
 function ajax_get_db_optimization_status() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -465,13 +409,7 @@ function ajax_get_db_optimization_status() {
 				'job_posts' => $wpdb->get_var( "SHOW TABLE STATUS LIKE '{$wpdb->posts}'" ),
 			),
 		);
-
-		wp_send_json_success( $status );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX get_db_optimization_status error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -481,7 +419,7 @@ function ajax_get_db_optimization_status() {
 function ajax_create_database_indexes() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -493,10 +431,6 @@ function ajax_create_database_indexes() {
 			'result' => $result,
 		) );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX create_database_indexes error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -506,7 +440,7 @@ function ajax_create_database_indexes() {
 function ajax_save_async_settings() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -520,10 +454,6 @@ function ajax_save_async_settings() {
 			'enabled' => $enabled,
 		) );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX save_async_settings error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -533,7 +463,7 @@ function ajax_save_async_settings() {
 function ajax_process_feed() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -555,11 +485,6 @@ function ajax_process_feed() {
 
 		wp_send_json_success( $result );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX process_feed error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-			'feed_key' => $feed_key ?? '',
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -569,7 +494,7 @@ function ajax_process_feed() {
 function ajax_schedule_feed_processing() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -600,10 +525,6 @@ function ajax_schedule_feed_processing() {
 			'scheduled_jobs' => $scheduled_jobs,
 		) );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX schedule_feed_processing error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -613,7 +534,7 @@ function ajax_schedule_feed_processing() {
 function ajax_get_feed_processing_status() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -642,12 +563,10 @@ function ajax_get_feed_processing_status() {
 		}
 
 		wp_send_json_success( array( 'status' => $status ) );
-	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX get_feed_processing_status error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
-	}
+        } catch ( \Exception $e ) {
+                error_log( 'AJAX get_feed_processing_status error' . ": " . $e->getMessage() );
+                wp_send_json_error( array( 'message' => $e->getMessage() ) );
+        }
 }
 
 /**
@@ -656,7 +575,7 @@ function ajax_get_feed_processing_status() {
 function ajax_cleanup_duplicates() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -668,10 +587,6 @@ function ajax_cleanup_duplicates() {
 			'result' => $result,
 		) );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX cleanup_duplicates error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -681,7 +596,7 @@ function ajax_cleanup_duplicates() {
 function ajax_cleanup_continue() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -693,10 +608,6 @@ function ajax_cleanup_continue() {
 
 		wp_send_json_success( $result );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX cleanup_continue error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
@@ -706,7 +617,7 @@ function ajax_cleanup_continue() {
 function ajax_clear_import_cancel() {
 	try {
 		// Verify nonce
-		if ( ! check_ajax_referer( 'puntwork_ajax', 'nonce', false ) ) {
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
@@ -715,10 +626,6 @@ function ajax_clear_import_cancel() {
 
 		wp_send_json_success( array( 'message' => 'Import cancel flag cleared' ) );
 	} catch ( \Exception $e ) {
-		PuntWorkLogger::error( 'AJAX clear_import_cancel error', PuntWorkLogger::CONTEXT_API, array(
-			'error' => $e->getMessage(),
-		) );
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
 	}
 }
 
