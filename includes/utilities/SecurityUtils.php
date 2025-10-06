@@ -418,33 +418,33 @@ class SecurityUtils {
 
 					break;
 				case 'key':
-					$value = sanitize_key( $value );
+					$value = sanitize_key( (string) $value );
 
 					break;
 				case 'text':
-					$value = sanitize_text_field( $value );
+					$value = sanitize_text_field( (string) $value );
 
 					break;
 				case 'textarea':
-					$value = sanitize_textarea_field( $value );
+					$value = sanitize_textarea_field( (string) $value );
 
 					break;
 				case 'email':
-					$value = sanitize_email( $value );
+					$value = sanitize_email( (string) $value );
 					if ( ! is_email( $value ) ) {
 						return new \WP_Error( 'validation', "{$field_name} must be a valid email address" );
 					}
 
 					break;
 				case 'url':
-					$value = esc_url_raw( $value );
+					$value = esc_url_raw( (string) $value );
 					if ( ! filter_var( $value, FILTER_VALIDATE_URL ) ) {
 						return new \WP_Error( 'validation', "{$field_name} must be a valid URL" );
 					}
 
 					break;
 				case 'html':
-					$value = wp_kses_post( $value ); // Allow safe HTML
+					$value = wp_kses_post( (string) $value ); // Allow safe HTML
 
 					break;
 				case 'json':
@@ -599,14 +599,14 @@ class SecurityUtils {
 		if ( is_array( $data ) ) {
 			$sanitized = array();
 			foreach ( $data as $key => $value ) {
-				$sanitized[ sanitize_key( $key ) ] = self::sanitizeDeep( $value );
+				$sanitized[ sanitize_key( (string) $key ) ] = self::sanitizeDeep( $value );
 			}
 
 			return $sanitized;
 		} elseif ( is_object( $data ) ) {
 			$sanitized = new \stdClass();
 			foreach ( $data as $key => $value ) {
-				$sanitized->{sanitize_key( $key )} = self::sanitizeDeep( $value );
+				$sanitized->{sanitize_key( (string) $key )} = self::sanitizeDeep( $value );
 			}
 
 			return $sanitized;
@@ -644,6 +644,9 @@ class SecurityUtils {
 
 		// Check for malicious file content (basic check)
 		$file_content = file_get_contents( $file['tmp_name'] );
+		if ( $file_content === false ) {
+			return new \WP_Error( 'upload_error', 'Unable to read file content' );
+		}
 		if ( strpos( $file_content, '<?php' ) !== false || strpos( $file_content, '<script' ) !== false ) {
 			return new \WP_Error( 'upload_error', 'File contains potentially malicious content' );
 		}
@@ -809,7 +812,7 @@ class SecurityUtils {
 		$text_fields = array( 'job_title', 'job_desc', 'job_location', 'job_company', 'job_type' );
 		foreach ( $text_fields as $field ) {
 			if ( isset( $job_data[ $field ] ) ) {
-				$sanitized[ $field ] = self::sanitizeText( $job_data[ $field ] );
+				$sanitized[ $field ] = self::sanitizeText( (string) $job_data[ $field ] );
 			}
 		}
 
@@ -820,7 +823,7 @@ class SecurityUtils {
 				if ( ! self::validateSecureUrl( $job_data[ $field ] ) ) {
 					$errors[] = "Invalid URL in field: {$field}";
 				} else {
-					$sanitized[ $field ] = esc_url_raw( $job_data[ $field ] );
+					$sanitized[ $field ] = esc_url_raw( (string) $job_data[ $field ] );
 				}
 			}
 		}
@@ -841,7 +844,7 @@ class SecurityUtils {
 			if ( ! is_email( $job_data['job_email'] ) ) {
 				$errors[] = 'Invalid email address';
 			} else {
-				$sanitized['job_email'] = sanitize_email( $job_data['job_email'] );
+				$sanitized['job_email'] = sanitize_email( (string) $job_data['job_email'] );
 			}
 		}
 
@@ -925,10 +928,10 @@ class SecurityUtils {
 		}
 
 		return array(
-			'url'         => esc_url_raw( $feed_data['url'] ),
-			'format'      => sanitize_text_field( $feed_data['format'] ),
-			'name'        => sanitize_text_field( $feed_data['name'] ?? '' ),
-			'description' => self::sanitizeText( $feed_data['description'] ?? '', 500 ),
+			'url'         => esc_url_raw( (string) $feed_data['url'] ),
+			'format'      => sanitize_text_field( (string) $feed_data['format'] ),
+			'name'        => sanitize_text_field( (string) ($feed_data['name'] ?? '') ),
+			'description' => self::sanitizeText( (string) ($feed_data['description'] ?? ''), 500 ),
 		);
 	}
 }

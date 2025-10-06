@@ -421,6 +421,10 @@ class FeedProcessor {
 			$content = fread( $file_handle, 1024 ); // Read first 1KB to detect structure
 			rewind( $file_handle );
 
+			if ( $content === false ) {
+				throw new \Exception( "Could not read from JSON file: $json_path" );
+			}
+
 			// Check if it's a JSON array
 			$content = trim( $content );
 			if ( strpos( $content, '[' ) === 0 ) {

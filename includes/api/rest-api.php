@@ -1508,7 +1508,7 @@ function handle_social_save_config( $request ) {
 		$sanitized_config = array();
 		if ( is_array( $config ) ) {
 			foreach ( $config as $key => $value ) {
-				$sanitized_config[ $key ] = sanitize_text_field( $value );
+				$sanitized_config[ $key ] = sanitize_text_field( (string) $value );
 			}
 		}
 
@@ -1593,7 +1593,9 @@ function handle_social_post_now( $request ) {
 		$social_manager = new \Puntwork\SocialMedia\SocialMediaManager();
 
 		// Sanitize platforms
-		$sanitized_platforms = array_map( 'sanitize_text_field', $platforms );
+		$sanitized_platforms = array_map( function( $platform ) {
+			return sanitize_text_field( (string) $platform );
+		}, $platforms );
 
 		$results = $social_manager->postToPlatforms(
 			array( 'text' => sanitize_textarea_field( $content ) ),
