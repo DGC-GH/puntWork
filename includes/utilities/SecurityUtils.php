@@ -54,14 +54,6 @@ class SecurityUtils {
 				'max_requests' => 20,
 				'time_window'  => 300, // 5 minutes
 			),
-			'test_single_job_import'       => array(
-				'max_requests' => 5,
-				'time_window'  => 300, // 5 minutes
-			),
-			'clear_rate_limits'            => array(
-				'max_requests' => 3,
-				'time_window'  => 3600, // 1 hour
-			),
 			'job_import_cleanup_continue' => array(
 				'max_requests' => 10,
 				'time_window'  => 60, // 1 minute - allow more frequent continues
@@ -145,14 +137,6 @@ class SecurityUtils {
 			'process_feed'                 => array(
 				'max_requests' => 20,
 				'time_window'  => 300,
-			),
-			'test_single_job_import'       => array(
-				'max_requests' => 5,
-				'time_window'  => 300,
-			),
-			'clear_rate_limits'            => array(
-				'max_requests' => 3,
-				'time_window'  => 3600,
 			),
 			'job_import_cleanup_duplicates' => array(
 				'max_requests' => 5,

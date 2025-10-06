@@ -72,22 +72,9 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 console.log('[PUNTWORK] Reset button clicked!');
                 JobImportEvents.handleResetImport();
             });
-            $('#test-single-job').on('click', function(e) {
-                console.log('[PUNTWORK] Test single job button clicked via event binding!');
-                JobImportEvents.handleTestSingleJob();
-            });
 
-            $('#clear-rate-limits').on('click', function(e) {
-                console.log('[PUNTWORK] Clear rate limits button clicked!');
-                JobImportEvents.handleClearRateLimits();
-            });
-
-            console.log('[PUNTWORK] Test single job button binding check:', $('#test-single-job').length);
-            if ($('#test-single-job').length > 0) {
-                console.log('[PUNTWORK] Test single job button found and bound');
-            } else {
-                console.log('[PUNTWORK] Test single job button NOT found!');
-            }
+            // Test single job button binding
+            // (Button removed - functionality no longer available)
 
             // Database optimization events
             $('#optimize-database').on('click', function(e) {
@@ -185,104 +172,9 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             JobImportLogic.handleResetImport();
         },
 
-        /**
-         * Handle test single job button click
-         */
-        handleTestSingleJob: function() {
-            console.log('[PUNTWORK] Test Single Job clicked - starting handler');
-            console.log('[PUNTWORK] Current button state:', $('#test-single-job').prop('disabled'));
 
-            if (confirm('This will create a test job with title "TEST" to verify the import functionality works. Continue?')) {
-                console.log('[PUNTWORK] User confirmed test single job');
-                $('#test-single-job').prop('disabled', true).text('Testing...');
 
-                // Show progress UI
-                JobImportUI.showImportUI();
-                $('#status-message').text('Testing single job import...');
 
-                console.log('[PUNTWORK] About to call JobImportAPI.testSingleJob()');
-                console.log('[PUNTWORK] JobImportAPI available:', typeof JobImportAPI);
-                console.log('[PUNTWORK] testSingleJob method exists:', typeof JobImportAPI.testSingleJob);
-
-                // Call the test single job API
-                JobImportAPI.testSingleJob().then(function(response) {
-                    console.log('[PUNTWORK] Test single job response received:', response);
-
-                    if (response.success) {
-                        console.log('[PUNTWORK] Test successful, updating UI');
-                        $('#status-message').text('Test job created successfully!');
-                        JobImportUI.appendLogs(['✅ Test job created with ID: ' + (response.data.post_id || 'Unknown')]);
-                        JobImportUI.appendLogs(['✅ Job title: ' + (response.data.post_title || 'Unknown')]);
-                        JobImportUI.appendLogs(['✅ Job status: ' + (response.data.post_status || 'Unknown')]);
-                        if (response.data.logs && response.data.logs.length > 0) {
-                            JobImportUI.appendLogs(response.data.logs);
-                        }
-                    } else {
-                        console.log('[PUNTWORK] Test failed:', response.data);
-                        $('#status-message').text('Test job failed: ' + (response.data.error || 'Unknown error'));
-                        JobImportUI.appendLogs(['❌ Test job failed: ' + (response.data.error || 'Unknown error')]);
-                    }
-
-                    $('#test-single-job').prop('disabled', false).text('Test Single Job');
-                    console.log('[PUNTWORK] Test single job completed, button re-enabled');
-                }).catch(function(xhr, status, error) {
-                    console.log('[PUNTWORK] Test single job error caught:', error);
-                    console.log('[PUNTWORK] XHR object:', xhr);
-                    console.log('[PUNTWORK] Status:', status);
-                    $('#status-message').text('Test job error: ' + error);
-                    JobImportUI.appendLogs(['❌ Test job error: ' + error]);
-                    $('#test-single-job').prop('disabled', false).text('Test Single Job');
-                });
-            } else {
-                console.log('[PUNTWORK] User cancelled test single job');
-            }
-        },
-
-        /**
-         * Handle clear rate limits button click
-         */
-        handleClearRateLimits: function() {
-            console.log('[PUNTWORK] Clear Rate Limits clicked - starting handler');
-
-            if (confirm('This will clear all rate limiting restrictions for AJAX requests. This may temporarily reduce security. Continue?')) {
-                console.log('[PUNTWORK] User confirmed clear rate limits');
-                $('#clear-rate-limits').prop('disabled', true);
-                $('#clear-rate-text').hide();
-                $('#clear-rate-loading').show();
-
-                // Call the clear rate limits API
-                JobImportAPI.clearRateLimits().then(function(response) {
-                    console.log('[PUNTWORK] Clear rate limits response received:', response);
-
-                    if (response.success) {
-                        console.log('[PUNTWORK] Rate limits cleared successfully');
-                        $('#import-status').text('Rate limits cleared successfully!');
-                        JobImportUI.appendLogs(['✅ Rate limits cleared successfully']);
-                        if (response.data.message) {
-                            JobImportUI.appendLogs(['ℹ️ ' + response.data.message]);
-                        }
-                    } else {
-                        console.log('[PUNTWORK] Clear rate limits failed:', response.data);
-                        $('#import-status').text('Failed to clear rate limits: ' + (response.data.error || 'Unknown error'));
-                        JobImportUI.appendLogs(['❌ Failed to clear rate limits: ' + (response.data.error || 'Unknown error')]);
-                    }
-
-                    $('#clear-rate-limits').prop('disabled', false);
-                    $('#clear-rate-text').show();
-                    $('#clear-rate-loading').hide();
-                    console.log('[PUNTWORK] Clear rate limits completed, button re-enabled');
-                }).catch(function(xhr, status, error) {
-                    console.log('[PUNTWORK] Clear rate limits error caught:', error);
-                    $('#import-status').text('Clear rate limits error: ' + error);
-                    JobImportUI.appendLogs(['❌ Clear rate limits error: ' + error]);
-                    $('#clear-rate-limits').prop('disabled', false);
-                    $('#clear-rate-text').show();
-                    $('#clear-rate-loading').hide();
-                });
-            } else {
-                console.log('[PUNTWORK] User cancelled clear rate limits');
-            }
-        },
 
         /**
          * Handle cleanup duplicates button click

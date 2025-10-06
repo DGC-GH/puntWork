@@ -153,8 +153,6 @@ function api_settings_page() {
 								'run_job_import_batch'   => __( 'Batch job import processing', 'puntwork' ),
 								'get_job_import_status'  => __( 'Import status checking', 'puntwork' ),
 								'process_feed'           => __( 'Feed processing operations', 'puntwork' ),
-								'test_single_job_import' => __( 'Single job import testing', 'puntwork' ),
-								'clear_rate_limits'      => __( 'Rate limit clearing operations', 'puntwork' ),
 							);
 
 							foreach ( $rate_limit_configs as $action => $config ) :
