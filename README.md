@@ -3,7 +3,7 @@
 ## Project Overview
 - **Name**: puntWork
 - **Type**: WordPress plugin for advanced job import from XML/JSON/CSV feeds
-- **Version**: 0.0.4
+- **Version**: 0.0.7
 - **Author**: DGC-GH
 - **License**: GPL v2+
 - **Requirements**: WordPress 5.0+, PHP 8.1+, MySQL 5.7+

@@ -52,7 +52,7 @@ if ( ! defined( 'PUNTWORK_LOGS' ) ) {
 }
 
 if ( ! defined( 'PUNTWORK_VERSION' ) ) {
-	define( 'PUNTWORK_VERSION', '0.0.6' );
+	define( 'PUNTWORK_VERSION', '0.0.7' );
 }
 
 // Load WordPress test functions

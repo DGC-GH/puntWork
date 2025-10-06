@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.7] - 2025-10-06
 
 ### Added
 - Protocol maintenance run completed on 2025-10-04: Improved error messages in AJAX handlers for better debugging, ran evolution analysis and applied improvements
@@ -52,6 +52,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Code Quality Improvements**: Fixed PHPCS violations including indentation, spacing, inline comments, and WordPress coding standards compliance
 - **PHP 8.4 Compatibility**: Fixed deprecation warnings for implicitly nullable parameters in exception constructors by explicitly declaring `?\Throwable $previous = null` in all custom exception classes
 - **Import Lock Conflict Resolution**: Fixed import process stalling at processed:0 due to lock conflict between batch import functions
+- **PHP 8.2 Deprecation Warnings**: Fixed null parameter warnings in strpos(), str_replace(), and strip_tags() by casting inputs to strings before WordPress functions
+- **AJAX Handler Fatal Errors**: Fixed 500 errors by ensuring scheduling-core.php is loaded during AJAX requests and adding proper dependency checks
 
 ### Performance
 - Implemented parallel feed downloading using Symfony HTTP Client to reduce total import time for multiple feeds
@@ -87,6 +89,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSE JSON Parse Error Fix**: Added sanitization functions to remove "undefined" values from import status data before JSON serialization, preventing JavaScript parse errors
 - **Concurrent Import Prevention**: Implemented transient-based locking mechanism to prevent multiple simultaneous imports that cause "Import already running" errors
 - **Status Data Sanitization**: Added sanitize_import_status() function to clean AJAX responses and prevent corrupted status data from breaking real-time updates
+
+## [Unreleased]
 
 ## [0.0.5] - 2025-10-02
 

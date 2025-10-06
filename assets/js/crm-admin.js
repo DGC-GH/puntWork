@@ -3,7 +3,7 @@
  *
  * @package    Puntwork
  * @subpackage Admin
- * @since      0.0.4
+ * @since      0.0.7
  */
 
 console.log('[PUNTWORK] crm-admin.js loaded - DEBUG MODE');

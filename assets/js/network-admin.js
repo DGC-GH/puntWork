@@ -5,7 +5,7 @@
  *
  * @package    Puntwork
  * @subpackage MultiSite
- * @since      0.0.4
+ * @since      0.0.7
  */
 
 (function($) {
