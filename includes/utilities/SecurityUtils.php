@@ -724,7 +724,7 @@ class SecurityUtils {
 		if ( $referer ) {
 			$site_url = get_site_url();
 
-			return strpos( $referer, $site_url ) === 0;
+			return strpos( (string) $referer, (string) $site_url ) === 0;
 		}
 
 		return false;

@@ -18,7 +18,7 @@ add_action(
 	'admin_init',
 	function () {
 		// This helps ensure the admin menu icon is refreshed
-		if ( isset( $_GET['page'] ) && strpos( $_GET['page'], 'puntwork' ) === 0 ) {
+		if ( isset( $_GET['page'] ) && strpos( (string) $_GET['page'], 'puntwork' ) === 0 ) {
 			// Add a small cache-busting parameter to force icon reload
 			add_action(
 				'admin_head',

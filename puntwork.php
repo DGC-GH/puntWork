@@ -259,6 +259,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 				'api/ajax-feed-health.php',
 				'api/rest-api.php',
 				'api/sse-import-progress.php',
+				'scheduling/scheduling-core.php',
 			) );
 		}
 
