@@ -1796,6 +1796,30 @@ function combine_jsonl_ajax() {
 		if ( $total_items > $chunk_size ) {
 			error_log( '[PUNTWORK] [DEBUG-PHP] Using chunked processing for large dataset (' . $total_items . ' items)' );
 
+			// Initialize progress status for feed processing
+			$progress_status = array(
+				'total'              => $total_items,
+				'processed'          => 0,
+				'published'          => 0,
+				'updated'            => 0,
+				'skipped'            => 0,
+				'duplicates_drafted' => 0,
+				'time_elapsed'       => 0,
+				'complete'           => false,
+				'success'            => false,
+				'error_message'      => '',
+				'batch_size'         => 10,
+				'inferred_languages' => 0,
+				'inferred_benefits'  => 0,
+				'schema_generated'   => 0,
+				'start_time'         => microtime( true ),
+				'end_time'           => null,
+				'last_update'        => time(),
+				'logs'               => array( 'Processing feeds (0/' . $total_items . ') - 0%' ),
+			);
+			update_option( 'job_import_status', $progress_status );
+			error_log( '[PUNTWORK] [COMBINE-PROGRESS] Initialized progress status for feed processing' );
+
 			$chunk_offset = 0;
 			$total_processed = 0;
 			$chunks_processed = 0;
@@ -1809,6 +1833,14 @@ function combine_jsonl_ajax() {
 
 					$total_processed += $chunk_result['processed_in_chunk'];
 					$chunks_processed++;
+
+					// Update progress status after each chunk
+					$percentage = $total_items > 0 ? round( ( $total_processed / $total_items ) * 100, 1 ) : 0;
+					$progress_status['processed'] = $total_processed;
+					$progress_status['last_update'] = time();
+					$progress_status['logs'] = array( 'Processing feeds (' . $total_processed . '/' . $total_items . ') - ' . $percentage . '%' );
+					update_option( 'job_import_status', $progress_status );
+					error_log( '[PUNTWORK] [COMBINE-PROGRESS] Updated progress: ' . $total_processed . '/' . $total_items . ' (' . $percentage . '%)' );
 
 					error_log( '[PUNTWORK] [DEBUG-PHP] Chunk ' . $chunks_processed . ' processed in ' . round( $chunk_time, 2 ) . ' seconds: ' . $chunk_result['processed_in_chunk'] . ' items' );
 
@@ -1846,12 +1878,43 @@ function combine_jsonl_ajax() {
 
 			error_log( '[PUNTWORK] [DEBUG-PHP] Chunked processing completed: ' . $chunks_processed . ' chunks, ' . $total_processed . ' total items' );
 		} else {
+			// Initialize progress status for feed processing (non-chunked)
+			$progress_status = array(
+				'total'              => $total_items,
+				'processed'          => 0,
+				'published'          => 0,
+				'updated'            => 0,
+				'skipped'            => 0,
+				'duplicates_drafted' => 0,
+				'time_elapsed'       => 0,
+				'complete'           => false,
+				'success'            => false,
+				'error_message'      => '',
+				'batch_size'         => 10,
+				'inferred_languages' => 0,
+				'inferred_benefits'  => 0,
+				'schema_generated'   => 0,
+				'start_time'         => microtime( true ),
+				'end_time'           => null,
+				'last_update'        => time(),
+				'logs'               => array( 'Processing feeds (0/' . $total_items . ') - 0%' ),
+			);
+			update_option( 'job_import_status', $progress_status );
+			error_log( '[PUNTWORK] [COMBINE-PROGRESS] Initialized progress status for non-chunked feed processing' );
+
 			try {
 				$start_time = microtime( true );
 				combine_jsonl_files( $feeds, $output_dir, $total_items, $logs );
 				$end_time        = microtime( true );
 				$processing_time = $end_time - $start_time;
 				error_log( '[PUNTWORK] [DEBUG-PHP] combine_jsonl_files completed in ' . round( $processing_time, 2 ) . ' seconds' );
+
+				// Update progress to 100% completion
+				$progress_status['processed'] = $total_items;
+				$progress_status['last_update'] = time();
+				$progress_status['logs'] = array( 'Processing feeds (' . $total_items . '/' . $total_items . ') - 100%' );
+				update_option( 'job_import_status', $progress_status );
+				error_log( '[PUNTWORK] [COMBINE-PROGRESS] Updated progress to 100% completion' );
 			} catch ( \Exception $e ) {
 				error_log( '[PUNTWORK] [DEBUG-PHP] combine_jsonl_files threw exception: ' . $e->getMessage() );
 				error_log( '[PUNTWORK] [DEBUG-PHP] Exception file: ' . $e->getFile() . ':' . $e->getLine() );
