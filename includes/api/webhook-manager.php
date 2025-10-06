@@ -91,7 +91,7 @@ class WebhookManager {
 
 		$data = array(
 			'name'      => sanitize_text_field( (string) $config['name'] ),
-			'url'       => esc_url_raw( $config['url'] ),
+			'url'       => esc_url_raw( (string) $config['url'] ),
 			'method'    => strtoupper( (string) ($config['method'] ?? 'POST') ),
 			'events'    => json_encode( $config['events'] ?? array() ),
 			'headers'   => json_encode( $config['headers'] ?? array() ),
@@ -117,7 +117,7 @@ class WebhookManager {
 			$data['name'] = sanitize_text_field( (string) $config['name'] );
 		}
 		if ( isset( $config['url'] ) ) {
-			$data['url'] = esc_url_raw( $config['url'] );
+			$data['url'] = esc_url_raw( (string) $config['url'] );
 		}
 		if ( isset( $config['method'] ) ) {
 			$data['method'] = strtoupper( (string) $config['method'] );
