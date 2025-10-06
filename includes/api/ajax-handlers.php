@@ -654,19 +654,6 @@ function ajax_clear_import_cancel() {
 }
 
 /**
- * Helper function to get next scheduled time
- */
-function get_next_scheduled_time() {
-	$schedule = get_option( 'puntwork_import_schedule', array() );
-
-	if ( empty( $schedule ) || ! $schedule['enabled'] ) {
-		return null;
-	}
-
-	return get_next_run_time( $schedule );
-}
-
-/**
  * Helper function to get next run time
  */
 function get_next_run_time( $schedule ) {

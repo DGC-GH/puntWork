@@ -259,7 +259,9 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 				'api/ajax-feed-health.php',
 				'api/rest-api.php',
 				'api/sse-import-progress.php',
+				'import/feed-processor.php',
 				'scheduling/scheduling-core.php',
+				'scheduling/scheduling-history.php',
 			) );
 		}
 
