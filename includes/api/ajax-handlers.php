@@ -244,7 +244,7 @@ function ajax_get_async_status() {
 		$running_jobs = array();
 
 		// Check for running Action Scheduler jobs
-		if ( function_exists( 'as_get_scheduled_actions' ) ) {
+		if ( function_exists( 'as_get_scheduled_actions' ) && class_exists( '\ActionScheduler_Store' ) ) {
 			$actions = as_get_scheduled_actions( array(
 				'hook' => 'puntwork_process_import_batch',
 				'status' => \ActionScheduler_Store::STATUS_RUNNING,
@@ -529,7 +529,7 @@ function ajax_schedule_feed_processing() {
 		$scheduled_jobs = array();
 
 		foreach ( $feed_keys as $feed_key ) {
-			$feed_key = sanitize_text_field( $feed_key );
+			$feed_key = sanitize_text_field( (string) $feed_key );
 
 			if ( function_exists( 'as_schedule_single_action' ) ) {
 				$job_id = as_schedule_single_action( time(), 'puntwork_process_feed', array( 'feed_key' => $feed_key ) );
@@ -564,9 +564,9 @@ function ajax_get_feed_processing_status() {
 
 		$status = array();
 
-		if ( function_exists( 'as_get_scheduled_actions' ) ) {
+		if ( function_exists( 'as_get_scheduled_actions' ) && class_exists( '\ActionScheduler_Store' ) ) {
 			foreach ( $feed_keys as $feed_key ) {
-				$feed_key = sanitize_text_field( $feed_key );
+				$feed_key = sanitize_text_field( (string) $feed_key );
 
 				$actions = as_get_scheduled_actions( array(
 					'hook' => 'puntwork_process_feed',

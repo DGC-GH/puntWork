@@ -90,9 +90,9 @@ class WebhookManager {
 		$table = $wpdb->prefix . self::TABLE_NAME;
 
 		$data = array(
-			'name'      => sanitize_text_field( $config['name'] ),
+			'name'      => sanitize_text_field( (string) $config['name'] ),
 			'url'       => esc_url_raw( $config['url'] ),
-			'method'    => strtoupper( $config['method'] ?? 'POST' ),
+			'method'    => strtoupper( (string) ($config['method'] ?? 'POST') ),
 			'events'    => json_encode( $config['events'] ?? array() ),
 			'headers'   => json_encode( $config['headers'] ?? array() ),
 			'secret'    => $config['secret'] ?? wp_generate_password( 32, false ),
@@ -114,13 +114,13 @@ class WebhookManager {
 
 		$data = array();
 		if ( isset( $config['name'] ) ) {
-			$data['name'] = sanitize_text_field( $config['name'] );
+			$data['name'] = sanitize_text_field( (string) $config['name'] );
 		}
 		if ( isset( $config['url'] ) ) {
 			$data['url'] = esc_url_raw( $config['url'] );
 		}
 		if ( isset( $config['method'] ) ) {
-			$data['method'] = strtoupper( $config['method'] );
+			$data['method'] = strtoupper( (string) $config['method'] );
 		}
 		if ( isset( $config['events'] ) ) {
 			$data['events'] = json_encode( $config['events'] );
