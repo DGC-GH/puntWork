@@ -76,7 +76,7 @@ if ( ! function_exists( 'process_batch_items' ) ) {
 				$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'Updated ID: ' . $post_id . ' GUID: ' . $guid;
 			} else {
 				// Create new post
-				$xml_title = $item['functiontitle'];
+				$xml_title = $item['functiontitle'] ?? 'Untitled Job';
 				$xml_validfrom = $item['validfrom'] ?? current_time( 'mysql' );
 				$post_modified = $xml_updated ?: current_time( 'mysql' );
 

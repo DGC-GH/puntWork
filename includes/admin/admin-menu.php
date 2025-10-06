@@ -97,32 +97,32 @@ add_action(
 
 		// Add the main dashboard as first submenu (this replaces the parent menu)
 		$submenu['puntwork-dashboard'][] = array(
-			__( 'Dashboard', 'puntwork' ),
+			(string) __( 'Dashboard', 'puntwork' ),
 			'manage_options',
 			'admin.php?page=puntwork-dashboard'
 		);
 
 		// Add other submenus
 		$submenu['puntwork-dashboard'][] = array(
-			__( 'Feeds', 'puntwork' ),
+			(string) __( 'Feeds', 'puntwork' ),
 			'manage_options',
 			'admin.php?page=job-feed-dashboard'
 		);
 
 		$submenu['puntwork-dashboard'][] = array(
-			__( 'Jobs', 'puntwork' ),
+			(string) __( 'Jobs', 'puntwork' ),
 			'manage_options',
 			'admin.php?page=jobs-dashboard'
 		);
 
 		$submenu['puntwork-dashboard'][] = array(
-			__( 'Feed Config', 'puntwork' ),
+			(string) __( 'Feed Config', 'puntwork' ),
 			'manage_options',
 			'admin.php?page=puntwork-feed-config'
 		);
 
 		$submenu['puntwork-dashboard'][] = array(
-			__( 'API Settings', 'puntwork' ),
+			(string) __( 'API Settings', 'puntwork' ),
 			'manage_options',
 			'admin.php?page=puntwork-api-settings'
 		);
