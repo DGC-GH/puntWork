@@ -370,7 +370,14 @@ function prepare_import_setup( $batch_start = 0, $is_batch = false ) {
 
 				// Attempt to combine the JSONL files
 				try {
-					$feeds = get_feeds(); // Get feeds configuration
+					// Build feeds array from existing files
+					$feeds = array();
+					foreach ( $feed_files as $feed_file ) {
+						if ( basename( $feed_file ) !== 'combined-jobs.jsonl' ) {
+							$feed_key = basename( $feed_file, '.jsonl' );
+							$feeds[ $feed_key ] = ''; // URL not needed for combination
+						}
+					}
 					if ( ! empty( $feeds ) ) {
 						$combine_logs = array();
 						$total_items  = 0;
