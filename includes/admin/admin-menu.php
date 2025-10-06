@@ -50,81 +50,41 @@ add_action(
 		);
 		error_log( '[PUNTWORK] [ADMIN-MENU] Main menu page added: puntwork-dashboard' );
 
-		// Register the page handlers without adding to menu
+		// Register submenu pages properly
 		add_submenu_page(
-			null, // Don't show in menu
-			__( 'Feeds Dashboard', 'puntwork' ),
-			'',
+			'puntwork-dashboard',
+			__( 'Job Feeds Dashboard', 'puntwork' ),
+			__( 'Feeds', 'puntwork' ),
 			'manage_options',
 			'job-feed-dashboard',
 			'Puntwork\\feeds_dashboard_page'
 		);
 
 		add_submenu_page(
-			null, // Don't show in menu
+			'puntwork-dashboard',
 			__( 'Jobs Dashboard', 'puntwork' ),
-			'',
+			__( 'Jobs', 'puntwork' ),
 			'manage_options',
 			'jobs-dashboard',
 			'Puntwork\\jobs_dashboard_page'
 		);
 
 		add_submenu_page(
-			null, // Don't show in menu
+			'puntwork-dashboard',
 			__( 'Feed Configuration', 'puntwork' ),
-			'',
+			__( 'Feed Config', 'puntwork' ),
 			'manage_options',
 			'puntwork-feed-config',
 			'Puntwork\\feed_config_page'
 		);
 
 		add_submenu_page(
-			null, // Don't show in menu
+			'puntwork-dashboard',
 			__( 'API Settings', 'puntwork' ),
-			'',
+			__( 'API Settings', 'puntwork' ),
 			'manage_options',
 			'puntwork-api-settings',
 			'Puntwork\\api_settings_page'
-		);
-
-		// Register submenu pages with different approach
-		global $submenu;
-		
-		// Add submenus manually to ensure they work
-		if (!isset($submenu['puntwork-dashboard'])) {
-			$submenu['puntwork-dashboard'] = array();
-		}
-
-		// Add the main dashboard as first submenu (this replaces the parent menu)
-		$submenu['puntwork-dashboard'][] = array(
-			(string) __( 'Dashboard', 'puntwork' ),
-			'manage_options',
-			'admin.php?page=puntwork-dashboard'
-		);
-
-		// Add other submenus
-		$submenu['puntwork-dashboard'][] = array(
-			(string) __( 'Feeds', 'puntwork' ),
-			'manage_options',
-			'admin.php?page=job-feed-dashboard'
-		);
-
-		$submenu['puntwork-dashboard'][] = array(
-			(string) __( 'Jobs', 'puntwork' ),
-			'manage_options',
-			'admin.php?page=jobs-dashboard'
-		);
-
-		$submenu['puntwork-dashboard'][] = array(
-			(string) __( 'Feed Config', 'puntwork' ),
-			'manage_options',
-			'admin.php?page=puntwork-feed-config'
-		);
-
-		$submenu['puntwork-dashboard'][] = array(
-			(string) __( 'API Settings', 'puntwork' ),
-			'manage_options',
-			'admin.php?page=puntwork-api-settings'
 		);
 
 		error_log( '[PUNTWORK] [ADMIN-MENU] Submenus added manually' );
