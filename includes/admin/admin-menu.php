@@ -165,22 +165,6 @@ add_action(
 			return;
 		}
 
-		// Onboarding menu item (only show if onboarding not completed) - always last
-		if ( ! PuntworkOnboardingWizard::isOnboardingCompleted() ) {
-			add_submenu_page(
-				'puntwork-dashboard',
-				__( 'Setup Wizard', 'puntwork' ),
-				__( 'Setup Wizard', 'puntwork' ),
-				'manage_options',
-				'puntwork-onboarding',
-				function () {
-					// Reset onboarding and redirect to dashboard with onboarding modal
-					delete_option( 'puntwork_onboarding_completed' );
-					wp_redirect( admin_url( 'admin.php?page=puntwork-dashboard&show_onboarding=1' ) );
-					exit;
-				}
-			);
-		}
 	},
 	99
 );

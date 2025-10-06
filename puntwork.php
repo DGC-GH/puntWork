@@ -250,7 +250,6 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 				'admin/admin-ajax-monitoring.php',
 				'admin/admin-feed-config.php',
 				'admin/admin-modern-styles.php',
-				'admin/onboarding-wizard.php',
 				'admin/social-media-admin.php',
 				'admin/social-media-test.php',
 				'admin/crm-admin.php',

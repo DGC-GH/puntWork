@@ -632,7 +632,6 @@ $includes = array(
 	'admin/admin-api-settings.php',
 	'admin/admin-ui-feed-health.php',
 	'admin/admin-ui-analytics.php',
-	'admin/onboarding-wizard.php',
 
 	// API handlers - testing one by one
 	// 'api/ajax-feed-processing.php',

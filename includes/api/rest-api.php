@@ -362,23 +362,6 @@ function register_import_api_routes() {
 
 	register_rest_route(
 		'puntwork/v1',
-		'/onboarding/complete',
-		array(
-			'methods'             => 'POST',
-			'callback'            => __NAMESPACE__ . '\\handle_onboarding_complete',
-			'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
-			'args'                => array(
-				'api_key' => array(
-					'required'    => true,
-					'type'        => 'string',
-					'description' => 'API key for authentication',
-				),
-			),
-		)
-	);
-
-	register_rest_route(
-		'puntwork/v1',
 		'/cache/clear',
 		array(
 			'methods'             => 'POST',
@@ -1640,43 +1623,6 @@ function handle_social_post_now( $request ) {
 			array(
 				'success' => false,
 				'message' => 'Failed to post to platforms: ' . $e->getMessage(),
-			),
-			500
-		);
-	}
-}
-
-/**
- * Handle onboarding completion request.
- */
-function handle_onboarding_complete( $request ) {
-	try {
-		// Mark onboarding as completed
-		update_option( 'puntwork_onboarding_completed', true );
-
-		// Log the completion
-		PuntWorkLogger::info( 'Onboarding completed via API', PuntWorkLogger::CONTEXT_API );
-
-		return new \WP_REST_Response(
-			array(
-				'success' => true,
-				'message' => 'Onboarding completed successfully',
-			),
-			200
-		);
-	} catch ( \Exception $e ) {
-		PuntWorkLogger::error(
-			'Onboarding complete API error',
-			PuntWorkLogger::CONTEXT_API,
-			array(
-				'error' => $e->getMessage(),
-			)
-		);
-
-		return new \WP_REST_Response(
-			array(
-				'success' => false,
-				'message' => 'Failed to complete onboarding: ' . $e->getMessage(),
 			),
 			500
 		);
