@@ -35,13 +35,7 @@
             "includes/import/feed-processor.php",
             "includes/ai/job-categorizer.php",
             "includes/ai/duplicate-detector.php",
-            "includes/ai/content-quality-scorer.php",
-            "includes/crm/crm-integration.php",
-            "includes/crm/crm-manager.php",
-            "includes/crm/hubspot-integration.php",
-            "includes/crm/salesforce-integration.php",
-            "includes/crm/zoho-integration.php",
-            "includes/crm/pipedrive-integration.php"
+            "includes/ai/content-quality-scorer.php"
         ]
     },
     "config": {

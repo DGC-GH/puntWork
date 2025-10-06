@@ -653,14 +653,6 @@ $includes = array(
 	'import/process-batch-items.php',
 	'import/process-xml-batch.php',
 
-	// CRM functionality - testing
-	'crm/crm-integration.php',
-	'crm/crm-manager.php',
-	'crm/hubspot-integration.php',
-	'crm/pipedrive-integration.php',
-	'crm/salesforce-integration.php',
-	'crm/zoho-integration.php',
-
 	// Utilities - only load essential ones
 	'utilities/PuntWorkLogger.php',
 	'utilities/feeds-path-utils.php',
