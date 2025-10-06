@@ -675,14 +675,11 @@ $includes = array(
 	'mappings/mappings-salary.php',
 	'mappings/mappings-schema.php',
 
-	// Scheduling - commented out
-	/*
-	'scheduling/scheduling-ajax.php',
+	// Scheduling
 	'scheduling/scheduling-core.php',
 	'scheduling/scheduling-history.php',
 	'scheduling/scheduling-triggers.php',
 	'scheduling/test-scheduling.php',
-	*/
 );
 foreach ( $includes as $include ) {
 	$file = dirname( __DIR__ ) . '/includes/' . $include;

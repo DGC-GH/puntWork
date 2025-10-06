@@ -18,6 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once __DIR__ . '/admin-ui-main.php';
 require_once __DIR__ . '/admin-api-settings.php';
 require_once __DIR__ . '/admin-feed-config.php';
+require_once __DIR__ . '/admin-ui-scheduling.php';
 
 function feeds_dashboard_page() {
 	// Ensure API key exists for SSE functionality
@@ -138,6 +139,9 @@ function feeds_dashboard_page() {
 
 	// Render import history UI
 	render_import_history_ui();
+
+	// Render scheduling UI
+	render_scheduling_ui();
 
 	// Render JavaScript initialization
 	render_javascript_init();
