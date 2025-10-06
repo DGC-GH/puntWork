@@ -19,7 +19,6 @@ class PuntworkQueueInterface {
     createInterface() {
         // Create queue management section
         const queueSection = document.createElement('div');
-        queueSection.id = 'puntwork-queue-management';
         queueSection.className = 'puntwork-queue-section';
         queueSection.innerHTML = `
             <div class="queue-header">

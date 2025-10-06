@@ -36,11 +36,7 @@ function enqueue_job_import_scripts() {
 		'job-feed-dashboard',
 		'jobs-dashboard',
 		'puntwork-feed-config',
-		'puntwork-feed-health',
-		'puntwork-analytics',
-		'puntwork-performance',
 		'puntwork-api-settings',
-		'puntwork-monitoring',
 		'puntwork-scheduling',
 	);
 	$should_load    = in_array( $current_page, $puntwork_pages );
@@ -450,7 +446,7 @@ function enqueue_job_import_scripts() {
 		);
 
 		// Enqueue queue management styles and scripts only on relevant pages
-		$queue_pages = array( 'puntwork-dashboard', 'puntwork-monitoring' );
+		$queue_pages = array( 'puntwork-dashboard' );
 		if ( in_array( $current_page, $queue_pages ) ) {
 			wp_enqueue_style(
 				'puntwork-queue',
@@ -499,7 +495,7 @@ add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\\enqueue_job_import_scrip
  */
 function add_pwa_manifest_link() {
 	$current_page   = isset( $_GET['page'] ) ? $_GET['page'] : '';
-	$puntwork_pages = array( 'puntwork-dashboard', 'puntwork-analytics', 'puntwork-api-settings', 'puntwork-feed-health', 'puntwork-scheduling' );
+	$puntwork_pages = array( 'puntwork-dashboard', 'puntwork-api-settings', 'puntwork-scheduling' );
 
 	if ( in_array( $current_page, $puntwork_pages ) ) {
 		echo '<link rel="manifest" href="' . esc_url( PUNTWORK_URL . 'puntwork-admin.webmanifest' ) . '">' . "\n";

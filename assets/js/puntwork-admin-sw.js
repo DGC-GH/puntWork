@@ -7,9 +7,7 @@ const CACHE_NAME = 'puntwork-admin-v1.0.0';
 const ADMIN_URLS = [
     '/wp-admin/',
     '/wp-admin/admin.php?page=puntwork-dashboard',
-    '/wp-admin/admin.php?page=puntwork-analytics',
     '/wp-admin/admin.php?page=puntwork-api-settings',
-    '/wp-admin/admin.php?page=puntwork-feed-health',
     '/wp-admin/admin.php?page=puntwork-scheduling'
 ];
 
