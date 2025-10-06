@@ -284,13 +284,43 @@ if ( ! function_exists( 'import_jobs_from_json' ) ) {
 				);
 			}
 
-			if ( isset( $setup['success'] ) ) {
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [IMPORT-EARLY] EARLY RETURN - setup returned success/complete' );
-					error_log( '[PUNTWORK] [IMPORT-EARLY] Early return details: ' . json_encode( $setup ) );
+			// Check for critical setup failures that should stop the import
+			if ( isset( $setup['success'] ) && $setup['success'] === false ) {
+				$error_message = $setup['message'] ?? 'Import setup failed with unknown error';
+				$error_logs = $setup['logs'] ?? array( 'Critical setup failure' );
+
+				// Log the critical failure
+				error_log( '[PUNTWORK] [IMPORT-CRITICAL-FAILURE] Import stopped due to critical setup failure: ' . $error_message );
+				\Puntwork\PuntWorkLogger::error(
+					'Import stopped due to critical setup failure',
+					\Puntwork\PuntWorkLogger::CONTEXT_IMPORT,
+					array(
+						'error_message' => $error_message,
+						'error_logs' => $error_logs,
+						'batch_start' => $batch_start,
+						'is_batch' => $is_batch
+					)
+				);
+
+				// Update import status to reflect the critical failure
+				$current_status = get_option( 'job_import_status', array() );
+				$current_status['success'] = false;
+				$current_status['complete'] = true; // Mark as complete since we can't proceed
+				$current_status['error_message'] = $error_message;
+				$current_status['last_update'] = time();
+				$current_status['logs'] = array_merge( $current_status['logs'] ?? array(), $error_logs );
+				update_option( 'job_import_status', $current_status, false );
+
+				// Flush cache for real-time status updates
+				if ( function_exists( 'wp_cache_flush' ) ) {
+					wp_cache_flush();
 				}
 
-				return $setup; // Early return for empty or completed cases
+				return array(
+					'success' => false,
+					'message' => $error_message,
+					'logs'    => $error_logs,
+				);
 			}
 
 			// Execute batch processing with error recovery
@@ -573,9 +603,30 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 
 				// Check again after potential automatic combination
 				if ( ! file_exists( $json_path ) ) {
+					// Log critical failure and update status
+					$error_message = 'Combined JSONL file not found - feeds may need to be processed first. Run feed processing to download and convert feeds to JSONL format, then combine them.';
+					error_log( '[PUNTWORK] [IMPORT-CRITICAL-FAILURE] Import stopped due to missing combined JSONL file' );
+					\Puntwork\PuntWorkLogger::error(
+						'Import stopped due to missing combined JSONL file',
+						\Puntwork\PuntWorkLogger::CONTEXT_IMPORT,
+						array(
+							'json_path' => $json_path,
+							'error_message' => $error_message
+						)
+					);
+
+					// Update import status to reflect the critical failure
+					$current_status = get_option( 'job_import_status', array() );
+					$current_status['success'] = false;
+					$current_status['complete'] = true;
+					$current_status['error_message'] = $error_message;
+					$current_status['last_update'] = time();
+					$current_status['logs'] = array_merge( $current_status['logs'] ?? array(), array( 'Combined JSONL file not found - run feed processing first' ) );
+					update_option( 'job_import_status', $current_status, false );
+
 					return array(
 						'success' => false,
-						'message' => 'Combined JSONL file not found - feeds may need to be processed first. Run feed processing to download and convert feeds to JSONL format, then combine them.',
+						'message' => $error_message,
 						'logs' => array( 'Combined JSONL file not found - run feed processing first' ),
 					);
 				}
@@ -583,13 +634,30 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 
 			// Ensure combined file is not empty
 			if ( filesize( $json_path ) === 0 ) {
-				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [IMPORT-PREREQ] Combined JSONL file exists but is empty: ' . $json_path );
-				}
+				// Log critical failure and update status
+				$error_message = 'Combined JSONL file is empty - feeds may need to be processed first';
+				error_log( '[PUNTWORK] [IMPORT-CRITICAL-FAILURE] Import stopped due to empty combined JSONL file' );
+				\Puntwork\PuntWorkLogger::error(
+					'Import stopped due to empty combined JSONL file',
+					\Puntwork\PuntWorkLogger::CONTEXT_IMPORT,
+					array(
+						'json_path' => $json_path,
+						'error_message' => $error_message
+					)
+				);
+
+				// Update import status to reflect the critical failure
+				$current_status = get_option( 'job_import_status', array() );
+				$current_status['success'] = false;
+				$current_status['complete'] = true;
+				$current_status['error_message'] = $error_message;
+				$current_status['last_update'] = time();
+				$current_status['logs'] = array_merge( $current_status['logs'] ?? array(), array( 'Combined JSONL file is empty - run feed processing first' ) );
+				update_option( 'job_import_status', $current_status, false );
 
 				return array(
 					'success' => false,
-					'message' => 'Combined JSONL file is empty - feeds may need to be processed first',
+					'message' => $error_message,
 					'logs' => array( 'Combined JSONL file is empty - run feed processing first' ),
 				);
 			}
@@ -959,22 +1027,68 @@ function import_all_jobs_from_json_sync( int $expected_total_items = 0 ): array 
 			// Process this batch synchronously
 			$setup = prepare_import_setup( $batch_start, true );
 			if ( is_wp_error( $setup ) ) {
+				$error_message = 'Setup failed: ' . $setup->get_error_message();
 				if ( $debug_mode ) {
 					error_log( '[PUNTWORK] [SYNC-FALLBACK-ERROR] Setup failed for batch ' . ($batch_count + 1) . ': ' . $setup->get_error_message() );
 				}
-				$batch_result = array(
+
+				// Log critical failure and update status
+				error_log( '[PUNTWORK] [SYNC-FALLBACK-CRITICAL-FAILURE] Import stopped due to setup failure: ' . $error_message );
+				\Puntwork\PuntWorkLogger::error(
+					'Synchronous fallback stopped due to setup failure',
+					\Puntwork\PuntWorkLogger::CONTEXT_IMPORT,
+					array(
+						'batch_index' => $batch_count + 1,
+						'error_message' => $error_message
+					)
+				);
+
+				// Update import status to reflect the critical failure
+				$import_status = get_option( 'job_import_status', array() );
+				$import_status['success'] = false;
+				$import_status['complete'] = true;
+				$import_status['error_message'] = $error_message;
+				$import_status['last_update'] = time();
+				$import_status['logs'] = array_merge( $import_status['logs'] ?? array(), array( 'Setup failed for batch ' . ($batch_count + 1) . ': ' . $setup->get_error_message() ) );
+				update_option( 'job_import_status', $import_status, false );
+
+				return array(
 					'success' => false,
-					'message' => 'Setup failed: ' . $setup->get_error_message(),
+					'message' => $error_message,
 					'logs' => array( 'Setup failed for batch ' . ($batch_count + 1) ),
 				);
 			} elseif ( isset( $setup['success'] ) && ! $setup['success'] ) {
+				$error_message = $setup['message'] ?? 'Setup failed';
+				$error_logs = $setup['logs'] ?? array( 'Setup failed for batch ' . ($batch_count + 1) );
 				if ( $debug_mode ) {
-					error_log( '[PUNTWORK] [SYNC-FALLBACK-ERROR] Setup returned early for batch ' . ($batch_count + 1) . ': ' . ( $setup['message'] ?? 'Unknown' ) );
+					error_log( '[PUNTWORK] [SYNC-FALLBACK-ERROR] Setup returned early for batch ' . ($batch_count + 1) . ': ' . $error_message );
 				}
-				$batch_result = array(
+
+				// Log critical failure and update status
+				error_log( '[PUNTWORK] [SYNC-FALLBACK-CRITICAL-FAILURE] Import stopped due to critical setup failure: ' . $error_message );
+				\Puntwork\PuntWorkLogger::error(
+					'Synchronous fallback stopped due to critical setup failure',
+					\Puntwork\PuntWorkLogger::CONTEXT_IMPORT,
+					array(
+						'batch_index' => $batch_count + 1,
+						'error_message' => $error_message,
+						'error_logs' => $error_logs
+					)
+				);
+
+				// Update import status to reflect the critical failure
+				$import_status = get_option( 'job_import_status', array() );
+				$import_status['success'] = false;
+				$import_status['complete'] = true;
+				$import_status['error_message'] = $error_message;
+				$import_status['last_update'] = time();
+				$import_status['logs'] = array_merge( $import_status['logs'] ?? array(), $error_logs );
+				update_option( 'job_import_status', $import_status, false );
+
+				return array(
 					'success' => false,
-					'message' => $setup['message'] ?? 'Setup failed',
-					'logs' => array( 'Setup failed for batch ' . ($batch_count + 1) ),
+					'message' => $error_message,
+					'logs' => $error_logs,
 				);
 			} else {
 				// Process the batch using the same logic as Action Scheduler
@@ -1392,15 +1506,63 @@ function puntwork_process_batch_handler( $args ) {
 		// Prepare import setup for this specific batch
 		$setup = prepare_import_setup( $batch_start, true );
 		if ( is_wp_error( $setup ) ) {
+			$error_message = 'Setup failed: ' . $setup->get_error_message();
 			if ( $debug_mode ) {
 				error_log( '[PUNTWORK] [BATCH-ASYNC-ERROR] Setup failed for batch ' . ($batch_index + 1) . ': ' . $setup->get_error_message() );
 			}
+
+			// Log critical failure and update status
+			error_log( '[PUNTWORK] [BATCH-ASYNC-CRITICAL-FAILURE] Action Scheduler batch stopped due to setup failure: ' . $error_message );
+			\Puntwork\PuntWorkLogger::error(
+				'Action Scheduler batch stopped due to setup failure',
+				\Puntwork\PuntWorkLogger::CONTEXT_BATCH,
+				array(
+					'batch_index' => $batch_index + 1,
+					'batch_start' => $batch_start,
+					'error_message' => $error_message
+				)
+			);
+
+			// Update import status to reflect the critical failure
+			$import_status = get_option( 'job_import_status', array() );
+			$import_status['success'] = false;
+			$import_status['complete'] = true;
+			$import_status['error_message'] = $error_message;
+			$import_status['last_update'] = time();
+			$import_status['logs'] = array_merge( $import_status['logs'] ?? array(), array( 'Setup failed for batch ' . ($batch_index + 1) . ': ' . $setup->get_error_message() ) );
+			update_option( 'job_import_status', $import_status, false );
+
 			return;
 		}
 		if ( isset( $setup['success'] ) && ! $setup['success'] ) {
+			$error_message = $setup['message'] ?? 'Setup failed';
+			$error_logs = $setup['logs'] ?? array( 'Setup failed for batch ' . ($batch_index + 1) );
 			if ( $debug_mode ) {
-				error_log( '[PUNTWORK] [BATCH-ASYNC-ERROR] Setup returned early for batch ' . ($batch_index + 1) . ': ' . ( $setup['message'] ?? 'Unknown' ) );
+				error_log( '[PUNTWORK] [BATCH-ASYNC-ERROR] Setup returned early for batch ' . ($batch_index + 1) . ': ' . $error_message );
 			}
+
+			// Log critical failure and update status
+			error_log( '[PUNTWORK] [BATCH-ASYNC-CRITICAL-FAILURE] Action Scheduler batch stopped due to critical setup failure: ' . $error_message );
+			\Puntwork\PuntWorkLogger::error(
+				'Action Scheduler batch stopped due to critical setup failure',
+				\Puntwork\PuntWorkLogger::CONTEXT_BATCH,
+				array(
+					'batch_index' => $batch_index + 1,
+					'batch_start' => $batch_start,
+					'error_message' => $error_message,
+					'error_logs' => $error_logs
+				)
+			);
+
+			// Update import status to reflect the critical failure
+			$import_status = get_option( 'job_import_status', array() );
+			$import_status['success'] = false;
+			$import_status['complete'] = true;
+			$import_status['error_message'] = $error_message;
+			$import_status['last_update'] = time();
+			$import_status['logs'] = array_merge( $import_status['logs'] ?? array(), $error_logs );
+			update_option( 'job_import_status', $import_status, false );
+
 			return;
 		}
 

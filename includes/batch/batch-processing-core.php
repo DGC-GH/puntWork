@@ -79,36 +79,68 @@ function process_batch_items_logic( array $setup ): array {
 			error_log( '[PUNTWORK] [BATCH-FILE] JSON file check: exists=' . ( file_exists( $setup['json_path'] ) ? 'yes' : 'no' ) . ', readable=' . ( is_readable( $setup['json_path'] ) ? 'yes' : 'no' ) . ', size=' . ( file_exists( $setup['json_path'] ) ? filesize( $setup['json_path'] ) : 'N/A' ) );
 		}
 		if ( ! file_exists( $setup['json_path'] ) ) {
-			error_log( '[PUNTWORK] [BATCH-ERROR] JSON file does not exist: ' . $setup['json_path'] );
+			$error_message = 'JSON file does not exist: ' . basename( $setup['json_path'] );
+			error_log( '[PUNTWORK] [BATCH-CRITICAL-FAILURE] ' . $error_message );
 
 			\Puntwork\PuntWorkLogger::error(
-				'JSON file does not exist',
+				'Batch processing stopped due to missing JSON file',
 				\Puntwork\PuntWorkLogger::CONTEXT_BATCH,
 				array(
 					'json_path' => $setup['json_path'],
+					'error_message' => $error_message
 				)
 			);
 
+			// Update import status to reflect the critical failure
+			$current_status = get_option( 'job_import_status', array() );
+			$current_status['success'] = false;
+			$current_status['complete'] = true;
+			$current_status['error_message'] = $error_message;
+			$current_status['last_update'] = time();
+			$current_status['logs'] = array_merge( $current_status['logs'] ?? array(), array( 'JSON file not found - feeds may need to be processed first' ) );
+			update_option( 'job_import_status', $current_status, false );
+
+			// Flush cache for real-time status updates
+			if ( function_exists( 'wp_cache_flush' ) ) {
+				wp_cache_flush();
+			}
+
 			return array(
 				'success' => false,
-				'message' => 'JSON file not found: ' . basename( $setup['json_path'] ),
+				'message' => $error_message,
 				'logs'    => array( 'JSON file not found - feeds may need to be processed first' ),
 			);
 		}
 		if ( ! is_readable( $setup['json_path'] ) ) {
-			error_log( '[PUNTWORK] [BATCH-ERROR] JSON file not readable: ' . $setup['json_path'] );
+			$error_message = 'JSON file not readable: ' . basename( $setup['json_path'] );
+			error_log( '[PUNTWORK] [BATCH-CRITICAL-FAILURE] ' . $error_message );
 
 			\Puntwork\PuntWorkLogger::error(
-				'JSON file not readable',
+				'Batch processing stopped due to unreadable JSON file',
 				\Puntwork\PuntWorkLogger::CONTEXT_BATCH,
 				array(
 					'json_path' => $setup['json_path'],
+					'error_message' => $error_message
 				)
 			);
 
+			// Update import status to reflect the critical failure
+			$current_status = get_option( 'job_import_status', array() );
+			$current_status['success'] = false;
+			$current_status['complete'] = true;
+			$current_status['error_message'] = $error_message;
+			$current_status['last_update'] = time();
+			$current_status['logs'] = array_merge( $current_status['logs'] ?? array(), array( 'JSON file not readable - check file permissions' ) );
+			update_option( 'job_import_status', $current_status, false );
+
+			// Flush cache for real-time status updates
+			if ( function_exists( 'wp_cache_flush' ) ) {
+				wp_cache_flush();
+			}
+
 			return array(
 				'success' => false,
-				'message' => 'JSON file not readable: ' . basename( $setup['json_path'] ),
+				'message' => $error_message,
 				'logs'    => array( 'JSON file not readable - check file permissions' ),
 			);
 		}
