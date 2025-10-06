@@ -1935,10 +1935,10 @@ function combine_jsonl_ajax() {
 			$action_scheduler_reliable = false;
 			if ( $scheduling_success ) {
 				// Try to execute Action Scheduler queue manually to test if it works
-				if ( class_exists( 'ActionScheduler' ) ) {
+				if ( class_exists( '\\ActionScheduler' ) ) {
 					try {
-						$store = ActionScheduler::store();
-						$runner = ActionScheduler::runner();
+						$store = \ActionScheduler::store();
+						$runner = \ActionScheduler::runner();
 						
 						// Check if there are any pending jobs
 						$pending_jobs = $store->query_actions( array( 'status' => 'pending', 'per_page' => 5 ) );

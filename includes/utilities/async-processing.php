@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 function is_action_scheduler_available(): bool {
 	return function_exists( 'as_schedule_single_action' ) ||
 	function_exists( 'as_schedule_recurring_action' ) ||
-	class_exists( 'ActionScheduler' );
+	class_exists( '\\ActionScheduler' );
 }
 
 /**

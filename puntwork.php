@@ -56,15 +56,15 @@ function init_action_scheduler() {
 		// Debug logging
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( '[PUNTWORK] [ACTION-SCHEDULER] Action Scheduler file included' );
-			error_log( '[PUNTWORK] [ACTION-SCHEDULER] ActionScheduler class exists: ' . ( class_exists( 'ActionScheduler', false ) ? 'YES' : 'NO' ) );
+			error_log( '[PUNTWORK] [ACTION-SCHEDULER] ActionScheduler class exists: ' . ( class_exists( '\\ActionScheduler', false ) ? 'YES' : 'NO' ) );
 			error_log( '[PUNTWORK] [ACTION-SCHEDULER] as_schedule_single_action function exists: ' . ( function_exists( 'as_schedule_single_action' ) ? 'YES' : 'NO' ) );
 		}
 		
 		// Ensure Action Scheduler is initialized if not already done
-		if ( ! class_exists( 'ActionScheduler', false ) || ! ActionScheduler::is_initialized() ) {
+		if ( ! class_exists( '\\ActionScheduler', false ) || ! \ActionScheduler::is_initialized() ) {
 			// Manually initialize if not done automatically
-			if ( class_exists( 'ActionScheduler', false ) ) {
-				ActionScheduler::init( PUNTWORK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php' );
+			if ( class_exists( '\\ActionScheduler', false ) ) {
+				\ActionScheduler::init( PUNTWORK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php' );
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 					error_log( '[PUNTWORK] [ACTION-SCHEDULER] Manually initialized Action Scheduler' );
 				}
@@ -72,7 +72,7 @@ function init_action_scheduler() {
 		}
 		
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [ACTION-SCHEDULER] ActionScheduler is_initialized: ' . ( ActionScheduler::is_initialized() ? 'YES' : 'NO' ) );
+			error_log( '[PUNTWORK] [ACTION-SCHEDULER] ActionScheduler is_initialized: ' . ( \ActionScheduler::is_initialized() ? 'YES' : 'NO' ) );
 		}
 	}
 }
