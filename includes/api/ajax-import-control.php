@@ -24,6 +24,9 @@ require_once __DIR__ . '/../utilities/SecurityUtils.php';
 require_once __DIR__ . '/../utilities/PuntWorkLogger.php';
 require_once __DIR__ . '/../utilities/AjaxErrorHandler.php';
 require_once __DIR__ . '/../utilities/utility-helpers.php';
+require_once __DIR__ . '/../utilities/feeds-path-utils.php';
+require_once __DIR__ . '/../utilities/database-optimization.php';
+require_once __DIR__ . '/../import/import-finalization.php';
 
 /*
  * AJAX handlers for import control operations
