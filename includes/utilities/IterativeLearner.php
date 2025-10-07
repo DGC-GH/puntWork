@@ -286,8 +286,8 @@ class IterativeLearner {
 				case 'group_by_content_type':
 				case 'sort_by_complexity':
 				case 'cluster_by_location':
-					$success = self::adjustJsonlOptimizerWeight( $strategy, $adjustment );
-
+					// JsonlOptimizer functionality removed - these strategies are no longer supported
+					$success = false;
 					break;
 
 				case 'priority_new':
@@ -326,29 +326,6 @@ class IterativeLearner {
 		update_option( self::WEIGHT_ADJUSTMENTS_KEY, $adjustment_history );
 
 		return $applied;
-	}
-
-	/**
-	 * Adjust JsonlOptimizer weight.
-	 */
-	private static function adjustJsonlOptimizerWeight( string $strategy, float $adjustment ): bool {
-		if ( ! class_exists( 'Puntwork\\Utilities\\JsonlOptimizer' ) ) {
-			return false;
-		}
-
-		$config = JsonlOptimizer::getOptimizationConfig();
-
-		if ( isset( $config[ $strategy ]['weight'] ) ) {
-			$current_weight = $config[ $strategy ]['weight'];
-			$new_weight     = max( self::$learning_config['min_weight'], min( self::$learning_config['max_weight'], $current_weight + $adjustment ) );
-
-			$config[ $strategy ]['weight'] = $new_weight;
-			JsonlOptimizer::updateOptimizationConfig( $config );
-
-			return true;
-		}
-
-		return false;
 	}
 
 	/**
@@ -444,16 +421,6 @@ class IterativeLearner {
 	 */
 	private static function getCurrentWeightsSnapshot(): array {
 		$weights = array();
-
-		// JsonlOptimizer weights
-		if ( class_exists( 'Puntwork\\Utilities\\JsonlOptimizer' ) ) {
-			$config = JsonlOptimizer::getOptimizationConfig();
-			foreach ( $config as $strategy => $settings ) {
-				if ( isset( $settings['weight'] ) ) {
-					$weights[ $strategy ] = $settings['weight'];
-				}
-			}
-		}
 
 		// BatchPrioritizer weights
 		if ( class_exists( 'Puntwork\\Utilities\\BatchPrioritizer' ) ) {

@@ -186,45 +186,6 @@ function combine_jsonl_files( $feeds, $output_dir, $total_items, &$logs, $chunk_
 		error_log( '[PUNTWORK] [JSONL-COMBINE-DEBUG] GZIP compression completed for ' . $combined_json_path );
 	}
 
-	// Optimize JSONL for batch processing synergy
-	$optimization_stats   = array();
-	$optimization_success = \Puntwork\Utilities\JsonlOptimizer::optimizeForBatchProcessing(
-		$combined_json_path,
-		$combined_json_path . '.optimized',
-		$optimization_stats
-	);
-
-	if ( $optimization_success ) {
-		// Replace original with optimized version
-		rename( $combined_json_path . '.optimized', $combined_json_path );
-
-		// Re-compress the optimized file
-		gzip_file( $combined_json_path, $combined_json_path . '.gz' );
-
-		$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . sprintf(
-			'JSONL optimization completed: %d strategies applied, %.3f seconds, %.1f MB memory',
-			count( $optimization_stats['strategies_applied'] ),
-			$optimization_stats['optimization_time'],
-			$optimization_stats['memory_peak_mb']
-		);
-
-		PuntWorkLogger::info(
-			'JSONL optimization completed',
-			PuntWorkLogger::CONTEXT_FEED,
-			array(
-				'strategies_applied' => $optimization_stats['strategies_applied'],
-				'optimization_time'  => $optimization_stats['optimization_time'],
-				'memory_peak_mb'     => $optimization_stats['memory_peak_mb'],
-				'grouping_stats'     => $optimization_stats['grouping_stats'],
-			)
-		);
-	} else {
-		$logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ' . 'JSONL optimization failed, using unoptimized version';
-		if ( $debug_mode ) {
-			error_log( '[PUNTWORK] [JSONL-COMBINE-DEBUG] JSONL optimization failed, proceeding with unoptimized file' );
-		}
-	}
-
 	// Final check
 	if ( file_exists( $combined_json_path ) ) {
 		$final_size = filesize( $combined_json_path );
