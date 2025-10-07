@@ -291,3 +291,42 @@ function setup_automated_import_schedules() {
 
 	error_log( '[PUNTWORK] Automated import schedules configured: 4 times per day (every 6 hours starting at 6 AM)' );
 }
+
+/**
+ * Disable scheduled imports by setting the enabled flag to false
+ * and clearing any existing cron schedules.
+ *
+ * @return array Result of the operation
+ */
+function disable_scheduled_imports() {
+	// Get current schedule settings
+	$current_schedule = get_option( 'puntwork_import_schedule', array(
+		'enabled'  => false,
+		'frequency' => 'daily',
+		'interval' => 24,
+		'hour'     => 9,
+		'minute'   => 0,
+	));
+
+	// Update schedule to disable automatic imports
+	$new_schedule = array(
+		'enabled'  => false,  // Disable automatic imports
+		'frequency' => $current_schedule['frequency'] ?? 'daily',
+		'interval' => $current_schedule['interval'] ?? 24,
+		'hour'     => $current_schedule['hour'] ?? 9,
+		'minute'   => $current_schedule['minute'] ?? 0,
+	);
+
+	// Save the updated schedule
+	update_option( 'puntwork_import_schedule', $new_schedule );
+
+	// Clear any existing scheduled hooks
+	wp_clear_scheduled_hook( 'puntwork_scheduled_import' );
+
+	return array(
+		'success' => true,
+		'message' => 'Scheduled imports have been disabled',
+		'previous_schedule' => $current_schedule,
+		'new_schedule' => $new_schedule,
+	);
+}

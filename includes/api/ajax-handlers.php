@@ -61,6 +61,9 @@ function register_ajax_handlers() {
 
 	// Clear import cancel flag
 	add_action( 'wp_ajax_clear_import_cancel', function() { ajax_clear_import_cancel(); } );
+
+	// Disable scheduled imports
+	add_action( 'wp_ajax_disable_scheduled_imports', function() { ajax_disable_scheduled_imports(); } );
 }
 
 /**
@@ -657,6 +660,31 @@ function ajax_clear_import_cancel() {
 		wp_send_json_success( array( 'message' => 'Import cancel flag cleared' ) );
 	} catch ( \Exception $e ) {
 		wp_send_json_error( array( 'message' => 'Failed to clear import cancel flag: ' . $e->getMessage() ) );
+	}
+}
+
+/**
+ * Disable scheduled imports
+ */
+function ajax_disable_scheduled_imports() {
+	try {
+		// Verify nonce
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
+			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
+			return;
+		}
+
+		// Include the scheduling core functions
+		require_once plugin_dir_path( __FILE__ ) . '../../scheduling/scheduling-core.php';
+
+		$result = disable_scheduled_imports();
+
+		wp_send_json_success( array(
+			'message' => 'Scheduled imports disabled successfully',
+			'result' => $result,
+		) );
+	} catch ( \Exception $e ) {
+		wp_send_json_error( array( 'message' => 'Failed to disable scheduled imports: ' . $e->getMessage() ) );
 	}
 }
 

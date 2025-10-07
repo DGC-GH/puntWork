@@ -137,9 +137,31 @@
             } else {
                 $indicator.removeClass('status-active status-error').addClass('status-disabled');
                 $status.find('span:last').text('Disabled');
+
+                // Immediately disable scheduled imports when toggle is turned off
+                this.disableScheduledImports();
             }
 
             PuntWorkJSLogger.info('Schedule ' + (enabled ? 'enabled' : 'disabled'), 'SCHEDULING');
+        },
+
+        /**
+         * Disable scheduled imports immediately
+         */
+        disableScheduledImports: function() {
+            var self = this;
+
+            JobImportAPI.call('disable_scheduled_imports', {}, function(response) {
+                if (response.success) {
+                    self.showNotification('Scheduled imports disabled successfully', 'success');
+                    // Refresh the schedule status to show the changes
+                    self.loadScheduleSettings();
+                    PuntWorkJSLogger.info('Scheduled imports disabled', 'SCHEDULING', response.data);
+                } else {
+                    self.showNotification('Failed to disable scheduled imports: ' + (response.data.message || 'Unknown error'), 'error');
+                    PuntWorkJSLogger.error('Failed to disable scheduled imports', 'SCHEDULING', response.data);
+                }
+            });
         },
 
         /**
