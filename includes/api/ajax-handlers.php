@@ -16,8 +16,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Register AJAX handlers
  */
-add_action( 'admin_init', __NAMESPACE__ . '\\register_ajax_handlers' );
+add_action( 'init', __NAMESPACE__ . '\\register_ajax_handlers' );
 function register_ajax_handlers() {
+	error_log( '[PUNTWORK] Registering AJAX handlers' );
 	// Schedule-related handlers
 	add_action( 'wp_ajax_get_import_schedule', function() { ajax_get_import_schedule(); } );
 	add_action( 'wp_ajax_save_import_schedule', function() { ajax_save_import_schedule(); } );

@@ -288,6 +288,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 			
 			if ( ! in_array( 'api/ajax-handlers.php', $includes ) ) {
 				$includes[] = 'api/ajax-handlers.php';
+				error_log( '[PUNTWORK] Loading ajax-handlers.php for action: ' . $current_action );
 			}
 			if ( ! in_array( 'scheduling/scheduling-history.php', $includes ) ) {
 				$includes[] = 'scheduling/scheduling-history.php';
