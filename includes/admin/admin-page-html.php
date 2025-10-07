@@ -143,6 +143,9 @@ function feeds_dashboard_page() {
 	// Render scheduling UI
 	render_scheduling_ui();
 
+	// Render async processing settings
+	render_async_processing_settings();
+
 	// Render JavaScript initialization
 	render_javascript_init();
 }
@@ -716,5 +719,48 @@ function render_jobs_javascript_init() {
 			}
 		});
 	</script>
+	<?php
+}
+
+/**
+ * Render async processing settings UI section.
+ */
+function render_async_processing_settings() {
+	?>
+	<!-- Async Processing Settings Section -->
+	<div class="puntwork-card" style="margin-bottom: var(--spacing-xl);">
+		<div class="puntwork-card__header">
+			<h2 class="puntwork-card__title">Async Processing Settings</h2>
+			<p class="puntwork-card__subtitle">Configure background processing for job imports using Action Scheduler.</p>
+		</div>
+
+		<div class="puntwork-card__body">
+			<div style="display: flex; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
+				<label class="puntwork-checkbox">
+					<input type="checkbox" id="enable-async-processing" />
+					<span class="puntwork-checkbox__checkmark"></span>
+				</label>
+				<div>
+					<h3 style="font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); margin: 0 0 var(--spacing-xs) 0;">Enable Async Processing</h3>
+					<p style="font-size: var(--font-size-sm); color: var(--color-gray-600); margin: 0;">Process job imports in the background using Action Scheduler for better performance.</p>
+				</div>
+			</div>
+
+			<div style="display: flex; align-items: center; gap: var(--spacing-md);">
+				<span id="async-status-badge" class="puntwork-badge info">Checking...</span>
+			</div>
+
+			<div id="async-status-details" style="margin-top: var(--spacing-md); font-size: var(--font-size-sm); color: var(--color-gray-600);">
+				<!-- Status details will be populated by JavaScript -->
+			</div>
+		</div>
+
+		<div class="puntwork-card__footer">
+			<button id="save-async-settings" class="puntwork-btn puntwork-btn--primary" disabled>
+				<i class="fas fa-save puntwork-btn__icon"></i>Save Settings
+			</button>
+			<span id="async-save-status" style="font-size: var(--font-size-sm); color: var(--color-gray-600); margin-left: var(--spacing-md);"></span>
+		</div>
+	</div>
 	<?php
 }

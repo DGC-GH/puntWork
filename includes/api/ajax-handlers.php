@@ -243,6 +243,7 @@ function ajax_get_async_status() {
 		}
 
 		$async_enabled = get_option( 'puntwork_async_processing_enabled', false );
+		$action_scheduler_available = function_exists( 'as_schedule_single_action' ) && class_exists( 'ActionScheduler' );
 		$running_jobs = array();
 
 		// Check for running Action Scheduler jobs
@@ -261,6 +262,8 @@ function ajax_get_async_status() {
 		}
 
 		wp_send_json_success( array(
+			'available' => $action_scheduler_available,
+			'action_scheduler' => $action_scheduler_available,
 			'enabled' => $async_enabled,
 			'running_jobs' => $running_jobs,
 		) );

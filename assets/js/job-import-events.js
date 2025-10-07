@@ -86,18 +86,20 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 JobImportEvents.handleCheckDbStatus();
             });
 
-            // Async processing events
-            $('#save-async-settings').on('click', function(e) {
-                console.log('[PUNTWORK] Save async settings button clicked!');
-                JobImportEvents.handleSaveAsyncSettings();
-            });
+            // Async processing events - only bind if elements exist
+            if ($('#save-async-settings').length > 0) {
+                $('#save-async-settings').on('click', function(e) {
+                    console.log('[PUNTWORK] Save async settings button clicked!');
+                    JobImportEvents.handleSaveAsyncSettings();
+                });
 
-            // Enable/disable save button when checkbox changes
-            $('#enable-async-processing').on('change', function(e) {
-                console.log('[PUNTWORK] Async processing checkbox changed:', $(this).is(':checked'));
-                $('#save-async-settings').prop('disabled', false);
-                $('#async-save-status').text('');
-            });
+                // Enable/disable save button when checkbox changes
+                $('#enable-async-processing').on('change', function(e) {
+                    console.log('[PUNTWORK] Async processing checkbox changed:', $(this).is(':checked'));
+                    $('#save-async-settings').prop('disabled', false);
+                    $('#async-save-status').text('');
+                });
+            }
 
             // Performance monitoring events
             $('#refresh-performance').on('click', function(e) {
@@ -405,23 +407,25 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 $('#db-indexes-list').html('<div style="color: #ff3b30;">Failed to load database status</div>');
             });
 
-            // Load async processing status (non-blocking)
-            JobImportAPI.getAsyncStatus().then(function(asyncResponse) {
-                console.log('[PUNTWORK] Async status response:', asyncResponse);
-                if (asyncResponse.success) {
-                    JobImportEvents.updateAsyncStatusDisplay(asyncResponse.data);
-                    // Update checkbox state
-                    $('#enable-async-processing').prop('checked', asyncResponse.data.enabled);
-                } else {
-                    // Show error state
+            // Load async processing status (non-blocking) - only if async settings UI exists
+            if ($('#async-status-badge').length > 0) {
+                JobImportAPI.getAsyncStatus().then(function(asyncResponse) {
+                    console.log('[PUNTWORK] Async status response:', asyncResponse);
+                    if (asyncResponse.success) {
+                        JobImportEvents.updateAsyncStatusDisplay(asyncResponse.data);
+                        // Update checkbox state
+                        $('#enable-async-processing').prop('checked', asyncResponse.data.enabled);
+                    } else {
+                        // Show error state
+                        $('#async-status-badge').removeClass('success warning error').addClass('error').html('<i class="fas fa-exclamation-triangle" style="margin-right: 4px;"></i>Error');
+                        $('#async-status-details').html('<div style="color: #ff3b30;">Failed to load async status</div>');
+                    }
+                }).catch(function(error) {
+                    console.log('[PUNTWORK] Async status load error:', error);
                     $('#async-status-badge').removeClass('success warning error').addClass('error').html('<i class="fas fa-exclamation-triangle" style="margin-right: 4px;"></i>Error');
                     $('#async-status-details').html('<div style="color: #ff3b30;">Failed to load async status</div>');
-                }
-            }).catch(function(error) {
-                console.log('[PUNTWORK] Async status load error:', error);
-                $('#async-status-badge').removeClass('success warning error').addClass('error').html('<i class="fas fa-exclamation-triangle" style="margin-right: 4px;"></i>Error');
-                $('#async-status-details').html('<div style="color: #ff3b30;">Failed to load async status</div>');
-            });
+                });
+            }
 
             // Load import status last (most important for user interaction)
             JobImportAPI.getImportStatus().then(function(response) {
@@ -889,9 +893,6 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             if (status.available) {
                 badgeClass = 'success';
                 badgeText = 'Available';
-            } else if (status.action_scheduler) {
-                badgeClass = 'warning';
-                badgeText = 'Limited';
             }
 
             badgeElement.removeClass('success warning error').addClass(badgeClass);
@@ -901,11 +902,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             var detailsHtml = '';
             if (status.available) {
                 detailsHtml += '<div>• Async processing is available</div>';
-                if (status.action_scheduler) {
-                    detailsHtml += '<div>• Using Action Scheduler (recommended)</div>';
-                } else {
-                    detailsHtml += '<div>• Using WordPress Cron (fallback)</div>';
-                }
+                detailsHtml += '<div>• Using Action Scheduler (recommended)</div>';
                 detailsHtml += '<div>• Large imports will be processed in background</div>';
             } else {
                 detailsHtml += '<div>• Async processing is not available</div>';
