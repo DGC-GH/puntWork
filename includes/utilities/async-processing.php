@@ -316,18 +316,50 @@ function handle_process_feeds_and_import_async(): void {
 	error_log( '[PUNTWORK] [ASYNC] Process feeds and import async handler called' );
 
 	try {
+		// Set initial status to indicate feed processing is starting
+		$initial_status = array(
+			'start_time' => microtime( true ),
+			'total' => 0, // Will be updated after feed processing
+			'processed' => 0,
+			'published' => 0,
+			'updated' => 0,
+			'skipped' => 0,
+			'duplicates_drafted' => 0,
+			'time_elapsed' => 0,
+			'complete' => false,
+			'success' => false,
+			'error_message' => '',
+			'last_update' => time(),
+			'logs' => array( 'Feed processing started - preparing job data...' ),
+		);
+		update_option( 'job_import_status', $initial_status, false );
+		error_log( '[PUNTWORK] [ASYNC] Set initial import status for feed processing' );
+
 		// Process feeds to create combined JSONL file
 		$result = process_feeds_to_jsonl( true );
 
 		if ( ! $result['success'] ) {
 			error_log( '[PUNTWORK] [ASYNC] Feed processing failed: ' . $result['message'] );
+			// Update status with error
+			$initial_status['error_message'] = $result['message'];
+			$initial_status['logs'][] = 'Feed processing failed: ' . $result['message'];
+			update_option( 'job_import_status', $initial_status, false );
 			return;
 		}
 
-		error_log( '[PUNTWORK] [ASYNC] Feed processing completed successfully, async import should be scheduled' );
+		// Update status with feed processing completion
+		$initial_status['logs'][] = 'Feed processing completed - ' . ($result['total_items'] ?? 0) . ' jobs prepared for import';
+		$initial_status['total'] = $result['total_items'] ?? 0;
+		update_option( 'job_import_status', $initial_status, false );
+		error_log( '[PUNTWORK] [ASYNC] Feed processing completed, import should be scheduled automatically' );
 
 	} catch ( \Exception $e ) {
 		error_log( '[PUNTWORK] [ASYNC] Process feeds and import async failed: ' . $e->getMessage() );
+		// Update status with error
+		$status = get_option( 'job_import_status', array() );
+		$status['error_message'] = $e->getMessage();
+		$status['logs'][] = 'Async processing failed: ' . $e->getMessage();
+		update_option( 'job_import_status', $status, false );
 	}
 }
 

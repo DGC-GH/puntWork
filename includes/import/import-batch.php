@@ -131,17 +131,25 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 
 		// Use Action Scheduler for automated processing
 		if ( function_exists( 'as_schedule_single_action' ) ) {
-			// Schedule all jobs individually for automated processing
-			for ( $i = 0; $i < $total_items; $i++ ) {
-				as_schedule_single_action( time() + ($i * 2), 'puntwork_process_job', array(
-					'job_index' => $i,
-					'import_id' => uniqid( 'import_', true )
+			// Schedule jobs in batches for better performance
+			$batch_size = 10; // Process 10 jobs per batch
+			$num_batches = ceil( $total_items / $batch_size );
+			
+			for ( $i = 0; $i < $num_batches; $i++ ) {
+				$start_index = $i * $batch_size;
+				$end_index = min( ($i + 1) * $batch_size, $total_items );
+				
+				as_schedule_single_action( time() + ($i * 5), 'puntwork_process_batch', array(
+					'start_index' => $start_index,
+					'end_index' => $end_index,
+					'total' => $total_items,
+					'batch_id' => uniqid( 'batch_', true )
 				) );
 			}
 
 			return array(
 				'success' => true,
-				'message' => 'Import scheduled successfully - ' . $total_items . ' jobs scheduled',
+				'message' => 'Import scheduled successfully - ' . $num_batches . ' batches scheduled',
 				'total' => $total_items,
 				'async_mode' => true,
 			);
@@ -175,11 +183,49 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 }
 
 /**
- * Import all jobs synchronously (for manual imports)
- * Forces synchronous processing regardless of Action Scheduler availability
+ * Import a batch of jobs from JSONL file.
  *
+ * @param  int $start_index Starting index for the batch
+ * @param  int $end_index   Ending index for the batch
+ * @param  int $total       Total items in the import
  * @return array Import result data
  */
+function import_jobs_batch( int $start_index, int $end_index, int $total ): array {
+	try {
+		// Setup import
+		$setup = prepare_import_setup( $start_index, true );
+		if ( isset( $setup['success'] ) && $setup['success'] === false ) {
+			return array(
+				'success' => false,
+				'message' => $setup['message'] ?? 'Import setup failed',
+				'logs'    => $setup['logs'] ?? array( 'Setup failed' ),
+			);
+		}
+
+		// Adjust batch size for this batch
+		$batch_size = $end_index - $start_index;
+		$setup['batch_size'] = $batch_size;
+		$setup['total'] = $total;
+
+		// Process the batch
+		$result = process_batch_items_logic( $setup );
+
+		// Ensure result has correct total
+		$result['total'] = $total;
+
+		// Finalize batch import
+		$final_result = finalize_batch_import( $result );
+
+		return $final_result;
+
+	} catch ( \Exception $e ) {
+		return array(
+			'success' => false,
+			'message' => 'Batch import failed: ' . $e->getMessage(),
+			'logs' => array( 'Exception: ' . $e->getMessage() ),
+		);
+	}
+}
 /**
  * Continue a paused import process
  * Called by WordPress cron when import needs to resume after timeout.
@@ -215,10 +261,12 @@ function start_batch_import() {
 	import_all_jobs_from_json( true );
 }
 
-// Register the individual job processing hook
-add_action( 'puntwork_process_job', __NAMESPACE__ . '\\puntwork_process_job_handler' );
-function puntwork_process_job_handler( $args ) {
-	$job_index = $args['job_index'] ?? 0;
+// Register the batch job processing hook
+add_action( 'puntwork_process_batch', __NAMESPACE__ . '\\puntwork_process_batch_handler' );
+function puntwork_process_batch_handler( $args ) {
+	$start_index = $args['start_index'] ?? 0;
+	$end_index = $args['end_index'] ?? 0;
+	$total = $args['total'] ?? 0;
 
 	try {
 		// Load required files
@@ -235,16 +283,16 @@ function puntwork_process_job_handler( $args ) {
 			}
 		}
 
-		// Process single job
-		$setup = prepare_import_setup( $job_index, true );
-		if ( is_wp_error( $setup ) || ( isset( $setup['success'] ) && ! $setup['success'] ) ) {
-			return;
-		}
+		// Process batch of jobs
+		$result = import_jobs_batch( $start_index, $end_index, $total );
 
-		$setup['is_action_scheduler'] = true;
-		process_batch_items_logic( $setup );
+		// Log the result for debugging
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( '[PUNTWORK] [ASYNC-BATCH] Processed batch ' . $start_index . '-' . $end_index . ' with result: ' . json_encode( $result ) );
+		}
 
 	} catch ( \Exception $e ) {
 		// Basic exception handling
+		error_log( '[PUNTWORK] [ASYNC-BATCH] Exception processing batch ' . $start_index . '-' . $end_index . ': ' . $e->getMessage() );
 	}
 }

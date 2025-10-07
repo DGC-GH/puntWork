@@ -252,7 +252,7 @@ function ajax_get_async_status() {
 		if ( function_exists( 'as_get_scheduled_actions' ) && class_exists( 'ActionScheduler_Store' ) ) {
 			try {
 				$actions = as_get_scheduled_actions( array(
-					'hook' => 'puntwork_process_batch_async',
+					'hook' => 'puntwork_process_batch',
 					'status' => 'running',
 				) );
 
@@ -263,7 +263,7 @@ function ajax_get_async_status() {
 					);
 				}
 
-				// Also check for individual job processing
+				// Also check for individual job processing (legacy)
 				$job_actions = as_get_scheduled_actions( array(
 					'hook' => 'puntwork_process_job',
 					'status' => 'running',

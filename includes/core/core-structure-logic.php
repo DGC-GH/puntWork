@@ -947,15 +947,15 @@ function fetch_and_generate_combined_json( bool $schedule_async_import = true ):
 			// Schedule the import to run asynchronously after a short delay
 			if ( function_exists( 'as_schedule_single_action' ) ) {
 				// Use Action Scheduler if available (preferred for reliability)
-				as_schedule_single_action( time() + 30, 'puntwork_scheduled_import_async' );
+				as_schedule_single_action( time() + 5, 'puntwork_scheduled_import_async' );
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( '[PUNTWORK] [SCHEDULING] Batch import scheduled using Action Scheduler (30 second delay)' );
+					error_log( '[PUNTWORK] [SCHEDULING] Batch import scheduled using Action Scheduler (5 second delay)' );
 				}
 			} elseif ( function_exists( 'wp_schedule_single_event' ) ) {
 				// Fallback: Use WordPress cron
-				wp_schedule_single_event( time() + 30, 'puntwork_scheduled_import_async' );
+				wp_schedule_single_event( time() + 5, 'puntwork_scheduled_import_async' );
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( '[PUNTWORK] [SCHEDULING] Batch import scheduled using WordPress cron (30 second delay)' );
+					error_log( '[PUNTWORK] [SCHEDULING] Batch import scheduled using WordPress cron (5 second delay)' );
 				}
 			} else {
 				// Last resort: Log that scheduling failed
