@@ -31,6 +31,9 @@ require_once __DIR__ . '/../batch/batch-processing.php';
 // Include import finalization
 require_once __DIR__ . '/import-finalization.php';
 
+// Include logger
+require_once __DIR__ . '/../utilities/puntwork-logger.php';
+
 /**
  * Check if the current import process has exceeded time limits
  * Similar to WooCommerce's time_exceeded() method
@@ -209,7 +212,10 @@ if (!function_exists('import_all_jobs_from_json')) {
             $setup = prepare_import_setup($batch_start);
             if (is_wp_error($setup)) {
                 $error_msg = 'Setup failed: ' . $setup->get_error_message();
-                error_log('[PUNTWORK] ' . $error_msg);
+                PuntWorkLogger::error('Import process failed during setup', PuntWorkLogger::CONTEXT_BATCH, [
+                    'error' => $error_msg,
+                    'batch_start' => $batch_start
+                ]);
                 return ['success' => false, 'message' => $error_msg, 'logs' => [$error_msg]];
             }
 
@@ -241,7 +247,12 @@ if (!function_exists('import_all_jobs_from_json')) {
 
             if (!$result['success']) {
                 $error_msg = 'Batch ' . $batch_count . ' failed: ' . ($result['message'] ?? 'Unknown error');
-                error_log('[PUNTWORK] ' . $error_msg);
+                PuntWorkLogger::error('Import process failed during batch processing', PuntWorkLogger::CONTEXT_BATCH, [
+                    'error' => $error_msg,
+                    'batch' => $batch_count,
+                    'batch_start' => $batch_start,
+                    'logs' => $result['logs'] ?? []
+                ]);
                 return ['success' => false, 'message' => $error_msg, 'logs' => $result['logs'] ?? []];
             }
 
@@ -279,7 +290,12 @@ if (!function_exists('import_all_jobs_from_json')) {
             // Safety check to prevent infinite loops
             if ($batch_count > 1000) {
                 $error_msg = 'Import aborted - too many batches processed (possible infinite loop)';
-                error_log('[PUNTWORK] ' . $error_msg);
+                PuntWorkLogger::error('Import process failed due to infinite loop detection', PuntWorkLogger::CONTEXT_BATCH, [
+                    'error' => $error_msg,
+                    'batches_processed' => $batch_count,
+                    'total_items' => $total_items,
+                    'processed' => $total_processed
+                ]);
                 return ['success' => false, 'message' => $error_msg, 'logs' => $all_logs];
             }
 
@@ -323,6 +339,18 @@ if (!function_exists('import_all_jobs_from_json')) {
             $total_updated,
             $total_skipped
         ));
+
+        // Log completion using consistent logger
+        PuntWorkLogger::info('Import process completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
+            'duration' => $total_duration,
+            'batches' => $batch_count,
+            'total_items' => $total_items,
+            'processed' => $total_processed,
+            'published' => $total_published,
+            'updated' => $total_updated,
+            'skipped' => $total_skipped,
+            'duplicates_drafted' => $total_duplicates_drafted
+        ]);
 
         // Ensure final status is updated for UI
         $current_status = get_option('job_import_status', []);
@@ -389,9 +417,17 @@ function continue_paused_import() {
     $result = import_all_jobs_from_json(true); // preserve status
 
     if ($result['success']) {
-        error_log('[PUNTWORK] Paused import continuation completed successfully');
+        PuntWorkLogger::info('Paused import continuation completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
+            'processed' => $result['processed'] ?? 0,
+            'total' => $result['total'] ?? 0,
+            'time_elapsed' => $result['time_elapsed'] ?? 0
+        ]);
     } else {
-        error_log('[PUNTWORK] Paused import continuation failed: ' . ($result['message'] ?? 'Unknown error'));
+        PuntWorkLogger::error('Paused import continuation failed', PuntWorkLogger::CONTEXT_BATCH, [
+            'error' => $result['message'] ?? 'Unknown error',
+            'processed' => $result['processed'] ?? 0,
+            'total' => $result['total'] ?? 0
+        ]);
     }
 }
 
