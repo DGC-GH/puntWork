@@ -51,20 +51,10 @@ function render_javascript_init() {
             console.log('[PUNTWORK] Inline script: JobImportLogic available:', typeof JobImportLogic);
             console.log('[PUNTWORK] Inline script: jobImportInitialized:', typeof window.jobImportInitialized);
 
-            // Check if buttons exist
-            console.log('[PUNTWORK] Inline script: cleanup-duplicates button exists:', $('#cleanup-duplicates').length);
-
             // Add a simple test function to global scope
             window.testButtons = function() {
                 console.log('[PUNTWORK] Testing buttons...');
-                console.log('Cleanup button found:', $('#cleanup-duplicates').length);
-
-                if ($('#cleanup-duplicates').length > 0) {
-                    console.log('Cleanup button HTML:', $('#cleanup-duplicates')[0].outerHTML);
-                }
-
-                // Test click events
-                $('#cleanup-duplicates').trigger('click');
+                // Test functionality here if needed
             };
 
             console.log('[PUNTWORK] Run testButtons() in console to test button functionality');
@@ -232,38 +222,15 @@ function render_jobs_javascript_init() {
         jQuery(document).ready(function($) {
             console.log('[PUNTWORK] Jobs Dashboard: Document ready, checking modules...');
 
-            // Check if buttons exist
-            console.log('[PUNTWORK] Jobs Dashboard: cleanup-duplicates button exists:', $('#cleanup-duplicates').length);
-
             // Add a simple test function to global scope
             window.testJobsButtons = function() {
                 console.log('[PUNTWORK] Testing jobs buttons...');
-                console.log('Cleanup button found:', $('#cleanup-duplicates').length);
-
-                if ($('#cleanup-duplicates').length > 0) {
-                    console.log('Cleanup button HTML:', $('#cleanup-duplicates')[0].outerHTML);
-                }
-
-                // Test click events
-                $('#cleanup-duplicates').trigger('click');
+                // Test functionality here if needed
             };
 
             console.log('[PUNTWORK] Run testJobsButtons() in console to test button functionality');
 
-            // Initialize jobs dashboard
-            if (typeof JobImportEvents !== 'undefined') {
-                console.log('[PUNTWORK] Jobs Dashboard: Initializing events...');
-                // Only bind cleanup events, not the full import system
-                JobImportEvents.bindCleanupEvents();
-            } else {
-                console.error('[PUNTWORK] Jobs Dashboard: JobImportEvents not available!');
-            }
-
-            // Initialize UI components
-            if (typeof JobImportUI !== 'undefined') {
-                console.log('[PUNTWORK] Jobs Dashboard: Clearing cleanup progress...');
-                JobImportUI.clearCleanupProgress();
-            }
+            // Jobs are managed automatically during import
         });
     </script>
     <?php
