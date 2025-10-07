@@ -18,6 +18,11 @@ class TestCase extends WP_UnitTestCase {
     public function setUp(): void {
         parent::setUp();
 
+        // Load plugin includes for testing
+        if (function_exists('Puntwork\\setup_job_import')) {
+            \Puntwork\setup_job_import();
+        }
+
         // Clean up any existing test data
         $this->cleanUpTestData();
 

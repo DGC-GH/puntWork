@@ -389,3 +389,9 @@ class WP_PHPUnit_Util_Getopt {
 
 }
 new WP_PHPUnit_Util_Getopt( $_SERVER['argv'] );
+
+// Load the plugin
+require_once dirname(dirname(dirname(__DIR__))) . '/puntwork.php';
+
+// Load custom test case
+require_once dirname(dirname(__DIR__)) . '/TestCase.php';
