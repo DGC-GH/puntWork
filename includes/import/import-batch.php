@@ -273,6 +273,7 @@ function puntwork_process_batch_handler( $args ) {
 		$import_files = array(
 			__DIR__ . '/../import/import-setup.php',
 			__DIR__ . '/../import/import-finalization.php',
+			__DIR__ . '/../import/process-batch-items.php',
 			__DIR__ . '/../utilities/ErrorHandler.php',
 			__DIR__ . '/../exceptions/PuntworkExceptions.php',
 		);

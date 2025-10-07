@@ -123,15 +123,20 @@ if ( ! function_exists( 'process_import_batch' ) ) {
 
 if ( ! function_exists( 'process_batch_items_logic' ) ) {
 	/**
-	 * Process batch items logic - simplified version for AJAX calls.
+	 * Process batch items logic - actual import implementation.
 	 *
 	 * @param  array $setup Import setup data.
 	 * @return array Processing result.
 	 */
 	function process_batch_items_logic( array $setup ): array {
+		global $wpdb;
+
 		$json_path = $setup['json_path'] ?? puntwork_get_combined_jsonl_path();
 		$start_index = $setup['start_index'] ?? 0;
 		$batch_size = $setup['batch_size'] ?? 50;
+		$total = $setup['total'] ?? 0;
+		$acf_fields = $setup['acf_fields'] ?? get_acf_fields();
+		$zero_empty_fields = $setup['zero_empty_fields'] ?? get_zero_empty_fields();
 
 		if ( ! file_exists( $json_path ) ) {
 			return array(
@@ -145,7 +150,29 @@ if ( ! function_exists( 'process_batch_items_logic' ) ) {
 		$updated = 0;
 		$skipped = 0;
 		$logs = array();
+		$processed_guids = array();
 
+		// Build lookup arrays for existing posts
+		$all_hashes_by_post = array();
+		$post_ids_by_guid = array();
+		$last_updates = array();
+
+		// Get existing job posts and their metadata
+		$existing_jobs = $wpdb->get_results(
+			"SELECT p.ID, p.post_modified, pm.meta_value AS guid, pm2.meta_value AS import_hash
+			FROM {$wpdb->posts} p
+			JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
+			LEFT JOIN {$wpdb->postmeta} pm2 ON p.ID = pm2.post_id AND pm2.meta_key = '_import_hash'
+			WHERE p.post_type = 'job' AND p.post_status IN ('publish', 'draft')"
+		);
+
+		foreach ( $existing_jobs as $job ) {
+			$post_ids_by_guid[ $job->guid ] = $job->ID;
+			$all_hashes_by_post[ $job->ID ] = $job->import_hash;
+			$last_updates[ $job->guid ] = $job->post_modified;
+		}
+
+		// Read and process batch from JSONL file
 		$handle = fopen( $json_path, 'r' );
 		if ( ! $handle ) {
 			return array(
@@ -154,27 +181,53 @@ if ( ! function_exists( 'process_batch_items_logic' ) ) {
 			);
 		}
 
+		$batch_guids = array();
+		$batch_items = array();
 		$current_index = 0;
-		while ( ( $line = fgets( $handle ) ) !== false && $processed < $batch_size ) {
-			if ( $current_index < $start_index ) {
-				$current_index++;
-				continue;
-			}
 
-			$item = json_decode( trim( $line ), true );
-			if ( ! $item || empty( $item['guid'] ) ) {
-				$current_index++;
-				continue;
-			}
-
-			// Simple processing - just count for now
-			$processed++;
-			$published++; // Assume new posts for simplicity
-
+		// Skip to start_index
+		while ( $current_index < $start_index && ( $line = fgets( $handle ) ) !== false ) {
 			$current_index++;
 		}
 
+		// Read batch of items
+		while ( $processed < $batch_size && ( $line = fgets( $handle ) ) !== false ) {
+			$item = json_decode( trim( $line ), true );
+			if ( ! $item || empty( $item['guid'] ) ) {
+				continue;
+			}
+
+			$guid = $item['guid'];
+			$batch_guids[] = $guid;
+			$batch_items[ $guid ] = array( 'item' => $item );
+			$processed++;
+		}
+
 		fclose( $handle );
+
+		// Process the batch using the real import logic
+		if ( ! empty( $batch_guids ) ) {
+			process_batch_items(
+				$batch_guids,
+				$batch_items,
+				$last_updates,
+				$all_hashes_by_post,
+				$acf_fields,
+				$zero_empty_fields,
+				$post_ids_by_guid,
+				$logs,
+				$updated,
+				$published,
+				$skipped,
+				$processed,
+				$processed_guids
+			);
+		}
+
+		// Update processed GUIDs option
+		$existing_processed_guids = get_option( 'job_import_processed_guids', array() );
+		$all_processed_guids = array_unique( array_merge( $existing_processed_guids, $processed_guids ) );
+		update_option( 'job_import_processed_guids', $all_processed_guids, false );
 
 		return array(
 			'success' => true,
@@ -183,7 +236,8 @@ if ( ! function_exists( 'process_batch_items_logic' ) ) {
 			'updated' => $updated,
 			'skipped' => $skipped,
 			'logs' => $logs,
-			'complete' => ( $current_index >= get_json_item_count( $json_path ) ),
+			'complete' => ( $start_index + $processed >= $total ),
+			'total' => $total,
 		);
 	}
 }
