@@ -249,11 +249,24 @@ function ajax_get_async_status() {
 		// Check for running Action Scheduler jobs
 		if ( function_exists( 'as_get_scheduled_actions' ) && class_exists( '\ActionScheduler_Store' ) ) {
 			$actions = as_get_scheduled_actions( array(
-				'hook' => 'puntwork_process_import_batch',
+				'hook' => 'puntwork_process_batch_async',
 				'status' => \ActionScheduler_Store::STATUS_RUNNING,
 			) );
 
 			foreach ( $actions as $action ) {
+				$running_jobs[] = array(
+					'id' => $action->get_id(),
+					'scheduled' => $action->get_schedule()->get_date()->getTimestamp(),
+				);
+			}
+
+			// Also check for individual job processing
+			$job_actions = as_get_scheduled_actions( array(
+				'hook' => 'puntwork_process_job',
+				'status' => \ActionScheduler_Store::STATUS_RUNNING,
+			) );
+
+			foreach ( $job_actions as $action ) {
 				$running_jobs[] = array(
 					'id' => $action->get_id(),
 					'scheduled' => $action->get_schedule()->get_date()->getTimestamp(),
@@ -316,22 +329,31 @@ function ajax_run_scheduled_import() {
 
 		error_log( '[PUNTWORK] [AJAX] Nonce verification passed' );
 
-		// Schedule async import (works for both manual and scheduled imports)
-		error_log( '[PUNTWORK] [AJAX] Scheduling async import' );
+		// Schedule async feed processing and import
+		error_log( '[PUNTWORK] [AJAX] Scheduling async feed processing and import' );
 
-		$result = run_scheduled_import( false, 'manual' );
-
-		error_log( '[PUNTWORK] [AJAX] Async import scheduled successfully with result: ' . json_encode( $result ) );
+		if ( function_exists( 'as_schedule_single_action' ) ) {
+			// Use Action Scheduler if available (preferred)
+			as_schedule_single_action( time() + 5, 'puntwork_process_feeds_and_import_async' );
+			error_log( '[PUNTWORK] [AJAX] Async feed processing and import scheduled using Action Scheduler (5 second delay)' );
+		} elseif ( function_exists( 'wp_schedule_single_event' ) ) {
+			// Fallback: Use WordPress cron
+			wp_schedule_single_event( time() + 5, 'puntwork_process_feeds_and_import_async' );
+			error_log( '[PUNTWORK] [AJAX] Async feed processing and import scheduled using WordPress cron (5 second delay)' );
+		} else {
+			error_log( '[PUNTWORK] [AJAX] ERROR: No async scheduling available' );
+			wp_send_json_error( array( 'message' => 'No async scheduling mechanism available' ) );
+			return;
+		}
 
 		wp_send_json_success( array(
-			'message' => 'Import scheduled successfully - processing in background',
-			'result' => $result,
+			'message' => 'Import scheduled successfully - processing feeds and importing in background',
 			'async' => true,
 		) );
 	} catch ( \Exception $e ) {
 		error_log( '[PUNTWORK] [AJAX] Manual import failed with error: ' . $e->getMessage() );
 		error_log( '[PUNTWORK] [AJAX] Error stack trace: ' . $e->getTraceAsString() );
-		wp_send_json_error( array( 'message' => 'Failed to run scheduled import: ' . $e->getMessage() ) );
+		wp_send_json_error( array( 'message' => 'Failed to schedule import: ' . $e->getMessage() ) );
 	}
 }
 

@@ -249,6 +249,9 @@ function init_async_processing(): void {
 	// Hook for scheduled import async
 	add_action( 'puntwork_scheduled_import_async', __NAMESPACE__ . '\\handle_scheduled_import_async', 10, 1 );
 
+	// Hook for processing feeds and scheduling import async
+	add_action( 'puntwork_process_feeds_and_import_async', __NAMESPACE__ . '\\handle_process_feeds_and_import_async', 10, 0 );
+
 	// Hook for analytics update
 	add_action( 'puntwork_update_analytics_async', 'process_async_analytics_update_global', 10, 1 );
 }
@@ -303,6 +306,28 @@ function handle_scheduled_import_async(): void {
 
 	} catch ( \Exception $e ) {
 		error_log( '[PUNTWORK] [ASYNC] Scheduled import async failed: ' . $e->getMessage() );
+	}
+}
+
+/**
+ * Handle process feeds and import async job.
+ */
+function handle_process_feeds_and_import_async(): void {
+	error_log( '[PUNTWORK] [ASYNC] Process feeds and import async handler called' );
+
+	try {
+		// Process feeds to create combined JSONL file
+		$result = process_feeds_to_jsonl( true );
+
+		if ( ! $result['success'] ) {
+			error_log( '[PUNTWORK] [ASYNC] Feed processing failed: ' . $result['message'] );
+			return;
+		}
+
+		error_log( '[PUNTWORK] [ASYNC] Feed processing completed successfully, async import should be scheduled' );
+
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] [ASYNC] Process feeds and import async failed: ' . $e->getMessage() );
 	}
 }
 
