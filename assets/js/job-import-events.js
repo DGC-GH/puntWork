@@ -61,6 +61,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             });
             $('#reset-import').on('click', function(e) {
                 console.log('[PUNTWORK] Reset button clicked!');
+                e.preventDefault(); // Prevent any default action
+                if ($(this).prop('disabled')) return; // Prevent multiple clicks
                 JobImportEvents.handleResetImport();
             });
 
@@ -120,11 +122,13 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
          * Handle reset import button click
          */
         handleResetImport: function() {
+            $('#reset-import').prop('disabled', true); // Disable immediately to prevent multiple clicks
             if (confirm('This will completely reset the import system and clear all progress. Any ongoing import will be stopped. Continue?')) {
                 console.log('[PUNTWORK] User confirmed reset');
                 JobImportLogic.handleResetImport();
             } else {
                 console.log('[PUNTWORK] User cancelled reset');
+                $('#reset-import').prop('disabled', false); // Re-enable if cancelled
             }
         },
 
