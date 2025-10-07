@@ -336,7 +336,6 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 				'utilities/AdaptiveResourceManager.php',
 				'utilities/BatchPrioritizer.php',
 				'utilities/AdvancedJsonlProcessor.php',
-				'utilities/IterativeLearner.php',
 				'utilities/MemoryManager.php',
 				'utilities/item-cleaning.php',
 				'utilities/gzip-file.php',
