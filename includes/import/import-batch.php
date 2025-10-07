@@ -175,6 +175,12 @@ if ( ! function_exists( 'import_all_jobs_from_json' ) ) {
 }
 
 /**
+ * Import all jobs synchronously (for manual imports)
+ * Forces synchronous processing regardless of Action Scheduler availability
+ *
+ * @return array Import result data
+ */
+/**
  * Continue a paused import process
  * Called by WordPress cron when import needs to resume after timeout.
  *

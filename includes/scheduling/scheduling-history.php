@@ -180,46 +180,29 @@ function run_scheduled_import( $test_mode = false, $trigger = 'scheduled' ) {
 	try {
 		error_log( '[PUNTWORK] [IMPORT] Starting import process' );
 		
-		// For manual imports, process feeds first
-		if ( $trigger === 'manual' ) {
-			error_log( '[PUNTWORK] [IMPORT] Manual import detected - processing feeds first' );
+		// Always process feeds and schedule async import
+		error_log( '[PUNTWORK] [IMPORT] Processing feeds and scheduling async import' );
 
-			// Process feeds to create combined JSONL file
-			$feed_result = process_feeds_to_jsonl();
+		// Process feeds to create combined JSONL file and schedule async import
+		$feed_result = process_feeds_to_jsonl( true );
 
-			if ( ! $feed_result['success'] ) {
-				throw new \Exception( 'Feed processing failed: ' . $feed_result['message'] );
-			}
-
-			error_log( '[PUNTWORK] [IMPORT] Feed processing completed for manual import' );
+		if ( ! $feed_result['success'] ) {
+			throw new \Exception( 'Feed processing failed: ' . $feed_result['message'] );
 		}
 
-		error_log( '[PUNTWORK] [IMPORT] Starting job import from JSON' );
-		
-		// Run the import
-		$result = import_all_jobs_from_json();
-
-		error_log( '[PUNTWORK] [IMPORT] Job import completed with result: ' . json_encode( $result ) );
+		error_log( '[PUNTWORK] [IMPORT] Feed processing completed, async import scheduled' );
 
 		// Update the last run time
 		update_option( 'puntwork_last_import_run', time() );
 
-		// Log the completion
-		if ( $result['success'] ) {
-			log_scheduled_run( array(
-				'timestamp'     => time(),
-				'duration'      => 0,
-				'success'       => true,
-				'processed'     => $result['processed'] ?? 0,
-				'total'         => $result['total'] ?? 0,
-				'published'     => $result['published'] ?? 0,
-				'updated'       => $result['updated'] ?? 0,
-				'skipped'       => $result['skipped'] ?? 0,
-				'error_message' => '',
-			), $test_mode, $trigger );
-		}
+		// Return success - the actual import will happen asynchronously
+		$result = array(
+			'success' => true,
+			'message' => 'Import scheduled successfully - processing in background',
+			'async'   => true,
+		);
 
-		error_log( '[PUNTWORK] [IMPORT] Import process completed successfully' );
+		error_log( '[PUNTWORK] [IMPORT] Import scheduling completed successfully' );
 		return $result;
 
 	} catch ( \Exception $e ) {

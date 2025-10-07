@@ -246,6 +246,9 @@ function init_async_processing(): void {
 	// Hook for WP-Cron fallback
 	add_action( 'puntwork_process_batch_async', __NAMESPACE__ . '\\handle_async_batch_job_cron', 10, 1 );
 
+	// Hook for scheduled import async
+	add_action( 'puntwork_scheduled_import_async', __NAMESPACE__ . '\\handle_scheduled_import_async', 10, 1 );
+
 	// Hook for analytics update
 	add_action( 'puntwork_update_analytics_async', 'process_async_analytics_update_global', 10, 1 );
 }
@@ -257,6 +260,50 @@ function init_async_processing(): void {
  */
 function handle_async_batch_job( array $batch_data ): void {
 	process_async_batch_job( $batch_data );
+}
+
+/**
+ * Handle scheduled import async job.
+ */
+function handle_scheduled_import_async(): void {
+	error_log( '[PUNTWORK] [ASYNC] Scheduled import async handler called' );
+
+	try {
+		// Get the combined JSONL file
+		$json_path = puntwork_get_combined_jsonl_path();
+		if ( ! file_exists( $json_path ) ) {
+			error_log( '[PUNTWORK] [ASYNC] Combined JSONL file not found' );
+			return;
+		}
+
+		// Get total items
+		$total_items = get_json_item_count( $json_path );
+		if ( $total_items === 0 ) {
+			error_log( '[PUNTWORK] [ASYNC] No items found in JSONL file' );
+			return;
+		}
+
+		// Initialize import status
+		$import_status = array(
+			'start_time' => microtime( true ),
+			'total' => $total_items,
+			'processed' => 0,
+			'published' => 0,
+			'updated' => 0,
+			'skipped' => 0,
+			'complete' => false,
+			'success' => false,
+		);
+
+		update_option( 'job_import_status', $import_status );
+		error_log( '[PUNTWORK] [ASYNC] Initialized import status with ' . $total_items . ' total items' );
+
+		// Start the async import
+		import_all_jobs_from_json( false );
+
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] [ASYNC] Scheduled import async failed: ' . $e->getMessage() );
+	}
 }
 
 /**
@@ -274,7 +321,7 @@ function prepare_feeds_for_import(): array {
 			);
 		}
 
-		$result = process_feeds_to_jsonl();
+		$result = process_feeds_to_jsonl( true );
 
 		if ( ! $result['success'] ) {
 			return $result;
@@ -308,9 +355,10 @@ function prepare_feeds_for_import(): array {
  * Process feeds and create combined JSONL file.
  * This is the main entry point for feed processing that creates the combined JSONL file.
  *
+ * @param bool $schedule_async_import Whether to schedule async import after processing
  * @return array Result of feed processing
  */
-function process_feeds_to_jsonl(): array {
+function process_feeds_to_jsonl( bool $schedule_async_import = true ): array {
 	try {
 		error_log( '[PUNTWORK] [FEEDS] Starting feed processing to create combined JSONL file' );
 		
@@ -334,7 +382,7 @@ function process_feeds_to_jsonl(): array {
 		}
 		
 		// Call the existing feed processing function
-		$logs = fetch_and_generate_combined_json();
+		$logs = fetch_and_generate_combined_json( $schedule_async_import );
 
 		error_log( '[PUNTWORK] [FEEDS] fetch_and_generate_combined_json completed, checking for combined file' );
 

@@ -313,27 +313,17 @@ function ajax_run_scheduled_import() {
 
 		error_log( '[PUNTWORK] [AJAX] Nonce verification passed' );
 
-		// For manual imports, run synchronously but with better timeout handling
-		// Set a reasonable time limit for the request
-		if ( function_exists( 'set_time_limit' ) ) {
-			set_time_limit( 600 ); // 10 minutes for large imports
-		}
-
-		// Increase memory limit
-		if ( function_exists( 'ini_set' ) ) {
-			ini_set( 'memory_limit', '1024M' );
-		}
-
-		error_log( '[PUNTWORK] [AJAX] Starting manual import synchronously - increased limits: time=600s, memory=1024M' );
+		// Schedule async import (works for both manual and scheduled imports)
+		error_log( '[PUNTWORK] [AJAX] Scheduling async import' );
 
 		$result = run_scheduled_import( false, 'manual' );
 
-		error_log( '[PUNTWORK] [AJAX] Manual import completed successfully with result: ' . json_encode( $result ) );
+		error_log( '[PUNTWORK] [AJAX] Async import scheduled successfully with result: ' . json_encode( $result ) );
 
 		wp_send_json_success( array(
-			'message' => 'Import completed successfully',
+			'message' => 'Import scheduled successfully - processing in background',
 			'result' => $result,
-			'async' => false,
+			'async' => true,
 		) );
 	} catch ( \Exception $e ) {
 		error_log( '[PUNTWORK] [AJAX] Manual import failed with error: ' . $e->getMessage() );

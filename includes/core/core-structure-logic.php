@@ -688,7 +688,7 @@ function process_downloaded_feed( string $feed_key, string $feed_path, string $o
  * @return array Import logs containing processing details and any errors
  * @throws \Exception If feed processing setup fails
  */
-function fetch_and_generate_combined_json(): array {
+function fetch_and_generate_combined_json( bool $schedule_async_import = true ): array {
 	global $import_logs;
 
 	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -929,8 +929,8 @@ function fetch_and_generate_combined_json(): array {
 			)
 		);
 
-		// Schedule the batch import to run after feed processing is complete
-		if ( $total_items > 0 ) {
+		// Schedule the batch import to run after feed processing is complete (only for scheduled imports)
+		if ( $total_items > 0 && $schedule_async_import ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 				error_log( '[PUNTWORK] [SCHEDULING] Scheduling batch import after successful feed processing' );
 			}
@@ -969,6 +969,18 @@ function fetch_and_generate_combined_json(): array {
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 					error_log( '[PUNTWORK] [SCHEDULING] ERROR: No async scheduling available for batch import' );
 				}
+			}
+		} elseif ( $total_items > 0 && ! $schedule_async_import ) {
+			PuntWorkLogger::info(
+				'Skipping async import scheduling for manual import',
+				PuntWorkLogger::CONTEXT_FEED_PROCESSING,
+				array(
+					'total_items' => $total_items,
+					'combined_file_exists' => file_exists( $output_dir . 'combined-jobs.jsonl' ),
+				)
+			);
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( '[PUNTWORK] [SCHEDULING] Skipping async import scheduling for manual import' );
 			}
 		} else {
 			PuntWorkLogger::warn(
