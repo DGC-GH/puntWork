@@ -799,6 +799,7 @@ console.info("=== Job Import Logic Script Loaded ===");
                     console.log('[PUNTWORK] Reset successful, updating UI');
                     JobImportUI.appendLogs(['Import system completely reset']);
                     $('#status-message').text('Import system reset - ready to start fresh');
+                    $('#background-import-indicator').hide();
 
                     // Clear all UI state
                     JobImportUI.clearProgress();
@@ -973,6 +974,7 @@ console.info("=== Job Import Logic Script Loaded ===");
             JobImportUI.clearProgress();
             JobImportUI.hideImportUI();
             $('#status-message').text('Import state reset - ready to start');
+            $('#background-import-indicator').hide();
 
             console.log('Import state has been force reset');
             console.log('New isImporting:', this.isImporting);

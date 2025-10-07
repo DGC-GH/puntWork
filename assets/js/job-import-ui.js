@@ -110,6 +110,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             $('#items-left').text(0);
             $('#log-textarea').val('');
             $('#status-message').text('Ready to start.');
+            $('#background-import-indicator').hide();
             $('#time-elapsed').text('0s');
             $('#time-left').text('Calculating...');
             $('#ui-update-indicator').hide();

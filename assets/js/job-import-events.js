@@ -389,6 +389,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             $('#reset-import').hide();
             JobImportUI.hideImportUI();
             $('#status-message').text('Ready to start.');
+            $('#background-import-indicator').hide();
 
             // Load database optimization status first (non-blocking)
             JobImportAPI.getDbOptimizationStatus().then(function(dbResponse) {
@@ -442,6 +443,51 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     (!statusData.complete && statusData.total > 0) // Incomplete with total set
                 );
 
+                // Function to check for background imports
+                var checkBackgroundImports = function() {
+                    return new Promise(function(resolve) {
+                        if ($('#async-status-badge').length > 0) {
+                            JobImportAPI.getAsyncStatus().then(function(asyncResponse) {
+                                console.log('[PUNTWORK] Background import check - Async status response:', asyncResponse);
+                                if (asyncResponse.success && asyncResponse.data.running_jobs && asyncResponse.data.running_jobs.length > 0) {
+                                    console.log('[PUNTWORK] Background import detected -', asyncResponse.data.running_jobs.length, 'running jobs');
+                                    PuntWorkJSLogger.info('Background import detected on page load', 'EVENTS', {
+                                        runningJobs: asyncResponse.data.running_jobs.length,
+                                        jobIds: asyncResponse.data.running_jobs.map(job => job.id)
+                                    });
+
+                                    // Show import progress UI for background import
+                                    $('#start-import').hide();
+                                    $('#resume-import').hide();
+                                    $('#cancel-import').show();
+                                    $('#reset-import').show();
+                                    JobImportUI.showImportUI();
+                                    $('#status-message').text('Background import in progress...');
+                                    $('#background-import-indicator').show();
+
+                                    // Start polling to monitor the background import
+                                    JobImportEvents.startStatusPolling();
+
+                                    // Update progress with any available data
+                                    if (statusData.total > 0) {
+                                        JobImportUI.updateProgress(statusData);
+                                        JobImportUI.appendLogs(statusData.logs || []);
+                                    }
+
+                                    resolve(true); // Background import detected
+                                } else {
+                                    resolve(false); // No background import
+                                }
+                            }).catch(function(error) {
+                                console.log('[PUNTWORK] Background import check failed:', error);
+                                resolve(false);
+                            });
+                        } else {
+                            resolve(false);
+                        }
+                    });
+                };
+
                 if (hasIncompleteImport) {
                     JobImportUI.updateProgress(statusData);
                     JobImportUI.appendLogs(statusData.logs || []);
@@ -482,12 +528,19 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             $('#reset-import').hide();
                             JobImportUI.hideImportUI();
                             $('#status-message').text('Ready to start.');
+                            $('#background-import-indicator').hide();
                             console.log('[PUNTWORK] Import is complete, showing start button');
                         }
                     }
                 } else {
-                    // Clean state - Start Import button already shown above
-                    console.log('[PUNTWORK] Clean state detected - Start Import button already visible');
+                    // No incomplete import found - check for background imports
+                    console.log('[PUNTWORK] No incomplete import found, checking for background imports...');
+                    checkBackgroundImports().then(function(hasBackgroundImport) {
+                        if (!hasBackgroundImport) {
+                            // Clean state - Start Import button already shown above
+                            console.log('[PUNTWORK] Clean state detected - Start Import button already visible');
+                        }
+                    });
                 }
             }).catch(function(xhr, status, error) {
                 PuntWorkJSLogger.error('Initial status AJAX error', 'EVENTS', error);
@@ -555,6 +608,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         JobImportEvents.stopStatusPolling();
                         JobImportUI.resetButtons();
                         $('#status-message').text('Import monitoring timed out - please refresh the page');
+                        $('#background-import-indicator').hide();
                         return;
                     }
 
@@ -590,6 +644,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                                 JobImportEvents.stopStatusPolling();
                                 JobImportUI.resetButtons();
                                 $('#status-message').text('Import failed to start - please try again');
+                                $('#background-import-indicator').hide();
                                 return;
                             }
 
@@ -656,6 +711,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                                     JobImportEvents.stopStatusPolling();
                                     JobImportUI.resetButtons();
                                     $('#status-message').text('Import Complete');
+                                    $('#background-import-indicator').hide();
                                 }
                             } else if (statusData.complete && statusData.total === 0 && !isStartingNewImport) {
                                 console.log('[PUNTWORK] Import status reset to empty state, stopping polling and resetting UI');
@@ -665,6 +721,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                                 JobImportUI.hideImportUI();
                                 JobImportUI.resetButtons();
                                 $('#status-message').text('Ready to start.');
+                                $('#background-import-indicator').hide();
                             } else {
                                 // Reset complete detection counter if import is not complete
                                 JobImportEvents.completeDetectedCount = 0;
@@ -680,6 +737,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                                 
                                 // Update status message to inform user
                                 $('#status-message').text('Rate limited - waiting before retry...');
+                                $('#background-import-indicator').show(); // Keep showing for rate limited
                                 
                                 // Don't stop polling, just slow it down
                                 return;
@@ -705,6 +763,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     JobImportEvents.stopStatusPolling();
                     JobImportUI.resetButtons();
                     $('#status-message').text('Import monitoring timed out - please refresh the page');
+                    $('#background-import-indicator').hide();
                 }, 30 * 60 * 1000); // 30 minutes
             }, 2000); // 2-second delay
         },
