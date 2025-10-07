@@ -16,12 +16,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 if (!function_exists('process_batch_items')) {
     function process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count) {
+        error_log('process_batch_items called with ' . count($batch_guids) . ' GUIDs');
         $user_id = get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : get_current_user_id();
         foreach ($batch_guids as $guid) {
             $item = $batch_items[$guid]['item'];
             $xml_updated = isset($item['updated']) ? $item['updated'] : '';
             $xml_updated_ts = strtotime($xml_updated);
             $post_id = isset($post_ids_by_guid[$guid]) ? $post_ids_by_guid[$guid] : null;
+
+            error_log("Processing GUID: $guid, post_id: " . ($post_id ?: 'null'));
 
             // If post exists, check if it needs updating
             if ($post_id) {
