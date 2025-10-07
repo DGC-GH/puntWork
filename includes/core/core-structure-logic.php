@@ -106,6 +106,11 @@ add_action('save_post', function($post_id, $post, $update) {
 }, 10, 3);
 
 function process_one_feed($feed_key, $url, $output_dir, $fallback_domain, &$logs) {
+    // Ensure output directory exists
+    if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
+        throw new \Exception('Output directory not writable');
+    }
+    
     $xml_path = $output_dir . $feed_key . '.xml';
     $json_filename = $feed_key . '.jsonl';
     $json_path = $output_dir . $json_filename;

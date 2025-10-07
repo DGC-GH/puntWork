@@ -16,13 +16,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 function download_feed($url, $xml_path, $output_dir, &$logs) {
     // Validate file paths for security
-    $real_output_dir = realpath($output_dir);
-    $real_xml_path = realpath(dirname($xml_path)) . '/' . basename($xml_path);
-    if ($real_output_dir === false || strpos($real_xml_path, $real_output_dir) !== 0) {
-        throw new \Exception('Invalid file path: XML path must be within output directory');
+    if (!is_dir($output_dir) || !is_writable($output_dir)) {
+        throw new \Exception('Output directory is not accessible or writable');
     }
-    if (!is_writable($output_dir)) {
-        throw new \Exception('Output directory is not writable');
+    if (strpos($xml_path, $output_dir) !== 0) {
+        throw new \Exception('Invalid file path: XML path must be within output directory');
     }
     try {
         if (function_exists('curl_init')) {
