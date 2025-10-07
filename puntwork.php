@@ -461,10 +461,19 @@ add_action( 'puntwork_update_analytics_async', 'process_async_analytics_update_g
 // Add manual import async processing hook
 add_action( 'puntwork_run_manual_import', __NAMESPACE__ . '\\process_manual_import_async' );
 function process_manual_import_async( $args ) {
+	error_log( '[PUNTWORK] [ASYNC] Manual import async function called with args: ' . json_encode( $args ) );
+	
 	$test_mode = $args['test_mode'] ?? false;
 	$trigger = $args['trigger'] ?? 'manual';
 	
-	run_scheduled_import( $test_mode, $trigger );
+	error_log( '[PUNTWORK] [ASYNC] Starting manual import via Action Scheduler' );
+	
+	try {
+		$result = run_scheduled_import( $test_mode, $trigger );
+		error_log( '[PUNTWORK] [ASYNC] Manual import completed with result: ' . json_encode( $result ) );
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] [ASYNC] Manual import failed with error: ' . $e->getMessage() );
+	}
 }
 
 // Uninstall hook (cleanup)

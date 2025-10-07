@@ -443,17 +443,13 @@ console.log('[PUNTWORK] job-import-api.js loaded');
                     action: 'run_scheduled_import',
                     nonce: jobImportData.nonce
                 },
-                timeout: 30000, // 30 seconds for scheduling
+                timeout: 300000, // 5 minutes for synchronous import
                 success: function(response) {
                     console.log('[PUNTWORK] AJAX success for runScheduledImport:', response);
                     if (!response || !response.success) {
                         console.error('[PUNTWORK] ERROR: runScheduledImport AJAX returned unsuccessful response:', response);
                     } else {
-                        if (response.data && response.data.async) {
-                            console.log('[PUNTWORK] SUCCESS: Manual import scheduled asynchronously, job ID:', response.data.job_id);
-                        } else {
-                            console.log('[PUNTWORK] SUCCESS: Scheduled import completed synchronously');
-                        }
+                        console.log('[PUNTWORK] SUCCESS: Import completed synchronously');
                     }
                 },
                 error: function(xhr, status, error) {

@@ -303,29 +303,30 @@ function ajax_run_scheduled_import() {
 			return;
 		}
 
-		// For manual imports, schedule asynchronously to avoid timeouts
-		if ( function_exists( 'as_schedule_single_action' ) ) {
-			$job_id = as_schedule_single_action( time(), 'puntwork_run_manual_import', array(
-				'test_mode' => false,
-				'trigger' => 'manual'
-			) );
-
-			wp_send_json_success( array(
-				'message' => 'Manual import scheduled successfully',
-				'async' => true,
-				'job_id' => $job_id,
-			) );
-		} else {
-			// Fallback to synchronous execution if Action Scheduler not available
-			$result = run_scheduled_import( false, 'manual' );
-
-			wp_send_json_success( array(
-				'message' => 'Import started successfully',
-				'result' => $result,
-				'async' => false,
-			) );
+		// For manual imports, run synchronously but with better timeout handling
+		// Set a reasonable time limit for the request
+		if ( function_exists( 'set_time_limit' ) ) {
+			set_time_limit( 300 ); // 5 minutes should be enough
 		}
+
+		// Increase memory limit
+		if ( function_exists( 'ini_set' ) ) {
+			ini_set( 'memory_limit', '512M' );
+		}
+
+		error_log( '[PUNTWORK] [AJAX] Starting manual import synchronously' );
+
+		$result = run_scheduled_import( false, 'manual' );
+
+		error_log( '[PUNTWORK] [AJAX] Manual import completed with result: ' . json_encode( $result ) );
+
+		wp_send_json_success( array(
+			'message' => 'Import completed successfully',
+			'result' => $result,
+			'async' => false,
+		) );
 	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] [AJAX] Manual import failed with error: ' . $e->getMessage() );
 		wp_send_json_error( array( 'message' => 'Failed to run scheduled import: ' . $e->getMessage() ) );
 	}
 }
