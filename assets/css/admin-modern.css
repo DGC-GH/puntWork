@@ -99,7 +99,7 @@
   font-size: var(--font-size-base);
   line-height: var(--line-height-normal);
   color: var(--color-black);
-  background-color: var(--color-gray-50);
+  background-color: #f5f5f7;
   min-height: 100vh;
 }
 
