@@ -268,7 +268,8 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 		// Import/batch processing includes (load on AJAX, cron, or explicit import requests)
 		$current_action = isset( $_REQUEST['action'] ) ? $_REQUEST['action'] : '';
 		$is_import_request = isset( $_REQUEST['puntwork_import'] ) ||
-		                    ( strpos( $current_action, 'puntwork' ) === 0 );
+		                    ( strpos( $current_action, 'puntwork' ) === 0 ) ||
+		                    in_array( $current_action, array( 'run_scheduled_import', 'run_job_import_batch' ) );
 
 		if ( $is_ajax && $is_import_request || $is_cron ) {
 			$includes = array_merge( $includes, array(
