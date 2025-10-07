@@ -74,6 +74,44 @@ function render_jobs_dashboard_ui(): void {
 			</div>
 
 			<!-- Async Processing Configuration Section -->
+			<div id="async-processing-container" class="puntwork-card" style="margin-bottom: var(--spacing-xl);">
+				<div class="puntwork-card__header">
+					<h2 class="puntwork-card__title">Async Processing Settings</h2>
+					<p class="puntwork-card__subtitle">Configure background processing for imports using Action Scheduler.</p>
+				</div>
+
+				<div class="puntwork-card__body">
+					<div style="display: flex; align-items: center; gap: var(--spacing-lg); flex-wrap: wrap;">
+						<div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+							<input type="checkbox" id="enable-async-processing" class="puntwork-checkbox">
+							<label for="enable-async-processing" style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); cursor: pointer;">
+								Enable Async Processing
+							</label>
+						</div>
+
+						<div id="async-status-display" style="display: flex; align-items: center; gap: var(--spacing-sm);">
+							<span id="async-status-badge" class="puntwork-badge">
+								<i class="fas fa-spinner fa-spin" style="margin-right: var(--spacing-xs);"></i>Checking...
+							</span>
+							<span id="async-status-details" style="font-size: var(--font-size-sm); color: var(--color-gray-600);"></span>
+						</div>
+					</div>
+
+					<div style="margin-top: var(--spacing-md); padding: var(--spacing-md); background-color: var(--color-gray-50); border-radius: var(--radius-md); border-left: 4px solid var(--color-primary);">
+						<div style="font-size: var(--font-size-sm); color: var(--color-gray-700); line-height: var(--line-height-normal);">
+							<strong>How it works:</strong> When enabled, imports run in the background using Action Scheduler, allowing you to navigate away from the page while processing continues. When disabled, imports run synchronously and may timeout for large datasets.
+						</div>
+					</div>
+				</div>
+
+				<div class="puntwork-card__footer">
+					<button id="save-async-settings" class="puntwork-btn puntwork-btn--primary" disabled>
+						<i class="fas fa-save puntwork-btn__icon"></i>Save Settings
+					</button>
+					<span id="async-save-status" style="font-size: var(--font-size-sm); color: var(--color-gray-600); margin-left: var(--spacing-md);"></span>
+				</div>
+			</div>
+
 			<!-- Job Listings Section -->
 			<div id="job-listings-container" class="puntwork-card" style="margin-bottom: var(--spacing-xl);">
 				<div class="puntwork-card__header">

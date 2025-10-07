@@ -92,6 +92,13 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 JobImportEvents.handleSaveAsyncSettings();
             });
 
+            // Enable/disable save button when checkbox changes
+            $('#enable-async-processing').on('change', function(e) {
+                console.log('[PUNTWORK] Async processing checkbox changed:', $(this).is(':checked'));
+                $('#save-async-settings').prop('disabled', false);
+                $('#async-save-status').text('');
+            });
+
             // Performance monitoring events
             $('#refresh-performance').on('click', function(e) {
                 console.log('[PUNTWORK] Refresh performance button clicked!');
@@ -846,9 +853,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             console.log('[PUNTWORK] Save async settings handler called');
 
             $('#save-async-settings').prop('disabled', true);
-            $('#save-async-text').hide();
-            $('#save-async-loading').show();
-            $('#async-settings-status').text('Saving settings...');
+            $('#async-save-status').text('Saving settings...');
 
             var enableAsync = $('#enable-async-processing').is(':checked');
 
@@ -856,21 +861,17 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 console.log('[PUNTWORK] Save async settings response:', response);
 
                 if (response.success) {
-                    $('#async-settings-status').text('Settings saved successfully!');
+                    $('#async-save-status').text('Settings saved successfully!');
                     JobImportEvents.updateAsyncStatusDisplay(response.data);
                 } else {
-                    $('#async-settings-status').text('Failed to save settings');
+                    $('#async-save-status').text('Failed to save settings');
                 }
 
                 $('#save-async-settings').prop('disabled', false);
-                $('#save-async-text').show();
-                $('#save-async-loading').hide();
             }).catch(function(xhr, status, error) {
                 console.log('[PUNTWORK] Save async settings error:', error);
-                $('#async-settings-status').text('Error: ' + error);
+                $('#async-save-status').text('Error: ' + error);
                 $('#save-async-settings').prop('disabled', false);
-                $('#save-async-text').show();
-                $('#save-async-loading').hide();
             });
         },
 
