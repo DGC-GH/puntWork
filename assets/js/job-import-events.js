@@ -112,6 +112,17 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 JobImportEvents.handleClearPerformanceLogs();
             });
 
+            // Diagnostics events
+            $('#run-import-diagnostics').on('click', function(e) {
+                console.log('[PUNTWORK] Run import diagnostics button clicked!');
+                JobImportEvents.handleRunImportDiagnostics();
+            });
+
+            $('#force-run-batch-job').on('click', function(e) {
+                console.log('[PUNTWORK] Force run batch job button clicked!');
+                JobImportEvents.handleForceRunBatchJob();
+            });
+
             // Log toggle button
             // $('#toggle-log').on('click', function(e) {
             //     console.log('[PUNTWORK] Toggle log button clicked!');
@@ -1104,6 +1115,152 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             }
 
             $('#performance-metrics').html(metricsHtml);
+        },
+
+        /**
+         * Handle run import diagnostics button click
+         */
+        handleRunImportDiagnostics: function() {
+            console.log('[PUNTWORK] Run import diagnostics handler called');
+
+            $('#run-import-diagnostics').prop('disabled', true);
+            $('#diagnostics-status').text('Running diagnostics...');
+            $('#diagnostics-results').html('<div style="color: #666; font-style: italic;">Checking import system...</div>');
+
+            JobImportAPI.runImportDiagnostics().then(function(response) {
+                console.log('[PUNTWORK] Import diagnostics response:', response);
+
+                if (response.success) {
+                    JobImportEvents.displayDiagnosticsResults(response.data);
+                    $('#diagnostics-status').text('Diagnostics completed');
+                } else {
+                    $('#diagnostics-status').text('Diagnostics failed');
+                    $('#diagnostics-results').html('<div style="color: #ff3b30;">Failed to run diagnostics: ' + (response.data?.error || 'Unknown error') + '</div>');
+                }
+
+                $('#run-import-diagnostics').prop('disabled', false);
+            }).catch(function(xhr, status, error) {
+                console.log('[PUNTWORK] Import diagnostics error:', error);
+                $('#diagnostics-status').text('Diagnostics error');
+                $('#diagnostics-results').html('<div style="color: #ff3b30;">Error running diagnostics: ' + error + '</div>');
+                $('#run-import-diagnostics').prop('disabled', false);
+            });
+        },
+
+        /**
+         * Handle force run batch job button click
+         */
+        handleForceRunBatchJob: function() {
+            console.log('[PUNTWORK] Force run batch job handler called');
+
+            var jobId = $('#batch-job-id').val();
+            if (!jobId || jobId.trim() === '') {
+                alert('Please enter a valid job ID');
+                return;
+            }
+
+            if (!confirm('This will force execute the specified Action Scheduler job. This should only be used for debugging. Continue?')) {
+                return;
+            }
+
+            $('#force-run-batch-job').prop('disabled', true);
+            $('#diagnostics-status').text('Executing job ' + jobId + '...');
+
+            JobImportAPI.forceRunBatchJob(jobId).then(function(response) {
+                console.log('[PUNTWORK] Force run batch job response:', response);
+
+                if (response.success) {
+                    $('#diagnostics-status').text('Job execution completed');
+                    $('#diagnostics-results').html('<div style="color: #32d74b;">Job ' + jobId + ' executed successfully</div>');
+                    if (response.data && response.data.message) {
+                        $('#diagnostics-results').append('<div style="margin-top: 8px; color: #666;">' + response.data.message + '</div>');
+                    }
+                } else {
+                    $('#diagnostics-status').text('Job execution failed');
+                    $('#diagnostics-results').html('<div style="color: #ff3b30;">Failed to execute job ' + jobId + ': ' + (response.data?.error || 'Unknown error') + '</div>');
+                }
+
+                $('#force-run-batch-job').prop('disabled', false);
+            }).catch(function(xhr, status, error) {
+                console.log('[PUNTWORK] Force run batch job error:', error);
+                $('#diagnostics-status').text('Job execution error');
+                $('#diagnostics-results').html('<div style="color: #ff3b30;">Error executing job ' + jobId + ': ' + error + '</div>');
+                $('#force-run-batch-job').prop('disabled', false);
+            });
+        },
+
+        /**
+         * Display diagnostics results in the UI
+         */
+        displayDiagnosticsResults: function(data) {
+            console.log('[PUNTWORK] Displaying diagnostics results:', data);
+
+            var resultsHtml = '';
+
+            // File status section
+            resultsHtml += '<div style="margin-bottom: 16px;">';
+            resultsHtml += '<h4 style="margin: 0 0 8px 0; color: #333;">File Status</h4>';
+            if (data.files) {
+                resultsHtml += '<div style="display: grid; gap: 4px;">';
+                for (var file in data.files) {
+                    if (data.files.hasOwnProperty(file)) {
+                        var fileStatus = data.files[file];
+                        var statusColor = fileStatus.exists ? '#32d74b' : '#ff3b30';
+                        var statusIcon = fileStatus.exists ? '✓' : '✗';
+                        resultsHtml += '<div style="color: ' + statusColor + ';">' + statusIcon + ' ' + file + ': ' + fileStatus.message + '</div>';
+                    }
+                }
+                resultsHtml += '</div>';
+            }
+            resultsHtml += '</div>';
+
+            // Action Scheduler status section
+            resultsHtml += '<div style="margin-bottom: 16px;">';
+            resultsHtml += '<h4 style="margin: 0 0 8px 0; color: #333;">Action Scheduler Status</h4>';
+            if (data.action_scheduler) {
+                resultsHtml += '<div style="display: grid; gap: 4px;">';
+                for (var key in data.action_scheduler) {
+                    if (data.action_scheduler.hasOwnProperty(key)) {
+                        var asStatus = data.action_scheduler[key];
+                        var statusColor = asStatus.status === 'ok' ? '#32d74b' : (asStatus.status === 'warning' ? '#ff9500' : '#ff3b30');
+                        var statusIcon = asStatus.status === 'ok' ? '✓' : (asStatus.status === 'warning' ? '⚠' : '✗');
+                        resultsHtml += '<div style="color: ' + statusColor + ';">' + statusIcon + ' ' + asStatus.label + ': ' + asStatus.message + '</div>';
+                    }
+                }
+                resultsHtml += '</div>';
+            }
+            resultsHtml += '</div>';
+
+            // Import status section
+            resultsHtml += '<div style="margin-bottom: 16px;">';
+            resultsHtml += '<h4 style="margin: 0 0 8px 0; color: #333;">Import Status</h4>';
+            if (data.import_status) {
+                resultsHtml += '<div style="display: grid; gap: 4px;">';
+                for (var key in data.import_status) {
+                    if (data.import_status.hasOwnProperty(key)) {
+                        var importStatus = data.import_status[key];
+                        var statusColor = importStatus.status === 'ok' ? '#32d74b' : (importStatus.status === 'warning' ? '#ff9500' : '#ff3b30');
+                        var statusIcon = importStatus.status === 'ok' ? '✓' : (importStatus.status === 'warning' ? '⚠' : '✗');
+                        resultsHtml += '<div style="color: ' + statusColor + ';">' + statusIcon + ' ' + importStatus.label + ': ' + importStatus.message + '</div>';
+                    }
+                }
+                resultsHtml += '</div>';
+            }
+            resultsHtml += '</div>';
+
+            // Recommendations section
+            if (data.recommendations && data.recommendations.length > 0) {
+                resultsHtml += '<div style="margin-bottom: 16px;">';
+                resultsHtml += '<h4 style="margin: 0 0 8px 0; color: #333;">Recommendations</h4>';
+                resultsHtml += '<ul style="margin: 0; padding-left: 20px;">';
+                data.recommendations.forEach(function(rec) {
+                    resultsHtml += '<li style="color: #666; margin-bottom: 4px;">' + rec + '</li>';
+                });
+                resultsHtml += '</ul>';
+                resultsHtml += '</div>';
+            }
+
+            $('#diagnostics-results').html(resultsHtml);
         }
     };
 

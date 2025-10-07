@@ -63,6 +63,10 @@ add_action( 'wp_ajax_clear_import_cancel', __NAMESPACE__ . '\\ajax_clear_import_
 // Disable scheduled imports
 add_action( 'wp_ajax_disable_scheduled_imports', __NAMESPACE__ . '\\ajax_disable_scheduled_imports' );
 
+// Diagnostic handlers
+add_action( 'wp_ajax_run_import_diagnostics', __NAMESPACE__ . '\\ajax_run_import_diagnostics' );
+add_action( 'wp_ajax_force_run_batch_job', __NAMESPACE__ . '\\ajax_force_run_batch_job' );
+
 error_log( '[PUNTWORK] AJAX handlers registered for action: ' . ($_REQUEST['action'] ?? 'unknown') );
 
 /**
@@ -744,6 +748,342 @@ function ajax_disable_scheduled_imports() {
 		) );
 	} catch ( \Exception $e ) {
 		wp_send_json_error( array( 'message' => 'Failed to disable scheduled imports: ' . $e->getMessage() ) );
+	}
+}
+
+/**
+ * Run comprehensive import diagnostics
+ */
+function ajax_run_import_diagnostics() {
+	try {
+		// Verify nonce
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
+			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
+			return;
+		}
+
+		error_log( '[PUNTWORK] [DIAGNOSTICS] Starting comprehensive import diagnostics' );
+
+		$diagnostics = array(
+			'timestamp' => time(),
+			'logs' => array(),
+			'checks' => array(),
+			'recommendations' => array(),
+		);
+
+		// Check 1: Combined JSONL file status
+		$diagnostics['logs'][] = '=== CHECK 1: Combined JSONL File Status ===';
+		$combined_file = puntwork_get_combined_jsonl_path();
+		$file_exists = file_exists( $combined_file );
+		$file_size = $file_exists ? filesize( $combined_file ) : 0;
+		$file_readable = $file_exists && is_readable( $combined_file );
+
+		$diagnostics['checks']['combined_file'] = array(
+			'exists' => $file_exists,
+			'size' => $file_size,
+			'readable' => $file_readable,
+			'path' => $combined_file,
+		);
+
+		if ( $file_exists ) {
+			$diagnostics['logs'][] = "✓ Combined file exists at: $combined_file";
+			$diagnostics['logs'][] = "✓ File size: " . number_format( $file_size ) . " bytes";
+
+			if ( $file_readable ) {
+				// Count lines to get job count
+				$line_count = 0;
+				$handle = fopen( $combined_file, 'r' );
+				if ( $handle ) {
+					while ( fgets( $handle ) !== false ) {
+						$line_count++;
+					}
+					fclose( $handle );
+				}
+
+				$diagnostics['checks']['combined_file']['line_count'] = $line_count;
+				$diagnostics['logs'][] = "✓ File contains $line_count job records";
+
+				if ( $line_count === 0 ) {
+					$diagnostics['recommendations'][] = 'Combined file exists but is empty. Feed processing may have failed.';
+				}
+			} else {
+				$diagnostics['logs'][] = "✗ File is not readable";
+				$diagnostics['recommendations'][] = 'Combined file is not readable. Check file permissions.';
+			}
+		} else {
+			$diagnostics['logs'][] = "✗ Combined file does not exist at: $combined_file";
+			$diagnostics['recommendations'][] = 'Combined JSONL file does not exist. Run feed processing first.';
+		}
+
+		// Check 2: Action Scheduler availability
+		$diagnostics['logs'][] = '';
+		$diagnostics['logs'][] = '=== CHECK 2: Action Scheduler Status ===';
+		$as_available = function_exists( 'as_schedule_single_action' ) && class_exists( 'ActionScheduler_Store' );
+		$diagnostics['checks']['action_scheduler'] = array(
+			'available' => $as_available,
+			'function_exists' => function_exists( 'as_schedule_single_action' ),
+			'class_exists' => class_exists( 'ActionScheduler_Store' ),
+		);
+
+		if ( $as_available ) {
+			$diagnostics['logs'][] = "✓ Action Scheduler is available";
+
+			// Check for scheduled puntwork_process_batch jobs
+			try {
+				$pending_jobs = as_get_scheduled_actions( array(
+					'hook' => 'puntwork_process_batch',
+					'status' => 'pending',
+				) );
+
+				$running_jobs = as_get_scheduled_actions( array(
+					'hook' => 'puntwork_process_batch',
+					'status' => 'running',
+				) );
+
+				$completed_jobs = as_get_scheduled_actions( array(
+					'hook' => 'puntwork_process_batch',
+					'status' => 'completed',
+				) );
+
+				$failed_jobs = as_get_scheduled_actions( array(
+					'hook' => 'puntwork_process_batch',
+					'status' => 'failed',
+				) );
+
+				$diagnostics['checks']['action_scheduler']['jobs'] = array(
+					'pending' => count( $pending_jobs ),
+					'running' => count( $running_jobs ),
+					'completed' => count( $completed_jobs ),
+					'failed' => count( $failed_jobs ),
+				);
+
+				$diagnostics['logs'][] = "✓ Pending batch jobs: " . count( $pending_jobs );
+				$diagnostics['logs'][] = "✓ Running batch jobs: " . count( $running_jobs );
+				$diagnostics['logs'][] = "✓ Completed batch jobs: " . count( $completed_jobs );
+				$diagnostics['logs'][] = "✓ Failed batch jobs: " . count( $failed_jobs );
+
+				if ( count( $pending_jobs ) > 0 ) {
+					$diagnostics['logs'][] = "Pending jobs details:";
+					foreach ( $pending_jobs as $job ) {
+						$args = $job->get_args();
+						$scheduled = $job->get_schedule()->get_date()->getTimestamp();
+						$diagnostics['logs'][] = "  - Job ID {$job->get_id()}: start_index " . ($args['start_index'] ?? 'unknown') . ", scheduled " . date( 'Y-m-d H:i:s', $scheduled );
+					}
+				}
+
+				if ( count( $running_jobs ) > 0 ) {
+					$diagnostics['logs'][] = "Running jobs details:";
+					foreach ( $running_jobs as $job ) {
+						$args = $job->get_args();
+						$scheduled = $job->get_schedule()->get_date()->getTimestamp();
+						$diagnostics['logs'][] = "  - Job ID {$job->get_id()}: start_index " . ($args['start_index'] ?? 'unknown') . ", scheduled " . date( 'Y-m-d H:i:s', $scheduled );
+					}
+				}
+
+				if ( count( $failed_jobs ) > 0 ) {
+					$diagnostics['logs'][] = "Failed jobs details:";
+					foreach ( $failed_jobs as $job ) {
+						$args = $job->get_args();
+						$scheduled = $job->get_schedule()->get_date()->getTimestamp();
+						$diagnostics['logs'][] = "  - Job ID {$job->get_id()}: start_index " . ($args['start_index'] ?? 'unknown') . ", scheduled " . date( 'Y-m-d H:i:s', $scheduled );
+					}
+					$diagnostics['recommendations'][] = 'There are failed batch jobs. Check Action Scheduler logs for errors.';
+				}
+
+				if ( count( $pending_jobs ) === 0 && count( $running_jobs ) === 0 && $file_exists && $line_count > 0 ) {
+					$diagnostics['recommendations'][] = 'No pending or running batch jobs found, but combined file exists. Import jobs may not have been scheduled.';
+				}
+
+			} catch ( \Exception $e ) {
+				$diagnostics['logs'][] = "✗ Error checking Action Scheduler jobs: " . $e->getMessage();
+				$diagnostics['recommendations'][] = 'Error accessing Action Scheduler jobs: ' . $e->getMessage();
+			}
+
+		} else {
+			$diagnostics['logs'][] = "✗ Action Scheduler is not available";
+			$diagnostics['recommendations'][] = 'Action Scheduler is not available. Install WooCommerce or Action Scheduler plugin.';
+		}
+
+		// Check 3: Import status
+		$diagnostics['logs'][] = '';
+		$diagnostics['logs'][] = '=== CHECK 3: Import Status ===';
+		$import_status = get_option( 'job_import_status', array() );
+
+		$diagnostics['checks']['import_status'] = $import_status;
+
+		if ( ! empty( $import_status ) ) {
+			$diagnostics['logs'][] = "✓ Import status exists";
+			$diagnostics['logs'][] = "  - Total: " . ($import_status['total'] ?? 0);
+			$diagnostics['logs'][] = "  - Processed: " . ($import_status['processed'] ?? 0);
+			$diagnostics['logs'][] = "  - Published: " . ($import_status['published'] ?? 0);
+			$diagnostics['logs'][] = "  - Updated: " . ($import_status['updated'] ?? 0);
+			$diagnostics['logs'][] = "  - Complete: " . (($import_status['complete'] ?? false) ? 'Yes' : 'No');
+			$diagnostics['logs'][] = "  - Success: " . (($import_status['success'] ?? false) ? 'Yes' : 'No');
+
+			if ( isset( $import_status['last_update'] ) ) {
+				$diagnostics['logs'][] = "  - Last update: " . date( 'Y-m-d H:i:s', $import_status['last_update'] );
+			}
+
+			if ( ($import_status['total'] ?? 0) === 0 && $file_exists && $line_count > 0 ) {
+				$diagnostics['recommendations'][] = 'Import status shows total=0 but combined file has jobs. Status may not be updating.';
+			}
+
+			if ( ! ($import_status['complete'] ?? false) && ($import_status['processed'] ?? 0) === 0 ) {
+				$diagnostics['recommendations'][] = 'Import is not complete and no jobs have been processed. Batch jobs may not be executing.';
+			}
+
+		} else {
+			$diagnostics['logs'][] = "✗ No import status found";
+			$diagnostics['recommendations'][] = 'No import status found. Import may not have started.';
+		}
+
+		// Check 4: WordPress cron status
+		$diagnostics['logs'][] = '';
+		$diagnostics['logs'][] = '=== CHECK 4: WordPress Cron Status ===';
+		$cron_disabled = defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON;
+		$diagnostics['checks']['wordpress_cron'] = array(
+			'disabled' => $cron_disabled,
+			'alternative_enabled' => defined( 'ALTERNATE_WP_CRON' ) && ALTERNATE_WP_CRON,
+		);
+
+		if ( $cron_disabled ) {
+			$diagnostics['logs'][] = "⚠ WordPress cron is disabled (DISABLE_WP_CRON = true)";
+			$diagnostics['recommendations'][] = 'WordPress cron is disabled. Action Scheduler may not work properly.';
+		} else {
+			$diagnostics['logs'][] = "✓ WordPress cron is enabled";
+		}
+
+		// Check 5: Memory and time limits
+		$diagnostics['logs'][] = '';
+		$diagnostics['logs'][] = '=== CHECK 5: System Resources ===';
+		$memory_limit = ini_get( 'memory_limit' );
+		$time_limit = ini_get( 'max_execution_time' );
+		$current_memory = memory_get_usage( true ) / 1024 / 1024;
+
+		$diagnostics['checks']['system_resources'] = array(
+			'memory_limit' => $memory_limit,
+			'time_limit' => $time_limit,
+			'current_memory_mb' => round( $current_memory, 2 ),
+		);
+
+		$diagnostics['logs'][] = "✓ Memory limit: $memory_limit";
+		$diagnostics['logs'][] = "✓ Time limit: $time_limit seconds";
+		$diagnostics['logs'][] = "✓ Current memory usage: " . round( $current_memory, 2 ) . " MB";
+
+		if ( $time_limit > 0 && $time_limit < 300 ) {
+			$diagnostics['recommendations'][] = 'Time limit is low (' . $time_limit . 's). Consider increasing for large imports.';
+		}
+
+		// Check 6: Recent error logs
+		$diagnostics['logs'][] = '';
+		$diagnostics['logs'][] = '=== CHECK 6: Recent Logs (last 10) ===';
+		$recent_logs = get_option( 'puntwork_recent_logs', array() );
+		if ( ! empty( $recent_logs ) && is_array( $recent_logs ) ) {
+			$recent_logs = array_slice( $recent_logs, -10 ); // Last 10 logs
+			foreach ( $recent_logs as $log ) {
+				$diagnostics['logs'][] = "  " . (is_string( $log ) ? $log : json_encode( $log ));
+			}
+		} else {
+			$diagnostics['logs'][] = "  No recent logs found";
+		}
+
+		// Summary and recommendations
+		$diagnostics['logs'][] = '';
+		$diagnostics['logs'][] = '=== SUMMARY ===';
+
+		if ( ! $file_exists ) {
+			$diagnostics['logs'][] = "❌ CRITICAL: Combined JSONL file does not exist";
+		} elseif ( $line_count === 0 ) {
+			$diagnostics['logs'][] = "❌ CRITICAL: Combined JSONL file is empty";
+		} elseif ( ! $as_available ) {
+			$diagnostics['logs'][] = "❌ CRITICAL: Action Scheduler not available";
+		} elseif ( count( $pending_jobs ?? array() ) === 0 && count( $running_jobs ?? array() ) === 0 ) {
+			$diagnostics['logs'][] = "❌ CRITICAL: No batch jobs scheduled or running";
+		} elseif ( ($import_status['total'] ?? 0) === 0 ) {
+			$diagnostics['logs'][] = "❌ CRITICAL: Import status shows total=0";
+		} else {
+			$diagnostics['logs'][] = "✅ All critical checks passed";
+		}
+
+		error_log( '[PUNTWORK] [DIAGNOSTICS] Diagnostics completed with ' . count( $diagnostics['recommendations'] ) . ' recommendations' );
+
+		wp_send_json_success( $diagnostics );
+
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] [DIAGNOSTICS] Exception in diagnostics: ' . $e->getMessage() );
+		wp_send_json_error( array( 'message' => 'Diagnostics failed: ' . $e->getMessage() ) );
+	}
+}
+
+/**
+ * Force run a specific batch job
+ */
+function ajax_force_run_batch_job() {
+	try {
+		// Verify nonce
+		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
+			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
+			return;
+		}
+
+		$job_id = intval( $_POST['job_id'] ?? 0 );
+
+		if ( ! $job_id ) {
+			wp_send_json_error( array( 'message' => 'Job ID is required' ) );
+			return;
+		}
+
+		error_log( "[PUNTWORK] [FORCE-RUN] Attempting to force run batch job ID: $job_id" );
+
+		// Get the job from Action Scheduler
+		if ( function_exists( 'as_get_scheduled_actions' ) && class_exists( 'ActionScheduler_Store' ) ) {
+			try {
+				$actions = as_get_scheduled_actions( array(
+					'id' => $job_id,
+					'hook' => 'puntwork_process_batch',
+				) );
+
+				if ( empty( $actions ) ) {
+					wp_send_json_error( array( 'message' => 'Job not found or not a batch job' ) );
+					return;
+				}
+
+				$action = $actions[0];
+				$args = $action->get_args();
+
+				error_log( "[PUNTWORK] [FORCE-RUN] Found job, executing with args: " . json_encode( $args ) );
+
+				// Execute the job directly
+				require_once plugin_dir_path( __FILE__ ) . '../import/import-batch.php';
+				$result = import_jobs_batch(
+					$args['start_index'] ?? 0,
+					$args['end_index'] ?? 0,
+					$args['total'] ?? 0
+				);
+
+				// Mark the job as completed in Action Scheduler
+				if ( method_exists( $action, 'execute' ) ) {
+					$action->execute();
+				}
+
+				error_log( "[PUNTWORK] [FORCE-RUN] Job execution completed with result: " . json_encode( $result ) );
+
+				wp_send_json_success( array(
+					'message' => 'Batch job executed successfully',
+					'result' => $result,
+				) );
+
+			} catch ( \Exception $e ) {
+				error_log( "[PUNTWORK] [FORCE-RUN] Error executing job: " . $e->getMessage() );
+				wp_send_json_error( array( 'message' => 'Failed to execute job: ' . $e->getMessage() ) );
+			}
+		} else {
+			wp_send_json_error( array( 'message' => 'Action Scheduler not available' ) );
+		}
+
+	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] [FORCE-RUN] Exception: ' . $e->getMessage() );
+		wp_send_json_error( array( 'message' => 'Failed to force run job: ' . $e->getMessage() ) );
 	}
 }
 

@@ -397,6 +397,61 @@ function render_main_import_ui(): void {
 				</div>
 			</div>
 
+			<!-- Diagnostics Section -->
+			<div class="puntwork-card" style="margin-bottom: var(--spacing-xl);">
+				<div class="puntwork-card__header">
+					<h2 class="puntwork-card__title">Import Diagnostics</h2>
+					<p class="puntwork-card__subtitle">Run comprehensive diagnostics to troubleshoot import issues.</p>
+				</div>
+
+				<div class="puntwork-card__body">
+					<div style="display: flex; gap: var(--spacing-md); align-items: center; margin-bottom: var(--spacing-lg);">
+						<button id="run-diagnostics" class="puntwork-btn puntwork-btn--outline">
+							<i class="fas fa-stethoscope puntwork-btn__icon"></i>
+							<span id="diagnostics-text">Run Diagnostics</span>
+							<span id="diagnostics-loading" style="display: none;">Running...</span>
+						</button>
+						<span id="diagnostics-status" style="font-size: var(--font-size-sm); color: var(--color-gray-600);"></span>
+					</div>
+
+					<!-- Diagnostics Results -->
+					<div id="diagnostics-results" style="display: none;">
+						<div style="background-color: var(--color-gray-50); border-radius: var(--radius-md); padding: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
+							<h4 style="font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); margin: 0 0 var(--spacing-md) 0; color: var(--color-black);">Diagnostic Results</h4>
+							<div id="diagnostics-summary" style="margin-bottom: var(--spacing-md);">
+								<!-- Summary will be inserted here -->
+							</div>
+							<div id="diagnostics-details" style="font-family: var(--font-family-mono); font-size: var(--font-size-xs); line-height: var(--line-height-normal); max-height: 300px; overflow-y: auto; background-color: var(--color-white); border: 1px solid var(--color-gray-300); border-radius: var(--radius-sm); padding: var(--spacing-md);">
+								<!-- Detailed logs will be inserted here -->
+							</div>
+						</div>
+
+						<!-- Recommendations -->
+						<div id="diagnostics-recommendations" style="display: none;">
+							<h4 style="font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); margin: 0 0 var(--spacing-md) 0; color: var(--color-black);">Recommendations</h4>
+							<ul id="recommendations-list" style="margin: 0; padding-left: var(--spacing-lg);">
+								<!-- Recommendations will be inserted here -->
+							</ul>
+						</div>
+
+						<!-- Force Run Job Section -->
+						<div id="force-run-section" style="display: none; margin-top: var(--spacing-lg);">
+							<h4 style="font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); margin: 0 0 var(--spacing-md) 0; color: var(--color-black);">Force Run Batch Job</h4>
+							<div style="display: flex; gap: var(--spacing-md); align-items: center;">
+								<div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+									<label for="force-job-id" style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">Job ID:</label>
+									<input type="number" id="force-job-id" class="puntwork-input" placeholder="Enter job ID" style="width: 120px;">
+								</div>
+								<button id="force-run-job" class="puntwork-btn puntwork-btn--warning">
+									<i class="fas fa-play-circle puntwork-btn__icon"></i>Force Run Job
+								</button>
+								<span id="force-run-status" style="font-size: var(--font-size-sm); color: var(--color-gray-600);"></span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
 		<!-- Import Progress Section -->
 		<div id="import-progress" class="puntwork-card" style="margin-bottom: var(--spacing-xl); display: none;">
 			<div class="puntwork-card__header">
