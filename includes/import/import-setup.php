@@ -51,7 +51,7 @@ function prepare_import_setup($batch_start = 0) {
         PuntWorkLogger::info('Starting new import with start time: ' . $start_time, PuntWorkLogger::CONTEXT_BATCH);
     }
 
-    $json_path = ABSPATH . 'feeds/combined-jobs.jsonl';
+    $json_path = PUNTWORK_PATH . 'feeds/combined-jobs.jsonl';
 
     if (!file_exists($json_path)) {
         error_log('JSONL file not found: ' . $json_path);
