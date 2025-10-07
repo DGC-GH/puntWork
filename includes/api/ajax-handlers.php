@@ -243,35 +243,46 @@ function ajax_get_async_status() {
 		}
 
 		$async_enabled = get_option( 'puntwork_async_processing_enabled', false );
-		$action_scheduler_available = function_exists( 'as_schedule_single_action' ) && class_exists( 'ActionScheduler' );
+		$action_scheduler_available = function_exists( 'as_schedule_single_action' ) && class_exists( 'ActionScheduler_Store' );
 		$running_jobs = array();
 
+		error_log( '[PUNTWORK] [ASYNC-STATUS] Checking async status - enabled: ' . ($async_enabled ? 'true' : 'false') . ', available: ' . ($action_scheduler_available ? 'true' : 'false') );
+
 		// Check for running Action Scheduler jobs
-		if ( function_exists( 'as_get_scheduled_actions' ) && class_exists( '\ActionScheduler_Store' ) ) {
-			$actions = as_get_scheduled_actions( array(
-				'hook' => 'puntwork_process_batch_async',
-				'status' => \ActionScheduler_Store::STATUS_RUNNING,
-			) );
+		if ( function_exists( 'as_get_scheduled_actions' ) && class_exists( 'ActionScheduler_Store' ) ) {
+			try {
+				$actions = as_get_scheduled_actions( array(
+					'hook' => 'puntwork_process_batch_async',
+					'status' => 'running',
+				) );
 
-			foreach ( $actions as $action ) {
-				$running_jobs[] = array(
-					'id' => $action->get_id(),
-					'scheduled' => $action->get_schedule()->get_date()->getTimestamp(),
-				);
+				foreach ( $actions as $action ) {
+					$running_jobs[] = array(
+						'id' => $action->get_id(),
+						'scheduled' => $action->get_schedule()->get_date()->getTimestamp(),
+					);
+				}
+
+				// Also check for individual job processing
+				$job_actions = as_get_scheduled_actions( array(
+					'hook' => 'puntwork_process_job',
+					'status' => 'running',
+				) );
+
+				foreach ( $job_actions as $action ) {
+					$running_jobs[] = array(
+						'id' => $action->get_id(),
+						'scheduled' => $action->get_schedule()->get_date()->getTimestamp(),
+					);
+				}
+
+				error_log( '[PUNTWORK] [ASYNC-STATUS] Found ' . count( $running_jobs ) . ' running jobs' );
+			} catch ( \Exception $e ) {
+				error_log( '[PUNTWORK] [ASYNC-STATUS] Error checking Action Scheduler jobs: ' . $e->getMessage() );
+				// Continue without running jobs data
 			}
-
-			// Also check for individual job processing
-			$job_actions = as_get_scheduled_actions( array(
-				'hook' => 'puntwork_process_job',
-				'status' => \ActionScheduler_Store::STATUS_RUNNING,
-			) );
-
-			foreach ( $job_actions as $action ) {
-				$running_jobs[] = array(
-					'id' => $action->get_id(),
-					'scheduled' => $action->get_schedule()->get_date()->getTimestamp(),
-				);
-			}
+		} else {
+			error_log( '[PUNTWORK] [ASYNC-STATUS] Action Scheduler not available - functions: ' . (function_exists( 'as_get_scheduled_actions' ) ? 'yes' : 'no') . ', class: ' . (class_exists( 'ActionScheduler_Store' ) ? 'yes' : 'no') );
 		}
 
 		wp_send_json_success( array(
@@ -281,6 +292,7 @@ function ajax_get_async_status() {
 			'running_jobs' => $running_jobs,
 		) );
 	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] [ASYNC-STATUS] Exception in ajax_get_async_status: ' . $e->getMessage() );
 		wp_send_json_error( array( 'message' => 'Failed to get async status: ' . $e->getMessage() ) );
 	}
 }
@@ -616,22 +628,27 @@ function ajax_get_feed_processing_status() {
 
 		$status = array();
 
-		if ( function_exists( 'as_get_scheduled_actions' ) && class_exists( '\ActionScheduler_Store' ) ) {
-			foreach ( $feed_keys as $feed_key ) {
-				$feed_key = sanitize_text_field( (string) $feed_key );
+		if ( function_exists( 'as_get_scheduled_actions' ) && class_exists( 'ActionScheduler_Store' ) ) {
+			try {
+				foreach ( $feed_keys as $feed_key ) {
+					$feed_key = sanitize_text_field( (string) $feed_key );
 
-				$actions = as_get_scheduled_actions( array(
-					'hook' => 'puntwork_process_feed',
-					'args' => array( 'feed_key' => $feed_key ),
-					'status' => array( \ActionScheduler_Store::STATUS_PENDING, \ActionScheduler_Store::STATUS_RUNNING ),
-				) );
+					$actions = as_get_scheduled_actions( array(
+						'hook' => 'puntwork_process_feed',
+						'args' => array( 'feed_key' => $feed_key ),
+						'status' => array( 'pending', 'running' ),
+					) );
 
-				$status[ $feed_key ] = array(
-					'scheduled' => ! empty( $actions ),
-					'running' => count( array_filter( $actions, function( $action ) {
-						return $action->get_status() === \ActionScheduler_Store::STATUS_RUNNING;
-					} ) ) > 0,
-				);
+					$status[ $feed_key ] = array(
+						'scheduled' => ! empty( $actions ),
+						'running' => count( array_filter( $actions, function( $action ) {
+							return $action->get_status() === 'running';
+						} ) ) > 0,
+					);
+				}
+			} catch ( \Exception $e ) {
+				error_log( '[PUNTWORK] [FEED-STATUS] Error checking feed processing status: ' . $e->getMessage() );
+				// Return empty status on error
 			}
 		}
 
