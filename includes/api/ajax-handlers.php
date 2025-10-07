@@ -306,19 +306,19 @@ function ajax_run_scheduled_import() {
 		// For manual imports, run synchronously but with better timeout handling
 		// Set a reasonable time limit for the request
 		if ( function_exists( 'set_time_limit' ) ) {
-			set_time_limit( 300 ); // 5 minutes should be enough
+			set_time_limit( 600 ); // 10 minutes for large imports
 		}
 
 		// Increase memory limit
 		if ( function_exists( 'ini_set' ) ) {
-			ini_set( 'memory_limit', '512M' );
+			ini_set( 'memory_limit', '1024M' );
 		}
 
-		error_log( '[PUNTWORK] [AJAX] Starting manual import synchronously' );
+		error_log( '[PUNTWORK] [AJAX] Starting manual import synchronously - increased limits: time=600s, memory=1024M' );
 
 		$result = run_scheduled_import( false, 'manual' );
 
-		error_log( '[PUNTWORK] [AJAX] Manual import completed with result: ' . json_encode( $result ) );
+		error_log( '[PUNTWORK] [AJAX] Manual import completed successfully with result: ' . json_encode( $result ) );
 
 		wp_send_json_success( array(
 			'message' => 'Import completed successfully',
@@ -327,6 +327,7 @@ function ajax_run_scheduled_import() {
 		) );
 	} catch ( \Exception $e ) {
 		error_log( '[PUNTWORK] [AJAX] Manual import failed with error: ' . $e->getMessage() );
+		error_log( '[PUNTWORK] [AJAX] Error stack trace: ' . $e->getTraceAsString() );
 		wp_send_json_error( array( 'message' => 'Failed to run scheduled import: ' . $e->getMessage() ) );
 	}
 }

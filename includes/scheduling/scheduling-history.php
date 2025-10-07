@@ -157,6 +157,8 @@ function log_manual_import_run( $details ) {
  * This function is called by the cron system to execute automated imports.
  */
 function run_scheduled_import( $test_mode = false, $trigger = 'scheduled' ) {
+	error_log( '[PUNTWORK] [IMPORT] run_scheduled_import called with test_mode=' . ($test_mode ? 'true' : 'false') . ', trigger=' . $trigger );
+	
 	// Set test mode if requested
 	if ( $test_mode ) {
 		update_option( 'puntwork_test_mode', true );
@@ -176,9 +178,11 @@ function run_scheduled_import( $test_mode = false, $trigger = 'scheduled' ) {
 	) );
 
 	try {
+		error_log( '[PUNTWORK] [IMPORT] Starting import process' );
+		
 		// For manual imports, process feeds first
 		if ( $trigger === 'manual' ) {
-			error_log( '[PUNTWORK] Manual import detected - processing feeds first' );
+			error_log( '[PUNTWORK] [IMPORT] Manual import detected - processing feeds first' );
 
 			// Process feeds to create combined JSONL file
 			$feed_result = process_feeds_to_jsonl();
@@ -187,11 +191,15 @@ function run_scheduled_import( $test_mode = false, $trigger = 'scheduled' ) {
 				throw new \Exception( 'Feed processing failed: ' . $feed_result['message'] );
 			}
 
-			error_log( '[PUNTWORK] Feed processing completed for manual import' );
+			error_log( '[PUNTWORK] [IMPORT] Feed processing completed for manual import' );
 		}
 
+		error_log( '[PUNTWORK] [IMPORT] Starting job import from JSON' );
+		
 		// Run the import
 		$result = import_all_jobs_from_json();
+
+		error_log( '[PUNTWORK] [IMPORT] Job import completed with result: ' . json_encode( $result ) );
 
 		// Update the last run time
 		update_option( 'puntwork_last_import_run', time() );
@@ -211,9 +219,13 @@ function run_scheduled_import( $test_mode = false, $trigger = 'scheduled' ) {
 			), $test_mode, $trigger );
 		}
 
+		error_log( '[PUNTWORK] [IMPORT] Import process completed successfully' );
 		return $result;
 
 	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] [IMPORT] Import failed with exception: ' . $e->getMessage() );
+		error_log( '[PUNTWORK] [IMPORT] Exception stack trace: ' . $e->getTraceAsString() );
+		
 		// Log the error
 		log_scheduled_run( array(
 			'timestamp'     => time(),

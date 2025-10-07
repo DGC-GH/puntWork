@@ -312,13 +312,37 @@ function prepare_feeds_for_import(): array {
  */
 function process_feeds_to_jsonl(): array {
 	try {
+		error_log( '[PUNTWORK] [FEEDS] Starting feed processing to create combined JSONL file' );
+		
+		// Check if feeds directory exists and is writable
+		$feeds_dir = puntwork_get_feeds_directory();
+		if (!is_dir($feeds_dir)) {
+			if (!wp_mkdir_p($feeds_dir)) {
+				error_log( '[PUNTWORK] [FEEDS] Failed to create feeds directory: ' . $feeds_dir );
+				return array(
+					'success' => false,
+					'message' => 'Failed to create feeds directory: ' . $feeds_dir,
+				);
+			}
+		}
+		if (!is_writable($feeds_dir)) {
+			error_log( '[PUNTWORK] [FEEDS] Feeds directory not writable: ' . $feeds_dir );
+			return array(
+				'success' => false,
+				'message' => 'Feeds directory not writable: ' . $feeds_dir,
+			);
+		}
+		
 		// Call the existing feed processing function
 		$logs = fetch_and_generate_combined_json();
+
+		error_log( '[PUNTWORK] [FEEDS] fetch_and_generate_combined_json completed, checking for combined file' );
 
 		// Check if the combined file was created
 		$combined_file = puntwork_get_combined_jsonl_path();
 		if ( file_exists( $combined_file ) ) {
 			$total_items = get_json_item_count( $combined_file );
+			error_log( '[PUNTWORK] [FEEDS] Combined JSONL file created successfully with ' . $total_items . ' items' );
 			return array(
 				'success'     => true,
 				'message'     => 'Feeds processed successfully',
@@ -326,6 +350,7 @@ function process_feeds_to_jsonl(): array {
 				'logs'        => $logs,
 			);
 		} else {
+			error_log( '[PUNTWORK] [FEEDS] Combined JSONL file was not created' );
 			return array(
 				'success' => false,
 				'message' => 'Combined JSONL file was not created',
@@ -333,6 +358,8 @@ function process_feeds_to_jsonl(): array {
 			);
 		}
 	} catch ( \Exception $e ) {
+		error_log( '[PUNTWORK] [FEEDS] Feed processing failed with exception: ' . $e->getMessage() );
+		error_log( '[PUNTWORK] [FEEDS] Exception stack trace: ' . $e->getTraceAsString() );
 		return array(
 			'success' => false,
 			'message' => 'Feed processing failed: ' . $e->getMessage(),

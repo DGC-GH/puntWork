@@ -835,142 +835,30 @@ function fetch_and_generate_combined_json(): array {
 			error_log( '[PUNTWORK] [MEMORY] Peak memory usage so far: ' . memory_get_peak_usage( true ) / 1024 / 1024 . ' MB' );
 		}
 
-		// Download all feeds first before processing any of them
+		// Process feeds one at a time to reduce memory usage
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [DOWNLOAD-ALL] Starting download of all feeds before processing' );
+			error_log( '[PUNTWORK] [PROCESS-ONE-BY-ONE] Starting one-by-one feed processing to reduce memory usage' );
 		}
 
 		PuntWorkLogger::info(
-			'Starting download of all feeds',
+			'Starting one-by-one feed processing',
 			PuntWorkLogger::CONTEXT_FEED_PROCESSING,
 			array(
 				'feed_count' => count( $feeds ),
 			)
 		);
 
-		$downloaded_feeds = array();
 		foreach ( $feeds as $feed_key => $url ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[PUNTWORK] [DOWNLOAD-ALL] Downloading feed: ' . $feed_key );
+				error_log( '[PUNTWORK] [PROCESS-ONE-BY-ONE] Processing feed: ' . $feed_key );
 			}
 
 			PuntWorkLogger::debug(
-				'Downloading feed',
+				'Processing individual feed',
 				PuntWorkLogger::CONTEXT_FEED_PROCESSING,
 				array(
 					'feed_key' => $feed_key,
 					'feed_url' => $url,
-				)
-			);
-
-			// Force garbage collection before downloading each feed
-			if ( function_exists( 'gc_collect_cycles' ) ) {
-				gc_collect_cycles();
-			}
-
-			// Check memory usage before downloading
-			$memory_before = memory_get_usage( true );
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[PUNTWORK] [MEMORY] Memory before downloading ' . $feed_key . ': ' . round( $memory_before / 1024 / 1024, 2 ) . ' MB' );
-			}
-
-			try {
-				$feed_path = $output_dir . $feed_key . '.xml'; // Assume XML for now, will be detected properly during processing
-				$format    = null;
-
-				// Use the reliable download_feed function instead of the Symfony-based one
-				$format = null;
-				$download_success = \Puntwork\download_feed( $url, $feed_path, $output_dir, $import_logs, $format );
-
-				if ( $download_success && file_exists( $feed_path ) && filesize( $feed_path ) > 0 ) {
-					$downloaded_feeds[ $feed_key ] = array(
-						'path'   => $feed_path,
-						'url'    => $url,
-						'format' => $format ?: 'xml', // Default to xml if not detected
-						'size'   => filesize( $feed_path ),
-					);
-
-					PuntWorkLogger::info(
-						'Feed downloaded successfully',
-						PuntWorkLogger::CONTEXT_FEED_PROCESSING,
-						array(
-							'feed_key'    => $feed_key,
-							'file_size'   => filesize( $feed_path ),
-							'detected_format' => $format ?: 'xml',
-						)
-					);
-
-					// Check memory usage after downloading
-					$memory_after = memory_get_usage( true );
-					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-						error_log( '[PUNTWORK] [MEMORY] Memory after downloading ' . $feed_key . ': ' . round( $memory_after / 1024 / 1024, 2 ) . ' MB (delta: ' . round( ( $memory_after - $memory_before ) / 1024 / 1024, 2 ) . ' MB)' );
-					}
-				} else {
-					// Log download failure but continue with other feeds
-					$import_logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] Download failed for feed ' . $feed_key . ': ' . ( isset( $import_logs[ count( $import_logs ) - 1 ] ) ? end( $import_logs ) : 'Unknown error' );
-					PuntWorkLogger::error(
-						'Feed download failed',
-						PuntWorkLogger::CONTEXT_FEED_PROCESSING,
-						array(
-							'feed_key' => $feed_key,
-							'feed_url' => $url,
-						)
-					);
-
-					// Continue with next feed instead of failing completely
-					continue;
-				}
-
-			} catch ( \Exception $e ) {
-				// Log the error but continue with other feeds
-				$import_logs[] = '[' . date( 'd-M-Y H:i:s' ) . ' UTC] ERROR downloading feed ' . $feed_key . ': ' . $e->getMessage();
-				PuntWorkLogger::error(
-					'Feed download failed with exception',
-					PuntWorkLogger::CONTEXT_FEED_PROCESSING,
-					array(
-						'feed_key'      => $feed_key,
-						'error_message' => $e->getMessage(),
-						'error_file'    => $e->getFile(),
-						'error_line'    => $e->getLine(),
-					)
-				);
-
-				// Continue with next feed instead of failing completely
-				continue;
-			}
-
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				// Log memory usage after each download
-				error_log( '[PUNTWORK] [MEMORY] After downloading ' . $feed_key . ': ' . memory_get_usage( true ) / 1024 / 1024 . ' MB (peak: ' . memory_get_peak_usage( true ) / 1024 / 1024 . ' MB)' );
-			}
-		}
-
-		// Now process all successfully downloaded feeds
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[PUNTWORK] [PROCESS-ALL] Starting processing of ' . count( $downloaded_feeds ) . ' downloaded feeds' );
-		}
-
-		PuntWorkLogger::info(
-			'Starting processing of downloaded feeds',
-			PuntWorkLogger::CONTEXT_FEED_PROCESSING,
-			array(
-				'downloaded_count' => count( $downloaded_feeds ),
-				'total_feeds'      => count( $feeds ),
-			)
-		);
-
-		foreach ( $downloaded_feeds as $feed_key => $feed_info ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[PUNTWORK] [PROCESS-ALL] Processing downloaded feed: ' . $feed_key );
-			}
-
-			PuntWorkLogger::debug(
-				'Processing downloaded feed',
-				PuntWorkLogger::CONTEXT_FEED_PROCESSING,
-				array(
-					'feed_key'  => $feed_key,
-					'feed_path' => $feed_info['path'],
-					'file_size' => $feed_info['size'],
 				)
 			);
 
@@ -986,11 +874,11 @@ function fetch_and_generate_combined_json(): array {
 			}
 
 			try {
-				$count        = process_downloaded_feed( $feed_key, $feed_info['path'], $output_dir, $fallback_domain, $import_logs );
+				$count        = process_one_feed( $feed_key, $url, $output_dir, $fallback_domain, $import_logs );
 				$total_items += $count;
 
 				PuntWorkLogger::info(
-					'Downloaded feed processed',
+					'Individual feed processed',
 					PuntWorkLogger::CONTEXT_FEED_PROCESSING,
 					array(
 						'feed_key'           => $feed_key,
@@ -1003,11 +891,6 @@ function fetch_and_generate_combined_json(): array {
 				$memory_after = memory_get_usage( true );
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 					error_log( '[PUNTWORK] [MEMORY] Memory after processing ' . $feed_key . ': ' . round( $memory_after / 1024 / 1024, 2 ) . ' MB (delta: ' . round( ( $memory_after - $memory_before ) / 1024 / 1024, 2 ) . ' MB)' );
-				}
-
-				// Clean up the downloaded file immediately after processing
-				if ( file_exists( $feed_info['path'] ) ) {
-					unlink( $feed_info['path'] );
 				}
 
 			} catch ( \Exception $e ) {
@@ -1023,11 +906,6 @@ function fetch_and_generate_combined_json(): array {
 						'error_line'    => $e->getLine(),
 					)
 				);
-
-				// Clean up the downloaded file
-				if ( file_exists( $feed_info['path'] ) ) {
-					unlink( $feed_info['path'] );
-				}
 
 				// Continue with next feed instead of failing completely
 				continue;
