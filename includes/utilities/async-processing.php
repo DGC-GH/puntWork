@@ -305,6 +305,42 @@ function prepare_feeds_for_import(): array {
 }
 
 /**
+ * Process feeds and create combined JSONL file.
+ * This is the main entry point for feed processing that creates the combined JSONL file.
+ *
+ * @return array Result of feed processing
+ */
+function process_feeds_to_jsonl(): array {
+	try {
+		// Call the existing feed processing function
+		$logs = fetch_and_generate_combined_json();
+
+		// Check if the combined file was created
+		$combined_file = puntwork_get_combined_jsonl_path();
+		if ( file_exists( $combined_file ) ) {
+			$total_items = get_json_item_count( $combined_file );
+			return array(
+				'success'     => true,
+				'message'     => 'Feeds processed successfully',
+				'total_items' => $total_items,
+				'logs'        => $logs,
+			);
+		} else {
+			return array(
+				'success' => false,
+				'message' => 'Combined JSONL file was not created',
+				'logs'    => $logs,
+			);
+		}
+	} catch ( \Exception $e ) {
+		return array(
+			'success' => false,
+			'message' => 'Feed processing failed: ' . $e->getMessage(),
+		);
+	}
+}
+
+/**
  * Check status of async import jobs.
  *
  * @return array Current status of async import

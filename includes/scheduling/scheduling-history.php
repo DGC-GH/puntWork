@@ -176,6 +176,20 @@ function run_scheduled_import( $test_mode = false, $trigger = 'scheduled' ) {
 	) );
 
 	try {
+		// For manual imports, process feeds first
+		if ( $trigger === 'manual' ) {
+			error_log( '[PUNTWORK] Manual import detected - processing feeds first' );
+
+			// Process feeds to create combined JSONL file
+			$feed_result = process_feeds_to_jsonl();
+
+			if ( ! $feed_result['success'] ) {
+				throw new \Exception( 'Feed processing failed: ' . $feed_result['message'] );
+			}
+
+			error_log( '[PUNTWORK] Feed processing completed for manual import' );
+		}
+
 		// Run the import
 		$result = import_all_jobs_from_json();
 
