@@ -347,6 +347,8 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 				'utilities/AjaxErrorHandler.php',
 				'utilities/item-inference.php',
 				'utilities/handle-duplicates.php',
+				'AI/JobCategorizer.php',
+				'AI/ContentQualityScorer.php',
 			) );
 		}
 
