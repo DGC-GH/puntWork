@@ -735,15 +735,15 @@ function render_async_processing_settings() {
 		</div>
 
 		<div class="puntwork-card__body">
-			<div style="display: flex; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
-				<label class="puntwork-checkbox">
-					<input type="checkbox" id="enable-async-processing" />
-					<span class="puntwork-checkbox__checkmark"></span>
-				</label>
+			<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--spacing-lg);">
 				<div>
 					<h3 style="font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); margin: 0 0 var(--spacing-xs) 0;">Enable Async Processing</h3>
 					<p style="font-size: var(--font-size-sm); color: var(--color-gray-600); margin: 0;">Process job imports in the background using Action Scheduler for better performance.</p>
 				</div>
+				<label class="schedule-toggle">
+					<input type="checkbox" id="enable-async-processing" />
+					<span class="schedule-slider"></span>
+				</label>
 			</div>
 
 			<div style="display: flex; align-items: center; gap: var(--spacing-md);">

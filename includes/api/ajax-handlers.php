@@ -493,7 +493,7 @@ function ajax_save_async_settings() {
 			return;
 		}
 
-		$enabled = isset( $_POST['enabled'] ) && $_POST['enabled'] === 'true';
+		$enabled = isset( $_POST['enabled'] ) && filter_var( $_POST['enabled'], FILTER_VALIDATE_BOOLEAN );
 
 		update_option( 'puntwork_async_processing_enabled', $enabled );
 
