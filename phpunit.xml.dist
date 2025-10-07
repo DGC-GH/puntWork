@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <phpunit
-    bootstrap="tests/bootstrap.php"
+    bootstrap="tests/phpunit/includes/bootstrap.php"
     backupGlobals="false"
     colors="true"
     convertErrorsToExceptions="true"
@@ -23,4 +23,3 @@
         </whitelist>
     </filter>
 </phpunit>
-<parameter name="filePath">/Users/dg/Documents/GitHub/puntWork/phpunit.xml.dist
