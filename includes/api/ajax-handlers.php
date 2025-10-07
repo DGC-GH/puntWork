@@ -297,11 +297,22 @@ function ajax_run_job_import_batch() {
  */
 function ajax_run_scheduled_import() {
 	try {
+		error_log( '[PUNTWORK] [AJAX] ajax_run_scheduled_import called - REQUEST: ' . json_encode( $_REQUEST ) );
+		error_log( '[PUNTWORK] [AJAX] ajax_run_scheduled_import called - POST: ' . json_encode( $_POST ) );
+		error_log( '[PUNTWORK] [AJAX] ajax_run_scheduled_import called - SERVER: ' . json_encode( array(
+			'REQUEST_METHOD' => $_SERVER['REQUEST_METHOD'] ?? 'unknown',
+			'CONTENT_TYPE' => $_SERVER['CONTENT_TYPE'] ?? 'unknown',
+			'HTTP_X_REQUESTED_WITH' => $_SERVER['HTTP_X_REQUESTED_WITH'] ?? 'unknown',
+		) ) );
+
 		// Verify nonce
 		if ( ! check_ajax_referer( 'job_import_nonce', 'nonce', false ) ) {
+			error_log( '[PUNTWORK] [AJAX] Nonce verification failed' );
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
 			return;
 		}
+
+		error_log( '[PUNTWORK] [AJAX] Nonce verification passed' );
 
 		// For manual imports, run synchronously but with better timeout handling
 		// Set a reasonable time limit for the request

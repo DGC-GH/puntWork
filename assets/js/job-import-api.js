@@ -443,6 +443,10 @@ console.log('[PUNTWORK] job-import-api.js loaded');
                     action: 'run_scheduled_import',
                     nonce: jobImportData.nonce
                 },
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                },
                 timeout: 300000, // 5 minutes for synchronous import
                 success: function(response) {
                     console.log('[PUNTWORK] AJAX success for runScheduledImport:', response);

@@ -265,6 +265,44 @@ if ( ! function_exists( __NAMESPACE__ . '\\load_puntwork_includes' ) ) {
 			) );
 		}
 
+		// Load AJAX handlers for specific import actions even if not recognized as AJAX
+		$current_action = isset( $_REQUEST['action'] ) ? $_REQUEST['action'] : '';
+		$import_actions = array(
+			'run_scheduled_import',
+			'run_job_import_batch',
+			'reset_job_import',
+			'reset_job_import_status',
+			'get_job_import_status',
+			'get_async_status',
+			'check_import_data_status',
+			'get_import_schedule',
+			'save_import_schedule',
+			'get_import_run_history'
+		);
+
+		if ( in_array( $current_action, $import_actions ) ) {
+			// Ensure DOING_AJAX is defined for our handlers
+			if ( ! defined( 'DOING_AJAX' ) ) {
+				define( 'DOING_AJAX', true );
+			}
+			
+			if ( ! in_array( 'api/ajax-handlers.php', $includes ) ) {
+				$includes[] = 'api/ajax-handlers.php';
+			}
+			if ( ! in_array( 'scheduling/scheduling-history.php', $includes ) ) {
+				$includes[] = 'scheduling/scheduling-history.php';
+			}
+			if ( ! in_array( 'utilities/async-processing.php', $includes ) ) {
+				$includes[] = 'utilities/async-processing.php';
+			}
+			if ( ! in_array( 'core/core-structure-logic.php', $includes ) ) {
+				$includes[] = 'core/core-structure-logic.php';
+			}
+			if ( ! in_array( 'import/import-batch.php', $includes ) ) {
+				$includes[] = 'import/import-batch.php';
+			}
+		}
+
 		// Import/batch processing includes (load on AJAX, cron, or explicit import requests)
 		$current_action = isset( $_REQUEST['action'] ) ? $_REQUEST['action'] : '';
 		$is_import_request = isset( $_REQUEST['puntwork_import'] ) ||
