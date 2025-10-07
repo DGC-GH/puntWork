@@ -112,17 +112,6 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 JobImportEvents.handleClearPerformanceLogs();
             });
 
-            // Diagnostics events
-            $('#run-import-diagnostics').on('click', function(e) {
-                console.log('[PUNTWORK] Run import diagnostics button clicked!');
-                JobImportEvents.handleRunImportDiagnostics();
-            });
-
-            $('#force-run-batch-job').on('click', function(e) {
-                console.log('[PUNTWORK] Force run batch job button clicked!');
-                JobImportEvents.handleForceRunBatchJob();
-            });
-
             // Log toggle button
             // $('#toggle-log').on('click', function(e) {
             //     console.log('[PUNTWORK] Toggle log button clicked!');
@@ -1115,78 +1104,6 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             }
 
             $('#performance-metrics').html(metricsHtml);
-        },
-
-        /**
-         * Handle run import diagnostics button click
-         */
-        handleRunImportDiagnostics: function() {
-            console.log('[PUNTWORK] Run import diagnostics handler called');
-
-            $('#run-import-diagnostics').prop('disabled', true);
-            $('#diagnostics-status').text('Running diagnostics...');
-            $('#diagnostics-results').html('<div style="color: #666; font-style: italic;">Checking import system...</div>');
-
-            JobImportAPI.runImportDiagnostics().then(function(response) {
-                console.log('[PUNTWORK] Import diagnostics response:', response);
-
-                if (response.success) {
-                    JobImportEvents.displayDiagnosticsResults(response.data);
-                    $('#diagnostics-status').text('Diagnostics completed');
-                } else {
-                    $('#diagnostics-status').text('Diagnostics failed');
-                    $('#diagnostics-results').html('<div style="color: #ff3b30;">Failed to run diagnostics: ' + (response.data?.error || 'Unknown error') + '</div>');
-                }
-
-                $('#run-import-diagnostics').prop('disabled', false);
-            }).catch(function(xhr, status, error) {
-                console.log('[PUNTWORK] Import diagnostics error:', error);
-                $('#diagnostics-status').text('Diagnostics error');
-                $('#diagnostics-results').html('<div style="color: #ff3b30;">Error running diagnostics: ' + error + '</div>');
-                $('#run-import-diagnostics').prop('disabled', false);
-            });
-        },
-
-        /**
-         * Handle force run batch job button click
-         */
-        handleForceRunBatchJob: function() {
-            console.log('[PUNTWORK] Force run batch job handler called');
-
-            var jobId = $('#batch-job-id').val();
-            if (!jobId || jobId.trim() === '') {
-                alert('Please enter a valid job ID');
-                return;
-            }
-
-            if (!confirm('This will force execute the specified Action Scheduler job. This should only be used for debugging. Continue?')) {
-                return;
-            }
-
-            $('#force-run-batch-job').prop('disabled', true);
-            $('#diagnostics-status').text('Executing job ' + jobId + '...');
-
-            JobImportAPI.forceRunBatchJob(jobId).then(function(response) {
-                console.log('[PUNTWORK] Force run batch job response:', response);
-
-                if (response.success) {
-                    $('#diagnostics-status').text('Job execution completed');
-                    $('#diagnostics-results').html('<div style="color: #32d74b;">Job ' + jobId + ' executed successfully</div>');
-                    if (response.data && response.data.message) {
-                        $('#diagnostics-results').append('<div style="margin-top: 8px; color: #666;">' + response.data.message + '</div>');
-                    }
-                } else {
-                    $('#diagnostics-status').text('Job execution failed');
-                    $('#diagnostics-results').html('<div style="color: #ff3b30;">Failed to execute job ' + jobId + ': ' + (response.data?.error || 'Unknown error') + '</div>');
-                }
-
-                $('#force-run-batch-job').prop('disabled', false);
-            }).catch(function(xhr, status, error) {
-                console.log('[PUNTWORK] Force run batch job error:', error);
-                $('#diagnostics-status').text('Job execution error');
-                $('#diagnostics-results').html('<div style="color: #ff3b30;">Error executing job ' + jobId + ': ' + error + '</div>');
-                $('#force-run-batch-job').prop('disabled', false);
-            });
         },
 
         /**
