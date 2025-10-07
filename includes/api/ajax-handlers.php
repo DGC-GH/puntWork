@@ -303,13 +303,28 @@ function ajax_run_scheduled_import() {
 			return;
 		}
 
-		$result = run_scheduled_import( false, 'manual' );
+		// For manual imports, schedule asynchronously to avoid timeouts
+		if ( function_exists( 'as_schedule_single_action' ) ) {
+			$job_id = as_schedule_single_action( time(), 'puntwork_run_manual_import', array(
+				'test_mode' => false,
+				'trigger' => 'manual'
+			) );
 
-		wp_send_json_success( array(
-			'message' => 'Import started successfully',
-			'result' => $result,
-			'async' => false, // This is synchronous for now
-		) );
+			wp_send_json_success( array(
+				'message' => 'Manual import scheduled successfully',
+				'async' => true,
+				'job_id' => $job_id,
+			) );
+		} else {
+			// Fallback to synchronous execution if Action Scheduler not available
+			$result = run_scheduled_import( false, 'manual' );
+
+			wp_send_json_success( array(
+				'message' => 'Import started successfully',
+				'result' => $result,
+				'async' => false,
+			) );
+		}
 	} catch ( \Exception $e ) {
 		wp_send_json_error( array( 'message' => 'Failed to run scheduled import: ' . $e->getMessage() ) );
 	}

@@ -458,6 +458,15 @@ function add_admin_ajax_cors_headers() {
 // Add analytics async processing hook
 add_action( 'puntwork_update_analytics_async', 'process_async_analytics_update_global' );
 
+// Add manual import async processing hook
+add_action( 'puntwork_run_manual_import', __NAMESPACE__ . '\\process_manual_import_async' );
+function process_manual_import_async( $args ) {
+	$test_mode = $args['test_mode'] ?? false;
+	$trigger = $args['trigger'] ?? 'manual';
+	
+	run_scheduled_import( $test_mode, $trigger );
+}
+
 // Uninstall hook (cleanup)
 register_uninstall_hook( __FILE__, __NAMESPACE__ . '\\job_import_uninstall' );
 function job_import_uninstall() {

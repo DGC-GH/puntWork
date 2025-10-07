@@ -449,7 +449,11 @@ console.log('[PUNTWORK] job-import-api.js loaded');
                     if (!response || !response.success) {
                         console.error('[PUNTWORK] ERROR: runScheduledImport AJAX returned unsuccessful response:', response);
                     } else {
-                        console.log('[PUNTWORK] SUCCESS: Scheduled import started');
+                        if (response.data && response.data.async) {
+                            console.log('[PUNTWORK] SUCCESS: Manual import scheduled asynchronously, job ID:', response.data.job_id);
+                        } else {
+                            console.log('[PUNTWORK] SUCCESS: Scheduled import completed synchronously');
+                        }
                     }
                 },
                 error: function(xhr, status, error) {

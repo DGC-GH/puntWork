@@ -533,22 +533,30 @@ console.info("=== Job Import Logic Script Loaded ===");
 
                 // Always process feeds to update combined JSONL from feeds
                 console.log('[PUNTWORK] [DEBUG-IMPORT] ===== PHASE 1: FULL SCHEDULED IMPORT =====');
-                JobImportUI.appendLogs(['Starting full import process (feeds + combine + import)...']);
-                $('#status-message').text('Starting full import process...');
+                JobImportUI.appendLogs(['Scheduling full import process (feeds + combine + import)...']);
+                $('#status-message').text('Scheduling full import process...');
 
-                // Run the complete scheduled import process
+                // Schedule the complete import process asynchronously
                 const importStartTime = Date.now();
                 const importResponse = await JobImportAPI.runScheduledImport();
                 const importEndTime = Date.now();
-                console.log('[PUNTWORK] [DEBUG-IMPORT] Run scheduled import took:', (importEndTime - importStartTime), 'ms');
-                console.log('[PUNTWORK] [DEBUG-IMPORT] Import response:', importResponse);
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Schedule import took:', (importEndTime - importStartTime), 'ms');
+                console.log('[PUNTWORK] [DEBUG-IMPORT] Schedule response:', importResponse);
 
                 if (!importResponse.success) {
-                    console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: Scheduled import failed:', importResponse);
-                    throw new Error('Scheduled import failed: ' + (importResponse.message || 'Unknown error'));
+                    console.error('[PUNTWORK] [DEBUG-IMPORT] ERROR: Import scheduling failed:', importResponse);
+                    throw new Error('Import scheduling failed: ' + (importResponse.message || 'Unknown error'));
                 }
 
-                JobImportUI.appendLogs(['Full import process started successfully']);
+                if (importResponse.data && importResponse.data.async) {
+                    JobImportUI.appendLogs(['Import scheduled successfully (Job ID: ' + importResponse.data.job_id + ')']);
+                    JobImportUI.appendLogs(['Import will run in the background...']);
+                    $('#status-message').text('Import scheduled - running in background...');
+                } else {
+                    JobImportUI.appendLogs(['Import started synchronously']);
+                    $('#status-message').text('Import started...');
+                }
+
                 JobImportUI.appendLogs(['Monitoring import progress...']);
 
                 // Start status polling to monitor the import progress
