@@ -94,7 +94,7 @@ function register_sse_import_progress_route() {
 		array(
 			'methods'             => 'GET',
 			'callback'            => __NAMESPACE__ . '\\handle_import_progress_sse',
-			'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
+			'permission_callback' => '__return_true',
 			'args'                => array(
 				'api_key' => array(
 					'required'    => true,
@@ -126,7 +126,7 @@ function register_sse_monitoring_route() {
 		array(
 			'methods'             => 'GET',
 			'callback'            => __NAMESPACE__ . '\\handle_monitoring_sse',
-			'permission_callback' => __NAMESPACE__ . '\\verify_api_key',
+			'permission_callback' => '__return_true',
 			'args'                => array(
 				'api_key' => array(
 					'required'    => true,
@@ -156,8 +156,10 @@ function handle_import_progress_sse( $request ) {
 			header( 'Content-Type: text/event-stream' );
 			header( 'Cache-Control: no-cache' );
 			header( 'Connection: keep-alive' );
-			header( 'Access-Control-Allow-Origin: ' . get_site_url() );
+			$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : get_site_url();
+			header( 'Access-Control-Allow-Origin: ' . $origin );
 			header( 'Access-Control-Allow-Headers: Cache-Control' );
+			header( 'Access-Control-Allow-Credentials: true' );
 			if ( ob_get_level() ) {
 				ob_end_clean();
 			}
@@ -182,8 +184,10 @@ function handle_import_progress_sse( $request ) {
 			header( 'Content-Type: text/event-stream' );
 			header( 'Cache-Control: no-cache' );
 			header( 'Connection: keep-alive' );
-			header( 'Access-Control-Allow-Origin: ' . get_site_url() );
+			$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : get_site_url();
+			header( 'Access-Control-Allow-Origin: ' . $origin );
 			header( 'Access-Control-Allow-Headers: Cache-Control' );
+			header( 'Access-Control-Allow-Credentials: true' );
 			if ( ob_get_level() ) {
 				ob_end_clean();
 			}
@@ -205,8 +209,10 @@ function handle_import_progress_sse( $request ) {
 		header( 'Content-Type: text/event-stream' );
 		header( 'Cache-Control: no-cache' );
 		header( 'Connection: keep-alive' );
-		header( 'Access-Control-Allow-Origin: ' . get_site_url() );
+		$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : get_site_url();
+		header( 'Access-Control-Allow-Origin: ' . $origin );
 		header( 'Access-Control-Allow-Headers: Cache-Control' );
+		header( 'Access-Control-Allow-Credentials: true' );
 
 		// Disable output buffering
 		if ( ob_get_level() ) {
@@ -533,8 +539,10 @@ function handle_monitoring_sse( $request ) {
 			header( 'Content-Type: text/event-stream' );
 			header( 'Cache-Control: no-cache' );
 			header( 'Connection: keep-alive' );
-			header( 'Access-Control-Allow-Origin: ' . get_site_url() );
+			$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : get_site_url();
+			header( 'Access-Control-Allow-Origin: ' . $origin );
 			header( 'Access-Control-Allow-Headers: Cache-Control' );
+			header( 'Access-Control-Allow-Credentials: true' );
 			if ( ob_get_level() ) {
 				ob_end_clean();
 			}
@@ -558,8 +566,10 @@ function handle_monitoring_sse( $request ) {
 			header( 'Content-Type: text/event-stream' );
 			header( 'Cache-Control: no-cache' );
 			header( 'Connection: keep-alive' );
-			header( 'Access-Control-Allow-Origin: ' . get_site_url() );
+			$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : get_site_url();
+			header( 'Access-Control-Allow-Origin: ' . $origin );
 			header( 'Access-Control-Allow-Headers: Cache-Control' );
+			header( 'Access-Control-Allow-Credentials: true' );
 			if ( ob_get_level() ) {
 				ob_end_clean();
 			}
@@ -581,8 +591,10 @@ function handle_monitoring_sse( $request ) {
 		header( 'Content-Type: text/event-stream' );
 		header( 'Cache-Control: no-cache' );
 		header( 'Connection: keep-alive' );
-		header( 'Access-Control-Allow-Origin: ' . get_site_url() );
+		$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : get_site_url();
+		header( 'Access-Control-Allow-Origin: ' . $origin );
 		header( 'Access-Control-Allow-Headers: Cache-Control' );
+		header( 'Access-Control-Allow-Credentials: true' );
 
 		// Disable output buffering
 		if ( ob_get_level() ) {
