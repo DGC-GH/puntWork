@@ -16,56 +16,54 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Register AJAX handlers
  */
-add_action( 'init', __NAMESPACE__ . '\\register_ajax_handlers' );
-function register_ajax_handlers() {
-	error_log( '[PUNTWORK] Registering AJAX handlers' );
-	// Schedule-related handlers
-	add_action( 'wp_ajax_get_import_schedule', function() { ajax_get_import_schedule(); } );
-	add_action( 'wp_ajax_save_import_schedule', function() { ajax_save_import_schedule(); } );
-	add_action( 'wp_ajax_test_import_schedule', function() { ajax_test_import_schedule(); } );
+// Schedule-related handlers
+add_action( 'wp_ajax_get_import_schedule', __NAMESPACE__ . '\\ajax_get_import_schedule' );
+add_action( 'wp_ajax_save_import_schedule', __NAMESPACE__ . '\\ajax_save_import_schedule' );
+add_action( 'wp_ajax_test_import_schedule', __NAMESPACE__ . '\\ajax_test_import_schedule' );
 
-	// History-related handlers
-	add_action( 'wp_ajax_get_import_run_history', function() { ajax_get_import_run_history(); } );
+// History-related handlers
+add_action( 'wp_ajax_get_import_run_history', __NAMESPACE__ . '\\ajax_get_import_run_history' );
 
-	// Status-related handlers
-	add_action( 'wp_ajax_get_job_import_status', function() { ajax_get_job_import_status(); } );
-	add_action( 'wp_ajax_get_async_status', function() { ajax_get_async_status(); } );
+// Status-related handlers
+add_action( 'wp_ajax_get_job_import_status', __NAMESPACE__ . '\\ajax_get_job_import_status' );
+add_action( 'wp_ajax_get_async_status', __NAMESPACE__ . '\\ajax_get_async_status' );
 
-	// Import-related handlers
-	add_action( 'wp_ajax_run_job_import_batch', function() { ajax_run_job_import_batch(); } );
-	add_action( 'wp_ajax_run_scheduled_import', function() { ajax_run_scheduled_import(); } );
-	add_action( 'wp_ajax_cancel_job_import', function() { ajax_cancel_job_import(); } );
-	add_action( 'wp_ajax_reset_job_import', function() { ajax_reset_job_import(); } );
-	add_action( 'wp_ajax_reset_job_import_status', function() { ajax_reset_job_import_status(); } );
+// Import-related handlers
+add_action( 'wp_ajax_run_job_import_batch', __NAMESPACE__ . '\\ajax_run_job_import_batch' );
+add_action( 'wp_ajax_run_scheduled_import', __NAMESPACE__ . '\\ajax_run_scheduled_import' );
+add_action( 'wp_ajax_cancel_job_import', __NAMESPACE__ . '\\ajax_cancel_job_import' );
+add_action( 'wp_ajax_reset_job_import', __NAMESPACE__ . '\\ajax_reset_job_import' );
+add_action( 'wp_ajax_reset_job_import_status', __NAMESPACE__ . '\\ajax_reset_job_import_status' );
 
-	// API-related handlers
-	add_action( 'wp_ajax_get_api_key', function() { ajax_get_api_key(); } );
+// API-related handlers
+add_action( 'wp_ajax_get_api_key', __NAMESPACE__ . '\\ajax_get_api_key' );
 
-	// Data status handlers
-	add_action( 'wp_ajax_check_import_data_status', function() { ajax_check_import_data_status(); } );
+// Data status handlers
+add_action( 'wp_ajax_check_import_data_status', __NAMESPACE__ . '\\ajax_check_import_data_status' );
 
-	// Database optimization handlers
-	add_action( 'wp_ajax_get_db_optimization_status', function() { ajax_get_db_optimization_status(); } );
-	add_action( 'wp_ajax_create_database_indexes', function() { ajax_create_database_indexes(); } );
+// Database optimization handlers
+add_action( 'wp_ajax_get_db_optimization_status', __NAMESPACE__ . '\\ajax_get_db_optimization_status' );
+add_action( 'wp_ajax_create_database_indexes', __NAMESPACE__ . '\\ajax_create_database_indexes' );
 
-	// Async processing handlers
-	add_action( 'wp_ajax_save_async_settings', function() { ajax_save_async_settings(); } );
+// Async processing handlers
+add_action( 'wp_ajax_save_async_settings', __NAMESPACE__ . '\\ajax_save_async_settings' );
 
-	// Feed processing handlers
-	add_action( 'wp_ajax_process_feed', function() { ajax_process_feed(); } );
-	add_action( 'wp_ajax_schedule_feed_processing', function() { ajax_schedule_feed_processing(); } );
-	add_action( 'wp_ajax_get_feed_processing_status', function() { ajax_get_feed_processing_status(); } );
+// Feed processing handlers
+add_action( 'wp_ajax_process_feed', __NAMESPACE__ . '\\ajax_process_feed' );
+add_action( 'wp_ajax_schedule_feed_processing', __NAMESPACE__ . '\\ajax_schedule_feed_processing' );
+add_action( 'wp_ajax_get_feed_processing_status', __NAMESPACE__ . '\\ajax_get_feed_processing_status' );
 
-	// Cleanup handlers
-	add_action( 'wp_ajax_job_import_cleanup_duplicates', function() { ajax_cleanup_duplicates(); } );
-	add_action( 'wp_ajax_job_import_cleanup_continue', function() { ajax_cleanup_continue(); } );
+// Cleanup handlers
+add_action( 'wp_ajax_job_import_cleanup_duplicates', __NAMESPACE__ . '\\ajax_cleanup_duplicates' );
+add_action( 'wp_ajax_job_import_cleanup_continue', __NAMESPACE__ . '\\ajax_cleanup_continue' );
 
-	// Clear import cancel flag
-	add_action( 'wp_ajax_clear_import_cancel', function() { ajax_clear_import_cancel(); } );
+// Clear import cancel flag
+add_action( 'wp_ajax_clear_import_cancel', __NAMESPACE__ . '\\ajax_clear_import_cancel' );
 
-	// Disable scheduled imports
-	add_action( 'wp_ajax_disable_scheduled_imports', function() { ajax_disable_scheduled_imports(); } );
-}
+// Disable scheduled imports
+add_action( 'wp_ajax_disable_scheduled_imports', __NAMESPACE__ . '\\ajax_disable_scheduled_imports' );
+
+error_log( '[PUNTWORK] AJAX handlers registered for action: ' . ($_REQUEST['action'] ?? 'unknown') );
 
 /**
  * Get import schedule settings
