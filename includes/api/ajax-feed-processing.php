@@ -43,7 +43,7 @@ function process_feed_ajax() {
 
     PuntWorkLogger::info("Processing feed: {$feed_key}", PuntWorkLogger::CONTEXT_FEED, ['url' => $url]);
 
-    $output_dir = ABSPATH . 'feeds/';
+    $output_dir = PUNTWORK_PATH . 'feeds/';
     $fallback_domain = 'belgiumjobs.work';
     $logs = [];
 
@@ -79,7 +79,7 @@ function combine_jsonl_ajax() {
     PuntWorkLogger::info("Combining JSONL files for {$total_items} items", PuntWorkLogger::CONTEXT_FEED);
 
     $feeds = get_feeds();
-    $output_dir = ABSPATH . 'feeds/';
+    $output_dir = PUNTWORK_PATH . 'feeds/';
     $logs = [];
 
     try {

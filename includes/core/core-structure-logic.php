@@ -133,7 +133,7 @@ function fetch_and_generate_combined_json() {
     ini_set('memory_limit', '512M');
     set_time_limit(1800);
     $feeds = get_feeds();
-    $output_dir = ABSPATH . 'feeds/';
+    $output_dir = PUNTWORK_PATH . 'feeds/';
     if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
         error_log("Directory $output_dir not writable");
         throw new \Exception('Feeds directory not writable - check Hostinger permissions');
