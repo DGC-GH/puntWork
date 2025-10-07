@@ -12,10 +12,21 @@ class WordPressIntegrationTest extends WP_UnitTestCase_Base {
     public function setUp(): void {
         parent::setUp();
 
-        // Activate the plugin for testing
+        // Manually load and initialize the plugin for testing
         $plugin_file = dirname(__DIR__) . '/puntwork.php';
         if (file_exists($plugin_file)) {
-            activate_plugin(plugin_basename($plugin_file));
+            // Include the main plugin file
+            require_once $plugin_file;
+
+            // Manually trigger the setup function that loads includes
+            if (function_exists('Puntwork\\setup_job_import')) {
+                \Puntwork\setup_job_import();
+            }
+
+            // Trigger plugin activation if activation function exists
+            if (function_exists('Puntwork\\job_import_activate')) {
+                \Puntwork\job_import_activate();
+            }
         }
     }
 
@@ -132,11 +143,11 @@ class WordPressIntegrationTest extends WP_UnitTestCase_Base {
      * Test AJAX handlers are properly set up
      */
     public function test_ajax_handlers() {
-        // Test that AJAX action hooks exist
+        // Test that AJAX action hooks exist (using actual action names from the plugin)
         $ajax_actions = [
-            'wp_ajax_puntwork_import_feed',
-            'wp_ajax_puntwork_purge_data',
-            'wp_ajax_puntwork_get_import_status'
+            'wp_ajax_process_feed',
+            'wp_ajax_run_job_import_batch',
+            'wp_ajax_get_job_import_status'
         ];
 
         foreach ($ajax_actions as $action) {
@@ -160,11 +171,19 @@ class WordPressIntegrationTest extends WP_UnitTestCase_Base {
      * Test that plugin includes are loaded
      */
     public function test_plugin_includes_loaded() {
-        // Test that key functions from includes are available
+        // Test that key classes/functions from includes are available
+        $classes_to_test = [
+            'Puntwork\\PuntWorkLogger', // Logger class
+        ];
+
+        foreach ($classes_to_test as $class) {
+            $this->assertTrue(class_exists($class), "Class {$class} should be available");
+        }
+
+        // Test that key functions are available
         $functions_to_test = [
-            'puntwork_log_message', // from puntwork-logger.php
-            'puntwork_handle_duplicates', // from handle-duplicates.php
-            'puntwork_clean_item_data', // from item-cleaning.php
+            'Puntwork\\import_jobs_from_json', // from import-batch.php
+            'Puntwork\\run_job_import_batch_ajax', // from ajax-import-control.php
         ];
 
         foreach ($functions_to_test as $function) {
