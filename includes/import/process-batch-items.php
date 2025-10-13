@@ -97,23 +97,25 @@ if (!function_exists('process_batch_items')) {
                         $current_last_ts = $current_last_update ? strtotime($current_last_update) : 0;
 
                         // Skip if no update timestamp or if current version is newer/equal
-                        if ($xml_updated_ts && $current_last_ts >= $xml_updated_ts) {
-                            $skipped++;
-                            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - Not updated';
-                            $processed_count++;
-                            continue;
-                        }
+                        // Temporarily disabled to ensure full processing
+                        // if ($xml_updated_ts && $current_last_ts >= $xml_updated_ts) {
+                        //     $skipped++;
+                        //     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - Not updated';
+                        //     $processed_count++;
+                        //     continue;
+                        // }
 
                         $current_hash = $all_hashes_by_post[$post_id] ?? '';
                         $item_hash = md5(json_encode($item));
 
                         // Skip if content hasn't changed
-                        if ($current_hash === $item_hash) {
-                            $skipped++;
-                            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - No changes';
-                            $processed_count++;
-                            continue;
-                        }
+                        // Temporarily disabled to ensure full processing
+                        // if ($current_hash === $item_hash) {
+                        //     $skipped++;
+                        //     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped ID: ' . $post_id . ' GUID: ' . $guid . ' - No changes';
+                        //     $processed_count++;
+                        //     continue;
+                        // }
 
                         // Update existing post
                         $xml_title = isset($item['functiontitle']) ? $item['functiontitle'] : '';
