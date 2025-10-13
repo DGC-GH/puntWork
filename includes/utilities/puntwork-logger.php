@@ -87,7 +87,7 @@ class PuntWorkLogger {
      * @param array $data Additional data to log
      * @param bool $includeFunction Whether to include calling function context
      */
-    private static function log($message, $level, $context, $data = [], $includeFunction = true) {
+    private static function log($message, $level, $context, $data = [], $includeFunction = false) {
         // Skip debug logs in production unless WP_DEBUG is true
         if ($level === self::DEBUG && (!defined('WP_DEBUG') || !WP_DEBUG)) {
             return;
