@@ -66,6 +66,23 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 JobImportEvents.handleResetImport();
             });
 
+            // Cleanup buttons for jobs dashboard
+            $('#cleanup-trashed').on('click', function(e) {
+                console.log('[PUNTWORK] Cleanup trashed jobs button clicked!');
+                e.preventDefault();
+                JobImportEvents.handleCleanupTrashedJobs();
+            });
+            $('#cleanup-drafted').on('click', function(e) {
+                console.log('[PUNTWORK] Cleanup drafted jobs button clicked!');
+                e.preventDefault();
+                JobImportEvents.handleCleanupDraftedJobs();
+            });
+            $('#cleanup-old-published').on('click', function(e) {
+                console.log('[PUNTWORK] Cleanup old published jobs button clicked!');
+                e.preventDefault();
+                JobImportEvents.handleCleanupOldPublishedJobs();
+            });
+
             // Log toggle button
             // $('#toggle-log').on('click', function(e) {
             //     console.log('[PUNTWORK] Toggle log button clicked!');
@@ -80,19 +97,25 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
          */
         bindCleanupEvents: function() {
             console.log('[PUNTWORK] Binding cleanup events only...');
-            console.log('[PUNTWORK] Cleanup button exists:', $('#cleanup-duplicates').length);
 
-            // Check if cleanup button exists before binding
-            if ($('#cleanup-duplicates').length > 0) {
-                console.log('[PUNTWORK] Found cleanup button, binding click handler');
-                $('#cleanup-duplicates').on('click', function(e) {
-                    console.log('[PUNTWORK] Cleanup button clicked!');
-                    e.preventDefault(); // Prevent any default form submission
-                    JobImportEvents.handleCleanupDuplicates();
-                });
-            } else {
-                console.log('[PUNTWORK] Cleanup button NOT found!');
-            }
+            // Bind cleanup buttons
+            $('#cleanup-trashed').on('click', function(e) {
+                console.log('[PUNTWORK] Cleanup trashed jobs button clicked!');
+                e.preventDefault();
+                JobImportEvents.handleCleanupTrashedJobs();
+            });
+
+            $('#cleanup-drafted').on('click', function(e) {
+                console.log('[PUNTWORK] Cleanup drafted jobs button clicked!');
+                e.preventDefault();
+                JobImportEvents.handleCleanupDraftedJobs();
+            });
+
+            $('#cleanup-old-published').on('click', function(e) {
+                console.log('[PUNTWORK] Cleanup old published jobs button clicked!');
+                e.preventDefault();
+                JobImportEvents.handleCleanupOldPublishedJobs();
+            });
 
             console.log('[PUNTWORK] Cleanup events bound successfully');
         },
@@ -157,7 +180,54 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             } else {
                 console.log('[PUNTWORK] User cancelled cleanup');
             }
-        },        /**
+        },
+
+        /**
+         * Handle cleanup trashed jobs button click
+         */
+        handleCleanupTrashedJobs: function() {
+            console.log('[PUNTWORK] Cleanup trashed jobs handler called');
+
+            if (confirm('This will permanently delete all job posts that are in Trash status. This action cannot be undone. Continue?')) {
+                console.log('[PUNTWORK] User confirmed cleanup trashed jobs');
+                $('#cleanup-status').text('Removing trashed jobs...');
+                JobImportLogic.handleCleanupTrashedJobs();
+            } else {
+                console.log('[PUNTWORK] User cancelled cleanup trashed jobs');
+            }
+        },
+
+        /**
+         * Handle cleanup drafted jobs button click
+         */
+        handleCleanupDraftedJobs: function() {
+            console.log('[PUNTWORK] Cleanup drafted jobs handler called');
+
+            if (confirm('This will permanently delete all job posts that are in Draft status. This action cannot be undone. Continue?')) {
+                console.log('[PUNTWORK] User confirmed cleanup drafted jobs');
+                $('#cleanup-status').text('Removing drafted jobs...');
+                JobImportLogic.handleCleanupDraftedJobs();
+            } else {
+                console.log('[PUNTWORK] User cancelled cleanup drafted jobs');
+            }
+        },
+
+        /**
+         * Handle cleanup old published jobs button click
+         */
+        handleCleanupOldPublishedJobs: function() {
+            console.log('[PUNTWORK] Cleanup old published jobs handler called');
+
+            if (confirm('This will permanently delete all published job posts that are no longer present in current feeds. This action cannot be undone. Continue?')) {
+                console.log('[PUNTWORK] User confirmed cleanup old published jobs');
+                $('#cleanup-status').text('Removing old published jobs...');
+                JobImportLogic.handleCleanupOldPublishedJobs();
+            } else {
+                console.log('[PUNTWORK] User cancelled cleanup old published jobs');
+            }
+        },
+
+        /**
          * Process cleanup batch and continue if needed
          * @param {number} offset - Current offset for batch processing
          * @param {number} batchSize - Size of batch to process
