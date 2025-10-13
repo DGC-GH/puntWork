@@ -28,7 +28,7 @@ class TestCase extends WP_UnitTestCase {
 
         // Set up test constants if needed
         if (!defined('PUNTWORK_VERSION')) {
-            define('PUNTWORK_VERSION', '1.0.8');
+            define('PUNTWORK_VERSION', '1.0.9');
         }
         if (!defined('PUNTWORK_PATH')) {
             define('PUNTWORK_PATH', dirname(dirname(__DIR__)) . '/');
