@@ -358,6 +358,27 @@ if (!function_exists('import_all_jobs_from_json')) {
             'deleted_old_posts' => $deleted_count
         ]);
 
+        // Update status to show cleanup phase starting
+        $cleanup_status = array_merge($current_status, [
+            'total' => $total_items,
+            'processed' => $total_processed,
+            'published' => $total_published,
+            'updated' => $total_updated,
+            'skipped' => $total_skipped,
+            'duplicates_drafted' => $total_duplicates_drafted,
+            'time_elapsed' => $total_duration,
+            'complete' => false, // Not complete yet - cleanup phase starting
+            'success' => true,
+            'error_message' => '',
+            'end_time' => null,
+            'last_update' => time(),
+            'logs' => array_slice($all_logs, -50),
+            'cleanup_phase' => true, // Flag to indicate cleanup phase
+            'cleanup_total' => 0, // Will be updated during cleanup
+            'cleanup_processed' => 0,
+        ]);
+        update_option('job_import_status', $cleanup_status, false);
+
         // Clean up old job posts that are no longer in the feed
         $deleted_count = cleanup_old_job_posts($start_time);
 
@@ -377,6 +398,9 @@ if (!function_exists('import_all_jobs_from_json')) {
             'end_time' => $end_time,
             'last_update' => time(),
             'logs' => array_slice($all_logs, -50),
+            'cleanup_phase' => false, // Cleanup complete
+            'cleanup_total' => $deleted_count,
+            'cleanup_processed' => $deleted_count,
         ]);
         // When complete, ensure processed equals total
         if ($final_status['complete'] && $final_status['processed'] < $final_status['total']) {
