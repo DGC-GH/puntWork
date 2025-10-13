@@ -35,15 +35,21 @@ add_action('wp_ajax_debug_clear_import_status', function() {
     wp_die('Import status cleared - you can now try Run Now again');
 });
 
+namespace Puntwork;
+
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+require_once __DIR__ . '/../utilities/ajax-utilities.php';
+
 /**
  * Save import schedule settings via AJAX
  */
 function save_import_schedule_ajax() {
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        wp_send_json_error(['message' => 'Nonce verification failed']);
-    }
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error(['message' => 'Permission denied']);
+    if (!validate_ajax_request('save_import_schedule')) {
+        return;
     }
 
     $enabled = isset($_POST['enabled']) ? filter_var($_POST['enabled'], FILTER_VALIDATE_BOOLEAN) : false;
@@ -63,20 +69,20 @@ function save_import_schedule_ajax() {
     // Validate frequency
     $valid_frequencies = ['hourly', '3hours', '6hours', '12hours', 'daily', 'custom'];
     if (!in_array($frequency, $valid_frequencies)) {
-        wp_send_json_error(['message' => 'Invalid frequency']);
+        send_ajax_error('save_import_schedule', 'Invalid frequency');
     }
 
     // Validate time
     if ($hour < 0 || $hour > 23) {
-        wp_send_json_error(['message' => 'Hour must be between 0 and 23']);
+        send_ajax_error('save_import_schedule', 'Hour must be between 0 and 23');
     }
     if ($minute < 0 || $minute > 59) {
-        wp_send_json_error(['message' => 'Minute must be between 0 and 59']);
+        send_ajax_error('save_import_schedule', 'Minute must be between 0 and 59');
     }
 
     // Validate custom interval
     if ($frequency === 'custom' && ($interval < 1 || $interval > 168)) {
-        wp_send_json_error(['message' => 'Custom interval must be between 1 and 168 hours']);
+        send_ajax_error('save_import_schedule', 'Custom interval must be between 1 and 168 hours');
     }
 
     $schedule_data = [
@@ -103,7 +109,7 @@ function save_import_schedule_ajax() {
 
     error_log('[PUNTWORK] Save schedule AJAX response: enabled=' . ($schedule_data['enabled'] ? 'true' : 'false'));
 
-    wp_send_json_success([
+    send_ajax_success('save_import_schedule', [
         'message' => 'Schedule saved successfully',
         'schedule' => $schedule_data,
         'next_run' => get_next_scheduled_time(),
@@ -116,11 +122,8 @@ function save_import_schedule_ajax() {
  * Get current import schedule settings via AJAX
  */
 function get_import_schedule_ajax() {
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        wp_send_json_error(['message' => 'Nonce verification failed']);
-    }
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error(['message' => 'Permission denied']);
+    if (!validate_ajax_request('get_import_schedule')) {
+        return;
     }
 
     $schedule = get_option('puntwork_import_schedule', [
@@ -144,7 +147,7 @@ function get_import_schedule_ajax() {
         $last_run['formatted_date'] = wp_date('M j, Y H:i', $last_run['timestamp']);
     }
 
-    wp_send_json_success([
+    send_ajax_success('get_import_schedule', [
         'schedule' => $schedule,
         'next_run' => get_next_scheduled_time(),
         'last_run' => $last_run,
@@ -156,11 +159,8 @@ function get_import_schedule_ajax() {
  * Get import run history via AJAX
  */
 function get_import_run_history_ajax() {
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        wp_send_json_error(['message' => 'Nonce verification failed']);
-    }
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error(['message' => 'Permission denied']);
+    if (!validate_ajax_request('get_import_run_history')) {
+        return;
     }
 
     $history = get_option('puntwork_import_run_history', []);
@@ -172,7 +172,7 @@ function get_import_run_history_ajax() {
         }
     }
 
-    wp_send_json_success([
+    send_ajax_success('get_import_run_history', [
         'history' => $history,
         'count' => count($history)
     ]);
@@ -182,17 +182,14 @@ function get_import_run_history_ajax() {
  * Test import schedule via AJAX
  */
 function test_import_schedule_ajax() {
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        wp_send_json_error(['message' => 'Nonce verification failed']);
-    }
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error(['message' => 'Permission denied']);
+    if (!validate_ajax_request('test_import_schedule')) {
+        return;
     }
 
     // Run a test import
     $result = run_scheduled_import(true); // true = test mode
 
-    wp_send_json_success([
+    send_ajax_success('test_import_schedule', [
         'message' => 'Test import completed',
         'result' => $result
     ]);
@@ -203,11 +200,8 @@ function test_import_schedule_ajax() {
  * Now triggers the import asynchronously like the manual Start Import button
  */
 function run_scheduled_import_ajax() {
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        wp_send_json_error(['message' => 'Nonce verification failed']);
-    }
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error(['message' => 'Permission denied']);
+    if (!validate_ajax_request('run_scheduled_import')) {
+        return;
     }
 
     // Check if an import is already running
@@ -230,7 +224,7 @@ function run_scheduled_import_ajax() {
             delete_option('job_import_status');
             delete_transient('import_cancel');
         } else {
-            wp_send_json_error(['message' => 'An import is already running']);
+            send_ajax_error('run_scheduled_import', 'An import is already running');
             return;
         }
     }
@@ -261,7 +255,7 @@ function run_scheduled_import_ajax() {
             
             if ($result['success']) {
                 error_log('[PUNTWORK] Synchronous scheduled import completed successfully');
-                wp_send_json_success([
+                send_ajax_success('run_scheduled_import', [
                     'message' => 'Import completed successfully',
                     'result' => $result,
                     'async' => false
@@ -271,21 +265,21 @@ function run_scheduled_import_ajax() {
                 // Reset import status on failure so future attempts can start
                 delete_option('job_import_status');
                 error_log('[PUNTWORK] Reset job_import_status due to import failure');
-                wp_send_json_error(['message' => 'Import failed: ' . ($result['message'] ?? 'Unknown error')]);
+                send_ajax_error('run_scheduled_import', 'Import failed: ' . ($result['message'] ?? 'Unknown error'));
             }
             return;
         }
 
         // Return success immediately so UI can start polling
         error_log('[PUNTWORK] Scheduled import initiated asynchronously');
-        wp_send_json_success([
+        send_ajax_success('run_scheduled_import', [
             'message' => 'Import started successfully',
             'async' => true
         ]);
 
     } catch (\Exception $e) {
         error_log('[PUNTWORK] Run scheduled import AJAX error: ' . $e->getMessage());
-        wp_send_json_error(['message' => 'Failed to start import: ' . $e->getMessage()]);
+        send_ajax_error('run_scheduled_import', 'Failed to start import: ' . $e->getMessage());
     }
 }
 
