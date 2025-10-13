@@ -215,54 +215,8 @@ function run_manual_import() {
         // This includes feed fetching, JSONL combination, and then the import
         error_log('[PUNTWORK] Processing feeds for manual import');
 
-        // Get feed configuration
-        $feeds = get_option('puntwork_feeds', []);
-        if (empty($feeds)) {
-            return [
-                'success' => false,
-                'message' => 'No feeds configured for import'
-            ];
-        }
-
-        // Process each feed
-        $total_items = 0;
-        foreach ($feeds as $feed_name => $feed_config) {
-            if (empty($feed_config['url'])) {
-                continue;
-            }
-
-            error_log('[PUNTWORK] Processing feed: ' . $feed_name);
-            try {
-                $result = process_single_feed($feed_name, $feed_config);
-                if ($result['success']) {
-                    $total_items += $result['item_count'];
-                    error_log('[PUNTWORK] Feed ' . $feed_name . ' processed successfully, items: ' . $result['item_count']);
-                } else {
-                    error_log('[PUNTWORK] Feed ' . $feed_name . ' processing failed: ' . ($result['message'] ?? 'Unknown error'));
-                }
-            } catch (\Exception $e) {
-                error_log('[PUNTWORK] Feed ' . $feed_name . ' processing exception: ' . $e->getMessage());
-            }
-        }
-
-        if ($total_items === 0) {
-            return [
-                'success' => false,
-                'message' => 'No items found in configured feeds'
-            ];
-        }
-
-        // Combine JSONL files
-        error_log('[PUNTWORK] Combining JSONL files for manual import');
-        try {
-            combine_jsonl_files($total_items);
-        } catch (\Exception $e) {
-            error_log('[PUNTWORK] JSONL combination failed: ' . $e->getMessage());
-            return [
-                'success' => false,
-                'message' => 'Failed to combine feed data: ' . $e->getMessage()
-            ];
-        }
+        // Process feeds using the unified function (same as scheduled import)
+        fetch_and_generate_combined_json();
 
         // Now run the actual import
         error_log('[PUNTWORK] Starting import processing for manual import');
