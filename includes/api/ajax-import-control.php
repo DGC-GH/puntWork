@@ -719,6 +719,12 @@ function cleanup_old_published_jobs_ajax() {
     $offset = isset($_POST['offset']) ? intval($_POST['offset']) : 0;
     $is_continue = isset($_POST['is_continue']) && $_POST['is_continue'] === 'true';
 
+    PuntWorkLogger::debug('Cleanup old published jobs function called', PuntWorkLogger::CONTEXT_AJAX, [
+        'batch_size' => $batch_size,
+        'offset' => $offset,
+        'is_continue' => $is_continue
+    ]);
+
     // Initialize progress tracking for first batch
     if (!$is_continue) {
         // Check if combined-jobs.jsonl exists
@@ -760,6 +766,11 @@ function cleanup_old_published_jobs_ajax() {
             AND pm.meta_value NOT IN ({$placeholders})
         ", $current_guids));
 
+        PuntWorkLogger::info('Old published cleanup initialized', PuntWorkLogger::CONTEXT_BATCH, [
+            'current_guids_count' => count($current_guids),
+            'total_old_jobs_found' => $total_count
+        ]);
+
         update_option('job_cleanup_old_published_progress', [
             'total_processed' => 0,
             'total_deleted' => 0,
@@ -781,6 +792,13 @@ function cleanup_old_published_jobs_ajax() {
         'logs' => []
     ]);
 
+    PuntWorkLogger::debug('Retrieved old published progress data', PuntWorkLogger::CONTEXT_BATCH, [
+        'total_processed' => $progress['total_processed'],
+        'total_jobs' => $progress['total_jobs'],
+        'current_offset' => $progress['current_offset'],
+        'complete' => $progress['complete']
+    ]);
+
     $current_guids = get_option('job_cleanup_guids', []);
 
     try {
@@ -796,6 +814,14 @@ function cleanup_old_published_jobs_ajax() {
             ORDER BY p.ID
             LIMIT %d OFFSET %d
         ", array_merge($current_guids, [$batch_size, $offset])));
+
+        PuntWorkLogger::debug('Old published jobs query results', PuntWorkLogger::CONTEXT_BATCH, [
+            'current_guids_count' => count($current_guids),
+            'batch_size' => $batch_size,
+            'offset' => $offset,
+            'found_jobs_count' => count($old_published_posts),
+            'first_few_job_ids' => array_slice(array_column($old_published_posts, 'ID'), 0, 5)
+        ]);
 
         if (empty($old_published_posts)) {
             // No more jobs to process
@@ -814,11 +840,23 @@ function cleanup_old_published_jobs_ajax() {
                 'current_feed_jobs' => count($current_guids)
             ]);
 
+            PuntWorkLogger::debug('Sending completion progress update for old published jobs', PuntWorkLogger::CONTEXT_BATCH, [
+                'processed' => $progress['total_processed'],
+                'total' => $progress['total_jobs'],
+                'deleted' => $progress['total_deleted'],
+                'offset' => $progress['current_offset'],
+                'progress_percentage' => 100,
+                'complete' => true
+            ]);
+
             wp_send_json_success([
                 'message' => $message,
                 'complete' => true,
-                'total_processed' => $progress['total_processed'],
-                'total_deleted' => $progress['total_deleted'],
+                'processed' => $progress['total_processed'],
+                'deleted' => $progress['total_deleted'],
+                'total' => $progress['total_jobs'],
+                'offset' => $progress['current_offset'],
+                'progress_percentage' => 100,
                 'time_elapsed' => $progress['time_elapsed'],
                 'logs' => array_slice($progress['logs'], -50)
             ]);
@@ -855,13 +893,23 @@ function cleanup_old_published_jobs_ajax() {
         // Calculate progress percentage
         $progress_percentage = $progress['total_jobs'] > 0 ? round(($progress['total_processed'] / $progress['total_jobs']) * 100, 1) : 0;
 
+        PuntWorkLogger::debug('Sending batch progress update for old published jobs', PuntWorkLogger::CONTEXT_BATCH, [
+            'processed' => $progress['total_processed'],
+            'total' => $progress['total_jobs'],
+            'deleted' => $progress['total_deleted'],
+            'offset' => $progress['current_offset'],
+            'progress_percentage' => $progress_percentage,
+            'batch_size' => $batch_size
+        ]);
+
         wp_send_json_success([
             'message' => "Batch processed: {$progress['total_processed']}/{$progress['total_jobs']} jobs ({$progress_percentage}%), deleted {$deleted_count} old published jobs this batch",
             'complete' => false,
-            'next_offset' => $progress['current_offset'],
+            'offset' => $progress['current_offset'],
             'batch_size' => $batch_size,
-            'total_processed' => $progress['total_processed'],
-            'total_deleted' => $progress['total_deleted'],
+            'processed' => $progress['total_processed'],
+            'deleted' => $progress['total_deleted'],
+            'total' => $progress['total_jobs'],
             'progress_percentage' => $progress_percentage,
             'logs' => array_slice($logs, -20) // Return last 20 log entries for this batch
         ]);
