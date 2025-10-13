@@ -61,10 +61,8 @@ function run_scheduled_import($test_mode = false) {
             }
         }
 
-        // Run the import - don't reset status if it's already initialized for UI polling
-        $result = import_all_jobs_from_json(true); // true = preserve existing status
-
-        $end_time = microtime(true);
+    // Run the import - reset status since feed processing is complete
+    $result = import_all_jobs_from_json(false); // false = reset status for fresh import        $end_time = microtime(true);
         $duration = $end_time - $start_time;
 
         // Store last run information
@@ -220,7 +218,7 @@ function run_manual_import() {
 
         // Now run the actual import
         error_log('[PUNTWORK] Starting import processing for manual import');
-        $result = import_all_jobs_from_json(true); // true = preserve existing status
+        $result = import_all_jobs_from_json(false); // false = reset status for fresh import
 
         $end_time = microtime(true);
         $duration = $end_time - $start_time;
