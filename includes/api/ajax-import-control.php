@@ -170,11 +170,11 @@ function get_job_import_status_ajax() {
 
     $progress = Puntwork\get_import_status() ?: initialize_import_status(0, '', null);
 
-    PuntWorkLogger::debug('Retrieved import status', PuntWorkLogger::CONTEXT_BATCH, [
-        'total' => $progress['total'],
-        'processed' => $progress['processed'],
-        'complete' => $progress['complete'] ?? null
-    ]);
+    // PuntWorkLogger::debug('Retrieved import status', PuntWorkLogger::CONTEXT_BATCH, [
+    //     'total' => $progress['total'],
+    //     'processed' => $progress['processed'],
+    //     'complete' => $progress['complete'] ?? null
+    // ]);
 
     // Check for stuck or stale imports and clear them
     if (isset($progress['complete']) && !$progress['complete'] && isset($progress['total']) && $progress['total'] > 0) {
@@ -208,13 +208,13 @@ function get_job_import_status_ajax() {
         }
 
         if ($is_stuck) {
-            PuntWorkLogger::info('Detected stuck import in status check, clearing status', PuntWorkLogger::CONTEXT_BATCH, [
-                'processed' => $progress['processed'],
-                'total' => $progress['total'],
-                'time_elapsed' => $time_elapsed,
-                'time_since_last_update' => $time_since_last_update,
-                'reason' => $stuck_reason
-            ]);
+            // PuntWorkLogger::info('Detected stuck import in status check, clearing status', PuntWorkLogger::CONTEXT_BATCH, [
+            //     'processed' => $progress['processed'],
+            //     'total' => $progress['total'],
+            //     'time_elapsed' => $time_elapsed,
+            //     'time_since_last_update' => $time_since_last_update,
+            //     'reason' => $stuck_reason
+            // ]);
             delete_option('job_import_status');
             delete_option('job_import_progress');
             delete_option('job_import_processed_guids');
@@ -270,7 +270,8 @@ function get_job_import_status_ajax() {
         'last_modified' => $progress['last_modified'] ?? microtime(true)
     ];
 
-    send_ajax_success('get_job_import_status', $progress, $log_summary);
+    // send_ajax_success('get_job_import_status', $progress, $log_summary);
+    wp_send_json_success($progress);
 }
 
 add_action('wp_ajax_cleanup_trashed_jobs', __NAMESPACE__ . '\\cleanup_trashed_jobs_ajax');
