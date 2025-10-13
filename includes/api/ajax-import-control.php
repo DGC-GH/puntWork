@@ -30,96 +30,87 @@ function run_job_import_batch_ajax() {
         return;
     }
 
-    $start = intval($_POST['start']);
-    PuntWorkLogger::info("Starting batch import at index: {$start}", PuntWorkLogger::CONTEXT_BATCH);
+    // For manual imports, use the same async approach as scheduled imports
+    // This unifies the import process - both manual and scheduled use the same backend logic
 
-    // For fresh imports (start = 0), pre-initialize the status to prevent synchronization issues
-    if ($start === 0) {
-        $json_path = PUNTWORK_PATH . 'feeds/combined-jobs.jsonl';
-        if (file_exists($json_path)) {
-            // Count items quickly to set initial total
-            $total = count_jsonl_items($json_path);
+    // Check if an import is already running
+    $import_status = PuntWork\get_import_status([]);
+    if (isset($import_status['complete']) && !$import_status['complete']) {
+        // Calculate actual time elapsed
+        $time_elapsed = 0;
+        if (isset($import_status['start_time']) && $import_status['start_time'] > 0) {
+            $time_elapsed = microtime(true) - $import_status['start_time'];
+        } elseif (isset($import_status['time_elapsed'])) {
+            $time_elapsed = $import_status['time_elapsed'];
+        }
 
-            // Initialize status immediately to prevent frontend polling issues
-            $initial_status = initialize_import_status($total, 'Manual import started - preparing to process items...');
-            Puntwork\set_import_status($initial_status);
-            PuntWorkLogger::info('Pre-initialized import status for fresh import', PuntWorkLogger::CONTEXT_BATCH, [
-                'total' => $total,
-                'start_time' => $initial_status['start_time']
-            ]);
+        // Check if it's a stuck import (processed = 0 and old)
+        $is_stuck = (!isset($import_status['processed']) || $import_status['processed'] == 0) &&
+                   ($time_elapsed > 300); // 5 minutes
+
+        if ($is_stuck) {
+            error_log('[PUNTWORK] Detected stuck import (processed: ' . ($import_status['processed'] ?? 'null') . ', time_elapsed: ' . $time_elapsed . '), clearing status for new run');
+            PuntWork\delete_import_status();
+            delete_transient('import_cancel');
+        } else {
+            send_ajax_error('run_job_import_batch', 'An import is already running');
+            return;
         }
     }
 
     try {
-        $result = import_jobs_from_json(true, $start);
-    } catch (\Exception $e) {
-        PuntWorkLogger::error('Import batch processing failed', PuntWorkLogger::CONTEXT_AJAX, [
-            'start' => $start,
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        wp_send_json_error(['message' => 'Import failed: ' . $e->getMessage()]);
-        return;
-    }
+        // Initialize import status for immediate UI feedback
+        $initial_status = initialize_import_status(0, 'Manual import started - preparing feeds...');
+        PuntWork\set_import_status($initial_status);
+        error_log('[PUNTWORK] Initialized import status for manual run: ' . json_encode($initial_status));
 
-    // Check if the import result indicates failure
-    if (!$result['success']) {
-        PuntWorkLogger::error('Import batch failed with result', PuntWorkLogger::CONTEXT_AJAX, [
-            'start' => $start,
-            'message' => $result['message'] ?? 'Unknown error',
-            'logs' => $result['logs'] ?? []
-        ]);
-        wp_send_json_error(['message' => $result['message'] ?? 'Import failed: Unknown error']);
-        return;
-    }
+        // Clear any previous cancellation before starting
+        delete_transient('import_cancel');
+        error_log('[PUNTWORK] Cleared import_cancel transient for manual run');
 
-    // If import is complete, perform cleanup of old published jobs
-    if (isset($result['complete']) && $result['complete'] && isset($result['success']) && $result['success']) {
-        PuntWorkLogger::info('Manual import completed, starting automatic cleanup of old published jobs', PuntWorkLogger::CONTEXT_BATCH);
-        
-        try {
-            // Import the cleanup function
-            require_once __DIR__ . '/../import/import-finalization.php';
-            
-            $cleanup_start_time = microtime(true);
-            $cleanup_result = \Puntwork\cleanup_old_job_posts($cleanup_start_time);
-            $deleted_count = $cleanup_result['deleted_count'];
-            
-            // Add cleanup results to the response
-            $result['deleted_old_posts'] = $deleted_count;
-            $result['cleanup_completed'] = true;
-            
-            PuntWorkLogger::info('Automatic cleanup completed for manual import', PuntWorkLogger::CONTEXT_BATCH, [
-                'deleted_old_posts' => $deleted_count
-            ]);
-        } catch (\Exception $e) {
-            PuntWorkLogger::error('Automatic cleanup failed for manual import', PuntWorkLogger::CONTEXT_BATCH, [
-                'error' => $e->getMessage()
-            ]);
-            // Don't fail the import if cleanup fails
-            $result['cleanup_error'] = $e->getMessage();
+        // Schedule the import to run asynchronously (same as scheduled imports)
+        if (function_exists('as_schedule_single_action')) {
+            // Use Action Scheduler if available
+            error_log('[PUNTWORK] Scheduling async manual import using Action Scheduler');
+            as_schedule_single_action(time(), 'puntwork_manual_import_async');
+        } elseif (function_exists('wp_schedule_single_event')) {
+            // Fallback: Use WordPress cron for near-immediate execution
+            error_log('[PUNTWORK] Action Scheduler not available, using WordPress cron for manual import');
+            wp_schedule_single_event(time() + 1, 'puntwork_manual_import_async');
+        } else {
+            // Final fallback: Run synchronously (not ideal for UI but maintains functionality)
+            error_log('[PUNTWORK] No async scheduling available, running manual import synchronously');
+            $result = run_manual_import();
+
+            if ($result['success']) {
+                error_log('[PUNTWORK] Synchronous manual import completed successfully');
+                send_ajax_success('run_job_import_batch', [
+                    'message' => 'Import completed successfully',
+                    'result' => $result,
+                    'async' => false
+                ]);
+            } else {
+                error_log('[PUNTWORK] Synchronous manual import failed: ' . ($result['message'] ?? 'Unknown error'));
+                // Reset import status on failure so future attempts can start
+                PuntWork\delete_import_status();
+                error_log('[PUNTWORK] Reset job_import_status due to manual import failure');
+                send_ajax_error('run_job_import_batch', 'Import failed: ' . ($result['message'] ?? 'Unknown error'));
+            }
+            return;
         }
+
+        // Return success immediately so UI can start polling
+        error_log('[PUNTWORK] Manual import initiated asynchronously');
+        send_ajax_success('run_job_import_batch', [
+            'message' => 'Import started successfully',
+            'async' => true
+        ]);
+
+    } catch (\Exception $e) {
+        error_log('[PUNTWORK] Run manual import AJAX error: ' . $e->getMessage());
+        send_ajax_error('run_job_import_batch', 'Failed to start import: ' . $e->getMessage());
     }
-
-    // Log summary instead of full result to prevent large debug logs
-    $log_summary = [
-        'success' => isset($result['success']) && $result['success'],
-        'processed' => $result['processed'] ?? 0,
-        'total' => $result['total'] ?? 0,
-        'published' => $result['published'] ?? 0,
-        'updated' => $result['updated'] ?? 0,
-        'skipped' => $result['skipped'] ?? 0,
-        'complete' => $result['complete'] ?? false,
-        'logs_count' => isset($result['logs']) && is_array($result['logs']) ? count($result['logs']) : 0,
-        'has_error' => !empty($result['message']),
-        'deleted_old_posts' => $result['deleted_old_posts'] ?? 0,
-        'cleanup_completed' => $result['cleanup_completed'] ?? false
-    ];
-
-    send_ajax_success('run_job_import_batch', $result, $log_summary, isset($result['success']) && $result['success']);
-}
-
-add_action('wp_ajax_cancel_job_import', __NAMESPACE__ . '\\cancel_job_import_ajax');
+}add_action('wp_ajax_cancel_job_import', __NAMESPACE__ . '\\cancel_job_import_ajax');
 function cancel_job_import_ajax() {
     if (!validate_ajax_request('cancel_job_import')) {
         return;

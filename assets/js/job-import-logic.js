@@ -198,8 +198,6 @@
         handleStartImport: async function() {
             PuntWorkJSLogger.info('Start Import clicked', 'LOGIC');
             console.log('[PUNTWORK] Start Import clicked');
-            console.log('[PUNTWORK] jobImportData:', jobImportData);
-            console.log('[PUNTWORK] feeds:', jobImportData.feeds);
 
             if (this.isImporting) {
                 console.log('[PUNTWORK] Import already in progress');
@@ -216,142 +214,34 @@
             try {
                 JobImportUI.clearProgress();
                 this.startTime = Date.now(); // Record start time in milliseconds
-                JobImportUI.setPhase('feed-processing');
+                JobImportUI.setPhase('import-processing');
                 $('#start-import').hide();
                 $('#resume-import').hide();
                 $('#cancel-import').show();
                 $('#reset-import').show();
                 JobImportUI.showImportUI();
 
-                JobImportUI.appendLogs(['Starting feed processing...']);
-                $('#status-message').text('Processing feeds...');
-
-                // Reset import
-                const resetResponse = await JobImportAPI.resetImport();
-                if (resetResponse.success) {
-                    JobImportUI.appendLogs(['Import reset for fresh start']);
-                }
-
-                // Process feeds
-                const feeds = jobImportData.feeds;
-                console.log('[PUNTWORK] Processing feeds:', feeds);
-                let total_items = 0;
-                const total_feeds = Object.keys(feeds).length;
-
-                JobImportUI.appendLogs(['Processing ' + total_feeds + ' feeds...']);
-
-                // Initialize progress for feed processing phase
-                JobImportUI.updateProgress({
-                    total: total_feeds,
-                    processed: 0,
-                    published: 0,
-                    updated: 0,
-                    skipped: 0,
-                    duplicates_drafted: 0,
-                    drafted_old: 0,
-                    time_elapsed: this.getElapsedTime() / 1000, // Convert to seconds for server compatibility
-                    complete: false
-                });
-
-                for (let i = 0; i < Object.keys(feeds).length; i++) {
-                    const feed = Object.keys(feeds)[i];
-                    console.log('[PUNTWORK] Processing feed:', feed);
-
-                    // Update progress for current feed
-                    const current_feed_num = i + 1;
-                    $('#status-message').text(`Processing feed ${current_feed_num}/${total_feeds}: ${feed}`);
-                    JobImportUI.updateProgress({
-                        total: total_feeds,
-                        processed: current_feed_num - 1, // Show progress up to current feed
-                        published: 0,
-                        updated: 0,
-                        skipped: 0,
-                        duplicates_drafted: 0,
-                        drafted_old: 0,
-                        time_elapsed: this.getElapsedTime() / 1000, // Convert to seconds for server compatibility
-                        complete: false
-                    });
-
-                    const response = await JobImportAPI.processFeed(feed);
-                    PuntWorkJSLogger.debug(`Process feed ${feed} response`, 'LOGIC', response);
-
-                    if (response.success) {
-                        JobImportUI.appendLogs(response.data.logs || []);
-                        total_items += response.data.item_count;
-
-                        // Update progress after successful feed processing
-                        JobImportUI.updateProgress({
-                            total: total_feeds,
-                            processed: current_feed_num,
-                            published: 0,
-                            updated: 0,
-                            skipped: 0,
-                            duplicates_drafted: 0,
-                            drafted_old: 0,
-                            time_elapsed: this.getElapsedTime() / 1000, // Convert to seconds for server compatibility
-                            complete: false
-                        });
-                    } else {
-                        throw new Error(`Processing feed ${feed} failed: ` + (response.message || 'Unknown error'));
-                    }
-                }
-
-                console.log('[PUNTWORK] Total items after feed processing:', total_items);
-
-                if (total_items === 0) {
-                    throw new Error('No items found in feeds. Please check that feeds are configured and accessible.');
-                }
-
-                // Combine JSONL files
-                $('#status-message').text('Combining JSONL files...');
-                JobImportUI.appendLogs(['Starting JSONL combination...']);
-
-                // Show progress for JSONL combination phase
-                JobImportUI.updateProgress({
-                    total: 1,
-                    processed: 0,
-                    published: 0,
-                    updated: 0,
-                    skipped: 0,
-                    duplicates_drafted: 0,
-                    drafted_old: 0,
-                    time_elapsed: this.getElapsedTime() / 1000, // Convert to seconds for server compatibility
-                    complete: false
-                });
-
-                const combineResponse = await JobImportAPI.combineJsonl(total_items);
-                PuntWorkJSLogger.debug('Combine JSONL response', 'LOGIC', combineResponse);
-
-                if (combineResponse.success) {
-                    JobImportUI.appendLogs(combineResponse.data.logs || []);
-
-                    // Update progress to show JSONL combination complete
-                    JobImportUI.updateProgress({
-                        total: 1,
-                        processed: 1,
-                        published: 0,
-                        updated: 0,
-                        skipped: 0,
-                        duplicates_drafted: 0,
-                        drafted_old: 0,
-                        time_elapsed: this.getElapsedTime() / 1000, // Convert to seconds for server compatibility
-                        complete: false
-                    });
-                } else {
-                    throw new Error('Combining JSONL failed: ' + (combineResponse.message || 'Unknown error'));
-                }
-
-                // Start import
+                JobImportUI.appendLogs(['Starting manual import...']);
                 $('#status-message').text('Starting import...');
-                JobImportUI.appendLogs(['Starting batch import processing...']);
+
+                // Trigger the unified async import process
                 await JobImportAPI.clearImportCancel();
-                
-                // Start status polling for real-time UI updates during manual import
+
+                // Start status polling for real-time UI updates
                 if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
                     window.JobImportEvents.startStatusPolling();
                 }
-                
-                await this.handleImport(0);
+
+                // Trigger the async import using the same API as scheduled imports
+                const startResponse = await JobImportAPI.call('run_scheduled_import', { import_type: 'manual' });
+                PuntWorkJSLogger.debug('Manual import start response', 'LOGIC', startResponse);
+
+                if (!startResponse.success) {
+                    throw new Error('Failed to start import: ' + (startResponse.message || 'Unknown error'));
+                }
+
+                // The import is now running asynchronously
+                // Status polling will handle UI updates until completion
 
             } catch (error) {
                 PuntWorkJSLogger.error('Start import error', 'LOGIC', error);
@@ -359,6 +249,11 @@
                 $('#status-message').text('Error: ' + error.message);
                 JobImportUI.resetButtons();
                 this.isImporting = false; // Ensure importing flag is reset on error
+
+                // Stop status polling on error
+                if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
+                    window.JobImportEvents.stopStatusPolling();
+                }
             }
         },
 

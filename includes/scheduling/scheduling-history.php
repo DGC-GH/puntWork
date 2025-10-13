@@ -200,3 +200,140 @@ function cleanup_scheduled_imports() {
     delete_option('puntwork_last_import_details');
     delete_option('puntwork_import_run_history');
 }
+
+/**
+ * Run the manual import (unified with scheduled import)
+ */
+function run_manual_import() {
+    $start_time = microtime(true);
+
+    try {
+        // Log the manual run
+        error_log('[PUNTWORK] Manual import started');
+
+        // For manual imports, we need to do the full feed processing workflow
+        // This includes feed fetching, JSONL combination, and then the import
+        error_log('[PUNTWORK] Processing feeds for manual import');
+
+        // Get feed configuration
+        $feeds = get_option('puntwork_feeds', []);
+        if (empty($feeds)) {
+            return [
+                'success' => false,
+                'message' => 'No feeds configured for import'
+            ];
+        }
+
+        // Process each feed
+        $total_items = 0;
+        foreach ($feeds as $feed_name => $feed_config) {
+            if (empty($feed_config['url'])) {
+                continue;
+            }
+
+            error_log('[PUNTWORK] Processing feed: ' . $feed_name);
+            try {
+                $result = process_single_feed($feed_name, $feed_config);
+                if ($result['success']) {
+                    $total_items += $result['item_count'];
+                    error_log('[PUNTWORK] Feed ' . $feed_name . ' processed successfully, items: ' . $result['item_count']);
+                } else {
+                    error_log('[PUNTWORK] Feed ' . $feed_name . ' processing failed: ' . ($result['message'] ?? 'Unknown error'));
+                }
+            } catch (\Exception $e) {
+                error_log('[PUNTWORK] Feed ' . $feed_name . ' processing exception: ' . $e->getMessage());
+            }
+        }
+
+        if ($total_items === 0) {
+            return [
+                'success' => false,
+                'message' => 'No items found in configured feeds'
+            ];
+        }
+
+        // Combine JSONL files
+        error_log('[PUNTWORK] Combining JSONL files for manual import');
+        try {
+            combine_jsonl_files($total_items);
+        } catch (\Exception $e) {
+            error_log('[PUNTWORK] JSONL combination failed: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Failed to combine feed data: ' . $e->getMessage()
+            ];
+        }
+
+        // Now run the actual import
+        error_log('[PUNTWORK] Starting import processing for manual import');
+        $result = import_all_jobs_from_json(true); // true = preserve existing status
+
+        $end_time = microtime(true);
+        $duration = $end_time - $start_time;
+
+        // Store last run information as manual import
+        $last_run_data = [
+            'timestamp' => time(),
+            'duration' => $duration,
+            'test_mode' => false,
+            'result' => $result
+        ];
+
+        update_option('puntwork_last_import_run', $last_run_data);
+
+        // Store detailed run information
+        if (isset($result['success'])) {
+            $details = [
+                'success' => $result['success'],
+                'duration' => $duration,
+                'processed' => $result['processed'] ?? 0,
+                'total' => $result['total'] ?? 0,
+                'published' => $result['published'] ?? 0,
+                'updated' => $result['updated'] ?? 0,
+                'skipped' => $result['skipped'] ?? 0,
+                'error_message' => $result['message'] ?? '',
+                'timestamp' => time()
+            ];
+
+            PuntWork\set_last_import_details($details);
+
+            // Log this run to history as manual import
+            log_import_run($details, 'manual');
+        }
+
+        return $result;
+
+    } catch (\Exception $e) {
+        $end_time = microtime(true);
+        $duration = $end_time - $start_time;
+
+        $error_data = [
+            'timestamp' => time(),
+            'duration' => $duration,
+            'test_mode' => false,
+            'error' => $e->getMessage()
+        ];
+
+        update_option('puntwork_last_import_run', $error_data);
+
+        // Log failed run to history as manual import
+        log_import_run([
+            'success' => false,
+            'duration' => $duration,
+            'processed' => 0,
+            'total' => 0,
+            'published' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'error_message' => $e->getMessage(),
+            'timestamp' => time()
+        ], 'manual');
+
+        error_log('[PUNTWORK] Manual import failed: ' . $e->getMessage());
+
+        return [
+            'success' => false,
+            'message' => 'Manual import failed: ' . $e->getMessage()
+        ];
+    }
+}
