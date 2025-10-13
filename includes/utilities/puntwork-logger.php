@@ -92,13 +92,11 @@ class PuntWorkLogger {
             return;
         }
 
-        $timestamp = date('d-M-Y H:i:s T');
         $function = self::getCallingFunction();
 
-        // Format the log message
+        // Format the log message (without timestamp since error_log adds it)
         $formattedMessage = sprintf(
-            '[%s] [%s] [%s] %s',
-            $timestamp,
+            '[%s] [%s] %s',
             $level,
             $context,
             $message
@@ -119,7 +117,9 @@ class PuntWorkLogger {
 
         // Also add to admin logs if in admin context
         if (is_admin() && isset($GLOBALS['import_logs'])) {
-            $GLOBALS['import_logs'][] = $formattedMessage;
+            $timestamp = date('d-M-Y H:i:s T');
+            $adminMessage = "[{$timestamp}] {$formattedMessage}";
+            $GLOBALS['import_logs'][] = $adminMessage;
         }
     }
 
@@ -315,12 +315,14 @@ class PuntWorkLogger {
      * @param string $context Context identifier
      */
     public static function addAdminLog($message, $level = self::INFO, $context = self::CONTEXT_SYSTEM) {
-        $timestamp = date('d-M-Y H:i:s T');
-        $formattedMessage = "[{$timestamp}] [{$level}] [{$context}] {$message}";
+        // Format the log message (without timestamp since error_log adds it)
+        $formattedMessage = "[{$level}] [{$context}] {$message}";
 
-        // Add to global import logs if available
+        // Add to global import logs if available (with timestamp for admin display)
         if (isset($GLOBALS['import_logs']) && is_array($GLOBALS['import_logs'])) {
-            $GLOBALS['import_logs'][] = $formattedMessage;
+            $timestamp = date('d-M-Y H:i:s T');
+            $adminMessage = "[{$timestamp}] {$formattedMessage}";
+            $GLOBALS['import_logs'][] = $adminMessage;
         }
 
         // Also log to WordPress debug.log
