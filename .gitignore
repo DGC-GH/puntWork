@@ -13,3 +13,4 @@ wordpress/
 phpunit.xml
 wp-content/debug.log
 .vscode/sftp.json
+wp-content/
