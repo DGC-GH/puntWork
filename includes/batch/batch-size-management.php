@@ -563,15 +563,6 @@ function update_batch_metrics($time_elapsed, $processed_count, $batch_size) {
 }
 
 /**
- * Get the current batch size from WordPress options.
- *
- * @return int The current batch size, defaulting to DEFAULT_BATCH_SIZE.
- */
-function get_batch_size() {
-    return Puntwork\get_batch_size();
-}
-
-/**
  * Initialize import status with standardized structure.
  *
  * @param int $total Total number of items to process (0 for unknown/in-progress).
