@@ -357,7 +357,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
             console.log('[PUNTWORK] Starting smart status polling (initial: 2000ms)');
 
-            var startTime = Date.now(); // Track when polling started for early poll detection
+            this.startTime = Date.now(); // Track when polling started for early poll detection
 
             // Store the polling function for reuse
             this.pollStatus = function() {
@@ -402,7 +402,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
                         // Check if total is still 0 (import hasn't started)
                         // Be more tolerant in the first few polls after starting an import
-                        var pollCount = Math.floor((Date.now() - startTime) / JobImportEvents.currentPollingInterval);
+                        var pollCount = Math.floor((Date.now() - JobImportEvents.startTime) / JobImportEvents.currentPollingInterval);
                         var isEarlyPoll = pollCount < 5; // First 5 polls are more tolerant
                         
                         if (currentTotal === 0) {
@@ -580,6 +580,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 JobImportEvents.statusPollingTimeout = null;
                 console.log('[PUNTWORK] Cleared status polling timeout');
             }
+            // Clean up startTime
+            JobImportEvents.startTime = null;
         }
     };
 
