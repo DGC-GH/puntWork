@@ -15,6 +15,9 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+require_once __DIR__ . '/../utilities/ajax-utilities.php';
+require_once __DIR__ . '/../utilities/file-utilities.php';
+
 /**
  * AJAX handlers for import control operations
  * Handles batch processing, cancellation, and status retrieval
@@ -22,15 +25,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 add_action('wp_ajax_run_job_import_batch', __NAMESPACE__ . '\\run_job_import_batch_ajax');
 function run_job_import_batch_ajax() {
-    PuntWorkLogger::logAjaxRequest('run_job_import_batch', $_POST);
-
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        PuntWorkLogger::error('Nonce verification failed for run_job_import_batch', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Nonce verification failed']);
-    }
-    if (!current_user_can('manage_options')) {
-        PuntWorkLogger::error('Permission denied for run_job_import_batch', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Permission denied']);
+    if (!validate_ajax_request('run_job_import_batch')) {
+        return;
     }
 
     $start = intval($_POST['start']);
@@ -41,19 +37,7 @@ function run_job_import_batch_ajax() {
         $json_path = PUNTWORK_PATH . 'feeds/combined-jobs.jsonl';
         if (file_exists($json_path)) {
             // Count items quickly to set initial total
-            $total = 0;
-            if (($handle = fopen($json_path, "r")) !== false) {
-                while (($line = fgets($handle)) !== false) {
-                    $line = trim($line);
-                    if (!empty($line)) {
-                        $item = json_decode($line, true);
-                        if ($item !== null) {
-                            $total++;
-                        }
-                    }
-                }
-                fclose($handle);
-            }
+            $total = count_jsonl_items($json_path);
 
             // Initialize status immediately to prevent frontend polling issues
             $initial_status = initialize_import_status($total, 'Manual import started - preparing to process items...');
@@ -131,21 +115,13 @@ function run_job_import_batch_ajax() {
         'cleanup_completed' => $result['cleanup_completed'] ?? false
     ];
 
-    PuntWorkLogger::logAjaxResponse('run_job_import_batch', $log_summary, isset($result['success']) && $result['success']);
-    wp_send_json_success($result);
+    send_ajax_success('run_job_import_batch', $result, $log_summary, isset($result['success']) && $result['success']);
 }
 
 add_action('wp_ajax_cancel_job_import', __NAMESPACE__ . '\\cancel_job_import_ajax');
 function cancel_job_import_ajax() {
-    PuntWorkLogger::logAjaxRequest('cancel_job_import', $_POST);
-
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        PuntWorkLogger::error('Nonce verification failed for cancel_job_import', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Nonce verification failed']);
-    }
-    if (!current_user_can('manage_options')) {
-        PuntWorkLogger::error('Permission denied for cancel_job_import', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Permission denied']);
+    if (!validate_ajax_request('cancel_job_import')) {
+        return;
     }
 
     set_transient('import_cancel', true, 3600);
@@ -154,41 +130,25 @@ function cancel_job_import_ajax() {
     delete_option('job_import_batch_size');
     PuntWorkLogger::info('Import cancelled and status cleared', PuntWorkLogger::CONTEXT_BATCH);
 
-    PuntWorkLogger::logAjaxResponse('cancel_job_import', ['message' => 'Import cancelled']);
-    wp_send_json_success();
+    send_ajax_success('cancel_job_import', []);
 }
 
 add_action('wp_ajax_clear_import_cancel', __NAMESPACE__ . '\\clear_import_cancel_ajax');
 function clear_import_cancel_ajax() {
-    PuntWorkLogger::logAjaxRequest('clear_import_cancel', $_POST);
-
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        PuntWorkLogger::error('Nonce verification failed for clear_import_cancel', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Nonce verification failed']);
-    }
-    if (!current_user_can('manage_options')) {
-        PuntWorkLogger::error('Permission denied for clear_import_cancel', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Permission denied']);
+    if (!validate_ajax_request('clear_import_cancel')) {
+        return;
     }
 
     delete_transient('import_cancel');
     PuntWorkLogger::info('Import cancellation flag cleared', PuntWorkLogger::CONTEXT_BATCH);
 
-    PuntWorkLogger::logAjaxResponse('clear_import_cancel', ['message' => 'Cancellation cleared']);
-    wp_send_json_success();
+    send_ajax_success('clear_import_cancel', []);
 }
 
 add_action('wp_ajax_reset_job_import', __NAMESPACE__ . '\\reset_job_import_ajax');
 function reset_job_import_ajax() {
-    PuntWorkLogger::logAjaxRequest('reset_job_import', $_POST);
-
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        PuntWorkLogger::error('Nonce verification failed for reset_job_import', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Nonce verification failed']);
-    }
-    if (!current_user_can('manage_options')) {
-        PuntWorkLogger::error('Permission denied for reset_job_import', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Permission denied']);
+    if (!validate_ajax_request('reset_job_import')) {
+        return;
     }
 
     // Clear all import-related data
@@ -204,21 +164,13 @@ function reset_job_import_ajax() {
 
     PuntWorkLogger::info('Import system completely reset', PuntWorkLogger::CONTEXT_BATCH);
 
-    PuntWorkLogger::logAjaxResponse('reset_job_import', ['message' => 'Import system reset']);
-    wp_send_json_success();
+    send_ajax_success('reset_job_import', []);
 }
 
 add_action('wp_ajax_get_job_import_status', __NAMESPACE__ . '\\get_job_import_status_ajax');
 function get_job_import_status_ajax() {
-    PuntWorkLogger::logAjaxRequest('get_job_import_status', $_POST);
-
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        PuntWorkLogger::error('Nonce verification failed for get_job_import_status', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Nonce verification failed']);
-    }
-    if (!current_user_can('manage_options')) {
-        PuntWorkLogger::error('Permission denied for get_job_import_status', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Permission denied']);
+    if (!validate_ajax_request('get_job_import_status')) {
+        return;
     }
 
     $progress = get_option('job_import_status') ?: initialize_import_status(0, '', null);
@@ -323,21 +275,13 @@ function get_job_import_status_ajax() {
         'last_modified' => $progress['last_modified'] ?? microtime(true)
     ];
 
-    PuntWorkLogger::logAjaxResponse('get_job_import_status', $log_summary);
-    wp_send_json_success($progress);
+    send_ajax_success('get_job_import_status', $progress, $log_summary);
 }
 
 add_action('wp_ajax_cleanup_trashed_jobs', __NAMESPACE__ . '\\cleanup_trashed_jobs_ajax');
 function cleanup_trashed_jobs_ajax() {
-    PuntWorkLogger::logAjaxRequest('cleanup_trashed_jobs', $_POST);
-
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        PuntWorkLogger::error('Nonce verification failed for cleanup_trashed_jobs', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Nonce verification failed']);
-    }
-    if (!current_user_can('manage_options')) {
-        PuntWorkLogger::error('Permission denied for cleanup_trashed_jobs', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Permission denied']);
+    if (!validate_ajax_request('cleanup_trashed_jobs')) {
+        return;
     }
 
     global $wpdb;
@@ -461,15 +405,8 @@ function cleanup_trashed_jobs_ajax() {
 
 add_action('wp_ajax_cleanup_drafted_jobs', __NAMESPACE__ . '\\cleanup_drafted_jobs_ajax');
 function cleanup_drafted_jobs_ajax() {
-    PuntWorkLogger::logAjaxRequest('cleanup_drafted_jobs', $_POST);
-
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        PuntWorkLogger::error('Nonce verification failed for cleanup_drafted_jobs', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Nonce verification failed']);
-    }
-    if (!current_user_can('manage_options')) {
-        PuntWorkLogger::error('Permission denied for cleanup_drafted_jobs', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Permission denied']);
+    if (!validate_ajax_request('cleanup_drafted_jobs')) {
+        return;
     }
 
     global $wpdb;
@@ -705,15 +642,8 @@ function cleanup_drafted_jobs_ajax() {
 
 add_action('wp_ajax_cleanup_old_published_jobs', __NAMESPACE__ . '\\cleanup_old_published_jobs_ajax');
 function cleanup_old_published_jobs_ajax() {
-    PuntWorkLogger::logAjaxRequest('cleanup_old_published_jobs', $_POST);
-
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        PuntWorkLogger::error('Nonce verification failed for cleanup_old_published_jobs', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Nonce verification failed']);
-    }
-    if (!current_user_can('manage_options')) {
-        PuntWorkLogger::error('Permission denied for cleanup_old_published_jobs', PuntWorkLogger::CONTEXT_AJAX);
-        wp_send_json_error(['message' => 'Permission denied']);
+    if (!validate_ajax_request('cleanup_old_published_jobs')) {
+        return;
     }
 
     global $wpdb;

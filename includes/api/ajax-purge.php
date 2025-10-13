@@ -14,6 +14,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+require_once __DIR__ . '/../utilities/ajax-utilities.php';
+
 /**
  * AJAX handlers for purge operations
  * Handles cleanup of old/unprocessed job posts
@@ -21,14 +23,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 add_action('wp_ajax_job_import_purge', __NAMESPACE__ . '\\job_import_purge_ajax');
 function job_import_purge_ajax() {
-    error_log('job_import_purge_ajax called');
-    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
-        error_log('Nonce verification failed for job_import_purge');
-        wp_send_json_error(['message' => 'Nonce verification failed']);
-    }
-    if (!current_user_can('manage_options')) {
-        error_log('Permission denied for job_import_purge');
-        wp_send_json_error(['message' => 'Permission denied']);
+    if (!validate_ajax_request('job_import_purge')) {
+        return;
     }
     global $wpdb;
 
