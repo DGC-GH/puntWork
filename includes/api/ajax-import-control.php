@@ -116,7 +116,8 @@ function run_job_import_batch_ajax() {
             require_once __DIR__ . '/../import/import-finalization.php';
             
             $cleanup_start_time = microtime(true);
-            $deleted_count = \Puntwork\cleanup_old_job_posts($cleanup_start_time);
+            $cleanup_result = \Puntwork\cleanup_old_job_posts($cleanup_start_time);
+            $deleted_count = $cleanup_result['deleted_count'];
             
             // Add cleanup results to the response
             $result['deleted_old_posts'] = $deleted_count;

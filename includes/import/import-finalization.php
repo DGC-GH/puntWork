@@ -136,14 +136,18 @@ function cleanup_import_data() {
  * Clean up old job posts that are no longer in the feed.
  *
  * @param float $import_start_time The timestamp when the import started.
- * @return int Number of posts deleted.
+ * @return array Array with deleted_count and logs.
  */
 function cleanup_old_job_posts($import_start_time) {
     global $wpdb;
 
+    $logs = []; // Initialize logs array
+
     PuntWorkLogger::info('Starting cleanup of old job posts based on current feed GUIDs', PuntWorkLogger::CONTEXT_BATCH, [
         'import_start_time' => date('Y-m-d H:i:s', $import_start_time)
     ]);
+
+    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Starting cleanup of old job posts';
 
     // Get all current GUIDs from the combined JSONL file
     $json_path = PUNTWORK_PATH . 'feeds/combined-jobs.jsonl';
@@ -166,12 +170,18 @@ function cleanup_old_job_posts($import_start_time) {
 
     if (empty($current_guids)) {
         PuntWorkLogger::warning('No current GUIDs found in feed file - skipping cleanup', PuntWorkLogger::CONTEXT_BATCH);
-        return 0;
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] No current GUIDs found in feed file - skipping cleanup';
+        return [
+            'deleted_count' => 0,
+            'logs' => $logs
+        ];
     }
 
     PuntWorkLogger::info('Found current GUIDs in feed', PuntWorkLogger::CONTEXT_BATCH, [
         'guid_count' => count($current_guids)
     ]);
+
+    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Found ' . count($current_guids) . ' current GUIDs in feed';
 
     // Get total count of old posts to be deleted for progress tracking
     $total_old_posts = 0;
@@ -195,6 +205,8 @@ function cleanup_old_job_posts($import_start_time) {
     PuntWorkLogger::info('Total old job posts to clean up', PuntWorkLogger::CONTEXT_BATCH, [
         'total_old_posts' => $total_old_posts
     ]);
+
+    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Found ' . $total_old_posts . ' old published job posts to clean up';
 
     // Update status to show cleanup progress starting
     $cleanup_start_status = get_option('job_import_status', []);
@@ -283,6 +295,8 @@ function cleanup_old_job_posts($import_start_time) {
         'current_feed_jobs' => count($current_guids),
         'chunks_processed' => count($guid_chunks)
     ]);
+
+    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Cleanup completed: ' . $total_deleted . ' old published jobs deleted';
 
     return [
         'deleted_count' => $total_deleted,
