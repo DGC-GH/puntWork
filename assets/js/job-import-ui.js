@@ -267,18 +267,52 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 // Job importing phase: 0-100% for this phase only
                 if (total > 0) {
                     if ((processed >= total && data.success === true) || data.complete === true) {
-                        percent = 100;
-                        this.setPhase('complete');
-                        this.importSuccess = true; // Set success when import completes
-                        PuntWorkJSLogger.debug('Import completed successfully', 'UI');
-                        // Force a final progress update to show completion
-                        this.updateProgress(data);
+                        // Check if cleanup phase is needed
+                        if (data.cleanup_phase === true) {
+                            this.setPhase('cleanup');
+                            PuntWorkJSLogger.debug('Transitioned to cleanup phase', 'UI');
+                            // Force a progress update to reflect the phase change
+                            this.updateProgress(data);
+                        } else {
+                            percent = 100;
+                            this.setPhase('complete');
+                            this.importSuccess = true; // Set success when import completes
+                            PuntWorkJSLogger.debug('Import completed successfully', 'UI');
+                            // Force a final progress update to show completion
+                            this.updateProgress(data);
+                        }
                     } else {
                         phaseProgress = processed / total;
                         percent = Math.round(phaseProgress * 100);
                     }
                 } else {
                     percent = 0; // Start from 0 for importing phase
+                }
+            } else if (this.currentPhase === 'cleanup') {
+                // Cleanup phase: show cleanup progress
+                var cleanupTotal = data.cleanup_total || 0;
+                var cleanupProcessed = data.cleanup_processed || 0;
+
+                if (cleanupTotal > 0) {
+                    phaseProgress = cleanupProcessed / cleanupTotal;
+                    percent = Math.round(phaseProgress * 100);
+
+                    // Transition to complete when cleanup is done
+                    if (cleanupProcessed >= cleanupTotal) {
+                        percent = 100;
+                        this.setPhase('complete');
+                        this.importSuccess = true;
+                        PuntWorkJSLogger.debug('Cleanup completed, import fully complete', 'UI');
+                        // Force a final progress update to show completion
+                        this.updateProgress(data);
+                    }
+                } else {
+                    // No cleanup needed, go directly to complete
+                    percent = 100;
+                    this.setPhase('complete');
+                    this.importSuccess = true;
+                    PuntWorkJSLogger.debug('No cleanup needed, import complete', 'UI');
+                    this.updateProgress(data);
                 }
             } else if (this.currentPhase === 'complete') {
                 // Ensure we show 100% when complete
@@ -391,6 +425,10 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 // Update status message based on completion
                 if (this.importSuccess === false) {
                     $('#status-message').text('Import Failed: ' + (this.errorMessage || 'Unknown error'));
+                } else if (this.currentPhase === 'cleanup') {
+                    var cleanupTotal = data.cleanup_total || 0;
+                    var cleanupProcessed = data.cleanup_processed || 0;
+                    $('#status-message').text(`Cleaning up old jobs... (${cleanupProcessed}/${cleanupTotal})`);
                 } else if ((processed >= total && total > 0 && data.success === true) || data.complete === true) {
                     $('#status-message').text('Import Complete - 100%');
                 } else {
@@ -496,6 +534,11 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
 
             if (this.currentPhase === 'jsonl-combining') {
                 $('#time-left').text('Combining files...');
+                return;
+            }
+
+            if (this.currentPhase === 'cleanup') {
+                $('#time-left').text('Cleaning up...');
                 return;
             }
 

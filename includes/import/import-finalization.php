@@ -173,11 +173,37 @@ function cleanup_old_job_posts($import_start_time) {
         'guid_count' => count($current_guids)
     ]);
 
-    // Process GUIDs in chunks to avoid long IN clauses
+    // Get total count of old posts to be deleted for progress tracking
+    $total_old_posts = 0;
     $chunk_size = 500; // Process in chunks of 500 GUIDs
-    $total_deleted = 0;
-
     $guid_chunks = array_chunk($current_guids, $chunk_size);
+
+    // First pass: count total old posts
+    foreach ($guid_chunks as $chunk_index => $guid_chunk) {
+        $placeholders = implode(',', array_fill(0, count($guid_chunk), '%s'));
+        $chunk_count = $wpdb->get_var($wpdb->prepare("
+            SELECT COUNT(*)
+            FROM {$wpdb->posts} p
+            JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
+            WHERE p.post_type = 'job'
+            AND p.post_status = 'publish'
+            AND pm.meta_value NOT IN ({$placeholders})
+        ", $guid_chunk));
+        $total_old_posts += $chunk_count;
+    }
+
+    PuntWorkLogger::info('Total old job posts to clean up', PuntWorkLogger::CONTEXT_BATCH, [
+        'total_old_posts' => $total_old_posts
+    ]);
+
+    // Update status to show cleanup progress starting
+    $cleanup_start_status = get_option('job_import_status', []);
+    $cleanup_start_status['cleanup_total'] = $total_old_posts;
+    $cleanup_start_status['cleanup_processed'] = 0;
+    $cleanup_start_status['last_update'] = time();
+    update_option('job_import_status', $cleanup_start_status, false);
+
+    $total_deleted = 0;
 
     foreach ($guid_chunks as $chunk_index => $guid_chunk) {
         PuntWorkLogger::debug('Processing GUID chunk', PuntWorkLogger::CONTEXT_BATCH, [
@@ -212,11 +238,21 @@ function cleanup_old_job_posts($import_start_time) {
             $result = wp_delete_post($post->ID, true); // true = force delete, skip trash
             if ($result) {
                 $total_deleted++;
+
+                // Update cleanup progress every 10 deletions
+                if ($total_deleted % 10 === 0) {
+                    $cleanup_progress_status = get_option('job_import_status', []);
+                    $cleanup_progress_status['cleanup_processed'] = $total_deleted;
+                    $cleanup_progress_status['last_update'] = time();
+                    update_option('job_import_status', $cleanup_progress_status, false);
+                }
+
                 PuntWorkLogger::debug('Deleted old published job post', PuntWorkLogger::CONTEXT_BATCH, [
                     'post_id' => $post->ID,
                     'title' => $post->post_title,
                     'guid' => $post->guid,
-                    'chunk' => $chunk_index + 1
+                    'chunk' => $chunk_index + 1,
+                    'progress' => $total_deleted . '/' . $total_old_posts
                 ]);
             } else {
                 PuntWorkLogger::error('Failed to delete old published job post', PuntWorkLogger::CONTEXT_BATCH, [
@@ -234,6 +270,12 @@ function cleanup_old_job_posts($import_start_time) {
             }
         }
     }
+
+    // Final cleanup status update
+    $final_cleanup_status = get_option('job_import_status', []);
+    $final_cleanup_status['cleanup_processed'] = $total_deleted;
+    $final_cleanup_status['last_update'] = time();
+    update_option('job_import_status', $final_cleanup_status, false);
 
     PuntWorkLogger::info('Cleanup of old published job posts completed', PuntWorkLogger::CONTEXT_BATCH, [
         'deleted_count' => $total_deleted,
