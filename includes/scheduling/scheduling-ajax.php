@@ -28,7 +28,7 @@ add_action('wp_ajax_debug_clear_import_status', function() {
         wp_die('Permission denied');
     }
 
-    delete_option('job_import_status');
+    PuntWork\delete_import_status();
     delete_transient('import_cancel');
     error_log('[PUNTWORK] === DEBUG: Cleared import status and cancel transient ===');
 
@@ -43,6 +43,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 require_once __DIR__ . '/../utilities/ajax-utilities.php';
+require_once __DIR__ . '/../utilities/options-utilities.php';
 
 /**
  * Save import schedule settings via AJAX
@@ -104,8 +105,8 @@ function save_import_schedule_ajax() {
     // Update WordPress cron
     update_cron_schedule($schedule_data);
 
-    $last_run = get_option('puntwork_last_import_run', null);
-    $last_run_details = get_option('puntwork_last_import_details', null);
+    $last_run = PuntWork\get_last_import_run(null);
+    $last_run_details = PuntWork\get_last_import_details(null);
 
     error_log('[PUNTWORK] Save schedule AJAX response: enabled=' . ($schedule_data['enabled'] ? 'true' : 'false'));
 
@@ -138,8 +139,8 @@ function get_import_schedule_ajax() {
 
     error_log('[PUNTWORK] Get schedule AJAX loaded: enabled=' . ($schedule['enabled'] ? 'true' : 'false'));
 
-    $last_run = get_option('puntwork_last_import_run', null);
-    $last_run_details = get_option('puntwork_last_import_details', null);
+    $last_run = PuntWork\get_last_import_run(null);
+    $last_run_details = PuntWork\get_last_import_details(null);
 
     // Add formatted date to last run if it exists
     if ($last_run && isset($last_run['timestamp'])) {
@@ -163,7 +164,7 @@ function get_import_run_history_ajax() {
         return;
     }
 
-    $history = get_option('puntwork_import_run_history', []);
+    $history = PuntWork\get_import_run_history([]);
 
     // Format dates for history entries - timestamps are stored in UTC
     foreach ($history as &$entry) {
@@ -205,7 +206,7 @@ function run_scheduled_import_ajax() {
     }
 
     // Check if an import is already running
-    $import_status = get_option('job_import_status', []);
+    $import_status = PuntWork\get_import_status([]);
     if (isset($import_status['complete']) && !$import_status['complete']) {
         // Calculate actual time elapsed
         $time_elapsed = 0;
@@ -221,7 +222,7 @@ function run_scheduled_import_ajax() {
         
         if ($is_stuck) {
             error_log('[PUNTWORK] Detected stuck import (processed: ' . ($import_status['processed'] ?? 'null') . ', time_elapsed: ' . $time_elapsed . '), clearing status for new run');
-            delete_option('job_import_status');
+            PuntWork\delete_import_status();
             delete_transient('import_cancel');
         } else {
             send_ajax_error('run_scheduled_import', 'An import is already running');
@@ -232,7 +233,7 @@ function run_scheduled_import_ajax() {
     try {
         // Initialize import status for immediate UI feedback
         $initial_status = initialize_import_status(0, 'Scheduled import started - preparing feeds...');
-        update_option('job_import_status', $initial_status, false);
+        PuntWork\set_import_status($initial_status);
         error_log('[PUNTWORK] Initialized import status for scheduled run: ' . json_encode($initial_status));
 
         // Clear any previous cancellation before starting
@@ -263,7 +264,7 @@ function run_scheduled_import_ajax() {
             } else {
                 error_log('[PUNTWORK] Synchronous scheduled import failed: ' . ($result['message'] ?? 'Unknown error'));
                 // Reset import status on failure so future attempts can start
-                delete_option('job_import_status');
+                PuntWork\delete_import_status();
                 error_log('[PUNTWORK] Reset job_import_status due to import failure');
                 send_ajax_error('run_scheduled_import', 'Import failed: ' . ($result['message'] ?? 'Unknown error'));
             }
@@ -310,7 +311,7 @@ function run_scheduled_import_async() {
     error_log('[PUNTWORK] Cleared import_cancel transient');
 
     // Check if an import is already running
-    $import_status = get_option('job_import_status', []);
+    $import_status = PuntWork\get_import_status([]);
     error_log('[PUNTWORK] Current import status at async start: ' . json_encode($import_status));
 
     // Check for stuck imports (similar to AJAX handler logic)
@@ -333,7 +334,7 @@ function run_scheduled_import_async() {
         
         if ($is_stuck) {
             error_log('[PUNTWORK] Detected stuck import in async function (processed: ' . ($import_status['processed'] ?? 'null') . ', time_elapsed: ' . $time_elapsed . '), clearing status for new run');
-            delete_option('job_import_status');
+            PuntWork\delete_import_status();
             delete_transient('import_cancel');
             $import_status = []; // Reset for fresh start
         } elseif (isset($import_status['processed']) && $import_status['processed'] > 0) {
@@ -358,14 +359,14 @@ function run_scheduled_import_async() {
         } else {
             error_log('[PUNTWORK] Async scheduled import failed: ' . ($result['message'] ?? 'Unknown error'));
             // Reset import status on failure so future attempts can start
-            delete_option('job_import_status');
+            PuntWork\delete_import_status();
             error_log('[PUNTWORK] Reset job_import_status due to import failure');
         }
     } catch (\Exception $e) {
         error_log('[PUNTWORK] Async scheduled import exception: ' . $e->getMessage());
         error_log('[PUNTWORK] Exception trace: ' . $e->getTraceAsString());
         // Reset import status on exception so future attempts can start
-        delete_option('job_import_status');
+        PuntWork\delete_import_status();
         error_log('[PUNTWORK] Reset job_import_status due to import exception');
     }
 
@@ -380,7 +381,7 @@ function run_manual_import_cron() {
     error_log('[PUNTWORK] Manual import cron started');
 
     // Check if an import is already running
-    $import_status = get_option('job_import_status', []);
+    $import_status = PuntWork\get_import_status([]);
     if (isset($import_status['complete']) && $import_status['complete'] === false && 
         isset($import_status['processed']) && $import_status['processed'] > 0) {
         error_log('[PUNTWORK] Manual import cron skipped - import already running and has processed items');

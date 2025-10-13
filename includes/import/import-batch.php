@@ -14,6 +14,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+require_once __DIR__ . '/../utilities/options-utilities.php';
+
 /**
  * Main import batch processing file
  * Includes all import-related modules and provides the main import function
@@ -41,7 +43,7 @@ require_once __DIR__ . '/../utilities/puntwork-logger.php';
  * @return bool True if time limit exceeded
  */
 function import_time_exceeded() {
-    $start_time = get_option('job_import_start_time', microtime(true));
+    $start_time = PuntWork\get_import_start_time(microtime(true));
     $time_limit = apply_filters('puntwork_import_time_limit', 600); // 600 seconds (10 minutes) default - increased for better performance with large feeds
     $current_time = microtime(true);
 
@@ -135,38 +137,38 @@ if (!function_exists('import_all_jobs_from_json')) {
         // Only reset status if not preserving existing status
         if (!$preserve_status) {
             // Reset import progress for fresh start
-            update_option('job_import_progress', 0, false);
-            update_option('job_import_processed_guids', [], false);
-            delete_option('job_import_status');
+            PuntWork\set_import_progress(0);
+            PuntWork\set_processed_guids([]);
+            PuntWork\delete_import_status();
         }
 
         // Initialize import status for UI tracking (only if not preserving)
         $initial_status = [];
         if (!$preserve_status) {
             $initial_status = initialize_import_status(0, 'Scheduled import started - preparing feeds...', $start_time);
-            update_option('job_import_status', $initial_status, false);
+            PuntWork\set_import_status($initial_status);
         } else {
             // Update existing status to indicate import is resuming (don't reset start_time to preserve elapsed time)
-            $existing_status = get_option('job_import_status', []);
+            $existing_status = PuntWork\get_import_status([]);
             $existing_status['logs'][] = 'Scheduled import resumed - processing batches...';
             // Note: start_time is preserved from original import start
-            update_option('job_import_status', $existing_status, false);
+            PuntWork\set_import_status($existing_status);
             $initial_status = $existing_status; // Use existing status as initial_status for later updates
         }
 
         // Store import start time for timeout checking
-        update_option('job_import_start_time', $start_time, false);
+        PuntWork\set_import_start_time($start_time);
 
         while (true) {
             // Check if we should continue processing (time/memory limits)
             if (!should_continue_batch_processing()) {
                 // Pause processing and schedule continuation
-                $current_status = get_option('job_import_status', []);
+                $current_status = PuntWork\get_import_status([]);
                 $current_status['paused'] = true;
                 $current_status['pause_reason'] = 'time_limit_exceeded';
                 $current_status['last_update'] = time();
                 $current_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Import paused due to time/memory limits - will continue automatically';
-                update_option('job_import_status', $current_status, false);
+                PuntWork\set_import_status($current_status);
 
                 // Schedule continuation via WordPress cron (runs in background)
                 if (!wp_next_scheduled('puntwork_continue_import')) {
@@ -189,7 +191,7 @@ if (!function_exists('import_all_jobs_from_json')) {
                 ];
             }
 
-            $batch_start = (int) get_option('job_import_progress', 0);
+            $batch_start = (int) PuntWork\get_import_progress(0);
 
             // Prepare setup for this batch
             $setup = prepare_import_setup($batch_start);
@@ -251,7 +253,7 @@ if (!function_exists('import_all_jobs_from_json')) {
             }
 
             // Update import status for UI tracking
-            $current_status = get_option('job_import_status', $initial_status);
+            $current_status = PuntWork\get_import_status($initial_status);
             $current_status['processed'] = $total_processed;
             $current_status['published'] = $total_published;
             $current_status['updated'] = $total_updated;
@@ -260,7 +262,7 @@ if (!function_exists('import_all_jobs_from_json')) {
             $current_status['time_elapsed'] = microtime(true) - $start_time;
             $current_status['last_update'] = time();
             $current_status['logs'] = array_slice($all_logs, -50); // Keep last 50 log entries for UI
-            update_option('job_import_status', $current_status, false);
+            PuntWork\set_import_status($current_status);
             error_log(sprintf('[PUNTWORK] Updated import status after batch %d: processed=%d/%d, complete=%s', 
                 $batch_count, $total_processed, $total_items, ($total_processed >= $total_items ? 'true' : 'false')));
 
@@ -346,7 +348,7 @@ if (!function_exists('import_all_jobs_from_json')) {
         ];
 
         // Ensure final status is updated for UI
-        $current_status = get_option('job_import_status', []);
+        $current_status = PuntWork\get_import_status([]);
         $final_status = array_merge($current_status, [
             'total' => $total_items,
             'processed' => $total_processed,
@@ -369,7 +371,7 @@ if (!function_exists('import_all_jobs_from_json')) {
         if ($final_status['complete'] && $final_status['processed'] < $final_status['total']) {
             $final_status['processed'] = $final_status['total'];
         }
-        update_option('job_import_status', $final_status, false);
+        PuntWork\set_import_status($final_status);
         error_log('[PUNTWORK] Import fully completed including cleanup: ' . json_encode([
             'total' => $total_items,
             'processed' => $total_processed,
@@ -401,7 +403,7 @@ function continue_paused_import() {
     error_log('[PUNTWORK] Continuing paused import process');
 
     // Check if import is actually paused
-    $status = get_option('job_import_status', []);
+    $status = PuntWork\get_import_status([]);
     if (!isset($status['paused']) || !$status['paused']) {
         error_log('[PUNTWORK] No paused import found - skipping continuation');
         return;
@@ -411,10 +413,10 @@ function continue_paused_import() {
     $status['paused'] = false;
     unset($status['pause_reason']);
     $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Resuming paused import';
-    update_option('job_import_status', $status, false);
+    PuntWork\set_import_status($status);
 
     // Reset start time for new timeout window
-    update_option('job_import_start_time', microtime(true), false);
+    PuntWork\set_import_start_time(microtime(true));
 
     // Continue the import
     $result = import_all_jobs_from_json(true); // preserve status
