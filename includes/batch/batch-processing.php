@@ -237,7 +237,9 @@ function process_batch_items_logic($setup) {
                 }
 
                 if ($i % 5 === 0) {
-                    ob_flush();
+                    if (ob_get_level() > 0) {
+                        ob_flush();
+                    }
                     flush();
                 }
                 unset($batch_json_items[$i]);
