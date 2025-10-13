@@ -122,19 +122,6 @@ console.log('[PUNTWORK] job-import-api.js loaded');
         },
 
         /**
-         * Cleanup duplicate job posts
-         * @returns {Promise} AJAX promise
-         */
-        cleanupDuplicates: function() {
-            console.log('[PUNTWORK] API: Making cleanup duplicates request');
-            return $.ajax({
-                url: jobImportData.ajaxurl,
-                type: 'POST',
-                data: { action: 'job_import_cleanup_duplicates', nonce: jobImportData.nonce }
-            });
-        },
-
-        /**
          * Cleanup trashed job posts
          * @returns {Promise} AJAX promise
          */
@@ -170,26 +157,6 @@ console.log('[PUNTWORK] job-import-api.js loaded');
                 url: jobImportData.ajaxurl,
                 type: 'POST',
                 data: { action: 'cleanup_old_published_jobs', nonce: jobImportData.nonce }
-            });
-        },
-
-        /**
-         * Continue cleanup operation (for batched processing)
-         * @param {number} offset - Current offset for batch processing
-         * @param {number} batchSize - Size of batch to process
-         * @returns {Promise} AJAX promise
-         */
-        continueCleanup: function(offset, batchSize) {
-            console.log('[PUNTWORK] API: Making continue cleanup request - offset:', offset, 'batchSize:', batchSize);
-            return $.ajax({
-                url: jobImportData.ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'job_import_cleanup_continue',
-                    offset: offset,
-                    batch_size: batchSize,
-                    nonce: jobImportData.nonce
-                }
             });
         },
 
