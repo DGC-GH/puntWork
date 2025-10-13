@@ -336,7 +336,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             this.lastProgressTimestamp = Date.now();
             this.noProgressCount = 0;
             this.maxNoProgressBeforeSlow = 10; // After 10 polls with no progress (20 seconds), slow down significantly
-            this.maxNoProgressBeforeStop = 60; // After 60 polls with no progress (2 minutes), stop polling
+            this.maxNoProgressBeforeStop = 300; // After 300 polls with no progress (10 minutes at 2s intervals), stop polling
             this.completeDetectedCount = 0;
             this.maxCompletePolls = 2; // Continue polling for 2 more polls after detecting complete
             var totalZeroCount = 0;
@@ -468,11 +468,15 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             }
 
                             // Stop polling if no progress for too long
-                            if (JobImportEvents.noProgressCount >= JobImportEvents.maxNoProgressBeforeStop) {
-                                console.log('[PUNTWORK] No progress detected for extended period, stopping polling');
+                            // Be more patient when import is close to completion
+                            var progressPercent = currentTotal > 0 ? (currentProcessed / currentTotal) * 100 : 0;
+                            var effectiveMaxNoProgress = progressPercent > 90 ? 600 : JobImportEvents.maxNoProgressBeforeStop; // 20 minutes for final 10%, 10 minutes otherwise
+                            if (JobImportEvents.noProgressCount >= effectiveMaxNoProgress) {
+                                console.log('[PUNTWORK] No progress detected for extended period, stopping polling (progress: ' + progressPercent.toFixed(1) + '%)');
                                 PuntWorkJSLogger.warn('No progress for extended period, stopping polling', 'EVENTS', {
                                     noProgressCount: JobImportEvents.noProgressCount,
-                                    maxNoProgressBeforeStop: JobImportEvents.maxNoProgressBeforeStop
+                                    effectiveMaxNoProgress: effectiveMaxNoProgress,
+                                    progressPercent: progressPercent
                                 });
                                 JobImportEvents.stopStatusPolling();
                                 JobImportUI.resetButtons();
