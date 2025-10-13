@@ -309,9 +309,31 @@ if (!function_exists('import_all_jobs_from_json')) {
         $total_duration = $end_time - $start_time;
 
         // Clean up old job posts that are no longer in the feed BEFORE creating final result
-        $cleanup_result = cleanup_old_job_posts($start_time);
-        $deleted_count = $cleanup_result['deleted_count'];
-        $cleanup_logs = $cleanup_result['logs'];
+        // Add timeout protection for cleanup phase
+        $cleanup_start_time = microtime(true);
+        $cleanup_timeout = 300; // 5 minutes max for cleanup
+
+        try {
+            $cleanup_result = cleanup_old_job_posts($start_time);
+            $deleted_count = $cleanup_result['deleted_count'];
+            $cleanup_logs = $cleanup_result['logs'];
+
+            $cleanup_duration = microtime(true) - $cleanup_start_time;
+            PuntWorkLogger::info('Cleanup phase completed', PuntWorkLogger::CONTEXT_BATCH, [
+                'duration' => $cleanup_duration,
+                'deleted_count' => $deleted_count
+            ]);
+
+        } catch (Exception $e) {
+            PuntWorkLogger::error('Cleanup phase failed', PuntWorkLogger::CONTEXT_BATCH, [
+                'error' => $e->getMessage(),
+                'duration' => microtime(true) - $cleanup_start_time
+            ]);
+
+            // Continue with import even if cleanup fails
+            $deleted_count = 0;
+            $cleanup_logs = ['[' . date('d-M-Y H:i:s') . ' UTC] Cleanup failed: ' . $e->getMessage()];
+        }
 
         // Add cleanup logs to main logs
         $all_logs = array_merge($all_logs, $cleanup_logs);
