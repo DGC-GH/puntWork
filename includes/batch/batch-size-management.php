@@ -61,7 +61,7 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
         $absolute_very_low_memory = 25 * 1024 * 1024; // 25MB absolute threshold
         $absolute_low_memory = 50 * 1024 * 1024;      // 50MB absolute threshold
 
-        if ($last_memory_ratio > 0.50) { // High memory usage - reduce batch size significantly
+        if ($last_memory_ratio > 0.80) { // High memory usage - reduce batch size significantly
             // High memory usage - reduce batch size significantly
             $new_batch_size = max(1, floor($batch_size * 0.6));
             if ($new_batch_size < $batch_size) {
@@ -70,13 +70,13 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
                 PuntWorkLogger::debug('Memory-based reduction: high usage threshold', PuntWorkLogger::CONTEXT_BATCH, [
                     'memory_ratio' => $last_memory_ratio,
                     'memory_bytes' => $last_memory_bytes,
-                    'threshold' => 0.50,
+                    'threshold' => 0.80,
                     'old_batch_size' => $old_batch_size,
                     'new_batch_size' => $batch_size,
                     'reduction_factor' => 0.6
                 ]);
             }
-        } elseif ($last_memory_ratio > 0.30) { // Moderate high memory - reduce slightly
+        } elseif ($last_memory_ratio > 0.85) { // Moderate high memory - reduce slightly
             // Moderate high memory - reduce slightly
             $new_batch_size = max(1, floor($batch_size * 0.8));
             if ($new_batch_size < $batch_size) {
@@ -85,15 +85,15 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
                 PuntWorkLogger::debug('Memory-based reduction: moderate high usage threshold', PuntWorkLogger::CONTEXT_BATCH, [
                     'memory_ratio' => $last_memory_ratio,
                     'memory_bytes' => $last_memory_bytes,
-                    'threshold' => 0.30,
+                    'threshold' => 0.85,
                     'old_batch_size' => $old_batch_size,
                     'new_batch_size' => $batch_size,
                     'reduction_factor' => 0.8
                 ]);
             }
         } elseif ($last_memory_bytes < $absolute_very_low_memory || $last_memory_ratio < 0.05) {
-            // Very low memory usage - aggressive batch size increase (50%)
-            $new_size = floor($batch_size * 1.5);
+            // Very low memory usage - aggressive batch size increase (60%)
+            $new_size = floor($batch_size * 1.6);
             if ($new_size == $batch_size) {
                 $new_size = $batch_size + 5; // Ensure at least +5 if multiplier doesn't change
             }
@@ -106,12 +106,12 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
                 'percentage_threshold' => 0.05,
                 'old_batch_size' => $old_batch_size,
                 'new_batch_size' => $batch_size,
-                'growth_factor' => 1.5,
+                'growth_factor' => 1.6,
                 'trigger_type' => $last_memory_bytes < $absolute_very_low_memory ? 'absolute' : 'percentage'
             ]);
         } elseif ($last_memory_bytes < $absolute_low_memory || $last_memory_ratio < 0.10) {
-            // Low memory usage - moderate batch size increase (30%)
-            $new_size = floor($batch_size * 1.3);
+            // Low memory usage - moderate batch size increase (40%)
+            $new_size = floor($batch_size * 1.4);
             if ($new_size == $batch_size) {
                 $new_size = $batch_size + 3; // Ensure at least +3 if multiplier doesn't change
             }
@@ -124,7 +124,7 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
                 'percentage_threshold' => 0.10,
                 'old_batch_size' => $old_batch_size,
                 'new_batch_size' => $batch_size,
-                'growth_factor' => 1.3,
+                'growth_factor' => 1.4,
                 'trigger_type' => $last_memory_bytes < $absolute_low_memory ? 'absolute' : 'percentage'
             ]);
         } elseif ($last_memory_ratio < 0.20) {
@@ -147,12 +147,12 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
 
         // Time-based batch size reduction for slow processing
         $time_adjusted = false;
-        if ($current_batch_time > 120) { // 2-minute threshold for slow processing
+        if ($current_batch_time > 180) { // 3-minute threshold for slow processing
             $batch_size = max(50, (int)($batch_size * 0.8)); // Reduce by 20%, minimum 50
             $time_adjusted = true;
             PuntWorkLogger::info('Time-based batch size reduction applied', PuntWorkLogger::CONTEXT_BATCH, [
                 'current_batch_time' => $current_batch_time,
-                'threshold' => 120,
+                'threshold' => 180,
                 'old_batch_size' => $old_batch_size,
                 'new_batch_size' => $batch_size
             ]);
@@ -161,11 +161,11 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
         // Efficiency tracking - reduce batch size if processing becomes inefficient
         if (!$time_adjusted && $batch_size > 0) {
             $time_per_item = $current_batch_time / $batch_size;
-            if ($time_per_item > 2.5) { // Increased from 2.0 to 2.5 seconds per item
+            if ($time_per_item > 3.0) { // Increased from 2.5 to 3.0 seconds per item
                 $batch_size = max(50, (int)($batch_size * 0.9)); // Reduce by 10%, minimum 50
                 PuntWorkLogger::info('Efficiency-based batch size reduction applied', PuntWorkLogger::CONTEXT_BATCH, [
                     'time_per_item' => $time_per_item,
-                    'threshold' => 2.5,
+                    'threshold' => 3.0,
                     'old_batch_size' => $old_batch_size,
                     'new_batch_size' => $batch_size,
                     'memory_ratio' => $last_memory_ratio,
@@ -265,7 +265,7 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
                         'current_batch_time' => $current_batch_time
                     ]);
                 }
-            } elseif ($time_per_item > 2.5 || $last_memory_ratio > 0.35) {
+            } elseif ($time_per_item > 3.0 || $last_memory_ratio > 0.90) {
                 // Current batch is inefficient - slightly decrease optimal batch size
                 $new_optimal = max(50, $optimal_batch_size - 5);
                 if ($new_optimal != $optimal_batch_size) {
@@ -391,13 +391,13 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
                 'absolute_low_threshold' => $absolute_low_memory
             ];
 
-            if ($last_memory_ratio > 0.50) {
+            if ($last_memory_ratio > 0.80) {
                 $reason = 'high memory usage';
-                $detailed_reason = 'high memory usage detected (>50%)';
+                $detailed_reason = 'high memory usage detected (>80%)';
                 $trigger_type = 'memory_high';
-            } elseif ($last_memory_ratio > 0.30) {
+            } elseif ($last_memory_ratio > 0.85) {
                 $reason = 'moderate high memory usage';
-                $detailed_reason = 'moderate high memory usage detected (>30%)';
+                $detailed_reason = 'moderate high memory usage detected (>85%)';
                 $trigger_type = 'memory_moderate_high';
             } elseif ($last_memory_bytes < $absolute_very_low_memory || $last_memory_ratio < 0.05) {
                 $reason = 'very low memory usage';
