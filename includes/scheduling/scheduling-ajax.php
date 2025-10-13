@@ -337,10 +337,33 @@ function run_scheduled_import_async() {
     $import_status = get_option('job_import_status', []);
     error_log('[PUNTWORK] Current import status at async start: ' . json_encode($import_status));
 
-    if (isset($import_status['complete']) && $import_status['complete'] === false && 
-        isset($import_status['processed']) && $import_status['processed'] > 0) {
-        error_log('[PUNTWORK] Async import skipped - import already running and has processed items');
-        return;
+    // Check for stuck imports (similar to AJAX handler logic)
+    if (isset($import_status['complete']) && !$import_status['complete']) {
+        // Calculate actual time elapsed
+        $time_elapsed = 0;
+        if (isset($import_status['start_time']) && $import_status['start_time'] > 0) {
+            $time_elapsed = microtime(true) - $import_status['start_time'];
+        } elseif (isset($import_status['time_elapsed'])) {
+            $time_elapsed = $import_status['time_elapsed'];
+        }
+        
+        // Check if it's a stuck import (processed = 0 and old, or very old regardless of progress)
+        $is_stuck = false;
+        if ((!isset($import_status['processed']) || $import_status['processed'] == 0) && $time_elapsed > 300) { // 5 minutes with no progress
+            $is_stuck = true;
+        } elseif ($time_elapsed > 7200) { // 2 hours regardless of progress
+            $is_stuck = true;
+        }
+        
+        if ($is_stuck) {
+            error_log('[PUNTWORK] Detected stuck import in async function (processed: ' . ($import_status['processed'] ?? 'null') . ', time_elapsed: ' . $time_elapsed . '), clearing status for new run');
+            delete_option('job_import_status');
+            delete_transient('import_cancel');
+            $import_status = []; // Reset for fresh start
+        } elseif (isset($import_status['processed']) && $import_status['processed'] > 0) {
+            error_log('[PUNTWORK] Async import skipped - import already running and has processed items');
+            return;
+        }
     }
 
     error_log('[PUNTWORK] Starting actual import process...');
