@@ -220,13 +220,38 @@ function run_scheduled_import_ajax() {
         } elseif (isset($import_status['time_elapsed'])) {
             $time_elapsed = $import_status['time_elapsed'];
         }
-        
-        // Check if it's a stuck import (processed = 0 and old)
-        $is_stuck = (!isset($import_status['processed']) || $import_status['processed'] == 0) &&
-                   ($time_elapsed > 300); // 5 minutes
-        
+
+        // Check for stuck imports and clear them automatically
+        $current_time = time();
+        $last_update = isset($import_status['last_update']) ? $import_status['last_update'] : 0;
+        $time_since_last_update = $current_time - $last_update;
+
+        // Detect stuck imports with multiple criteria:
+        // 1. No progress for 5+ minutes (300 seconds)
+        // 2. Import running for more than 2 hours without completion (7200 seconds)
+        // 3. No status update for 10+ minutes (600 seconds)
+        $is_stuck = false;
+        $stuck_reason = '';
+
+        if ($import_status['processed'] == 0 && $time_elapsed > 300) {
+            $is_stuck = true;
+            $stuck_reason = 'no progress for 5+ minutes';
+        } elseif ($time_elapsed > 7200) { // 2 hours
+            $is_stuck = true;
+            $stuck_reason = 'running for more than 2 hours';
+        } elseif ($time_since_last_update > 600) { // 10 minutes since last update
+            $is_stuck = true;
+            $stuck_reason = 'no status update for 10+ minutes';
+        }
+
         if ($is_stuck) {
-            error_log('[PUNTWORK] Detected stuck import (processed: ' . ($import_status['processed'] ?? 'null') . ', time_elapsed: ' . $time_elapsed . '), clearing status for new run');
+            error_log('[PUNTWORK] Detected stuck import in scheduled start, clearing status', [
+                'processed' => $import_status['processed'],
+                'total' => $import_status['total'],
+                'time_elapsed' => $time_elapsed,
+                'time_since_last_update' => $time_since_last_update,
+                'reason' => $stuck_reason
+            ]);
             delete_import_status();
             delete_transient('import_cancel');
         } else {
@@ -330,17 +355,32 @@ function run_scheduled_import_async() {
         } elseif (isset($import_status['time_elapsed'])) {
             $time_elapsed = $import_status['time_elapsed'];
         }
-        
-        // Check if it's a stuck import (processed = 0 and old, or very old regardless of progress)
+
+        // Check for stuck imports with multiple criteria:
+        // 1. No progress for 5+ minutes (300 seconds)
+        // 2. Import running for more than 2 hours without completion (7200 seconds)
+        // 3. No status update for 10+ minutes (600 seconds)
         $is_stuck = false;
-        if ((!isset($import_status['processed']) || $import_status['processed'] == 0) && $time_elapsed > 300) { // 5 minutes with no progress
+        $stuck_reason = '';
+
+        if ($import_status['processed'] == 0 && $time_elapsed > 300) {
             $is_stuck = true;
-        } elseif ($time_elapsed > 7200) { // 2 hours regardless of progress
+            $stuck_reason = 'no progress for 5+ minutes';
+        } elseif ($time_elapsed > 7200) { // 2 hours
             $is_stuck = true;
+            $stuck_reason = 'running for more than 2 hours';
         }
-        
+
+        $current_time = time();
+        $last_update = isset($import_status['last_update']) ? $import_status['last_update'] : 0;
+        $time_since_last_update = $current_time - $last_update;
+        if ($time_since_last_update > 600) { // 10 minutes since last update
+            $is_stuck = true;
+            $stuck_reason = 'no status update for 10+ minutes';
+        }
+
         if ($is_stuck) {
-            error_log('[PUNTWORK] Detected stuck import in async function (processed: ' . ($import_status['processed'] ?? 'null') . ', time_elapsed: ' . $time_elapsed . '), clearing status for new run');
+            error_log('[PUNTWORK] Detected stuck import in async function (processed: ' . ($import_status['processed'] ?? 'null') . ', time_elapsed: ' . $time_elapsed . ', time_since_last_update: ' . $time_since_last_update . ', reason: ' . $stuck_reason . '), clearing status for new run');
             delete_import_status();
             delete_transient('import_cancel');
             $import_status = []; // Reset for fresh start
@@ -407,16 +447,31 @@ function run_manual_import_async() {
             $time_elapsed = $import_status['time_elapsed'];
         }
 
-        // Check if it's a stuck import (processed = 0 and old, or very old regardless of progress)
+        // Check for stuck imports with multiple criteria:
+        // 1. No progress for 5+ minutes (300 seconds)
+        // 2. Import running for more than 2 hours without completion (7200 seconds)
+        // 3. No status update for 10+ minutes (600 seconds)
         $is_stuck = false;
-        if ((!isset($import_status['processed']) || $import_status['processed'] == 0) && $time_elapsed > 300) { // 5 minutes with no progress
+        $stuck_reason = '';
+
+        if ($import_status['processed'] == 0 && $time_elapsed > 300) {
             $is_stuck = true;
-        } elseif ($time_elapsed > 7200) { // 2 hours regardless of progress
+            $stuck_reason = 'no progress for 5+ minutes';
+        } elseif ($time_elapsed > 7200) { // 2 hours
             $is_stuck = true;
+            $stuck_reason = 'running for more than 2 hours';
+        }
+
+        $current_time = time();
+        $last_update = isset($import_status['last_update']) ? $import_status['last_update'] : 0;
+        $time_since_last_update = $current_time - $last_update;
+        if ($time_since_last_update > 600) { // 10 minutes since last update
+            $is_stuck = true;
+            $stuck_reason = 'no status update for 10+ minutes';
         }
 
         if ($is_stuck) {
-            error_log('[PUNTWORK] Detected stuck import in manual async function (processed: ' . ($import_status['processed'] ?? 'null') . ', time_elapsed: ' . $time_elapsed . '), clearing status for new run');
+            error_log('[PUNTWORK] Detected stuck import in manual async function (processed: ' . ($import_status['processed'] ?? 'null') . ', time_elapsed: ' . $time_elapsed . ', time_since_last_update: ' . $time_since_last_update . ', reason: ' . $stuck_reason . '), clearing status for new run');
             delete_import_status();
             delete_transient('import_cancel');
             $import_status = []; // Reset for fresh start
