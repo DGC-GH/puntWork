@@ -363,21 +363,21 @@ function get_job_import_status_ajax() {
 
     // Log response summary instead of full data to prevent large debug logs
     $log_summary = [
-        'total' => $progress['total'],
-        'processed' => $progress['processed'],
-        'published' => $progress['published'],
-        'updated' => $progress['updated'],
-        'skipped' => $progress['skipped'],
-        'complete' => $progress['complete'],
-        'success' => $progress['success'],
-        'time_elapsed' => $progress['time_elapsed'],
-        'job_importing_time_elapsed' => $progress['job_importing_time_elapsed'],
-        'estimated_time_remaining' => $progress['estimated_time_remaining'],
-        'batch_time' => $progress['batch_time'],
-        'batch_processed' => $progress['batch_processed'],
-        'logs_count' => is_array($progress['logs']) ? count($progress['logs']) : 0,
-        'has_error' => !empty($progress['error_message']),
-        'last_modified' => $progress['last_modified']
+        'total' => $progress['total'] ?? 0,
+        'processed' => $progress['processed'] ?? 0,
+        'published' => $progress['published'] ?? 0,
+        'updated' => $progress['updated'] ?? 0,
+        'skipped' => $progress['skipped'] ?? 0,
+        'complete' => $progress['complete'] ?? true,
+        'success' => $progress['success'] ?? false,
+        'time_elapsed' => $progress['time_elapsed'] ?? 0,
+        'job_importing_time_elapsed' => $progress['job_importing_time_elapsed'] ?? 0,
+        'estimated_time_remaining' => $progress['estimated_time_remaining'] ?? 0,
+        'batch_time' => $progress['batch_time'] ?? 0,
+        'batch_processed' => $progress['batch_processed'] ?? 0,
+        'logs_count' => is_array($progress['logs'] ?? null) ? count($progress['logs']) : 0,
+        'has_error' => !empty($progress['error_message'] ?? ''),
+        'last_modified' => $progress['last_modified'] ?? microtime(true)
     ];
 
     PuntWorkLogger::logAjaxResponse('get_job_import_status', $log_summary);

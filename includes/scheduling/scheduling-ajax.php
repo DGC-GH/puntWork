@@ -245,6 +245,7 @@ function run_scheduled_import_ajax() {
             'skipped' => 0,
             'duplicates_drafted' => 0,
             'time_elapsed' => 0,
+            'complete' => false,
             'success' => false,
             'error_message' => '',
             'batch_size' => get_option('job_import_batch_size') ?: 100,
