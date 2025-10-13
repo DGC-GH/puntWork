@@ -15,6 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 require_once __DIR__ . '/../utilities/ajax-utilities.php';
+require_once __DIR__ . '/../utilities/database-utilities.php';
+require_once __DIR__ . '/../utilities/progress-utilities.php';
 
 /**
  * AJAX handlers for purge operations
@@ -35,17 +37,12 @@ function job_import_purge_ajax() {
 
     // Initialize progress tracking for first batch
     if (!$is_continue) {
-        update_option('job_import_purge_progress', [
-            'total_processed' => 0,
-            'total_deleted' => 0,
-            'current_offset' => 0,
-            'complete' => false,
-            'start_time' => microtime(true),
-            'logs' => []
-        ], false);
+        initialize_progress_tracking('purge', [
+            'total_jobs' => get_jobs_count(['guid' => '']), // Count jobs with GUID meta
+        ]);
     }
 
-    $progress = get_option('job_import_purge_progress', [
+    $progress = get_progress('purge', [
         'total_processed' => 0,
         'total_deleted' => 0,
         'current_offset' => 0,
@@ -54,16 +51,11 @@ function job_import_purge_ajax() {
         'logs' => []
     ]);
 
-    // Set lock for this batch
-    $lock_start = microtime(true);
-    while (get_transient('job_import_purge_lock')) {
-        usleep(50000);
-        if (microtime(true) - $lock_start > 10) {
-            error_log('Purge lock timeout');
-            wp_send_json_error(['message' => 'Purge lock timeout']);
-        }
+    // Acquire lock
+    if (!acquire_operation_lock('purge', 30)) {
+        send_ajax_error('job_import_purge', 'Purge operation already in progress');
+        return;
     }
-    set_transient('job_import_purge_lock', true, 10);
 
     try {
         $processed_guids = get_option('job_import_processed_guids') ?: [];
@@ -93,93 +85,95 @@ function job_import_purge_ajax() {
             error_log('Purge check - Has processed data: ' . ($has_processed_data ? 'yes' : 'no'));
 
             // Get total count for progress calculation
-            $total_jobs = $wpdb->get_var("
-                SELECT COUNT(*) FROM {$wpdb->posts} p
-                JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
-                WHERE p.post_type = 'job'
-            ");
-            $progress['total_jobs'] = $total_jobs;
-            update_option('job_import_purge_progress', $progress, false);
+            $total_jobs = get_jobs_count(['guid' => '']); // Jobs with GUID meta
+            update_progress('purge', ['total_jobs' => $total_jobs]);
         }
 
         // Get batch of jobs to check
-        $batch_jobs = $wpdb->get_results($wpdb->prepare("
-            SELECT p.ID, pm.meta_value AS guid
-            FROM {$wpdb->posts} p
-            JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
-            WHERE p.post_type = 'job'
-            ORDER BY p.ID
-            LIMIT %d OFFSET %d
-        ", $batch_size, $offset));
+        $batch_jobs = get_jobs_with_meta('guid', $batch_size, $offset);
 
         if (empty($batch_jobs)) {
             // No more jobs to process
-            $progress['complete'] = true;
-            $progress['end_time'] = microtime(true);
-            $progress['time_elapsed'] = $progress['end_time'] - $progress['start_time'];
-            update_option('job_import_purge_progress', $progress, false);
-            delete_transient('job_import_purge_lock');
+            complete_progress('purge', [], "Purge completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} old jobs");
+
+            release_operation_lock('purge');
 
             // Clean up options
             delete_option('job_import_processed_guids');
             delete_option('job_existing_guids');
 
-            $message = "Purge completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} old jobs";
-            error_log($message);
+            $final_progress = get_progress('purge');
+            cleanup_progress('purge');
 
-            wp_send_json_success([
+            $message = "Purge completed: Processed {$final_progress['total_processed']} jobs, deleted {$final_progress['total_deleted']} old jobs";
+
+            send_ajax_success('job_import_purge', [
                 'message' => $message,
                 'complete' => true,
-                'total_processed' => $progress['total_processed'],
-                'total_deleted' => $progress['total_deleted'],
-                'time_elapsed' => $progress['time_elapsed'],
-                'logs' => array_slice($logs, -50)
+                'total_processed' => $final_progress['total_processed'],
+                'total_deleted' => $final_progress['total_deleted'],
+                'time_elapsed' => $final_progress['time_elapsed'],
+                'logs' => array_slice($final_progress['logs'], -50)
             ]);
         }
 
         // Process this batch
         $deleted_count = 0;
+        $jobs_to_delete = [];
+
         foreach ($batch_jobs as $job) {
-            if (!in_array($job->guid, $processed_guids)) {
-                // This job is no longer in the feed, delete it
-                $result = wp_delete_post($job->ID, true); // true = force delete, skip trash
-                if ($result) {
-                    $deleted_count++;
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Permanently deleted ID: ' . $job->ID . ' GUID: ' . $job->guid . ' - No longer in feed';
-                    error_log('Purge: Permanently deleted ID: ' . $job->ID . ' GUID: ' . $job->guid . ' - No longer in feed');
+            if (!in_array($job->meta_value, $processed_guids)) {
+                // This job is no longer in the feed, mark for deletion
+                $jobs_to_delete[] = $job->ID;
+            }
+        }
+
+        // Delete jobs in batch
+        if (!empty($jobs_to_delete)) {
+            $delete_results = delete_jobs_by_ids($jobs_to_delete, true);
+            $deleted_count = $delete_results['success'];
+
+            // Log results
+            foreach ($jobs_to_delete as $job_id) {
+                if (in_array($job_id, $delete_results['failed'])) {
+                    update_progress('purge', [], "Failed to delete ID: {$job_id}");
                 } else {
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Failed to delete ID: ' . $job->ID . ' GUID: ' . $job->guid;
-                    error_log('Purge: Failed to delete ID: ' . $job->ID . ' GUID: ' . $job->guid);
+                    update_progress('purge', [], "Permanently deleted ID: {$job_id} - No longer in feed");
                 }
             }
         }
 
         // Update progress
-        $progress['total_processed'] += count($batch_jobs);
-        $progress['total_deleted'] += $deleted_count;
-        $progress['current_offset'] = $offset + $batch_size;
-        $progress['logs'] = $logs;
-        update_option('job_import_purge_progress', $progress, false);
+        $new_processed = $progress['total_processed'] + count($batch_jobs);
+        $new_deleted = $progress['total_deleted'] + $deleted_count;
+        $new_offset = $offset + $batch_size;
 
-        delete_transient('job_import_purge_lock');
+        update_progress('purge', [
+            'total_processed' => $new_processed,
+            'total_deleted' => $new_deleted,
+            'current_offset' => $new_offset
+        ]);
+
+        release_operation_lock('purge');
 
         // Calculate progress percentage
-        $progress_percentage = $progress['total_jobs'] > 0 ? round(($progress['total_processed'] / $progress['total_jobs']) * 100, 1) : 0;
+        $current_progress = get_progress('purge');
+        $progress_percentage = calculate_progress_percentage($current_progress);
 
-        wp_send_json_success([
-            'message' => "Batch processed: {$progress['total_processed']}/{$progress['total_jobs']} jobs ({$progress_percentage}%), deleted {$deleted_count} old jobs this batch",
+        send_ajax_success('job_import_purge', [
+            'message' => "Batch processed: {$new_processed}/{$current_progress['total_jobs']} jobs ({$progress_percentage}%), deleted {$deleted_count} old jobs this batch",
             'complete' => false,
-            'next_offset' => $progress['current_offset'],
+            'next_offset' => $new_offset,
             'batch_size' => $batch_size,
-            'total_processed' => $progress['total_processed'],
-            'total_deleted' => $progress['total_deleted'],
+            'total_processed' => $new_processed,
+            'total_deleted' => $new_deleted,
             'progress_percentage' => $progress_percentage,
-            'logs' => array_slice($logs, -20) // Return last 20 log entries for this batch
+            'logs' => array_slice($current_progress['logs'], -20)
         ]);
 
     } catch (\Exception $e) {
-        delete_transient('job_import_purge_lock');
+        release_operation_lock('purge');
         error_log('Purge failed: ' . $e->getMessage());
-        wp_send_json_error(['message' => 'Purge failed: ' . $e->getMessage()]);
+        send_ajax_error('job_import_purge', 'Purge failed: ' . $e->getMessage());
     }
 }

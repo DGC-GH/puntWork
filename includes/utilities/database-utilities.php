@@ -220,3 +220,115 @@ function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$log
         return new \WP_Error('meta_update_failed', $error_message);
     }
 }
+
+/**
+ * Get jobs by post status with optional meta filtering
+ *
+ * @param string $status Post status ('publish', 'draft', 'any', etc.)
+ * @param int $limit Maximum number of posts to return
+ * @param int $offset Offset for pagination
+ * @param array $meta_filters Optional array of meta key => value filters
+ * @return array Array of post objects
+ */
+function get_jobs_by_status($status = 'publish', $limit = -1, $offset = 0, $meta_filters = []) {
+    $args = [
+        'post_type' => 'job',
+        'post_status' => $status,
+        'posts_per_page' => $limit,
+        'offset' => $offset,
+        'fields' => 'ids',
+    ];
+
+    if (!empty($meta_filters)) {
+        $args['meta_query'] = [];
+        foreach ($meta_filters as $key => $value) {
+            $args['meta_query'][] = [
+                'key' => $key,
+                'value' => $value,
+                'compare' => '='
+            ];
+        }
+    }
+
+    return get_posts($args);
+}
+
+/**
+ * Get jobs with specific meta key (like GUID)
+ *
+ * @param string $meta_key Meta key to filter by
+ * @param int $limit Maximum number of posts to return
+ * @param int $offset Offset for pagination
+ * @return array Array of objects with ID and meta_value
+ */
+function get_jobs_with_meta($meta_key, $limit = -1, $offset = 0) {
+    global $wpdb;
+
+    return $wpdb->get_results($wpdb->prepare("
+        SELECT p.ID, pm.meta_value
+        FROM {$wpdb->posts} p
+        JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = %s
+        WHERE p.post_type = 'job'
+        ORDER BY p.ID
+        LIMIT %d OFFSET %d
+    ", $meta_key, $limit, $offset));
+}
+
+/**
+ * Delete jobs by IDs with retry logic
+ *
+ * @param array $post_ids Array of post IDs to delete
+ * @param bool $force_delete Whether to force delete (skip trash)
+ * @return array Array with 'success' count and 'failed' array
+ */
+function delete_jobs_by_ids($post_ids, $force_delete = true) {
+    $results = ['success' => 0, 'failed' => []];
+
+    foreach ($post_ids as $post_id) {
+        $result = retry_database_operation(function() use ($post_id, $force_delete) {
+            return wp_delete_post($post_id, $force_delete);
+        }, [$post_id, $force_delete], [
+            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+            'operation' => 'delete_job_post',
+            'post_id' => $post_id
+        ]);
+
+        if ($result) {
+            $results['success']++;
+        } else {
+            $results['failed'][] = $post_id;
+        }
+    }
+
+    return $results;
+}
+
+/**
+ * Get total count of jobs with optional meta filtering
+ *
+ * @param array $meta_filters Optional array of meta key => value filters
+ * @return int Total count
+ */
+function get_jobs_count($meta_filters = []) {
+    global $wpdb;
+
+    $query = "SELECT COUNT(*) FROM {$wpdb->posts} p WHERE p.post_type = 'job'";
+    $params = [];
+
+    if (!empty($meta_filters)) {
+        $query .= " JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id";
+        $conditions = [];
+        foreach ($meta_filters as $key => $value) {
+            $conditions[] = "pm.meta_key = %s AND pm.meta_value = %s";
+            $params[] = $key;
+            $params[] = $value;
+        }
+        $query .= " AND (" . implode(" OR ", $conditions) . ")";
+    }
+
+    if (!empty($params)) {
+        return $wpdb->get_var($wpdb->prepare($query, $params));
+    } else {
+        return $wpdb->get_var($query);
+    }
+}
