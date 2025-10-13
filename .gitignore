@@ -11,3 +11,5 @@ wordpress/
 # Test cache
 .phpunit.result.cache
 phpunit.xml
+wp-content/debug.log
+.vscode/sftp.json
