@@ -167,24 +167,9 @@ function process_batch_items_logic($setup) {
                 $inferred_benefits += $benefit_count;
                 if (!empty($item['job_posting']) || !empty($item['job_ecommerce'])) $schema_generated++;
 
-                if (memory_get_usage(true) > $threshold) {
-                    $batch_size = max(1, (int)($batch_size * 0.8));
-                    try {
-                        retry_option_operation(function() use ($batch_size) {
-                            return update_option('job_import_batch_size', $batch_size, false);
-                        }, [], [
-                            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
-                            'operation' => 'update_batch_size_memory'
-                        ]);
-                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Memory high, reduced batch to ' . $batch_size;
-                    } catch (\Exception $e) {
-                        PuntWorkLogger::error('Failed to update batch size due to memory', PuntWorkLogger::CONTEXT_BATCH, [
-                            'error' => $e->getMessage(),
-                            'new_batch_size' => $batch_size
-                        ]);
-                    }
-                    $end_index = min($start_index + $batch_size, $total);
-                }
+                // Only check memory usage at the end of processing all items in the batch
+                // Individual item memory checks are too aggressive and cause unnecessary batch size reductions
+                // Memory-based adjustments should happen at batch boundaries via adjust_batch_size()
 
                 if ($i % 5 === 0) {
                     ob_flush();
