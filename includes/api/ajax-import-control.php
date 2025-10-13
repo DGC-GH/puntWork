@@ -96,6 +96,17 @@ function run_job_import_batch_ajax() {
         return;
     }
 
+    // Check if the import result indicates failure
+    if (!$result['success']) {
+        PuntWorkLogger::error('Import batch failed with result', PuntWorkLogger::CONTEXT_AJAX, [
+            'start' => $start,
+            'message' => $result['message'] ?? 'Unknown error',
+            'logs' => $result['logs'] ?? []
+        ]);
+        wp_send_json_error(['message' => $result['message'] ?? 'Import failed: Unknown error']);
+        return;
+    }
+
     // If import is complete, perform cleanup of old published jobs
     if (isset($result['complete']) && $result['complete'] && isset($result['success']) && $result['success']) {
         PuntWorkLogger::info('Manual import completed, starting automatic cleanup of old published jobs', PuntWorkLogger::CONTEXT_BATCH);

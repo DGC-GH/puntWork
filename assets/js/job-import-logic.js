@@ -66,7 +66,7 @@
                                 current = response.data.processed || current;
                                 console.log('[PUNTWORK] Next batch completed, current processed:', current);
                             } else {
-                                throw new Error('Import batch failed: ' + (response.message || 'Unknown error'));
+                                throw new Error('Import batch failed: ' + (response.message || response.data?.message || 'Unknown error'));
                             }
                         } catch (batchError) {
                             PuntWorkJSLogger.error('Batch processing error', 'LOGIC', batchError);
@@ -106,8 +106,8 @@
                         await this.handleImportCompletion();
                     }
                 } else {
-                    JobImportUI.appendLogs(['Initial import batch error: ' + (response.message || 'Unknown')]);
-                    $('#status-message').text('Error: ' + (response.message || 'Unknown'));
+                    JobImportUI.appendLogs(['Initial import batch error: ' + (response.message || response.data?.message || 'Unknown')]);
+                    $('#status-message').text('Error: ' + (response.message || response.data?.message || 'Unknown'));
                     JobImportUI.resetButtons();
                     
                     // Stop status polling on error
