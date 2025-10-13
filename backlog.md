@@ -32,3 +32,8 @@ audit current job processing, publishing, updating, skipping and remving algorit
 analyse the related logs, timestamps and metrics in debug.log.
 make conclusion about the efficiency.
 refactor the code to increase speed and efficiency of the import process.
+
+
+replace manual import "Start Import" functionality with scheduled import "Run Now", the goal is to have one import process that can be scheduled or triggered manually
+
+what can you improve that would reduce code duplication, improve maintainability, and ensure consistency across the application?
