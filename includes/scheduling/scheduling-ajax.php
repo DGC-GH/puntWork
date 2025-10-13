@@ -245,13 +245,13 @@ function run_scheduled_import_ajax() {
         }
 
         if ($is_stuck) {
-            error_log('[PUNTWORK] Detected stuck import in scheduled start, clearing status', [
+            error_log('[PUNTWORK] Detected stuck import in scheduled start, clearing status: ' . json_encode([
                 'processed' => $import_status['processed'],
                 'total' => $import_status['total'],
                 'time_elapsed' => $time_elapsed,
                 'time_since_last_update' => $time_since_last_update,
                 'reason' => $stuck_reason
-            ]);
+            ]));
             delete_import_status();
             delete_transient('import_cancel');
         } else {
