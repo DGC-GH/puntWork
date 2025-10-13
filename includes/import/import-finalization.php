@@ -388,7 +388,7 @@ function bulk_delete_job_posts_sql($post_ids) {
  * @return float Estimated time remaining in seconds.
  */
 function calculate_estimated_time_remaining($status) {
-    if ($status['complete'] || $status['processed'] == 0 || $status['job_importing_time_elapsed'] == 0) {
+    if (($status['complete'] ?? false) || ($status['processed'] ?? 0) == 0 || ($status['job_importing_time_elapsed'] ?? 0) == 0) {
         return 0;
     }
 
