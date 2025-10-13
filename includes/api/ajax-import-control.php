@@ -97,25 +97,43 @@ function run_job_import_batch_ajax() {
         }
     }
 
-    $result = import_jobs_from_json(true, $start);
+    try {
+        $result = import_jobs_from_json(true, $start);
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Import batch processing failed', PuntWorkLogger::CONTEXT_AJAX, [
+            'start' => $start,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        wp_send_json_error(['message' => 'Import failed: ' . $e->getMessage()]);
+        return;
+    }
 
     // If import is complete, perform cleanup of old published jobs
     if (isset($result['complete']) && $result['complete'] && isset($result['success']) && $result['success']) {
         PuntWorkLogger::info('Manual import completed, starting automatic cleanup of old published jobs', PuntWorkLogger::CONTEXT_BATCH);
         
-        // Import the cleanup function
-        require_once __DIR__ . '/../import/import-finalization.php';
-        
-        $cleanup_start_time = microtime(true);
-        $deleted_count = \Puntwork\cleanup_old_job_posts($cleanup_start_time);
-        
-        // Add cleanup results to the response
-        $result['deleted_old_posts'] = $deleted_count;
-        $result['cleanup_completed'] = true;
-        
-        PuntWorkLogger::info('Automatic cleanup completed for manual import', PuntWorkLogger::CONTEXT_BATCH, [
-            'deleted_old_posts' => $deleted_count
-        ]);
+        try {
+            // Import the cleanup function
+            require_once __DIR__ . '/../import/import-finalization.php';
+            
+            $cleanup_start_time = microtime(true);
+            $deleted_count = \Puntwork\cleanup_old_job_posts($cleanup_start_time);
+            
+            // Add cleanup results to the response
+            $result['deleted_old_posts'] = $deleted_count;
+            $result['cleanup_completed'] = true;
+            
+            PuntWorkLogger::info('Automatic cleanup completed for manual import', PuntWorkLogger::CONTEXT_BATCH, [
+                'deleted_old_posts' => $deleted_count
+            ]);
+        } catch (\Exception $e) {
+            PuntWorkLogger::error('Automatic cleanup failed for manual import', PuntWorkLogger::CONTEXT_BATCH, [
+                'error' => $e->getMessage()
+            ]);
+            // Don't fail the import if cleanup fails
+            $result['cleanup_error'] = $e->getMessage();
+        }
     }
 
     // Log summary instead of full result to prevent large debug logs
