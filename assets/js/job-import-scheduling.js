@@ -664,7 +664,16 @@
                 var statusColor = run.success ? '#34c759' : '#ff3b30';
                 var statusBg = run.success ? '#f0fdf4' : '#fef2f2';
                 var statusText = run.success ? 'Success' : 'Failed';
-                var modeText = run.test_mode ? '<span class="test-badge" style="background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-left: 8px;">TEST</span>' : '';
+                var modeText = '';
+
+                // Determine badge text and color based on import type
+                if (run.test_mode || run.import_type === 'test') {
+                    modeText = '<span class="test-badge" style="background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-left: 8px;">TEST</span>';
+                } else if (run.import_type === 'scheduled') {
+                    modeText = '<span class="scheduled-badge" style="background: #fef3c7; color: #f59e0b; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-left: 8px;">AUTO</span>';
+                } else if (run.import_type === 'manual') {
+                    modeText = '<span class="manual-badge" style="background: #f3e8ff; color: #8b5cf6; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-left: 8px;">MANUAL</span>';
+                }
 
                 // Calculate progress percentage
                 var progressPercent = run.total > 0 ? Math.round((run.processed / run.total) * 100) : 0;

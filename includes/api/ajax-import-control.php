@@ -302,6 +302,52 @@ function get_job_import_status_ajax() {
         $progress['complete'] = ($progress['processed'] >= $progress['total'] && $progress['total'] > 0);
     }
 
+    // Check if this is a newly completed manual import and log it to history
+    if ($progress['complete'] && $progress['total'] > 0 && isset($progress['success']) && $progress['success']) {
+        // Check if this import has already been logged by looking for a recent entry
+        $history = get_option('puntwork_import_run_history', []);
+        $already_logged = false;
+
+        // Check the most recent history entry to see if it matches this import
+        if (!empty($history)) {
+            $latest_entry = $history[0];
+            // If the latest entry has the same timestamp (within a few seconds) and similar stats, it's already logged
+            if (isset($latest_entry['timestamp']) && isset($progress['start_time'])) {
+                $time_diff = abs($latest_entry['timestamp'] - $progress['start_time']);
+                if ($time_diff < 30 && // Within 30 seconds
+                    $latest_entry['total'] == $progress['total'] &&
+                    $latest_entry['processed'] == $progress['processed']) {
+                    $already_logged = true;
+                }
+            }
+        }
+
+        // Log the completed manual import if it hasn't been logged yet
+        if (!$already_logged) {
+            $import_details = [
+                'success' => $progress['success'],
+                'duration' => $progress['time_elapsed'],
+                'processed' => $progress['processed'],
+                'total' => $progress['total'],
+                'published' => $progress['published'],
+                'updated' => $progress['updated'],
+                'skipped' => $progress['skipped'],
+                'error_message' => $progress['error_message'] ?? '',
+                'timestamp' => time()
+            ];
+
+            // Import the function
+            require_once __DIR__ . '/../scheduling/scheduling-history.php';
+            \Puntwork\log_import_run($import_details, 'manual');
+
+            PuntWorkLogger::info('Logged completed manual import to history', PuntWorkLogger::CONTEXT_BATCH, [
+                'processed' => $progress['processed'],
+                'total' => $progress['total'],
+                'duration' => $progress['time_elapsed']
+            ]);
+        }
+    }
+
     // Add resume_progress for JavaScript
     $progress['resume_progress'] = (int) get_option('job_import_progress', 0);
 
