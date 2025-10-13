@@ -22,20 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 add_action('wp_ajax_run_job_import_batch', __NAMESPACE__ . '\\run_job_import_batch_ajax');
 function run_job_import_batch_ajax() {
-             $message = "Cleanup completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} drafted jobs";
-
-            // Verify final count
-            $final_count = $wpdb->get_var($wpdb->prepare("
-                SELECT COUNT(*) FROM {$wpdb->posts}
-                WHERE post_type = 'job' AND post_status = 'draft'
-            "));
-
-            PuntWorkLogger::info('Cleanup of drafted jobs completed', PuntWorkLogger::CONTEXT_BATCH, [
-                'total_processed' => $progress['total_processed'],
-                'total_deleted' => $progress['total_deleted'],
-                'final_draft_count' => $final_count,
-                'expected_remaining' => $progress['total_jobs'] - $progress['total_deleted']
-            ]);ntWorkLogger::logAjaxRequest('run_job_import_batch', $_POST);
+    PuntWorkLogger::logAjaxRequest('run_job_import_batch', $_POST);
 
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
         PuntWorkLogger::error('Nonce verification failed for run_job_import_batch', PuntWorkLogger::CONTEXT_AJAX);
