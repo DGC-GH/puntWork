@@ -134,6 +134,7 @@ function cleanup_import_data() {
 
 /**
  * Clean up old job posts that are no longer in the feed.
+ * OPTIMIZED VERSION: Uses bulk operations to avoid database sync errors and improve performance
  *
  * @param float $import_start_time The timestamp when the import started.
  * @return array Array with deleted_count and logs.
@@ -183,30 +184,48 @@ function cleanup_old_job_posts($import_start_time) {
 
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Found ' . count($current_guids) . ' current GUIDs in feed';
 
-    // Get total count of old posts to be deleted for progress tracking
-    $total_old_posts = 0;
-    $chunk_size = 500; // Process in chunks of 500 GUIDs
-    $guid_chunks = array_chunk($current_guids, $chunk_size);
+    // Get all old published job post IDs in one efficient query
+    // Split GUIDs into chunks to avoid SQL query length limits
+    $guid_chunks = array_chunk($current_guids, 1000); // Smaller chunks for IN clause
+    $old_post_ids = [];
 
-    // First pass: count total old posts
-    foreach ($guid_chunks as $chunk_index => $guid_chunk) {
-        $placeholders = implode(',', array_fill(0, count($guid_chunk), '%s'));
-        $chunk_count = $wpdb->get_var($wpdb->prepare("
-            SELECT COUNT(*)
+    foreach ($guid_chunks as $chunk) {
+        $placeholders = implode(',', array_fill(0, count($chunk), '%s'));
+        $chunk_results = $wpdb->get_col($wpdb->prepare("
+            SELECT DISTINCT p.ID
             FROM {$wpdb->posts} p
             JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
             WHERE p.post_type = 'job'
             AND p.post_status = 'publish'
             AND pm.meta_value NOT IN ({$placeholders})
-        ", $guid_chunk));
-        $total_old_posts += $chunk_count;
+        ", $chunk));
+
+        if ($chunk_results) {
+            $old_post_ids = array_merge($old_post_ids, $chunk_results);
+        }
+
+        // Free result set to prevent "Commands out of sync" error
+        if ($wpdb->result instanceof mysqli_result) {
+            $wpdb->result->free();
+        }
     }
+
+    $total_old_posts = count($old_post_ids);
 
     PuntWorkLogger::info('Total old job posts to clean up', PuntWorkLogger::CONTEXT_BATCH, [
         'total_old_posts' => $total_old_posts
     ]);
 
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Found ' . $total_old_posts . ' old published job posts to clean up';
+
+    if ($total_old_posts === 0) {
+        PuntWorkLogger::info('No old posts to clean up', PuntWorkLogger::CONTEXT_BATCH);
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] No old posts to clean up';
+        return [
+            'deleted_count' => 0,
+            'logs' => $logs
+        ];
+    }
 
     // Update status to show cleanup progress starting
     $cleanup_start_status = get_option('job_import_status', []);
@@ -215,73 +234,69 @@ function cleanup_old_job_posts($import_start_time) {
     $cleanup_start_status['last_update'] = time();
     update_option('job_import_status', $cleanup_start_status, false);
 
+    // Process deletions in batches to avoid memory issues and timeouts
+    $batch_size = 100; // Delete 100 posts at a time
     $total_deleted = 0;
+    $batches_processed = 0;
 
-    foreach ($guid_chunks as $chunk_index => $guid_chunk) {
-        PuntWorkLogger::debug('Processing GUID chunk', PuntWorkLogger::CONTEXT_BATCH, [
-            'chunk' => $chunk_index + 1,
-            'total_chunks' => count($guid_chunks),
-            'chunk_size' => count($guid_chunk)
+    while (!empty($old_post_ids)) {
+        $batches_processed++;
+        $batch_ids = array_splice($old_post_ids, 0, $batch_size);
+
+        PuntWorkLogger::debug('Processing deletion batch', PuntWorkLogger::CONTEXT_BATCH, [
+            'batch' => $batches_processed,
+            'batch_size' => count($batch_ids),
+            'remaining' => count($old_post_ids)
         ]);
 
-        // Get published job posts whose GUID is not in this chunk
-        $placeholders = implode(',', array_fill(0, count($guid_chunk), '%s'));
-        $old_posts = $wpdb->get_results($wpdb->prepare("
-            SELECT p.ID, p.post_title, pm.meta_value as guid
-            FROM {$wpdb->posts} p
-            JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
-            WHERE p.post_type = 'job'
-            AND p.post_status = 'publish'
-            AND pm.meta_value NOT IN ({$placeholders})
-        ", $guid_chunk));
+        // Delete posts in this batch
+        $deleted_in_batch = 0;
+        foreach ($batch_ids as $post_id) {
+            // Verify post still exists and is published before deletion
+            $post_status = $wpdb->get_var($wpdb->prepare(
+                "SELECT post_status FROM {$wpdb->posts} WHERE ID = %d AND post_type = 'job'",
+                $post_id
+            ));
 
-        PuntWorkLogger::debug('Found old published job posts in chunk', PuntWorkLogger::CONTEXT_BATCH, [
-            'chunk' => $chunk_index + 1,
-            'old_posts_count' => count($old_posts)
-        ]);
-
-        foreach ($old_posts as $post) {
-            // Double-check the post still exists and is published
-            $post_status = $wpdb->get_var($wpdb->prepare("SELECT post_status FROM {$wpdb->posts} WHERE ID = %d", $post->ID));
-            if ($post_status !== 'publish') {
-                continue; // Skip if no longer published
+            if ($post_status === 'publish') {
+                $result = wp_delete_post($post_id, true); // true = force delete, skip trash
+                if ($result) {
+                    $deleted_in_batch++;
+                    $total_deleted++;
+                } else {
+                    PuntWorkLogger::warning('Failed to delete post', PuntWorkLogger::CONTEXT_BATCH, [
+                        'post_id' => $post_id
+                    ]);
+                }
             }
 
-            $result = wp_delete_post($post->ID, true); // true = force delete, skip trash
-            if ($result) {
-                $total_deleted++;
-
-                // Update cleanup progress every 10 deletions
-                if ($total_deleted % 10 === 0) {
-                    $cleanup_progress_status = get_option('job_import_status', []);
-                    $cleanup_progress_status['cleanup_processed'] = $total_deleted;
-                    $cleanup_progress_status['last_update'] = time();
-                    $cleanup_progress_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Cleanup progress: ' . $total_deleted . '/' . $total_old_posts . ' old jobs deleted';
-                    update_option('job_import_status', $cleanup_progress_status, false);
-                }
-
-                PuntWorkLogger::debug('Deleted old published job post', PuntWorkLogger::CONTEXT_BATCH, [
-                    'post_id' => $post->ID,
-                    'title' => $post->post_title,
-                    'guid' => $post->guid,
-                    'chunk' => $chunk_index + 1,
-                    'progress' => $total_deleted . '/' . $total_old_posts
-                ]);
-            } else {
-                PuntWorkLogger::error('Failed to delete old published job post', PuntWorkLogger::CONTEXT_BATCH, [
-                    'post_id' => $post->ID,
-                    'title' => $post->post_title,
-                    'guid' => $post->guid
-                ]);
-            }
-
-            // Clean up memory after each deletion
-            if ($total_deleted % 10 === 0) {
-                if (function_exists('gc_collect_cycles')) {
-                    gc_collect_cycles();
-                }
+            // Free result set after each query to prevent sync errors
+            if ($wpdb->result instanceof mysqli_result) {
+                $wpdb->result->free();
             }
         }
+
+        // Update progress every batch (every 100 deletions)
+        $cleanup_progress_status = get_option('job_import_status', []);
+        $cleanup_progress_status['cleanup_processed'] = $total_deleted;
+        $cleanup_progress_status['last_update'] = time();
+        $cleanup_progress_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Cleanup progress: ' . $total_deleted . '/' . $total_old_posts . ' old jobs deleted';
+        update_option('job_import_status', $cleanup_progress_status, false);
+
+        PuntWorkLogger::debug('Batch deletion completed', PuntWorkLogger::CONTEXT_BATCH, [
+            'batch' => $batches_processed,
+            'deleted_in_batch' => $deleted_in_batch,
+            'total_deleted' => $total_deleted,
+            'remaining' => count($old_post_ids)
+        ]);
+
+        // Clean up memory and allow other processes to run
+        if (function_exists('gc_collect_cycles')) {
+            gc_collect_cycles();
+        }
+
+        // Small delay between batches to prevent overwhelming the server
+        usleep(10000); // 0.01 seconds
     }
 
     // Final cleanup status update
@@ -293,7 +308,7 @@ function cleanup_old_job_posts($import_start_time) {
     PuntWorkLogger::info('Cleanup of old published job posts completed', PuntWorkLogger::CONTEXT_BATCH, [
         'deleted_count' => $total_deleted,
         'current_feed_jobs' => count($current_guids),
-        'chunks_processed' => count($guid_chunks)
+        'batches_processed' => $batches_processed
     ]);
 
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Cleanup completed: ' . $total_deleted . ' old published jobs deleted';
@@ -305,26 +320,59 @@ function cleanup_old_job_posts($import_start_time) {
 }
 
 /**
- * Get import status summary.
+ * Clean up old job posts using direct SQL for maximum performance.
+ * WARNING: This bypasses WordPress hooks and should only be used when wp_delete_post is too slow.
+ * Use with extreme caution and thorough testing.
  *
- * @return array Status summary.
+ * @param array $post_ids Array of post IDs to delete
+ * @return int Number of posts deleted
  */
-function get_import_status_summary() {
-    $status = get_option('job_import_status', []);
+function bulk_delete_job_posts_sql($post_ids) {
+    global $wpdb;
 
-    return [
-        'total' => $status['total'] ?? 0,
-        'processed' => $status['processed'] ?? 0,
-        'published' => $status['published'] ?? 0,
-        'updated' => $status['updated'] ?? 0,
-        'skipped' => $status['skipped'] ?? 0,
-        'duplicates_drafted' => $status['duplicates_drafted'] ?? 0,
-        'complete' => $status['complete'] ?? false,
-        'progress_percentage' => $status['total'] > 0 ? round(($status['processed'] / $status['total']) * 100, 2) : 0,
-        'time_elapsed' => $status['time_elapsed'] ?? 0,
-        'estimated_time_remaining' => calculate_estimated_time_remaining($status),
-        'last_update' => $status['last_update'] ?? null,
-    ];
+    if (empty($post_ids)) {
+        return 0;
+    }
+
+    $post_ids = array_map('intval', $post_ids);
+    $placeholders = implode(',', array_fill(0, count($post_ids), '%d'));
+
+    // Begin transaction for data integrity
+    $wpdb->query('START TRANSACTION');
+
+    try {
+        // Delete postmeta first (required before deleting posts)
+        $wpdb->query($wpdb->prepare("
+            DELETE FROM {$wpdb->postmeta}
+            WHERE post_id IN ({$placeholders})
+        ", $post_ids));
+
+        // Delete term relationships
+        $wpdb->query($wpdb->prepare("
+            DELETE FROM {$wpdb->term_relationships}
+            WHERE object_id IN ({$placeholders})
+        ", $post_ids));
+
+        // Delete posts
+        $result = $wpdb->query($wpdb->prepare("
+            DELETE FROM {$wpdb->posts}
+            WHERE ID IN ({$placeholders}) AND post_type = 'job'
+        ", $post_ids));
+
+        // Commit transaction
+        $wpdb->query('COMMIT');
+
+        return $result;
+
+    } catch (Exception $e) {
+        // Rollback on error
+        $wpdb->query('ROLLBACK');
+        PuntWorkLogger::error('Bulk delete failed, rolled back', PuntWorkLogger::CONTEXT_BATCH, [
+            'error' => $e->getMessage(),
+            'post_count' => count($post_ids)
+        ]);
+        return 0;
+    }
 }
 
 /**
