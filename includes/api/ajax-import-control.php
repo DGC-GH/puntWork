@@ -273,6 +273,9 @@ function get_job_import_status_ajax() {
     // Add estimated time remaining calculation from PHP
     $progress['estimated_time_remaining'] = calculate_estimated_time_remaining($progress);
 
+    // Add a last_modified timestamp for client-side caching
+    $progress['last_modified'] = time();
+
     // Log response summary instead of full data to prevent large debug logs
     $log_summary = [
         'total' => $progress['total'],
@@ -288,7 +291,8 @@ function get_job_import_status_ajax() {
         'batch_time' => $progress['batch_time'],
         'batch_processed' => $progress['batch_processed'],
         'logs_count' => is_array($progress['logs']) ? count($progress['logs']) : 0,
-        'has_error' => !empty($progress['error_message'])
+        'has_error' => !empty($progress['error_message']),
+        'last_modified' => $progress['last_modified']
     ];
 
     PuntWorkLogger::logAjaxResponse('get_job_import_status', $log_summary);
