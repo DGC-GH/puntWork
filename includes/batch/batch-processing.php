@@ -137,6 +137,11 @@ function process_batch_items_logic($setup) {
             ];
         }
 
+        // Progress update interval - update every 50 items or 10% of batch, whichever is smaller
+        $progress_update_interval = min(50, max(10, floor($batch_size / 10)));
+        $next_progress_update = $start_index + $progress_update_interval;
+        $items_processed_in_batch = 0;
+
         for ($i = 0; $i < count($batch_json_items); $i++) {
             try {
                 $current_index = $start_index + $i;
@@ -183,6 +188,52 @@ function process_batch_items_logic($setup) {
                         // Update the stored batch size for future batches
                         update_option('job_import_batch_size', $batch_size, false);
                     }
+                }
+
+                $items_processed_in_batch++;
+
+                // Update progress periodically during batch processing for better UX
+                if ($current_index >= $next_progress_update || $i % 25 === 0) {
+                    $current_batch_progress = $start_index + $items_processed_in_batch;
+
+                    // Update import status for real-time UI feedback
+                    $intermediate_status = get_option('job_import_status', []);
+                    $intermediate_status['total'] = $total;
+                    $intermediate_status['processed'] = $current_batch_progress;
+                    $intermediate_status['published'] = ($intermediate_status['published'] ?? 0) + $published;
+                    $intermediate_status['updated'] = ($intermediate_status['updated'] ?? 0) + $updated;
+                    $intermediate_status['skipped'] = ($intermediate_status['skipped'] ?? 0) + $skipped;
+                    $intermediate_status['duplicates_drafted'] = ($intermediate_status['duplicates_drafted'] ?? 0) + $duplicates_drafted;
+                    $intermediate_status['time_elapsed'] = microtime(true) - $start_time;
+                    $intermediate_status['complete'] = false;
+                    $intermediate_status['success'] = false;
+                    $intermediate_status['error_message'] = '';
+                    $intermediate_status['batch_size'] = $batch_size;
+                    $intermediate_status['inferred_languages'] = ($intermediate_status['inferred_languages'] ?? 0) + $inferred_languages;
+                    $intermediate_status['inferred_benefits'] = ($intermediate_status['inferred_benefits'] ?? 0) + $inferred_benefits;
+                    $intermediate_status['schema_generated'] = ($intermediate_status['schema_generated'] ?? 0) + $schema_generated;
+                    $intermediate_status['start_time'] = $start_time;
+                    $intermediate_status['end_time'] = null;
+                    $intermediate_status['last_update'] = time();
+                    $intermediate_status['logs'] = array_slice($logs, -50);
+
+                    retry_option_operation(function() use ($intermediate_status) {
+                        return update_option('job_import_status', $intermediate_status, false);
+                    }, [], [
+                        'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                        'operation' => 'update_intermediate_progress'
+                    ]);
+
+                    // Calculate next progress update point
+                    $next_progress_update = $current_batch_progress + $progress_update_interval;
+
+                    PuntWorkLogger::debug('Intermediate progress update during batch processing', PuntWorkLogger::CONTEXT_BATCH, [
+                        'current_index' => $current_index,
+                        'processed_in_batch' => $items_processed_in_batch,
+                        'total_processed' => $current_batch_progress,
+                        'next_update_at' => $next_progress_update,
+                        'batch_size' => $batch_size
+                    ]);
                 }
 
                 if ($i % 5 === 0) {
