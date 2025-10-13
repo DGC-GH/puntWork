@@ -95,33 +95,52 @@ function prepare_import_setup($batch_start = 0) {
         $start_index = 0;
         // Clear processed GUIDs for fresh start
         $processed_guids = [];
-        // Clear existing status for fresh start
-        delete_option('job_import_status');
-        $start_time = microtime(true);
-        PuntWorkLogger::info('Fresh import start - resetting status and progress to 0', PuntWorkLogger::CONTEXT_BATCH);
+        
+        // Check if status is already properly initialized (from run_job_import_batch_ajax)
+        $existing_status = get_option('job_import_status');
+        $needs_reinit = true;
+        
+        if ($existing_status && 
+            isset($existing_status['total']) && $existing_status['total'] === $total &&
+            isset($existing_status['processed']) && $existing_status['processed'] === 0 &&
+            isset($existing_status['complete']) && $existing_status['complete'] === false) {
+            // Status is already properly initialized, don't clear it
+            $needs_reinit = false;
+            PuntWorkLogger::info('Using pre-initialized import status', PuntWorkLogger::CONTEXT_BATCH, [
+                'total' => $existing_status['total'],
+                'start_time' => $existing_status['start_time']
+            ]);
+        }
+        
+        if ($needs_reinit) {
+            // Clear existing status for fresh start
+            delete_option('job_import_status');
+            $start_time = microtime(true);
+            PuntWorkLogger::info('Fresh import start - resetting status and progress to 0', PuntWorkLogger::CONTEXT_BATCH);
 
-        // Initialize status for manual import
-        $initial_status = [
-            'total' => $total,
-            'processed' => 0,
-            'published' => 0,
-            'updated' => 0,
-            'skipped' => 0,
-            'duplicates_drafted' => 0,
-            'time_elapsed' => 0,
-            'complete' => false,
-            'success' => false,
-            'error_message' => '',
-            'batch_size' => get_option('job_import_batch_size') ?: 100,
-            'inferred_languages' => 0,
-            'inferred_benefits' => 0,
-            'schema_generated' => 0,
-            'start_time' => $start_time,
-            'end_time' => null,
-            'last_update' => time(),
-            'logs' => ['Manual import started - preparing to process items...'],
-        ];
-        update_option('job_import_status', $initial_status, false);
+            // Initialize status for manual import
+            $initial_status = [
+                'total' => $total,
+                'processed' => 0,
+                'published' => 0,
+                'updated' => 0,
+                'skipped' => 0,
+                'duplicates_drafted' => 0,
+                'time_elapsed' => 0,
+                'complete' => false,
+                'success' => false,
+                'error_message' => '',
+                'batch_size' => get_option('job_import_batch_size') ?: 100,
+                'inferred_languages' => 0,
+                'inferred_benefits' => 0,
+                'schema_generated' => 0,
+                'start_time' => $start_time,
+                'end_time' => null,
+                'last_update' => time(),
+                'logs' => ['Manual import started - preparing to process items...'],
+            ];
+            update_option('job_import_status', $initial_status, false);
+        }
     }
 
     if ($start_index >= $total) {

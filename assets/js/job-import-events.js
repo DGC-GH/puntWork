@@ -391,21 +391,28 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         lastModifiedTimestamp = serverLastModified;
 
                         // Check if total is still 0 (import hasn't started)
+                        // Be more tolerant in the first few polls after starting an import
+                        var pollCount = Math.floor((Date.now() - startTime) / JobImportEvents.currentPollingInterval);
+                        var isEarlyPoll = pollCount < 5; // First 5 polls are more tolerant
+                        
                         if (currentTotal === 0) {
                             totalZeroCount++;
                             if (timeSinceLastLog > 10000) {
-                                console.log('[PUNTWORK] Import total still 0, count:', totalZeroCount);
+                                console.log('[PUNTWORK] Import total still 0, count:', totalZeroCount, 'early poll:', isEarlyPoll);
                             }
                         } else {
                             totalZeroCount = 0;
                         }
 
                         // Stop polling if total has been 0 for too many polls
-                        if (totalZeroCount >= JobImportEvents.maxTotalZeroPolls) {
-                            console.log('[PUNTWORK] Import failed to start after', JobImportEvents.maxTotalZeroPolls, 'polls, stopping polling');
+                        // But be more lenient for early polls (allow more time for initialization)
+                        var effectiveMaxZeroPolls = isEarlyPoll ? 25 : JobImportEvents.maxTotalZeroPolls;
+                        if (totalZeroCount >= effectiveMaxZeroPolls) {
+                            console.log('[PUNTWORK] Import failed to start after', effectiveMaxZeroPolls, 'polls, stopping polling');
                             PuntWorkJSLogger.warn('Import failed to start, stopping polling', 'EVENTS', {
                                 totalZeroCount: totalZeroCount,
-                                maxTotalZeroPolls: JobImportEvents.maxTotalZeroPolls
+                                effectiveMaxZeroPolls: effectiveMaxZeroPolls,
+                                isEarlyPoll: isEarlyPoll
                             });
                             JobImportEvents.stopStatusPolling();
                             JobImportUI.resetButtons();
