@@ -22,7 +22,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 add_action('wp_ajax_run_job_import_batch', __NAMESPACE__ . '\\run_job_import_batch_ajax');
 function run_job_import_batch_ajax() {
-    PuntWorkLogger::logAjaxRequest('run_job_import_batch', $_POST);
+             $message = "Cleanup completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} drafted jobs";
+
+            // Verify final count
+            $final_count = $wpdb->get_var($wpdb->prepare("
+                SELECT COUNT(*) FROM {$wpdb->posts}
+                WHERE post_type = 'job' AND post_status = 'draft'
+            "));
+
+            PuntWorkLogger::info('Cleanup of drafted jobs completed', PuntWorkLogger::CONTEXT_BATCH, [
+                'total_processed' => $progress['total_processed'],
+                'total_deleted' => $progress['total_deleted'],
+                'final_draft_count' => $final_count,
+                'expected_remaining' => $progress['total_jobs'] - $progress['total_deleted']
+            ]);ntWorkLogger::logAjaxRequest('run_job_import_batch', $_POST);
 
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
         PuntWorkLogger::error('Nonce verification failed for run_job_import_batch', PuntWorkLogger::CONTEXT_AJAX);
@@ -492,6 +505,10 @@ function cleanup_drafted_jobs_ajax() {
             WHERE post_type = 'job' AND post_status = 'draft'
         "));
 
+        PuntWorkLogger::info('Draft cleanup initialized', PuntWorkLogger::CONTEXT_BATCH, [
+            'total_draft_jobs_found' => $total_count
+        ]);
+
         update_option('job_cleanup_drafted_progress', [
             'total_processed' => 0,
             'total_deleted' => 0,
@@ -551,12 +568,43 @@ function cleanup_drafted_jobs_ajax() {
         $logs = $progress['logs'];
 
         foreach ($drafted_posts as $post) {
+            // Check if post still exists before deletion
+            $post_exists_before = $wpdb->get_var($wpdb->prepare("SELECT ID FROM {$wpdb->posts} WHERE ID = %d", $post->ID));
+
+            // Check if post is locked
+            $locked = wp_check_post_lock($post->ID);
+            if ($locked) {
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Skipped locked draft job: ' . $post->post_title . ' (ID: ' . $post->ID . ', locked by user: ' . $locked . ')';
+                PuntWorkLogger::debug('Skipped locked post', PuntWorkLogger::CONTEXT_BATCH, [
+                    'post_id' => $post->ID,
+                    'locked_by' => $locked
+                ]);
+                continue;
+            }
+
             $result = wp_delete_post($post->ID, true); // true = force delete, skip trash
-            if ($result) {
+
+            // Verify deletion
+            $post_exists_after = $wpdb->get_var($wpdb->prepare("SELECT ID FROM {$wpdb->posts} WHERE ID = %d", $post->ID));
+
+            if ($result && !$post_exists_after) {
                 $deleted_count++;
-                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Permanently deleted drafted job: ' . $post->post_title . ' (ID: ' . $post->ID . ')';
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Successfully deleted draft job: ' . $post->post_title . ' (ID: ' . $post->ID . ')';
+                PuntWorkLogger::debug('Post deletion verified', PuntWorkLogger::CONTEXT_BATCH, [
+                    'post_id' => $post->ID,
+                    'post_title' => $post->post_title,
+                    'existed_before' => $post_exists_before ? 'yes' : 'no',
+                    'exists_after' => $post_exists_after ? 'yes' : 'no'
+                ]);
             } else {
-                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Failed to delete drafted job: ' . $post->post_title . ' (ID: ' . $post->ID . ')';
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Failed to delete draft job: ' . $post->post_title . ' (ID: ' . $post->ID . ') - wp_delete_post returned: ' . ($result ? 'true' : 'false') . ', still exists: ' . ($post_exists_after ? 'yes' : 'no');
+                PuntWorkLogger::error('Post deletion failed', PuntWorkLogger::CONTEXT_BATCH, [
+                    'post_id' => $post->ID,
+                    'post_title' => $post->post_title,
+                    'wp_delete_result' => $result ? 'true' : 'false',
+                    'existed_before' => $post_exists_before ? 'yes' : 'no',
+                    'exists_after' => $post_exists_after ? 'yes' : 'no'
+                ]);
             }
 
             // Clean up memory after each deletion
