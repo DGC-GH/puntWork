@@ -25,3 +25,10 @@ Review and optimize database queries (add indexes on frequently queried columns)
 Add database query profiling to identify slow queries.
 
 Optimize batch size dynamically based on performance.
+
+
+
+audit current job processing, publishing, updating, skipping and remving algorithm.
+analyse the related logs, timestamps and metrics in debug.log.
+make conclusion about the efficiency.
+refactor the code to increase speed and efficiency of the import process.
