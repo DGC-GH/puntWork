@@ -471,39 +471,13 @@
             $('#cleanup-trashed-text').hide();
             $('#cleanup-trashed-loading').show();
 
-            JobImportAPI.cleanupTrashedJobs().then(function(response) {
-                PuntWorkJSLogger.debug('Cleanup trashed jobs response', 'LOGIC', response);
+            // Show progress UI
+            JobImportUI.showCleanupUI();
+            JobImportUI.clearCleanupProgress();
+            $('#cleanup-status').text('Starting cleanup...');
 
-                if (response.success) {
-                    JobImportUI.appendLogs(response.data.logs || []);
-                    $('#cleanup-status').text('Trashed jobs cleanup completed successfully');
-                    JobImportUI.updateCleanupProgress({
-                        progress_percentage: 100,
-                        total_processed: response.data.total_found,
-                        total_jobs: response.data.total_found,
-                        time_elapsed: 0.1, // Minimal time for instant operation
-                        complete: true
-                    });
-                } else {
-                    JobImportUI.appendLogs(['Cleanup failed: ' + (response.message || 'Unknown error')]);
-                    $('#cleanup-status').text('Trashed jobs cleanup failed');
-                }
-
-                // Reset button state
-                $('#cleanup-trashed').prop('disabled', false);
-                $('#cleanup-trashed-text').show();
-                $('#cleanup-trashed-loading').hide();
-
-            }).catch(function(xhr, status, error) {
-                PuntWorkJSLogger.error('Cleanup trashed jobs AJAX error', 'LOGIC', error);
-                JobImportUI.appendLogs(['Cleanup AJAX error: ' + error]);
-                $('#cleanup-status').text('Trashed jobs cleanup failed');
-
-                // Reset button state
-                $('#cleanup-trashed').prop('disabled', false);
-                $('#cleanup-trashed-text').show();
-                $('#cleanup-trashed-loading').hide();
-            });
+            // Start batch processing
+            this.processCleanupBatch('trashed', 0, 50);
         },
 
         /**
@@ -517,39 +491,13 @@
             $('#cleanup-drafted-text').hide();
             $('#cleanup-drafted-loading').show();
 
-            JobImportAPI.cleanupDraftedJobs().then(function(response) {
-                PuntWorkJSLogger.debug('Cleanup drafted jobs response', 'LOGIC', response);
+            // Show progress UI
+            JobImportUI.showCleanupUI();
+            JobImportUI.clearCleanupProgress();
+            $('#cleanup-status').text('Starting cleanup...');
 
-                if (response.success) {
-                    JobImportUI.appendLogs(response.data.logs || []);
-                    $('#cleanup-status').text('Drafted jobs cleanup completed successfully');
-                    JobImportUI.updateCleanupProgress({
-                        progress_percentage: 100,
-                        total_processed: response.data.total_found,
-                        total_jobs: response.data.total_found,
-                        time_elapsed: 0.1, // Minimal time for instant operation
-                        complete: true
-                    });
-                } else {
-                    JobImportUI.appendLogs(['Cleanup failed: ' + (response.message || 'Unknown error')]);
-                    $('#cleanup-status').text('Drafted jobs cleanup failed');
-                }
-
-                // Reset button state
-                $('#cleanup-drafted').prop('disabled', false);
-                $('#cleanup-drafted-text').show();
-                $('#cleanup-drafted-loading').hide();
-
-            }).catch(function(xhr, status, error) {
-                PuntWorkJSLogger.error('Cleanup drafted jobs AJAX error', 'LOGIC', error);
-                JobImportUI.appendLogs(['Cleanup AJAX error: ' + error]);
-                $('#cleanup-status').text('Drafted jobs cleanup failed');
-
-                // Reset button state
-                $('#cleanup-drafted').prop('disabled', false);
-                $('#cleanup-drafted-text').show();
-                $('#cleanup-drafted-loading').hide();
-            });
+            // Start batch processing
+            this.processCleanupBatch('drafted', 0, 50);
         },
 
         /**
@@ -563,38 +511,146 @@
             $('#cleanup-old-published-text').hide();
             $('#cleanup-old-published-loading').show();
 
-            JobImportAPI.cleanupOldPublishedJobs().then(function(response) {
-                PuntWorkJSLogger.debug('Cleanup old published jobs response', 'LOGIC', response);
+            // Show progress UI
+            JobImportUI.showCleanupUI();
+            JobImportUI.clearCleanupProgress();
+            $('#cleanup-status').text('Starting cleanup...');
+
+            // Start batch processing
+            this.processCleanupBatch('old-published', 0, 50);
+        },
+
+        /**
+         * Process cleanup batches for different operations
+         * @param {string} operation - The cleanup operation type ('trashed', 'drafted', 'old-published')
+         * @param {number} offset - Current offset for batch processing
+         * @param {number} batchSize - Size of batch to process
+         */
+        processCleanupBatch: function(operation, offset, batchSize) {
+            console.log('[PUNTWORK] Processing cleanup batch - operation:', operation, 'offset:', offset, 'batchSize:', batchSize);
+
+            var actionMap = {
+                'trashed': 'cleanup_trashed_jobs',
+                'drafted': 'cleanup_drafted_jobs',
+                'old-published': 'cleanup_old_published_jobs'
+            };
+
+            var action = actionMap[operation];
+            if (!action) {
+                console.error('[PUNTWORK] Unknown cleanup operation:', operation);
+                return;
+            }
+
+            var isContinue = offset > 0;
+            var apiCall = JobImportAPI.call(action, {
+                offset: offset,
+                batch_size: batchSize,
+                is_continue: isContinue
+            });
+
+            apiCall.then(function(response) {
+                console.log('[PUNTWORK] Cleanup API response:', response);
+                PuntWorkJSLogger.debug('Cleanup response', 'LOGIC', response);
 
                 if (response.success) {
-                    JobImportUI.appendLogs(response.data.logs || []);
-                    $('#cleanup-status').text('Old published jobs cleanup completed successfully');
-                    JobImportUI.updateCleanupProgress({
-                        progress_percentage: 100,
-                        total_processed: response.data.total_found,
-                        total_jobs: response.data.total_found,
-                        time_elapsed: 0.1, // Minimal time for instant operation
-                        complete: true
-                    });
+                    console.log('[PUNTWORK] Cleanup response successful, complete:', response.data.complete);
+
+                    // Update progress UI
+                    JobImportUI.updateCleanupProgress(response.data);
+                    JobImportUI.appendCleanupLogs(response.data.logs || []);
+
+                    if (response.data.complete) {
+                        // Operation completed
+                        $('#cleanup-status').text('Cleanup completed: ' + response.data.total_deleted + ' jobs deleted');
+
+                        // Reset button states
+                        var buttonMap = {
+                            'trashed': '#cleanup-trashed',
+                            'drafted': '#cleanup-drafted',
+                            'old-published': '#cleanup-old-published'
+                        };
+                        var textMap = {
+                            'trashed': '#cleanup-trashed-text',
+                            'drafted': '#cleanup-drafted-text',
+                            'old-published': '#cleanup-old-published-text'
+                        };
+                        var loadingMap = {
+                            'trashed': '#cleanup-trashed-loading',
+                            'drafted': '#cleanup-drafted-loading',
+                            'old-published': '#cleanup-old-published-loading'
+                        };
+
+                        $(buttonMap[operation]).prop('disabled', false);
+                        $(textMap[operation]).show();
+                        $(loadingMap[operation]).hide();
+
+                        // Clear cleanup progress after a delay
+                        setTimeout(function() {
+                            JobImportUI.clearCleanupProgress();
+                        }, 3000);
+
+                    } else {
+                        // Update status and continue with next batch
+                        $('#cleanup-status').text('Progress: ' + response.data.progress_percentage + '% (' +
+                            response.data.total_processed + '/' + response.data.total_jobs + ' jobs processed)');
+
+                        // Continue with next batch
+                        JobImportLogic.processCleanupBatch(operation, response.data.next_offset, batchSize);
+                    }
                 } else {
-                    JobImportUI.appendLogs(['Cleanup failed: ' + (response.message || 'Unknown error')]);
-                    $('#cleanup-status').text('Old published jobs cleanup failed');
+                    console.log('[PUNTWORK] Cleanup response failed:', response.data);
+                    $('#cleanup-status').text('Cleanup failed: ' + (response.data || 'Unknown error'));
+
+                    // Reset button states on failure
+                    var buttonMap = {
+                        'trashed': '#cleanup-trashed',
+                        'drafted': '#cleanup-drafted',
+                        'old-published': '#cleanup-old-published'
+                    };
+                    var textMap = {
+                        'trashed': '#cleanup-trashed-text',
+                        'drafted': '#cleanup-drafted-text',
+                        'old-published': '#cleanup-old-published-text'
+                    };
+                    var loadingMap = {
+                        'trashed': '#cleanup-trashed-loading',
+                        'drafted': '#cleanup-drafted-loading',
+                        'old-published': '#cleanup-old-published-loading'
+                    };
+
+                    $(buttonMap[operation]).prop('disabled', false);
+                    $(textMap[operation]).show();
+                    $(loadingMap[operation]).hide();
+                    JobImportUI.clearCleanupProgress();
                 }
-
-                // Reset button state
-                $('#cleanup-old-published').prop('disabled', false);
-                $('#cleanup-old-published-text').show();
-                $('#cleanup-old-published-loading').hide();
-
             }).catch(function(xhr, status, error) {
-                PuntWorkJSLogger.error('Cleanup old published jobs AJAX error', 'LOGIC', error);
-                JobImportUI.appendLogs(['Cleanup AJAX error: ' + error]);
-                $('#cleanup-status').text('Old published jobs cleanup failed');
+                console.log('[PUNTWORK] Cleanup API error:', error);
+                console.log('[PUNTWORK] XHR status:', xhr.status, 'response:', xhr.responseText);
+                PuntWorkJSLogger.error('Cleanup AJAX error', 'LOGIC', error);
+                $('#cleanup-status').text('Cleanup failed: ' + error);
+                JobImportUI.appendCleanupLogs(['Cleanup AJAX error: ' + error]);
 
-                // Reset button state
-                $('#cleanup-old-published').prop('disabled', false);
-                $('#cleanup-old-published-text').show();
-                $('#cleanup-old-published-loading').hide();
+                // Reset button states on error
+                var buttonMap = {
+                    'trashed': '#cleanup-trashed',
+                    'drafted': '#cleanup-drafted',
+                    'old-published': '#cleanup-old-published'
+                };
+                var textMap = {
+                    'trashed': '#cleanup-trashed-text',
+                    'drafted': '#cleanup-drafted-text',
+                    'old-published': '#cleanup-old-published-text'
+                };
+                var loadingMap = {
+                    'trashed': '#cleanup-trashed-loading',
+                    'drafted': '#cleanup-drafted-loading',
+                    'old-published': '#cleanup-old-published-loading'
+                };
+
+                $(buttonMap[operation]).prop('disabled', false);
+                $(textMap[operation]).show();
+                $(loadingMap[operation]).hide();
+                JobImportUI.clearCleanupProgress();
             });
         }
     };

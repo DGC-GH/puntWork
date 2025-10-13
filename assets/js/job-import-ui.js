@@ -112,6 +112,20 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
         },
 
         /**
+         * Append logs to the cleanup log textarea
+         * @param {Array} logs - Array of log messages
+         */
+        appendCleanupLogs: function(logs) {
+            var logArea = $('#cleanup-log-textarea');
+            if (logArea.length > 0) {
+                logs.forEach(function(log) {
+                    logArea.val(logArea.val() + log + '\n');
+                });
+                logArea.scrollTop(logArea[0].scrollHeight);
+            }
+        },
+
+        /**
          * Format time in seconds to human-readable format
          * @param {number} seconds - Time in seconds
          * @returns {string} Formatted time string
