@@ -16,6 +16,59 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Render import history UI section
+ */
+function render_import_history_ui() {
+    ?>
+    <!-- Import History Section -->
+    <div class="wrap" style="max-width: 800px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1d1d1f; padding: 0 24px;">
+        <div id="import-history" style="max-width: 900px; margin: 0 auto; margin-top: 40px; background-color: #ffffff; border-radius: 16px; padding: 32px; box-shadow: 0 2px 10px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04); position: relative; overflow: hidden;">
+
+            <!-- Header Section -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #e5e5e7;">
+                <div>
+                    <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 4px 0; color: #1d1d1f; letter-spacing: -0.02em;">Import History</h2>
+                    <p style="font-size: 15px; color: #86868b; margin: 0; font-weight: 400;">View past import runs and their results</p>
+                </div>
+                <button id="refresh-history" class="secondary-button" style="border-radius: 8px; padding: 10px 16px; font-size: 14px; font-weight: 500; background-color: #f2f2f7; border: 1px solid #d1d1d6; color: #424245; transition: all 0.2s ease; cursor: pointer;" aria-label="Refresh import history">
+                    <i class="fas fa-sync-alt" style="margin-right: 6px;"></i>Refresh
+                </button>
+            </div>
+
+            <!-- Import History Content -->
+            <div id="run-history-list" style="max-height: 600px; overflow-y: auto; font-size: 14px; border-radius: 8px; background-color: #fafbfc; padding: 20px;">
+                <div style="color: #86868b; text-align: center; padding: 24px; font-style: italic;">Loading history...</div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Loading animation for refresh button */
+        #import-history #refresh-history.loading i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            #import-history {
+                margin: 20px 16px;
+                padding: 24px 20px;
+            }
+
+            #import-history h2 {
+                font-size: 24px;
+            }
+        }
+    </style>
+    <?php
+}
+
+/**
  * Render scheduling UI section
  */
 function render_scheduling_ui() {
@@ -124,19 +177,6 @@ function render_scheduling_ui() {
                         <div style="color: #86868b; margin-bottom: 4px; font-weight: 500;">Status</div>
                         <div id="last-run-status" style="font-weight: 600;">—</div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Import History Card -->
-            <div class="scheduling-card" style="background-color: #ffffff; border-radius: 12px; padding: 24px; margin-bottom: 32px; border: 1px solid #e5e5e7; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-                    <h3 style="font-size: 20px; font-weight: 600; margin: 0; color: #1d1d1f;">Import History</h3>
-                    <button id="refresh-history" class="secondary-button" style="border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: 500; background-color: #f2f2f7; border: 1px solid #d1d1d6; color: #424245; transition: all 0.2s ease; cursor: pointer;" aria-label="Refresh import history">
-                        <i class="fas fa-sync-alt" style="margin-right: 6px;"></i>Refresh
-                    </button>
-                </div>
-                <div id="run-history-list" style="max-height: 600px; overflow-y: auto; font-size: 14px; border-radius: 8px; background-color: #fafbfc; padding: 20px;">
-                    <div style="color: #86868b; text-align: center; padding: 24px; font-style: italic;">Loading history...</div>
                 </div>
             </div>
 

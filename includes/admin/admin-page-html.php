@@ -30,6 +30,9 @@ function feeds_dashboard_page() {
     // Render scheduling UI
     render_scheduling_ui();
 
+    // Render import history UI
+    render_import_history_ui();
+
     // Render debug UI (only in development)
     render_debug_ui();
 

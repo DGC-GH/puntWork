@@ -63,8 +63,8 @@
                 self.refreshScheduleStatus();
             }, 300000); // Refresh every 5 minutes instead of 30 seconds
 
-            // Refresh history button
-            $('#refresh-history').on('click', function(e) {
+            // Refresh history buttons (both scheduling and import history sections)
+            $('#import-scheduling #refresh-history, #import-history #refresh-history').on('click', function(e) {
                 e.preventDefault();
                 $(this).addClass('manual-refresh');
                 self.loadRunHistory();
@@ -599,37 +599,44 @@
          */
         loadRunHistory: function() {
             var self = this;
-            var $button = $('#refresh-history');
-            var $list = $('#run-history-list');
 
-            // Show loading state
-            $button.addClass('loading').prop('disabled', true);
-            $list.html('<div style="color: #86868b; text-align: center; padding: 24px; font-style: italic;"><i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Loading history...</div>');
+            // Handle both scheduling and import history sections
+            $('#import-scheduling #refresh-history, #import-history #refresh-history').each(function() {
+                var $button = $(this);
+                var sectionId = $button.closest('.wrap').find('> div').attr('id');
+                var $list = $button.closest('.wrap').find('#run-history-list');
 
-            JobImportAPI.call('get_import_run_history', {}, function(response) {
-                // Remove loading state
-                $button.removeClass('loading').prop('disabled', false);
+                // Show loading state
+                $button.addClass('loading').prop('disabled', true);
+                $list.html('<div style="color: #86868b; text-align: center; padding: 24px; font-style: italic;"><i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Loading history...</div>');
 
-                if (response.success) {
-                    self.displayRunHistory(response.data.history);
-                    // Only log on initial load or manual refresh, not periodic refreshes
-                    if ($button.hasClass('manual-refresh') || !self.historyLoaded) {
-                        PuntWorkJSLogger.info('Run history loaded', 'SCHEDULING', { count: response.data.count });
-                        self.historyLoaded = true;
-                        $button.removeClass('manual-refresh');
+                JobImportAPI.call('get_import_run_history', {}, function(response) {
+                    // Remove loading state
+                    $button.removeClass('loading').prop('disabled', false);
+
+                    if (response.success) {
+                        self.displayRunHistory(response.data.history, $list);
+                        // Only log on initial load or manual refresh, not periodic refreshes
+                        if ($button.hasClass('manual-refresh') || !self.historyLoaded) {
+                            PuntWorkJSLogger.info('Run history loaded for ' + sectionId, 'SCHEDULING', { count: response.data.count });
+                            self.historyLoaded = true;
+                            $button.removeClass('manual-refresh');
+                        }
+                    } else {
+                        $list.html('<div style="color: #ff3b30; text-align: center; padding: 24px;"><i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>Failed to load history</div>');
+                        PuntWorkJSLogger.error('Failed to load run history for ' + sectionId, 'SCHEDULING', response.data);
                     }
-                } else {
-                    $list.html('<div style="color: #ff3b30; text-align: center; padding: 24px;"><i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>Failed to load history</div>');
-                    PuntWorkJSLogger.error('Failed to load run history', 'SCHEDULING', response.data);
-                }
+                });
             });
         },
 
         /**
          * Display run history
          */
-        displayRunHistory: function(history) {
-            var $container = $('#run-history-list');
+        displayRunHistory: function(history, $container) {
+            if (!$container) {
+                $container = $('#run-history-list'); // Fallback for backward compatibility
+            }
 
             if (!history || history.length === 0) {
                 $container.html('<div style="color: #86868b; text-align: center; padding: 32px; font-style: italic; font-size: 15px;"><i class="fas fa-history" style="margin-right: 8px; opacity: 0.6;"></i>No import history available</div>');
