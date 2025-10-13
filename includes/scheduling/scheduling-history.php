@@ -15,6 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+require_once __DIR__ . '/../utilities/options-utilities.php';
+
 /**
  * Run the scheduled import
  */
@@ -45,10 +47,10 @@ function run_scheduled_import($test_mode = false) {
                 fetch_and_generate_combined_json();
                 
                 // Update status after feed refresh
-                $feed_status = get_option('job_import_status', []);
+                $feed_status = PuntWork\get_import_status([]);
                 if (!empty($feed_status)) {
                     $feed_status['logs'][] = 'Feed data refreshed successfully';
-                    update_option('job_import_status', $feed_status, false);
+                    PuntWork\set_import_status($feed_status);
                 }
             } catch (\Exception $e) {
                 error_log('[PUNTWORK] Feed refresh failed: ' . $e->getMessage());
@@ -89,7 +91,7 @@ function run_scheduled_import($test_mode = false) {
                 'timestamp' => time()
             ];
 
-            update_option('puntwork_last_import_details', $details);
+            PuntWork\set_last_import_details($details);
 
             // Log this run to history
             log_scheduled_run($details, $test_mode);
@@ -159,7 +161,7 @@ function log_import_run($details, $import_type = 'manual') {
     ];
 
     // Get existing history
-    $history = get_option('puntwork_import_run_history', []);
+    $history = PuntWork\get_import_run_history([]);
 
     // Add new entry to the beginning
     array_unshift($history, $run_entry);
@@ -169,7 +171,7 @@ function log_import_run($details, $import_type = 'manual') {
         $history = array_slice($history, 0, 50);
     }
 
-    update_option('puntwork_import_run_history', $history);
+    PuntWork\set_import_run_history($history);
 
     // Log to debug log
     $status = $details['success'] ? 'SUCCESS' : 'FAILED';

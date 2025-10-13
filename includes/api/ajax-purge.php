@@ -17,6 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once __DIR__ . '/../utilities/ajax-utilities.php';
 require_once __DIR__ . '/../utilities/database-utilities.php';
 require_once __DIR__ . '/../utilities/progress-utilities.php';
+require_once __DIR__ . '/../utilities/options-utilities.php';
 
 /**
  * AJAX handlers for purge operations
@@ -58,19 +59,19 @@ function job_import_purge_ajax() {
     }
 
     try {
-        $processed_guids = get_option('job_import_processed_guids') ?: [];
+        $processed_guids = PuntWork\get_processed_guids() ?: [];
         $logs = $progress['logs'];
 
         // Check if import is complete (only on first batch)
         if (!$is_continue) {
-            $import_progress = get_option('job_import_status') ?: [
+            $import_progress = PuntWork\get_import_status() ?: [
                 'total' => 0,
                 'processed' => 0,
                 'complete' => false
             ];
 
             // More permissive check - allow purge if we have processed GUIDs or if total > 0
-            $processed_guids = get_option('job_import_processed_guids') ?: [];
+            $processed_guids = PuntWork\get_processed_guids() ?: [];
             $has_processed_data = !empty($processed_guids) || $import_progress['total'] > 0;
 
             if (!$has_processed_data) {
@@ -99,8 +100,8 @@ function job_import_purge_ajax() {
             release_operation_lock('purge');
 
             // Clean up options
-            delete_option('job_import_processed_guids');
-            delete_option('job_existing_guids');
+            PuntWork\delete_processed_guids();
+            PuntWork\delete_existing_guids();
 
             $final_progress = get_progress('purge');
             cleanup_progress('purge');
