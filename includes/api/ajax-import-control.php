@@ -35,7 +35,7 @@ function run_job_import_batch_ajax() {
     // This unifies the import process - both manual and scheduled use the same backend logic
 
     // Check if an import is already running
-    $import_status = PuntWork\get_import_status([]);
+    $import_status = get_import_status([]);
     if (isset($import_status['complete']) && !$import_status['complete']) {
         // Calculate actual time elapsed
         $time_elapsed = 0;
@@ -51,7 +51,7 @@ function run_job_import_batch_ajax() {
 
         if ($is_stuck) {
             error_log('[PUNTWORK] Detected stuck import (processed: ' . ($import_status['processed'] ?? 'null') . ', time_elapsed: ' . $time_elapsed . '), clearing status for new run');
-            PuntWork\delete_import_status();
+            delete_import_status();
             delete_transient('import_cancel');
         } else {
             send_ajax_error('run_job_import_batch', 'An import is already running');
@@ -62,7 +62,7 @@ function run_job_import_batch_ajax() {
     try {
         // Initialize import status for immediate UI feedback
         $initial_status = initialize_import_status(0, 'Manual import started - preparing feeds...');
-        PuntWork\set_import_status($initial_status);
+        set_import_status($initial_status);
         error_log('[PUNTWORK] Initialized import status for manual run: ' . json_encode($initial_status));
 
         // Clear any previous cancellation before starting
@@ -93,7 +93,7 @@ function run_job_import_batch_ajax() {
             } else {
                 error_log('[PUNTWORK] Synchronous manual import failed: ' . ($result['message'] ?? 'Unknown error'));
                 // Reset import status on failure so future attempts can start
-                PuntWork\delete_import_status();
+                delete_import_status();
                 error_log('[PUNTWORK] Reset job_import_status due to manual import failure');
                 send_ajax_error('run_job_import_batch', 'Import failed: ' . ($result['message'] ?? 'Unknown error'));
             }
