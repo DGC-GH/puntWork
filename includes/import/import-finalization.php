@@ -196,29 +196,21 @@ function cleanup_old_job_posts($import_start_time) {
 
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Found ' . count($current_guids) . ' current GUIDs in feed';
 
-    // Get all old published job post IDs in one efficient query
-    // Split GUIDs into chunks to avoid SQL query length limits
-    $guid_chunks = array_chunk($current_guids, 1000); // Smaller chunks for IN clause
+    // Get all published job GUIDs and compare against current feed GUIDs
+    $published_jobs = $wpdb->get_results($wpdb->prepare("
+        SELECT DISTINCT p.ID, pm.meta_value as guid
+        FROM {$wpdb->posts} p
+        JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
+        WHERE p.post_type = 'job'
+        AND p.post_status = 'publish'
+    "));
+
     $old_post_ids = [];
+    $current_guids_set = array_flip($current_guids); // For fast lookup
 
-    foreach ($guid_chunks as $chunk) {
-        $placeholders = implode(',', array_fill(0, count($chunk), '%s'));
-        $chunk_results = $wpdb->get_col($wpdb->prepare("
-            SELECT DISTINCT p.ID
-            FROM {$wpdb->posts} p
-            JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
-            WHERE p.post_type = 'job'
-            AND p.post_status = 'publish'
-            AND pm.meta_value NOT IN ({$placeholders})
-        ", $chunk));
-
-        if ($chunk_results) {
-            $old_post_ids = array_merge($old_post_ids, $chunk_results);
-        }
-
-        // Free result set to prevent "Commands out of sync" error
-        if ($wpdb->result instanceof mysqli_result) {
-            $wpdb->result->free();
+    foreach ($published_jobs as $job) {
+        if (!isset($current_guids_set[$job->guid])) {
+            $old_post_ids[] = $job->ID;
         }
     }
 
