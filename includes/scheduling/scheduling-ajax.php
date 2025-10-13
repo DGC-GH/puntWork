@@ -9,7 +9,7 @@
 
 namespace Puntwork;
 
-// Prevent direc// Debug endpoint to manually trigger async function
+// Debug endpoint to manually trigger async function
 add_action('wp_ajax_debug_trigger_async', function() {
     if (!current_user_can('manage_options')) {
         wp_die('Permission denied');
@@ -34,8 +34,6 @@ add_action('wp_ajax_debug_clear_import_status', function() {
 
     wp_die('Import status cleared - you can now try Run Now again');
 });
-
-namespace Puntwork;
 
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
