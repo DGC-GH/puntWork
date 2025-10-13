@@ -154,24 +154,35 @@ function cleanup_old_job_posts($import_start_time) {
     $json_path = PUNTWORK_PATH . 'feeds/combined-jobs.jsonl';
     $current_guids = [];
 
-    if (file_exists($json_path)) {
-        if (($handle = fopen($json_path, "r")) !== false) {
-            while (($line = fgets($handle)) !== false) {
-                $line = trim($line);
-                if (!empty($line)) {
-                    $item = json_decode($line, true);
-                    if ($item !== null && isset($item['guid'])) {
-                        $current_guids[] = $item['guid'];
-                    }
+    if (!file_exists($json_path)) {
+        PuntWorkLogger::error('Combined jobs file not found during cleanup - cannot proceed safely', PuntWorkLogger::CONTEXT_BATCH, [
+            'json_path' => $json_path
+        ]);
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ERROR: Combined jobs file not found - skipping cleanup to prevent unintended deletions';
+        return [
+            'deleted_count' => 0,
+            'logs' => $logs
+        ];
+    }
+
+    if (($handle = fopen($json_path, "r")) !== false) {
+        while (($line = fgets($handle)) !== false) {
+            $line = trim($line);
+            if (!empty($line)) {
+                $item = json_decode($line, true);
+                if ($item !== null && isset($item['guid'])) {
+                    $current_guids[] = $item['guid'];
                 }
             }
-            fclose($handle);
         }
+        fclose($handle);
     }
 
     if (empty($current_guids)) {
-        PuntWorkLogger::warning('No current GUIDs found in feed file - skipping cleanup', PuntWorkLogger::CONTEXT_BATCH);
-        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] No current GUIDs found in feed file - skipping cleanup';
+        PuntWorkLogger::error('No valid GUIDs found in combined jobs file - cannot proceed safely', PuntWorkLogger::CONTEXT_BATCH, [
+            'json_path' => $json_path
+        ]);
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ERROR: No valid GUIDs found in feed file - skipping cleanup to prevent unintended deletions';
         return [
             'deleted_count' => 0,
             'logs' => $logs
@@ -179,7 +190,8 @@ function cleanup_old_job_posts($import_start_time) {
     }
 
     PuntWorkLogger::info('Found current GUIDs in feed', PuntWorkLogger::CONTEXT_BATCH, [
-        'guid_count' => count($current_guids)
+        'guid_count' => count($current_guids),
+        'sample_guids' => array_slice($current_guids, 0, 5)
     ]);
 
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Found ' . count($current_guids) . ' current GUIDs in feed';
@@ -213,7 +225,8 @@ function cleanup_old_job_posts($import_start_time) {
     $total_old_posts = count($old_post_ids);
 
     PuntWorkLogger::info('Total old job posts to clean up', PuntWorkLogger::CONTEXT_BATCH, [
-        'total_old_posts' => $total_old_posts
+        'total_old_posts' => $total_old_posts,
+        'sample_old_post_ids' => array_slice($old_post_ids, 0, 5)
     ]);
 
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Found ' . $total_old_posts . ' old published job posts to clean up';
