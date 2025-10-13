@@ -497,6 +497,12 @@ function cleanup_drafted_jobs_ajax() {
     $offset = isset($_POST['offset']) ? intval($_POST['offset']) : 0;
     $is_continue = isset($_POST['is_continue']) && $_POST['is_continue'] === 'true';
 
+    PuntWorkLogger::debug('Cleanup drafted jobs function called', PuntWorkLogger::CONTEXT_AJAX, [
+        'batch_size' => $batch_size,
+        'offset' => $offset,
+        'is_continue' => $is_continue
+    ]);
+
     // Initialize progress tracking for first batch
     if (!$is_continue) {
         // Get all draft job IDs first to avoid offset issues during deletion
@@ -537,6 +543,13 @@ function cleanup_drafted_jobs_ajax() {
         'logs' => []
     ]);
 
+    PuntWorkLogger::debug('Retrieved progress data', PuntWorkLogger::CONTEXT_BATCH, [
+        'total_processed' => $progress['total_processed'],
+        'total_jobs' => $progress['total_jobs'],
+        'current_index' => $progress['current_index'],
+        'complete' => $progress['complete']
+    ]);
+
     $draft_job_ids = $progress['draft_job_ids'] ?? [];
     $current_index = $progress['current_index'] ?? 0;
 
@@ -566,11 +579,23 @@ function cleanup_drafted_jobs_ajax() {
                 'expected_remaining' => $progress['total_jobs'] - $progress['total_deleted']
             ]);
 
+            PuntWorkLogger::debug('Sending completion progress update', PuntWorkLogger::CONTEXT_BATCH, [
+                'processed' => $progress['total_processed'],
+                'total' => $progress['total_jobs'],
+                'deleted' => $progress['total_deleted'],
+                'offset' => $progress['current_index'],
+                'progress_percentage' => 100,
+                'complete' => true
+            ]);
+
             wp_send_json_success([
                 'message' => $message,
                 'complete' => true,
-                'total_processed' => $progress['total_processed'],
-                'total_deleted' => $progress['total_deleted'],
+                'processed' => $progress['total_processed'],
+                'deleted' => $progress['total_deleted'],
+                'total' => $progress['total_jobs'],
+                'offset' => $progress['current_index'],
+                'progress_percentage' => 100,
                 'time_elapsed' => $progress['time_elapsed'],
                 'logs' => array_slice($progress['logs'], -50)
             ]);
@@ -645,13 +670,23 @@ function cleanup_drafted_jobs_ajax() {
         // Calculate progress percentage
         $progress_percentage = $progress['total_jobs'] > 0 ? round(($progress['total_processed'] / $progress['total_jobs']) * 100, 1) : 0;
 
+        PuntWorkLogger::debug('Sending batch progress update', PuntWorkLogger::CONTEXT_BATCH, [
+            'processed' => $progress['total_processed'],
+            'total' => $progress['total_jobs'],
+            'deleted' => $progress['total_deleted'],
+            'offset' => $progress['current_index'],
+            'progress_percentage' => $progress_percentage,
+            'batch_size' => $batch_size
+        ]);
+
         wp_send_json_success([
             'message' => "Batch processed: {$progress['total_processed']}/{$progress['total_jobs']} jobs ({$progress_percentage}%), deleted {$deleted_count} drafted jobs this batch",
             'complete' => false,
-            'next_offset' => $progress['current_index'], // Keep compatibility with frontend
+            'offset' => $progress['current_index'], // Changed from next_offset for frontend compatibility
             'batch_size' => $batch_size,
-            'total_processed' => $progress['total_processed'],
-            'total_deleted' => $progress['total_deleted'],
+            'processed' => $progress['total_processed'],
+            'deleted' => $progress['total_deleted'],
+            'total' => $progress['total_jobs'],
             'progress_percentage' => $progress_percentage,
             'logs' => array_slice($logs, -20) // Return last 20 log entries for this batch
         ]);
