@@ -357,6 +357,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
             console.log('[PUNTWORK] Starting smart status polling (initial: 2000ms)');
 
+            var startTime = Date.now(); // Track when polling started for early poll detection
+
             // Store the polling function for reuse
             this.pollStatus = function() {
                 var now = Date.now();
