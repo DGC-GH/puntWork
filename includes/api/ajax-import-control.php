@@ -367,8 +367,8 @@ function get_job_import_status_ajax() {
     // Add estimated time remaining calculation from PHP
     $progress['estimated_time_remaining'] = calculate_estimated_time_remaining($progress);
 
-    // Add a last_modified timestamp for client-side caching
-    $progress['last_modified'] = time();
+    // Add a last_modified timestamp for client-side caching (use microtime for better precision)
+    $progress['last_modified'] = microtime(true);
 
     // Log response summary instead of full data to prevent large debug logs
     $log_summary = [

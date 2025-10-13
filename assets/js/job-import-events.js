@@ -345,6 +345,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             var hasSeenImportRunning = false;
             var lastLogTime = 0; // Track when we last logged to reduce log spam
             var lastModifiedTimestamp = 0; // Track server-side last modified timestamp
+            this.lastTotalCount = 0; // Track total count for change detection
+            this.lastCompleteStatus = false; // Track completion status for change detection
 
             // Show the progress UI immediately when starting polling
             console.log('[PUNTWORK] Showing import UI for import');
@@ -389,7 +391,17 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         var serverLastModified = statusData.last_modified || 0;
 
                         // Check if server data has actually changed since last poll
-                        if (serverLastModified === lastModifiedTimestamp && lastModifiedTimestamp > 0) {
+                        // Use a combination of last_modified and actual data changes to be more robust
+                        var dataHasChanged = serverLastModified !== lastModifiedTimestamp ||
+                                           currentProcessed !== JobImportEvents.lastProcessedCount ||
+                                           currentTotal !== (JobImportEvents.lastTotalCount || 0) ||
+                                           statusData.complete !== (JobImportEvents.lastCompleteStatus || false);
+
+                        // Store current values for next comparison
+                        JobImportEvents.lastTotalCount = currentTotal;
+                        JobImportEvents.lastCompleteStatus = statusData.complete;
+
+                        if (!dataHasChanged && lastModifiedTimestamp > 0) {
                             // Server data hasn't changed, skip processing but continue polling
                             if (timeSinceLastLog > 30000) { // Log every 30 seconds for unchanged data
                                 console.log('[PUNTWORK] Server data unchanged, skipping processing (last modified: ' + serverLastModified + ')');
