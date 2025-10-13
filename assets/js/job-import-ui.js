@@ -105,10 +105,12 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
          */
         appendLogs: function(logs) {
             var logArea = $('#log-textarea');
-            logs.forEach(function(log) {
-                logArea.val(logArea.val() + log + '\n');
-            });
-            logArea.scrollTop(logArea[0].scrollHeight);
+            if (logArea.length > 0) {
+                logs.forEach(function(log) {
+                    logArea.val(logArea.val() + log + '\n');
+                });
+                logArea.scrollTop(logArea[0].scrollHeight);
+            }
         },
 
         /**
