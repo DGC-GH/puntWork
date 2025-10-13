@@ -42,7 +42,7 @@ class PuntWorkLogger {
      * @param array $data Additional data to log
      */
     public static function debug($message, $context = self::CONTEXT_SYSTEM, $data = []) {
-        self::log($message, self::DEBUG, $context, $data);
+        self::log($message, self::DEBUG, $context, $data, false);
     }
 
     /**
@@ -85,14 +85,15 @@ class PuntWorkLogger {
      * @param string $level Log level
      * @param string $context Context identifier
      * @param array $data Additional data to log
+     * @param bool $includeFunction Whether to include calling function context
      */
-    private static function log($message, $level, $context, $data = []) {
+    private static function log($message, $level, $context, $data = [], $includeFunction = true) {
         // Skip debug logs in production unless WP_DEBUG is true
         if ($level === self::DEBUG && (!defined('WP_DEBUG') || !WP_DEBUG)) {
             return;
         }
 
-        $function = self::getCallingFunction();
+        $function = $includeFunction ? self::getCallingFunction() : null;
 
         // Format the log message (without timestamp since error_log adds it)
         $formattedMessage = sprintf(
@@ -102,7 +103,7 @@ class PuntWorkLogger {
             $message
         );
 
-        // Add function context if available
+        // Add function context if available and requested
         if ($function) {
             $formattedMessage .= " (in {$function})";
         }
@@ -171,9 +172,9 @@ class PuntWorkLogger {
 
         if (is_array($response) || is_object($response)) {
             $responseData = self::sanitizeLogData($response);
-            self::log("AJAX Response: {$action} - {$status}", $level, self::CONTEXT_AJAX, $responseData);
+            self::log("AJAX Response: {$action} - {$status}", $level, self::CONTEXT_AJAX, $responseData, false);
         } else {
-            self::log("AJAX Response: {$action} - {$status}: {$response}", $level, self::CONTEXT_AJAX);
+            self::log("AJAX Response: {$action} - {$status}: {$response}", $level, self::CONTEXT_AJAX, [], false);
         }
     }
 
