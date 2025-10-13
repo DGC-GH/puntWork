@@ -143,26 +143,7 @@ if (!function_exists('import_all_jobs_from_json')) {
         // Initialize import status for UI tracking (only if not preserving)
         $initial_status = [];
         if (!$preserve_status) {
-            $initial_status = [
-                'total' => 0, // Will be updated when we know the total
-                'processed' => 0,
-                'published' => 0,
-                'updated' => 0,
-                'skipped' => 0,
-                'duplicates_drafted' => 0,
-                'time_elapsed' => 0,
-                'complete' => false,
-                'success' => false,
-                'error_message' => '',
-                'batch_size' => get_batch_size(),
-                'inferred_languages' => 0,
-                'inferred_benefits' => 0,
-                'schema_generated' => 0,
-                'start_time' => $start_time,
-                'end_time' => null,
-                'last_update' => time(),
-                'logs' => ['Scheduled import started - preparing feeds...'],
-            ];
+            $initial_status = initialize_import_status(0, 'Scheduled import started - preparing feeds...', $start_time);
             update_option('job_import_status', $initial_status, false);
         } else {
             // Update existing status to indicate import is resuming (don't reset start_time to preserve elapsed time)

@@ -56,26 +56,7 @@ function run_job_import_batch_ajax() {
             }
 
             // Initialize status immediately to prevent frontend polling issues
-            $initial_status = [
-                'total' => $total,
-                'processed' => 0,
-                'published' => 0,
-                'updated' => 0,
-                'skipped' => 0,
-                'duplicates_drafted' => 0,
-                'time_elapsed' => 0,
-                'complete' => false,
-                'success' => false,
-                'error_message' => '',
-                'batch_size' => get_batch_size(),
-                'inferred_languages' => 0,
-                'inferred_benefits' => 0,
-                'schema_generated' => 0,
-                'start_time' => microtime(true),
-                'end_time' => null,
-                'last_update' => time(),
-                'logs' => ['Manual import started - preparing to process items...'],
-            ];
+            $initial_status = initialize_import_status($total, 'Manual import started - preparing to process items...');
             update_option('job_import_status', $initial_status, false);
             PuntWorkLogger::info('Pre-initialized import status for fresh import', PuntWorkLogger::CONTEXT_BATCH, [
                 'total' => $total,
@@ -240,26 +221,7 @@ function get_job_import_status_ajax() {
         wp_send_json_error(['message' => 'Permission denied']);
     }
 
-    $progress = get_option('job_import_status') ?: [
-        'total' => 0,
-        'processed' => 0,
-        'published' => 0,
-        'updated' => 0,
-        'skipped' => 0,
-        'duplicates_drafted' => 0,
-        'time_elapsed' => 0,
-        'complete' => true, // Fresh state is complete
-        'success' => false, // Add success status
-        'error_message' => '', // Add error message for failures
-        'batch_size' => get_batch_size(),
-        'inferred_languages' => 0,
-        'inferred_benefits' => 0,
-        'schema_generated' => 0,
-        'start_time' => microtime(true),
-        'end_time' => null,
-        'last_update' => time(),
-        'logs' => [],
-    ];
+    $progress = get_option('job_import_status') ?: initialize_import_status(0, '', null);
 
     PuntWorkLogger::debug('Retrieved import status', PuntWorkLogger::CONTEXT_BATCH, [
         'total' => $progress['total'],
@@ -316,26 +278,7 @@ function get_job_import_status_ajax() {
             delete_transient('import_cancel');
 
             // Return fresh status
-            $progress = [
-                'total' => 0,
-                'processed' => 0,
-                'published' => 0,
-                'updated' => 0,
-                'skipped' => 0,
-                'duplicates_drafted' => 0,
-                'time_elapsed' => 0,
-                'complete' => true, // Fresh state is complete
-                'success' => false,
-                'error_message' => '',
-                'batch_size' => get_batch_size(),
-                'inferred_languages' => 0,
-                'inferred_benefits' => 0,
-                'schema_generated' => 0,
-                'start_time' => microtime(true),
-                'end_time' => null,
-                'last_update' => time(),
-                'logs' => [],
-            ];
+            $progress = initialize_import_status(0, '', null);
         }
     }
 
