@@ -17,6 +17,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Include retry utility
 require_once plugin_dir_path(__FILE__) . '../utilities/retry-utility.php';
 
+// Include options utilities for centralized option management
+require_once __DIR__ . '/../utilities/options-utilities.php';
+
 /**
  * Batch processing logic
  * Handles the core batch processing operations for job imports
@@ -44,14 +47,14 @@ function process_batch_items_logic($setup) {
         $threshold = 0.6 * $memory_limit_bytes;
         $batch_size = get_batch_size();
         $old_batch_size = $batch_size;
-        $prev_time_per_item = get_option('job_import_time_per_job', 0);
-        $avg_time_per_item = get_option('job_import_avg_time_per_job', $prev_time_per_item);
-        $last_peak_memory = get_option('job_import_last_peak_memory', $memory_limit_bytes);
+        $prev_time_per_item = Puntwork\get_time_per_job();
+        $avg_time_per_item = Puntwork\get_avg_time_per_job();
+        $last_peak_memory = Puntwork\get_last_peak_memory();
         $last_memory_ratio = $last_peak_memory / $memory_limit_bytes;
 
         // Get current and previous batch times for dynamic adjustment
-        $current_batch_time = get_option('job_import_last_batch_time', 0);
-        $previous_batch_time = get_option('job_import_previous_batch_time', 0);
+        $current_batch_time = Puntwork\get_last_batch_time();
+        $previous_batch_time = Puntwork\get_previous_batch_time();
 
         try {
             $adjustment_result = adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time);
@@ -69,7 +72,7 @@ function process_batch_items_logic($setup) {
         if ($batch_size != $old_batch_size) {
             try {
                 retry_option_operation(function() use ($batch_size) {
-                    return update_option('job_import_batch_size', $batch_size, false);
+                    return Puntwork\set_batch_size($batch_size);
                 }, [], [
                     'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                     'operation' => 'update_batch_size'
@@ -148,7 +151,7 @@ function process_batch_items_logic($setup) {
 
                 if (get_transient('import_cancel') === true) {
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Import cancelled at #' . ($current_index + 1);
-                    update_option('job_import_progress', $current_index, false);
+                    Puntwork\set_import_progress($current_index);
                     return ['success' => false, 'message' => 'Import cancelled by user', 'logs' => $logs];
                 }
 
@@ -186,7 +189,7 @@ function process_batch_items_logic($setup) {
                         ]);
                         $batch_size = $emergency_batch_size;
                         // Update the stored batch size for future batches
-                        update_option('job_import_batch_size', $batch_size, false);
+                        Puntwork\set_batch_size($batch_size);
                     }
                 }
 
@@ -197,7 +200,7 @@ function process_batch_items_logic($setup) {
                     $current_batch_progress = $start_index + $items_processed_in_batch;
 
                     // Update import status for real-time UI feedback
-                    $intermediate_status = get_option('job_import_status', []);
+                    $intermediate_status = Puntwork\get_import_status();
                     $intermediate_status['total'] = $total;
                     $intermediate_status['processed'] = $current_batch_progress;
                     $intermediate_status['published'] = ($intermediate_status['published'] ?? 0) + $published;
@@ -218,7 +221,7 @@ function process_batch_items_logic($setup) {
                     $intermediate_status['logs'] = array_slice($logs, -50);
 
                     retry_option_operation(function() use ($intermediate_status) {
-                        return update_option('job_import_status', $intermediate_status, false);
+                        return Puntwork\set_import_status($intermediate_status);
                     }, [], [
                         'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                         'operation' => 'update_intermediate_progress'
@@ -262,14 +265,14 @@ function process_batch_items_logic($setup) {
         if (empty($batch_guids)) {
             try {
                 retry_option_operation(function() use ($end_index) {
-                    return update_option('job_import_progress', $end_index, false);
+                    return Puntwork\set_import_progress($end_index);
                 }, [], [
                     'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                     'operation' => 'update_progress_empty_batch'
                 ]);
 
                 retry_option_operation(function() use ($processed_guids) {
-                    return update_option('job_import_processed_guids', $processed_guids, false);
+                    return Puntwork\set_processed_guids($processed_guids);
                 }, [], [
                     'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                     'operation' => 'update_processed_guids_empty_batch'
@@ -279,7 +282,7 @@ function process_batch_items_logic($setup) {
                 $batch_time = microtime(true) - $batch_start_time;
 
                 // Update import status for UI polling
-                $current_status = get_option('job_import_status', []);
+                $current_status = Puntwork\get_import_status();
                 $current_status['total'] = $total;
                 $current_status['processed'] = $end_index;
                 $current_status['published'] = $current_status['published'] ?? 0;
@@ -300,7 +303,7 @@ function process_batch_items_logic($setup) {
                 $current_status['logs'] = array_slice($logs, -50);
 
                 retry_option_operation(function() use ($current_status) {
-                    return update_option('job_import_status', $current_status, false);
+                    return Puntwork\set_import_status($current_status);
                 }, [], [
                     'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                     'operation' => 'update_import_status_empty_batch'
@@ -355,14 +358,14 @@ function process_batch_items_logic($setup) {
 
         try {
             retry_option_operation(function() use ($end_index) {
-                return update_option('job_import_progress', $end_index, false);
+                return Puntwork\set_import_progress($end_index);
             }, [], [
                 'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                 'operation' => 'update_progress_final'
             ]);
 
             retry_option_operation(function() use ($processed_guids) {
-                return update_option('job_import_processed_guids', $processed_guids, false);
+                return Puntwork\set_processed_guids($processed_guids);
             }, [], [
                 'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                 'operation' => 'update_processed_guids_final'
@@ -377,21 +380,21 @@ function process_batch_items_logic($setup) {
 
             // Store batch timing data for status retrieval
             retry_option_operation(function() use ($batch_time) {
-                return update_option('job_import_last_batch_time', $batch_time, false);
+                return Puntwork\set_last_batch_time($batch_time);
             }, [], [
                 'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                 'operation' => 'update_last_batch_time'
             ]);
 
             retry_option_operation(function() use ($result) {
-                return update_option('job_import_last_batch_processed', $result['processed_count'], false);
+                return Puntwork\set_last_batch_processed($result['processed_count']);
             }, [], [
                 'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                 'operation' => 'update_last_batch_processed'
             ]);
 
             // Update import status for UI polling
-            $current_status = get_option('job_import_status', []);
+            $current_status = Puntwork\get_import_status();
             $current_status['total'] = $total;
             $current_status['processed'] = $end_index;
             $current_status['published'] = ($current_status['published'] ?? 0) + $published;
@@ -412,7 +415,7 @@ function process_batch_items_logic($setup) {
             $current_status['logs'] = array_slice($logs, -50); // Keep last 50 log entries
 
             retry_option_operation(function() use ($current_status) {
-                return update_option('job_import_status', $current_status, false);
+                return Puntwork\set_import_status($current_status);
             }, [], [
                 'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                 'operation' => 'update_import_status_final'

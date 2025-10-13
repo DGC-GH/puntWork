@@ -14,6 +14,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+require_once __DIR__ . '/../utilities/options-utilities.php';
+
 /**
  * Import setup and validation
  * Handles preparation and prerequisite validation for job imports
@@ -42,7 +44,7 @@ function prepare_import_setup($batch_start = 0) {
     remove_action('post_updated', 'wp_save_post_revision');
 
     // Check if there's an existing import in progress and use its start time
-    $existing_status = get_option('job_import_status');
+    $existing_status = Puntwork\get_import_status();
     if ($existing_status && isset($existing_status['start_time']) && $existing_status['start_time'] > 0) {
         $start_time = $existing_status['start_time'];
         PuntWorkLogger::info('Using existing import start time: ' . $start_time, PuntWorkLogger::CONTEXT_BATCH);
@@ -71,13 +73,13 @@ function prepare_import_setup($batch_start = 0) {
     }
 
     // Cache existing job GUIDs if not already cached
-    if (false === get_option('job_existing_guids')) {
+    if (false === Puntwork\get_existing_guids()) {
         $all_jobs = $wpdb->get_results("SELECT p.ID, pm.meta_value AS guid FROM $wpdb->posts p JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = 'job' AND pm.meta_key = 'guid'");
-        update_option('job_existing_guids', $all_jobs, false);
+        Puntwork\set_existing_guids($all_jobs);
     }
 
-    $processed_guids = get_option('job_import_processed_guids') ?: [];
-    $start_index = max((int) get_option('job_import_progress'), $batch_start);
+    $processed_guids = Puntwork\get_processed_guids();
+    $start_index = max(Puntwork\get_import_progress(), $batch_start);
 
     // For fresh starts (batch_start = 0), reset the status and create new start time
     if ($batch_start === 0) {
@@ -86,7 +88,7 @@ function prepare_import_setup($batch_start = 0) {
         $processed_guids = [];
         
         // Check if status is already properly initialized (from run_job_import_batch_ajax)
-        $existing_status = get_option('job_import_status');
+        $existing_status = Puntwork\get_import_status();
         $needs_reinit = true;
         
         if ($existing_status && 
@@ -109,7 +111,7 @@ function prepare_import_setup($batch_start = 0) {
 
             // Initialize status for manual import
             $initial_status = initialize_import_status($total, 'Manual import started - preparing to process items...', $start_time);
-            update_option('job_import_status', $initial_status, false);
+            Puntwork\set_import_status($initial_status);
         }
     }
 
