@@ -36,6 +36,54 @@ function run_job_import_batch_ajax() {
     $start = intval($_POST['start']);
     PuntWorkLogger::info("Starting batch import at index: {$start}", PuntWorkLogger::CONTEXT_BATCH);
 
+    // For fresh imports (start = 0), pre-initialize the status to prevent synchronization issues
+    if ($start === 0) {
+        $json_path = PUNTWORK_PATH . 'feeds/combined-jobs.jsonl';
+        if (file_exists($json_path)) {
+            // Count items quickly to set initial total
+            $total = 0;
+            if (($handle = fopen($json_path, "r")) !== false) {
+                while (($line = fgets($handle)) !== false) {
+                    $line = trim($line);
+                    if (!empty($line)) {
+                        $item = json_decode($line, true);
+                        if ($item !== null) {
+                            $total++;
+                        }
+                    }
+                }
+                fclose($handle);
+            }
+
+            // Initialize status immediately to prevent frontend polling issues
+            $initial_status = [
+                'total' => $total,
+                'processed' => 0,
+                'published' => 0,
+                'updated' => 0,
+                'skipped' => 0,
+                'duplicates_drafted' => 0,
+                'time_elapsed' => 0,
+                'complete' => false,
+                'success' => false,
+                'error_message' => '',
+                'batch_size' => get_option('job_import_batch_size') ?: 100,
+                'inferred_languages' => 0,
+                'inferred_benefits' => 0,
+                'schema_generated' => 0,
+                'start_time' => microtime(true),
+                'end_time' => null,
+                'last_update' => time(),
+                'logs' => ['Manual import started - preparing to process items...'],
+            ];
+            update_option('job_import_status', $initial_status, false);
+            PuntWorkLogger::info('Pre-initialized import status for fresh import', PuntWorkLogger::CONTEXT_BATCH, [
+                'total' => $total,
+                'start_time' => $initial_status['start_time']
+            ]);
+        }
+    }
+
     $result = import_jobs_from_json(true, $start);
 
     // Log summary instead of full result to prevent large debug logs
