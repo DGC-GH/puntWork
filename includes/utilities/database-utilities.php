@@ -122,50 +122,63 @@ function create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, &$log
 }
 
 /**
- * Update an existing job post with new data
+ * Updates an existing job post with new data and metadata
  *
  * @param int $post_id The post ID to update
  * @param array $item The job data item
- * @param array $acf_fields ACF fields to update
+ * @param array $acf_fields ACF fields to set
  * @param array $zero_empty_fields Fields that should be empty when value is '0'
  * @param array &$logs Reference to logs array for recording operations
  * @param string &$error_message Reference to error message variable
- * @return bool True on success, false on failure
+ * @return int|WP_Error Post ID on success, WP_Error on failure
  */
 function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$logs, &$error_message) {
     $guid = $item['guid'] ?? '';
-    $xml_title = $item['title'] ?? '';
+    $xml_title = $item['functiontitle'] ?? '';
+    $xml_validfrom = $item['validfrom'] ?? '';
     $xml_updated = $item['updated'] ?? null;
+    $post_modified = $xml_updated ?: current_time('mysql');
+
+    $post_data = [
+        'ID' => $post_id,
+        'post_title' => $xml_title,
+        'post_name' => sanitize_title($xml_title . '-' . $guid),
+        'post_status' => 'publish',
+        'post_date' => $xml_validfrom,
+        'post_modified' => $post_modified,
+    ];
+
+    $update_result = retry_database_operation(function() use ($post_data) {
+        return wp_update_post($post_data);
+    }, [$post_data], [
+        'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+        'operation' => 'update_existing_post',
+        'post_id' => $post_id,
+        'guid' => $guid
+    ]);
+
+    if (is_wp_error($update_result)) {
+        PuntWorkLogger::error('Failed to update existing post', PuntWorkLogger::CONTEXT_BATCH, [
+            'post_id' => $post_id,
+            'guid' => $guid,
+            'error' => $update_result->get_error_message()
+        ]);
+        $error_message = 'Failed to update ID: ' . $post_id . ' GUID: ' . $guid . ' - ' . $update_result->get_error_message();
+        return $update_result;
+    }
 
     try {
         $current_time = current_time('mysql');
 
-        // Update last import time
+        // Update last import update meta
         retry_database_operation(function() use ($post_id, $current_time) {
             return update_post_meta($post_id, '_last_import_update', $current_time);
         }, [$post_id, $current_time], [
             'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
-            'operation' => 'set_last_import_meta_update',
+            'operation' => 'update_last_import_meta',
             'post_id' => $post_id,
             'guid' => $guid
         ]);
-
-        // Update post title and modified date if needed
-        if ($xml_updated) {
-            $update_data = [
-                'ID' => $post_id,
-                'post_title' => $xml_title,
-                'post_modified' => $xml_updated
-            ];
-            retry_database_operation(function() use ($update_data) {
-                return wp_update_post($update_data);
-            }, [$update_data], [
-                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
-                'operation' => 'update_post_data',
-                'post_id' => $post_id,
-                'guid' => $guid
-            ]);
-        }
 
         // Update import hash
         $item_hash = md5(json_encode($item));
@@ -173,7 +186,7 @@ function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$log
             return update_post_meta($post_id, '_import_hash', $item_hash);
         }, [$post_id, $item_hash], [
             'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
-            'operation' => 'set_import_hash_meta_update',
+            'operation' => 'update_import_hash_meta',
             'post_id' => $post_id,
             'guid' => $guid
         ]);
@@ -187,7 +200,7 @@ function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$log
                 return update_post_meta($post_id, $field, $set_value);
             }, [$post_id, $field, $set_value], [
                 'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
-                'operation' => 'set_acf_field_meta_update',
+                'operation' => 'update_acf_field_meta',
                 'post_id' => $post_id,
                 'field' => $field,
                 'guid' => $guid
@@ -195,15 +208,15 @@ function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$log
         }
 
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Updated ID: ' . $post_id . ' GUID: ' . $guid;
-        return true;
+        return $post_id;
 
     } catch (\Exception $e) {
-        PuntWorkLogger::error('Failed to update post', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('Failed to update post meta for existing post', PuntWorkLogger::CONTEXT_BATCH, [
             'post_id' => $post_id,
             'guid' => $guid,
             'error' => $e->getMessage()
         ]);
-        $error_message = 'Update failed for post ID: ' . $post_id . ' GUID: ' . $guid . ' - ' . $e->getMessage();
-        return false;
+        $error_message = 'Meta update failed for ID: ' . $post_id . ' GUID: ' . $guid . ' - ' . $e->getMessage();
+        return new \WP_Error('meta_update_failed', $error_message);
     }
 }
