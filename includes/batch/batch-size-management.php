@@ -53,6 +53,10 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
         // Final bounds check after oscillation prevention
         $batch_size = max(1, min(500, $batch_size)); // Reduced hard limit to 500 for speed optimization
 
+        // Skip time-based and efficiency adjustments for first batch (no real metrics available)
+        $has_previous_metrics = ($current_batch_time > 0 || $previous_batch_time > 0);
+        $is_first_batch = (get_option('job_import_consecutive_batches', 0) == 0);
+
         // Enhanced memory-based adjustment with tiered thresholds and absolute limits
         $memory_adjusted = false;
         $last_memory_bytes = $last_memory_ratio * $memory_limit_bytes;
@@ -155,7 +159,8 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
         }
 
         // Efficiency optimization - reward fast processing, penalize slow processing
-        if (!$time_adjusted && $batch_size > 0) {
+        // Only apply if we have real metrics from previous batches
+        if (!$time_adjusted && $has_previous_metrics && !$is_first_batch && $batch_size > 0) {
             $time_per_item = $current_batch_time / $batch_size;
 
             // Excellent performance threshold based on observed data (1.1-1.2 sec/item)
@@ -417,7 +422,7 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
                 $reason = 'slow processing time';
                 $detailed_reason = 'processing time exceeded 2-minute threshold - reducing batch size';
                 $trigger_type = 'time_slow_batch';
-            } elseif ($batch_size > 0 && ($current_batch_time / $batch_size) > 3.0) {
+            } elseif ($has_previous_metrics && !$is_first_batch && $batch_size > 0 && ($current_batch_time / $batch_size) > 3.0) {
                 $reason = 'low processing efficiency';
                 $detailed_reason = 'processing efficiency below 3.0 seconds per item - reducing batch size';
                 $trigger_type = 'efficiency_low';
