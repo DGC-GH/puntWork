@@ -105,6 +105,53 @@ function cleanup_import_data() {
 }
 
 /**
+ * Clean up old job posts that are no longer in the feed.
+ *
+ * @param float $import_start_time The timestamp when the import started.
+ * @return int Number of posts deleted.
+ */
+function cleanup_old_job_posts($import_start_time) {
+    global $wpdb;
+
+    PuntWorkLogger::info('Starting cleanup of old job posts', PuntWorkLogger::CONTEXT_BATCH, [
+        'import_start_time' => date('Y-m-d H:i:s', $import_start_time)
+    ]);
+
+    // Get all job posts with _last_import_update older than import start time
+    $old_posts = $wpdb->get_results($wpdb->prepare("
+        SELECT p.ID, p.post_title, pm.meta_value as last_update
+        FROM {$wpdb->posts} p
+        JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_last_import_update'
+        WHERE p.post_type = 'job'
+        AND pm.meta_value < %s
+    ", date('Y-m-d H:i:s', $import_start_time)));
+
+    $deleted = 0;
+    foreach ($old_posts as $post) {
+        $result = wp_delete_post($post->ID, true); // true = force delete, skip trash
+        if ($result) {
+            $deleted++;
+            PuntWorkLogger::info('Deleted old job post', PuntWorkLogger::CONTEXT_BATCH, [
+                'post_id' => $post->ID,
+                'title' => $post->post_title,
+                'last_update' => $post->last_update
+            ]);
+        } else {
+            PuntWorkLogger::error('Failed to delete old job post', PuntWorkLogger::CONTEXT_BATCH, [
+                'post_id' => $post->ID,
+                'title' => $post->post_title
+            ]);
+        }
+    }
+
+    PuntWorkLogger::info('Cleanup of old job posts completed', PuntWorkLogger::CONTEXT_BATCH, [
+        'deleted_count' => $deleted
+    ]);
+
+    return $deleted;
+}
+
+/**
  * Get import status summary.
  *
  * @return array Status summary.

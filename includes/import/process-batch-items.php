@@ -72,6 +72,27 @@ if (!function_exists('process_batch_items')) {
                             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Republished ID: ' . $post_id . ' GUID: ' . $guid . ' - Found in active feed';
                         }
 
+                        // Mark this post as still active in the feed
+                        $current_time = current_time('mysql');
+                        retry_database_operation(function() use ($post_id, $current_time) {
+                            return update_post_meta($post_id, '_last_import_update', $current_time);
+                        }, [$post_id, $current_time], [
+                            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                            'operation' => 'mark_post_active',
+                            'post_id' => $post_id,
+                            'guid' => $guid
+                        ]);
+
+                        // Ensure GUID meta is set for compatibility with purge feature
+                        retry_database_operation(function() use ($post_id, $guid) {
+                            return update_post_meta($post_id, 'guid', $guid);
+                        }, [$post_id, $guid], [
+                            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                            'operation' => 'set_guid_meta',
+                            'post_id' => $post_id,
+                            'guid' => $guid
+                        ]);
+
                         $current_last_update = isset($last_updates[$post_id]) ? $last_updates[$post_id]->meta_value : '';
                         $current_last_ts = $current_last_update ? strtotime($current_last_update) : 0;
 
@@ -128,9 +149,10 @@ if (!function_exists('process_batch_items')) {
                         }
 
                         try {
-                            retry_database_operation(function() use ($post_id, $xml_updated) {
-                                return update_post_meta($post_id, '_last_import_update', $xml_updated);
-                            }, [$post_id, $xml_updated], [
+                            $current_time = current_time('mysql');
+                            retry_database_operation(function() use ($post_id, $current_time) {
+                                return update_post_meta($post_id, '_last_import_update', $current_time);
+                            }, [$post_id, $current_time], [
                                 'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                                 'operation' => 'update_last_import_meta',
                                 'post_id' => $post_id,
@@ -228,11 +250,22 @@ if (!function_exists('process_batch_items')) {
 
                         try {
                             $published++;
-                            retry_database_operation(function() use ($post_id, $xml_updated) {
-                                return update_post_meta($post_id, '_last_import_update', $xml_updated);
-                            }, [$post_id, $xml_updated], [
+                            $current_time = current_time('mysql');
+                            retry_database_operation(function() use ($post_id, $current_time) {
+                                return update_post_meta($post_id, '_last_import_update', $current_time);
+                            }, [$post_id, $current_time], [
                                 'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                                 'operation' => 'set_last_import_meta_new',
+                                'post_id' => $post_id,
+                                'guid' => $guid
+                            ]);
+
+                            // Set GUID meta for new posts
+                            retry_database_operation(function() use ($post_id, $guid) {
+                                return update_post_meta($post_id, 'guid', $guid);
+                            }, [$post_id, $guid], [
+                                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                                'operation' => 'set_guid_meta_new',
                                 'post_id' => $post_id,
                                 'guid' => $guid
                             ]);

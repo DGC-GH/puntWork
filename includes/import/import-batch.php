@@ -318,26 +318,29 @@ if (!function_exists('import_all_jobs_from_json')) {
             'complete' => true,
             'logs' => $all_logs,
             'batches_processed' => $batch_count,
+            'deleted_old_posts' => $deleted_count,
             'message' => sprintf(
-                'Full import completed successfully - Processed: %d/%d items (Published: %d, Updated: %d, Skipped: %d) in %.1f seconds',
+                'Full import completed successfully - Processed: %d/%d items (Published: %d, Updated: %d, Skipped: %d, Deleted old: %d) in %.1f seconds',
                 $total_processed,
                 $total_items,
                 $total_published,
                 $total_updated,
                 $total_skipped,
+                $deleted_count,
                 $total_duration
             )
         ];
 
         error_log(sprintf(
-            '[PUNTWORK] Full import completed - Duration: %.2fs, Batches: %d, Total: %d, Processed: %d, Published: %d, Updated: %d, Skipped: %d',
+            '[PUNTWORK] Full import completed - Duration: %.2fs, Batches: %d, Total: %d, Processed: %d, Published: %d, Updated: %d, Skipped: %d, Deleted old: %d',
             $total_duration,
             $batch_count,
             $total_items,
             $total_processed,
             $total_published,
             $total_updated,
-            $total_skipped
+            $total_skipped,
+            $deleted_count
         ));
 
         // Log completion using consistent logger
@@ -349,8 +352,12 @@ if (!function_exists('import_all_jobs_from_json')) {
             'published' => $total_published,
             'updated' => $total_updated,
             'skipped' => $total_skipped,
-            'duplicates_drafted' => $total_duplicates_drafted
+            'duplicates_drafted' => $total_duplicates_drafted,
+            'deleted_old_posts' => $deleted_count
         ]);
+
+        // Clean up old job posts that are no longer in the feed
+        $deleted_count = cleanup_old_job_posts($start_time);
 
         // Ensure final status is updated for UI
         $current_status = get_option('job_import_status', []);
