@@ -197,6 +197,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             data = this.normalizeResponseData(data);
 
             console.log('[PUNTWORK] JobImportUI.updateProgress called with data:', data);
+            console.log('[PUNTWORK] Current phase:', this.currentPhase, 'cleanup_phase flag:', data.cleanup_phase);
             PuntWorkJSLogger.debug('Updating progress with data', 'UI', data);
             console.log('[PUNTWORK] Progress data received:', data);
 
@@ -271,6 +272,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                         if (data.cleanup_phase === true) {
                             this.setPhase('cleanup');
                             PuntWorkJSLogger.debug('Transitioned to cleanup phase', 'UI');
+                            console.log('[PUNTWORK] UI: Transitioned to cleanup phase');
                             // Force a progress update to reflect the phase change
                             this.updateProgress(data);
                         } else {
@@ -278,6 +280,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                             this.setPhase('complete');
                             this.importSuccess = true; // Set success when import completes
                             PuntWorkJSLogger.debug('Import completed successfully', 'UI');
+                            console.log('[PUNTWORK] UI: Import completed successfully');
                             // Force a final progress update to show completion
                             this.updateProgress(data);
                         }
@@ -293,9 +296,13 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 var cleanupTotal = data.cleanup_total || 0;
                 var cleanupProcessed = data.cleanup_processed || 0;
 
+                console.log('[PUNTWORK] UI: Cleanup phase - processed:', cleanupProcessed, 'total:', cleanupTotal);
+
                 if (cleanupTotal > 0) {
                     phaseProgress = cleanupProcessed / cleanupTotal;
                     percent = Math.round(phaseProgress * 100);
+
+                    console.log('[PUNTWORK] UI: Cleanup progress:', percent + '%');
 
                     // Transition to complete when cleanup is done
                     if (cleanupProcessed >= cleanupTotal) {
@@ -303,6 +310,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                         this.setPhase('complete');
                         this.importSuccess = true;
                         PuntWorkJSLogger.debug('Cleanup completed, import fully complete', 'UI');
+                        console.log('[PUNTWORK] UI: Cleanup completed, transitioning to complete');
                         // Force a final progress update to show completion
                         this.updateProgress(data);
                     }
@@ -312,6 +320,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                     this.setPhase('complete');
                     this.importSuccess = true;
                     PuntWorkJSLogger.debug('No cleanup needed, import complete', 'UI');
+                    console.log('[PUNTWORK] UI: No cleanup needed, transitioning to complete');
                     this.updateProgress(data);
                 }
             } else if (this.currentPhase === 'complete') {
@@ -429,6 +438,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                     var cleanupTotal = data.cleanup_total || 0;
                     var cleanupProcessed = data.cleanup_processed || 0;
                     $('#status-message').text(`Cleaning up old jobs... (${cleanupProcessed}/${cleanupTotal})`);
+                    console.log('[PUNTWORK] UI: Status message set to cleanup:', `Cleaning up old jobs... (${cleanupProcessed}/${cleanupTotal})`);
                 } else if ((processed >= total && total > 0 && data.success === true) || data.complete === true) {
                     $('#status-message').text('Import Complete - 100%');
                 } else {

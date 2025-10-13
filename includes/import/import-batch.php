@@ -378,9 +378,21 @@ if (!function_exists('import_all_jobs_from_json')) {
             'cleanup_processed' => 0,
         ]);
         update_option('job_import_status', $cleanup_status, false);
+        error_log('[PUNTWORK] Starting cleanup phase - status updated: ' . json_encode([
+            'cleanup_phase' => true,
+            'complete' => false,
+            'cleanup_total' => 0,
+            'cleanup_processed' => 0
+        ]));
 
         // Clean up old job posts that are no longer in the feed
-        $deleted_count = cleanup_old_job_posts($start_time);
+        $cleanup_result = cleanup_old_job_posts($start_time);
+        $deleted_count = $cleanup_result['deleted_count'];
+        $cleanup_logs = $cleanup_result['logs'];
+
+        // Add cleanup logs to main logs
+        $all_logs = array_merge($all_logs, $cleanup_logs);
+        $all_logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Cleanup completed: ' . $deleted_count . ' old published jobs deleted';
 
         // Ensure final status is updated for UI
         $current_status = get_option('job_import_status', []);
@@ -407,6 +419,13 @@ if (!function_exists('import_all_jobs_from_json')) {
             $final_status['processed'] = $final_status['total'];
         }
         update_option('job_import_status', $final_status, false);
+        error_log('[PUNTWORK] Import fully completed including cleanup: ' . json_encode([
+            'total' => $total_items,
+            'processed' => $total_processed,
+            'complete' => true,
+            'cleanup_total' => $deleted_count,
+            'cleanup_processed' => $deleted_count
+        ]));
         error_log('[PUNTWORK] Final import status updated: ' . json_encode([
             'total' => $total_items,
             'processed' => $total_processed,

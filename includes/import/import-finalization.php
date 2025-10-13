@@ -244,6 +244,7 @@ function cleanup_old_job_posts($import_start_time) {
                     $cleanup_progress_status = get_option('job_import_status', []);
                     $cleanup_progress_status['cleanup_processed'] = $total_deleted;
                     $cleanup_progress_status['last_update'] = time();
+                    $cleanup_progress_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Cleanup progress: ' . $total_deleted . '/' . $total_old_posts . ' old jobs deleted';
                     update_option('job_import_status', $cleanup_progress_status, false);
                 }
 
@@ -283,7 +284,10 @@ function cleanup_old_job_posts($import_start_time) {
         'chunks_processed' => count($guid_chunks)
     ]);
 
-    return $total_deleted;
+    return [
+        'deleted_count' => $total_deleted,
+        'logs' => $logs
+    ];
 }
 
 /**
