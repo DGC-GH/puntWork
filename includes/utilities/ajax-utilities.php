@@ -7,6 +7,9 @@
 
 namespace Puntwork;
 
+// Include logger for AJAX operations
+require_once __DIR__ . '/puntwork-logger.php';
+
 /**
  * Validates AJAX request security and permissions
  *
