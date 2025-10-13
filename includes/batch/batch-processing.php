@@ -42,7 +42,7 @@ function process_batch_items_logic($setup) {
 
         $memory_limit_bytes = get_memory_limit_bytes();
         $threshold = 0.6 * $memory_limit_bytes;
-        $batch_size = get_option('job_import_batch_size') ?: 100;
+        $batch_size = get_batch_size();
         $old_batch_size = $batch_size;
         $prev_time_per_item = get_option('job_import_time_per_job', 0);
         $avg_time_per_item = get_option('job_import_avg_time_per_job', $prev_time_per_item);
