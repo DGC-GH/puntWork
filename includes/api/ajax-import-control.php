@@ -499,21 +499,27 @@ function cleanup_drafted_jobs_ajax() {
 
     // Initialize progress tracking for first batch
     if (!$is_continue) {
-        // Get total count first
-        $total_count = $wpdb->get_var($wpdb->prepare("
-            SELECT COUNT(*) FROM {$wpdb->posts}
+        // Get all draft job IDs first to avoid offset issues during deletion
+        $draft_job_ids = $wpdb->get_col($wpdb->prepare("
+            SELECT ID FROM {$wpdb->posts}
             WHERE post_type = 'job' AND post_status = 'draft'
+            ORDER BY ID DESC
         "));
 
+        $total_count = count($draft_job_ids);
+
         PuntWorkLogger::info('Draft cleanup initialized', PuntWorkLogger::CONTEXT_BATCH, [
-            'total_draft_jobs_found' => $total_count
+            'total_draft_jobs_found' => $total_count,
+            'first_5_ids' => array_slice($draft_job_ids, 0, 5),
+            'last_5_ids' => array_slice($draft_job_ids, -5)
         ]);
 
         update_option('job_cleanup_drafted_progress', [
             'total_processed' => 0,
             'total_deleted' => 0,
             'total_jobs' => $total_count,
-            'current_offset' => 0,
+            'draft_job_ids' => $draft_job_ids,
+            'current_index' => 0,
             'complete' => false,
             'start_time' => microtime(true),
             'logs' => []
@@ -524,23 +530,21 @@ function cleanup_drafted_jobs_ajax() {
         'total_processed' => 0,
         'total_deleted' => 0,
         'total_jobs' => 0,
-        'current_offset' => 0,
+        'draft_job_ids' => [],
+        'current_index' => 0,
         'complete' => false,
         'start_time' => microtime(true),
         'logs' => []
     ]);
 
-    try {
-        // Get batch of drafted jobs to process
-        $drafted_posts = $wpdb->get_results($wpdb->prepare("
-            SELECT ID, post_title
-            FROM {$wpdb->posts}
-            WHERE post_type = 'job' AND post_status = 'draft'
-            ORDER BY ID
-            LIMIT %d OFFSET %d
-        ", $batch_size, $offset));
+    $draft_job_ids = $progress['draft_job_ids'] ?? [];
+    $current_index = $progress['current_index'] ?? 0;
 
-        if (empty($drafted_posts)) {
+    try {
+        // Process batch of drafted jobs from collected IDs
+        $batch_posts = array_slice($draft_job_ids, $current_index, $batch_size);
+
+        if (empty($batch_posts)) {
             // No more jobs to process
             $progress['complete'] = true;
             $progress['end_time'] = microtime(true);
@@ -548,9 +552,18 @@ function cleanup_drafted_jobs_ajax() {
             update_option('job_cleanup_drafted_progress', $progress, false);
 
             $message = "Cleanup completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} drafted jobs";
+
+            // Verify final count
+            $final_count = $wpdb->get_var($wpdb->prepare("
+                SELECT COUNT(*) FROM {$wpdb->posts}
+                WHERE post_type = 'job' AND post_status = 'draft'
+            "));
+
             PuntWorkLogger::info('Cleanup of drafted jobs completed', PuntWorkLogger::CONTEXT_BATCH, [
                 'total_processed' => $progress['total_processed'],
-                'total_deleted' => $progress['total_deleted']
+                'total_deleted' => $progress['total_deleted'],
+                'final_draft_count' => $final_count,
+                'expected_remaining' => $progress['total_jobs'] - $progress['total_deleted']
             ]);
 
             wp_send_json_success([
@@ -563,11 +576,18 @@ function cleanup_drafted_jobs_ajax() {
             ]);
         }
 
+        // Get post details for this batch
+        $placeholders = implode(',', array_fill(0, count($batch_posts), '%d'));
+        $posts_details = $wpdb->get_results($wpdb->prepare("
+            SELECT ID, post_title FROM {$wpdb->posts}
+            WHERE ID IN ({$placeholders})
+        ", $batch_posts));
+
         // Process this batch
         $deleted_count = 0;
         $logs = $progress['logs'];
 
-        foreach ($drafted_posts as $post) {
+        foreach ($posts_details as $post) {
             // Check if post still exists before deletion
             $post_exists_before = $wpdb->get_var($wpdb->prepare("SELECT ID FROM {$wpdb->posts} WHERE ID = %d", $post->ID));
 
@@ -616,9 +636,9 @@ function cleanup_drafted_jobs_ajax() {
         }
 
         // Update progress
-        $progress['total_processed'] += count($drafted_posts);
+        $progress['total_processed'] += count($posts_details);
         $progress['total_deleted'] += $deleted_count;
-        $progress['current_offset'] = $offset + $batch_size;
+        $progress['current_index'] = $current_index + $batch_size;
         $progress['logs'] = $logs;
         update_option('job_cleanup_drafted_progress', $progress, false);
 
@@ -628,7 +648,7 @@ function cleanup_drafted_jobs_ajax() {
         wp_send_json_success([
             'message' => "Batch processed: {$progress['total_processed']}/{$progress['total_jobs']} jobs ({$progress_percentage}%), deleted {$deleted_count} drafted jobs this batch",
             'complete' => false,
-            'next_offset' => $progress['current_offset'],
+            'next_offset' => $progress['current_index'], // Keep compatibility with frontend
             'batch_size' => $batch_size,
             'total_processed' => $progress['total_processed'],
             'total_deleted' => $progress['total_deleted'],
