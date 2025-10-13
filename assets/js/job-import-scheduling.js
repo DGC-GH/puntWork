@@ -357,8 +357,8 @@
             $('#cancel-import').show();
             $('#reset-import').show();
 
-            // Start status polling immediately to show progress as soon as import begins
-            JobImportEvents.startStatusPolling();
+            // Don't start polling yet - wait for the AJAX response to determine if it's async
+            // JobImportEvents.startStatusPolling(); // Removed - will start after AJAX response
 
             JobImportAPI.call('run_scheduled_import', {}, function(response) {
                 console.log('[PUNTWORK] run_scheduled_import response:', response);
@@ -371,23 +371,34 @@
                 if (response.success) {
                     // Check if import ran asynchronously or synchronously
                     if (response.data.async === false) {
-                        // Import completed synchronously - stop polling and show results
+                        // Import completed synchronously - show results directly
                         console.log('[PUNTWORK] Import completed synchronously');
                         PuntWorkJSLogger.info('Import completed synchronously', 'SCHEDULING');
-                        JobImportEvents.stopStatusPolling();
                         $button.prop('disabled', false).html('Run Now');
                         
+                        // Update UI with final results
+                        if (response.data.result) {
+                            JobImportUI.updateProgress(JobImportUI.normalizeResponseData({
+                                data: response.data.result
+                            }));
+                            JobImportUI.appendLogs(response.data.result.logs || []);
+                        }
+                        
                         // Show success notification with detailed stats
-                        var message = response.data.result.message || 'Import completed successfully! Check history for details.';
+                        var message = response.data.result?.message || response.data.message || 'Import completed successfully! Check history for details.';
                         self.showNotification(message, 'success');
                         
                         // Refresh the schedule settings and history to show the new run
                         self.loadScheduleSettings();
                         self.loadRunHistory();
                     } else {
-                        // Import started asynchronously - keep polling for progress
-                        console.log('[PUNTWORK] Import started asynchronously, continuing to poll');
+                        // Import started asynchronously - now start polling for progress
+                        console.log('[PUNTWORK] Import started asynchronously, starting status polling');
                         PuntWorkJSLogger.info('Import started asynchronously, polling for updates', 'SCHEDULING');
+                        
+                        // Start status polling now that we know it's async
+                        JobImportEvents.startStatusPolling();
+                        
                         $button.prop('disabled', false).html('Run Now');
                         
                         // Show success notification
@@ -403,9 +414,6 @@
                     console.log('[PUNTWORK] Import failed to start:', response.data);
                     PuntWorkJSLogger.error('Import failed to start', 'SCHEDULING', response.data);
                     $button.prop('disabled', false).html('Run Now');
-                    
-                    // Stop status polling since import failed to start
-                    JobImportEvents.stopStatusPolling();
                     
                     // Reset UI state
                     JobImportUI.hideImportUI();
