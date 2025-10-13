@@ -519,13 +519,14 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
                         // Check if progress has changed
                         if (currentProcessed !== JobImportEvents.lastProcessedCount) {
+                            var previousProcessed = JobImportEvents.lastProcessedCount;
                             JobImportEvents.lastProcessedCount = currentProcessed;
                             JobImportEvents.lastProgressTimestamp = now;
                             JobImportEvents.noProgressCount = 0;
                             JobImportEvents.consecutiveFastUpdates++;
 
                             // Progress detected - speed up polling for active processing
-                            var itemsProcessedInPoll = currentProcessed - (JobImportEvents.lastProcessedCount || 0);
+                            var itemsProcessedInPoll = currentProcessed - (previousProcessed || 0);
                             var timeSinceLastProgress = now - JobImportEvents.lastProgressTimestamp;
 
                             // If we're processing items quickly (more than 10 items per second), keep polling fast
