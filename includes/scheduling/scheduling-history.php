@@ -136,6 +136,13 @@ function run_scheduled_import($test_mode = false) {
  * Log a scheduled run to history
  */
 function log_scheduled_run($details, $test_mode = false) {
+    log_import_run($details, $test_mode ? 'test' : 'scheduled');
+}
+
+/**
+ * Log an import run to history
+ */
+function log_import_run($details, $import_type = 'manual') {
     $run_entry = [
         'timestamp' => $details['timestamp'],
         'formatted_date' => wp_date('M j, Y H:i', $details['timestamp']),
@@ -147,7 +154,8 @@ function log_scheduled_run($details, $test_mode = false) {
         'updated' => $details['updated'],
         'skipped' => $details['skipped'],
         'error_message' => $details['error_message'] ?? '',
-        'test_mode' => $test_mode
+        'test_mode' => $import_type === 'test',
+        'import_type' => $import_type // 'scheduled', 'manual', or 'test'
     ];
 
     // Get existing history
@@ -165,11 +173,12 @@ function log_scheduled_run($details, $test_mode = false) {
 
     // Log to debug log
     $status = $details['success'] ? 'SUCCESS' : 'FAILED';
-    $mode = $test_mode ? ' (TEST)' : '';
+    $type_label = $import_type === 'test' ? ' (TEST)' : ($import_type === 'scheduled' ? ' (SCHEDULED)' : ' (MANUAL)');
     error_log(sprintf(
-        '[PUNTWORK] Scheduled import %s%s - Duration: %.2fs, Processed: %d/%d, Published: %d, Updated: %d, Skipped: %d',
+        '[PUNTWORK] %s import %s%s - Duration: %.2fs, Processed: %d/%d, Published: %d, Updated: %d, Skipped: %d',
+        ucfirst($import_type),
         $status,
-        $mode,
+        $type_label,
         $details['duration'],
         $details['processed'],
         $details['total'],
