@@ -509,6 +509,19 @@ function load_json_batch($json_path, $start_index, $batch_size) {
             throw new \Exception("JSONL file is not readable: $json_path");
         }
 
+        // Check file size
+        $file_size = filesize($json_path);
+        if ($file_size === 0) {
+            throw new \Exception("JSONL file is empty: $json_path");
+        }
+
+        PuntWorkLogger::debug('JSONL file validation passed', PuntWorkLogger::CONTEXT_BATCH, [
+            'json_path' => $json_path,
+            'file_size' => $file_size,
+            'start_index' => $start_index,
+            'batch_size' => $batch_size
+        ]);
+
         $handle = retry_file_operation(function() use ($json_path) {
             return fopen($json_path, "r");
         }, [$json_path], [

@@ -58,27 +58,16 @@ function prepare_import_setup($batch_start = 0) {
         return ['success' => false, 'message' => 'JSONL file not found', 'logs' => ['JSONL file not found']];
     }
 
+    if (!is_readable($json_path)) {
+        error_log('JSONL file not readable: ' . $json_path);
+        return ['success' => false, 'message' => 'JSONL file not readable', 'logs' => ['JSONL file not readable']];
+    }
+
     $total = get_json_item_count($json_path);
 
     if ($total == 0) {
-        return [
-            'success' => true,
-            'processed' => 0,
-            'total' => 0,
-            'published' => 0,
-            'updated' => 0,
-            'skipped' => 0,
-            'duplicates_drafted' => 0,
-            'time_elapsed' => 0,
-            'complete' => true,
-            'logs' => [],
-            'batch_size' => 0,
-            'inferred_languages' => 0,
-            'inferred_benefits' => 0,
-            'schema_generated' => 0,
-            'batch_time' => 0,
-            'batch_processed' => 0
-        ];
+        error_log('JSONL file is empty or contains no valid items: ' . $json_path);
+        return ['success' => false, 'message' => 'JSONL file is empty or contains no valid items', 'logs' => ['JSONL file is empty or contains no valid items']];
     }
 
     // Cache existing job GUIDs if not already cached
