@@ -224,6 +224,10 @@ function render_jobs_javascript_init() {
     <script type="text/javascript">
         jQuery(document).ready(function($) {
             console.log('[PUNTWORK] Jobs Dashboard: Document ready, checking modules...');
+            console.log('[PUNTWORK] Jobs Dashboard: JobImportEvents available:', typeof JobImportEvents);
+            console.log('[PUNTWORK] Jobs Dashboard: JobImportUI available:', typeof JobImportUI);
+            console.log('[PUNTWORK] Jobs Dashboard: JobImportAPI available:', typeof JobImportAPI);
+            console.log('[PUNTWORK] Jobs Dashboard: JobImportLogic available:', typeof JobImportLogic);
 
             // Add a simple test function to global scope
             window.testJobsButtons = function() {
@@ -233,7 +237,30 @@ function render_jobs_javascript_init() {
 
             console.log('[PUNTWORK] Run testJobsButtons() in console to test button functionality');
 
-            // Jobs are managed automatically during import
+            // Only initialize if not already initialized
+            if (typeof window.jobsDashboardInitialized === 'undefined') {
+                console.log('[PUNTWORK] Jobs Dashboard: Initializing cleanup system...');
+
+                // Initialize the cleanup event handlers
+                if (typeof JobImportEvents !== 'undefined') {
+                    console.log('[PUNTWORK] Jobs Dashboard: Binding cleanup events');
+                    JobImportEvents.bindCleanupEvents();
+                } else {
+                    console.error('[PUNTWORK] Jobs Dashboard: JobImportEvents not available!');
+                }
+
+                // Initialize UI components for cleanup
+                if (typeof JobImportUI !== 'undefined') {
+                    console.log('[PUNTWORK] Jobs Dashboard: Clearing cleanup progress');
+                    JobImportUI.clearCleanupProgress();
+                }
+
+                // Mark as initialized to prevent double initialization
+                window.jobsDashboardInitialized = true;
+                console.log('[PUNTWORK] Jobs Dashboard: Cleanup JavaScript initialized');
+            } else {
+                console.log('[PUNTWORK] Jobs Dashboard: Cleanup already initialized, skipping...');
+            }
         });
     </script>
     <?php

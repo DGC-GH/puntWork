@@ -331,3 +331,204 @@ function get_job_import_status_ajax() {
     PuntWorkLogger::logAjaxResponse('get_job_import_status', $log_summary);
     wp_send_json_success($progress);
 }
+
+add_action('wp_ajax_cleanup_trashed_jobs', __NAMESPACE__ . '\\cleanup_trashed_jobs_ajax');
+function cleanup_trashed_jobs_ajax() {
+    PuntWorkLogger::logAjaxRequest('cleanup_trashed_jobs', $_POST);
+
+    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
+        PuntWorkLogger::error('Nonce verification failed for cleanup_trashed_jobs', PuntWorkLogger::CONTEXT_AJAX);
+        wp_send_json_error(['message' => 'Nonce verification failed']);
+    }
+    if (!current_user_can('manage_options')) {
+        PuntWorkLogger::error('Permission denied for cleanup_trashed_jobs', PuntWorkLogger::CONTEXT_AJAX);
+        wp_send_json_error(['message' => 'Permission denied']);
+    }
+
+    global $wpdb;
+
+    try {
+        // Get all trashed job posts
+        $trashed_posts = $wpdb->get_results($wpdb->prepare("
+            SELECT p.ID, p.post_title
+            FROM {$wpdb->posts} p
+            WHERE p.post_type = 'job'
+            AND p.post_status = 'trash'
+        "));
+
+        $deleted = 0;
+        $logs = [];
+
+        foreach ($trashed_posts as $post) {
+            $result = wp_delete_post($post->ID, true); // true = force delete, skip trash
+            if ($result) {
+                $deleted++;
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Permanently deleted trashed job: ' . $post->post_title . ' (ID: ' . $post->ID . ')';
+            } else {
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Failed to delete trashed job: ' . $post->post_title . ' (ID: ' . $post->ID . ')';
+            }
+        }
+
+        PuntWorkLogger::info('Cleanup of trashed jobs completed', PuntWorkLogger::CONTEXT_BATCH, [
+            'deleted_count' => $deleted,
+            'total_found' => count($trashed_posts)
+        ]);
+
+        wp_send_json_success([
+            'message' => "Cleanup completed: {$deleted} trashed jobs permanently deleted",
+            'deleted_count' => $deleted,
+            'total_found' => count($trashed_posts),
+            'logs' => $logs
+        ]);
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Cleanup of trashed jobs failed', PuntWorkLogger::CONTEXT_BATCH, [
+            'error' => $e->getMessage()
+        ]);
+        wp_send_json_error(['message' => 'Cleanup failed: ' . $e->getMessage()]);
+    }
+}
+
+add_action('wp_ajax_cleanup_drafted_jobs', __NAMESPACE__ . '\\cleanup_drafted_jobs_ajax');
+function cleanup_drafted_jobs_ajax() {
+    PuntWorkLogger::logAjaxRequest('cleanup_drafted_jobs', $_POST);
+
+    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
+        PuntWorkLogger::error('Nonce verification failed for cleanup_drafted_jobs', PuntWorkLogger::CONTEXT_AJAX);
+        wp_send_json_error(['message' => 'Nonce verification failed']);
+    }
+    if (!current_user_can('manage_options')) {
+        PuntWorkLogger::error('Permission denied for cleanup_drafted_jobs', PuntWorkLogger::CONTEXT_AJAX);
+        wp_send_json_error(['message' => 'Permission denied']);
+    }
+
+    global $wpdb;
+
+    try {
+        // Get all drafted job posts
+        $drafted_posts = $wpdb->get_results($wpdb->prepare("
+            SELECT p.ID, p.post_title
+            FROM {$wpdb->posts} p
+            WHERE p.post_type = 'job'
+            AND p.post_status = 'draft'
+        "));
+
+        $deleted = 0;
+        $logs = [];
+
+        foreach ($drafted_posts as $post) {
+            $result = wp_delete_post($post->ID, true); // true = force delete, skip trash
+            if ($result) {
+                $deleted++;
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Permanently deleted drafted job: ' . $post->post_title . ' (ID: ' . $post->ID . ')';
+            } else {
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Failed to delete drafted job: ' . $post->post_title . ' (ID: ' . $post->ID . ')';
+            }
+        }
+
+        PuntWorkLogger::info('Cleanup of drafted jobs completed', PuntWorkLogger::CONTEXT_BATCH, [
+            'deleted_count' => $deleted,
+            'total_found' => count($drafted_posts)
+        ]);
+
+        wp_send_json_success([
+            'message' => "Cleanup completed: {$deleted} drafted jobs permanently deleted",
+            'deleted_count' => $deleted,
+            'total_found' => count($drafted_posts),
+            'logs' => $logs
+        ]);
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Cleanup of drafted jobs failed', PuntWorkLogger::CONTEXT_BATCH, [
+            'error' => $e->getMessage()
+        ]);
+        wp_send_json_error(['message' => 'Cleanup failed: ' . $e->getMessage()]);
+    }
+}
+
+add_action('wp_ajax_cleanup_old_published_jobs', __NAMESPACE__ . '\\cleanup_old_published_jobs_ajax');
+function cleanup_old_published_jobs_ajax() {
+    PuntWorkLogger::logAjaxRequest('cleanup_old_published_jobs', $_POST);
+
+    if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
+        PuntWorkLogger::error('Nonce verification failed for cleanup_old_published_jobs', PuntWorkLogger::CONTEXT_AJAX);
+        wp_send_json_error(['message' => 'Nonce verification failed']);
+    }
+    if (!current_user_can('manage_options')) {
+        PuntWorkLogger::error('Permission denied for cleanup_old_published_jobs', PuntWorkLogger::CONTEXT_AJAX);
+        wp_send_json_error(['message' => 'Permission denied']);
+    }
+
+    global $wpdb;
+
+    try {
+        // Check if combined-jobs.jsonl exists
+        $json_path = PUNTWORK_PATH . 'feeds/combined-jobs.jsonl';
+        if (!file_exists($json_path)) {
+            wp_send_json_error(['message' => 'No current feed data found. Please run an import first to generate feed data.']);
+        }
+
+        // Get all current GUIDs from the combined JSONL file
+        $current_guids = [];
+        if (($handle = fopen($json_path, "r")) !== false) {
+            while (($line = fgets($handle)) !== false) {
+                $line = trim($line);
+                if (!empty($line)) {
+                    $item = json_decode($line, true);
+                    if ($item !== null && isset($item['guid'])) {
+                        $current_guids[] = $item['guid'];
+                    }
+                }
+            }
+            fclose($handle);
+        }
+
+        if (empty($current_guids)) {
+            wp_send_json_error(['message' => 'No valid job data found in current feeds.']);
+        }
+
+        // Get all published job posts that are NOT in the current feeds
+        $placeholders = implode(',', array_fill(0, count($current_guids), '%s'));
+        $old_published_posts = $wpdb->get_results($wpdb->prepare("
+            SELECT p.ID, p.post_title, pm.meta_value as guid
+            FROM {$wpdb->posts} p
+            JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
+            WHERE p.post_type = 'job'
+            AND p.post_status = 'publish'
+            AND pm.meta_value NOT IN ({$placeholders})
+        ", $current_guids));
+
+        $deleted = 0;
+        $logs = [];
+
+        foreach ($old_published_posts as $post) {
+            $result = wp_delete_post($post->ID, true); // true = force delete, skip trash
+            if ($result) {
+                $deleted++;
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Permanently deleted old published job: ' . $post->post_title . ' (ID: ' . $post->ID . ', GUID: ' . $post->guid . ')';
+            } else {
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Failed to delete old published job: ' . $post->post_title . ' (ID: ' . $post->ID . ', GUID: ' . $post->guid . ')';
+            }
+        }
+
+        PuntWorkLogger::info('Cleanup of old published jobs completed', PuntWorkLogger::CONTEXT_BATCH, [
+            'deleted_count' => $deleted,
+            'total_found' => count($old_published_posts),
+            'current_feed_jobs' => count($current_guids)
+        ]);
+
+        wp_send_json_success([
+            'message' => "Cleanup completed: {$deleted} old published jobs permanently deleted",
+            'deleted_count' => $deleted,
+            'total_found' => count($old_published_posts),
+            'current_feed_jobs' => count($current_guids),
+            'logs' => $logs
+        ]);
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Cleanup of old published jobs failed', PuntWorkLogger::CONTEXT_BATCH, [
+            'error' => $e->getMessage()
+        ]);
+        wp_send_json_error(['message' => 'Cleanup failed: ' . $e->getMessage()]);
+    }
+}

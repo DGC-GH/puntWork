@@ -135,6 +135,45 @@ console.log('[PUNTWORK] job-import-api.js loaded');
         },
 
         /**
+         * Cleanup trashed job posts
+         * @returns {Promise} AJAX promise
+         */
+        cleanupTrashedJobs: function() {
+            console.log('[PUNTWORK] API: Making cleanup trashed jobs request');
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: { action: 'cleanup_trashed_jobs', nonce: jobImportData.nonce }
+            });
+        },
+
+        /**
+         * Cleanup drafted job posts
+         * @returns {Promise} AJAX promise
+         */
+        cleanupDraftedJobs: function() {
+            console.log('[PUNTWORK] API: Making cleanup drafted jobs request');
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: { action: 'cleanup_drafted_jobs', nonce: jobImportData.nonce }
+            });
+        },
+
+        /**
+         * Cleanup old published job posts not in current feeds
+         * @returns {Promise} AJAX promise
+         */
+        cleanupOldPublishedJobs: function() {
+            console.log('[PUNTWORK] API: Making cleanup old published jobs request');
+            return $.ajax({
+                url: jobImportData.ajaxurl,
+                type: 'POST',
+                data: { action: 'cleanup_old_published_jobs', nonce: jobImportData.nonce }
+            });
+        },
+
+        /**
          * Continue cleanup operation (for batched processing)
          * @param {number} offset - Current offset for batch processing
          * @param {number} batchSize - Size of batch to process
