@@ -26,112 +26,167 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return array Processing results.
  */
 function process_batch_items_logic($setup) {
-    extract($setup);
-
-    $batch_start_time = microtime(true); // Record start time for this batch
-
-    $memory_limit_bytes = get_memory_limit_bytes();
-    $threshold = 0.6 * $memory_limit_bytes;
-    $batch_size = get_option('job_import_batch_size') ?: 100; // Start more conservatively
-    $old_batch_size = $batch_size;
-    $prev_time_per_item = get_option('job_import_time_per_job', 0);
-    $avg_time_per_item = get_option('job_import_avg_time_per_job', $prev_time_per_item);
-    $last_peak_memory = get_option('job_import_last_peak_memory', $memory_limit_bytes);
-    $last_memory_ratio = $last_peak_memory / $memory_limit_bytes;
-
-    // Get current and previous batch times for dynamic adjustment
-    $current_batch_time = get_option('job_import_last_batch_time', 0);
-    $previous_batch_time = get_option('job_import_previous_batch_time', 0);
-
-    $batch_size = adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time);
-    $adjustment_result = $batch_size; // Now returns array with 'batch_size' and 'reason'
-    $batch_size = $adjustment_result['batch_size'];
-
-    // Only update and log if changed
-    if ($batch_size != $old_batch_size) {
-        update_option('job_import_batch_size', $batch_size, false);
-        $reason = '';
-        if ($last_memory_ratio > 0.85) {
-            $reason = 'high previous memory';
-        } elseif ($last_memory_ratio < 0.5) {
-            $reason = 'low previous memory and low avg time';
-        } elseif ($current_batch_time > $previous_batch_time) {
-            $reason = 'current batch slower than previous';
-        } elseif ($current_batch_time < $previous_batch_time) {
-            $reason = 'current batch faster than previous';
-        }
-        $logs = [];
-        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch size adjusted to ' . $batch_size . ' due to ' . $reason;
-        if (!empty($adjustment_result['reason'])) {
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Reason: ' . $adjustment_result['reason'];
-        }
-    } else {
-        $logs = [];
-    }
-
-    // Re-align start_index with new batch_size to avoid skips
-    // Removed to prevent stuck imports when batch_size changes
-
-    $end_index = min($start_index + $batch_size, $total);
-    $published = 0;
-    $updated = 0;
-    $skipped = 0;
-    $duplicates_drafted = 0;
-    $inferred_languages = 0;
-    $inferred_benefits = 0;
-    $schema_generated = 0;
+    $batch_start_time = microtime(true);
 
     try {
+        extract($setup);
+
+        PuntWorkLogger::info('Starting batch processing', PuntWorkLogger::CONTEXT_BATCH, [
+            'start_index' => $start_index ?? 'unknown',
+            'total' => $total ?? 'unknown',
+            'batch_start_time' => $batch_start_time
+        ]);
+
+        $memory_limit_bytes = get_memory_limit_bytes();
+        $threshold = 0.6 * $memory_limit_bytes;
+        $batch_size = get_option('job_import_batch_size') ?: 100;
+        $old_batch_size = $batch_size;
+        $prev_time_per_item = get_option('job_import_time_per_job', 0);
+        $avg_time_per_item = get_option('job_import_avg_time_per_job', $prev_time_per_item);
+        $last_peak_memory = get_option('job_import_last_peak_memory', $memory_limit_bytes);
+        $last_memory_ratio = $last_peak_memory / $memory_limit_bytes;
+
+        // Get current and previous batch times for dynamic adjustment
+        $current_batch_time = get_option('job_import_last_batch_time', 0);
+        $previous_batch_time = get_option('job_import_previous_batch_time', 0);
+
+        try {
+            $batch_size = adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time);
+            $adjustment_result = $batch_size;
+            $batch_size = $adjustment_result['batch_size'];
+        } catch (\Exception $e) {
+            PuntWorkLogger::error('Failed to adjust batch size, using default', PuntWorkLogger::CONTEXT_BATCH, [
+                'error' => $e->getMessage(),
+                'original_batch_size' => $old_batch_size
+            ]);
+            $batch_size = $old_batch_size; // Fallback to original size
+            $adjustment_result = ['batch_size' => $batch_size, 'reason' => 'error fallback'];
+        }
+
+        // Only update and log if changed
+        if ($batch_size != $old_batch_size) {
+            try {
+                update_option('job_import_batch_size', $batch_size, false);
+                $reason = '';
+                if ($last_memory_ratio > 0.85) {
+                    $reason = 'high previous memory';
+                } elseif ($last_memory_ratio < 0.5) {
+                    $reason = 'low previous memory and low avg time';
+                } elseif ($current_batch_time > $previous_batch_time) {
+                    $reason = 'current batch slower than previous';
+                } elseif ($current_batch_time < $previous_batch_time) {
+                    $reason = 'current batch faster than previous';
+                }
+                $logs = [];
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch size adjusted to ' . $batch_size . ' due to ' . $reason;
+                if (!empty($adjustment_result['reason'])) {
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Reason: ' . $adjustment_result['reason'];
+                }
+            } catch (\Exception $e) {
+                PuntWorkLogger::error('Failed to update batch size option', PuntWorkLogger::CONTEXT_BATCH, [
+                    'error' => $e->getMessage(),
+                    'batch_size' => $batch_size
+                ]);
+                $logs = [];
+            }
+        } else {
+            $logs = [];
+        }
+
+        // Re-align start_index with new batch_size to avoid skips
+        // Removed to prevent stuck imports when batch_size changes
+
+        $end_index = min($start_index + $batch_size, $total);
+        $published = 0;
+        $updated = 0;
+        $skipped = 0;
+        $duplicates_drafted = 0;
+        $inferred_languages = 0;
+        $inferred_benefits = 0;
+        $schema_generated = 0;
+
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Starting batch from $start_index to $end_index (size $batch_size)";
 
         // Load batch from JSONL
-        $batch_json_items = load_json_batch($json_path, $start_index, $batch_size);
-        $batch_items = [];
-        $batch_guids = [];
-        $loaded_count = count($batch_json_items);
+        try {
+            $batch_json_items = load_json_batch($json_path, $start_index, $batch_size);
+            $batch_items = [];
+            $batch_guids = [];
+            $loaded_count = count($batch_json_items);
 
-        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Loaded $loaded_count items from JSONL (batch size: $batch_size)";
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Loaded $loaded_count items from JSONL (batch size: $batch_size)";
+        } catch (\Exception $e) {
+            PuntWorkLogger::error('Failed to load JSONL batch', PuntWorkLogger::CONTEXT_BATCH, [
+                'error' => $e->getMessage(),
+                'json_path' => $json_path ?? 'unknown',
+                'start_index' => $start_index ?? 'unknown',
+                'batch_size' => $batch_size
+            ]);
+            return [
+                'success' => false,
+                'message' => 'Failed to load batch data: ' . $e->getMessage(),
+                'logs' => $logs
+            ];
+        }
 
         for ($i = 0; $i < count($batch_json_items); $i++) {
-            $current_index = $start_index + $i;
+            try {
+                $current_index = $start_index + $i;
 
-            if (get_transient('import_cancel') === true) {
-                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Import cancelled at #' . ($current_index + 1);
-                update_option('job_import_progress', $current_index, false);
-                return ['success' => false, 'message' => 'Import cancelled by user', 'logs' => $logs];
-            }
+                if (get_transient('import_cancel') === true) {
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Import cancelled at #' . ($current_index + 1);
+                    update_option('job_import_progress', $current_index, false);
+                    return ['success' => false, 'message' => 'Import cancelled by user', 'logs' => $logs];
+                }
 
-            $item = $batch_json_items[$i];
-            $guid = $item['guid'] ?? '';
+                $item = $batch_json_items[$i];
+                $guid = $item['guid'] ?? '';
 
-            if (empty($guid)) {
+                if (empty($guid)) {
+                    $skipped++;
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped #' . ($current_index + 1) . ': Empty GUID';
+                    continue;
+                }
+
+                $processed_guids[] = $guid;
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Processing #' . ($current_index + 1) . ' GUID: ' . $guid;
+                $batch_items[$guid] = ['item' => $item, 'index' => $current_index];
+                $batch_guids[] = $guid;
+
+                if (!empty($item['job_languages'])) $inferred_languages++;
+                $benefit_count = (!empty($item['job_car']) ? 1 : 0) + (!empty($item['job_remote']) ? 1 : 0) + (!empty($item['job_meal_vouchers']) ? 1 : 0) + (!empty($item['job_flex_hours']) ? 1 : 0);
+                $inferred_benefits += $benefit_count;
+                if (!empty($item['job_posting']) || !empty($item['job_ecommerce'])) $schema_generated++;
+
+                if (memory_get_usage(true) > $threshold) {
+                    $batch_size = max(1, (int)($batch_size * 0.8));
+                    try {
+                        update_option('job_import_batch_size', $batch_size, false);
+                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Memory high, reduced batch to ' . $batch_size;
+                    } catch (\Exception $e) {
+                        PuntWorkLogger::error('Failed to update batch size due to memory', PuntWorkLogger::CONTEXT_BATCH, [
+                            'error' => $e->getMessage(),
+                            'new_batch_size' => $batch_size
+                        ]);
+                    }
+                    $end_index = min($start_index + $batch_size, $total);
+                }
+
+                if ($i % 5 === 0) {
+                    ob_flush();
+                    flush();
+                }
+                unset($batch_json_items[$i]);
+            } catch (\Exception $e) {
+                PuntWorkLogger::error('Error processing batch item', PuntWorkLogger::CONTEXT_BATCH, [
+                    'error' => $e->getMessage(),
+                    'item_index' => $i,
+                    'current_index' => $start_index + $i
+                ]);
                 $skipped++;
-                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Skipped #' . ($current_index + 1) . ': Empty GUID';
+                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Error processing item #' . ($start_index + $i + 1) . ': ' . $e->getMessage();
                 continue;
             }
-
-            $processed_guids[] = $guid;
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Processing #' . ($current_index + 1) . ' GUID: ' . $guid;
-            $batch_items[$guid] = ['item' => $item, 'index' => $current_index];
-            $batch_guids[] = $guid;
-
-            if (!empty($item['job_languages'])) $inferred_languages++;
-            $benefit_count = (!empty($item['job_car']) ? 1 : 0) + (!empty($item['job_remote']) ? 1 : 0) + (!empty($item['job_meal_vouchers']) ? 1 : 0) + (!empty($item['job_flex_hours']) ? 1 : 0);
-            $inferred_benefits += $benefit_count;
-            if (!empty($item['job_posting']) || !empty($item['job_ecommerce'])) $schema_generated++;
-
-            if (memory_get_usage(true) > $threshold) {
-                $batch_size = max(1, (int)($batch_size * 0.8));
-                update_option('job_import_batch_size', $batch_size, false);
-                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Memory high, reduced batch to ' . $batch_size;
-                $end_index = min($start_index + $batch_size, $total);
-            }
-
-            if ($i % 5 === 0) {
-                ob_flush();
-                flush();
-            }
-            unset($batch_json_items[$i]);
         }
         unset($batch_json_items);
 
@@ -139,19 +194,102 @@ function process_batch_items_logic($setup) {
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Prepared $valid_items_count valid items for processing (skipped " . ($loaded_count - $valid_items_count) . " items)";
 
         if (empty($batch_guids)) {
+            try {
+                update_option('job_import_progress', $end_index, false);
+                update_option('job_import_processed_guids', $processed_guids, false);
+                $time_elapsed = microtime(true) - $start_time;
+                $batch_time = microtime(true) - $batch_start_time;
+
+                // Update import status for UI polling
+                $current_status = get_option('job_import_status', []);
+                $current_status['total'] = $total;
+                $current_status['processed'] = $end_index;
+                $current_status['published'] = $current_status['published'] ?? 0;
+                $current_status['updated'] = $current_status['updated'] ?? 0;
+                $current_status['skipped'] = ($current_status['skipped'] ?? 0) + $skipped;
+                $current_status['duplicates_drafted'] = $current_status['duplicates_drafted'] ?? 0;
+                $current_status['time_elapsed'] = $time_elapsed;
+                $current_status['complete'] = ($end_index >= $total);
+                $current_status['success'] = true;
+                $current_status['error_message'] = '';
+                $current_status['batch_size'] = $batch_size;
+                $current_status['inferred_languages'] = ($current_status['inferred_languages'] ?? 0) + $inferred_languages;
+                $current_status['inferred_benefits'] = ($current_status['inferred_benefits'] ?? 0) + $inferred_benefits;
+                $current_status['schema_generated'] = ($current_status['schema_generated'] ?? 0) + $schema_generated;
+                $current_status['start_time'] = $start_time;
+                $current_status['end_time'] = $current_status['complete'] ? microtime(true) : null;
+                $current_status['last_update'] = time();
+                $current_status['logs'] = array_slice($logs, -50);
+                update_option('job_import_status', $current_status, false);
+            } catch (\Exception $e) {
+                PuntWorkLogger::error('Failed to update import status for empty batch', PuntWorkLogger::CONTEXT_BATCH, [
+                    'error' => $e->getMessage(),
+                    'end_index' => $end_index,
+                    'total' => $total
+                ]);
+            }
+
+            return [
+                'success' => true,
+                'processed' => $end_index,
+                'total' => $total,
+                'published' => $published,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'duplicates_drafted' => $duplicates_drafted,
+                'time_elapsed' => microtime(true) - $start_time,
+                'complete' => ($end_index >= $total),
+                'logs' => $logs,
+                'batch_size' => $batch_size,
+                'inferred_languages' => $inferred_languages,
+                'inferred_benefits' => $inferred_benefits,
+                'schema_generated' => $schema_generated,
+                'batch_time' => microtime(true) - $batch_start_time,
+                'batch_processed' => 0,
+                'message' => '' // No error message for success
+            ];
+        }
+
+        // Process batch items
+        try {
+            $result = process_batch_data($batch_guids, $batch_items, $logs, $published, $updated, $skipped, $duplicates_drafted);
+        } catch (\Exception $e) {
+            PuntWorkLogger::error('Failed to process batch data', PuntWorkLogger::CONTEXT_BATCH, [
+                'error' => $e->getMessage(),
+                'batch_guids_count' => count($batch_guids),
+                'batch_items_count' => count($batch_items)
+            ]);
+            return [
+                'success' => false,
+                'message' => 'Failed to process batch data: ' . $e->getMessage(),
+                'logs' => $logs
+            ];
+        }
+
+        unset($batch_items, $batch_guids);
+
+        try {
             update_option('job_import_progress', $end_index, false);
             update_option('job_import_processed_guids', $processed_guids, false);
             $time_elapsed = microtime(true) - $start_time;
-            $batch_time = microtime(true) - $batch_start_time; // Calculate actual batch processing time
+            $batch_time = microtime(true) - $batch_start_time;
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Batch complete: Processed {$result['processed_count']} items (published: $published, updated: $updated, skipped: $skipped, duplicates: $duplicates_drafted)";
+
+            // Update performance metrics with batch time, not total time
+            update_batch_metrics($batch_time, $result['processed_count'], $batch_size);
+
+            // Store batch timing data for status retrieval
+            update_option('job_import_last_batch_time', $batch_time, false);
+            update_option('job_import_last_batch_processed', $result['processed_count'], false);
 
             // Update import status for UI polling
             $current_status = get_option('job_import_status', []);
             $current_status['total'] = $total;
             $current_status['processed'] = $end_index;
-            $current_status['published'] = $current_status['published'] ?? 0;
-            $current_status['updated'] = $current_status['updated'] ?? 0;
+            $current_status['published'] = ($current_status['published'] ?? 0) + $published;
+            $current_status['updated'] = ($current_status['updated'] ?? 0) + $updated;
             $current_status['skipped'] = ($current_status['skipped'] ?? 0) + $skipped;
-            $current_status['duplicates_drafted'] = $current_status['duplicates_drafted'] ?? 0;
+            $current_status['duplicates_drafted'] = ($current_status['duplicates_drafted'] ?? 0) + $duplicates_drafted;
             $current_status['time_elapsed'] = $time_elapsed;
             $current_status['complete'] = ($end_index >= $total);
             $current_status['success'] = true;
@@ -163,69 +301,27 @@ function process_batch_items_logic($setup) {
             $current_status['start_time'] = $start_time;
             $current_status['end_time'] = $current_status['complete'] ? microtime(true) : null;
             $current_status['last_update'] = time();
-            $current_status['logs'] = array_slice($logs, -50);
+            $current_status['logs'] = array_slice($logs, -50); // Keep last 50 log entries
             update_option('job_import_status', $current_status, false);
-
-            return [
-                'success' => true,
-                'processed' => $end_index,
+        } catch (\Exception $e) {
+            PuntWorkLogger::error('Failed to update import status after batch processing', PuntWorkLogger::CONTEXT_BATCH, [
+                'error' => $e->getMessage(),
+                'end_index' => $end_index,
                 'total' => $total,
-                'published' => $published,
-                'updated' => $updated,
-                'skipped' => $skipped,
-                'duplicates_drafted' => $duplicates_drafted,
-                'time_elapsed' => $time_elapsed,
-                'complete' => ($end_index >= $total),
-                'logs' => $logs,
-                'batch_size' => $batch_size,
-                'inferred_languages' => $inferred_languages,
-                'inferred_benefits' => $inferred_benefits,
-                'schema_generated' => $schema_generated,
-                'batch_time' => $batch_time,
-                'batch_processed' => 0,
-                'message' => '' // No error message for success
-            ];
+                'processed_count' => $result['processed_count'] ?? 0
+            ]);
+            // Continue with return even if status update fails
         }
 
-        // Process batch items
-        $result = process_batch_data($batch_guids, $batch_items, $logs, $published, $updated, $skipped, $duplicates_drafted);
-
-        unset($batch_items, $batch_guids);
-
-        update_option('job_import_progress', $end_index, false);
-        update_option('job_import_processed_guids', $processed_guids, false);
-        $time_elapsed = microtime(true) - $start_time;
-        $batch_time = microtime(true) - $batch_start_time; // Calculate actual batch processing time
-        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Batch complete: Processed {$result['processed_count']} items (published: $published, updated: $updated, skipped: $skipped, duplicates: $duplicates_drafted)";
-
-        // Update performance metrics with batch time, not total time
-        update_batch_metrics($batch_time, $result['processed_count'], $batch_size);
-
-        // Store batch timing data for status retrieval
-        update_option('job_import_last_batch_time', $batch_time, false);
-        update_option('job_import_last_batch_processed', $result['processed_count'], false);
-
-        // Update import status for UI polling
-        $current_status = get_option('job_import_status', []);
-        $current_status['total'] = $total;
-        $current_status['processed'] = $end_index;
-        $current_status['published'] = ($current_status['published'] ?? 0) + $published;
-        $current_status['updated'] = ($current_status['updated'] ?? 0) + $updated;
-        $current_status['skipped'] = ($current_status['skipped'] ?? 0) + $skipped;
-        $current_status['duplicates_drafted'] = ($current_status['duplicates_drafted'] ?? 0) + $duplicates_drafted;
-        $current_status['time_elapsed'] = $time_elapsed;
-        $current_status['complete'] = ($end_index >= $total);
-        $current_status['success'] = true;
-        $current_status['error_message'] = '';
-        $current_status['batch_size'] = $batch_size;
-        $current_status['inferred_languages'] = ($current_status['inferred_languages'] ?? 0) + $inferred_languages;
-        $current_status['inferred_benefits'] = ($current_status['inferred_benefits'] ?? 0) + $inferred_benefits;
-        $current_status['schema_generated'] = ($current_status['schema_generated'] ?? 0) + $schema_generated;
-        $current_status['start_time'] = $start_time;
-        $current_status['end_time'] = $current_status['complete'] ? microtime(true) : null;
-        $current_status['last_update'] = time();
-        $current_status['logs'] = array_slice($logs, -50); // Keep last 50 log entries
-        update_option('job_import_status', $current_status, false);
+        PuntWorkLogger::info('Batch processing completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
+            'processed_count' => $result['processed_count'] ?? 0,
+            'published' => $published,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'duplicates_drafted' => $duplicates_drafted,
+            'batch_time' => $batch_time,
+            'time_elapsed' => $time_elapsed
+        ]);
 
         return [
             'success' => true,
@@ -242,16 +338,28 @@ function process_batch_items_logic($setup) {
             'inferred_languages' => $inferred_languages,
             'inferred_benefits' => $inferred_benefits,
             'schema_generated' => $schema_generated,
-            'batch_time' => $batch_time,  // Time for this specific batch
-            'batch_processed' => $result['processed_count'],  // Items processed in this batch
+            'batch_time' => $batch_time,
+            'batch_processed' => $result['processed_count'],
             'start_time' => $start_time,
             'message' => '' // No error message for success
         ];
     } catch (\Exception $e) {
         $error_msg = 'Batch import error: ' . $e->getMessage();
         error_log($error_msg);
+
+        PuntWorkLogger::error('Critical batch processing error', PuntWorkLogger::CONTEXT_BATCH, [
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg;
-        return ['success' => false, 'message' => 'Batch failed: ' . $e->getMessage(), 'logs' => $logs];
+        return [
+            'success' => false,
+            'message' => 'Batch failed: ' . $e->getMessage(),
+            'logs' => $logs
+        ];
     }
 }
 
@@ -333,28 +441,86 @@ function process_batch_data($batch_guids, $batch_items, &$logs, &$published, &$u
  * @return array Array of JSON items.
  */
 function load_json_batch($json_path, $start_index, $batch_size) {
-    $items = [];
-    $count = 0;
-    $current_index = 0;
+    try {
+        PuntWorkLogger::debug('Loading JSONL batch', PuntWorkLogger::CONTEXT_BATCH, [
+            'json_path' => $json_path,
+            'start_index' => $start_index,
+            'batch_size' => $batch_size
+        ]);
 
-    if (($handle = fopen($json_path, "r")) !== false) {
-        while (($line = fgets($handle)) !== false) {
-            if ($current_index >= $start_index && $count < $batch_size) {
-                $line = trim($line);
-                if (!empty($line)) {
-                    $item = json_decode($line, true);
-                    if ($item !== null) {
-                        $items[] = $item;
-                        $count++;
-                    }
-                }
-            } elseif ($current_index >= $start_index + $batch_size) {
-                break;
-            }
-            $current_index++;
+        $items = [];
+        $count = 0;
+        $current_index = 0;
+
+        // Validate file exists and is readable
+        if (!file_exists($json_path)) {
+            throw new \Exception("JSONL file does not exist: $json_path");
         }
-        fclose($handle);
-    }
 
-    return $items;
+        if (!is_readable($json_path)) {
+            throw new \Exception("JSONL file is not readable: $json_path");
+        }
+
+        $handle = fopen($json_path, "r");
+        if ($handle === false) {
+            throw new \Exception("Failed to open JSONL file: $json_path");
+        }
+
+        try {
+            while (($line = fgets($handle)) !== false) {
+                if ($current_index >= $start_index && $count < $batch_size) {
+                    $line = trim($line);
+                    if (!empty($line)) {
+                        $item = json_decode($line, true);
+                        if ($item === null && json_last_error() !== JSON_ERROR_NONE) {
+                            PuntWorkLogger::warning('JSON decode error in batch', PuntWorkLogger::CONTEXT_BATCH, [
+                                'line_number' => $current_index + 1,
+                                'json_error' => json_last_error_msg(),
+                                'line_preview' => substr($line, 0, 100)
+                            ]);
+                            // Skip malformed JSON lines but continue processing
+                            $current_index++;
+                            continue;
+                        }
+
+                        if ($item !== null) {
+                            $items[] = $item;
+                            $count++;
+                        }
+                    }
+                } elseif ($current_index >= $start_index + $batch_size) {
+                    break;
+                }
+                $current_index++;
+            }
+        } catch (\Exception $e) {
+            PuntWorkLogger::error('Error reading JSONL file', PuntWorkLogger::CONTEXT_BATCH, [
+                'error' => $e->getMessage(),
+                'json_path' => $json_path,
+                'current_index' => $current_index,
+                'items_loaded' => count($items)
+            ]);
+            // Continue to close file handle
+        }
+
+        fclose($handle);
+
+        PuntWorkLogger::debug('JSONL batch loaded successfully', PuntWorkLogger::CONTEXT_BATCH, [
+            'items_loaded' => count($items),
+            'total_lines_processed' => $current_index
+        ]);
+
+        return $items;
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Failed to load JSONL batch', PuntWorkLogger::CONTEXT_BATCH, [
+            'error' => $e->getMessage(),
+            'json_path' => $json_path,
+            'start_index' => $start_index,
+            'batch_size' => $batch_size,
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ]);
+        throw $e; // Re-throw to let calling function handle it
+    }
 }
