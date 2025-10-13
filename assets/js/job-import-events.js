@@ -230,21 +230,26 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 // Handle both response formats: direct data or wrapped in .data
                 var statusData = JobImportUI.normalizeResponseData(response);
 
+                // Check time since last update for detecting active imports
+                var currentTime = Math.floor(Date.now() / 1000);
+                var timeSinceLastUpdate = currentTime - (statusData.last_update || 0);
+
                 // Determine if there's actually an incomplete import to resume
                 var hasIncompleteImport = response.success && (
                     (statusData.processed > 0 && !statusData.complete) || // Partially completed import
                     (statusData.resume_progress > 0) || // Has resume progress
-                    (!statusData.complete && statusData.total > 0) // Incomplete with total set
+                    (!statusData.complete && statusData.total > 0) || // Incomplete with total set
+                    (!statusData.complete && timeSinceLastUpdate < 600) // Incomplete and recently updated (for scheduled imports)
                 );
 
                 if (hasIncompleteImport) {
                     JobImportUI.updateProgress(statusData);
                     JobImportUI.appendLogs(statusData.logs || []);
                     
+                    // Always start polling for incomplete imports to catch scheduled imports
+                    JobImportEvents.startStatusPolling();
+                    
                     // Check if import appears to be currently running (updated within last 5 minutes)
-                    // This aligns with the PHP stuck import detection threshold
-                    var currentTime = Math.floor(Date.now() / 1000);
-                    var timeSinceLastUpdate = currentTime - (statusData.last_update || 0);
                     var isRecentlyActive = timeSinceLastUpdate < 300; // 5 minutes
                     
                     if (isRecentlyActive && statusData.processed > 0) {
@@ -260,7 +265,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         // Start polling for status updates
                         JobImportEvents.startStatusPolling();
                     } else {
-                        // Import was interrupted - show resume and reset options
+                        // Import was interrupted or completed - show resume and reset options, but also start polling in case it's a scheduled import
                         $('#start-import').hide();
                         $('#resume-import').show();
                         $('#reset-import').show();
@@ -268,6 +273,9 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         JobImportUI.showImportUI();
                         $('#status-message').text('Previous import interrupted. Resume or reset?');
                         console.log('[PUNTWORK] Import was interrupted, showing resume and reset options');
+                        
+                        // Start polling anyway in case a scheduled import is running in the background
+                        JobImportEvents.startStatusPolling();
                     }
                 } else {
                     // Clean state - hide all import controls except start
