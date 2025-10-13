@@ -42,7 +42,7 @@ require_once __DIR__ . '/../utilities/puntwork-logger.php';
  */
 function import_time_exceeded() {
     $start_time = get_option('job_import_start_time', microtime(true));
-    $time_limit = apply_filters('puntwork_import_time_limit', 120); // 120 seconds default (increased from 20 for better performance)
+    $time_limit = apply_filters('puntwork_import_time_limit', 600); // 600 seconds (10 minutes) default - increased for better performance with large feeds
     $current_time = microtime(true);
 
     if (($current_time - $start_time) >= $time_limit) {
