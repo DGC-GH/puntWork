@@ -36,6 +36,9 @@ require_once __DIR__ . '/import-finalization.php';
 // Include logger
 require_once __DIR__ . '/../utilities/puntwork-logger.php';
 
+// Include core structure logic for feed processing
+require_once __DIR__ . '/../core/core-structure-logic.php';
+
 /**
  * Check if the current import process has exceeded time limits
  * Similar to WooCommerce's time_exceeded() method
@@ -392,6 +395,134 @@ if (!function_exists('import_all_jobs_from_json')) {
         }
 
         return finalize_batch_import($final_result);
+    }
+}
+
+/**
+ * Run a scheduled import - processes feeds and imports jobs
+ * This is the main entry point for scheduled imports
+ *
+ * @return array Import result data
+ */
+function run_scheduled_import() {
+    error_log('[PUNTWORK] Starting scheduled import process');
+
+    try {
+        // Phase 1: Process feeds and generate combined JSONL
+        PuntWorkLogger::info('Starting scheduled import - Phase 1: Feed processing', PuntWorkLogger::CONTEXT_BATCH);
+
+        $feed_logs = fetch_and_generate_combined_json();
+
+        PuntWorkLogger::info('Feed processing completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
+            'feed_logs_count' => count($feed_logs)
+        ]);
+
+        // Phase 2: Import jobs from the combined JSONL file
+        PuntWorkLogger::info('Starting scheduled import - Phase 2: Job importing', PuntWorkLogger::CONTEXT_BATCH);
+
+        $import_result = import_all_jobs_from_json();
+
+        // Merge feed logs with import logs
+        if (isset($import_result['logs']) && is_array($import_result['logs'])) {
+            $import_result['logs'] = array_merge($feed_logs, $import_result['logs']);
+        } else {
+            $import_result['logs'] = $feed_logs;
+        }
+
+        if ($import_result['success']) {
+            PuntWorkLogger::info('Scheduled import completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
+                'processed' => $import_result['processed'] ?? 0,
+                'total' => $import_result['total'] ?? 0,
+                'published' => $import_result['published'] ?? 0,
+                'updated' => $import_result['updated'] ?? 0,
+                'time_elapsed' => $import_result['time_elapsed'] ?? 0
+            ]);
+        } else {
+            PuntWorkLogger::error('Scheduled import failed', PuntWorkLogger::CONTEXT_BATCH, [
+                'error' => $import_result['message'] ?? 'Unknown error',
+                'processed' => $import_result['processed'] ?? 0,
+                'total' => $import_result['total'] ?? 0
+            ]);
+        }
+
+        return $import_result;
+
+    } catch (Exception $e) {
+        $error_msg = 'Scheduled import failed: ' . $e->getMessage();
+        PuntWorkLogger::error('Scheduled import exception', PuntWorkLogger::CONTEXT_BATCH, [
+            'error' => $error_msg,
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return [
+            'success' => false,
+            'message' => $error_msg,
+            'logs' => ['[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg]
+        ];
+    }
+}
+
+/**
+ * Run a manual import - processes feeds and imports jobs
+ * This is the main entry point for manual imports
+ *
+ * @return array Import result data
+ */
+function run_manual_import() {
+    error_log('[PUNTWORK] Starting manual import process');
+
+    try {
+        // Phase 1: Process feeds and generate combined JSONL
+        PuntWorkLogger::info('Starting manual import - Phase 1: Feed processing', PuntWorkLogger::CONTEXT_BATCH);
+
+        $feed_logs = fetch_and_generate_combined_json();
+
+        PuntWorkLogger::info('Feed processing completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
+            'feed_logs_count' => count($feed_logs)
+        ]);
+
+        // Phase 2: Import jobs from the combined JSONL file
+        PuntWorkLogger::info('Starting manual import - Phase 2: Job importing', PuntWorkLogger::CONTEXT_BATCH);
+
+        $import_result = import_all_jobs_from_json();
+
+        // Merge feed logs with import logs
+        if (isset($import_result['logs']) && is_array($import_result['logs'])) {
+            $import_result['logs'] = array_merge($feed_logs, $import_result['logs']);
+        } else {
+            $import_result['logs'] = $feed_logs;
+        }
+
+        if ($import_result['success']) {
+            PuntWorkLogger::info('Manual import completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
+                'processed' => $import_result['processed'] ?? 0,
+                'total' => $import_result['total'] ?? 0,
+                'published' => $import_result['published'] ?? 0,
+                'updated' => $import_result['updated'] ?? 0,
+                'time_elapsed' => $import_result['time_elapsed'] ?? 0
+            ]);
+        } else {
+            PuntWorkLogger::error('Manual import failed', PuntWorkLogger::CONTEXT_BATCH, [
+                'error' => $import_result['message'] ?? 'Unknown error',
+                'processed' => $import_result['processed'] ?? 0,
+                'total' => $import_result['total'] ?? 0
+            ]);
+        }
+
+        return $import_result;
+
+    } catch (Exception $e) {
+        $error_msg = 'Manual import failed: ' . $e->getMessage();
+        PuntWorkLogger::error('Manual import exception', PuntWorkLogger::CONTEXT_BATCH, [
+            'error' => $error_msg,
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return [
+            'success' => false,
+            'message' => $error_msg,
+            'logs' => ['[' . date('d-M-Y H:i:s') . ' UTC] ' . $error_msg]
+        ];
     }
 }
 
