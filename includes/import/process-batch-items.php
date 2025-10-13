@@ -14,8 +14,10 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+// Include retry utility
+require_once plugin_dir_path(__FILE__) . '../utilities/retry-utility.php';
+
 if (!function_exists('process_batch_items')) {
-    if (!function_exists('process_batch_items')) {
     function process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count) {
         PuntWorkLogger::info('Starting batch item processing', PuntWorkLogger::CONTEXT_BATCH, [
             'batch_guids_count' => count($batch_guids),
@@ -43,9 +45,16 @@ if (!function_exists('process_batch_items')) {
                         // First, ensure the job is published if it's in the feed
                         $current_post = get_post($post_id);
                         if ($current_post && $current_post->post_status !== 'publish') {
-                            $update_result = wp_update_post([
-                                'ID' => $post_id,
-                                'post_status' => 'publish'
+                            $update_result = retry_database_operation(function() use ($post_id) {
+                                return wp_update_post([
+                                    'ID' => $post_id,
+                                    'post_status' => 'publish'
+                                ]);
+                            }, [$post_id], [
+                                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                                'operation' => 'republish_existing_post',
+                                'post_id' => $post_id,
+                                'guid' => $guid
                             ]);
 
                             if (is_wp_error($update_result)) {
@@ -90,13 +99,20 @@ if (!function_exists('process_batch_items')) {
                         $xml_validfrom = isset($item['validfrom']) ? $item['validfrom'] : '';
                         $post_modified = $xml_updated ?: current_time('mysql');
 
-                        $update_result = wp_update_post([
-                            'ID' => $post_id,
-                            'post_title' => $xml_title,
-                            'post_name' => sanitize_title($xml_title . '-' . $guid),
-                            'post_status' => 'publish', // Ensure updated posts are published
-                            'post_date' => $xml_validfrom,
-                            'post_modified' => $post_modified,
+                        $update_result = retry_database_operation(function() use ($post_id, $xml_title, $guid, $xml_validfrom, $post_modified) {
+                            return wp_update_post([
+                                'ID' => $post_id,
+                                'post_title' => $xml_title,
+                                'post_name' => sanitize_title($xml_title . '-' . $guid),
+                                'post_status' => 'publish', // Ensure updated posts are published
+                                'post_date' => $xml_validfrom,
+                                'post_modified' => $post_modified,
+                            ]);
+                        }, [$post_id, $xml_title, $guid, $xml_validfrom, $post_modified], [
+                            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                            'operation' => 'update_existing_post',
+                            'post_id' => $post_id,
+                            'guid' => $guid
                         ]);
 
                         if (is_wp_error($update_result)) {
@@ -112,14 +128,38 @@ if (!function_exists('process_batch_items')) {
                         }
 
                         try {
-                            update_post_meta($post_id, '_last_import_update', $xml_updated);
-                            update_post_meta($post_id, '_import_hash', $item_hash);
+                            retry_database_operation(function() use ($post_id, $xml_updated) {
+                                return update_post_meta($post_id, '_last_import_update', $xml_updated);
+                            }, [$post_id, $xml_updated], [
+                                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                                'operation' => 'update_last_import_meta',
+                                'post_id' => $post_id,
+                                'guid' => $guid
+                            ]);
+
+                            $item_hash = md5(json_encode($item));
+                            retry_database_operation(function() use ($post_id, $item_hash) {
+                                return update_post_meta($post_id, '_import_hash', $item_hash);
+                            }, [$post_id, $item_hash], [
+                                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                                'operation' => 'update_import_hash_meta',
+                                'post_id' => $post_id,
+                                'guid' => $guid
+                            ]);
 
                             foreach ($acf_fields as $field) {
                                 $value = $item[$field] ?? '';
                                 $is_special = in_array($field, $zero_empty_fields);
                                 $set_value = $is_special && $value === '0' ? '' : $value;
-                                update_post_meta($post_id, $field, $set_value);
+                                retry_database_operation(function() use ($post_id, $field, $set_value) {
+                                    return update_post_meta($post_id, $field, $set_value);
+                                }, [$post_id, $field, $set_value], [
+                                    'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                                    'operation' => 'update_acf_field_meta',
+                                    'post_id' => $post_id,
+                                    'field' => $field,
+                                    'guid' => $guid
+                                ]);
                             }
                         } catch (\Exception $e) {
                             PuntWorkLogger::error('Failed to update post meta for existing post', PuntWorkLogger::CONTEXT_BATCH, [
@@ -166,7 +206,15 @@ if (!function_exists('process_batch_items')) {
                             'post_author' => $user_id,
                         ];
 
-                        $post_id = wp_insert_post($post_data);
+                        $post_id = retry_database_operation(function() use ($post_data) {
+                            return wp_insert_post($post_data);
+                        }, [$post_data], [
+                            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                            'operation' => 'create_new_post',
+                            'guid' => $guid,
+                            'title' => $xml_title
+                        ]);
+
                         if (is_wp_error($post_id)) {
                             PuntWorkLogger::error('Failed to create new post', PuntWorkLogger::CONTEXT_BATCH, [
                                 'guid' => $guid,
@@ -180,15 +228,38 @@ if (!function_exists('process_batch_items')) {
 
                         try {
                             $published++;
-                            update_post_meta($post_id, '_last_import_update', $xml_updated);
+                            retry_database_operation(function() use ($post_id, $xml_updated) {
+                                return update_post_meta($post_id, '_last_import_update', $xml_updated);
+                            }, [$post_id, $xml_updated], [
+                                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                                'operation' => 'set_last_import_meta_new',
+                                'post_id' => $post_id,
+                                'guid' => $guid
+                            ]);
+
                             $item_hash = md5(json_encode($item));
-                            update_post_meta($post_id, '_import_hash', $item_hash);
+                            retry_database_operation(function() use ($post_id, $item_hash) {
+                                return update_post_meta($post_id, '_import_hash', $item_hash);
+                            }, [$post_id, $item_hash], [
+                                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                                'operation' => 'set_import_hash_meta_new',
+                                'post_id' => $post_id,
+                                'guid' => $guid
+                            ]);
 
                             foreach ($acf_fields as $field) {
                                 $value = $item[$field] ?? '';
                                 $is_special = in_array($field, $zero_empty_fields);
                                 $set_value = $is_special && $value === '0' ? '' : $value;
-                                update_post_meta($post_id, $field, $set_value);
+                                retry_database_operation(function() use ($post_id, $field, $set_value) {
+                                    return update_post_meta($post_id, $field, $set_value);
+                                }, [$post_id, $field, $set_value], [
+                                    'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                                    'operation' => 'set_acf_field_meta_new',
+                                    'post_id' => $post_id,
+                                    'field' => $field,
+                                    'guid' => $guid
+                                ]);
                             }
                         } catch (\Exception $e) {
                             PuntWorkLogger::error('Failed to set post meta for new post', PuntWorkLogger::CONTEXT_BATCH, [
@@ -249,5 +320,4 @@ if (!function_exists('process_batch_items')) {
             'skipped' => $skipped
         ]);
     }
-}
 }

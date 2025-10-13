@@ -14,6 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+// Include retry utility
+require_once plugin_dir_path(__FILE__) . '../utilities/retry-utility.php';
+
 /**
  * Batch processing logic
  * Handles the core batch processing operations for job imports
@@ -66,7 +69,13 @@ function process_batch_items_logic($setup) {
         // Only update and log if changed
         if ($batch_size != $old_batch_size) {
             try {
-                update_option('job_import_batch_size', $batch_size, false);
+                retry_option_operation(function() use ($batch_size) {
+                    return update_option('job_import_batch_size', $batch_size, false);
+                }, [], [
+                    'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                    'operation' => 'update_batch_size'
+                ]);
+
                 $reason = '';
                 if ($last_memory_ratio > 0.85) {
                     $reason = 'high previous memory';
@@ -161,7 +170,12 @@ function process_batch_items_logic($setup) {
                 if (memory_get_usage(true) > $threshold) {
                     $batch_size = max(1, (int)($batch_size * 0.8));
                     try {
-                        update_option('job_import_batch_size', $batch_size, false);
+                        retry_option_operation(function() use ($batch_size) {
+                            return update_option('job_import_batch_size', $batch_size, false);
+                        }, [], [
+                            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                            'operation' => 'update_batch_size_memory'
+                        ]);
                         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Memory high, reduced batch to ' . $batch_size;
                     } catch (\Exception $e) {
                         PuntWorkLogger::error('Failed to update batch size due to memory', PuntWorkLogger::CONTEXT_BATCH, [
@@ -195,8 +209,20 @@ function process_batch_items_logic($setup) {
 
         if (empty($batch_guids)) {
             try {
-                update_option('job_import_progress', $end_index, false);
-                update_option('job_import_processed_guids', $processed_guids, false);
+                retry_option_operation(function() use ($end_index) {
+                    return update_option('job_import_progress', $end_index, false);
+                }, [], [
+                    'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                    'operation' => 'update_progress_empty_batch'
+                ]);
+
+                retry_option_operation(function() use ($processed_guids) {
+                    return update_option('job_import_processed_guids', $processed_guids, false);
+                }, [], [
+                    'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                    'operation' => 'update_processed_guids_empty_batch'
+                ]);
+
                 $time_elapsed = microtime(true) - $start_time;
                 $batch_time = microtime(true) - $batch_start_time;
 
@@ -220,7 +246,14 @@ function process_batch_items_logic($setup) {
                 $current_status['end_time'] = $current_status['complete'] ? microtime(true) : null;
                 $current_status['last_update'] = time();
                 $current_status['logs'] = array_slice($logs, -50);
-                update_option('job_import_status', $current_status, false);
+
+                retry_option_operation(function() use ($current_status) {
+                    return update_option('job_import_status', $current_status, false);
+                }, [], [
+                    'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                    'operation' => 'update_import_status_empty_batch'
+                ]);
+
             } catch (\Exception $e) {
                 PuntWorkLogger::error('Failed to update import status for empty batch', PuntWorkLogger::CONTEXT_BATCH, [
                     'error' => $e->getMessage(),
@@ -269,8 +302,20 @@ function process_batch_items_logic($setup) {
         unset($batch_items, $batch_guids);
 
         try {
-            update_option('job_import_progress', $end_index, false);
-            update_option('job_import_processed_guids', $processed_guids, false);
+            retry_option_operation(function() use ($end_index) {
+                return update_option('job_import_progress', $end_index, false);
+            }, [], [
+                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                'operation' => 'update_progress_final'
+            ]);
+
+            retry_option_operation(function() use ($processed_guids) {
+                return update_option('job_import_processed_guids', $processed_guids, false);
+            }, [], [
+                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                'operation' => 'update_processed_guids_final'
+            ]);
+
             $time_elapsed = microtime(true) - $start_time;
             $batch_time = microtime(true) - $batch_start_time;
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Batch complete: Processed {$result['processed_count']} items (published: $published, updated: $updated, skipped: $skipped, duplicates: $duplicates_drafted)";
@@ -279,8 +324,19 @@ function process_batch_items_logic($setup) {
             update_batch_metrics($batch_time, $result['processed_count'], $batch_size);
 
             // Store batch timing data for status retrieval
-            update_option('job_import_last_batch_time', $batch_time, false);
-            update_option('job_import_last_batch_processed', $result['processed_count'], false);
+            retry_option_operation(function() use ($batch_time) {
+                return update_option('job_import_last_batch_time', $batch_time, false);
+            }, [], [
+                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                'operation' => 'update_last_batch_time'
+            ]);
+
+            retry_option_operation(function() use ($result) {
+                return update_option('job_import_last_batch_processed', $result['processed_count'], false);
+            }, [], [
+                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                'operation' => 'update_last_batch_processed'
+            ]);
 
             // Update import status for UI polling
             $current_status = get_option('job_import_status', []);
@@ -302,7 +358,14 @@ function process_batch_items_logic($setup) {
             $current_status['end_time'] = $current_status['complete'] ? microtime(true) : null;
             $current_status['last_update'] = time();
             $current_status['logs'] = array_slice($logs, -50); // Keep last 50 log entries
-            update_option('job_import_status', $current_status, false);
+
+            retry_option_operation(function() use ($current_status) {
+                return update_option('job_import_status', $current_status, false);
+            }, [], [
+                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                'operation' => 'update_import_status_final'
+            ]);
+
         } catch (\Exception $e) {
             PuntWorkLogger::error('Failed to update import status after batch processing', PuntWorkLogger::CONTEXT_BATCH, [
                 'error' => $e->getMessage(),
@@ -461,7 +524,14 @@ function load_json_batch($json_path, $start_index, $batch_size) {
             throw new \Exception("JSONL file is not readable: $json_path");
         }
 
-        $handle = fopen($json_path, "r");
+        $handle = retry_file_operation(function() use ($json_path) {
+            return fopen($json_path, "r");
+        }, [$json_path], [
+            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+            'operation' => 'open_json_file',
+            'file_path' => $json_path
+        ]);
+
         if ($handle === false) {
             throw new \Exception("Failed to open JSONL file: $json_path");
         }

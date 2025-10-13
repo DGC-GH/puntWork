@@ -19,6 +19,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Handles dynamic batch size adjustments based on memory and time metrics
  */
 
+// Include retry utility
+require_once plugin_dir_path(__FILE__) . '../utilities/retry-utility.php';
+
 /**
  * Adjust batch size based on memory and consecutive batch time metrics.
  *
@@ -82,9 +85,19 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
                     } elseif ($batch_size === 2) {
                         $batch_size = 3; // Increase from 2 to 3
                     }
-                    update_option('job_import_consecutive_small_batches', 0, false);
+                    retry_option_operation(function() {
+                        return update_option('job_import_consecutive_small_batches', 0, false);
+                    }, [], [
+                        'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                        'operation' => 'reset_consecutive_small_batches'
+                    ]);
                 } else {
-                    update_option('job_import_consecutive_small_batches', $consecutive_small_batches + 1, false);
+                    retry_option_operation(function() use ($consecutive_small_batches) {
+                        return update_option('job_import_consecutive_small_batches', $consecutive_small_batches + 1, false);
+                    }, [$consecutive_small_batches], [
+                        'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                        'operation' => 'increment_consecutive_small_batches'
+                    ]);
                 }
             } catch (\Exception $e) {
                 PuntWorkLogger::error('Failed to update consecutive small batches option', PuntWorkLogger::CONTEXT_BATCH, [
@@ -96,7 +109,12 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
         } elseif ($batch_size > 2) {
             try {
                 // Reset consecutive small batches counter when batch size recovers
-                update_option('job_import_consecutive_small_batches', 0, false);
+                retry_option_operation(function() {
+                    return update_option('job_import_consecutive_small_batches', 0, false);
+                }, [], [
+                    'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                    'operation' => 'reset_consecutive_small_batches_recovery'
+                ]);
             } catch (\Exception $e) {
                 PuntWorkLogger::error('Failed to reset consecutive small batches option', PuntWorkLogger::CONTEXT_BATCH, [
                     'error' => $e->getMessage(),
@@ -191,29 +209,64 @@ function update_batch_metrics($time_elapsed, $processed_count, $batch_size) {
     try {
         // Store previous batch time before updating
         $previous_batch_time = get_option('job_import_last_batch_time', 0);
-        update_option('job_import_previous_batch_time', $previous_batch_time, false);
+        retry_option_operation(function() use ($previous_batch_time) {
+            return update_option('job_import_previous_batch_time', $previous_batch_time, false);
+        }, [$previous_batch_time], [
+            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+            'operation' => 'update_previous_batch_time'
+        ]);
 
         // Update stored metrics for next batch
         $time_per_item = $processed_count > 0 ? $time_elapsed / $processed_count : 0;
         $prev_time_per_item = get_option('job_import_time_per_job', 0);
-        update_option('job_import_time_per_job', $time_per_item, false);
+        retry_option_operation(function() use ($time_per_item) {
+            return update_option('job_import_time_per_job', $time_per_item, false);
+        }, [$time_per_item], [
+            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+            'operation' => 'update_time_per_job'
+        ]);
 
         $peak_memory = memory_get_peak_usage(true);
-        update_option('job_import_last_peak_memory', $peak_memory, false);
+        retry_option_operation(function() use ($peak_memory) {
+            return update_option('job_import_last_peak_memory', $peak_memory, false);
+        }, [$peak_memory], [
+            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+            'operation' => 'update_peak_memory'
+        ]);
 
         // Use rolling average for time_per_item to stabilize adjustments
         $avg_time_per_item = get_option('job_import_avg_time_per_job', $time_per_item);
         $avg_time_per_item = ($avg_time_per_item * 0.7) + ($time_per_item * 0.3);
-        update_option('job_import_avg_time_per_job', $avg_time_per_item, false);
+        retry_option_operation(function() use ($avg_time_per_item) {
+            return update_option('job_import_avg_time_per_job', $avg_time_per_item, false);
+        }, [$avg_time_per_item], [
+            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+            'operation' => 'update_avg_time_per_job'
+        ]);
 
-        update_option('job_import_batch_size', $batch_size, false);
+        retry_option_operation(function() use ($batch_size) {
+            return update_option('job_import_batch_size', $batch_size, false);
+        }, [$batch_size], [
+            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+            'operation' => 'update_batch_size_metric'
+        ]);
 
         // Track consecutive small batches for recovery mechanism
         if ($batch_size <= 3) {
             $consecutive = get_option('job_import_consecutive_small_batches', 0) + 1;
-            update_option('job_import_consecutive_small_batches', $consecutive, false);
+            retry_option_operation(function() use ($consecutive) {
+                return update_option('job_import_consecutive_small_batches', $consecutive, false);
+            }, [$consecutive], [
+                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                'operation' => 'update_consecutive_small_batches'
+            ]);
         } else {
-            update_option('job_import_consecutive_small_batches', 0, false);
+            retry_option_operation(function() {
+                return update_option('job_import_consecutive_small_batches', 0, false);
+            }, [], [
+                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                'operation' => 'reset_consecutive_small_batches_metric'
+            ]);
         }
 
         PuntWorkLogger::debug('Batch metrics updated', PuntWorkLogger::CONTEXT_BATCH, [

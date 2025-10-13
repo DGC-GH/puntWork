@@ -14,6 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+// Include retry utility
+require_once plugin_dir_path(__FILE__) . 'retry-utility.php';
+
 function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates_drafted, &$post_ids_by_guid) {
     global $wpdb;
 
@@ -29,12 +32,19 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
 
                 if (count($ids) > 1) {
                     try {
-                        $existing = get_posts([
-                            'post_type' => 'job',
-                            'post__in' => $ids,
-                            'posts_per_page' => -1,
-                            'post_status' => 'any',
-                            'fields' => 'ids',
+                        $existing = retry_database_operation(function() use ($ids) {
+                            return get_posts([
+                                'post_type' => 'job',
+                                'post__in' => $ids,
+                                'posts_per_page' => -1,
+                                'post_status' => 'any',
+                                'fields' => 'ids',
+                            ]);
+                        }, [$ids], [
+                            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                            'operation' => 'get_duplicate_posts',
+                            'guid' => $guid,
+                            'post_ids' => $ids
                         ]) ?: [];
 
                         if (empty($existing)) {
@@ -127,10 +137,17 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
                                 }
 
                                 // Update post to draft status and modify title
-                                $update_result = wp_update_post([
-                                    'ID' => $dup_id,
-                                    'post_title' => $new_title,
-                                    'post_status' => 'draft'
+                                $update_result = retry_database_operation(function() use ($dup_id, $new_title) {
+                                    return wp_update_post([
+                                        'ID' => $dup_id,
+                                        'post_title' => $new_title,
+                                        'post_status' => 'draft'
+                                    ]);
+                                }, [$dup_id, $new_title], [
+                                    'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                                    'operation' => 'draft_duplicate_post',
+                                    'dup_id' => $dup_id,
+                                    'guid' => $guid
                                 ]);
 
                                 if (is_wp_error($update_result)) {
