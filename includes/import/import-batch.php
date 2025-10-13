@@ -422,7 +422,7 @@ function continue_paused_import() {
     PuntWork\set_import_start_time(microtime(true));
 
     // Continue the import
-    $result = import_all_jobs_from_json(true); // preserve status
+    $result = import_all_jobs_from_json(true); // preserve status for continuation
 
     if ($result['success']) {
         PuntWorkLogger::info('Paused import continuation completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
