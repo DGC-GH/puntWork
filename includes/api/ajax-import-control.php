@@ -18,6 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once __DIR__ . '/../utilities/ajax-utilities.php';
 require_once __DIR__ . '/../utilities/file-utilities.php';
 require_once __DIR__ . '/../utilities/options-utilities.php';
+require_once __DIR__ . '/../batch/batch-size-management.php';
 
 /**
  * AJAX handlers for import control operations

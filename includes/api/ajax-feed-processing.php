@@ -15,6 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 require_once __DIR__ . '/../utilities/ajax-utilities.php';
+require_once __DIR__ . '/../import/download-feed.php';
+require_once __DIR__ . '/../import/combine-jsonl.php';
 
 /**
  * AJAX handlers for feed processing operations
