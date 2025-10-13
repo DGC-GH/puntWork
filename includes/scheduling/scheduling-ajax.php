@@ -42,6 +42,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once __DIR__ . '/../utilities/ajax-utilities.php';
 require_once __DIR__ . '/../utilities/options-utilities.php';
+require_once __DIR__ . '/scheduling-core.php';
+require_once __DIR__ . '/scheduling-history.php';
 
 /**
  * Save import schedule settings via AJAX
