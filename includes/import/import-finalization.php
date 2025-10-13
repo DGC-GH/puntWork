@@ -141,39 +141,90 @@ function cleanup_import_data() {
 function cleanup_old_job_posts($import_start_time) {
     global $wpdb;
 
-    PuntWorkLogger::info('Starting cleanup of old job posts', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Starting cleanup of old job posts based on current feed GUIDs', PuntWorkLogger::CONTEXT_BATCH, [
         'import_start_time' => date('Y-m-d H:i:s', $import_start_time)
     ]);
 
-    // Get all job posts with _last_import_update older than import start time
-    $old_posts = $wpdb->get_results($wpdb->prepare("
-        SELECT p.ID, p.post_title, pm.meta_value as last_update
-        FROM {$wpdb->posts} p
-        JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_last_import_update'
-        WHERE p.post_type = 'job'
-        AND pm.meta_value < %s
-    ", date('Y-m-d H:i:s', $import_start_time)));
+    // Get all current GUIDs from the combined JSONL file
+    $json_path = PUNTWORK_PATH . 'feeds/combined-jobs.jsonl';
+    $current_guids = [];
 
-    $deleted = 0;
-    foreach ($old_posts as $post) {
-        $result = wp_delete_post($post->ID, true); // true = force delete, skip trash
-        if ($result) {
-            $deleted++;
-            PuntWorkLogger::info('Deleted old job post', PuntWorkLogger::CONTEXT_BATCH, [
-                'post_id' => $post->ID,
-                'title' => $post->post_title,
-                'last_update' => $post->last_update
-            ]);
-        } else {
-            PuntWorkLogger::error('Failed to delete old job post', PuntWorkLogger::CONTEXT_BATCH, [
-                'post_id' => $post->ID,
-                'title' => $post->post_title
-            ]);
+    if (file_exists($json_path)) {
+        if (($handle = fopen($json_path, "r")) !== false) {
+            while (($line = fgets($handle)) !== false) {
+                $line = trim($line);
+                if (!empty($line)) {
+                    $item = json_decode($line, true);
+                    if ($item !== null && isset($item['guid'])) {
+                        $current_guids[] = $item['guid'];
+                    }
+                }
+            }
+            fclose($handle);
         }
     }
 
-    PuntWorkLogger::info('Cleanup of old job posts completed', PuntWorkLogger::CONTEXT_BATCH, [
-        'deleted_count' => $deleted
+    if (empty($current_guids)) {
+        PuntWorkLogger::warning('No current GUIDs found in feed file - skipping cleanup', PuntWorkLogger::CONTEXT_BATCH);
+        return 0;
+    }
+
+    PuntWorkLogger::info('Found current GUIDs in feed', PuntWorkLogger::CONTEXT_BATCH, [
+        'guid_count' => count($current_guids),
+        'first_5_guids' => array_slice($current_guids, 0, 5)
+    ]);
+
+    // Get published job posts whose GUID is not in the current feed
+    $placeholders = implode(',', array_fill(0, count($current_guids), '%s'));
+    $old_posts = $wpdb->get_results($wpdb->prepare("
+        SELECT p.ID, p.post_title, pm.meta_value as guid
+        FROM {$wpdb->posts} p
+        JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
+        WHERE p.post_type = 'job'
+        AND p.post_status = 'publish'
+        AND pm.meta_value NOT IN ({$placeholders})
+    ", $current_guids));
+
+    PuntWorkLogger::info('Found old published job posts to delete', PuntWorkLogger::CONTEXT_BATCH, [
+        'old_posts_count' => count($old_posts),
+        'current_feed_jobs' => count($current_guids)
+    ]);
+
+    $deleted = 0;
+    foreach ($old_posts as $post) {
+        // Double-check the post still exists and is published
+        $post_status = $wpdb->get_var($wpdb->prepare("SELECT post_status FROM {$wpdb->posts} WHERE ID = %d", $post->ID));
+        if ($post_status !== 'publish') {
+            continue; // Skip if no longer published
+        }
+
+        $result = wp_delete_post($post->ID, true); // true = force delete, skip trash
+        if ($result) {
+            $deleted++;
+            PuntWorkLogger::info('Deleted old published job post', PuntWorkLogger::CONTEXT_BATCH, [
+                'post_id' => $post->ID,
+                'title' => $post->post_title,
+                'guid' => $post->guid
+            ]);
+        } else {
+            PuntWorkLogger::error('Failed to delete old published job post', PuntWorkLogger::CONTEXT_BATCH, [
+                'post_id' => $post->ID,
+                'title' => $post->post_title,
+                'guid' => $post->guid
+            ]);
+        }
+
+        // Clean up memory after each deletion
+        if ($deleted % 10 === 0) {
+            if (function_exists('gc_collect_cycles')) {
+                gc_collect_cycles();
+            }
+        }
+    }
+
+    PuntWorkLogger::info('Cleanup of old published job posts completed', PuntWorkLogger::CONTEXT_BATCH, [
+        'deleted_count' => $deleted,
+        'current_feed_jobs' => count($current_guids)
     ]);
 
     return $deleted;

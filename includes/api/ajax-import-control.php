@@ -99,6 +99,25 @@ function run_job_import_batch_ajax() {
 
     $result = import_jobs_from_json(true, $start);
 
+    // If import is complete, perform cleanup of old published jobs
+    if (isset($result['complete']) && $result['complete'] && isset($result['success']) && $result['success']) {
+        PuntWorkLogger::info('Manual import completed, starting automatic cleanup of old published jobs', PuntWorkLogger::CONTEXT_BATCH);
+        
+        // Import the cleanup function
+        require_once __DIR__ . '/../import/import-finalization.php';
+        
+        $cleanup_start_time = microtime(true);
+        $deleted_count = \Puntwork\cleanup_old_job_posts($cleanup_start_time);
+        
+        // Add cleanup results to the response
+        $result['deleted_old_posts'] = $deleted_count;
+        $result['cleanup_completed'] = true;
+        
+        PuntWorkLogger::info('Automatic cleanup completed for manual import', PuntWorkLogger::CONTEXT_BATCH, [
+            'deleted_old_posts' => $deleted_count
+        ]);
+    }
+
     // Log summary instead of full result to prevent large debug logs
     $log_summary = [
         'success' => isset($result['success']) && $result['success'],
@@ -109,7 +128,9 @@ function run_job_import_batch_ajax() {
         'skipped' => $result['skipped'] ?? 0,
         'complete' => $result['complete'] ?? false,
         'logs_count' => isset($result['logs']) && is_array($result['logs']) ? count($result['logs']) : 0,
-        'has_error' => !empty($result['message'])
+        'has_error' => !empty($result['message']),
+        'deleted_old_posts' => $result['deleted_old_posts'] ?? 0,
+        'cleanup_completed' => $result['cleanup_completed'] ?? false
     ];
 
     PuntWorkLogger::logAjaxResponse('run_job_import_batch', $log_summary, isset($result['success']) && $result['success']);
@@ -543,6 +564,26 @@ function cleanup_drafted_jobs_ajax() {
         'logs' => []
     ]);
 
+    // If already completed, return completion response
+    if ($progress['complete']) {
+        $message = "Cleanup completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} drafted jobs";
+        PuntWorkLogger::debug('Returning cached completion response for drafted jobs', PuntWorkLogger::CONTEXT_BATCH);
+        
+        wp_send_json_success([
+            'message' => $message,
+            'complete' => false,
+            'status' => 'completed',
+            'processed' => $progress['total_processed'],
+            'deleted' => $progress['total_deleted'],
+            'total' => $progress['total_jobs'],
+            'offset' => $progress['current_index'],
+            'progress_percentage' => 100,
+            'time_elapsed' => $progress['time_elapsed'] ?? 0,
+            'logs' => array_slice($progress['logs'], -50)
+        ]);
+        return;
+    }
+
     PuntWorkLogger::debug('Retrieved progress data', PuntWorkLogger::CONTEXT_BATCH, [
         'total_processed' => $progress['total_processed'],
         'total_jobs' => $progress['total_jobs'],
@@ -585,12 +626,14 @@ function cleanup_drafted_jobs_ajax() {
                 'deleted' => $progress['total_deleted'],
                 'offset' => $progress['current_index'],
                 'progress_percentage' => 100,
-                'complete' => true
+                'complete' => false,
+                'status' => 'completed'
             ]);
 
             wp_send_json_success([
                 'message' => $message,
-                'complete' => true,
+                'complete' => false,
+                'status' => 'completed',
                 'processed' => $progress['total_processed'],
                 'deleted' => $progress['total_deleted'],
                 'total' => $progress['total_jobs'],
@@ -792,6 +835,26 @@ function cleanup_old_published_jobs_ajax() {
         'logs' => []
     ]);
 
+    // If already completed, return completion response
+    if ($progress['complete']) {
+        $message = "Cleanup completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} old published jobs";
+        PuntWorkLogger::debug('Returning cached completion response for old published jobs', PuntWorkLogger::CONTEXT_BATCH);
+        
+        wp_send_json_success([
+            'message' => $message,
+            'complete' => false,
+            'status' => 'completed',
+            'processed' => $progress['total_processed'],
+            'deleted' => $progress['total_deleted'],
+            'total' => $progress['total_jobs'],
+            'offset' => $progress['current_offset'],
+            'progress_percentage' => 100,
+            'time_elapsed' => $progress['time_elapsed'] ?? 0,
+            'logs' => array_slice($progress['logs'], -50)
+        ]);
+        return;
+    }
+
     PuntWorkLogger::debug('Retrieved old published progress data', PuntWorkLogger::CONTEXT_BATCH, [
         'total_processed' => $progress['total_processed'],
         'total_jobs' => $progress['total_jobs'],
@@ -846,12 +909,14 @@ function cleanup_old_published_jobs_ajax() {
                 'deleted' => $progress['total_deleted'],
                 'offset' => $progress['current_offset'],
                 'progress_percentage' => 100,
-                'complete' => true
+                'complete' => false,
+                'status' => 'completed'
             ]);
 
             wp_send_json_success([
                 'message' => $message,
-                'complete' => true,
+                'complete' => false,
+                'status' => 'completed',
                 'processed' => $progress['total_processed'],
                 'deleted' => $progress['total_deleted'],
                 'total' => $progress['total_jobs'],
