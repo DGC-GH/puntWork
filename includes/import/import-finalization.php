@@ -75,6 +75,34 @@ function finalize_batch_import($result) {
 
     update_option('job_import_status', $status, false);
 
+    // Log completed manual imports to history (only when in AJAX context and import is complete)
+    if ($result['complete'] && $result['success'] && function_exists('wp_doing_ajax') && wp_doing_ajax()) {
+        $import_details = [
+            'success' => $result['success'],
+            'duration' => $total_elapsed,
+            'processed' => $result['processed'],
+            'total' => $result['total'],
+            'published' => $result['published'],
+            'updated' => $result['updated'],
+            'skipped' => $result['skipped'],
+            'error_message' => $result['message'] ?? '',
+            'timestamp' => time()
+        ];
+
+        // Import the function if not already available
+        if (!function_exists('Puntwork\log_import_run')) {
+            require_once __DIR__ . '/../scheduling/scheduling-history.php';
+        }
+
+        \Puntwork\log_import_run($import_details, 'manual');
+
+        PuntWorkLogger::info('Logged completed manual import to history', PuntWorkLogger::CONTEXT_BATCH, [
+            'processed' => $result['processed'],
+            'total' => $result['total'],
+            'duration' => $total_elapsed
+        ]);
+    }
+
     return $result;
 }
 
