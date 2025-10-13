@@ -37,3 +37,6 @@ refactor the code to increase speed and efficiency of the import process.
 replace manual import "Start Import" functionality with scheduled import "Run Now", the goal is to have one import process that can be scheduled or triggered manually
 
 what can you improve that would reduce code duplication, improve maintainability, and ensure consistency across the application?
+
+
+do 1 and 2 and optionally allow multiple import batches to be processed concurently and the amount of concurent batches to be dynamicly adjusted in synergy with batch size optimizing for speed per job item and import speed in general while avoiding performance related issues.
