@@ -84,10 +84,6 @@ function register_custom_cron_schedules($schedules) {
 // Init setup
 add_action( 'init', __NAMESPACE__ . '\\setup_job_import' );
 function setup_job_import() {
-    // Global batch limit (from old 1)
-    global $job_import_batch_limit;
-    $job_import_batch_limit = MAX_BATCH_SIZE;
-    
     // Load includes
     $includes = array(
         // Core functionality
