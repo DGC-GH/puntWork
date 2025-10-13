@@ -205,6 +205,10 @@ function run_scheduled_import_ajax() {
         return;
     }
 
+    // Check if this is a manual import trigger (from Start Import button)
+    $import_type = isset($_POST['import_type']) ? sanitize_text_field($_POST['import_type']) : 'scheduled';
+    $is_manual = $import_type === 'manual';
+
     // Check if an import is already running
     $import_status = PuntWork\get_import_status([]);
     if (isset($import_status['complete']) && !$import_status['complete']) {
@@ -232,37 +236,38 @@ function run_scheduled_import_ajax() {
 
     try {
         // Initialize import status for immediate UI feedback
-        $initial_status = initialize_import_status(0, 'Scheduled import started - preparing feeds...');
+        $status_message = $is_manual ? 'Manual import started - preparing feeds...' : 'Scheduled import started - preparing feeds...';
+        $initial_status = initialize_import_status(0, $status_message);
         PuntWork\set_import_status($initial_status);
-        error_log('[PUNTWORK] Initialized import status for scheduled run: ' . json_encode($initial_status));
+        error_log('[PUNTWORK] Initialized import status for ' . ($is_manual ? 'manual' : 'scheduled') . ' run: ' . json_encode($initial_status));
 
         // Clear any previous cancellation before starting
         delete_transient('import_cancel');
-        error_log('[PUNTWORK] Cleared import_cancel transient for scheduled run');
+        error_log('[PUNTWORK] Cleared import_cancel transient for ' . ($is_manual ? 'manual' : 'scheduled') . ' run');
 
         // Schedule the import to run asynchronously
         if (function_exists('as_schedule_single_action')) {
             // Use Action Scheduler if available
             error_log('[PUNTWORK] Scheduling async import using Action Scheduler');
-            as_schedule_single_action(time(), 'puntwork_scheduled_import_async');
+            as_schedule_single_action(time(), $is_manual ? 'puntwork_manual_import_async' : 'puntwork_scheduled_import_async');
         } elseif (function_exists('wp_schedule_single_event')) {
             // Fallback: Use WordPress cron for near-immediate execution
             error_log('[PUNTWORK] Action Scheduler not available, using WordPress cron');
-            wp_schedule_single_event(time() + 1, 'puntwork_scheduled_import_async');
+            wp_schedule_single_event(time() + 1, $is_manual ? 'puntwork_manual_import_async' : 'puntwork_scheduled_import_async');
         } else {
             // Final fallback: Run synchronously (not ideal for UI but maintains functionality)
             error_log('[PUNTWORK] No async scheduling available, running synchronously');
-            $result = run_scheduled_import();
+            $result = $is_manual ? run_manual_import() : run_scheduled_import();
             
             if ($result['success']) {
-                error_log('[PUNTWORK] Synchronous scheduled import completed successfully');
+                error_log('[PUNTWORK] Synchronous ' . ($is_manual ? 'manual' : 'scheduled') . ' import completed successfully');
                 send_ajax_success('run_scheduled_import', [
                     'message' => 'Import completed successfully',
                     'result' => $result,
                     'async' => false
                 ]);
             } else {
-                error_log('[PUNTWORK] Synchronous scheduled import failed: ' . ($result['message'] ?? 'Unknown error'));
+                error_log('[PUNTWORK] Synchronous ' . ($is_manual ? 'manual' : 'scheduled') . ' import failed: ' . ($result['message'] ?? 'Unknown error'));
                 // Reset import status on failure so future attempts can start
                 PuntWork\delete_import_status();
                 error_log('[PUNTWORK] Reset job_import_status due to import failure');
@@ -272,14 +277,14 @@ function run_scheduled_import_ajax() {
         }
 
         // Return success immediately so UI can start polling
-        error_log('[PUNTWORK] Scheduled import initiated asynchronously');
+        error_log('[PUNTWORK] ' . ($is_manual ? 'Manual' : 'Scheduled') . ' import initiated asynchronously');
         send_ajax_success('run_scheduled_import', [
             'message' => 'Import started successfully',
             'async' => true
         ]);
 
     } catch (\Exception $e) {
-        error_log('[PUNTWORK] Run scheduled import AJAX error: ' . $e->getMessage());
+        error_log('[PUNTWORK] Run ' . ($is_manual ? 'manual' : 'scheduled') . ' import AJAX error: ' . $e->getMessage());
         send_ajax_error('run_scheduled_import', 'Failed to start import: ' . $e->getMessage());
     }
 }
@@ -296,6 +301,7 @@ add_action('puntwork_manual_import', __NAMESPACE__ . '\\run_manual_import_cron')
 
 // Register async action hooks
 add_action('puntwork_scheduled_import_async', __NAMESPACE__ . '\\run_scheduled_import_async');
+add_action('puntwork_manual_import_async', __NAMESPACE__ . '\\run_manual_import_async');
 
 /**
  * Run scheduled import asynchronously (non-blocking)
@@ -371,6 +377,82 @@ function run_scheduled_import_async() {
     }
 
     error_log('[PUNTWORK] === ASYNC FUNCTION COMPLETED ===');
+}
+
+/**
+ * Run manual import asynchronously (non-blocking)
+ */
+function run_manual_import_async() {
+    error_log('[PUNTWORK] === MANUAL ASYNC FUNCTION STARTED ===');
+    error_log('[PUNTWORK] Manual async import started - Action Scheduler hook fired');
+    error_log('[PUNTWORK] Current time: ' . date('Y-m-d H:i:s'));
+    error_log('[PUNTWORK] Function called with arguments: ' . print_r(func_get_args(), true));
+
+    // Clear any previous cancellation before starting
+    delete_transient('import_cancel');
+    error_log('[PUNTWORK] Cleared import_cancel transient');
+
+    // Check if an import is already running
+    $import_status = PuntWork\get_import_status([]);
+    error_log('[PUNTWORK] Current import status at manual async start: ' . json_encode($import_status));
+
+    // Check for stuck imports (similar to AJAX handler logic)
+    if (isset($import_status['complete']) && !$import_status['complete']) {
+        // Calculate actual time elapsed
+        $time_elapsed = 0;
+        if (isset($import_status['start_time']) && $import_status['start_time'] > 0) {
+            $time_elapsed = microtime(true) - $import_status['start_time'];
+        } elseif (isset($import_status['time_elapsed'])) {
+            $time_elapsed = $import_status['time_elapsed'];
+        }
+
+        // Check if it's a stuck import (processed = 0 and old, or very old regardless of progress)
+        $is_stuck = false;
+        if ((!isset($import_status['processed']) || $import_status['processed'] == 0) && $time_elapsed > 300) { // 5 minutes with no progress
+            $is_stuck = true;
+        } elseif ($time_elapsed > 7200) { // 2 hours regardless of progress
+            $is_stuck = true;
+        }
+
+        if ($is_stuck) {
+            error_log('[PUNTWORK] Detected stuck import in manual async function (processed: ' . ($import_status['processed'] ?? 'null') . ', time_elapsed: ' . $time_elapsed . '), clearing status for new run');
+            PuntWork\delete_import_status();
+            delete_transient('import_cancel');
+            $import_status = []; // Reset for fresh start
+        } elseif (isset($import_status['processed']) && $import_status['processed'] > 0) {
+            error_log('[PUNTWORK] Manual async import skipped - import already running and has processed items');
+            return;
+        }
+    }
+
+    error_log('[PUNTWORK] Starting actual manual import process...');
+
+    // Clear import_cancel transient again just before starting the import
+    delete_transient('import_cancel');
+    error_log('[PUNTWORK] Cleared import_cancel transient again before manual import');
+
+    try {
+        $result = run_manual_import();
+        error_log('[PUNTWORK] Manual import result: ' . print_r($result, true));
+
+        // Import runs to completion without pausing
+        if ($result['success']) {
+            error_log('[PUNTWORK] Manual async import completed successfully');
+        } else {
+            error_log('[PUNTWORK] Manual async import failed: ' . ($result['message'] ?? 'Unknown error'));
+            // Reset import status on failure so future attempts can start
+            PuntWork\delete_import_status();
+            error_log('[PUNTWORK] Reset job_import_status due to manual import failure');
+        }
+    } catch (\Exception $e) {
+        error_log('[PUNTWORK] Manual async import exception: ' . $e->getMessage());
+        error_log('[PUNTWORK] Exception trace: ' . $e->getTraceAsString());
+        // Reset import status on exception so future attempts can start
+        PuntWork\delete_import_status();
+        error_log('[PUNTWORK] Reset job_import_status due to manual import exception');
+    }
+
+    error_log('[PUNTWORK] === MANUAL ASYNC FUNCTION COMPLETED ===');
 }
 
 /**
