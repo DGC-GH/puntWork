@@ -333,7 +333,7 @@ function get_job_import_status_ajax() {
                 'updated' => $progress['updated'],
                 'skipped' => $progress['skipped'],
                 'error_message' => $progress['error_message'] ?? '',
-                'timestamp' => time()
+                'timestamp' => microtime(true)
             ];
 
             // Import the function
