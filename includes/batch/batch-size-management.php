@@ -36,16 +36,39 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
     try {
         $old_batch_size = $batch_size;
 
-        // Ensure batch size is within reasonable bounds
+                // Apply bounds checking and ensure stability
+        $batch_size = max(1, min(500, $batch_size)); // Enforce absolute bounds
+
+        // Prevent rapid oscillations by limiting change magnitude
+        $max_change_factor = 2.0; // Maximum 2x increase or 0.5x decrease per adjustment
+        if ($original_batch_size > 0) {
+            $change_ratio = $batch_size / $original_batch_size;
+            if ($change_ratio > $max_change_factor) {
+                $batch_size = (int)($original_batch_size * $max_change_factor);
+            } elseif ($change_ratio < (1 / $max_change_factor)) {
+                $batch_size = max(1, (int)($original_batch_size / $max_change_factor));
+            }
+        }
+
+        // Final bounds check after oscillation prevention
         $batch_size = max(1, min(500, $batch_size));
 
-        // Memory-based adjustment (most critical)
+        // Memory-based adjustment (most critical) - with damping to prevent oscillations
+        $memory_adjusted = false;
         if ($last_memory_ratio > 0.85) {
             // High memory usage - reduce batch size significantly
-            $batch_size = max(1, floor($batch_size * 0.6));
+            $new_batch_size = max(1, floor($batch_size * 0.6));
+            if ($new_batch_size < $batch_size) {
+                $batch_size = $new_batch_size;
+                $memory_adjusted = true;
+            }
         } elseif ($last_memory_ratio > 0.75) {
             // Moderate high memory - reduce slightly
-            $batch_size = max(1, floor($batch_size * 0.8));
+            $new_batch_size = max(1, floor($batch_size * 0.8));
+            if ($new_batch_size < $batch_size) {
+                $batch_size = $new_batch_size;
+                $memory_adjusted = true;
+            }
         } elseif ($last_memory_ratio < 0.4) {
             // Low memory usage - gradually increase batch size
             $new_size = floor($batch_size * 1.2);
@@ -53,45 +76,69 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
                 $new_size = $batch_size + 1; // Ensure at least +1 if multiplier doesn't change
             }
             $batch_size = min(500, $new_size);
+            $memory_adjusted = true;
         }
 
         // Dynamic batch size adjustment based on consecutive batch completion times
-        if ($previous_batch_time > 0 && $current_batch_time > 0) {
-            if ($current_batch_time > $previous_batch_time) {
-                // Current batch took longer than previous - decrease batch size moderately
-                $batch_size = max(1, floor($batch_size * 0.9));
-            } elseif ($current_batch_time < $previous_batch_time) {
-                // Current batch took less time than previous - gradually increase batch size
+        // Only apply time-based adjustments if memory didn't trigger a change
+        if (!$memory_adjusted && $previous_batch_time > 0 && $current_batch_time > 0) {
+            $time_adjusted = false;
+            if ($current_batch_time > $previous_batch_time * 1.2) {
+                // Current batch took significantly longer (>20%) - decrease batch size moderately
+                $new_batch_size = max(1, floor($batch_size * 0.9));
+                if ($new_batch_size < $batch_size) {
+                    $batch_size = $new_batch_size;
+                    $time_adjusted = true;
+                }
+            } elseif ($current_batch_time < $previous_batch_time * 0.8) {
+                // Current batch took significantly less time (<80%) - gradually increase batch size
                 $new_size = floor($batch_size * 1.1);
                 if ($new_size == $batch_size) {
                     $new_size = $batch_size + 1; // Ensure at least +1 if multiplier doesn't change
                 }
                 $batch_size = min(500, $new_size);
+                $time_adjusted = true;
             }
-            // If times are equal, keep batch size the same
+
+            // Log time-based adjustments
+            if ($time_adjusted) {
+                PuntWorkLogger::debug('Time-based batch size adjustment applied', PuntWorkLogger::CONTEXT_BATCH, [
+                    'previous_batch_time' => $previous_batch_time,
+                    'current_batch_time' => $current_batch_time,
+                    'ratio' => $current_batch_time / $previous_batch_time,
+                    'new_batch_size' => $batch_size
+                ]);
+            }
         }
 
-        // Minimum batch size recovery mechanism
-        // If batch size is stuck at 1 or 2, try to gradually recover
+        // Minimum batch size recovery mechanism - simplified to prevent oscillations
         if ($batch_size <= 2) {
             try {
-                // Check if we can safely increase from low batch sizes
                 $consecutive_small_batches = get_option('job_import_consecutive_small_batches', 0);
 
-                // If we've had several small batches but memory is OK, try increasing
-                if ($consecutive_small_batches >= 3 && $last_memory_ratio < 0.7) {
+                // Only attempt recovery if we have consistent small batches AND good memory conditions
+                if ($consecutive_small_batches >= 5 && $last_memory_ratio < 0.6) {
                     if ($batch_size === 1) {
-                        $batch_size = 2; // Start with 2 instead of 1
+                        $batch_size = 2;
                     } elseif ($batch_size === 2) {
-                        $batch_size = 3; // Increase from 2 to 3
+                        $batch_size = 5; // Jump to a more stable size
                     }
+
+                    // Reset counter on successful recovery
                     retry_option_operation(function() {
                         return update_option('job_import_consecutive_small_batches', 0, false);
                     }, [], [
                         'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                         'operation' => 'reset_consecutive_small_batches'
                     ]);
+
+                    PuntWorkLogger::info('Batch size recovery applied', PuntWorkLogger::CONTEXT_BATCH, [
+                        'consecutive_small_batches' => $consecutive_small_batches,
+                        'memory_ratio' => $last_memory_ratio,
+                        'recovered_to' => $batch_size
+                    ]);
                 } else {
+                    // Increment counter for tracking
                     retry_option_operation(function() use ($consecutive_small_batches) {
                         return update_option('job_import_consecutive_small_batches', $consecutive_small_batches + 1, false);
                     }, [$consecutive_small_batches], [
@@ -106,9 +153,9 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
                 ]);
                 // Continue without updating the option
             }
-        } elseif ($batch_size > 2) {
+        } elseif ($batch_size > 5) {
+            // Reset counter when batch size is healthy
             try {
-                // Reset consecutive small batches counter when batch size recovers
                 retry_option_operation(function() {
                     return update_option('job_import_consecutive_small_batches', 0, false);
                 }, [], [

@@ -54,8 +54,7 @@ function process_batch_items_logic($setup) {
         $previous_batch_time = get_option('job_import_previous_batch_time', 0);
 
         try {
-            $batch_size = adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time);
-            $adjustment_result = $batch_size;
+            $adjustment_result = adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time);
             $batch_size = $adjustment_result['batch_size'];
         } catch (\Exception $e) {
             PuntWorkLogger::error('Failed to adjust batch size, using default', PuntWorkLogger::CONTEXT_BATCH, [
@@ -167,9 +166,24 @@ function process_batch_items_logic($setup) {
                 $inferred_benefits += $benefit_count;
                 if (!empty($item['job_posting']) || !empty($item['job_ecommerce'])) $schema_generated++;
 
-                // Only check memory usage at the end of processing all items in the batch
-                // Individual item memory checks are too aggressive and cause unnecessary batch size reductions
-                // Memory-based adjustments should happen at batch boundaries via adjust_batch_size()
+                // Monitor memory usage during processing and adjust batch size if needed
+                $current_memory = memory_get_usage(true);
+                $current_memory_ratio = $current_memory / $memory_limit_bytes;
+
+                // Emergency batch size reduction if memory usage is critically high
+                if ($current_memory_ratio > 0.9) {
+                    $emergency_batch_size = max(1, floor($batch_size * 0.5));
+                    if ($emergency_batch_size < $batch_size) {
+                        PuntWorkLogger::warning('Emergency batch size reduction due to high memory usage', PuntWorkLogger::CONTEXT_BATCH, [
+                            'current_memory_ratio' => $current_memory_ratio,
+                            'original_batch_size' => $batch_size,
+                            'emergency_batch_size' => $emergency_batch_size
+                        ]);
+                        $batch_size = $emergency_batch_size;
+                        // Update the stored batch size for future batches
+                        update_option('job_import_batch_size', $batch_size, false);
+                    }
+                }
 
                 if ($i % 5 === 0) {
                     ob_flush();
