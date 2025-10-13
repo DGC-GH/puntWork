@@ -572,3 +572,38 @@ function update_batch_metrics($time_elapsed, $processed_count, $batch_size) {
 function get_batch_size() {
     return get_option('job_import_batch_size') ?: DEFAULT_BATCH_SIZE;
 }
+
+/**
+ * Initialize import status with standardized structure.
+ *
+ * @param int $total Total number of items to process (0 for unknown/in-progress).
+ * @param string $initial_message Initial log message for the import.
+ * @param float|null $start_time Optional start time (defaults to current microtime).
+ * @return array Standardized import status array.
+ */
+function initialize_import_status($total = 0, $initial_message = 'Import started', $start_time = null) {
+    if ($start_time === null) {
+        $start_time = microtime(true);
+    }
+
+    return [
+        'total' => $total,
+        'processed' => 0,
+        'published' => 0,
+        'updated' => 0,
+        'skipped' => 0,
+        'duplicates_drafted' => 0,
+        'time_elapsed' => 0,
+        'complete' => false,
+        'success' => false,
+        'error_message' => '',
+        'batch_size' => get_batch_size(),
+        'inferred_languages' => 0,
+        'inferred_benefits' => 0,
+        'schema_generated' => 0,
+        'start_time' => $start_time,
+        'end_time' => null,
+        'last_update' => time(),
+        'logs' => [$initial_message],
+    ];
+}

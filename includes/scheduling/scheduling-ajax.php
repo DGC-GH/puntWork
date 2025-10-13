@@ -237,26 +237,7 @@ function run_scheduled_import_ajax() {
 
     try {
         // Initialize import status for immediate UI feedback
-        $initial_status = [
-            'total' => 0, // Will be updated as import progresses
-            'processed' => 0,
-            'published' => 0,
-            'updated' => 0,
-            'skipped' => 0,
-            'duplicates_drafted' => 0,
-            'time_elapsed' => 0,
-            'complete' => false,
-            'success' => false,
-            'error_message' => '',
-            'batch_size' => get_batch_size(),
-            'inferred_languages' => 0,
-            'inferred_benefits' => 0,
-            'schema_generated' => 0,
-            'start_time' => microtime(true),
-            'end_time' => null,
-            'last_update' => time(),
-            'logs' => ['Scheduled import started - preparing feeds...'],
-        ];
+        $initial_status = initialize_import_status(0, 'Scheduled import started - preparing feeds...');
         update_option('job_import_status', $initial_status, false);
         error_log('[PUNTWORK] Initialized import status for scheduled run: ' . json_encode($initial_status));
 
