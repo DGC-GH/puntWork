@@ -18,3 +18,10 @@ Challenge: Is testing needed beyond basic cron verification? Could it be part of
 
 ACF Pro integration - Requested by DGC-GH to use ACF for custom fields.
 Challenge: Is ACF Pro dependency justified, or could we use core fields? Does it limit portability?
+
+
+Review and optimize database queries (add indexes on frequently queried columns).
+
+Add database query profiling to identify slow queries.
+
+Optimize batch size dynamically based on performance.
