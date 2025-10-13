@@ -164,9 +164,9 @@ function log_import_run($details, $import_type = 'manual') {
     // Add new entry to the beginning
     array_unshift($history, $run_entry);
 
-    // Keep only the last 20 runs to prevent the option from growing too large
-    if (count($history) > 20) {
-        $history = array_slice($history, 0, 20);
+    // Keep only the last 50 runs to prevent the option from growing too large
+    if (count($history) > 50) {
+        $history = array_slice($history, 0, 50);
     }
 
     update_option('puntwork_import_run_history', $history);
