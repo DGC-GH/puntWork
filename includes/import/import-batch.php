@@ -141,6 +141,7 @@ if (!function_exists('import_all_jobs_from_json')) {
         }
 
         // Initialize import status for UI tracking (only if not preserving)
+        $initial_status = [];
         if (!$preserve_status) {
             $initial_status = [
                 'total' => 0, // Will be updated when we know the total
@@ -164,11 +165,12 @@ if (!function_exists('import_all_jobs_from_json')) {
             ];
             update_option('job_import_status', $initial_status, false);
         } else {
-            // Update existing status to indicate import is starting
+            // Update existing status to indicate import is resuming (don't reset start_time to preserve elapsed time)
             $existing_status = get_option('job_import_status', []);
-            $existing_status['logs'][] = 'Scheduled import started - processing batches...';
-            $existing_status['start_time'] = $start_time;
+            $existing_status['logs'][] = 'Scheduled import resumed - processing batches...';
+            // Note: start_time is preserved from original import start
             update_option('job_import_status', $existing_status, false);
+            $initial_status = $existing_status; // Use existing status as initial_status for later updates
         }
 
         // Store import start time for timeout checking
