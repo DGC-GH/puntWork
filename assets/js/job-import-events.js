@@ -401,22 +401,23 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             }
 
             // Initialize smart polling variables
-            this.currentPollingInterval = 2000; // Start with 2 seconds for less aggressive polling
+            this.currentPollingInterval = 1000; // Start with 1 second for more responsive polling during large batches
             this.lastProcessedCount = -1;
             this.lastProgressTimestamp = Date.now();
             this.noProgressCount = 0;
-            this.maxNoProgressBeforeSlow = 10; // After 10 polls with no progress (20 seconds), slow down significantly
-            this.maxNoProgressBeforeStop = 300; // After 300 polls with no progress (10 minutes at 2s intervals), stop polling
+            this.maxNoProgressBeforeSlow = 15; // After 15 polls with no progress (15 seconds), slow down
+            this.maxNoProgressBeforeStop = 300; // After 300 polls with no progress (5 minutes at 1s intervals), stop polling
             this.completeDetectedCount = 0;
             this.maxCompletePolls = 2; // Continue polling for 2 more polls after detecting complete
             var totalZeroCount = 0;
-            this.maxTotalZeroPolls = 15; // Stop polling after 15 polls with total=0 (30 seconds)
+            this.maxTotalZeroPolls = 20; // Stop polling after 20 polls with total=0 (20 seconds)
             var isStartingNewImport = true;
             var hasSeenImportRunning = false;
             var lastLogTime = 0; // Track when we last logged to reduce log spam
             var lastModifiedTimestamp = 0; // Track server-side last modified timestamp
             this.lastTotalCount = 0; // Track total count for change detection
             this.lastCompleteStatus = false; // Track completion status for change detection
+            this.consecutiveFastUpdates = 0; // Track consecutive fast progress updates
 
             // Show the progress UI immediately when starting polling
             console.log('[PUNTWORK] Showing import UI for import');
@@ -427,7 +428,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             $('#reset-import').show();
             $('#status-message').text('Import in progress...');
 
-            console.log('[PUNTWORK] Starting smart status polling (initial: 2000ms)');
+            console.log('[PUNTWORK] Starting smart status polling (initial: 1000ms)');
 
             var startTime = Date.now(); // Track when polling started for early poll detection
 
@@ -521,17 +522,35 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             JobImportEvents.lastProcessedCount = currentProcessed;
                             JobImportEvents.lastProgressTimestamp = now;
                             JobImportEvents.noProgressCount = 0;
+                            JobImportEvents.consecutiveFastUpdates++;
 
-                            // Progress detected - ensure reasonable polling speed
-                            if (JobImportEvents.currentPollingInterval > 2000) {
-                                JobImportEvents.adjustPollingInterval(2000);
+                            // Progress detected - speed up polling for active processing
+                            var itemsProcessedInPoll = currentProcessed - (JobImportEvents.lastProcessedCount || 0);
+                            var timeSinceLastProgress = now - JobImportEvents.lastProgressTimestamp;
+
+                            // If we're processing items quickly (more than 10 items per second), keep polling fast
+                            if (itemsProcessedInPoll > 0 && timeSinceLastProgress < 2000) {
+                                var processingRate = itemsProcessedInPoll / (timeSinceLastProgress / 1000); // items per second
+                                if (processingRate > 5) { // Processing more than 5 items/second
+                                    JobImportEvents.adjustPollingInterval(500); // Poll every 0.5 seconds for very active processing
+                                } else if (processingRate > 2) { // Processing more than 2 items/second
+                                    JobImportEvents.adjustPollingInterval(1000); // Poll every 1 second for active processing
+                                } else {
+                                    JobImportEvents.adjustPollingInterval(1500); // Poll every 1.5 seconds for moderate processing
+                                }
+                            } else {
+                                // Normal progress - keep reasonable polling speed
+                                if (JobImportEvents.currentPollingInterval > 1500) {
+                                    JobImportEvents.adjustPollingInterval(1500);
+                                }
                             }
                         } else {
+                            JobImportEvents.consecutiveFastUpdates = 0;
                             JobImportEvents.noProgressCount++;
 
                             // Implement smart backoff when no progress
                             if (JobImportEvents.noProgressCount >= JobImportEvents.maxNoProgressBeforeSlow) {
-                                var newInterval = Math.min(JobImportEvents.currentPollingInterval * 1.5, 10000); // Exponential backoff, max 10 seconds
+                                var newInterval = Math.min(JobImportEvents.currentPollingInterval * 1.5, 8000); // Exponential backoff, max 8 seconds
                                 if (newInterval !== JobImportEvents.currentPollingInterval) {
                                     JobImportEvents.adjustPollingInterval(newInterval);
                                 }
@@ -540,7 +559,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             // Stop polling if no progress for too long
                             // Be more patient when import is close to completion
                             var progressPercent = currentTotal > 0 ? (currentProcessed / currentTotal) * 100 : 0;
-                            var effectiveMaxNoProgress = progressPercent > 90 ? 600 : JobImportEvents.maxNoProgressBeforeStop; // 20 minutes for final 10%, 10 minutes otherwise
+                            var effectiveMaxNoProgress = progressPercent > 90 ? 600 : JobImportEvents.maxNoProgressBeforeStop; // 10 minutes for final 10%, 5 minutes otherwise
                             if (JobImportEvents.noProgressCount >= effectiveMaxNoProgress) {
                                 console.log('[PUNTWORK] No progress detected for extended period, stopping polling (progress: ' + progressPercent.toFixed(1) + '%)');
                                 PuntWorkJSLogger.warn('No progress for extended period, stopping polling', 'EVENTS', {
