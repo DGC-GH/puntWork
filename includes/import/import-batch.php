@@ -266,8 +266,8 @@ if (!function_exists('import_all_jobs_from_json')) {
                 return ['success' => false, 'message' => $error_msg, 'logs' => [$error_msg]];
             }
 
-            // Capture total items from first setup
-            if ($batch_count === 0) {
+            // Capture total items from setup (not just first batch)
+            if ($batch_count === 0 || $total_items === 0) {
                 $total_items = $setup['total'] ?? 0;
                 // Update status with total items
                 $initial_status['total'] = $total_items;
