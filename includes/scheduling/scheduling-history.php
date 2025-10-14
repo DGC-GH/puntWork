@@ -22,16 +22,19 @@ require_once __DIR__ . '/../utilities/options-utilities.php';
  */
 function run_scheduled_import($test_mode = false) {
     // Check for cancellation before starting scheduled import
-    if (get_transient('import_cancel') === true) {
-        error_log('[PUNTWORK] Scheduled import cancelled - not starting new import');
-        PuntWorkLogger::info('Scheduled import cancelled before execution', PuntWorkLogger::CONTEXT_SCHEDULER, [
+    if (get_transient('import_cancel') === true || get_transient('import_force_cancel') === true || get_transient('import_emergency_stop') === true) {
+        $cancel_type = get_transient('import_emergency_stop') === true ? 'emergency stopped' :
+                      (get_transient('import_force_cancel') === true ? 'force cancelled' : 'cancelled');
+        error_log('[PUNTWORK] Scheduled import ' . $cancel_type . ' - not starting new import');
+        PuntWorkLogger::info('Scheduled import ' . $cancel_type . ' before execution', PuntWorkLogger::CONTEXT_SCHEDULER, [
             'reason' => 'import_cancel_transient_set',
             'test_mode' => $test_mode,
-            'action' => 'skipped_scheduled_import'
+            'action' => 'skipped_scheduled_import',
+            'cancel_type' => $cancel_type
         ]);
         return [
             'success' => false,
-            'message' => 'Scheduled import cancelled by user'
+            'message' => 'Scheduled import ' . $cancel_type . ' by user'
         ];
     }
 

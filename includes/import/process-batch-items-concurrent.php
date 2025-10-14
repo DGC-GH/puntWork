@@ -180,6 +180,18 @@ function calculate_optimal_concurrency($batch_size) {
 function process_single_item_callback($guid, $json_path, $start_index, $acf_fields, $zero_empty_fields, $user_id) {
     $item_start_time = microtime(true);
 
+    // Check for cancellation before processing this item
+    if (get_transient('import_cancel') === true || get_transient('import_force_cancel') === true || get_transient('import_emergency_stop') === true) {
+        $cancel_type = get_transient('import_emergency_stop') === true ? 'emergency stopped' :
+                      (get_transient('import_force_cancel') === true ? 'force cancelled' : 'cancelled');
+        PuntWorkLogger::info('Concurrent item processing ' . $cancel_type . ' - skipping item', PuntWorkLogger::CONTEXT_BATCH, [
+            'guid' => $guid,
+            'cancel_type' => $cancel_type,
+            'action' => 'skipped_concurrent_item'
+        ]);
+        return; // Skip processing this item
+    }
+
     PuntWorkLogger::debug('Processing concurrent single item', PuntWorkLogger::CONTEXT_BATCH, [
         'guid' => $guid
     ]);

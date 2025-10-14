@@ -239,6 +239,19 @@ function process_batch_items_logic($setup) {
                     return ['success' => false, 'message' => 'Import cancelled by user', 'logs' => $logs];
                 }
 
+                // Check for additional cancellation flags (force cancel and emergency stop)
+                if (get_transient('import_force_cancel') === true) {
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Import force cancelled at #' . ($current_index + 1);
+                    set_import_progress($current_index);
+                    return ['success' => false, 'message' => 'Import force cancelled by user', 'logs' => $logs];
+                }
+
+                if (get_transient('import_emergency_stop') === true) {
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Import emergency stopped at #' . ($current_index + 1);
+                    set_import_progress($current_index);
+                    return ['success' => false, 'message' => 'Import emergency stopped', 'logs' => $logs];
+                }
+
                 $item = $batch_json_items[$i];
                 if (!isset($item)) {
                     // Item was already processed or unset
