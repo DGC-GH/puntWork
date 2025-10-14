@@ -110,12 +110,13 @@ function create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, &$log
             $set_value = $is_special && $value === '0' ? '' : $value;
 
             // Serialize arrays if needed
-            if (is_array($set_value)) {
-                $set_value = serialize($set_value);
-            }
+            // Note: Removed serialization for ACF fields, let ACF handle it
+            // if (is_array($set_value)) {
+            //     $set_value = serialize($set_value);
+            // }
 
             retry_database_operation(function() use ($post_id, $field, $set_value) {
-                return update_post_meta($post_id, $field, $set_value);
+                return update_field($field, $set_value, $post_id);
             }, [$post_id, $field, $set_value], [
                 'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                 'operation' => 'set_acf_field_meta_new',
@@ -289,12 +290,13 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
                 $set_value = $is_special && $value === '0' ? '' : $value;
 
                 // Serialize arrays if needed
-                if (is_array($set_value)) {
-                    $set_value = serialize($set_value);
-                }
+                // Note: Removed serialization for ACF fields, let ACF handle it
+                // if (is_array($set_value)) {
+                //     $set_value = serialize($set_value);
+                // }
 
                 retry_database_operation(function() use ($post_id, $field, $set_value) {
-                    return update_post_meta($post_id, $field, $set_value);
+                    return update_field($field, $set_value, $post_id);
                 }, [$post_id, $field, $set_value], [
                     'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                     'operation' => 'update_acf_field_meta',
