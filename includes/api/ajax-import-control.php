@@ -350,13 +350,13 @@ function get_job_import_status_ajax() {
         // Debug log the status data (only in debug mode to avoid spam)
         if (defined('WP_DEBUG') && WP_DEBUG) {
             PuntWorkLogger::debug('Import status retrieved', PuntWorkLogger::CONTEXT_AJAX, [
-                'total' => $total,
-                'processed' => $processed,
-                'complete' => $complete,
+                'total' => $progress['total'] ?? 0,
+                'processed' => $progress['processed'] ?? 0,
+                'complete' => $progress['complete'] ?? false,
                 'has_start_time' => isset($progress['start_time']),
                 'start_time' => $progress['start_time'] ?? null,
                 'logs_count' => count($progress['logs'] ?? []),
-                'is_counting_phase' => ($total == 0 && isset($progress['start_time']) && $progress['start_time'] > 0)
+                'is_counting_phase' => (($progress['total'] ?? 0) == 0 && isset($progress['start_time']) && $progress['start_time'] > 0)
             ]);
         }
 
@@ -517,12 +517,6 @@ function get_job_import_status_ajax() {
             'error_message' => $e->getMessage(),
             'error_file' => $e->getFile(),
             'error_line' => $e->getLine(),
-            'request_data' => [
-                'total_from_status' => $total,
-                'processed_from_status' => $processed,
-                'complete_from_status' => $complete,
-                'should_log' => $should_log
-            ],
             'stack_trace' => $e->getTraceAsString()
         ]);
         wp_send_json_error(['message' => 'Internal server error occurred while retrieving import status']);
