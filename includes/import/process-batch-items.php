@@ -37,13 +37,15 @@ if (!function_exists('process_batch_items')) {
         $user_id = get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : get_current_user_id();
 
         // Debug: Log first few GUIDs and items
-        $first_guids = array_slice($batch_guids, 0, 3);
-        PuntWorkLogger::debug('Processing first few GUIDs', PuntWorkLogger::CONTEXT_BATCH, [
-            'first_guids' => $first_guids,
-            'first_items_exist' => array_map(function($guid) use ($batch_items) {
-                return isset($batch_items[$guid]) ? 'yes' : 'no';
-            }, $first_guids)
-        ]);
+        // NOTE: To enable item processing debug logs, define PUNTWORK_DEBUG_ITEM_PROCESSING as true in wp-config.php
+        if (defined('PUNTWORK_DEBUG_ITEM_PROCESSING') && PUNTWORK_DEBUG_ITEM_PROCESSING) {
+            PuntWorkLogger::debug('Processing first few GUIDs', PuntWorkLogger::CONTEXT_BATCH, [
+                'first_guids' => $first_guids,
+                'first_items_exist' => array_map(function($guid) use ($batch_items) {
+                    return isset($batch_items[$guid]) ? 'yes' : 'no';
+                }, $first_guids)
+            ]);
+        }
         $error_message = '';
 
         foreach ($batch_guids as $guid) {
@@ -53,15 +55,18 @@ if (!function_exists('process_batch_items')) {
                 $xml_updated_ts = strtotime($xml_updated);
                 $post_id = isset($post_ids_by_guid[$guid]) ? $post_ids_by_guid[$guid] : null;
 
-                PuntWorkLogger::debug('Processing individual item', PuntWorkLogger::CONTEXT_BATCH, [
-                    'guid' => $guid,
-                    'post_id' => $post_id,
-                    'has_title' => isset($item['title']) ? 'yes' : 'no',
-                    'title_value' => $item['title'] ?? 'none',
-                    'has_functiontitle' => isset($item['functiontitle']) ? 'yes' : 'no',
-                    'functiontitle_value' => $item['functiontitle'] ?? 'none',
-                    'action' => $post_id ? 'update' : 'create'
-                ]);
+                // NOTE: To enable item processing debug logs, define PUNTWORK_DEBUG_ITEM_PROCESSING as true in wp-config.php
+                if (defined('PUNTWORK_DEBUG_ITEM_PROCESSING') && PUNTWORK_DEBUG_ITEM_PROCESSING) {
+                    PuntWorkLogger::debug('Processing individual item', PuntWorkLogger::CONTEXT_BATCH, [
+                        'guid' => $guid,
+                        'post_id' => $post_id,
+                        'has_title' => isset($item['title']) ? 'yes' : 'no',
+                        'title_value' => $item['title'] ?? 'none',
+                        'has_functiontitle' => isset($item['functiontitle']) ? 'yes' : 'no',
+                        'functiontitle_value' => $item['functiontitle'] ?? 'none',
+                        'action' => $post_id ? 'update' : 'create'
+                    ]);
+                }
 
                 // If post exists, check if it needs updating
                 if ($post_id) {
@@ -142,17 +147,23 @@ if (!function_exists('process_batch_items')) {
 
                         // Update post immediately
                         $error_message = '';
-                        PuntWorkLogger::debug('About to call update_job_post', PuntWorkLogger::CONTEXT_BATCH, [
-                            'post_id' => $post_id,
-                            'guid' => $guid,
-                            'acf_fields_count' => count($acf_fields)
-                        ]);
+                        // NOTE: To enable item processing debug logs, define PUNTWORK_DEBUG_ITEM_PROCESSING as true in wp-config.php
+                        if (defined('PUNTWORK_DEBUG_ITEM_PROCESSING') && PUNTWORK_DEBUG_ITEM_PROCESSING) {
+                            PuntWorkLogger::debug('About to call update_job_post', PuntWorkLogger::CONTEXT_BATCH, [
+                                'post_id' => $post_id,
+                                'guid' => $guid,
+                                'acf_fields_count' => count($acf_fields)
+                            ]);
+                        }
                         $update_result = update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields, $logs, $error_message);
-                        PuntWorkLogger::debug('update_job_post returned', PuntWorkLogger::CONTEXT_BATCH, [
-                            'post_id' => $post_id,
-                            'guid' => $guid,
-                            'is_wp_error' => is_wp_error($update_result)
-                        ]);
+                        // NOTE: To enable item processing debug logs, define PUNTWORK_DEBUG_ITEM_PROCESSING as true in wp-config.php
+                        if (defined('PUNTWORK_DEBUG_ITEM_PROCESSING') && PUNTWORK_DEBUG_ITEM_PROCESSING) {
+                            PuntWorkLogger::debug('update_job_post returned', PuntWorkLogger::CONTEXT_BATCH, [
+                                'post_id' => $post_id,
+                                'guid' => $guid,
+                                'is_wp_error' => is_wp_error($update_result)
+                            ]);
+                        }
                         if (is_wp_error($update_result)) {
                             PuntWorkLogger::error('Failed to update post', PuntWorkLogger::CONTEXT_BATCH, [
                                 'post_id' => $post_id,
@@ -226,9 +237,12 @@ if (!function_exists('process_batch_items')) {
                 $processed_count++;
 
                 if ($processed_count % 5 === 0) {
-                    PuntWorkLogger::debug('Individual processing progress', PuntWorkLogger::CONTEXT_BATCH, [
-                        'processed_count' => $processed_count
-                    ]);
+                    // NOTE: To enable item processing debug logs, define PUNTWORK_DEBUG_ITEM_PROCESSING as true in wp-config.php
+                    if (defined('PUNTWORK_DEBUG_ITEM_PROCESSING') && PUNTWORK_DEBUG_ITEM_PROCESSING) {
+                        PuntWorkLogger::debug('Individual processing progress', PuntWorkLogger::CONTEXT_BATCH, [
+                            'processed_count' => $processed_count
+                        ]);
+                    }
                     // Only flush output buffer if one is active
                     if (ob_get_level() > 0) {
                         ob_flush();
