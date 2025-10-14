@@ -392,17 +392,16 @@
                         self.loadScheduleSettings();
                         self.loadRunHistory();
                     } else {
-                        // Import started asynchronously - now start polling for progress
-                        console.log('[PUNTWORK] Import started asynchronously, starting status polling');
-                        PuntWorkJSLogger.info('Import started asynchronously, polling for updates', 'SCHEDULING');
+                        // Import started asynchronously - polling removed to prevent automatic loops
+                        console.log('[PUNTWORK] Import started asynchronously, polling disabled');
+                        PuntWorkJSLogger.info('Import started asynchronously, automatic polling disabled', 'SCHEDULING');
                         
-                        // Start status polling now that we know it's async
-                        JobImportEvents.startStatusPolling();
+                        // Removed automatic polling: JobImportEvents.startStatusPolling();
                         
                         $button.prop('disabled', false).html('Run Now');
                         
                         // Show success notification
-                        self.showNotification('Import started successfully - progress will update in real-time', 'success');
+                        self.showNotification('Import started successfully - refresh manually to check progress', 'success');
                         
                         // Refresh the schedule settings and history after a short delay
                         setTimeout(function() {
@@ -437,9 +436,8 @@
             var self = this;
             var startTime = Date.now();
 
-            // Start the status polling immediately to show progress as soon as import begins
-            console.log('[PUNTWORK] Starting JobImportEvents.startStatusPolling()');
-            JobImportEvents.startStatusPolling();
+            // Removed automatic polling to prevent loops
+            // JobImportEvents.startStatusPolling();
 
             var checkInterval = setInterval(function() {
                 console.log('[PUNTWORK] Monitoring check interval fired');

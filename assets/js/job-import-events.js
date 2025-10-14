@@ -297,8 +297,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         JobImportUI.updateProgress(statusData);
                         JobImportUI.appendLogs(statusData.logs || []);
 
-                        // Always start polling for incomplete imports to catch scheduled imports
-                        JobImportEvents.startStatusPolling();
+                        // Removed automatic polling - status will be checked manually only
+                        // JobImportEvents.startStatusPolling();
 
                         // Determine import type for UI display
                         var importType = 'manual';

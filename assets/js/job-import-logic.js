@@ -234,10 +234,10 @@
                 // Trigger the unified async import process
                 await JobImportAPI.clearImportCancel();
 
-                // Start status polling for real-time UI updates
-                if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
-                    window.JobImportEvents.startStatusPolling();
-                }
+                // Removed automatic status polling to prevent loops
+                // if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
+                //     window.JobImportEvents.startStatusPolling();
+                // }
 
                 // Trigger the async import using the same API as scheduled imports
                 const startResponse = await JobImportAPI.call('run_scheduled_import', { import_type: 'manual' });
@@ -248,7 +248,7 @@
                 }
 
                 // The import is now running asynchronously
-                // Status polling will handle UI updates until completion
+                // Status polling removed - user must manually refresh to check progress
 
             } catch (error) {
                 PuntWorkJSLogger.error('Start import error', 'LOGIC', error);
@@ -257,10 +257,10 @@
                 JobImportUI.resetButtons();
                 this.isImporting = false; // Ensure importing flag is reset on error
 
-                // Stop status polling on error
-                if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
-                    window.JobImportEvents.stopStatusPolling();
-                }
+                // Stop status polling on error (removed)
+                // if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
+                //     window.JobImportEvents.stopStatusPolling();
+                // }
             }
         },
 

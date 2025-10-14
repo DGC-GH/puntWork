@@ -92,11 +92,11 @@ function finalize_batch_import($result) {
         ];
 
         // Import the function if not already available
-        if (!function_exists('log_import_run')) {
+        if (!function_exists(__NAMESPACE__ . '\\log_import_run')) {
             require_once __DIR__ . '/../scheduling/scheduling-history.php';
         }
 
-        \log_import_run($import_details, 'manual');
+        log_import_run($import_details, 'manual');
 
         PuntWorkLogger::info('Logged completed manual import to history', PuntWorkLogger::CONTEXT_BATCH, [
             'processed' => $result['processed'] ?? 0,
