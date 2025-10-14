@@ -275,10 +275,10 @@ function check_import_health() {
     }
 }
 
-// Schedule health check to run every 5 minutes
-add_action('wp', function() {
-    if (!wp_next_scheduled('puntwork_import_health_check')) {
-        wp_schedule_event(time(), 'puntwork_5min', 'puntwork_import_health_check');
-    }
-});
-add_action('puntwork_import_health_check', __NAMESPACE__ . '\\check_import_health');
+// Schedule health check to run every 5 minutes (DISABLED - removed automatic health check loop)
+// add_action('wp', function() {
+//     if (!wp_next_scheduled('puntwork_import_health_check')) {
+//         wp_schedule_event(time(), 'puntwork_5min', 'puntwork_import_health_check');
+//     }
+// });
+// add_action('puntwork_import_health_check', __NAMESPACE__ . '\\check_import_health');

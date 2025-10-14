@@ -58,10 +58,10 @@
                 self.runNow();
             });
 
-            // Refresh schedule status periodically (reduced frequency to prevent console spam)
-            setInterval(function() {
-                self.refreshScheduleStatus();
-            }, 300000); // Refresh every 5 minutes instead of 30 seconds
+            // Refresh schedule status manually only (removed automatic polling)
+            // setInterval(function() {
+            //     self.refreshScheduleStatus();
+            // }, 300000); // Refresh every 5 minutes instead of 30 seconds
 
             // Refresh history buttons (both scheduling and import history sections)
             $('#import-scheduling #refresh-history, #import-history #refresh-history').on('click', function(e) {
