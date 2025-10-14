@@ -65,7 +65,7 @@ fi
 
 # Run tests
 echo "Running tests..."
-phpunit --verbose
+./vendor/bin/phpunit --verbose
 
 echo
 echo "=== Test run complete ==="
