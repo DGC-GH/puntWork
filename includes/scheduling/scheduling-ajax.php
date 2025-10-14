@@ -238,60 +238,10 @@ function run_scheduled_import_ajax() {
     $import_type = isset($_POST['import_type']) ? sanitize_text_field($_POST['import_type']) : 'scheduled';
     $is_manual = $import_type === 'manual';
 
-    // Check if an import is already running
-    $import_status = get_import_status([]);
-    if (isset($import_status['complete']) && !$import_status['complete']) {
-        // Calculate actual time elapsed
-        $time_elapsed = 0;
-        if (isset($import_status['start_time']) && $import_status['start_time'] > 0) {
-            $time_elapsed = microtime(true) - $import_status['start_time'];
-        } elseif (isset($import_status['time_elapsed'])) {
-            $time_elapsed = $import_status['time_elapsed'];
-        }
-
-        // Check for stuck imports and clear them automatically
-        $current_time = time();
-        $last_update = isset($import_status['last_update']) ? $import_status['last_update'] : 0;
-        $time_since_last_update = $current_time - $last_update;
-
-        error_log('[PUNTWORK] Checking for stuck import: processed=' . $import_status['processed'] . ', time_elapsed=' . $time_elapsed . ', time_since_last_update=' . $time_since_last_update);
-
-        // Detect stuck imports with multiple criteria:
-        // 1. No progress for 5+ minutes (300 seconds)
-        // 2. Import running for more than 2 hours without completion (7200 seconds)
-        // 3. No status update for 10+ minutes (600 seconds)
-        $is_stuck = false;
-        $stuck_reason = '';
-
-        if ($import_status['processed'] == 0 && $time_elapsed > 300) {
-            $is_stuck = true;
-            $stuck_reason = 'no progress for 5+ minutes';
-        } elseif ($import_status['processed'] > 0 && $import_status['processed'] < 50 && $time_elapsed > 600) { // Low progress
-            $is_stuck = true;
-            $stuck_reason = 'low progress (<50 items) for more than 10 minutes';
-        } elseif ($time_elapsed > 7200) { // 2 hours
-            $is_stuck = true;
-            $stuck_reason = 'running for more than 2 hours';
-        } elseif ($time_since_last_update > 600) { // 10 minutes since last update
-            $is_stuck = true;
-            $stuck_reason = 'no status update for 10+ minutes';
-        }
-
-        if ($is_stuck) {
-            error_log('[PUNTWORK] Detected stuck import in scheduled start, clearing status: ' . json_encode([
-                'processed' => $import_status['processed'],
-                'total' => $import_status['total'],
-                'time_elapsed' => $time_elapsed,
-                'time_since_last_update' => $time_since_last_update,
-                'reason' => $stuck_reason
-            ]));
-            delete_import_status();
-            delete_transient('import_cancel');
-        } else {
-            send_ajax_error('run_scheduled_import', 'An import is already running');
-            return;
-        }
-    }
+    // Always clear any existing import status before starting a new one
+    delete_import_status();
+    delete_transient('import_cancel');
+    error_log('[PUNTWORK] Cleared any existing import status and cancel transient before starting new import');
 
     try {
         // Initialize import status for immediate UI feedback
