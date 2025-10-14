@@ -513,6 +513,38 @@ function set_concurrent_success_rate($rate) {
 }
 
 /**
+ * Update concurrent processing success metrics
+ */
+function update_concurrent_success_metrics($concurrency_used, $chunks_completed, $total_chunks, $items_processed, $total_items) {
+    $success_rate = $total_chunks > 0 ? $chunks_completed / $total_chunks : 1.0;
+    $processing_efficiency = $total_items > 0 ? $items_processed / $total_items : 1.0;
+
+    // Combined success rate considers both chunk completion and item processing efficiency
+    $combined_success_rate = ($success_rate + $processing_efficiency) / 2;
+
+    // Use rolling average to stabilize the metric (less weight to historical data for concurrent to adapt faster)
+    $current_rate = get_concurrent_success_rate();
+    $new_rate = ($current_rate * 0.7) + ($combined_success_rate * 0.3);
+
+    set_concurrent_success_rate($new_rate);
+
+    // Track concurrent processing statistics
+    $stats = get_concurrent_processing_stats();
+    $stats['total_batches'] = ($stats['total_batches'] ?? 0) + 1;
+    $stats['total_chunks'] += $total_chunks;
+    $stats['total_completed'] += $chunks_completed;
+    $stats['total_items'] += $total_items;
+    $stats['total_processed'] += $items_processed;
+    $stats['last_success_rate'] = $success_rate;
+    $stats['last_concurrency_used'] = $concurrency_used;
+    $stats['last_update'] = microtime(true);
+
+    set_concurrent_processing_stats($stats);
+
+    return $new_rate;
+}
+
+/**
  * Update sequential processing success metrics
  */
 function update_sequential_success_metrics($total_items, $successful_operations, $skipped, $processed_count) {
@@ -568,4 +600,18 @@ function get_sequential_processing_stats() {
  */
 function set_sequential_processing_stats($stats) {
     update_option('job_import_sequential_stats', $stats, false);
+}
+
+/**
+ * Get concurrent processing statistics
+ */
+function get_concurrent_processing_stats() {
+    return get_option('job_import_concurrent_stats', []);
+}
+
+/**
+ * Set concurrent processing statistics
+ */
+function set_concurrent_processing_stats($stats) {
+    update_option('job_import_concurrent_stats', $stats, false);
 }
