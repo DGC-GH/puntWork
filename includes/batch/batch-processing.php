@@ -415,7 +415,7 @@ function process_batch_items_logic($setup) {
 
         // Process batch items
         try {
-            $result = process_batch_data($batch_guids, $batch_items, $logs, $published, $updated, $skipped, $duplicates_drafted);
+            $result = process_batch_data($batch_guids, $batch_items, $json_path, $start_index, $logs, $published, $updated, $skipped, $duplicates_drafted);
         } catch (\Exception $e) {
             PuntWorkLogger::error('Failed to process batch data', PuntWorkLogger::CONTEXT_BATCH, [
                 'error' => $e->getMessage(),
@@ -563,6 +563,8 @@ function process_batch_items_logic($setup) {
  *
  * @param array $batch_guids Array of GUIDs in batch.
  * @param array $batch_items Array of batch items.
+ * @param string $json_path Path to JSONL file.
+ * @param int $start_index Starting index in JSONL file.
  * @param array &$logs Reference to logs array.
  * @param int &$published Reference to published count.
  * @param int &$updated Reference to updated count.
@@ -570,7 +572,7 @@ function process_batch_items_logic($setup) {
  * @param int &$duplicates_drafted Reference to duplicates drafted count.
  * @return array Processing result.
  */
-function process_batch_data($batch_guids, $batch_items, &$logs, &$published, &$updated, &$skipped, &$duplicates_drafted) {
+function process_batch_data($batch_guids, $batch_items, $json_path, $start_index, &$logs, &$published, &$updated, &$skipped, &$duplicates_drafted) {
     global $wpdb;
 
     // Bulk existing post_ids
@@ -623,7 +625,7 @@ function process_batch_data($batch_guids, $batch_items, &$logs, &$published, &$u
     $zero_empty_fields = get_zero_empty_fields();
 
     // Use concurrent processing for better performance
-    $result = process_batch_items_concurrent($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $logs, $updated, $published, $skipped, $processed_count);
+    $result = process_batch_items_concurrent($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, $logs, $updated, $published, $skipped, $processed_count);
 
     return $result;
 }
