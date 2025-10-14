@@ -203,7 +203,7 @@ function get_job_import_status_ajax() {
             return;
         }
 
-        $progress = Puntwork\get_import_status() ?: initialize_import_status(0, '', null);
+        $progress = get_import_status() ?: initialize_import_status(0, '', null);
 
         PuntWorkLogger::debug('Retrieved import status', PuntWorkLogger::CONTEXT_BATCH, [
             'total' => $progress['total'] ?? 0,
@@ -265,12 +265,12 @@ function get_job_import_status_ajax() {
         }
 
         // Add resume_progress for JavaScript
-        $progress['resume_progress'] = Puntwork\get_import_progress();
+        $progress['resume_progress'] = get_import_progress();
 
         // Track job importing start time
         if (($progress['total'] ?? 0) > 1 && !isset($progress['job_import_start_time'])) {
             $progress['job_import_start_time'] = microtime(true);
-            Puntwork\set_import_status($progress);
+            set_import_status($progress);
         }
 
         // Calculate job importing elapsed time with safe defaults
@@ -279,8 +279,8 @@ function get_job_import_status_ajax() {
         $progress['job_importing_time_elapsed'] = $job_import_start_time ? microtime(true) - $job_import_start_time : $time_elapsed;
 
         // Add batch timing data for accurate time calculations
-        $progress['batch_time'] = Puntwork\get_last_batch_time();
-        $progress['batch_processed'] = Puntwork\get_last_batch_processed();
+        $progress['batch_time'] = get_last_batch_time();
+        $progress['batch_processed'] = get_last_batch_processed();
 
         // Add estimated time remaining calculation from PHP with error handling
         try {
@@ -347,7 +347,7 @@ function cleanup_trashed_jobs_ajax() {
             WHERE post_type = 'job' AND post_status = 'trash'
         "));
 
-        Puntwork\set_cleanup_trashed_progress([
+        set_cleanup_trashed_progress([
             'total_processed' => 0,
             'total_deleted' => 0,
             'total_jobs' => $total_count,
@@ -358,7 +358,7 @@ function cleanup_trashed_jobs_ajax() {
         ]);
     }
 
-    $progress = Puntwork\get_cleanup_trashed_progress();
+    $progress = get_cleanup_trashed_progress();
 
     try {
         // Get batch of trashed jobs to process
@@ -375,7 +375,7 @@ function cleanup_trashed_jobs_ajax() {
             $progress['complete'] = true;
             $progress['end_time'] = microtime(true);
             $progress['time_elapsed'] = $progress['end_time'] - $progress['start_time'];
-            Puntwork\set_cleanup_trashed_progress($progress);
+            set_cleanup_trashed_progress($progress);
 
             $message = "Cleanup completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} trashed jobs";
             PuntWorkLogger::info('Cleanup of trashed jobs completed', PuntWorkLogger::CONTEXT_BATCH, [
@@ -419,7 +419,7 @@ function cleanup_trashed_jobs_ajax() {
         $progress['total_deleted'] += $deleted_count;
         $progress['current_offset'] = $offset + $batch_size;
         $progress['logs'] = $logs;
-        Puntwork\set_cleanup_trashed_progress($progress);
+        set_cleanup_trashed_progress($progress);
 
         // Calculate progress percentage
         $progress_percentage = $progress['total_jobs'] > 0 ? round(($progress['total_processed'] / $progress['total_jobs']) * 100, 1) : 0;
@@ -479,7 +479,7 @@ function cleanup_drafted_jobs_ajax() {
             'last_5_ids' => array_slice($draft_job_ids, -5)
         ]);
 
-        Puntwork\set_cleanup_drafted_progress([
+        set_cleanup_drafted_progress([
             'total_processed' => 0,
             'total_deleted' => 0,
             'total_jobs' => $total_count,
@@ -491,7 +491,7 @@ function cleanup_drafted_jobs_ajax() {
         ]);
     }
 
-    $progress = Puntwork\get_cleanup_drafted_progress();
+    $progress = get_cleanup_drafted_progress();
 
     // If already completed, return completion response
     if ($progress['complete']) {
@@ -532,7 +532,7 @@ function cleanup_drafted_jobs_ajax() {
             $progress['complete'] = true;
             $progress['end_time'] = microtime(true);
             $progress['time_elapsed'] = $progress['end_time'] - $progress['start_time'];
-            Puntwork\set_cleanup_drafted_progress($progress);
+            set_cleanup_drafted_progress($progress);
 
             $message = "Cleanup completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} drafted jobs";
 
@@ -637,7 +637,7 @@ function cleanup_drafted_jobs_ajax() {
         $progress['total_deleted'] += $deleted_count;
         $progress['current_index'] = $current_index + $batch_size;
         $progress['logs'] = $logs;
-        Puntwork\set_cleanup_drafted_progress($progress);
+        set_cleanup_drafted_progress($progress);
 
         // Calculate progress percentage
         $progress_percentage = $progress['total_jobs'] > 0 ? round(($progress['total_processed'] / $progress['total_jobs']) * 100, 1) : 0;
@@ -718,7 +718,7 @@ function cleanup_old_published_jobs_ajax() {
         }
 
         // Store GUIDs in option for batch processing
-        Puntwork\set_cleanup_guids($current_guids);
+        set_cleanup_guids($current_guids);
 
         // Get total count of posts to process
         $placeholders = implode(',', array_fill(0, count($current_guids), '%s'));
@@ -736,7 +736,7 @@ function cleanup_old_published_jobs_ajax() {
             'total_old_jobs_found' => $total_count
         ]);
 
-        Puntwork\set_cleanup_old_published_progress([
+        set_cleanup_old_published_progress([
             'total_processed' => 0,
             'total_deleted' => 0,
             'total_jobs' => $total_count,
@@ -747,7 +747,7 @@ function cleanup_old_published_jobs_ajax() {
         ]);
     }
 
-    $progress = Puntwork\get_cleanup_old_published_progress();
+    $progress = get_cleanup_old_published_progress();
 
     // If already completed, return completion response
     if ($progress['complete']) {
@@ -776,7 +776,7 @@ function cleanup_old_published_jobs_ajax() {
         'complete' => $progress['complete']
     ]);
 
-    $current_guids = Puntwork\get_cleanup_guids();
+    $current_guids = get_cleanup_guids();
 
     try {
         // Get batch of old published jobs to process
@@ -805,7 +805,7 @@ function cleanup_old_published_jobs_ajax() {
             $progress['complete'] = true;
             $progress['end_time'] = microtime(true);
             $progress['time_elapsed'] = $progress['end_time'] - $progress['start_time'];
-            Puntwork\set_cleanup_old_published_progress($progress);
+            set_cleanup_old_published_progress($progress);
 
             // Clean up temporary options
             delete_option('job_cleanup_guids');
@@ -867,7 +867,7 @@ function cleanup_old_published_jobs_ajax() {
         $progress['total_deleted'] += $deleted_count;
         $progress['current_offset'] = $offset + $batch_size;
         $progress['logs'] = $logs;
-        Puntwork\set_cleanup_old_published_progress($progress);
+        set_cleanup_old_published_progress($progress);
 
         // Calculate progress percentage
         $progress_percentage = $progress['total_jobs'] > 0 ? round(($progress['total_processed'] / $progress['total_jobs']) * 100, 1) : 0;
