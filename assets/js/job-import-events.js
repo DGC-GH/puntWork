@@ -329,13 +329,13 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
                         // Show appropriate control buttons based on import type and state
                         if (importType === 'scheduled') {
-                            // For scheduled imports, show cancel button if active
+                            // For scheduled imports, show cancel and reset buttons if active
                             if (hasIncompleteImport || (activeScheduledImports && activeScheduledImports.has_active_imports)) {
                                 JobImportUI.showCancelButton();
+                                JobImportUI.showResetButton();
                                 JobImportUI.hideResumeButton();
-                                JobImportUI.hideResetButton();
                                 JobImportUI.hideStartButton();
-                                console.log('[PUNTWORK] Showing cancel button for active scheduled import');
+                                console.log('[PUNTWORK] Showing cancel and reset buttons for active scheduled import');
                             } else {
                                 // Scheduled import completed or not running
                                 JobImportUI.hideCancelButton();

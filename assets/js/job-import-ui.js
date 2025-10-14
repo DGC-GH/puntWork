@@ -698,6 +698,62 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
         },
 
         /**
+         * Show cancel button
+         */
+        showCancelButton: function() {
+            $('#cancel-import').show();
+        },
+
+        /**
+         * Hide cancel button
+         */
+        hideCancelButton: function() {
+            $('#cancel-import').hide();
+        },
+
+        /**
+         * Show resume button
+         */
+        showResumeButton: function() {
+            $('#resume-import').show();
+        },
+
+        /**
+         * Hide resume button
+         */
+        hideResumeButton: function() {
+            $('#resume-import').hide();
+        },
+
+        /**
+         * Show reset button
+         */
+        showResetButton: function() {
+            $('#reset-import').show();
+        },
+
+        /**
+         * Hide reset button
+         */
+        hideResetButton: function() {
+            $('#reset-import').hide();
+        },
+
+        /**
+         * Show start button
+         */
+        showStartButton: function() {
+            $('#start-import').show();
+        },
+
+        /**
+         * Hide start button
+         */
+        hideStartButton: function() {
+            $('#start-import').hide();
+        },
+
+        /**
          * Show import UI elements
          */
         showImportUI: function() {
