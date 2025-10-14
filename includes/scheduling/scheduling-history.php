@@ -62,8 +62,9 @@ function run_scheduled_import($test_mode = false) {
         }
 
     // Run the import - reset status since feed processing is complete
-    $result = import_all_jobs_from_json(false); // false = reset status for fresh import        $end_time = microtime(true);
-        $duration = $end_time - $start_time;
+    $result = import_all_jobs_from_json(false); // false = reset status for fresh import
+    $end_time = microtime(true);
+    $duration = $end_time - $start_time;
 
         // Store last run information
         $last_run_data = [
