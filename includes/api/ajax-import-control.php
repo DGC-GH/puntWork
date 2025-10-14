@@ -497,7 +497,26 @@ function get_job_import_status_ajax() {
                 'logs_count' => count($progress['logs'] ?? []),
                 'last_log_entry' => end($progress['logs'] ?? []) ?: null
             ];
-            send_ajax_success('get_job_import_status', $progress, $sanitized_log_data);
+
+            // Create a smaller response for the frontend to avoid JSON encoding issues with large data
+            $response_data = [
+                'total' => $progress['total'] ?? 0,
+                'processed' => $progress['processed'] ?? 0,
+                'published' => $progress['published'] ?? 0,
+                'updated' => $progress['updated'] ?? 0,
+                'skipped' => $progress['skipped'] ?? 0,
+                'duplicates_drafted' => $progress['duplicates_drafted'] ?? 0,
+                'complete' => $progress['complete'] ?? false,
+                'time_elapsed' => $progress['time_elapsed'] ?? 0,
+                'job_importing_time_elapsed' => $progress['job_importing_time_elapsed'] ?? 0,
+                'estimated_time_remaining' => $progress['estimated_time_remaining'] ?? 0,
+                'batch_count' => $progress['batch_count'] ?? 0,
+                'last_modified' => $progress['last_modified'] ?? microtime(true),
+                'progress_percentage' => $total > 0 ? round(($processed / $total) * 100, 2) : 0,
+                'logs' => array_slice($progress['logs'] ?? [], -10) // Only send last 10 logs to frontend
+            ];
+
+            send_ajax_success('get_job_import_status', $response_data, $sanitized_log_data);
         } else {
             // For initial polling or counting phase, still send response but with minimal logging
             // Check if we're in counting phase (import started but total still 0)
