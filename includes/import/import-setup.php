@@ -32,7 +32,7 @@ function prepare_import_setup($batch_start = 0) {
         'batch_start' => $batch_start,
         'memory_limit' => ini_get('memory_limit'),
         'time_limit' => ini_get('max_execution_time'),
-        'timestamp' => time()
+        'timestamp' => microtime(true)
     ]);
 
     do_action('qm/cease'); // Disable Query Monitor data collection to reduce memory usage
@@ -277,15 +277,13 @@ function get_json_item_count($json_path) {
             }
 
             // Update status every 1000 items to show progress
-            if ($count % 1000 === 0 && $count > 0) {
-                $current_status = get_import_status();
-                if ($current_status) {
-                    $current_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Counted ' . number_format($count) . ' items so far...';
-                    $current_status['last_update'] = time();
-                    set_import_status($current_status);
-                }
-
-                PuntWorkLogger::debug('JSONL counting progress milestone', PuntWorkLogger::CONTEXT_IMPORT, [
+                if ($count % 1000 === 0 && $count > 0) {
+                    $current_status = get_import_status();
+                    if ($current_status) {
+                        $current_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Counted ' . number_format($count) . ' items so far...';
+                        $current_status['last_update'] = microtime(true);
+                        set_import_status($current_status);
+                    }                PuntWorkLogger::debug('JSONL counting progress milestone', PuntWorkLogger::CONTEXT_IMPORT, [
                     'items_counted' => $count,
                     'elapsed_seconds' => round(microtime(true) - $start_time, 1),
                     'items_per_second' => round($count / (microtime(true) - $start_time), 1)
@@ -299,7 +297,7 @@ function get_json_item_count($json_path) {
         if ($current_status) {
             $current_status['total'] = $count;
             $current_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Found ' . number_format($count) . ' total items to import';
-            $current_status['last_update'] = time();
+            $current_status['last_update'] = microtime(true);
             set_import_status($current_status);
         }
 

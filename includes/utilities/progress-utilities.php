@@ -21,7 +21,7 @@ function initialize_progress_tracking($operation_name, $initial_data = []) {
         'current_offset' => 0,
         'complete' => false,
         'start_time' => microtime(true),
-        'last_update' => time(),
+        'last_update' => microtime(true),
         'logs' => []
     ];
 
@@ -44,7 +44,7 @@ function update_progress($operation_name, $update_data = [], $log_message = null
         $progress = array_merge($progress, $update_data);
     }
 
-    $progress['last_update'] = time();
+    $progress['last_update'] = microtime(true);
 
     if ($log_message) {
         $progress['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . $log_message;
@@ -127,7 +127,7 @@ function is_operation_stuck($progress, $timeout_seconds = 300) {
     $start_time = $progress['start_time'] ?? microtime(true);
 
     // Check if no progress for timeout period
-    if (time() - $last_update > $timeout_seconds) {
+    if (microtime(true) - $last_update > $timeout_seconds) {
         return true;
     }
 

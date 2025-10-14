@@ -262,7 +262,7 @@ class RetryUtility {
             return false;
         }
 
-        $now = time();
+        $now = microtime(true);
 
         // Check if circuit breaker has expired
         if ($now > $circuitBreaker['expires_at']) {
@@ -286,7 +286,7 @@ class RetryUtility {
             return 0;
         }
 
-        return max(0, $circuitBreaker['expires_at'] - time());
+        return max(0, $circuitBreaker['expires_at'] - microtime(true));
     }
 
     /**
@@ -295,7 +295,7 @@ class RetryUtility {
      * @param string $operationKey Operation key
      */
     private static function recordFailure($operationKey) {
-        $now = time();
+        $now = microtime(true);
 
         if (!isset(self::$circuit_breakers[$operationKey])) {
             self::$circuit_breakers[$operationKey] = [
@@ -336,7 +336,7 @@ class RetryUtility {
             $status[$key] = [
                 'failure_count' => $breaker['failure_count'],
                 'is_open' => $breaker['failure_count'] >= self::CIRCUIT_BREAKER_THRESHOLD,
-                'remaining_timeout' => max(0, $breaker['expires_at'] - time()),
+                'remaining_timeout' => max(0, $breaker['expires_at'] - microtime(true)),
                 'expires_at' => $breaker['expires_at']
             ];
         }

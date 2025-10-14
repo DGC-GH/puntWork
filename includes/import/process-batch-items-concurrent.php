@@ -132,7 +132,7 @@ function validate_action_scheduler_health() {
  * @return array Monitoring results
  */
 function monitor_concurrent_job_completion($action_ids, $timeout_seconds = 300, $check_interval_seconds = 5) {
-    $start_time = time();
+    $start_time = microtime(true);
     $completed_actions = [];
     $failed_actions = [];
     $pending_actions = $action_ids;
@@ -143,7 +143,7 @@ function monitor_concurrent_job_completion($action_ids, $timeout_seconds = 300, 
         'check_interval_seconds' => $check_interval_seconds
     ]);
 
-    while (!empty($pending_actions) && (time() - $start_time) < $timeout_seconds) {
+    while (!empty($pending_actions) && (microtime(true) - $start_time) < $timeout_seconds) {
         $store = \ActionScheduler::store();
         $current_pending = [];
         $just_completed = [];
@@ -183,7 +183,7 @@ function monitor_concurrent_job_completion($action_ids, $timeout_seconds = 300, 
             PuntWorkLogger::debug('Concurrent jobs completed in this check', PuntWorkLogger::CONTEXT_BATCH, [
                 'completed_count' => count($just_completed),
                 'remaining_pending' => count($pending_actions),
-                'elapsed_seconds' => time() - $start_time
+                'elapsed_seconds' => microtime(true) - $start_time
             ]);
         }
 
@@ -193,7 +193,7 @@ function monitor_concurrent_job_completion($action_ids, $timeout_seconds = 300, 
         }
     }
 
-    $elapsed_time = time() - $start_time;
+    $elapsed_time = microtime(true) - $start_time;
     $success_rate = count($action_ids) > 0 ? count($completed_actions) / count($action_ids) : 0;
 
     $result = [
@@ -713,7 +713,7 @@ function process_single_item_callback($guid, $json_path, $start_index, $acf_fiel
         $current_status['updated'] = ($current_status['updated'] ?? 0) + $updated;
         $current_status['skipped'] = ($current_status['skipped'] ?? 0) + $skipped;
         $current_status['processed'] = ($current_status['processed'] ?? 0) + $processed_count;
-        $current_status['last_update'] = time();
+        $current_status['last_update'] = microtime(true);
         if (!isset($current_status['logs']) || !is_array($current_status['logs'])) {
             $current_status['logs'] = [];
         }
@@ -780,7 +780,7 @@ function process_single_item_callback($guid, $json_path, $start_index, $acf_fiel
 
         $current_status['skipped'] = ($current_status['skipped'] ?? 0) + $skipped;
         $current_status['processed'] = ($current_status['processed'] ?? 0) + $processed_count;
-        $current_status['last_update'] = time();
+        $current_status['last_update'] = microtime(true);
         $current_status['logs'] = array_merge($current_status['logs'] ?? [], $logs);
         $current_status['logs'] = array_slice($current_status['logs'], -50);
 
@@ -805,7 +805,7 @@ add_action('puntwork_test_action_scheduler', function($test_timestamp) {
     // Simple test action that just logs completion
     PuntWorkLogger::debug('Action Scheduler test action executed successfully', PuntWorkLogger::CONTEXT_GENERAL, [
         'test_timestamp' => $test_timestamp,
-        'execution_time' => time()
+        'execution_time' => microtime(true)
     ]);
 }, 10, 1);
 

@@ -46,7 +46,7 @@ function finalize_batch_import($result) {
         'inferred_benefits' => 0,
         'schema_generated' => 0,
         'start_time' => $result['start_time'],
-        'last_update' => time(),
+        'last_update' => microtime(true),
         'logs' => [],
     ];
 
@@ -73,7 +73,7 @@ function finalize_batch_import($result) {
     $status['inferred_languages'] += $result['inferred_languages'] ?? 0;
     $status['inferred_benefits'] += $result['inferred_benefits'] ?? 0;
     $status['schema_generated'] += $result['schema_generated'] ?? 0;
-    $status['last_update'] = time();
+    $status['last_update'] = microtime(true);
 
     set_import_status($status);
 
@@ -88,7 +88,7 @@ function finalize_batch_import($result) {
             'updated' => $result['updated'] ?? 0,
             'skipped' => $result['skipped'] ?? 0,
             'error_message' => $result['message'] ?? '',
-            'timestamp' => time()
+            'timestamp' => microtime(true)
         ];
 
         // Import the function if not already available
@@ -315,7 +315,7 @@ function cleanup_old_job_posts($import_start_time) {
     $cleanup_start_status = get_import_status([]);
     $cleanup_start_status['cleanup_total'] = $total_old_posts;
     $cleanup_start_status['cleanup_processed'] = 0;
-    $cleanup_start_status['last_update'] = time();
+    $cleanup_start_status['last_update'] = microtime(true);
     set_import_status($cleanup_start_status);
 
     // Process deletions in batches with memory monitoring to avoid memory issues and timeouts
@@ -397,7 +397,7 @@ function cleanup_old_job_posts($import_start_time) {
         // Update progress every batch (every 100 deletions)
         $cleanup_progress_status = get_import_status([]);
         $cleanup_progress_status['cleanup_processed'] = $total_deleted;
-        $cleanup_progress_status['last_update'] = time();
+        $cleanup_progress_status['last_update'] = microtime(true);
         if (!is_array($cleanup_progress_status['logs'] ?? null)) {
             $cleanup_progress_status['logs'] = [];
         }
@@ -431,7 +431,7 @@ function cleanup_old_job_posts($import_start_time) {
     // Final cleanup status update
     $final_cleanup_status = get_import_status([]);
     $final_cleanup_status['cleanup_processed'] = $total_deleted;
-    $final_cleanup_status['last_update'] = time();
+    $final_cleanup_status['last_update'] = microtime(true);
     set_import_status($final_cleanup_status);
 
     PuntWorkLogger::info('Cleanup of old published job posts completed', PuntWorkLogger::CONTEXT_BATCH, [
