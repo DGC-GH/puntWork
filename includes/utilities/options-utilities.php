@@ -34,13 +34,78 @@ function set_import_status($status) {
     if (!is_array($status)) {
         $status = [];
     }
-    
+
     // Ensure logs is always an array
     if (!isset($status['logs']) || !is_array($status['logs'])) {
         $status['logs'] = [];
     }
-    
+
     update_option('job_import_status', $status, false);
+}
+
+/**
+ * Set import status with atomic locking to prevent race conditions in concurrent processing
+ *
+ * @param array $status The status array to set
+ * @param int $max_retries Maximum number of lock acquisition attempts (default: 5)
+ * @param int $lock_timeout_seconds How long to hold the lock (default: 10)
+ * @return bool True if status was updated, false if failed to acquire lock
+ */
+function set_import_status_atomic($status, $max_retries = 5, $lock_timeout_seconds = 10) {
+    // Ensure status is an array
+    if (!is_array($status)) {
+        $status = [];
+    }
+
+    // Ensure logs is always an array
+    if (!isset($status['logs']) || !is_array($status['logs'])) {
+        $status['logs'] = [];
+    }
+
+    $lock_key = 'job_import_status_lock';
+    $retry_count = 0;
+    $lock_acquired = false;
+
+    // Try to acquire lock with retries
+    while ($retry_count < $max_retries && !$lock_acquired) {
+        $lock_acquired = set_transient($lock_key, time(), $lock_timeout_seconds);
+
+        if (!$lock_acquired) {
+            // Lock is held by another process, wait and retry
+            $retry_count++;
+            if ($retry_count < $max_retries) {
+                usleep(rand(10000, 50000)); // Wait 10-50ms before retry
+            }
+        }
+    }
+
+    if (!$lock_acquired) {
+        // Failed to acquire lock after all retries
+        PuntWorkLogger::warning('Failed to acquire import status lock after retries', PuntWorkLogger::CONTEXT_GENERAL, [
+            'max_retries' => $max_retries,
+            'lock_timeout' => $lock_timeout_seconds,
+            'retry_count' => $retry_count
+        ]);
+        return false;
+    }
+
+    try {
+        // Lock acquired, safely update the status
+        update_option('job_import_status', $status, false);
+
+        PuntWorkLogger::debug('Import status updated atomically', PuntWorkLogger::CONTEXT_GENERAL, [
+            'processed' => $status['processed'] ?? 0,
+            'total' => $status['total'] ?? 0,
+            'published' => $status['published'] ?? 0,
+            'updated' => $status['updated'] ?? 0,
+            'skipped' => $status['skipped'] ?? 0
+        ]);
+
+        return true;
+    } finally {
+        // Always release the lock
+        delete_transient($lock_key);
+    }
 }
 
 /**
