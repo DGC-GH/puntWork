@@ -18,7 +18,7 @@ require_once plugin_dir_path(__FILE__) . '../utilities/options-utilities.php';
  */
 
 // Batch size configuration constants
-const DEFAULT_BATCH_SIZE = 50;
+const DEFAULT_BATCH_SIZE = 20;
 const MAX_BATCH_SIZE = 100;
 const MIN_BATCH_SIZE = 1;
 
@@ -87,17 +87,17 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
             // Very low memory usage - conservative batch size increase
             $consecutive_batches = get_consecutive_batches();
             if ($consecutive_batches < 3) {
-                // First 3 batches: 1.5x the batch size for gradual ramp-up
-                $new_size = min(MAX_BATCH_SIZE, $batch_size * 1.5);
+                // First 3 batches: 1.2x the batch size for gradual ramp-up
+                $new_size = min(MAX_BATCH_SIZE, $batch_size * 1.2);
             } elseif ($consecutive_batches < 6) {
-                // Next 3 batches: 1.3x increase
-                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.3));
+                // Next 3 batches: 1.15x increase
+                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.15));
             } else {
-                // After initial ramp-up: 1.2x increase
-                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.2));
+                // After initial ramp-up: 1.1x increase
+                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.1));
             }
             if ($new_size == $batch_size) {
-                $new_size = $batch_size + 5; // Ensure modest increase
+                $new_size = $batch_size + 3; // Ensure modest increase
             }
             $batch_size = $new_size;
             $memory_adjusted = true;
@@ -108,15 +108,15 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
                 'percentage_threshold' => 0.15,
                 'old_batch_size' => $old_batch_size,
                 'new_batch_size' => $batch_size,
-                'growth_factor' => $consecutive_batches < 3 ? 1.5 : ($consecutive_batches < 6 ? 1.3 : 1.2),
+                'growth_factor' => $consecutive_batches < 3 ? 1.2 : ($consecutive_batches < 6 ? 1.15 : 1.1),
                 'consecutive_batches' => $consecutive_batches,
                 'trigger_type' => $last_memory_bytes < $absolute_very_low_memory ? 'absolute' : 'percentage'
             ]);
         } elseif ($last_memory_bytes < $absolute_low_memory || $last_memory_ratio < 0.25) {
             // Low memory usage - moderate batch size increase
-            $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.2));
+            $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.1));
             if ($new_size == $batch_size) {
-                $new_size = $batch_size + 3; // Ensure modest increase
+                $new_size = $batch_size + 2; // Ensure modest increase
             }
             $batch_size = $new_size;
             $memory_adjusted = true;
@@ -127,14 +127,14 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
                 'percentage_threshold' => 0.25,
                 'old_batch_size' => $old_batch_size,
                 'new_batch_size' => $batch_size,
-                'growth_factor' => 1.2,
+                'growth_factor' => 1.1,
                 'trigger_type' => $last_memory_bytes < $absolute_low_memory ? 'absolute' : 'percentage'
             ]);
         } elseif ($last_memory_ratio < 0.40) {
             // Moderate low memory usage - slight batch size increase
-            $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.1));
+            $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.05));
             if ($new_size == $batch_size) {
-                $new_size = $batch_size + 2; // Ensure small increase
+                $new_size = $batch_size + 1; // Ensure small increase
             }
             $batch_size = $new_size;
             $memory_adjusted = true;
@@ -144,7 +144,7 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
                 'percentage_threshold' => 0.40,
                 'old_batch_size' => $old_batch_size,
                 'new_batch_size' => $batch_size,
-                'growth_factor' => 1.1
+                'growth_factor' => 1.05
             ]);
         }
 
@@ -166,56 +166,56 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
         if (!$time_adjusted && $has_previous_metrics && !$is_first_batch && $batch_size > 0) {
             $time_per_item = $current_batch_time / $batch_size;
 
-            // Enhanced performance thresholds for more aggressive optimization
-            if ($time_per_item <= 0.5) { // Excellent performance - very aggressive increase
-                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 2.0)); // Doubled from 1.5x
+            // Enhanced performance thresholds for more conservative optimization
+            if ($time_per_item <= 0.5) { // Excellent performance - moderate increase
+                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.4)); // Reduced from 2.0x
                 if ($new_size > $batch_size) {
                     $batch_size = $new_size;
-                    PuntWorkLogger::debug('Efficiency-based increase: excellent performance (very aggressive)', PuntWorkLogger::CONTEXT_BATCH, [
+                    PuntWorkLogger::debug('Efficiency-based increase: excellent performance (moderate)', PuntWorkLogger::CONTEXT_BATCH, [
                         'time_per_item' => $time_per_item,
                         'threshold' => 0.5,
                         'old_batch_size' => $old_batch_size,
                         'new_batch_size' => $batch_size,
-                        'growth_factor' => 2.0,
+                        'growth_factor' => 1.4,
                         'performance_rating' => 'excellent'
                     ]);
                 }
-            } elseif ($time_per_item <= 1.0) { // Very good performance - aggressive increase
-                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.8)); // Increased from 1.3x
+            } elseif ($time_per_item <= 1.0) { // Very good performance - slight increase
+                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.3)); // Reduced from 1.8x
                 if ($new_size > $batch_size) {
                     $batch_size = $new_size;
-                    PuntWorkLogger::debug('Efficiency-based increase: very good performance (aggressive)', PuntWorkLogger::CONTEXT_BATCH, [
+                    PuntWorkLogger::debug('Efficiency-based increase: very good performance (slight)', PuntWorkLogger::CONTEXT_BATCH, [
                         'time_per_item' => $time_per_item,
                         'threshold' => 1.0,
                         'old_batch_size' => $old_batch_size,
                         'new_batch_size' => $batch_size,
-                        'growth_factor' => 1.8,
+                        'growth_factor' => 1.3,
                         'performance_rating' => 'very_good'
                     ]);
                 }
-            } elseif ($time_per_item <= 1.5) { // Good performance - moderate increase
-                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.5)); // Increased from 1.2x
+            } elseif ($time_per_item <= 1.5) { // Good performance - minor increase
+                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.2)); // Reduced from 1.5x
                 if ($new_size > $batch_size) {
                     $batch_size = $new_size;
-                    PuntWorkLogger::debug('Efficiency-based increase: good performance (moderate)', PuntWorkLogger::CONTEXT_BATCH, [
+                    PuntWorkLogger::debug('Efficiency-based increase: good performance (minor)', PuntWorkLogger::CONTEXT_BATCH, [
                         'time_per_item' => $time_per_item,
                         'threshold' => 1.5,
                         'old_batch_size' => $old_batch_size,
                         'new_batch_size' => $batch_size,
-                        'growth_factor' => 1.5,
+                        'growth_factor' => 1.2,
                         'performance_rating' => 'good'
                     ]);
                 }
-            } elseif ($time_per_item <= 2.0) { // Moderate performance - slight increase
-                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.3)); // Increased from 1.1x
+            } elseif ($time_per_item <= 2.0) { // Moderate performance - very slight increase
+                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.15)); // Reduced from 1.3x
                 if ($new_size > $batch_size) {
                     $batch_size = $new_size;
-                    PuntWorkLogger::debug('Efficiency-based increase: moderate performance (slight)', PuntWorkLogger::CONTEXT_BATCH, [
+                    PuntWorkLogger::debug('Efficiency-based increase: moderate performance (very slight)', PuntWorkLogger::CONTEXT_BATCH, [
                         'time_per_item' => $time_per_item,
                         'threshold' => 2.0,
                         'old_batch_size' => $old_batch_size,
                         'new_batch_size' => $batch_size,
-                        'growth_factor' => 1.3,
+                        'growth_factor' => 1.15,
                         'performance_rating' => 'moderate'
                     ]);
                 }
@@ -301,51 +301,51 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
 
             // More aggressive ramp-up for stability and performance
             if ($consecutive_batches <= 3) {
-                // First 3 successful batches: 1.8x growth for faster initial scaling
-                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.8));
-                if ($new_size > $batch_size) {
-                    $batch_size = $new_size;
-                    PuntWorkLogger::debug('Adaptive learning: aggressive ramp-up (1.8x)', PuntWorkLogger::CONTEXT_BATCH, [
-                        'consecutive_batches' => $consecutive_batches,
-                        'old_batch_size' => $old_batch_size,
-                        'new_batch_size' => $batch_size,
-                        'growth_factor' => 1.8
-                    ]);
-                }
-            } elseif ($consecutive_batches <= 8) {
-                // Next 5 successful batches: 1.5x growth to continue aggressive scaling
-                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.5));
-                if ($new_size > $batch_size) {
-                    $batch_size = $new_size;
-                    PuntWorkLogger::debug('Adaptive learning: continued ramp-up (1.5x)', PuntWorkLogger::CONTEXT_BATCH, [
-                        'consecutive_batches' => $consecutive_batches,
-                        'old_batch_size' => $old_batch_size,
-                        'new_batch_size' => $batch_size,
-                        'growth_factor' => 1.5
-                    ]);
-                }
-            } elseif ($consecutive_batches <= 15) {
-                // Next 7 successful batches: 1.3x growth for sustained scaling
+                // First 3 successful batches: 1.3x growth for slower initial scaling
                 $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.3));
                 if ($new_size > $batch_size) {
                     $batch_size = $new_size;
-                    PuntWorkLogger::debug('Adaptive learning: sustained ramp-up (1.3x)', PuntWorkLogger::CONTEXT_BATCH, [
+                    PuntWorkLogger::debug('Adaptive learning: conservative ramp-up (1.3x)', PuntWorkLogger::CONTEXT_BATCH, [
                         'consecutive_batches' => $consecutive_batches,
                         'old_batch_size' => $old_batch_size,
                         'new_batch_size' => $batch_size,
                         'growth_factor' => 1.3
                     ]);
                 }
-            } elseif ($consecutive_batches % 5 == 0) {
-                // Every 5th successful batch beyond 15: 1.2x growth to maintain optimization
+            } elseif ($consecutive_batches <= 8) {
+                // Next 5 successful batches: 1.2x growth to continue moderate scaling
                 $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.2));
                 if ($new_size > $batch_size) {
                     $batch_size = $new_size;
-                    PuntWorkLogger::debug('Adaptive learning: maintenance ramp-up (1.2x)', PuntWorkLogger::CONTEXT_BATCH, [
+                    PuntWorkLogger::debug('Adaptive learning: continued ramp-up (1.2x)', PuntWorkLogger::CONTEXT_BATCH, [
                         'consecutive_batches' => $consecutive_batches,
                         'old_batch_size' => $old_batch_size,
                         'new_batch_size' => $batch_size,
                         'growth_factor' => 1.2
+                    ]);
+                }
+            } elseif ($consecutive_batches <= 15) {
+                // Next 7 successful batches: 1.15x growth for sustained scaling
+                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.15));
+                if ($new_size > $batch_size) {
+                    $batch_size = $new_size;
+                    PuntWorkLogger::debug('Adaptive learning: sustained ramp-up (1.15x)', PuntWorkLogger::CONTEXT_BATCH, [
+                        'consecutive_batches' => $consecutive_batches,
+                        'old_batch_size' => $old_batch_size,
+                        'new_batch_size' => $batch_size,
+                        'growth_factor' => 1.15
+                    ]);
+                }
+            } elseif ($consecutive_batches % 5 == 0) {
+                // Every 5th successful batch beyond 15: 1.1x growth to maintain optimization
+                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.1));
+                if ($new_size > $batch_size) {
+                    $batch_size = $new_size;
+                    PuntWorkLogger::debug('Adaptive learning: maintenance ramp-up (1.1x)', PuntWorkLogger::CONTEXT_BATCH, [
+                        'consecutive_batches' => $consecutive_batches,
+                        'old_batch_size' => $old_batch_size,
+                        'new_batch_size' => $batch_size,
+                        'growth_factor' => 1.1
                     ]);
                 }
             }
