@@ -428,13 +428,24 @@ function process_single_item_callback($guid, $json_path, $start_index, $acf_fiel
         }
         $current_status['logs'] = array_merge($current_status['logs'], $logs);
         $current_status['logs'] = array_slice($current_status['logs'], -50); // Keep last 50
-        set_import_status($current_status);
+
+        // Use atomic status update to prevent race conditions in concurrent processing
+        $status_updated = set_import_status_atomic($current_status);
+        if (!$status_updated) {
+            PuntWorkLogger::warning('Failed to update import status atomically for concurrent item', PuntWorkLogger::CONTEXT_BATCH, [
+                'guid' => $guid,
+                'processed_increment' => $processed_count,
+                'published_increment' => $published,
+                'updated_increment' => $updated,
+                'skipped_increment' => $skipped
+            ]);
+        }
 
         // NOTE: To enable item processing debug logs, define PUNTWORK_DEBUG_ITEM_PROCESSING as true in wp-config.php
         if (defined('PUNTWORK_DEBUG_ITEM_PROCESSING') && PUNTWORK_DEBUG_ITEM_PROCESSING) {
             PuntWorkLogger::debug('Import status updated with item results', PuntWorkLogger::CONTEXT_BATCH, [
                 'guid' => $guid,
-                'status_updated' => true
+                'status_updated' => $status_updated
             ]);
         }
 
@@ -481,7 +492,17 @@ function process_single_item_callback($guid, $json_path, $start_index, $acf_fiel
         $current_status['last_update'] = time();
         $current_status['logs'] = array_merge($current_status['logs'] ?? [], $logs);
         $current_status['logs'] = array_slice($current_status['logs'], -50);
-        set_import_status($current_status);
+
+        // Use atomic status update to prevent race conditions in concurrent processing
+        $status_updated = set_import_status_atomic($current_status);
+        if (!$status_updated) {
+            PuntWorkLogger::warning('Failed to update import status atomically for concurrent item error', PuntWorkLogger::CONTEXT_BATCH, [
+                'guid' => $guid,
+                'processed_increment' => $processed_count,
+                'skipped_increment' => $skipped,
+                'error' => true
+            ]);
+        }
     }
 }
 
