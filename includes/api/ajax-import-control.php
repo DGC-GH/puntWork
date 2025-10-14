@@ -307,6 +307,12 @@ function get_job_import_status_ajax() {
 
         // Only log AJAX response when import has meaningful progress to reduce log spam
         if ($total > 0 || $processed > 0 || $complete === true) {
+            $log_summary = [
+                'total' => $total,
+                'processed' => $processed,
+                'complete' => $complete,
+                'success' => $progress['success'] ?? false
+            ];
             send_ajax_success('get_job_import_status', $progress, $log_summary);
         } else {
             // For initial polling before import starts, just send response without logging
