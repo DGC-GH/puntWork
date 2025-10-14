@@ -308,7 +308,7 @@ function get_job_import_status_ajax() {
         // Only log AJAX response when import has meaningful progress to reduce log spam
         if ($total > 0 || $processed > 0 || $complete === true) {
             // Create sanitized log data that excludes the full logs array to reduce debug.log spam
-            $sanitized_log_data = $log_summary;
+            $sanitized_log_data = $progress;
             $sanitized_log_data['logs_count'] = count($progress['logs'] ?? []);
             $sanitized_log_data['last_log_entry'] = end($progress['logs'] ?? []);
             send_ajax_success('get_job_import_status', $progress, $sanitized_log_data);
