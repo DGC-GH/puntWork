@@ -22,6 +22,13 @@ function set_import_status($status) {
 }
 
 /**
+ * Delete import status
+ */
+function delete_import_status() {
+    delete_option('job_import_status');
+}
+
+/**
  * Get batch size with validation and defaults
  */
 function get_batch_size() {
