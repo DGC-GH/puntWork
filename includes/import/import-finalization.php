@@ -55,38 +55,38 @@ function finalize_batch_import($result) {
         $status['start_time'] = $result['start_time'] ?? microtime(true);
     }
 
-    $status['processed'] = $result['processed'];
-    $status['published'] += $result['published'];
-    $status['updated'] += $result['updated'];
-    $status['skipped'] += $result['skipped'];
-    $status['duplicates_drafted'] += $result['duplicates_drafted'];
+    $status['processed'] = $result['processed'] ?? 0;
+    $status['published'] += $result['published'] ?? 0;
+    $status['updated'] += $result['updated'] ?? 0;
+    $status['skipped'] += $result['skipped'] ?? 0;
+    $status['duplicates_drafted'] += $result['duplicates_drafted'] ?? 0;
 
     // Calculate total elapsed time from start to now
     $current_time = microtime(true);
     $total_elapsed = $current_time - $status['start_time'];
     $status['time_elapsed'] = $total_elapsed;
 
-    $status['complete'] = $result['complete'];
-    $status['success'] = $result['success']; // Set success status
+    $status['complete'] = $result['complete'] ?? false;
+    $status['success'] = $result['success'] ?? false; // Set success status
     $status['error_message'] = $result['message'] ?? ''; // Set error message if any
-    $status['batch_size'] = $result['batch_size'];
-    $status['inferred_languages'] += $result['inferred_languages'];
-    $status['inferred_benefits'] += $result['inferred_benefits'];
-    $status['schema_generated'] += $result['schema_generated'];
+    $status['batch_size'] = $result['batch_size'] ?? $status['batch_size'];
+    $status['inferred_languages'] += $result['inferred_languages'] ?? 0;
+    $status['inferred_benefits'] += $result['inferred_benefits'] ?? 0;
+    $status['schema_generated'] += $result['schema_generated'] ?? 0;
     $status['last_update'] = time();
 
     set_import_status($status);
 
     // Log completed manual imports to history (only when in AJAX context and import is complete)
-    if ($result['complete'] && $result['success'] && function_exists('wp_doing_ajax') && wp_doing_ajax()) {
+    if (($result['complete'] ?? false) && ($result['success'] ?? false) && function_exists('wp_doing_ajax') && wp_doing_ajax()) {
         $import_details = [
-            'success' => $result['success'],
+            'success' => $result['success'] ?? false,
             'duration' => $total_elapsed,
-            'processed' => $result['processed'],
-            'total' => $result['total'],
-            'published' => $result['published'],
-            'updated' => $result['updated'],
-            'skipped' => $result['skipped'],
+            'processed' => $result['processed'] ?? 0,
+            'total' => $result['total'] ?? 0,
+            'published' => $result['published'] ?? 0,
+            'updated' => $result['updated'] ?? 0,
+            'skipped' => $result['skipped'] ?? 0,
             'error_message' => $result['message'] ?? '',
             'timestamp' => time()
         ];
@@ -99,8 +99,8 @@ function finalize_batch_import($result) {
         \log_import_run($import_details, 'manual');
 
         PuntWorkLogger::info('Logged completed manual import to history', PuntWorkLogger::CONTEXT_BATCH, [
-            'processed' => $result['processed'],
-            'total' => $result['total'],
+            'processed' => $result['processed'] ?? 0,
+            'total' => $result['total'] ?? 0,
             'duration' => $total_elapsed
         ]);
     }
