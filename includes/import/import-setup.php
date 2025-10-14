@@ -77,10 +77,24 @@ function prepare_import_setup($batch_start = 0) {
     // Cache existing job GUIDs if not already cached
     if (false === get_existing_guids()) {
         error_log('[PUNTWORK] Starting GUID cache query...');
-        $all_jobs = $wpdb->get_results("SELECT p.ID, pm.meta_value AS guid FROM $wpdb->posts p JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = 'job' AND pm.meta_key = 'guid'");
-        error_log('[PUNTWORK] GUID cache query completed, found ' . count($all_jobs) . ' jobs');
-        set_existing_guids($all_jobs);
-        error_log('[PUNTWORK] GUID cache stored');
+        try {
+            $start_guid_query = microtime(true);
+            $all_jobs = $wpdb->get_results("SELECT p.ID, pm.meta_value AS guid FROM $wpdb->posts p JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = 'job' AND pm.meta_key = 'guid'");
+            $guid_query_time = microtime(true) - $start_guid_query;
+            error_log('[PUNTWORK] GUID cache query completed in ' . round($guid_query_time, 3) . ' seconds, found ' . count($all_jobs) . ' jobs');
+            
+            // Only cache if not too many jobs (to avoid memory issues)
+            if (count($all_jobs) > 10000) {
+                error_log('[PUNTWORK] Too many existing jobs (' . count($all_jobs) . ') - skipping GUID cache to avoid memory issues');
+                set_existing_guids([]); // Set empty array to avoid re-querying
+            } else {
+                set_existing_guids($all_jobs);
+                error_log('[PUNTWORK] GUID cache stored');
+            }
+        } catch (Exception $e) {
+            error_log('[PUNTWORK] GUID cache query failed: ' . $e->getMessage() . ' - continuing without cache');
+            set_existing_guids([]); // Set empty to avoid re-querying
+        }
     } else {
         error_log('[PUNTWORK] GUID cache already exists, skipping query');
     }
@@ -163,9 +177,18 @@ function prepare_import_setup($batch_start = 0) {
 function get_json_item_count($json_path) {
     error_log('[PUNTWORK] Starting JSONL item count for: ' . $json_path);
     $count = 0;
+    $start_time = microtime(true);
+    $max_time = 30; // 30 second timeout
+    
     if (($handle = fopen($json_path, "r")) !== false) {
         error_log('[PUNTWORK] JSONL file opened successfully');
         while (($line = fgets($handle)) !== false) {
+            // Check for timeout
+            if (microtime(true) - $start_time > $max_time) {
+                error_log('[PUNTWORK] JSONL count timed out after ' . round(microtime(true) - $start_time, 1) . ' seconds, counted ' . $count . ' items so far');
+                break;
+            }
+            
             $line = trim($line);
             if (!empty($line)) {
                 $item = json_decode($line, true);
@@ -179,7 +202,7 @@ function get_json_item_count($json_path) {
             }
         }
         fclose($handle);
-        error_log('[PUNTWORK] JSONL count completed: ' . $count . ' items');
+        error_log('[PUNTWORK] JSONL count completed: ' . $count . ' items in ' . round(microtime(true) - $start_time, 1) . ' seconds');
     } else {
         error_log('[PUNTWORK] Failed to open JSONL file: ' . $json_path);
     }

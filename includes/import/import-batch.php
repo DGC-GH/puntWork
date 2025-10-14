@@ -147,8 +147,30 @@ if (!function_exists('import_all_jobs_from_json')) {
             set_import_progress(0);
             error_log('[PUNTWORK] Resetting processed GUIDs...');
             set_processed_guids([]);
-            error_log('[PUNTWORK] Deleting import status...');
-            delete_import_status();
+            error_log('[PUNTWORK] Clearing import status instead of deleting...');
+            // Instead of deleting (which hangs), just update with fresh status
+            $fresh_status = [
+                'total' => 0,
+                'processed' => 0,
+                'published' => 0,
+                'updated' => 0,
+                'skipped' => 0,
+                'duplicates_drafted' => 0,
+                'time_elapsed' => 0,
+                'complete' => false,
+                'success' => false,
+                'error_message' => '',
+                'batch_size' => get_batch_size(),
+                'inferred_languages' => 0,
+                'inferred_benefits' => 0,
+                'schema_generated' => 0,
+                'start_time' => $start_time,
+                'end_time' => null,
+                'last_update' => time(),
+                'logs' => ['Fresh import started'],
+            ];
+            update_option('job_import_status', $fresh_status, false);
+            error_log('[PUNTWORK] Import status cleared and reset');
         }
 
         // Initialize import status for UI tracking (only if not preserving)
@@ -243,18 +265,29 @@ if (!function_exists('import_all_jobs_from_json')) {
             $batch_count++;
             error_log(sprintf('[PUNTWORK] Processing batch %d starting at index %d', $batch_count, $batch_start));
 
-            // Process this batch
-            $result = process_batch_items_logic($setup);
-
-            if (!$result['success']) {
-                $error_msg = 'Batch ' . $batch_count . ' failed: ' . ($result['message'] ?? 'Unknown error');
-                PuntWorkLogger::error('Import process failed during batch processing', PuntWorkLogger::CONTEXT_BATCH, [
+            try {
+                // Process this batch
+                $result = process_batch_items_logic($setup);
+                
+                if (!$result['success']) {
+                    $error_msg = 'Batch ' . $batch_count . ' failed: ' . ($result['message'] ?? 'Unknown error');
+                    PuntWorkLogger::error('Import process failed during batch processing', PuntWorkLogger::CONTEXT_BATCH, [
+                        'error' => $error_msg,
+                        'batch' => $batch_count,
+                        'batch_start' => $batch_start,
+                        'logs' => $result['logs'] ?? []
+                    ]);
+                    return ['success' => false, 'message' => $error_msg, 'logs' => $result['logs'] ?? []];
+                }
+            } catch (Exception $e) {
+                $error_msg = 'Exception in batch ' . $batch_count . ': ' . $e->getMessage();
+                PuntWorkLogger::error('Import process failed with exception', PuntWorkLogger::CONTEXT_BATCH, [
                     'error' => $error_msg,
                     'batch' => $batch_count,
                     'batch_start' => $batch_start,
-                    'logs' => $result['logs'] ?? []
+                    'trace' => $e->getTraceAsString()
                 ]);
-                return ['success' => false, 'message' => $error_msg, 'logs' => $result['logs'] ?? []];
+                return ['success' => false, 'message' => $error_msg, 'logs' => [$error_msg]];
             }
 
             // Accumulate results
