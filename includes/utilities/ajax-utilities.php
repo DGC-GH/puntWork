@@ -14,10 +14,13 @@ require_once __DIR__ . '/puntwork-logger.php';
  * Validates AJAX request security and permissions
  *
  * @param string $action_name The name of the AJAX action for logging
+ * @param bool $log_request Whether to log the AJAX request (default: true)
  * @return bool True if validation passes, false if it fails (response sent)
  */
-function validate_ajax_request($action_name) {
-    PuntWorkLogger::logAjaxRequest($action_name, $_POST);
+function validate_ajax_request($action_name, $log_request = true) {
+    if ($log_request) {
+        PuntWorkLogger::logAjaxRequest($action_name, $_POST);
+    }
 
     if (!check_ajax_referer('job_import_nonce', 'nonce', false)) {
         PuntWorkLogger::error('Nonce verification failed for ' . $action_name, PuntWorkLogger::CONTEXT_AJAX);
