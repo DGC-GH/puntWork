@@ -67,7 +67,14 @@ function prepare_import_setup($batch_start = 0) {
         return ['success' => false, 'message' => 'JSONL file not readable', 'logs' => ['JSONL file not readable']];
     }
 
-    $total = get_json_item_count($json_path);
+    // Check if total count is already cached in import status
+    $existing_status = get_import_status();
+    if ($existing_status && isset($existing_status['total']) && $existing_status['total'] > 0) {
+        $total = $existing_status['total'];
+        error_log('[PUNTWORK] Using cached total count: ' . $total . ' items');
+    } else {
+        $total = get_json_item_count($json_path);
+    }
 
     if ($total == 0) {
         error_log('JSONL file is empty or contains no valid items: ' . $json_path);
