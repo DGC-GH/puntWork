@@ -138,6 +138,7 @@ if (!function_exists('import_all_jobs_from_json')) {
         $batch_count = 0;
         $total_items = 0;
         $accumulated_time = 0; // Track total elapsed time across continuations
+        $all_action_ids = []; // Track all Action Scheduler action IDs for waiting
 
         // Get existing batch count if preserving status (resuming paused import)
         if ($preserve_status) {
@@ -414,6 +415,11 @@ if (!function_exists('import_all_jobs_from_json')) {
             $total_skipped += $result['skipped'] ?? 0;
             $total_duplicates_drafted += $result['duplicates_drafted'] ?? 0;
 
+            // Collect Action Scheduler action IDs for waiting
+            if (isset($result['action_ids']) && is_array($result['action_ids'])) {
+                $all_action_ids = array_merge($all_action_ids, $result['action_ids']);
+            }
+
             if (isset($result['logs']) && is_array($result['logs'])) {
                 $all_logs = array_merge($all_logs, $result['logs']);
             }
@@ -509,9 +515,71 @@ if (!function_exists('import_all_jobs_from_json')) {
         $end_time = microtime(true);
         $total_duration = $end_time - $start_time + $accumulated_time;
 
-        // Calculate overall performance metrics
-        $overall_time_per_item = $total_processed > 0 ? $total_duration / $total_processed : 0;
-        $overall_items_per_second = $overall_time_per_item > 0 ? 1 / $overall_time_per_item : 0;
+        // Wait for all concurrent Action Scheduler jobs to complete before marking import as complete
+        if (!empty($all_action_ids) && function_exists('ActionScheduler') && class_exists('ActionScheduler')) {
+            PuntWorkLogger::info('Waiting for concurrent processing to complete', PuntWorkLogger::CONTEXT_BATCH, [
+                'total_actions' => count($all_action_ids),
+                'action_ids_sample' => array_slice($all_action_ids, 0, 5)
+            ]);
+
+            // Wait for all actions to complete (with timeout)
+            $wait_start = microtime(true);
+            $max_wait_time = 300; // 5 minutes max wait
+            $check_interval = 2; // Check every 2 seconds
+            $all_complete = false;
+
+            while (!$all_complete && (microtime(true) - $wait_start) < $max_wait_time) {
+                $all_complete = true;
+                $pending_count = 0;
+                $completed_count = 0;
+
+                foreach ($all_action_ids as $action_id) {
+                    try {
+                        $action = ActionScheduler::store()->fetch_action($action_id);
+                        if ($action && !$action->is_finished()) {
+                            $all_complete = false;
+                            $pending_count++;
+                        } else {
+                            $completed_count++;
+                        }
+                    } catch (\Exception $e) {
+                        PuntWorkLogger::warning('Error checking action status', PuntWorkLogger::CONTEXT_BATCH, [
+                            'action_id' => $action_id,
+                            'error' => $e->getMessage()
+                        ]);
+                        // Assume completed on error to avoid infinite waiting
+                        $completed_count++;
+                    }
+                }
+
+                if (!$all_complete) {
+                    PuntWorkLogger::debug('Waiting for concurrent actions to complete', PuntWorkLogger::CONTEXT_BATCH, [
+                        'pending' => $pending_count,
+                        'completed' => $completed_count,
+                        'wait_time' => round(microtime(true) - $wait_start, 1)
+                    ]);
+                    sleep($check_interval);
+                }
+            }
+
+            if (!$all_complete) {
+                PuntWorkLogger::warning('Timeout waiting for concurrent actions to complete', PuntWorkLogger::CONTEXT_BATCH, [
+                    'total_actions' => count($all_action_ids),
+                    'wait_time' => round(microtime(true) - $wait_start, 1),
+                    'max_wait_time' => $max_wait_time
+                ]);
+            } else {
+                PuntWorkLogger::info('All concurrent actions completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
+                    'total_actions' => count($all_action_ids),
+                    'wait_time' => round(microtime(true) - $wait_start, 1)
+                ]);
+            }
+        } elseif (!empty($all_action_ids)) {
+            PuntWorkLogger::warning('Action Scheduler not available for waiting on concurrent actions', PuntWorkLogger::CONTEXT_BATCH, [
+                'total_actions' => count($all_action_ids),
+                'action_scheduler_available' => function_exists('ActionScheduler') && class_exists('ActionScheduler')
+            ]);
+        }
         
         error_log('[PUNTWORK] ===== IMPORT PERFORMANCE SUMMARY =====');
         error_log(sprintf('[PUNTWORK] Total import time: %.2f seconds', $total_duration));
