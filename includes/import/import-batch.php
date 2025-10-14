@@ -47,7 +47,7 @@ require_once __DIR__ . '/../core/core-structure-logic.php';
  */
 function import_time_exceeded() {
     $start_time = get_import_start_time(microtime(true));
-    $time_limit = apply_filters('puntwork_import_time_limit', 600); // 600 seconds (10 minutes) default - increased for better performance with large feeds
+    $time_limit = apply_filters('puntwork_import_time_limit', 300); // Reduced to 5 minutes for safety
     $current_time = microtime(true);
 
     if (($current_time - $start_time) >= $time_limit) {

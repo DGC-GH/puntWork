@@ -20,6 +20,9 @@ require_once plugin_dir_path(__FILE__) . '../utilities/retry-utility.php';
 // Include options utilities for centralized option management
 require_once __DIR__ . '/../utilities/options-utilities.php';
 
+// Include import batch utilities for timeout functions
+require_once __DIR__ . '/../import/import-batch.php';
+
 /**
  * Batch processing logic
  * Handles the core batch processing operations for job imports
@@ -148,6 +151,68 @@ function process_batch_items_logic($setup) {
         for ($i = 0; $i < count($batch_json_items); $i++) {
             try {
                 $current_index = $start_index + $i;
+
+                // CRITICAL: Check for timeouts during batch processing to prevent server kills
+                if ($i % 10 === 0) { // Check every 10 items
+                    if (import_time_exceeded() || import_memory_exceeded()) {
+                        PuntWorkLogger::warning('Timeout/memory limit detected mid-batch, saving progress', PuntWorkLogger::CONTEXT_BATCH, [
+                            'current_index' => $current_index,
+                            'items_processed_in_batch' => $items_processed_in_batch,
+                            'batch_size' => $batch_size,
+                            'time_exceeded' => import_time_exceeded(),
+                            'memory_exceeded' => import_memory_exceeded()
+                        ]);
+
+                        // Save partial progress before timeout
+                        $partial_processed = $start_index + $items_processed_in_batch;
+                        retry_option_operation(function() use ($partial_processed) {
+                            return set_import_progress($partial_processed);
+                        }, [], [
+                            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                            'operation' => 'save_partial_progress_timeout'
+                        ]);
+
+                        // Update status to show partial completion
+                        $timeout_status = get_import_status();
+                        $timeout_status['processed'] = $partial_processed;
+                        $timeout_status['last_update'] = time();
+                        $timeout_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Batch paused mid-processing due to time/memory limits at item ' . ($current_index + 1);
+                        set_import_status($timeout_status);
+
+                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch paused mid-processing due to limits - processed ' . $items_processed_in_batch . '/' . $batch_size . ' items in this batch';
+
+                        return [
+                            'success' => true,
+                            'processed' => $partial_processed,
+                            'total' => $total,
+                            'published' => $published,
+                            'updated' => $updated,
+                            'skipped' => $skipped,
+                            'duplicates_drafted' => $duplicates_drafted,
+                            'time_elapsed' => microtime(true) - $start_time,
+                            'complete' => false,
+                            'paused' => true,
+                            'pause_reason' => 'mid_batch_timeout',
+                            'logs' => $logs,
+                            'batch_size' => $batch_size,
+                            'inferred_languages' => $inferred_languages,
+                            'inferred_benefits' => $inferred_benefits,
+                            'schema_generated' => $schema_generated,
+                            'batch_time' => microtime(true) - $batch_start_time,
+                            'batch_processed' => $items_processed_in_batch,
+                            'message' => 'Batch paused mid-processing due to time/memory limits'
+                        ];
+                    }
+
+                    // HEARTBEAT: Update status every 10 items to prevent server timeout detection
+                    if ($i % 10 === 0) {
+                        $heartbeat_status = get_import_status();
+                        $heartbeat_status['last_update'] = time();
+                        $heartbeat_status['processed'] = $start_index + $items_processed_in_batch;
+                        $heartbeat_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Heartbeat: Processing item ' . ($current_index + 1) . '/' . $total;
+                        set_import_status($heartbeat_status);
+                    }
+                }
 
                 if (get_transient('import_cancel') === true) {
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Import cancelled at #' . ($current_index + 1);
