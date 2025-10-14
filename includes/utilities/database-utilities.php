@@ -246,9 +246,25 @@ function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$log
             'item_type' => gettype($item),
             'acf_fields_type' => gettype($acf_fields)
         ]);
-        foreach ($acf_fields as $field) {
+        foreach ($acf_fields as $field_index => $field) {
             try {
+                PuntWorkLogger::debug('Processing ACF field', PuntWorkLogger::CONTEXT_BATCH, [
+                    'post_id' => $post_id,
+                    'guid' => $guid,
+                    'field_index' => $field_index,
+                    'field' => $field,
+                    'field_type' => gettype($field)
+                ]);
+
                 $value = $item[$field] ?? '';
+                PuntWorkLogger::debug('ACF field value retrieved', PuntWorkLogger::CONTEXT_BATCH, [
+                    'post_id' => $post_id,
+                    'guid' => $guid,
+                    'field' => $field,
+                    'value_type' => gettype($value),
+                    'value_length' => is_string($value) ? strlen($value) : 'N/A'
+                ]);
+
                 $is_special = in_array($field, $zero_empty_fields);
                 $set_value = $is_special && $value === '0' ? '' : $value;
 
@@ -280,7 +296,9 @@ function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$log
                     'post_id' => $post_id,
                     'guid' => $guid,
                     'field' => $field,
-                    'error' => $t->getMessage()
+                    'field_index' => $field_index,
+                    'error' => $t->getMessage(),
+                    'trace' => $t->getTraceAsString()
                 ]);
                 // Continue with other fields
                 continue;
