@@ -617,12 +617,40 @@ function process_batch_data($batch_guids, $batch_items, $json_path, $start_index
 
     // Check if Action Scheduler is available for concurrent processing
     if (function_exists('as_schedule_single_action')) {
-        PuntWorkLogger::debug('Using concurrent processing with Action Scheduler', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::debug('Attempting concurrent processing with Action Scheduler', PuntWorkLogger::CONTEXT_BATCH, [
             'batch_guids_count' => count($batch_guids)
         ]);
         $result = process_batch_items_concurrent($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, $logs, $updated, $published, $skipped, $processed_count);
+
+        // VALIDATION: Check if concurrent processing failed validation and needs fallback
+        if (isset($result['success']) && $result['success'] === false && isset($result['fallback_to_sequential']) && $result['fallback_to_sequential']) {
+            PuntWorkLogger::warning('Concurrent processing validation failed, falling back to sequential processing', PuntWorkLogger::CONTEXT_BATCH, [
+                'error' => $result['error'] ?? 'Unknown validation error',
+                'issues' => $result['issues'] ?? [],
+                'recommendations' => $result['recommendations'] ?? [],
+                'scheduling_success_rate' => $result['scheduling_success_rate'] ?? null
+            ]);
+
+            // Log validation issues to the batch logs
+            if (isset($result['issues']) && is_array($result['issues'])) {
+                foreach ($result['issues'] as $issue) {
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Concurrent Processing Issue: ' . $issue;
+                }
+            }
+            if (isset($result['recommendations']) && is_array($result['recommendations'])) {
+                foreach ($result['recommendations'] as $recommendation) {
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Recommendation: ' . $recommendation;
+                }
+            }
+
+            // Fall back to sequential processing
+            PuntWorkLogger::info('Starting fallback sequential processing', PuntWorkLogger::CONTEXT_BATCH, [
+                'batch_guids_count' => count($batch_guids)
+            ]);
+            $result = process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, $logs, $updated, $published, $skipped, $processed_count);
+        }
     } else {
-        PuntWorkLogger::warning('Action Scheduler not available, falling back to sequential processing', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::warning('Action Scheduler not available, using sequential processing', PuntWorkLogger::CONTEXT_BATCH, [
             'batch_guids_count' => count($batch_guids)
         ]);
         $result = process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, $logs, $updated, $published, $skipped, $processed_count);
