@@ -120,11 +120,17 @@ function setup_job_import() {
         'import/import-finalization.php',
         'import/import-setup.php',
         'import/process-batch-items.php',
+        'import/process-batch-items-concurrent.php',
         'import/process-xml-batch.php',
-        'import/reset-import.php',
         
         // Utilities
+        'utilities/ajax-utilities.php',
+        'utilities/database-utilities.php',
+        'utilities/file-utilities.php',
+        'utilities/options-utilities.php',
+        'utilities/progress-utilities.php',
         'utilities/puntwork-logger.php',
+        'utilities/retry-utility.php',
         'utilities/gzip-file.php',
         'utilities/handle-duplicates.php',
         'utilities/heartbeat-control.php',
