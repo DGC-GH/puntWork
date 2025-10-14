@@ -94,6 +94,12 @@ function create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, &$log
             $value = $item[$field] ?? '';
             $is_special = in_array($field, $zero_empty_fields);
             $set_value = $is_special && $value === '0' ? '' : $value;
+
+            // Serialize arrays if needed
+            if (is_array($set_value)) {
+                $set_value = serialize($set_value);
+            }
+
             retry_database_operation(function() use ($post_id, $field, $set_value) {
                 return update_post_meta($post_id, $field, $set_value);
             }, [$post_id, $field, $set_value], [
@@ -196,6 +202,12 @@ function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$log
             $value = $item[$field] ?? '';
             $is_special = in_array($field, $zero_empty_fields);
             $set_value = $is_special && $value === '0' ? '' : $value;
+
+            // Serialize arrays if needed
+            if (is_array($set_value)) {
+                $set_value = serialize($set_value);
+            }
+
             retry_database_operation(function() use ($post_id, $field, $set_value) {
                 return update_post_meta($post_id, $field, $set_value);
             }, [$post_id, $field, $set_value], [
