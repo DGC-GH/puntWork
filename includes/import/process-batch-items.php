@@ -349,6 +349,7 @@ function batch_update_job_posts($posts_to_update, &$logs) {
             'post_status' => 'publish',
             'post_date' => $xml_validfrom,
             'post_modified' => $post_modified,
+            'guid' => $guid, // Add GUID for logging
         ];
 
         // Collect ACF field updates
@@ -356,6 +357,11 @@ function batch_update_job_posts($posts_to_update, &$logs) {
             $value = $item[$field] ?? '';
             $is_special = in_array($field, $zero_empty_fields);
             $set_value = $is_special && $value === '0' ? '' : $value;
+
+            // Serialize arrays if needed
+            if (is_array($set_value)) {
+                $set_value = serialize($set_value);
+            }
 
             $meta_updates[] = [
                 'post_id' => $post_id,
@@ -524,6 +530,11 @@ function batch_create_job_posts($posts_to_create, &$logs) {
             $value = $item[$field] ?? '';
             $is_special = in_array($field, $zero_empty_fields);
             $set_value = $is_special && $value === '0' ? '' : $value;
+
+            // Serialize arrays if needed
+            if (is_array($set_value)) {
+                $set_value = serialize($set_value);
+            }
 
             $meta_inserts[] = [
                 'post_id' => $post_id,
