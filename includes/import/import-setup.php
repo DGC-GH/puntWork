@@ -249,6 +249,13 @@ function get_json_item_count($json_path) {
             'file_path' => $json_path
         ]);
 
+        // Update import status to show counting is in progress
+        $current_status = get_import_status();
+        if ($current_status && isset($current_status['total']) && $current_status['total'] == 0) {
+            $current_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Counting items in feed file...';
+            set_import_status($current_status);
+        }
+
         while (($line = fgets($handle)) !== false) {
             // Check for timeout
             if (microtime(true) - $start_time > $max_time) {
@@ -268,8 +275,16 @@ function get_json_item_count($json_path) {
                     $count++;
                 }
             }
-            // Log progress every 1000 items
+
+            // Update status every 1000 items to show progress
             if ($count % 1000 === 0 && $count > 0) {
+                $current_status = get_import_status();
+                if ($current_status) {
+                    $current_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Counted ' . number_format($count) . ' items so far...';
+                    $current_status['last_update'] = time();
+                    set_import_status($current_status);
+                }
+
                 PuntWorkLogger::debug('JSONL counting progress milestone', PuntWorkLogger::CONTEXT_IMPORT, [
                     'items_counted' => $count,
                     'elapsed_seconds' => round(microtime(true) - $start_time, 1),
@@ -278,6 +293,16 @@ function get_json_item_count($json_path) {
             }
         }
         fclose($handle);
+
+        // Final status update with total count
+        $current_status = get_import_status();
+        if ($current_status) {
+            $current_status['total'] = $count;
+            $current_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Found ' . number_format($count) . ' total items to import';
+            $current_status['last_update'] = time();
+            set_import_status($current_status);
+        }
+
         PuntWorkLogger::info('JSONL count operation completed', PuntWorkLogger::CONTEXT_IMPORT, [
             'total_items' => $count,
             'elapsed_seconds' => round(microtime(true) - $start_time, 1),
