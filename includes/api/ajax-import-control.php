@@ -498,8 +498,10 @@ function get_active_scheduled_imports_ajax() {
         $active_imports = check_active_scheduled_imports();
 
         // Check scheduling settings
-        $schedule_enabled = get_option('job_import_schedule_enabled', false);
-        $schedule_frequency = get_option('job_import_schedule_frequency', 'daily');
+        $schedule_enabled = get_option('puntwork_import_schedule', ['enabled' => false]);
+        $schedule_enabled = $schedule_enabled['enabled'] ?? false;
+        $schedule_frequency = get_option('puntwork_import_schedule', ['frequency' => 'daily']);
+        $schedule_frequency = $schedule_frequency['frequency'] ?? 'daily';
 
         PuntWorkLogger::debug('Scheduling settings retrieved', PuntWorkLogger::CONTEXT_AJAX, [
             'schedule_enabled' => $schedule_enabled,
