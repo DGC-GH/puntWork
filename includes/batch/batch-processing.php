@@ -566,6 +566,12 @@ function process_batch_items_logic($setup) {
 function process_batch_data($batch_guids, $batch_items, $json_path, $start_index, &$logs, &$published, &$updated, &$skipped, &$duplicates_drafted) {
     global $wpdb;
 
+    // Ensure counter variables are integers to prevent type corruption
+    $published = is_int($published) ? $published : (int)$published;
+    $updated = is_int($updated) ? $updated : (int)$updated;
+    $skipped = is_int($skipped) ? $skipped : (int)$skipped;
+    $duplicates_drafted = is_int($duplicates_drafted) ? $duplicates_drafted : (int)$duplicates_drafted;
+
     // Bulk existing post_ids
     $guid_placeholders = implode(',', array_fill(0, count($batch_guids), '%s'));
     $existing_meta = $wpdb->get_results($wpdb->prepare(

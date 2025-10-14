@@ -273,6 +273,13 @@ if (!function_exists('process_batch_items')) {
 
         // SUCCESS RATE TRACKING: Calculate and update success metrics for sequential processing
         $total_items = count($batch_guids);
+        
+        // Ensure counter variables are integers to prevent type mismatch errors
+        $published = is_int($published) ? $published : (int)$published;
+        $updated = is_int($updated) ? $updated : (int)$updated;
+        $skipped = is_int($skipped) ? $skipped : (int)$skipped;
+        $processed_count = is_int($processed_count) ? $processed_count : (int)$processed_count;
+        
         $successful_operations = $published + $updated; // Items that were successfully created or updated
         $success_rate = $total_items > 0 ? $successful_operations / $total_items : 1.0;
 
