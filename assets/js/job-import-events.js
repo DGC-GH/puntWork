@@ -191,6 +191,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
          * Check initial import status on page load
          */
         checkInitialStatus: function() {
+            console.log('[PUNTWORK] === CHECKING INITIAL STATUS ===');
             // Clear progress first to ensure clean state
             JobImportUI.clearProgress();
 
@@ -206,10 +207,12 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
                 // Handle both response formats: direct data or wrapped in .data
                 var statusData = JobImportUI.normalizeResponseData(response);
+                console.log('[PUNTWORK] Normalized status data:', statusData);
 
                 // Check time since last update for detecting active imports
                 var currentTime = Math.floor(Date.now() / 1000);
                 var timeSinceLastUpdate = currentTime - (statusData.last_update || 0);
+                console.log('[PUNTWORK] Current time:', currentTime, 'Last update:', statusData.last_update, 'Time since update:', timeSinceLastUpdate);
 
                 // Determine if there's actually an incomplete import to resume
                 var hasIncompleteImport = response.success && (
@@ -218,26 +221,36 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     (!statusData.complete && statusData.total > 0) || // Incomplete with total set
                     (!statusData.complete && timeSinceLastUpdate < 600) // Incomplete and recently updated (for scheduled imports)
                 );
+                console.log('[PUNTWORK] Has incomplete import:', hasIncompleteImport, 'processed:', statusData.processed, 'complete:', statusData.complete, 'total:', statusData.total, 'resume_progress:', statusData.resume_progress);
 
                 // Check if scheduling is enabled to determine if we should consider scheduled imports
                 var isScheduledImport = false;
+                console.log('[PUNTWORK] Checking schedule status...');
                 JobImportAPI.call('get_import_schedule', {}, function(scheduleResponse) {
+                    console.log('[PUNTWORK] Schedule response:', scheduleResponse);
                     if (scheduleResponse.success && scheduleResponse.data.schedule) {
                         isScheduledImport = scheduleResponse.data.schedule.enabled;
+                        console.log('[PUNTWORK] Schedule enabled:', isScheduledImport);
                         
                         // For scheduled imports, also consider imports active if they have a start_time and are recent
                         if (isScheduledImport && !hasIncompleteImport) {
                             var hasRecentStartTime = statusData.start_time && (currentTime - statusData.start_time) < 3600; // Started within last hour
                             var isCountingPhase = statusData.start_time && statusData.total === 0 && !statusData.complete;
+                            console.log('[PUNTWORK] Checking scheduled import conditions - start_time:', statusData.start_time, 'hasRecentStartTime:', hasRecentStartTime, 'isCountingPhase:', isCountingPhase);
                             
                             if (hasRecentStartTime || isCountingPhase) {
                                 hasIncompleteImport = true;
                                 console.log('[PUNTWORK] Detected active scheduled import in counting phase or recently started');
                             }
                         }
+                    } else {
+                        console.log('[PUNTWORK] Schedule check failed or no schedule data');
                     }
 
+                    console.log('[PUNTWORK] Final decision - hasIncompleteImport:', hasIncompleteImport, 'isScheduledImport:', isScheduledImport);
+
                     if (hasIncompleteImport) {
+                        console.log('[PUNTWORK] Showing incomplete import UI');
                         JobImportUI.updateProgress(statusData);
                         JobImportUI.appendLogs(statusData.logs || []);
                         
@@ -246,6 +259,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         
                         // Check if import appears to be currently running (updated within last 5 minutes)
                         var isRecentlyActive = timeSinceLastUpdate < 300; // 5 minutes
+                        console.log('[PUNTWORK] Is recently active:', isRecentlyActive, 'timeSinceLastUpdate:', timeSinceLastUpdate);
                         
                         if (isRecentlyActive) {
                             // Import appears to be currently running - show progress UI with cancel and reset
@@ -260,6 +274,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             if (isScheduledImport) {
                                 $('#import-type-indicator').show();
                                 $('#import-type-text').text('Scheduled import is currently running');
+                                console.log('[PUNTWORK] Showing scheduled import indicator');
                             }
                             
                             console.log('[PUNTWORK] Import appears to be currently running - starting status polling');
@@ -296,7 +311,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         }
                     }
                 }).catch(function(scheduleError) {
-                    console.log('[PUNTWORK] Failed to get schedule status, assuming manual import mode');
+                    console.log('[PUNTWORK] Schedule check error:', scheduleError);
                     // Continue with manual import logic if schedule check fails
                     if (hasIncompleteImport) {
                         JobImportUI.updateProgress(statusData);
@@ -329,6 +344,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     }
                 });
             }).catch(function(xhr, status, error) {
+                console.log('[PUNTWORK] Initial status AJAX error:', error, 'xhr:', xhr, 'status:', status);
                 PuntWorkJSLogger.error('Initial status AJAX error', 'EVENTS', error);
                 JobImportUI.appendLogs(['Initial status AJAX error: ' + error]);
                 // Ensure UI is in clean state even on error
@@ -365,7 +381,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
          * Start polling for import status updates (used for scheduled imports and manual imports)
          */
         startStatusPolling: function() {
-            console.log('[PUNTWORK] JobImportEvents.startStatusPolling() called');
+            console.log('[PUNTWORK] === STARTING STATUS POLLING ===');
 
             // Clear any existing polling interval
             if (this.statusPollingInterval) {
@@ -409,6 +425,9 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             this.pollStatus = function() {
                 var now = Date.now();
                 var timeSinceLastLog = now - lastLogTime;
+                var pollCount = Math.floor((Date.now() - startTime) / JobImportEvents.currentPollingInterval);
+
+                console.log('[PUNTWORK] POLL #' + pollCount + ' - Interval: ' + JobImportEvents.currentPollingInterval + 'ms, Time since start: ' + Math.floor((now - startTime) / 1000) + 's');
 
                 // Only log every 10 seconds to reduce spam, or on significant events
                 if (timeSinceLastLog > 10000) {
@@ -433,6 +452,15 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         var currentProcessed = statusData.processed || 0;
                         var currentTotal = statusData.total || 0;
                         var serverLastModified = statusData.last_modified || 0;
+
+                        console.log('[PUNTWORK] Polling status data:', {
+                            processed: currentProcessed,
+                            total: currentTotal,
+                            complete: statusData.complete,
+                            start_time: statusData.start_time,
+                            last_update: statusData.last_update,
+                            pollCount: pollCount
+                        });
 
                         // Check if server data has actually changed since last poll
                         // Use a combination of last_modified and actual data changes to be more robust
@@ -494,24 +522,42 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         // Check if a scheduled import is running by looking at schedule status and import state
                         // Only check this periodically to avoid too many API calls
                         if (pollCount % 5 === 0) { // Check every 5 polls for more responsive detection
+                            console.log('[PUNTWORK] Checking for scheduled import at poll', pollCount, '- currentTotal:', currentTotal, 'complete:', statusData.complete, 'start_time:', statusData.start_time);
                             JobImportAPI.call('get_import_schedule', {}, function(scheduleResponse) {
+                                console.log('[PUNTWORK] Schedule check response:', scheduleResponse);
                                 if (scheduleResponse.success && scheduleResponse.data.schedule) {
                                     var isScheduledEnabled = scheduleResponse.data.schedule.enabled;
                                     var hasActiveImport = currentTotal > 0 && !statusData.complete;
                                     var hasRecentStartTime = statusData.start_time && (Date.now() / 1000 - statusData.start_time) < 3600; // Started within last hour
                                     var isCountingPhase = statusData.start_time && currentTotal === 0 && !statusData.complete;
                                     
+                                    console.log('[PUNTWORK] Schedule check details:', {
+                                        isScheduledEnabled: isScheduledEnabled,
+                                        hasActiveImport: hasActiveImport,
+                                        hasRecentStartTime: hasRecentStartTime,
+                                        isCountingPhase: isCountingPhase,
+                                        start_time: statusData.start_time,
+                                        currentTime: Date.now() / 1000,
+                                        timeDiff: Date.now() / 1000 - statusData.start_time
+                                    });
+                                    
                                     if (isScheduledEnabled && (hasActiveImport || hasRecentStartTime || isCountingPhase)) {
                                         $('#import-type-indicator').show();
                                         $('#import-type-text').text('Scheduled import is currently running');
+                                        console.log('[PUNTWORK] SHOWING scheduled import indicator');
                                     } else if (!isScheduledEnabled && hasActiveImport) {
                                         $('#import-type-indicator').show();
                                         $('#import-type-text').text('Manual import is currently running');
+                                        console.log('[PUNTWORK] SHOWING manual import indicator');
                                     } else {
                                         $('#import-type-indicator').hide();
+                                        console.log('[PUNTWORK] HIDING import type indicator');
                                     }
+                                } else {
+                                    console.log('[PUNTWORK] Schedule check failed');
                                 }
-                            }).catch(function() {
+                            }).catch(function(scheduleError) {
+                                console.log('[PUNTWORK] Schedule check error:', scheduleError);
                                 // Ignore schedule check errors, continue with polling
                             });
                         }
