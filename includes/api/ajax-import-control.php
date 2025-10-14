@@ -299,6 +299,114 @@ function reset_job_import_ajax() {
 add_action('wp_ajax_get_job_import_status', __NAMESPACE__ . '\\get_job_import_status_ajax');
 
 /**
+ * Check for active scheduled import jobs
+ */
+function check_active_scheduled_imports() {
+    $active_imports = [];
+
+    // Check for Action Scheduler jobs
+    if (function_exists('as_get_scheduled_actions')) {
+        // Check for pending scheduled import actions
+        $scheduled_actions = as_get_scheduled_actions([
+            'hook' => 'puntwork_scheduled_import',
+            'status' => \ActionScheduler_Store::STATUS_PENDING
+        ]);
+
+        if (!empty($scheduled_actions)) {
+            $active_imports['scheduled_pending'] = count($scheduled_actions);
+        }
+
+        // Check for running scheduled import actions
+        $running_actions = as_get_scheduled_actions([
+            'hook' => 'puntwork_scheduled_import',
+            'status' => \ActionScheduler_Store::STATUS_RUNNING
+        ]);
+
+        if (!empty($running_actions)) {
+            $active_imports['scheduled_running'] = count($running_actions);
+        }
+
+        // Check for continuation actions
+        $continuation_actions = as_get_scheduled_actions([
+            'hook' => 'puntwork_continue_import',
+            'status' => [\ActionScheduler_Store::STATUS_PENDING, \ActionScheduler_Store::STATUS_RUNNING]
+        ]);
+
+        if (!empty($continuation_actions)) {
+            $active_imports['continuation_jobs'] = count($continuation_actions);
+        }
+    }
+
+    // Check for async actions
+    if (function_exists('as_get_scheduled_actions')) {
+        $async_actions = as_get_scheduled_actions([
+            'hook' => 'puntwork_scheduled_import_async',
+            'status' => [\ActionScheduler_Store::STATUS_PENDING, \ActionScheduler_Store::STATUS_RUNNING]
+        ]);
+
+        if (!empty($async_actions)) {
+            $active_imports['async_scheduled'] = count($async_actions);
+        }
+    }
+
+    // Check WordPress cron for scheduled imports
+    $next_scheduled = wp_next_scheduled('puntwork_scheduled_import');
+    if ($next_scheduled) {
+        $active_imports['wp_cron_scheduled'] = $next_scheduled;
+    }
+
+    // Check if import is currently running (from status)
+    $import_status = get_import_status([]);
+    $is_running = isset($import_status['complete']) && !$import_status['complete'] && isset($import_status['start_time']);
+
+    if ($is_running) {
+        $active_imports['import_running'] = true;
+        $active_imports['running_details'] = [
+            'processed' => $import_status['processed'] ?? 0,
+            'total' => $import_status['total'] ?? 0,
+            'start_time' => $import_status['start_time'] ?? null
+        ];
+    }
+
+    return $active_imports;
+}
+
+add_action('wp_ajax_get_active_scheduled_imports', __NAMESPACE__ . '\\get_active_scheduled_imports_ajax');
+function get_active_scheduled_imports_ajax() {
+    if (!validate_ajax_request('get_active_scheduled_imports')) {
+        return;
+    }
+
+    try {
+        $active_imports = check_active_scheduled_imports();
+
+        // Check scheduling settings
+        $schedule_enabled = get_option('job_import_schedule_enabled', false);
+        $schedule_frequency = get_option('job_import_schedule_frequency', 'daily');
+
+        $response = [
+            'schedule_enabled' => $schedule_enabled,
+            'schedule_frequency' => $schedule_frequency,
+            'active_imports' => $active_imports,
+            'has_active_imports' => !empty($active_imports),
+            'last_checked' => time()
+        ];
+
+        PuntWorkLogger::debug('Active scheduled imports check', PuntWorkLogger::CONTEXT_AJAX, $response);
+
+        wp_send_json_success($response);
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Error checking active scheduled imports', PuntWorkLogger::CONTEXT_AJAX, [
+            'error_message' => $e->getMessage(),
+            'error_file' => $e->getFile(),
+            'error_line' => $e->getLine()
+        ]);
+        wp_send_json_error(['message' => 'Error checking scheduled imports status']);
+    }
+}
+
+/**
  * Calculate estimated time remaining for import completion
  *
  * @param array $status The current import status array
@@ -495,7 +603,7 @@ function get_job_import_status_ajax() {
                 'time_elapsed' => round($progress['time_elapsed'] ?? 0, 2),
                 'batch_count' => $progress['batch_count'] ?? 0,
                 'logs_count' => count($progress['logs'] ?? []),
-                'last_log_entry' => end($progress['logs'] ?? []) ?: null
+                'last_log_entry' => (!empty($progress['logs'])) ? end($progress['logs']) : null
             ];
 
             // Create a smaller response for the frontend to avoid JSON encoding issues with large data
