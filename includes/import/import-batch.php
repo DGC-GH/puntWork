@@ -108,6 +108,8 @@ if (!function_exists('import_jobs_from_json')) {
     function import_jobs_from_json($is_batch = false, $batch_start = 0) {
         $setup = prepare_import_setup($batch_start);
         if (is_wp_error($setup)) {
+            // Resume cache invalidation on setup failure
+            wp_resume_cache_invalidation();
             return ['success' => false, 'message' => $setup->get_error_message(), 'logs' => ['Setup failed: ' . $setup->get_error_message()]];
         }
         if (isset($setup['success'])) {
@@ -350,6 +352,8 @@ if (!function_exists('import_all_jobs_from_json')) {
                     'error' => $error_msg,
                     'batch_start' => $batch_start
                 ]);
+                // Resume cache invalidation on setup failure
+                wp_resume_cache_invalidation();
                 return ['success' => false, 'message' => $error_msg, 'logs' => [$error_msg]];
             }
 
@@ -405,6 +409,8 @@ if (!function_exists('import_all_jobs_from_json')) {
                     'batch_start' => $batch_start,
                     'trace' => $e->getTraceAsString()
                 ]);
+                // Resume cache invalidation on batch exception
+                wp_resume_cache_invalidation();
                 return ['success' => false, 'message' => $error_msg, 'logs' => [$error_msg]];
             }
 
@@ -505,6 +511,8 @@ if (!function_exists('import_all_jobs_from_json')) {
                     'total_items' => $total_items,
                     'processed' => $total_processed
                 ]);
+                // Resume cache invalidation on infinite loop detection
+                wp_resume_cache_invalidation();
                 return ['success' => false, 'message' => $error_msg, 'logs' => $all_logs];
             }
 
@@ -744,6 +752,9 @@ if (!function_exists('import_all_jobs_from_json')) {
             wp_cache_flush();
         }
 
+        // Resume cache invalidation that was suspended at import start
+        wp_resume_cache_invalidation();
+
         return finalize_batch_import($final_result);
         } catch (Exception $e) {
             $fatal_error = 'Fatal error in import_all_jobs_from_json: ' . $e->getMessage();
@@ -772,6 +783,9 @@ if (!function_exists('import_all_jobs_from_json')) {
             }
             $failed_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] FATAL ERROR: ' . $fatal_error;
             set_import_status($failed_status);
+            
+            // Resume cache invalidation even on fatal error
+            wp_resume_cache_invalidation();
             
             return ['success' => false, 'message' => $fatal_error, 'logs' => [$fatal_error]];
         }
