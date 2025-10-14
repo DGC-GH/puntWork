@@ -247,8 +247,13 @@
                     throw new Error('Failed to start import: ' + (startResponse.message || 'Unknown error'));
                 }
 
+                // Start status polling for real-time updates
+                if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
+                    window.JobImportEvents.startStatusPolling();
+                }
+
                 // The import is now running asynchronously
-                // Status polling removed - user must manually refresh to check progress
+                // Status polling will provide real-time progress updates
 
             } catch (error) {
                 PuntWorkJSLogger.error('Start import error', 'LOGIC', error);
