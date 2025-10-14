@@ -192,7 +192,6 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
          */
         checkInitialStatus: function() {
             console.log('[PUNTWORK] === CHECKING INITIAL STATUS === NEW ENHANCED CODE IS RUNNING ===');
-            alert('NEW ENHANCED JAVASCRIPT CODE IS LOADING - VERSION 1.1.1');
             // Clear progress first to ensure clean state
             JobImportUI.clearProgress();
 
@@ -217,12 +216,12 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
                 // Determine if there's actually an incomplete import to resume
                 var hasIncompleteImport = response.success && (
-                    (statusData.processed > 0 && !statusData.complete) || // Partially completed import
+                    (statusData.processed > 0 && !statusData.complete) || // Partially completed import OR counting phase
                     (statusData.resume_progress > 0) || // Has resume progress
                     (!statusData.complete && statusData.total > 0) || // Incomplete with total set
                     (!statusData.complete && timeSinceLastUpdate < 600) // Incomplete and recently updated (for scheduled imports)
                 );
-                console.log('[PUNTWORK] Has incomplete import:', hasIncompleteImport, 'processed:', statusData.processed, 'complete:', statusData.complete, 'total:', statusData.total, 'resume_progress:', statusData.resume_progress);
+                console.log('[PUNTWORK] Has incomplete import:', hasIncompleteImport, 'processed:', statusData.processed, 'complete:', statusData.complete, 'total:', statusData.total, 'resume_progress:', statusData.resume_progress, 'is_counting_phase:', (statusData.total === 0 && statusData.processed > 0 && !statusData.complete));
 
                 // Check if scheduling is enabled and for active scheduled imports
                 var isScheduledImport = false;
@@ -268,8 +267,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     // For scheduled imports, also consider imports active if they have a start_time and are recent
                     if (isScheduledImport && !hasIncompleteImport) {
                         var hasRecentStartTime = statusData.start_time && (currentTime - statusData.start_time) < 3600; // Started within last hour
-                        var isCountingPhase = statusData.start_time && statusData.total === 0 && !statusData.complete;
-                        console.log('[PUNTWORK] Checking scheduled import conditions - start_time:', statusData.start_time, 'hasRecentStartTime:', hasRecentStartTime, 'isCountingPhase:', isCountingPhase);
+                        var isCountingPhase = statusData.start_time && statusData.total === 0 && !statusData.complete && statusData.processed > 0; // Counting phase with processed items
+                        console.log('[PUNTWORK] Checking scheduled import conditions - start_time:', statusData.start_time, 'hasRecentStartTime:', hasRecentStartTime, 'isCountingPhase:', isCountingPhase, 'processed:', statusData.processed);
 
                         if (hasRecentStartTime || isCountingPhase) {
                             hasIncompleteImport = true;
@@ -540,14 +539,20 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         if (timeSinceLastLog > 10000) {
                             console.log('[PUNTWORK] Polling debug - startTime:', startTime, 'pollCount:', pollCount, 'isEarlyPoll:', isEarlyPoll);
                         }
-                        
-                        if (currentTotal === 0) {
+
+                        // Don't count as "zero total" if we're actively processing items (counting phase)
+                        var isActivelyProcessing = currentProcessed > 0 && currentProcessed !== JobImportEvents.lastProcessedCount;
+
+                        if (currentTotal === 0 && !isActivelyProcessing) {
                             totalZeroCount++;
                             if (timeSinceLastLog > 10000) {
-                                console.log('[PUNTWORK] Import total still 0, count:', totalZeroCount, 'early poll:', isEarlyPoll);
+                                console.log('[PUNTWORK] Import total still 0 and not actively processing, count:', totalZeroCount, 'early poll:', isEarlyPoll);
                             }
                         } else {
                             totalZeroCount = 0;
+                            if (timeSinceLastLog > 10000 && currentTotal === 0 && isActivelyProcessing) {
+                                console.log('[PUNTWORK] Import in counting phase (total=0 but processing active), resetting zero count');
+                            }
                         }
 
                         // Stop polling if total has been 0 for too many polls
@@ -558,7 +563,11 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             PuntWorkJSLogger.warn('Import failed to start, stopping polling', 'EVENTS', {
                                 totalZeroCount: totalZeroCount,
                                 effectiveMaxZeroPolls: effectiveMaxZeroPolls,
-                                isEarlyPoll: isEarlyPoll
+                                isEarlyPoll: isEarlyPoll,
+                                currentProcessed: currentProcessed,
+                                currentTotal: currentTotal,
+                                lastProcessedCount: JobImportEvents.lastProcessedCount,
+                                isActivelyProcessing: currentProcessed > 0 && currentProcessed !== JobImportEvents.lastProcessedCount
                             });
                             JobImportEvents.stopStatusPolling();
                             JobImportUI.resetButtons();
@@ -595,10 +604,11 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                                 hasActiveScheduledImports = pollActiveImportsData.data.has_active_imports;
                             }
 
-                            var hasActiveImport = currentTotal > 0 && !statusData.complete;
+                            var hasActiveImport = (currentTotal > 0 && !statusData.complete) || (currentTotal === 0 && currentProcessed > 0 && !statusData.complete);
                             var hasRecentStartTime = statusData.start_time && (Date.now() / 1000 - statusData.start_time) < 3600; // Started within last hour
-                            var isCountingPhase = statusData.start_time && currentTotal === 0 && !statusData.complete;
-                            var isLikelyScheduledImport = hasActiveImport && statusData.start_time && isScheduledEnabled && (Date.now() / 1000 - statusData.start_time) < 7200; // Within last 2 hours
+                            var isCountingPhase = statusData.start_time && currentTotal === 0 && !statusData.complete && currentProcessed > 0;
+                            var isLikelyScheduledImport = ((hasActiveImport && statusData.start_time && isScheduledEnabled && (Date.now() / 1000 - statusData.start_time) < 7200) || // Within last 2 hours
+                                                          (isCountingPhase && isScheduledEnabled)); // Counting phase for scheduled imports
 
                             console.log('[PUNTWORK] Poll schedule check details:', {
                                 isScheduledEnabled: isScheduledEnabled,
@@ -617,6 +627,16 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             if (isLikelyScheduledImport || hasActiveScheduledImports) {
                                 importType = 'scheduled';
                             }
+
+                            console.log('[PUNTWORK] Poll import type determination:', {
+                                importType: importType,
+                                isLikelyScheduledImport: isLikelyScheduledImport,
+                                hasActiveScheduledImports: hasActiveScheduledImports,
+                                hasActiveImport: hasActiveImport,
+                                isCountingPhase: isCountingPhase,
+                                currentProcessed: currentProcessed,
+                                currentTotal: currentTotal
+                            });
 
                             if (importType === 'scheduled') {
                                 $('#import-type-indicator').show();
@@ -725,23 +745,24 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         }
 
                         // Update UI with progress data (including final completion status)
-                        if (currentTotal > 0) {
-                            // Only update UI if we have meaningful progress data
+                        var isCountingPhase = currentTotal === 0 && currentProcessed > 0 && !statusData.complete;
+
+                        if (currentTotal > 0 || isCountingPhase) {
+                            // Only update UI if we have meaningful progress data or are in counting phase
                             if (timeSinceLastLog > 10000 || currentProcessed !== JobImportEvents.lastProcessedCount) {
-                                console.log('[PUNTWORK] Updating progress with polling data:', {
-                                    total: currentTotal,
-                                    processed: currentProcessed,
-                                    percent: Math.round((currentProcessed / currentTotal) * 100)
-                                });
+                                var progressText = currentTotal > 0 ?
+                                    'total: ' + currentTotal + ', processed: ' + currentProcessed + ', percent: ' + Math.round((currentProcessed / currentTotal) * 100) :
+                                    'Counting items... processed: ' + currentProcessed;
+                                console.log('[PUNTWORK] Updating progress with polling data:', progressText);
                             }
                             JobImportUI.updateProgress(statusData);
                             JobImportUI.appendLogs(statusData.logs || []);
                             isStartingNewImport = false;
                             hasSeenImportRunning = true;
-                        } else if (currentTotal === 0 && !statusData.complete) {
+                        } else if (currentTotal === 0 && !statusData.complete && currentProcessed === 0) {
                             // Import hasn't started yet, keep polling
                             if (timeSinceLastLog > 10000) {
-                                console.log('[PUNTWORK] Import not yet started (total=0), continuing to poll');
+                                console.log('[PUNTWORK] Import not yet started (total=0, processed=0), continuing to poll');
                             }
                         }
 
