@@ -34,6 +34,7 @@ class PuntWorkLogger {
     const CONTEXT_UI = 'UI';
     const CONTEXT_SYSTEM = 'SYSTEM';
     const CONTEXT_IMPORT = 'IMPORT';
+    const CONTEXT_SCHEDULING = 'SCHEDULING';
 
     /**
      * Log a debug message
