@@ -106,7 +106,11 @@ function run_job_import_batch_ajax() {
         error_log('[PUNTWORK] Cleared import_cancel transient for manual run');
 
         // Schedule the import to run asynchronously (same as scheduled imports)
-        if (function_exists('as_schedule_single_action')) {
+        if (function_exists('as_enqueue_async_action')) {
+            // Use Action Scheduler async action for immediate execution
+            error_log('[PUNTWORK] Enqueueing async manual import using Action Scheduler (immediate execution)');
+            as_enqueue_async_action('puntwork_manual_import_async');
+        } elseif (function_exists('as_schedule_single_action')) {
             // Use Action Scheduler if available
             error_log('[PUNTWORK] Scheduling async manual import using Action Scheduler');
             as_schedule_single_action(time(), 'puntwork_manual_import_async');
