@@ -346,7 +346,7 @@ function enqueue_job_import_scripts() {
             'puntwork-logger-js',
             PUNTWORK_URL . 'assets/js/puntwork-logger.js',
             ['jquery'],
-            PUNTWORK_VERSION,
+            PUNTWORK_VERSION . '.' . time(), // Add timestamp for cache busting
             true
         );
 
@@ -354,7 +354,7 @@ function enqueue_job_import_scripts() {
             'job-import-ui-js',
             PUNTWORK_URL . 'assets/js/job-import-ui.js',
             ['jquery', 'puntwork-logger-js'],
-            PUNTWORK_VERSION,
+            PUNTWORK_VERSION . '.' . time(), // Add timestamp for cache busting
             true
         );
 
@@ -362,7 +362,7 @@ function enqueue_job_import_scripts() {
             'job-import-api-js',
             PUNTWORK_URL . 'assets/js/job-import-api.js',
             ['jquery', 'puntwork-logger-js'],
-            PUNTWORK_VERSION,
+            PUNTWORK_VERSION . '.' . time(), // Add timestamp for cache busting
             true
         );
 
@@ -370,7 +370,7 @@ function enqueue_job_import_scripts() {
             'job-import-logic-js',
             PUNTWORK_URL . 'assets/js/job-import-logic.js',
             ['jquery', 'job-import-api-js', 'puntwork-logger-js'],
-            PUNTWORK_VERSION,
+            PUNTWORK_VERSION . '.' . time(), // Add timestamp for cache busting
             true
         );
 
@@ -378,7 +378,7 @@ function enqueue_job_import_scripts() {
             'job-import-events-js',
             PUNTWORK_URL . 'assets/js/job-import-events.js',
             ['jquery', 'puntwork-logger-js', 'job-import-ui-js', 'job-import-api-js', 'job-import-logic-js'],
-            PUNTWORK_VERSION,
+            PUNTWORK_VERSION . '.' . time(), // Add timestamp for cache busting
             true
         );
 
@@ -386,7 +386,7 @@ function enqueue_job_import_scripts() {
             'job-import-scheduling-js',
             PUNTWORK_URL . 'assets/js/job-import-scheduling.js',
             ['jquery', 'puntwork-logger-js', 'job-import-api-js'],
-            PUNTWORK_VERSION,
+            PUNTWORK_VERSION . '.' . time(), // Add timestamp for cache busting
             true
         );
 
@@ -395,7 +395,7 @@ function enqueue_job_import_scripts() {
             'job-import-admin-js',
             PUNTWORK_URL . 'assets/js/job-import-admin.js',
             ['jquery', 'job-import-ui-js', 'job-import-api-js', 'job-import-logic-js', 'job-import-events-js', 'job-import-scheduling-js', 'puntwork-logger-js'],
-            PUNTWORK_VERSION,
+            PUNTWORK_VERSION . '.' . time(), // Add timestamp for cache busting
             true
         );
 
