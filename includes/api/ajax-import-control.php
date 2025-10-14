@@ -304,60 +304,140 @@ add_action('wp_ajax_get_job_import_status', __NAMESPACE__ . '\\get_job_import_st
 function check_active_scheduled_imports() {
     $active_imports = [];
 
+    PuntWorkLogger::debug('Checking for active scheduled imports', PuntWorkLogger::CONTEXT_AJAX);
+
     // Check for Action Scheduler jobs
     if (function_exists('as_get_scheduled_actions')) {
-        // Check for pending scheduled import actions
-        $scheduled_actions = as_get_scheduled_actions([
-            'hook' => 'puntwork_scheduled_import',
-            'status' => \ActionScheduler_Store::STATUS_PENDING
-        ]);
+        PuntWorkLogger::debug('Action Scheduler available, checking for scheduled import jobs', PuntWorkLogger::CONTEXT_AJAX);
 
-        if (!empty($scheduled_actions)) {
-            $active_imports['scheduled_pending'] = count($scheduled_actions);
+        // Check for pending scheduled import actions
+        try {
+            $scheduled_actions = as_get_scheduled_actions([
+                'hook' => 'puntwork_scheduled_import',
+                'status' => \ActionScheduler_Store::STATUS_PENDING
+            ]);
+            PuntWorkLogger::debug('Found pending scheduled import actions', PuntWorkLogger::CONTEXT_AJAX, [
+                'count' => count($scheduled_actions),
+                'actions' => array_map(function($action) {
+                    return [
+                        'id' => $action->get_schedule()->get_date()->getTimestamp(),
+                        'next_run' => $action->get_schedule()->get_date()->format('Y-m-d H:i:s'),
+                        'args' => $action->get_args()
+                    ];
+                }, $scheduled_actions)
+            ]);
+            if (!empty($scheduled_actions)) {
+                $active_imports['scheduled_pending'] = count($scheduled_actions);
+            }
+        } catch (\Exception $e) {
+            PuntWorkLogger::error('Error checking pending scheduled import actions', PuntWorkLogger::CONTEXT_AJAX, [
+                'error' => $e->getMessage()
+            ]);
         }
 
         // Check for running scheduled import actions
-        $running_actions = as_get_scheduled_actions([
-            'hook' => 'puntwork_scheduled_import',
-            'status' => \ActionScheduler_Store::STATUS_RUNNING
-        ]);
-
-        if (!empty($running_actions)) {
-            $active_imports['scheduled_running'] = count($running_actions);
+        try {
+            $running_actions = as_get_scheduled_actions([
+                'hook' => 'puntwork_scheduled_import',
+                'status' => \ActionScheduler_Store::STATUS_RUNNING
+            ]);
+            PuntWorkLogger::debug('Found running scheduled import actions', PuntWorkLogger::CONTEXT_AJAX, [
+                'count' => count($running_actions),
+                'actions' => array_map(function($action) {
+                    return [
+                        'id' => $action->get_id(),
+                        'started' => $action->get_schedule()->get_date()->format('Y-m-d H:i:s'),
+                        'args' => $action->get_args()
+                    ];
+                }, $running_actions)
+            ]);
+            if (!empty($running_actions)) {
+                $active_imports['scheduled_running'] = count($running_actions);
+            }
+        } catch (\Exception $e) {
+            PuntWorkLogger::error('Error checking running scheduled import actions', PuntWorkLogger::CONTEXT_AJAX, [
+                'error' => $e->getMessage()
+            ]);
         }
 
         // Check for continuation actions
-        $continuation_actions = as_get_scheduled_actions([
-            'hook' => 'puntwork_continue_import',
-            'status' => [\ActionScheduler_Store::STATUS_PENDING, \ActionScheduler_Store::STATUS_RUNNING]
-        ]);
-
-        if (!empty($continuation_actions)) {
-            $active_imports['continuation_jobs'] = count($continuation_actions);
+        try {
+            $continuation_actions = as_get_scheduled_actions([
+                'hook' => 'puntwork_continue_import',
+                'status' => [\ActionScheduler_Store::STATUS_PENDING, \ActionScheduler_Store::STATUS_RUNNING]
+            ]);
+            PuntWorkLogger::debug('Found continuation import actions', PuntWorkLogger::CONTEXT_AJAX, [
+                'count' => count($continuation_actions),
+                'actions' => array_map(function($action) {
+                    return [
+                        'id' => $action->get_id(),
+                        'status' => $action->get_status(),
+                        'scheduled' => $action->get_schedule()->get_date()->format('Y-m-d H:i:s'),
+                        'args' => $action->get_args()
+                    ];
+                }, $continuation_actions)
+            ]);
+            if (!empty($continuation_actions)) {
+                $active_imports['continuation_jobs'] = count($continuation_actions);
+            }
+        } catch (\Exception $e) {
+            PuntWorkLogger::error('Error checking continuation import actions', PuntWorkLogger::CONTEXT_AJAX, [
+                'error' => $e->getMessage()
+            ]);
         }
+
+        // Check for async actions
+        try {
+            $async_actions = as_get_scheduled_actions([
+                'hook' => 'puntwork_scheduled_import_async',
+                'status' => [\ActionScheduler_Store::STATUS_PENDING, \ActionScheduler_Store::STATUS_RUNNING]
+            ]);
+            PuntWorkLogger::debug('Found async scheduled import actions', PuntWorkLogger::CONTEXT_AJAX, [
+                'count' => count($async_actions),
+                'actions' => array_map(function($action) {
+                    return [
+                        'id' => $action->get_id(),
+                        'status' => $action->get_status(),
+                        'scheduled' => $action->get_schedule()->get_date()->format('Y-m-d H:i:s'),
+                        'args' => $action->get_args()
+                    ];
+                }, $async_actions)
+            ]);
+            if (!empty($async_actions)) {
+                $active_imports['async_scheduled'] = count($async_actions);
+            }
+        } catch (\Exception $e) {
+            PuntWorkLogger::error('Error checking async scheduled import actions', PuntWorkLogger::CONTEXT_AJAX, [
+                'error' => $e->getMessage()
+            ]);
+        }
+    } else {
+        PuntWorkLogger::warn('Action Scheduler not available for checking scheduled imports', PuntWorkLogger::CONTEXT_AJAX);
     }
 
-    // Check for async actions
-    if (function_exists('as_get_scheduled_actions')) {
-        $async_actions = as_get_scheduled_actions([
-            'hook' => 'puntwork_scheduled_import_async',
-            'status' => [\ActionScheduler_Store::STATUS_PENDING, \ActionScheduler_Store::STATUS_RUNNING]
-        ]);
-
-        if (!empty($async_actions)) {
-            $active_imports['async_scheduled'] = count($async_actions);
-        }
-    }
-
-    // Check WordPress cron for scheduled imports
+    // Check for WordPress cron for scheduled imports
     $next_scheduled = wp_next_scheduled('puntwork_scheduled_import');
     if ($next_scheduled) {
+        PuntWorkLogger::debug('Found WordPress cron scheduled import', PuntWorkLogger::CONTEXT_AJAX, [
+            'next_run_timestamp' => $next_scheduled,
+            'next_run_formatted' => date('Y-m-d H:i:s', $next_scheduled)
+        ]);
         $active_imports['wp_cron_scheduled'] = $next_scheduled;
+    } else {
+        PuntWorkLogger::debug('No WordPress cron scheduled import found', PuntWorkLogger::CONTEXT_AJAX);
     }
 
     // Check if import is currently running (from status)
     $import_status = get_import_status([]);
     $is_running = isset($import_status['complete']) && !$import_status['complete'] && isset($import_status['start_time']);
+
+    PuntWorkLogger::debug('Current import status check', PuntWorkLogger::CONTEXT_AJAX, [
+        'is_running' => $is_running,
+        'complete' => $import_status['complete'] ?? 'undefined',
+        'start_time' => $import_status['start_time'] ?? 'undefined',
+        'processed' => $import_status['processed'] ?? 0,
+        'total' => $import_status['total'] ?? 0
+    ]);
 
     if ($is_running) {
         $active_imports['import_running'] = true;
@@ -368,6 +448,12 @@ function check_active_scheduled_imports() {
         ];
     }
 
+    $has_active_imports = !empty($active_imports);
+    PuntWorkLogger::info('Active scheduled imports check completed', PuntWorkLogger::CONTEXT_AJAX, [
+        'active_imports' => $active_imports,
+        'has_active_imports' => $has_active_imports
+    ]);
+
     return $active_imports;
 }
 
@@ -377,12 +463,19 @@ function get_active_scheduled_imports_ajax() {
         return;
     }
 
+    PuntWorkLogger::debug('get_active_scheduled_imports AJAX endpoint called', PuntWorkLogger::CONTEXT_AJAX);
+
     try {
         $active_imports = check_active_scheduled_imports();
 
         // Check scheduling settings
         $schedule_enabled = get_option('job_import_schedule_enabled', false);
         $schedule_frequency = get_option('job_import_schedule_frequency', 'daily');
+
+        PuntWorkLogger::debug('Scheduling settings retrieved', PuntWorkLogger::CONTEXT_AJAX, [
+            'schedule_enabled' => $schedule_enabled,
+            'schedule_frequency' => $schedule_frequency
+        ]);
 
         $response = [
             'schedule_enabled' => $schedule_enabled,
@@ -392,7 +485,7 @@ function get_active_scheduled_imports_ajax() {
             'last_checked' => time()
         ];
 
-        PuntWorkLogger::debug('Active scheduled imports check', PuntWorkLogger::CONTEXT_AJAX, $response);
+        PuntWorkLogger::debug('Active scheduled imports check response', PuntWorkLogger::CONTEXT_AJAX, $response);
 
         wp_send_json_success($response);
 
