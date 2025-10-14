@@ -102,7 +102,16 @@ if (!function_exists('process_batch_items')) {
                         // }
 
                         // Update post immediately
-                        update_job_post($post_id, $guid, $item, $item_hash, $acf_fields, $zero_empty_fields, $logs);
+                        $error_message = '';
+                        $update_result = update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, $logs, $error_message);
+                        if (is_wp_error($update_result)) {
+                            PuntWorkLogger::error('Failed to update post', PuntWorkLogger::CONTEXT_BATCH, [
+                                'post_id' => $post_id,
+                                'guid' => $guid,
+                                'error' => $error_message
+                            ]);
+                            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Failed to update ID: ' . $post_id . ' - ' . $error_message;
+                        }
 
                         $updated++;
 
@@ -120,9 +129,17 @@ if (!function_exists('process_batch_items')) {
 
                 } else {
                     // Create new post immediately
-                    create_job_post($guid, $item, $acf_fields, $zero_empty_fields, $user_id, $logs);
-
-                    $published++;
+                    $error_message = '';
+                    $create_result = create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, $logs, $error_message);
+                    if (is_wp_error($create_result)) {
+                        PuntWorkLogger::error('Failed to create post', PuntWorkLogger::CONTEXT_BATCH, [
+                            'guid' => $guid,
+                            'error' => $error_message
+                        ]);
+                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Failed to create GUID: ' . $guid . ' - ' . $error_message;
+                    } else {
+                        $published++;
+                    }
                 }
 
                 $processed_count++;
@@ -161,133 +178,4 @@ if (!function_exists('process_batch_items')) {
     }
 }
 
-/**
- * Update an existing job post individually
- *
- * @param int $post_id Post ID to update
- * @param string $guid Job GUID
- * @param array $item Job data
- * @param string $item_hash Hash of job data
- * @param array $acf_fields ACF fields to update
- * @param array $zero_empty_fields Fields that should be empty when value is '0'
- * @param array &$logs Reference to logs array
- */
-function update_job_post($post_id, $guid, $item, $item_hash, $acf_fields, $zero_empty_fields, &$logs) {
-    // Prepare post update data
-    $xml_title = $item['functiontitle'] ?? '';
-    $xml_validfrom = $item['validfrom'] ?? '';
-    $xml_updated = $item['updated'] ?? null;
-    $post_modified = $xml_updated ?: current_time('mysql');
 
-    $post_data = [
-        'ID' => $post_id,
-        'post_title' => $xml_title,
-        'post_name' => sanitize_title($xml_title . '-' . $guid),
-        'post_status' => 'publish',
-        'post_date' => $xml_validfrom,
-        'post_modified' => $post_modified,
-    ];
-
-    $update_result = retry_database_operation(function() use ($post_data) {
-        return wp_update_post($post_data);
-    }, [$post_data], [
-        'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
-        'operation' => 'update_post',
-        'post_id' => $post_data['ID']
-    ]);
-
-    if (is_wp_error($update_result)) {
-        PuntWorkLogger::error('Failed to update post', PuntWorkLogger::CONTEXT_BATCH, [
-            'post_id' => $post_id,
-            'error' => $update_result->get_error_message()
-        ]);
-        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Failed to update ID: ' . $post_id . ' - ' . $update_result->get_error_message();
-        return;
-    }
-
-    // Update ACF fields individually
-    foreach ($acf_fields as $field) {
-        $value = $item[$field] ?? '';
-        $is_special = in_array($field, $zero_empty_fields);
-        $set_value = $is_special && $value === '0' ? '' : $value;
-
-        // Serialize arrays if needed
-        if (is_array($set_value)) {
-            $set_value = serialize($set_value);
-        }
-
-        update_post_meta($post_id, $field, $set_value);
-    }
-
-    // Update import hash
-    update_post_meta($post_id, '_import_hash', $item_hash);
-
-    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Updated ID: ' . $post_id . ' GUID: ' . $guid;
-}
-
-/**
- * Create a new job post individually
- *
- * @param string $guid Job GUID
- * @param array $item Job data
- * @param array $acf_fields ACF fields to set
- * @param array $zero_empty_fields Fields that should be empty when value is '0'
- * @param int $user_id User ID for post author
- * @param array &$logs Reference to logs array
- */
-function create_job_post($guid, $item, $acf_fields, $zero_empty_fields, $user_id, &$logs) {
-    $xml_title = $item['title'] ?? '';
-    $xml_validfrom = $item['validfrom'] ?? current_time('mysql');
-    $xml_updated = $item['updated'] ?? null;
-    $post_modified = $xml_updated ?: current_time('mysql');
-    $item_hash = md5(json_encode($item));
-    $current_time = current_time('mysql');
-
-    $post_data = [
-        'post_type' => 'job',
-        'post_title' => $xml_title,
-        'post_name' => sanitize_title($xml_title . '-' . $guid),
-        'post_status' => 'publish',
-        'post_date' => $xml_validfrom,
-        'post_modified' => $post_modified,
-        'comment_status' => 'closed',
-        'post_author' => $user_id,
-    ];
-
-    $post_id = retry_database_operation(function() use ($post_data) {
-        return wp_insert_post($post_data);
-    }, [$post_data], [
-        'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
-        'operation' => 'create_post',
-        'guid' => $guid
-    ]);
-
-    if (is_wp_error($post_id)) {
-        PuntWorkLogger::error('Failed to create post', PuntWorkLogger::CONTEXT_BATCH, [
-            'guid' => $guid,
-            'error' => $post_id->get_error_message()
-        ]);
-        return;
-    }
-
-    // Set standard meta
-    update_post_meta($post_id, '_last_import_update', $current_time);
-    update_post_meta($post_id, 'guid', $guid);
-    update_post_meta($post_id, '_import_hash', $item_hash);
-
-    // Set ACF fields individually
-    foreach ($acf_fields as $field) {
-        $value = $item[$field] ?? '';
-        $is_special = in_array($field, $zero_empty_fields);
-        $set_value = $is_special && $value === '0' ? '' : $value;
-
-        // Serialize arrays if needed
-        if (is_array($set_value)) {
-            $set_value = serialize($set_value);
-        }
-
-        update_post_meta($post_id, $field, $set_value);
-    }
-
-    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Published ID: ' . $post_id . ' GUID: ' . $guid;
-}
