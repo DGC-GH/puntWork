@@ -685,7 +685,7 @@ function get_job_import_status_ajax() {
         $progress['resume_progress'] = get_import_progress();
 
         // Track job importing start time
-        if (($progress['total'] ?? 0) > 1 && !isset($progress['job_import_start_time'])) {
+        if (($progress['total'] ?? 0) > 1 && !isset($progress['job_import_start_time']) && !($progress['complete'] ?? false)) {
             $progress['job_import_start_time'] = microtime(true);
             set_import_status($progress);
             PuntWorkLogger::debug('Job import start time initialized', PuntWorkLogger::CONTEXT_BATCH, [
