@@ -466,21 +466,59 @@ function set_concurrent_success_rate($rate) {
 }
 
 /**
- * Update concurrent processing success metrics
+ * Update sequential processing success metrics
  */
-function update_concurrent_success_metrics($concurrency_used, $chunks_completed, $total_chunks, $items_processed, $total_items) {
-    $success_rate = $total_chunks > 0 ? $chunks_completed / $total_chunks : 1.0;
-    $processing_success_rate = $total_items > 0 ? $items_processed / $total_items : 1.0;
+function update_sequential_success_metrics($total_items, $successful_operations, $skipped, $processed_count) {
+    $success_rate = $total_items > 0 ? $successful_operations / $total_items : 1.0;
+    $processing_efficiency = $processed_count > 0 ? $successful_operations / $processed_count : 1.0;
 
-    // Combined success rate considers both chunk completion and item processing
-    $combined_success_rate = ($success_rate + $processing_success_rate) / 2;
+    // Combined success rate considers both successful operations and processing efficiency
+    $combined_success_rate = ($success_rate + $processing_efficiency) / 2;
 
     // Use rolling average to stabilize the metric
-    $current_rate = get_concurrent_success_rate();
-    $new_rate = ($current_rate * 0.7) + ($combined_success_rate * 0.3);
+    $current_rate = get_sequential_success_rate();
+    $new_rate = ($current_rate * 0.8) + ($combined_success_rate * 0.2); // More weight to historical data for sequential
 
-    set_concurrent_success_rate($new_rate);
-    set_last_concurrency_level($concurrency_used);
+    set_sequential_success_rate($new_rate);
+
+    // Track sequential processing statistics
+    $stats = get_sequential_processing_stats();
+    $stats['total_batches'] = ($stats['total_batches'] ?? 0) + 1;
+    $stats['total_items'] += $total_items;
+    $stats['total_successful'] += $successful_operations;
+    $stats['total_skipped'] += $skipped;
+    $stats['last_success_rate'] = $success_rate;
+    $stats['last_update'] = time();
+
+    set_sequential_processing_stats($stats);
 
     return $new_rate;
+}
+
+/**
+ * Get sequential processing success rate (0.0 to 1.0)
+ */
+function get_sequential_success_rate() {
+    return (float) get_option('job_import_sequential_success_rate', 1.0);
+}
+
+/**
+ * Set sequential processing success rate
+ */
+function set_sequential_success_rate($rate) {
+    update_option('job_import_sequential_success_rate', (float) max(0, min(1, $rate)), false);
+}
+
+/**
+ * Get sequential processing statistics
+ */
+function get_sequential_processing_stats() {
+    return get_option('job_import_sequential_stats', []);
+}
+
+/**
+ * Set sequential processing statistics
+ */
+function set_sequential_processing_stats($stats) {
+    update_option('job_import_sequential_stats', $stats, false);
 }
