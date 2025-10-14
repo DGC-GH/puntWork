@@ -280,6 +280,9 @@ function reset_job_import_ajax() {
 
     $before_reset = get_import_status([]);
 
+    // POISON PILL: Aggressively cancel all import-related processes before reset
+    $cancelled_count = cancel_all_import_processes();
+
     // Clear all import-related data
     $cleared_options = [
         'job_import_status',
@@ -310,7 +313,8 @@ function reset_job_import_ajax() {
         ],
         'options_cleared' => $cleared_options,
         'transients_cleared' => ['import_cancel', 'import_force_cancel', 'import_emergency_stop'],
-        'reset_type' => 'complete_system_reset'
+        'processes_cancelled' => $cancelled_count,
+        'reset_type' => 'complete_system_reset_with_cancellation'
     ]);
 
     send_ajax_success('reset_job_import', []);
