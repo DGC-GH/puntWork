@@ -153,7 +153,7 @@ function process_batch_items_logic($setup) {
                 $current_index = $start_index + $i;
 
                 // CRITICAL: Check for timeouts during batch processing to prevent server kills
-                if ($i % 10 === 0) { // Check every 10 items
+                if ($i % 5 === 0) { // Check every 5 items (more aggressive)
                     if (import_time_exceeded() || import_memory_exceeded()) {
                         PuntWorkLogger::warning('Timeout/memory limit detected mid-batch, saving progress', PuntWorkLogger::CONTEXT_BATCH, [
                             'current_index' => $current_index,
@@ -204,8 +204,8 @@ function process_batch_items_logic($setup) {
                         ];
                     }
 
-                    // HEARTBEAT: Update status every 10 items to prevent server timeout detection
-                    if ($i % 10 === 0) {
+                    // HEARTBEAT: Update status every 5 items to prevent server timeout detection
+                    if ($i % 5 === 0) {
                         $heartbeat_status = get_import_status();
                         $heartbeat_status['last_update'] = time();
                         $heartbeat_status['processed'] = $start_index + $items_processed_in_batch;

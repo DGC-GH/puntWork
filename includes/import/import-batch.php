@@ -47,7 +47,7 @@ require_once __DIR__ . '/../core/core-structure-logic.php';
  */
 function import_time_exceeded() {
     $start_time = get_import_start_time(microtime(true));
-    $time_limit = apply_filters('puntwork_import_time_limit', 300); // Reduced to 5 minutes for safety
+    $time_limit = apply_filters('puntwork_import_time_limit', 60); // Reduced to 1 minute to trigger pause before server timeout
     $current_time = microtime(true);
 
     if (($current_time - $start_time) >= $time_limit) {
@@ -221,8 +221,8 @@ if (!function_exists('import_all_jobs_from_json')) {
 
                 // Schedule continuation via WordPress cron (runs in background)
                 if (!wp_next_scheduled('puntwork_continue_import')) {
-                    wp_schedule_single_event(time() + 30, 'puntwork_continue_import'); // Continue in 30 seconds
-                    error_log('[PUNTWORK] Scheduled import continuation in 30 seconds');
+                    wp_schedule_single_event(time() + 10, 'puntwork_continue_import'); // Continue in 10 seconds (more aggressive)
+                    error_log('[PUNTWORK] Scheduled import continuation in 10 seconds');
                 }
 
                 return [
