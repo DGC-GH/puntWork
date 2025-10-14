@@ -531,10 +531,10 @@ function update_concurrent_success_metrics($concurrency_used, $chunks_completed,
     // Track concurrent processing statistics
     $stats = get_concurrent_processing_stats();
     $stats['total_batches'] = ($stats['total_batches'] ?? 0) + 1;
-    $stats['total_chunks'] += $total_chunks;
-    $stats['total_completed'] += $chunks_completed;
-    $stats['total_items'] += $total_items;
-    $stats['total_processed'] += $items_processed;
+    $stats['total_chunks'] = ($stats['total_chunks'] ?? 0) + $total_chunks;
+    $stats['total_completed'] = ($stats['total_completed'] ?? 0) + $chunks_completed;
+    $stats['total_items'] = ($stats['total_items'] ?? 0) + $total_items;
+    $stats['total_processed'] = ($stats['total_processed'] ?? 0) + $items_processed;
     $stats['last_success_rate'] = $success_rate;
     $stats['last_concurrency_used'] = $concurrency_used;
     $stats['last_update'] = microtime(true);
@@ -563,9 +563,9 @@ function update_sequential_success_metrics($total_items, $successful_operations,
     // Track sequential processing statistics
     $stats = get_sequential_processing_stats();
     $stats['total_batches'] = ($stats['total_batches'] ?? 0) + 1;
-    $stats['total_items'] += $total_items;
-    $stats['total_successful'] += $successful_operations;
-    $stats['total_skipped'] += $skipped;
+    $stats['total_items'] = ($stats['total_items'] ?? 0) + $total_items;
+    $stats['total_successful'] = ($stats['total_successful'] ?? 0) + $successful_operations;
+    $stats['total_skipped'] = ($stats['total_skipped'] ?? 0) + $skipped;
     $stats['last_success_rate'] = $success_rate;
     $stats['last_update'] = microtime(true);
 
