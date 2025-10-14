@@ -137,12 +137,14 @@ if (!function_exists('import_all_jobs_from_json')) {
         $all_logs = [];
         $batch_count = 0;
         $total_items = 0;
+        $accumulated_time = 0; // Track total elapsed time across continuations
 
         // Get existing batch count if preserving status (resuming paused import)
         if ($preserve_status) {
             $existing_status = get_import_status([]);
             $batch_count = $existing_status['batch_count'] ?? 0;
-            error_log('[PUNTWORK] Resuming import from batch ' . ($batch_count + 1));
+            $accumulated_time = $existing_status['time_elapsed'] ?? 0; // Preserve previous elapsed time
+            error_log('[PUNTWORK] Resuming import from batch ' . ($batch_count + 1) . ', accumulated time: ' . $accumulated_time . ' seconds');
         }
 
         error_log('[PUNTWORK] ===== STARTING FULL IMPORT =====');
@@ -242,7 +244,7 @@ if (!function_exists('import_all_jobs_from_json')) {
                     'updated' => $total_updated,
                     'skipped' => $total_skipped,
                     'duplicates_drafted' => $total_duplicates_drafted,
-                    'time_elapsed' => microtime(true) - $start_time,
+                    'time_elapsed' => microtime(true) - $start_time + $accumulated_time,
                     'complete' => false,
                     'paused' => true,
                     'message' => 'Import paused due to time limits - will continue automatically in background'
@@ -379,7 +381,7 @@ if (!function_exists('import_all_jobs_from_json')) {
             $current_status['skipped'] = $total_skipped;
             $current_status['duplicates_drafted'] = $total_duplicates_drafted;
             $current_status['batch_count'] = $batch_count;
-            $current_status['time_elapsed'] = microtime(true) - $start_time;
+            $current_status['time_elapsed'] = microtime(true) - $start_time + $accumulated_time;
             $current_status['last_update'] = time();
             $current_status['logs'] = array_slice($all_logs, -50); // Keep last 50 log entries for UI
             set_import_status($current_status);
@@ -421,7 +423,7 @@ if (!function_exists('import_all_jobs_from_json')) {
         }
 
         $end_time = microtime(true);
-        $total_duration = $end_time - $start_time;
+        $total_duration = $end_time - $start_time + $accumulated_time;
 
         // Calculate overall performance metrics
         $overall_time_per_item = $total_processed > 0 ? $total_duration / $total_processed : 0;

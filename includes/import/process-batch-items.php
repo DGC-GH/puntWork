@@ -26,6 +26,15 @@ if (!function_exists('process_batch_items')) {
         ]);
 
         $user_id = get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : get_current_user_id();
+
+        // Debug: Log first few GUIDs and items
+        $first_guids = array_slice($batch_guids, 0, 3);
+        PuntWorkLogger::debug('Processing first few GUIDs', PuntWorkLogger::CONTEXT_BATCH, [
+            'first_guids' => $first_guids,
+            'first_items_exist' => array_map(function($guid) use ($batch_items) {
+                return isset($batch_items[$guid]) ? 'yes' : 'no';
+            }, $first_guids)
+        ]);
         $error_message = '';
 
         foreach ($batch_guids as $guid) {
@@ -38,7 +47,10 @@ if (!function_exists('process_batch_items')) {
                 PuntWorkLogger::debug('Processing individual item', PuntWorkLogger::CONTEXT_BATCH, [
                     'guid' => $guid,
                     'post_id' => $post_id,
-                    'xml_updated' => $xml_updated
+                    'has_title' => isset($item['title']) ? 'yes' : 'no',
+                    'title_value' => $item['title'] ?? 'none',
+                    'has_functiontitle' => isset($item['functiontitle']) ? 'yes' : 'no',
+                    'functiontitle_value' => $item['functiontitle'] ?? 'none'
                 ]);
 
                 // If post exists, check if it needs updating
@@ -111,9 +123,18 @@ if (!function_exists('process_batch_items')) {
                                 'error' => $error_message
                             ]);
                             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Failed to update ID: ' . $post_id . ' - ' . $error_message;
+                        } else {
+                            PuntWorkLogger::debug('Successfully updated post', PuntWorkLogger::CONTEXT_BATCH, [
+                                'guid' => $guid,
+                                'post_id' => $post_id,
+                                'updated_counter_before' => $updated
+                            ]);
+                            $updated++;
+                            PuntWorkLogger::debug('Updated counter incremented', PuntWorkLogger::CONTEXT_BATCH, [
+                                'guid' => $guid,
+                                'updated_counter_after' => $updated
+                            ]);
                         }
-
-                        $updated++;
 
                     } catch (\Exception $e) {
                         PuntWorkLogger::error('Error processing existing post', PuntWorkLogger::CONTEXT_BATCH, [
@@ -138,7 +159,16 @@ if (!function_exists('process_batch_items')) {
                         ]);
                         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Failed to create GUID: ' . $guid . ' - ' . $error_message;
                     } else {
+                        PuntWorkLogger::debug('Successfully created post', PuntWorkLogger::CONTEXT_BATCH, [
+                            'guid' => $guid,
+                            'post_id' => $create_result,
+                            'published_counter_before' => $published
+                        ]);
                         $published++;
+                        PuntWorkLogger::debug('Published counter incremented', PuntWorkLogger::CONTEXT_BATCH, [
+                            'guid' => $guid,
+                            'published_counter_after' => $published
+                        ]);
                     }
                 }
 
