@@ -28,6 +28,12 @@ if (!function_exists('process_batch_items')) {
         $user_id = get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : get_current_user_id();
         $error_message = '';
 
+        // Initialize batch operation collections
+        $posts_to_republish = [];
+        $posts_to_update = [];
+        $posts_to_create = [];
+        $meta_operations = [];
+
         foreach ($batch_guids as $guid) {
             try {
                 $item = $batch_items[$guid]['item'];
@@ -47,53 +53,23 @@ if (!function_exists('process_batch_items')) {
                         // First, ensure the job is published if it's in the feed
                         $current_post = get_post($post_id);
                         if ($current_post && $current_post->post_status !== 'publish') {
-                            $update_result = retry_database_operation(function() use ($post_id) {
-                                return wp_update_post([
-                                    'ID' => $post_id,
-                                    'post_status' => 'publish'
-                                ]);
-                            }, [$post_id], [
-                                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
-                                'operation' => 'republish_existing_post',
+                            // Collect for batch republishing
+                            $posts_to_republish[] = [
                                 'post_id' => $post_id,
                                 'guid' => $guid
-                            ]);
-
-                            if (is_wp_error($update_result)) {
-                                PuntWorkLogger::error('Failed to republish existing post', PuntWorkLogger::CONTEXT_BATCH, [
-                                    'post_id' => $post_id,
-                                    'guid' => $guid,
-                                    'error' => $update_result->get_error_message()
-                                ]);
-                                $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Failed to republish ID: ' . $post_id . ' GUID: ' . $guid . ' - ' . $update_result->get_error_message();
-                                $skipped++;
-                                $processed_count++;
-                                continue;
-                            }
-
-                            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Republished ID: ' . $post_id . ' GUID: ' . $guid . ' - Found in active feed';
+                            ];
                         }
 
-                        // Mark this post as still active in the feed
+                        // Collect meta operations for batch update
                         $current_time = current_time('mysql');
-                        retry_database_operation(function() use ($post_id, $current_time) {
-                            return update_post_meta($post_id, '_last_import_update', $current_time);
-                        }, [$post_id, $current_time], [
-                            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
-                            'operation' => 'mark_post_active',
+                        $meta_operations[] = [
                             'post_id' => $post_id,
-                            'guid' => $guid
-                        ]);
-
-                        // Ensure GUID meta is set for compatibility with purge feature
-                        retry_database_operation(function() use ($post_id, $guid) {
-                            return update_post_meta($post_id, 'guid', $guid);
-                        }, [$post_id, $guid], [
-                            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
-                            'operation' => 'set_guid_meta',
-                            'post_id' => $post_id,
-                            'guid' => $guid
-                        ]);
+                            'guid' => $guid,
+                            'operations' => [
+                                ['key' => '_last_import_update', 'value' => $current_time],
+                                ['key' => 'guid', 'value' => $guid]
+                            ]
+                        ];
 
                         $current_last_update = isset($last_updates[$post_id]) ? $last_updates[$post_id]->meta_value : '';
                         $current_last_ts = $current_last_update ? strtotime($current_last_update) : 0;
@@ -119,14 +95,15 @@ if (!function_exists('process_batch_items')) {
                         //     continue;
                         // }
 
-                        // Update existing post
-                        $update_result = update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, $logs, $error_message);
-
-                        if (is_wp_error($update_result)) {
-                            $skipped++;
-                            $processed_count++;
-                            continue;
-                        }
+                        // Collect for batch update
+                        $posts_to_update[] = [
+                            'post_id' => $post_id,
+                            'guid' => $guid,
+                            'item' => $item,
+                            'item_hash' => $item_hash,
+                            'acf_fields' => $acf_fields,
+                            'zero_empty_fields' => $zero_empty_fields
+                        ];
 
                         $updated++;
 
@@ -143,14 +120,14 @@ if (!function_exists('process_batch_items')) {
                     }
 
                 } else {
-                    // Create new post only if it doesn't exist
-                    $create_result = create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, $logs, $error_message);
-
-                    if (is_wp_error($create_result)) {
-                        $skipped++;
-                        $processed_count++;
-                        continue;
-                    }
+                    // Collect for batch creation
+                    $posts_to_create[] = [
+                        'guid' => $guid,
+                        'item' => $item,
+                        'acf_fields' => $acf_fields,
+                        'zero_empty_fields' => $zero_empty_fields,
+                        'user_id' => $user_id
+                    ];
 
                     $published++;
                 }
@@ -182,11 +159,404 @@ if (!function_exists('process_batch_items')) {
             }
         }
 
+        // Execute batch operations
+        try {
+            // Batch republish posts
+            if (!empty($posts_to_republish)) {
+                batch_republish_posts($posts_to_republish, $logs);
+            }
+
+            // Batch update meta operations
+            if (!empty($meta_operations)) {
+                batch_update_meta_operations($meta_operations, $logs);
+            }
+
+            // Batch update existing posts
+            if (!empty($posts_to_update)) {
+                batch_update_job_posts($posts_to_update, $logs);
+            }
+
+            // Batch create new posts
+            if (!empty($posts_to_create)) {
+                batch_create_job_posts($posts_to_create, $logs);
+            }
+
+        } catch (\Exception $e) {
+            PuntWorkLogger::error('Error in batch operations', PuntWorkLogger::CONTEXT_BATCH, [
+                'error' => $e->getMessage(),
+                'republish_count' => count($posts_to_republish),
+                'meta_ops_count' => count($meta_operations),
+                'update_count' => count($posts_to_update),
+                'create_count' => count($posts_to_create)
+            ]);
+            // Continue with logging even if batch operations fail
+        }
+
         PuntWorkLogger::info('Batch item processing completed', PuntWorkLogger::CONTEXT_BATCH, [
             'total_processed' => $processed_count,
             'published' => $published,
             'updated' => $updated,
-            'skipped' => $skipped
+            'skipped' => $skipped,
+            'republished' => count($posts_to_republish),
+            'meta_operations' => count($meta_operations)
         ]);
     }
+}
+
+/**
+ * Batch republish posts that are not currently published
+ *
+ * @param array $posts_to_republish Array of posts to republish
+ * @param array &$logs Reference to logs array
+ */
+function batch_republish_posts($posts_to_republish, &$logs) {
+    if (empty($posts_to_republish)) {
+        return;
+    }
+
+    PuntWorkLogger::info('Starting batch republish operations', PuntWorkLogger::CONTEXT_BATCH, [
+        'count' => count($posts_to_republish)
+    ]);
+
+    foreach ($posts_to_republish as $post_data) {
+        $post_id = $post_data['post_id'];
+        $guid = $post_data['guid'];
+
+        $update_result = retry_database_operation(function() use ($post_id) {
+            return wp_update_post([
+                'ID' => $post_id,
+                'post_status' => 'publish'
+            ]);
+        }, [$post_id], [
+            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+            'operation' => 'batch_republish_post',
+            'post_id' => $post_id,
+            'guid' => $guid
+        ]);
+
+        if (is_wp_error($update_result)) {
+            PuntWorkLogger::error('Failed to batch republish post', PuntWorkLogger::CONTEXT_BATCH, [
+                'post_id' => $post_id,
+                'guid' => $guid,
+                'error' => $update_result->get_error_message()
+            ]);
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Failed to republish ID: ' . $post_id . ' GUID: ' . $guid . ' - ' . $update_result->get_error_message();
+        } else {
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Republished ID: ' . $post_id . ' GUID: ' . $guid . ' - Found in active feed';
+        }
+    }
+
+    PuntWorkLogger::info('Batch republish operations completed', PuntWorkLogger::CONTEXT_BATCH, [
+        'processed' => count($posts_to_republish)
+    ]);
+}
+
+/**
+ * Batch update meta operations for posts
+ *
+ * @param array $meta_operations Array of meta operations to perform
+ * @param array &$logs Reference to logs array
+ */
+function batch_update_meta_operations($meta_operations, &$logs) {
+    if (empty($meta_operations)) {
+        return;
+    }
+
+    PuntWorkLogger::info('Starting batch meta operations', PuntWorkLogger::CONTEXT_BATCH, [
+        'operations_count' => count($meta_operations)
+    ]);
+
+    global $wpdb;
+
+    // Prepare bulk insert data for meta operations
+    $meta_inserts = [];
+    $current_time = current_time('mysql');
+
+    foreach ($meta_operations as $operation) {
+        $post_id = $operation['post_id'];
+        $guid = $operation['guid'];
+
+        foreach ($operation['operations'] as $meta_op) {
+            $meta_key = $meta_op['key'];
+            $meta_value = $meta_op['value'];
+
+            // Check if meta already exists to decide between INSERT and UPDATE
+            $existing = $wpdb->get_var($wpdb->prepare(
+                "SELECT meta_id FROM $wpdb->postmeta WHERE post_id = %d AND meta_key = %s",
+                $post_id, $meta_key
+            ));
+
+            if ($existing) {
+                // Update existing meta
+                $wpdb->query($wpdb->prepare(
+                    "UPDATE $wpdb->postmeta SET meta_value = %s WHERE post_id = %d AND meta_key = %s",
+                    $meta_value, $post_id, $meta_key
+                ));
+            } else {
+                // Insert new meta
+                $wpdb->query($wpdb->prepare(
+                    "INSERT INTO $wpdb->postmeta (post_id, meta_key, meta_value) VALUES (%d, %s, %s)",
+                    $post_id, $meta_key, $meta_value
+                ));
+            }
+        }
+    }
+
+    PuntWorkLogger::info('Batch meta operations completed', PuntWorkLogger::CONTEXT_BATCH, [
+        'operations_processed' => count($meta_operations)
+    ]);
+}
+
+/**
+ * Batch update existing job posts
+ *
+ * @param array $posts_to_update Array of posts to update
+ * @param array &$logs Reference to logs array
+ */
+function batch_update_job_posts($posts_to_update, &$logs) {
+    if (empty($posts_to_update)) {
+        return;
+    }
+
+    PuntWorkLogger::info('Starting batch update operations', PuntWorkLogger::CONTEXT_BATCH, [
+        'count' => count($posts_to_update)
+    ]);
+
+    global $wpdb;
+
+    // Prepare bulk operations
+    $post_updates = [];
+    $meta_updates = [];
+
+    foreach ($posts_to_update as $post_data) {
+        $post_id = $post_data['post_id'];
+        $guid = $post_data['guid'];
+        $item = $post_data['item'];
+        $item_hash = $post_data['item_hash'];
+        $acf_fields = $post_data['acf_fields'];
+        $zero_empty_fields = $post_data['zero_empty_fields'];
+
+        // Prepare post update data
+        $xml_title = $item['functiontitle'] ?? '';
+        $xml_validfrom = $item['validfrom'] ?? '';
+        $xml_updated = $item['updated'] ?? null;
+        $post_modified = $xml_updated ?: current_time('mysql');
+
+        $post_updates[] = [
+            'ID' => $post_id,
+            'post_title' => $xml_title,
+            'post_name' => sanitize_title($xml_title . '-' . $guid),
+            'post_status' => 'publish',
+            'post_date' => $xml_validfrom,
+            'post_modified' => $post_modified,
+        ];
+
+        // Collect ACF field updates
+        foreach ($acf_fields as $field) {
+            $value = $item[$field] ?? '';
+            $is_special = in_array($field, $zero_empty_fields);
+            $set_value = $is_special && $value === '0' ? '' : $value;
+
+            $meta_updates[] = [
+                'post_id' => $post_id,
+                'meta_key' => $field,
+                'meta_value' => $set_value
+            ];
+        }
+
+        // Add import hash
+        $meta_updates[] = [
+            'post_id' => $post_id,
+            'meta_key' => '_import_hash',
+            'meta_value' => $item_hash
+        ];
+    }
+
+    // Execute batch post updates
+    foreach ($post_updates as $post_data) {
+        $update_result = retry_database_operation(function() use ($post_data) {
+            return wp_update_post($post_data);
+        }, [$post_data], [
+            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+            'operation' => 'batch_update_post',
+            'post_id' => $post_data['ID']
+        ]);
+
+        if (is_wp_error($update_result)) {
+            PuntWorkLogger::error('Failed to batch update post', PuntWorkLogger::CONTEXT_BATCH, [
+                'post_id' => $post_data['ID'],
+                'error' => $update_result->get_error_message()
+            ]);
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Failed to update ID: ' . $post_data['ID'] . ' - ' . $update_result->get_error_message();
+        } else {
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Updated ID: ' . $post_data['ID'] . ' GUID: ' . $post_data['guid'];
+        }
+    }
+
+    // Execute batch meta updates
+    foreach ($meta_updates as $meta_data) {
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT meta_id FROM $wpdb->postmeta WHERE post_id = %d AND meta_key = %s",
+            $meta_data['post_id'], $meta_data['meta_key']
+        ));
+
+        if ($existing) {
+            $wpdb->query($wpdb->prepare(
+                "UPDATE $wpdb->postmeta SET meta_value = %s WHERE post_id = %d AND meta_key = %s",
+                $meta_data['meta_value'], $meta_data['post_id'], $meta_data['meta_key']
+            ));
+        } else {
+            $wpdb->query($wpdb->prepare(
+                "INSERT INTO $wpdb->postmeta (post_id, meta_key, meta_value) VALUES (%d, %s, %s)",
+                $meta_data['post_id'], $meta_data['meta_key'], $meta_data['meta_value']
+            ));
+        }
+    }
+
+    PuntWorkLogger::info('Batch update operations completed', PuntWorkLogger::CONTEXT_BATCH, [
+        'posts_updated' => count($post_updates),
+        'meta_operations' => count($meta_updates)
+    ]);
+}
+
+/**
+ * Batch create new job posts
+ *
+ * @param array $posts_to_create Array of posts to create
+ * @param array &$logs Reference to logs array
+ */
+function batch_create_job_posts($posts_to_create, &$logs) {
+    if (empty($posts_to_create)) {
+        return;
+    }
+
+    PuntWorkLogger::info('Starting batch create operations', PuntWorkLogger::CONTEXT_BATCH, [
+        'count' => count($posts_to_create)
+    ]);
+
+    global $wpdb;
+
+    // Prepare bulk operations
+    $post_inserts = [];
+    $meta_inserts = [];
+
+    foreach ($posts_to_create as $post_data) {
+        $guid = $post_data['guid'];
+        $item = $post_data['item'];
+        $acf_fields = $post_data['acf_fields'];
+        $zero_empty_fields = $post_data['zero_empty_fields'];
+        $user_id = $post_data['user_id'];
+
+        $xml_title = $item['title'] ?? '';
+        $xml_validfrom = $item['validfrom'] ?? current_time('mysql');
+        $xml_updated = $item['updated'] ?? null;
+        $post_modified = $xml_updated ?: current_time('mysql');
+        $item_hash = md5(json_encode($item));
+        $current_time = current_time('mysql');
+
+        $post_inserts[] = [
+            'post_data' => [
+                'post_type' => 'job',
+                'post_title' => $xml_title,
+                'post_name' => sanitize_title($xml_title . '-' . $guid),
+                'post_status' => 'publish',
+                'post_date' => $xml_validfrom,
+                'post_modified' => $post_modified,
+                'comment_status' => 'closed',
+                'post_author' => $user_id,
+            ],
+            'guid' => $guid,
+            'item' => $item,
+            'acf_fields' => $acf_fields,
+            'zero_empty_fields' => $zero_empty_fields,
+            'item_hash' => $item_hash,
+            'current_time' => $current_time
+        ];
+    }
+
+    // Execute batch post creation
+    foreach ($post_inserts as $insert_data) {
+        $post_data = $insert_data['post_data'];
+        $guid = $insert_data['guid'];
+
+        $post_id = retry_database_operation(function() use ($post_data) {
+            return wp_insert_post($post_data);
+        }, [$post_data], [
+            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+            'operation' => 'batch_create_post',
+            'guid' => $guid
+        ]);
+
+        if (is_wp_error($post_id)) {
+            PuntWorkLogger::error('Failed to batch create post', PuntWorkLogger::CONTEXT_BATCH, [
+                'guid' => $guid,
+                'error' => $post_id->get_error_message()
+            ]);
+            continue;
+        }
+
+        // Prepare meta inserts for this post
+        $item = $insert_data['item'];
+        $acf_fields = $insert_data['acf_fields'];
+        $zero_empty_fields = $insert_data['zero_empty_fields'];
+        $item_hash = $insert_data['item_hash'];
+        $current_time = $insert_data['current_time'];
+
+        // Add standard meta
+        $meta_inserts[] = [
+            'post_id' => $post_id,
+            'meta_key' => '_last_import_update',
+            'meta_value' => $current_time
+        ];
+        $meta_inserts[] = [
+            'post_id' => $post_id,
+            'meta_key' => 'guid',
+            'meta_value' => $guid
+        ];
+        $meta_inserts[] = [
+            'post_id' => $post_id,
+            'meta_key' => '_import_hash',
+            'meta_value' => $item_hash
+        ];
+
+        // Add ACF fields
+        foreach ($acf_fields as $field) {
+            $value = $item[$field] ?? '';
+            $is_special = in_array($field, $zero_empty_fields);
+            $set_value = $is_special && $value === '0' ? '' : $value;
+
+            $meta_inserts[] = [
+                'post_id' => $post_id,
+                'meta_key' => $field,
+                'meta_value' => $set_value
+            ];
+        }
+
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Published ID: ' . $post_id . ' GUID: ' . $guid;
+    }
+
+    // Execute batch meta inserts
+    if (!empty($meta_inserts)) {
+        // Use bulk insert for better performance
+        $values = [];
+        $placeholders = [];
+        $params = [];
+
+        foreach ($meta_inserts as $meta) {
+            $values[] = "(%d, %s, %s)";
+            $params[] = $meta['post_id'];
+            $params[] = $meta['meta_key'];
+            $params[] = $meta['meta_value'];
+        }
+
+        if (!empty($values)) {
+            $query = "INSERT INTO $wpdb->postmeta (post_id, meta_key, meta_value) VALUES " . implode(', ', $values);
+            $wpdb->query($wpdb->prepare($query, $params));
+        }
+    }
+
+    PuntWorkLogger::info('Batch create operations completed', PuntWorkLogger::CONTEXT_BATCH, [
+        'posts_created' => count($post_inserts),
+        'meta_operations' => count($meta_inserts)
+    ]);
 }
