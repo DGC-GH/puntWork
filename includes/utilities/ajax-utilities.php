@@ -49,7 +49,12 @@ function send_ajax_success($action_name, $response_data, $log_data = null, $succ
     if ($log_data === null) {
         $log_data = $response_data;
     }
-    PuntWorkLogger::logAjaxResponse($action_name, $log_data, $success);
+
+    // NOTE: To enable AJAX response debug logs, define PUNTWORK_DEBUG_POLLING as true in wp-config.php
+    if (defined('PUNTWORK_DEBUG_POLLING') && PUNTWORK_DEBUG_POLLING) {
+        PuntWorkLogger::logAjaxResponse($action_name, $log_data, $success);
+    }
+
     wp_send_json_success($response_data);
 }
 
