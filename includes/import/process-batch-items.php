@@ -161,7 +161,10 @@ if (!function_exists('process_batch_items')) {
                     PuntWorkLogger::debug('Batch processing progress', PuntWorkLogger::CONTEXT_BATCH, [
                         'processed_count' => $processed_count
                     ]);
-                    ob_flush();
+                    // Only flush output buffer if one is active
+                    if (ob_get_level() > 0) {
+                        ob_flush();
+                    }
                     flush();
                 }
 
