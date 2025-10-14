@@ -219,50 +219,98 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     (!statusData.complete && timeSinceLastUpdate < 600) // Incomplete and recently updated (for scheduled imports)
                 );
 
-                if (hasIncompleteImport) {
-                    JobImportUI.updateProgress(statusData);
-                    JobImportUI.appendLogs(statusData.logs || []);
-                    
-                    // Always start polling for incomplete imports to catch scheduled imports
-                    JobImportEvents.startStatusPolling();
-                    
-                    // Check if import appears to be currently running (updated within last 5 minutes)
-                    var isRecentlyActive = timeSinceLastUpdate < 300; // 5 minutes
-                    
-                    if (isRecentlyActive) {
-                        // Import appears to be currently running - show progress UI with cancel and reset
-                        $('#start-import').hide();
-                        $('#resume-import').hide();
-                        $('#cancel-import').show();
-                        $('#reset-import').show();
-                        JobImportUI.showImportUI();
-                        $('#status-message').text('Import in progress...');
-                        console.log('[PUNTWORK] Import appears to be currently running - starting status polling');
-                        
-                        // Start polling for status updates
-                        JobImportEvents.startStatusPolling();
-                    } else {
-                        // Import was interrupted or completed - show resume and reset options, but also start polling in case it's a scheduled import
-                        $('#start-import').hide();
-                        $('#resume-import').show();
-                        $('#reset-import').show();
-                        $('#cancel-import').hide();
-                        JobImportUI.showImportUI();
-                        $('#status-message').text('Previous import interrupted. Resume or reset?');
-                        console.log('[PUNTWORK] Import was interrupted, showing resume and reset options');
-                        
-                        // Start polling anyway in case a scheduled import is running in the background
-                        JobImportEvents.startStatusPolling();
+                // Check if scheduling is enabled to determine import type
+                var isScheduledImport = false;
+                JobImportAPI.call('get_import_schedule', {}, function(scheduleResponse) {
+                    if (scheduleResponse.success && scheduleResponse.data.schedule) {
+                        isScheduledImport = scheduleResponse.data.schedule.enabled;
                     }
-                } else {
-                    // Clean state - hide all import controls except start
-                    $('#start-import').show().text('Start Import');
-                    $('#resume-import').hide();
-                    $('#cancel-import').hide();
-                    $('#reset-import').hide();
-                    JobImportUI.hideImportUI();
-                    console.log('[PUNTWORK] Clean state detected - showing start button only');
-                }
+
+                    if (hasIncompleteImport) {
+                        JobImportUI.updateProgress(statusData);
+                        JobImportUI.appendLogs(statusData.logs || []);
+                        
+                        // Always start polling for incomplete imports to catch scheduled imports
+                        JobImportEvents.startStatusPolling();
+                        
+                        // Check if import appears to be currently running (updated within last 5 minutes)
+                        var isRecentlyActive = timeSinceLastUpdate < 300; // 5 minutes
+                        
+                        if (isRecentlyActive) {
+                            // Import appears to be currently running - show progress UI with cancel and reset
+                            $('#start-import').hide();
+                            $('#resume-import').hide();
+                            $('#cancel-import').show();
+                            $('#reset-import').show();
+                            JobImportUI.showImportUI();
+                            $('#status-message').text('Import in progress...');
+                            
+                            // Show import type indicator if this appears to be a scheduled import
+                            if (isScheduledImport) {
+                                $('#import-type-indicator').show();
+                                $('#import-type-text').text('Scheduled import is currently running');
+                            }
+                            
+                            console.log('[PUNTWORK] Import appears to be currently running - starting status polling');
+                            
+                            // Start polling for status updates
+                            JobImportEvents.startStatusPolling();
+                        } else {
+                            // Import was interrupted or completed - show resume and reset options, but also start polling in case it's a scheduled import
+                            $('#start-import').hide();
+                            $('#resume-import').show();
+                            $('#reset-import').show();
+                            $('#cancel-import').hide();
+                            JobImportUI.showImportUI();
+                            $('#status-message').text('Previous import interrupted. Resume or reset?');
+                            console.log('[PUNTWORK] Import was interrupted, showing resume and reset options');
+                            
+                            // Start polling anyway in case a scheduled import is running in the background
+                            JobImportEvents.startStatusPolling();
+                        }
+                    } else {
+                        // Clean state - hide all import controls except start
+                        $('#start-import').show().text('Start Import');
+                        $('#resume-import').hide();
+                        $('#cancel-import').hide();
+                        $('#reset-import').hide();
+                        $('#import-type-indicator').hide();
+                        JobImportUI.hideImportUI();
+                        console.log('[PUNTWORK] Clean state detected - showing start button only');
+                    }
+                }).catch(function(scheduleError) {
+                    console.log('[PUNTWORK] Failed to get schedule status, assuming manual import mode');
+                    // Continue with manual import logic if schedule check fails
+                    if (hasIncompleteImport) {
+                        JobImportUI.updateProgress(statusData);
+                        JobImportUI.appendLogs(statusData.logs || []);
+                        JobImportEvents.startStatusPolling();
+                        
+                        var isRecentlyActive = timeSinceLastUpdate < 300;
+                        if (isRecentlyActive) {
+                            $('#start-import').hide();
+                            $('#resume-import').hide();
+                            $('#cancel-import').show();
+                            $('#reset-import').show();
+                            JobImportUI.showImportUI();
+                            $('#status-message').text('Import in progress...');
+                        } else {
+                            $('#start-import').hide();
+                            $('#resume-import').show();
+                            $('#reset-import').show();
+                            $('#cancel-import').hide();
+                            JobImportUI.showImportUI();
+                            $('#status-message').text('Previous import interrupted. Resume or reset?');
+                        }
+                    } else {
+                        $('#start-import').show().text('Start Import');
+                        $('#resume-import').hide();
+                        $('#cancel-import').hide();
+                        $('#reset-import').hide();
+                        $('#import-type-indicator').hide();
+                        JobImportUI.hideImportUI();
+                    }
+                });
             }).catch(function(xhr, status, error) {
                 PuntWorkJSLogger.error('Initial status AJAX error', 'EVENTS', error);
                 JobImportUI.appendLogs(['Initial status AJAX error: ' + error]);
@@ -273,6 +321,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 $('#resume-import').hide();
                 $('#cancel-import').hide();
                 $('#reset-import').hide();
+                $('#import-type-indicator').hide();
             });
         },
 
@@ -421,7 +470,31 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             JobImportEvents.stopStatusPolling();
                             JobImportUI.resetButtons();
                             $('#status-message').text('Import failed to start - please try again');
+                            $('#import-type-indicator').hide();
                             return;
+                        }
+
+                        // Check if this is a scheduled import by looking at schedule status
+                        // Only check this periodically to avoid too many API calls
+                        if (pollCount % 10 === 0) { // Check every 10 polls (roughly every 10-80 seconds depending on interval)
+                            JobImportAPI.call('get_import_schedule', {}, function(scheduleResponse) {
+                                if (scheduleResponse.success && scheduleResponse.data.schedule) {
+                                    var isScheduledEnabled = scheduleResponse.data.schedule.enabled;
+                                    var hasActiveImport = currentTotal > 0 && !statusData.complete;
+                                    
+                                    if (isScheduledEnabled && hasActiveImport) {
+                                        $('#import-type-indicator').show();
+                                        $('#import-type-text').text('Scheduled import is currently running');
+                                    } else if (!isScheduledEnabled && hasActiveImport) {
+                                        $('#import-type-indicator').show();
+                                        $('#import-type-text').text('Manual import is currently running');
+                                    } else {
+                                        $('#import-type-indicator').hide();
+                                    }
+                                }
+                            }).catch(function() {
+                                // Ignore schedule check errors, continue with polling
+                            });
                         }
 
                         // Check if progress has changed
@@ -519,6 +592,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                                 JobImportEvents.stopStatusPolling();
                                 JobImportUI.resetButtons();
                                 $('#status-message').text('Import Complete');
+                                $('#import-type-indicator').hide();
                             }
                         } else if (statusData.complete && currentTotal === 0 && hasSeenImportRunning && !isStartingNewImport) {
                             console.log('[PUNTWORK] Import status reset to empty state, stopping polling and resetting UI');
@@ -528,6 +602,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             JobImportUI.hideImportUI();
                             JobImportUI.resetButtons();
                             $('#status-message').text('Ready to start.');
+                            $('#import-type-indicator').hide();
                         } else {
                             // Reset complete detection counter if import is not complete
                             JobImportEvents.completeDetectedCount = 0;

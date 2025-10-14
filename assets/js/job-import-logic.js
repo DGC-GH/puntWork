@@ -185,6 +185,9 @@
             JobImportUI.resetButtons();
             this.isImporting = false; // Reset importing flag on completion
             
+            // Hide import type indicator on completion
+            $('#import-type-indicator').hide();
+            
             // Stop status polling on completion
             if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
                 window.JobImportEvents.stopStatusPolling();
@@ -223,6 +226,10 @@
 
                 JobImportUI.appendLogs(['Starting manual import...']);
                 $('#status-message').text('Starting import...');
+
+                // Show manual import indicator
+                $('#import-type-indicator').show();
+                $('#import-type-text').text('Manual import is currently running');
 
                 // Trigger the unified async import process
                 await JobImportAPI.clearImportCancel();
@@ -269,6 +276,10 @@
             $('#reset-import').show();
             JobImportUI.showImportUI();
 
+            // Show import indicator (could be either manual or scheduled resume)
+            $('#import-type-indicator').show();
+            $('#import-type-text').text('Resuming import...');
+
             await JobImportAPI.clearImportCancel();
             await this.handleImport(jobImportData.resume_progress || 0);
         },
@@ -291,6 +302,9 @@
                     $('#resume-import').show();
                     $('#reset-import').show();
                     $('#start-import').text('Restart').show();
+                    
+                    // Hide import type indicator on cancel
+                    $('#import-type-indicator').hide();
                     
                     // Stop status polling on cancel
                     if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
@@ -337,6 +351,9 @@
                     $('#resume-import').hide();
                     $('#cancel-import').hide();
                     $('#reset-import').hide().prop('disabled', false);
+
+                    // Hide import type indicator on reset
+                    $('#import-type-indicator').hide();
 
                     console.log('[PUNTWORK] Reset completed successfully');
                 } else {
