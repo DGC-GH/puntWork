@@ -48,146 +48,52 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
 
     $user_id = get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : get_current_user_id();
 
-    // Calculate optimal concurrency based on system resources
-    $concurrency = calculate_optimal_concurrency(count($batch_guids));
-    $batch_chunks = array_chunk($batch_guids, ceil(count($batch_guids) / $concurrency));
-
-    PuntWorkLogger::debug('Concurrent processing setup', PuntWorkLogger::CONTEXT_BATCH, [
-        'total_items' => count($batch_guids),
-        'concurrency_level' => $concurrency,
-        'chunks_count' => count($batch_chunks),
-        'avg_chunk_size' => count($batch_guids) / $concurrency
-    ]);
-
     $action_ids = [];
-    $chunk_results = [];
 
-    // Schedule concurrent processing for each chunk
-    foreach ($batch_chunks as $chunk_index => $chunk_guids) {
+    // Schedule concurrent processing for each item in the batch
+    foreach ($batch_guids as $guid) {
         $action_id = as_schedule_single_action(
             time(),
-            'puntwork_process_item_chunk',
+            'puntwork_process_single_item',
             [
-                'chunk_guids' => $chunk_guids,
-                'json_path' => $setup['json_path'] ?? '',
-                'start_index' => $setup['start_index'] ?? 0,
+                'guid' => $guid,
+                'json_path' => $json_path,
+                'start_index' => $start_index,
                 'acf_fields' => $acf_fields,
                 'zero_empty_fields' => $zero_empty_fields,
-                'user_id' => $user_id,
-                'chunk_index' => $chunk_index,
-                'total_chunks' => count($batch_chunks)
+                'user_id' => $user_id
             ],
             'puntwork-import'
         );
 
         if ($action_id) {
             $action_ids[] = $action_id;
-            PuntWorkLogger::debug('Scheduled concurrent chunk', PuntWorkLogger::CONTEXT_BATCH, [
-                'chunk_index' => $chunk_index,
-                'chunk_size' => count($chunk_guids),
+            PuntWorkLogger::debug('Scheduled concurrent item', PuntWorkLogger::CONTEXT_BATCH, [
+                'guid' => $guid,
                 'action_id' => $action_id
             ]);
         } else {
-            PuntWorkLogger::error('Failed to schedule concurrent chunk', PuntWorkLogger::CONTEXT_BATCH, [
-                'chunk_index' => $chunk_index,
-                'chunk_size' => count($chunk_guids)
+            PuntWorkLogger::error('Failed to schedule concurrent item', PuntWorkLogger::CONTEXT_BATCH, [
+                'guid' => $guid
             ]);
         }
     }
 
-    // Wait for all chunks to complete with timeout
-    $timeout = 300; // 5 minutes timeout
-    $start_wait = microtime(true);
-    $completed_actions = 0;
-    $total_expected = count($action_ids);
-
-    while ($completed_actions < $total_expected && (microtime(true) - $start_wait) < $timeout) {
-        $completed_actions = 0;
-        $chunk_results = [];
-
-        foreach ($action_ids as $action_id) {
-            $action = ActionScheduler::store()->fetch_action($action_id);
-            if ($action && $action->get_status() === ActionScheduler_Store::STATUS_COMPLETE) {
-                $completed_actions++;
-                // Get the result from action args or transient
-                $result_transient = get_transient('puntwork_chunk_result_' . $action_id);
-                if ($result_transient) {
-                    $chunk_results[] = $result_transient;
-                    delete_transient('puntwork_chunk_result_' . $action_id);
-                }
-            } elseif ($action && in_array($action->get_status(), [ActionScheduler_Store::STATUS_FAILED, ActionScheduler_Store::STATUS_CANCELED])) {
-                PuntWorkLogger::error('Concurrent chunk failed', PuntWorkLogger::CONTEXT_BATCH, [
-                    'action_id' => $action_id,
-                    'status' => $action->get_status()
-                ]);
-                $completed_actions++; // Count as completed even if failed
-            }
-        }
-
-        if ($completed_actions < $total_expected) {
-            sleep(1); // Wait 1 second before checking again
-        }
-    }
-
-    // Process results from all chunks
-    $item_timings = [];
-    foreach ($chunk_results as $chunk_result) {
-        if (isset($chunk_result['logs'])) {
-            $logs = array_merge($logs, $chunk_result['logs']);
-        }
-        if (isset($chunk_result['updated'])) {
-            $updated += $chunk_result['updated'];
-        }
-        if (isset($chunk_result['published'])) {
-            $published += $chunk_result['published'];
-        }
-        if (isset($chunk_result['skipped'])) {
-            $skipped += $chunk_result['skipped'];
-        }
-        if (isset($chunk_result['processed_count'])) {
-            $processed_count += $chunk_result['processed_count'];
-        }
-        if (isset($chunk_result['item_timings'])) {
-            $item_timings = array_merge($item_timings, $chunk_result['item_timings']);
-        }
-    }
-
-    $total_time = microtime(true) - $start_time;
-    $avg_time_per_item = !empty($item_timings) ? array_sum($item_timings) / count($item_timings) : 0;
-
-    // Update concurrent success metrics
-    $chunks_completed = count($chunk_results);
-    $total_expected_chunks = count($action_ids);
-    $total_processed_items = array_sum(array_column($chunk_results, 'processed_count'));
-
-    $success_rate = update_concurrent_success_metrics(
-        $concurrency,
-        $chunks_completed,
-        $total_expected_chunks,
-        $total_processed_items,
-        count($batch_guids)
-    );
-
-    PuntWorkLogger::info('Concurrent item processing completed', PuntWorkLogger::CONTEXT_BATCH, [
-        'total_processed' => $processed_count,
-        'published' => $published,
-        'updated' => $updated,
-        'skipped' => $skipped,
-        'total_time' => $total_time,
-        'avg_time_per_item' => $avg_time_per_item,
-        'concurrency_level' => $concurrency,
-        'chunks_completed' => $chunks_completed,
-        'total_expected_chunks' => $total_expected_chunks,
-        'success_rate' => $success_rate,
-        'timeout_exceeded' => (microtime(true) - $start_wait) >= $timeout
+    // Return immediately with async processing info
+    PuntWorkLogger::info('Concurrent item processing scheduled asynchronously', PuntWorkLogger::CONTEXT_BATCH, [
+        'total_items' => count($batch_guids),
+        'actions_scheduled' => count($action_ids),
+        'async' => true
     ]);
 
     return [
-        'processed_count' => $processed_count,
-        'total_time' => $total_time,
-        'avg_time_per_item' => $avg_time_per_item,
-        'item_timings' => $item_timings,
-        'concurrency_used' => $concurrency
+        'processed_count' => count($batch_guids), // Estimated
+        'total_time' => 0,
+        'avg_time_per_item' => 0,
+        'item_timings' => [],
+        'concurrency_used' => count($batch_guids),
+        'async' => true,
+        'action_ids' => $action_ids
     ];
 }
 
@@ -269,16 +175,13 @@ function calculate_optimal_concurrency($batch_size) {
 }
 
 /**
- * Action Scheduler callback for processing a chunk of items concurrently
+ * Action Scheduler callback for processing a single item concurrently
  */
-function process_item_chunk_callback($chunk_guids, $json_path, $start_index, $acf_fields, $zero_empty_fields, $user_id, $chunk_index, $total_chunks) {
-    $chunk_start_time = microtime(true);
-    $item_timings = [];
+function process_single_item_callback($guid, $json_path, $start_index, $acf_fields, $zero_empty_fields, $user_id) {
+    $item_start_time = microtime(true);
 
-    PuntWorkLogger::debug('Processing concurrent chunk', PuntWorkLogger::CONTEXT_BATCH, [
-        'chunk_index' => $chunk_index,
-        'total_chunks' => $total_chunks,
-        'chunk_size' => count($chunk_guids)
+    PuntWorkLogger::debug('Processing concurrent single item', PuntWorkLogger::CONTEXT_BATCH, [
+        'guid' => $guid
     ]);
 
     $logs = [];
@@ -288,7 +191,7 @@ function process_item_chunk_callback($chunk_guids, $json_path, $start_index, $ac
     $processed_count = 0;
 
     try {
-        // Re-read the specific items for this chunk from JSONL
+        // Re-read the specific item from JSONL
         $batch_items = [];
         if (!empty($json_path) && file_exists($json_path)) {
             $handle = fopen($json_path, "r");
@@ -299,8 +202,9 @@ function process_item_chunk_callback($chunk_guids, $json_path, $start_index, $ac
                         $line = trim($line);
                         if (!empty($line)) {
                             $item = json_decode($line, true);
-                            if ($item !== null && isset($item['guid']) && in_array($item['guid'], $chunk_guids)) {
-                                $batch_items[$item['guid']] = ['item' => $item, 'index' => $current_index];
+                            if ($item !== null && isset($item['guid']) && $item['guid'] === $guid) {
+                                $batch_items[$guid] = ['item' => $item, 'index' => $current_index];
+                                break; // Found the item
                             }
                         }
                     }
@@ -310,77 +214,62 @@ function process_item_chunk_callback($chunk_guids, $json_path, $start_index, $ac
             }
         }
 
-        // Re-fetch database data for this chunk
+        // Re-fetch database data for this item
         global $wpdb;
 
-        // Bulk existing post_ids for this chunk
-        $guid_placeholders = implode(',', array_fill(0, count($chunk_guids), '%s'));
+        // Get existing post_id for this guid
         $existing_meta = $wpdb->get_results($wpdb->prepare(
-            "SELECT post_id, meta_value AS guid FROM $wpdb->postmeta WHERE meta_key = 'guid' AND meta_value IN ($guid_placeholders)",
-            $chunk_guids
+            "SELECT post_id, meta_value AS guid FROM $wpdb->postmeta WHERE meta_key = 'guid' AND meta_value = %s",
+            $guid
         ));
-        $existing_by_guid = [];
-        foreach ($existing_meta as $row) {
-            $existing_by_guid[$row->guid][] = $row->post_id;
-        }
-
         $post_ids_by_guid = [];
-        // Simple duplicate handling for this chunk
-        foreach ($chunk_guids as $guid) {
-            if (isset($existing_by_guid[$guid])) {
-                $post_ids_by_guid[$guid] = $existing_by_guid[$guid][0]; // Take first post for this GUID
-            }
+        if (!empty($existing_meta)) {
+            $post_ids_by_guid[$guid] = $existing_meta[0]->post_id;
         }
 
-        // Bulk fetch last updates and hashes for existing posts in this chunk
-        $post_ids = array_values($post_ids_by_guid);
+        // Fetch last updates and hashes for existing post
+        $post_id = $post_ids_by_guid[$guid] ?? null;
         $last_updates = [];
         $all_hashes_by_post = [];
 
-        if (!empty($post_ids)) {
-            $placeholders = implode(',', array_fill(0, count($post_ids), '%d'));
-            $chunk_last = $wpdb->get_results($wpdb->prepare(
-                "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_last_import_update' AND post_id IN ($placeholders)",
-                $post_ids
-            ), OBJECT_K);
-            $last_updates = (array)$chunk_last;
+        if ($post_id) {
+            $last_update = $wpdb->get_var($wpdb->prepare(
+                "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = '_last_import_update' AND post_id = %d",
+                $post_id
+            ));
+            if ($last_update) {
+                $last_updates[$post_id] = (object)['meta_value' => $last_update];
+            }
 
-            $chunk_hashes = $wpdb->get_results($wpdb->prepare(
-                "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
-                $post_ids
-            ), OBJECT_K);
-            foreach ($chunk_hashes as $id => $obj) {
-                $all_hashes_by_post[$id] = $obj->meta_value;
+            $hash = $wpdb->get_var($wpdb->prepare(
+                "SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id = %d",
+                $post_id
+            ));
+            if ($hash) {
+                $all_hashes_by_post[$post_id] = $hash;
             }
         }
 
     } catch (\Exception $e) {
-        PuntWorkLogger::error('Failed to prepare data for concurrent chunk', PuntWorkLogger::CONTEXT_BATCH, [
-            'chunk_index' => $chunk_index,
+        PuntWorkLogger::error('Failed to prepare data for concurrent item', PuntWorkLogger::CONTEXT_BATCH, [
+            'guid' => $guid,
             'error' => $e->getMessage(),
             'json_path' => $json_path
         ]);
         return;
     }
 
-    foreach ($chunk_guids as $guid) {
-        $item_start_time = microtime(true);
-
-        try {
-            $item_data = $batch_items[$guid]['item'] ?? null;
-            if (!$item_data) {
-                PuntWorkLogger::warning('Item not found in chunk', PuntWorkLogger::CONTEXT_BATCH, [
-                    'guid' => $guid,
-                    'chunk_index' => $chunk_index
-                ]);
-                $skipped++;
-                $processed_count++;
-                continue;
-            }
-
+    try {
+        $item_data = $batch_items[$guid]['item'] ?? null;
+        if (!$item_data) {
+            PuntWorkLogger::warning('Item not found', PuntWorkLogger::CONTEXT_BATCH, [
+                'guid' => $guid
+            ]);
+            $skipped++;
+            $processed_count++;
+        } else {
             $xml_updated = isset($item_data['updated']) ? $item_data['updated'] : '';
             $xml_updated_ts = strtotime($xml_updated);
-            $post_id = isset($post_ids_by_guid[$guid]) ? $post_ids_by_guid[$guid] : null;
 
             // If post exists, check if it needs updating
             if ($post_id) {
@@ -398,15 +287,13 @@ function process_item_chunk_callback($chunk_guids, $json_path, $start_index, $ac
                             'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                             'operation' => 'republish_post_concurrent',
                             'post_id' => $post_id,
-                            'guid' => $guid,
-                            'chunk_index' => $chunk_index
+                            'guid' => $guid
                         ]);
 
                         if (is_wp_error($update_result)) {
-                            PuntWorkLogger::error('Failed to republish post in concurrent chunk', PuntWorkLogger::CONTEXT_BATCH, [
+                            PuntWorkLogger::error('Failed to republish post in concurrent item', PuntWorkLogger::CONTEXT_BATCH, [
                                 'post_id' => $post_id,
                                 'guid' => $guid,
-                                'chunk_index' => $chunk_index,
                                 'error' => $update_result->get_error_message()
                             ]);
                             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Failed to republish ID: ' . $post_id . ' GUID: ' . $guid . ' - ' . $update_result->get_error_message();
@@ -434,10 +321,9 @@ function process_item_chunk_callback($chunk_guids, $json_path, $start_index, $ac
                     $error_message = '';
                     $update_result = update_job_post($post_id, $guid, $item_data, $acf_fields, $zero_empty_fields, $logs, $error_message);
                     if (is_wp_error($update_result)) {
-                        PuntWorkLogger::error('Failed to update post in concurrent chunk', PuntWorkLogger::CONTEXT_BATCH, [
+                        PuntWorkLogger::error('Failed to update post in concurrent item', PuntWorkLogger::CONTEXT_BATCH, [
                             'post_id' => $post_id,
                             'guid' => $guid,
-                            'chunk_index' => $chunk_index,
                             'error' => $error_message
                         ]);
                         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Failed to update ID: ' . $post_id . ' - ' . $error_message;
@@ -446,16 +332,14 @@ function process_item_chunk_callback($chunk_guids, $json_path, $start_index, $ac
                     }
 
                 } catch (\Exception $e) {
-                    PuntWorkLogger::error('Error processing existing post in concurrent chunk', PuntWorkLogger::CONTEXT_BATCH, [
+                    PuntWorkLogger::error('Error processing existing post in concurrent item', PuntWorkLogger::CONTEXT_BATCH, [
                         'post_id' => $post_id,
                         'guid' => $guid,
-                        'chunk_index' => $chunk_index,
                         'error' => $e->getMessage()
                     ]);
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Error processing existing post ID: ' . $post_id . ' GUID: ' . $guid . ' - ' . $e->getMessage();
                     $skipped++;
                     $processed_count++;
-                    continue;
                 }
 
             } else {
@@ -463,9 +347,8 @@ function process_item_chunk_callback($chunk_guids, $json_path, $start_index, $ac
                 $error_message = '';
                 $create_result = create_job_post($item_data, $acf_fields, $zero_empty_fields, $user_id, $logs, $error_message);
                 if (is_wp_error($create_result)) {
-                    PuntWorkLogger::error('Failed to create post in concurrent chunk', PuntWorkLogger::CONTEXT_BATCH, [
+                    PuntWorkLogger::error('Failed to create post in concurrent item', PuntWorkLogger::CONTEXT_BATCH, [
                         'guid' => $guid,
-                        'chunk_index' => $chunk_index,
                         'error' => $error_message
                     ]);
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Failed to create GUID: ' . $guid . ' - ' . $error_message;
@@ -475,60 +358,68 @@ function process_item_chunk_callback($chunk_guids, $json_path, $start_index, $ac
             }
 
             $processed_count++;
-            $item_time = microtime(true) - $item_start_time;
-            $item_timings[] = $item_time;
-
-        } catch (\Exception $e) {
-            PuntWorkLogger::error('Critical error processing item in concurrent chunk', PuntWorkLogger::CONTEXT_BATCH, [
-                'guid' => $guid,
-                'chunk_index' => $chunk_index,
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Critical error processing GUID: ' . $guid . ' - ' . $e->getMessage();
-            $skipped++;
-            $processed_count++;
-            continue;
         }
-    }
 
-    $chunk_time = microtime(true) - $chunk_start_time;
-    $avg_item_time = !empty($item_timings) ? array_sum($item_timings) / count($item_timings) : 0;
+        $item_time = microtime(true) - $item_start_time;
 
-    PuntWorkLogger::debug('Concurrent chunk completed', PuntWorkLogger::CONTEXT_BATCH, [
-        'chunk_index' => $chunk_index,
-        'processed_count' => $processed_count,
-        'published' => $published,
-        'updated' => $updated,
-        'skipped' => $skipped,
-        'chunk_time' => $chunk_time,
-        'avg_item_time' => $avg_item_time,
-        'total_items' => count($chunk_guids)
-    ]);
+        PuntWorkLogger::debug('Concurrent single item completed', PuntWorkLogger::CONTEXT_BATCH, [
+            'guid' => $guid,
+            'processed_count' => $processed_count,
+            'published' => $published,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'item_time' => $item_time
+        ]);
 
-    // Store results in transient for the main process to collect
-    $result = [
-        'chunk_index' => $chunk_index,
-        'logs' => $logs,
-        'updated' => $updated,
-        'published' => $published,
-        'skipped' => $skipped,
-        'processed_count' => $processed_count,
-        'item_timings' => $item_timings,
-        'chunk_time' => $chunk_time,
-        'avg_item_time' => $avg_item_time
-    ];
+        // Update import status asynchronously with item results
+        $current_status = get_import_status();
+        if (!is_array($current_status)) {
+            $current_status = [];
+        }
+        $current_status['published'] = ($current_status['published'] ?? 0) + $published;
+        $current_status['updated'] = ($current_status['updated'] ?? 0) + $updated;
+        $current_status['skipped'] = ($current_status['skipped'] ?? 0) + $skipped;
+        $current_status['processed'] = ($current_status['processed'] ?? 0) + $processed_count;
+        $current_status['last_update'] = time();
+        if (!isset($current_status['logs']) || !is_array($current_status['logs'])) {
+            $current_status['logs'] = [];
+        }
+        $current_status['logs'] = array_merge($current_status['logs'], $logs);
+        $current_status['logs'] = array_slice($current_status['logs'], -50); // Keep last 50
+        set_import_status($current_status);
 
-    // Get the action ID from the current action
-    $current_action = current_action();
-    if ($current_action) {
-        set_transient('puntwork_chunk_result_' . $current_action->get_schedule()->get_action_id(), $result, 3600); // 1 hour expiry
+        PuntWorkLogger::debug('Import status updated with item results', PuntWorkLogger::CONTEXT_BATCH, [
+            'guid' => $guid,
+            'status_updated' => true
+        ]);
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Critical error processing item', PuntWorkLogger::CONTEXT_BATCH, [
+            'guid' => $guid,
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ]);
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Critical error processing GUID: ' . $guid . ' - ' . $e->getMessage();
+        $skipped++;
+        $processed_count++;
+
+        // Update status even on error
+        $current_status = get_import_status();
+        if (!is_array($current_status)) {
+            $current_status = [];
+        }
+        $current_status['skipped'] = ($current_status['skipped'] ?? 0) + $skipped;
+        $current_status['processed'] = ($current_status['processed'] ?? 0) + $processed_count;
+        $current_status['last_update'] = time();
+        $current_status['logs'] = array_merge($current_status['logs'] ?? [], $logs);
+        $current_status['logs'] = array_slice($current_status['logs'], -50);
+        set_import_status($current_status);
     }
 }
 
 // Hook the callback function
-add_action('puntwork_process_item_chunk', 'Puntwork\process_item_chunk_callback', 10, 8);
+add_action('puntwork_process_single_item', 'Puntwork\process_single_item_callback', 10, 6);
 
 /**
  * Enhanced batch metrics update with concurrent processing data
