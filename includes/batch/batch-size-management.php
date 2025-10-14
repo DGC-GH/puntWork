@@ -37,6 +37,66 @@ require_once plugin_dir_path(__FILE__) . '../utilities/retry-utility.php';
  */
 function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time) {
     try {
+        // COMPREHENSIVE INPUT VALIDATION
+        // Validate batch_size
+        if (!is_int($batch_size) || $batch_size < 1) {
+            PuntWorkLogger::warning('Invalid batch_size parameter, using default', PuntWorkLogger::CONTEXT_BATCH, [
+                'provided_batch_size' => $batch_size,
+                'provided_type' => gettype($batch_size),
+                'fallback_batch_size' => DEFAULT_BATCH_SIZE
+            ]);
+            $batch_size = DEFAULT_BATCH_SIZE;
+        }
+
+        // Validate memory_limit_bytes
+        if (!is_numeric($memory_limit_bytes) || $memory_limit_bytes <= 0) {
+            PuntWorkLogger::warning('Invalid memory_limit_bytes parameter, using system default', PuntWorkLogger::CONTEXT_BATCH, [
+                'provided_memory_limit' => $memory_limit_bytes,
+                'provided_type' => gettype($memory_limit_bytes),
+                'fallback_memory_limit' => get_memory_limit_bytes()
+            ]);
+            $memory_limit_bytes = get_memory_limit_bytes();
+        }
+
+        // Validate last_memory_ratio
+        if (!is_numeric($last_memory_ratio) || $last_memory_ratio < 0 || $last_memory_ratio > 2) {
+            PuntWorkLogger::warning('Invalid last_memory_ratio parameter, clamping to valid range', PuntWorkLogger::CONTEXT_BATCH, [
+                'provided_memory_ratio' => $last_memory_ratio,
+                'provided_type' => gettype($last_memory_ratio),
+                'clamped_ratio' => max(0, min(1, $last_memory_ratio))
+            ]);
+            $last_memory_ratio = max(0, min(1, $last_memory_ratio));
+        }
+
+        // Validate time parameters
+        if (!is_numeric($current_batch_time) || $current_batch_time < 0) {
+            PuntWorkLogger::warning('Invalid current_batch_time parameter, using 0', PuntWorkLogger::CONTEXT_BATCH, [
+                'provided_current_time' => $current_batch_time,
+                'provided_type' => gettype($current_batch_time),
+                'fallback_time' => 0
+            ]);
+            $current_batch_time = 0;
+        }
+
+        if (!is_numeric($previous_batch_time) || $previous_batch_time < 0) {
+            PuntWorkLogger::warning('Invalid previous_batch_time parameter, using 0', PuntWorkLogger::CONTEXT_BATCH, [
+                'provided_previous_time' => $previous_batch_time,
+                'provided_type' => gettype($previous_batch_time),
+                'fallback_time' => 0
+            ]);
+            $previous_batch_time = 0;
+        }
+
+        // Validate system constraints
+        $actual_memory_limit = get_memory_limit_bytes();
+        if ($memory_limit_bytes > $actual_memory_limit * 1.5) {
+            PuntWorkLogger::warning('Provided memory limit significantly exceeds system limit', PuntWorkLogger::CONTEXT_BATCH, [
+                'provided_limit' => $memory_limit_bytes,
+                'system_limit' => $actual_memory_limit,
+                'ratio' => $memory_limit_bytes / $actual_memory_limit
+            ]);
+        }
+
         $old_batch_size = $batch_size;
 
         // Get concurrency level for optimization
@@ -497,6 +557,50 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
         // Ensure batch size never goes below 1 or above dynamic maximum
         $batch_size = max(1, min($max_batch_size, $batch_size));
 
+        // VALIDATE FINAL CALCULATED VALUES
+        if ($batch_size < 1) {
+            PuntWorkLogger::error('Calculated batch size is invalid, using minimum', PuntWorkLogger::CONTEXT_BATCH, [
+                'calculated_batch_size' => $batch_size,
+                'minimum_allowed' => 1,
+                'fallback_batch_size' => 1
+            ]);
+            $batch_size = 1;
+        }
+
+        if ($batch_size > $max_batch_size) {
+            PuntWorkLogger::warning('Calculated batch size exceeds maximum, capping', PuntWorkLogger::CONTEXT_BATCH, [
+                'calculated_batch_size' => $batch_size,
+                'maximum_allowed' => $max_batch_size,
+                'capped_batch_size' => $max_batch_size
+            ]);
+            $batch_size = $max_batch_size;
+        }
+
+        // Validate that batch size is reasonable for system constraints
+        $recommended_max = calculate_recommended_max_batch_size($memory_limit_bytes, $last_memory_ratio);
+        if ($batch_size > $recommended_max) {
+            PuntWorkLogger::warning('Batch size exceeds recommended maximum for current conditions', PuntWorkLogger::CONTEXT_BATCH, [
+                'current_batch_size' => $batch_size,
+                'recommended_max' => $recommended_max,
+                'memory_ratio' => $last_memory_ratio,
+                'adjustment_reason' => 'system_constraint_violation'
+            ]);
+            $batch_size = $recommended_max;
+        }
+
+        // Validate time per item calculation doesn't result in division by zero or invalid values
+        if ($batch_size > 0 && $current_batch_time >= 0) {
+            $time_per_item = $current_batch_time / $batch_size;
+            if (!is_finite($time_per_item) || $time_per_item < 0) {
+                PuntWorkLogger::warning('Invalid time per item calculation detected', PuntWorkLogger::CONTEXT_BATCH, [
+                    'batch_size' => $batch_size,
+                    'current_batch_time' => $current_batch_time,
+                    'calculated_time_per_item' => $time_per_item,
+                    'calculation_valid' => false
+                ]);
+            }
+        }
+
         // Log batch size changes for debugging with comprehensive metrics
         if ($batch_size != $old_batch_size) {
             $reason = '';
@@ -595,6 +699,141 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
 }
 
 /**
+ * Calculate recommended maximum batch size based on system constraints.
+ *
+ * @param float $memory_limit_bytes Memory limit in bytes.
+ * @param float $current_memory_ratio Current memory usage ratio.
+ * @return int Recommended maximum batch size.
+ */
+function calculate_recommended_max_batch_size($memory_limit_bytes, $current_memory_ratio) {
+    try {
+        // Validate inputs
+        if (!is_numeric($memory_limit_bytes) || $memory_limit_bytes <= 0) {
+            $memory_limit_bytes = get_memory_limit_bytes();
+        }
+        if (!is_numeric($current_memory_ratio) || $current_memory_ratio < 0 || $current_memory_ratio > 1) {
+            $current_memory_ratio = min(1, max(0, $current_memory_ratio));
+        }
+
+        // Calculate available memory
+        $available_memory = $memory_limit_bytes * (1 - $current_memory_ratio);
+        $available_mb = $available_memory / (1024 * 1024);
+
+        // Estimate memory per item (conservative estimate based on typical job processing)
+        $memory_per_item_kb = 50; // 50KB per item average
+        $memory_per_item_bytes = $memory_per_item_kb * 1024;
+
+        // Calculate memory-based maximum
+        $memory_based_max = max(1, floor($available_memory / $memory_per_item_bytes));
+
+        // CPU-based constraints
+        $cpu_cores = function_exists('shell_exec') ? (int) shell_exec('nproc 2>/dev/null') : 2;
+        $cpu_based_max = max(1, $cpu_cores * 25); // 25 items per CPU core
+
+        // Time-based constraints (prevent batches longer than 5 minutes)
+        $time_based_max = 500; // Conservative upper limit
+
+        // Take the minimum of all constraints
+        $recommended_max = min($memory_based_max, $cpu_based_max, $time_based_max);
+
+        // Apply absolute bounds
+        $recommended_max = max(MIN_BATCH_SIZE, min(MAX_BATCH_SIZE * 2, $recommended_max));
+
+        PuntWorkLogger::debug('Calculated recommended maximum batch size', PuntWorkLogger::CONTEXT_BATCH, [
+            'recommended_max' => $recommended_max,
+            'memory_based_max' => $memory_based_max,
+            'cpu_based_max' => $cpu_based_max,
+            'time_based_max' => $time_based_max,
+            'available_memory_mb' => $available_mb,
+            'current_memory_ratio' => $current_memory_ratio,
+            'cpu_cores' => $cpu_cores,
+            'memory_per_item_kb' => $memory_per_item_kb
+        ]);
+
+        return $recommended_max;
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Error calculating recommended maximum batch size', PuntWorkLogger::CONTEXT_BATCH, [
+            'error' => $e->getMessage(),
+            'memory_limit_bytes' => $memory_limit_bytes,
+            'current_memory_ratio' => $current_memory_ratio,
+            'fallback_max' => DEFAULT_BATCH_SIZE
+        ]);
+        return DEFAULT_BATCH_SIZE;
+    }
+}
+
+/**
+ * Validate batch size calculation inputs and provide detailed error information.
+ *
+ * @param int $batch_size Current batch size.
+ * @param float $memory_limit_bytes Memory limit.
+ * @param float $last_memory_ratio Last memory ratio.
+ * @param float $current_batch_time Current batch completion time.
+ * @param float $previous_batch_time Previous batch completion time.
+ * @return array Array with 'valid' boolean and 'errors' array.
+ */
+function validate_batch_size_inputs($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time) {
+    $errors = [];
+    $warnings = [];
+
+    // Validate batch_size
+    if (!is_int($batch_size) && !is_numeric($batch_size)) {
+        $errors[] = 'batch_size must be a number';
+    } elseif ($batch_size < MIN_BATCH_SIZE) {
+        $errors[] = "batch_size must be at least " . MIN_BATCH_SIZE;
+    } elseif ($batch_size > MAX_BATCH_SIZE * 5) {
+        $warnings[] = "batch_size significantly exceeds typical maximum (" . MAX_BATCH_SIZE . ")";
+    }
+
+    // Validate memory_limit_bytes
+    if (!is_numeric($memory_limit_bytes)) {
+        $errors[] = 'memory_limit_bytes must be a number';
+    } elseif ($memory_limit_bytes <= 0) {
+        $errors[] = 'memory_limit_bytes must be positive';
+    } elseif ($memory_limit_bytes < 32 * 1024 * 1024) { // Less than 32MB
+        $warnings[] = 'memory_limit_bytes is very low, may impact performance';
+    }
+
+    // Validate last_memory_ratio
+    if (!is_numeric($last_memory_ratio)) {
+        $errors[] = 'last_memory_ratio must be a number';
+    } elseif ($last_memory_ratio < 0) {
+        $errors[] = 'last_memory_ratio cannot be negative';
+    } elseif ($last_memory_ratio > 2) {
+        $warnings[] = 'last_memory_ratio is very high (>200%), may indicate measurement issues';
+    }
+
+    // Validate time parameters
+    if (!is_numeric($current_batch_time)) {
+        $errors[] = 'current_batch_time must be a number';
+    } elseif ($current_batch_time < 0) {
+        $errors[] = 'current_batch_time cannot be negative';
+    }
+
+    if (!is_numeric($previous_batch_time)) {
+        $errors[] = 'previous_batch_time must be a number';
+    } elseif ($previous_batch_time < 0) {
+        $errors[] = 'previous_batch_time cannot be negative';
+    }
+
+    // Cross-validation
+    if ($last_memory_ratio > 0 && $memory_limit_bytes > 0) {
+        $used_memory = $last_memory_ratio * $memory_limit_bytes;
+        if ($used_memory > $memory_limit_bytes) {
+            $warnings[] = 'memory usage exceeds memory limit, may cause issues';
+        }
+    }
+
+    return [
+        'valid' => empty($errors),
+        'errors' => $errors,
+        'warnings' => $warnings,
+        'has_warnings' => !empty($warnings)
+    ];
+}
+
+/**
  * Update batch performance metrics.
  *
  * @param float $time_elapsed Time elapsed for batch.
@@ -604,6 +843,57 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
  */
 function update_batch_metrics($time_elapsed, $processed_count, $batch_size) {
     try {
+        // VALIDATE INPUTS
+        if (!is_numeric($time_elapsed) || $time_elapsed < 0) {
+            PuntWorkLogger::warning('Invalid time_elapsed parameter in update_batch_metrics', PuntWorkLogger::CONTEXT_BATCH, [
+                'provided_time_elapsed' => $time_elapsed,
+                'provided_type' => gettype($time_elapsed),
+                'fallback_value' => 0
+            ]);
+            $time_elapsed = 0;
+        }
+
+        if (!is_int($processed_count) && !is_numeric($processed_count)) {
+            PuntWorkLogger::warning('Invalid processed_count parameter in update_batch_metrics', PuntWorkLogger::CONTEXT_BATCH, [
+                'provided_processed_count' => $processed_count,
+                'provided_type' => gettype($processed_count),
+                'fallback_value' => 0
+            ]);
+            $processed_count = 0;
+        } elseif ($processed_count < 0) {
+            PuntWorkLogger::warning('Negative processed_count parameter in update_batch_metrics', PuntWorkLogger::CONTEXT_BATCH, [
+                'provided_processed_count' => $processed_count,
+                'corrected_value' => 0
+            ]);
+            $processed_count = 0;
+        }
+
+        if (!is_int($batch_size) && !is_numeric($batch_size)) {
+            PuntWorkLogger::warning('Invalid batch_size parameter in update_batch_metrics', PuntWorkLogger::CONTEXT_BATCH, [
+                'provided_batch_size' => $batch_size,
+                'provided_type' => gettype($batch_size),
+                'fallback_value' => DEFAULT_BATCH_SIZE
+            ]);
+            $batch_size = DEFAULT_BATCH_SIZE;
+        } elseif ($batch_size < 1) {
+            PuntWorkLogger::warning('Batch size too small in update_batch_metrics', PuntWorkLogger::CONTEXT_BATCH, [
+                'provided_batch_size' => $batch_size,
+                'corrected_value' => 1
+            ]);
+            $batch_size = 1;
+        }
+
+        // VALIDATE CALCULATIONS
+        $time_per_item = $processed_count > 0 ? $time_elapsed / $processed_count : 0;
+        if ($processed_count > 0 && (!is_finite($time_per_item) || $time_per_item < 0)) {
+            PuntWorkLogger::warning('Invalid time_per_item calculation in update_batch_metrics', PuntWorkLogger::CONTEXT_BATCH, [
+                'time_elapsed' => $time_elapsed,
+                'processed_count' => $processed_count,
+                'calculated_time_per_item' => $time_per_item,
+                'calculation_error' => true
+            ]);
+            $time_per_item = 0;
+        }
         // Store previous batch time before updating
         $previous_batch_time = get_last_batch_time();
         retry_option_operation(function() use ($previous_batch_time) {
@@ -710,6 +1000,40 @@ function update_batch_metrics($time_elapsed, $processed_count, $batch_size) {
  * @return array Standardized import status array.
  */
 function initialize_import_status($total = 0, $initial_message = 'Import started', $start_time = null) {
+    // VALIDATE INPUTS
+    if (!is_int($total) && !is_numeric($total)) {
+        PuntWorkLogger::warning('Invalid total parameter in initialize_import_status', PuntWorkLogger::CONTEXT_BATCH, [
+            'provided_total' => $total,
+            'provided_type' => gettype($total),
+            'fallback_value' => 0
+        ]);
+        $total = 0;
+    } elseif ($total < 0) {
+        PuntWorkLogger::warning('Negative total parameter in initialize_import_status', PuntWorkLogger::CONTEXT_BATCH, [
+            'provided_total' => $total,
+            'corrected_value' => 0
+        ]);
+        $total = 0;
+    }
+
+    if (!is_string($initial_message) && !is_null($initial_message)) {
+        PuntWorkLogger::warning('Invalid initial_message parameter in initialize_import_status', PuntWorkLogger::CONTEXT_BATCH, [
+            'provided_message' => $initial_message,
+            'provided_type' => gettype($initial_message),
+            'fallback_message' => 'Import started'
+        ]);
+        $initial_message = 'Import started';
+    }
+
+    if ($start_time !== null && (!is_numeric($start_time) || $start_time < 0)) {
+        PuntWorkLogger::warning('Invalid start_time parameter in initialize_import_status', PuntWorkLogger::CONTEXT_BATCH, [
+            'provided_start_time' => $start_time,
+            'provided_type' => gettype($start_time),
+            'fallback_to_current_time' => true
+        ]);
+        $start_time = microtime(true);
+    }
+
     if ($start_time === null) {
         $start_time = microtime(true);
     }

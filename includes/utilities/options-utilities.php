@@ -119,7 +119,54 @@ function delete_import_status() {
  * Get batch size with validation and defaults
  */
 function get_batch_size() {
-    return get_option('job_import_batch_size', DEFAULT_BATCH_SIZE);
+    $batch_size = get_option('job_import_batch_size', DEFAULT_BATCH_SIZE);
+
+    // VALIDATE RETRIEVED VALUE
+    if (!is_numeric($batch_size)) {
+        PuntWorkLogger::warning('Invalid batch size retrieved from options, using default', PuntWorkLogger::CONTEXT_BATCH, [
+            'retrieved_value' => $batch_size,
+            'retrieved_type' => gettype($batch_size),
+            'fallback_value' => DEFAULT_BATCH_SIZE
+        ]);
+        $batch_size = DEFAULT_BATCH_SIZE;
+    }
+
+    // Ensure batch size is within reasonable bounds
+    if ($batch_size < 1) {
+        PuntWorkLogger::warning('Batch size too small, correcting to minimum', PuntWorkLogger::CONTEXT_BATCH, [
+            'original_value' => $batch_size,
+            'corrected_value' => 1,
+            'minimum_allowed' => 1
+        ]);
+        $batch_size = 1;
+    }
+
+    if ($batch_size > MAX_BATCH_SIZE * 2) {
+        PuntWorkLogger::warning('Batch size excessively large, capping to maximum', PuntWorkLogger::CONTEXT_BATCH, [
+            'original_value' => $batch_size,
+            'capped_value' => MAX_BATCH_SIZE,
+            'maximum_allowed' => MAX_BATCH_SIZE
+        ]);
+        $batch_size = MAX_BATCH_SIZE;
+    }
+
+    // Validate against system constraints if available
+    $memory_limit = get_memory_limit_bytes();
+    $current_memory_ratio = get_last_peak_memory() / max(1, $memory_limit);
+    $recommended_max = calculate_recommended_max_batch_size($memory_limit, $current_memory_ratio);
+
+    if ($batch_size > $recommended_max) {
+        PuntWorkLogger::warning('Stored batch size exceeds recommended maximum for current system', PuntWorkLogger::CONTEXT_BATCH, [
+            'stored_batch_size' => $batch_size,
+            'recommended_max' => $recommended_max,
+            'memory_limit' => $memory_limit,
+            'current_memory_ratio' => $current_memory_ratio,
+            'adjustment_reason' => 'system_constraint_validation'
+        ]);
+        $batch_size = $recommended_max;
+    }
+
+    return (int) $batch_size;
 }
 
 /**
