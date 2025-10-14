@@ -270,6 +270,31 @@ if (!function_exists('process_batch_items')) {
             'updated' => $updated,
             'skipped' => $skipped
         ]);
+
+        // SUCCESS RATE TRACKING: Calculate and update success metrics for sequential processing
+        $total_items = count($batch_guids);
+        $successful_operations = $published + $updated; // Items that were successfully created or updated
+        $success_rate = $total_items > 0 ? $successful_operations / $total_items : 1.0;
+
+        // Update sequential processing success metrics
+        update_sequential_success_metrics($total_items, $successful_operations, $skipped, $processed_count);
+
+        PuntWorkLogger::info('Sequential processing success rate calculated', PuntWorkLogger::CONTEXT_BATCH, [
+            'total_items' => $total_items,
+            'successful_operations' => $successful_operations,
+            'skipped' => $skipped,
+            'success_rate' => $success_rate,
+            'processing_mode' => 'sequential'
+        ]);
+
+        return [
+            'success_rate' => $success_rate,
+            'total_processed' => $processed_count,
+            'successful_operations' => $successful_operations,
+            'skipped' => $skipped,
+            'published' => $published,
+            'updated' => $updated
+        ];
     }
 }
 

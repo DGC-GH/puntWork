@@ -708,6 +708,11 @@ if (!function_exists('import_all_jobs_from_json')) {
 
         // Ensure final status is updated for UI
         $current_status = get_import_status([]);
+        // SUCCESS RATE TRACKING: Calculate and include overall import success rate
+        $overall_success_rate = $total_items > 0 ? ($total_processed - $total_skipped) / $total_items : 1.0;
+        $concurrent_success_rate = get_concurrent_success_rate();
+        $sequential_success_rate = get_sequential_success_rate();
+
         $final_status = array_merge($current_status, [
             'total' => $total_items,
             'processed' => $total_processed,
@@ -727,6 +732,13 @@ if (!function_exists('import_all_jobs_from_json')) {
             'cleanup_total' => $deleted_count,
             'cleanup_processed' => $deleted_count,
             'import_completion_locked' => true, // CRITICAL: Lock to prevent further status updates
+            // Success rate tracking
+            'overall_success_rate' => $overall_success_rate,
+            'concurrent_success_rate' => $concurrent_success_rate,
+            'sequential_success_rate' => $sequential_success_rate,
+            'processing_mode_used' => $concurrent_success_rate > $sequential_success_rate ? 'concurrent' : 'sequential',
+            'total_successful' => $total_processed - $total_skipped,
+            'total_failed' => $total_skipped
         ]);
         // When complete, ensure processed equals total
         if ($final_status['complete'] && $final_status['processed'] < $final_status['total']) {

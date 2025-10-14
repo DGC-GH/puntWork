@@ -615,10 +615,49 @@ function process_batch_data($batch_guids, $batch_items, $json_path, $start_index
     $acf_fields = get_acf_fields();
     $zero_empty_fields = get_zero_empty_fields();
 
-    // Check if Action Scheduler is available for concurrent processing
-    if (function_exists('as_schedule_single_action')) {
-        PuntWorkLogger::debug('Attempting concurrent processing with Action Scheduler', PuntWorkLogger::CONTEXT_BATCH, [
-            'batch_guids_count' => count($batch_guids)
+    // SUCCESS RATE BASED PROCESSING DECISION: Choose between concurrent and sequential based on historical success rates
+    $concurrent_success_rate = get_concurrent_success_rate();
+    $sequential_success_rate = get_sequential_success_rate();
+    $action_scheduler_available = function_exists('as_schedule_single_action');
+
+    // Decision logic based on success rates and availability
+    $use_concurrent = false;
+    $decision_reason = '';
+
+    if (!$action_scheduler_available) {
+        $use_concurrent = false;
+        $decision_reason = 'action_scheduler_not_available';
+    } elseif ($concurrent_success_rate >= 0.95 && $concurrent_success_rate > $sequential_success_rate) {
+        // Use concurrent if it has very high success rate and is better than sequential
+        $use_concurrent = true;
+        $decision_reason = 'concurrent_high_success_rate';
+    } elseif ($sequential_success_rate >= 0.95 && $sequential_success_rate > $concurrent_success_rate) {
+        // Use sequential if it has very high success rate and is better than concurrent
+        $use_concurrent = false;
+        $decision_reason = 'sequential_high_success_rate';
+    } elseif ($concurrent_success_rate >= 0.8) {
+        // Use concurrent if success rate is acceptable
+        $use_concurrent = true;
+        $decision_reason = 'concurrent_acceptable_success_rate';
+    } else {
+        // Default to sequential if concurrent success rate is low
+        $use_concurrent = false;
+        $decision_reason = 'concurrent_low_success_rate_fallback';
+    }
+
+    PuntWorkLogger::info('Processing mode decision based on success rates', PuntWorkLogger::CONTEXT_BATCH, [
+        'use_concurrent' => $use_concurrent,
+        'decision_reason' => $decision_reason,
+        'concurrent_success_rate' => $concurrent_success_rate,
+        'sequential_success_rate' => $sequential_success_rate,
+        'action_scheduler_available' => $action_scheduler_available,
+        'batch_guids_count' => count($batch_guids)
+    ]);
+
+    if ($use_concurrent) {
+        PuntWorkLogger::debug('Attempting concurrent processing based on success rate decision', PuntWorkLogger::CONTEXT_BATCH, [
+            'batch_guids_count' => count($batch_guids),
+            'decision_reason' => $decision_reason
         ]);
         $result = process_batch_items_concurrent($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, $logs, $updated, $published, $skipped, $processed_count);
 
@@ -650,8 +689,9 @@ function process_batch_data($batch_guids, $batch_items, $json_path, $start_index
             $result = process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, $logs, $updated, $published, $skipped, $processed_count);
         }
     } else {
-        PuntWorkLogger::warning('Action Scheduler not available, using sequential processing', PuntWorkLogger::CONTEXT_BATCH, [
-            'batch_guids_count' => count($batch_guids)
+        PuntWorkLogger::info('Using sequential processing based on success rate decision', PuntWorkLogger::CONTEXT_BATCH, [
+            'batch_guids_count' => count($batch_guids),
+            'decision_reason' => $decision_reason
         ]);
         $result = process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, $logs, $updated, $published, $skipped, $processed_count);
     }
