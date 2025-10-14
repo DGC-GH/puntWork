@@ -408,6 +408,16 @@ function run_scheduled_import_async() {
     error_log('[PUNTWORK] Current time: ' . date('Y-m-d H:i:s'));
     error_log('[PUNTWORK] Function called with arguments: ' . print_r(func_get_args(), true));
 
+    // Check for cancellation before starting async import
+    if (get_transient('import_cancel') === true) {
+        error_log('[PUNTWORK] Async scheduled import cancelled - not starting');
+        PuntWorkLogger::info('Async scheduled import cancelled before execution', PuntWorkLogger::CONTEXT_SCHEDULER, [
+            'reason' => 'import_cancel_transient_set',
+            'action' => 'skipped_async_scheduled_import'
+        ]);
+        return;
+    }
+
     // Clear any previous cancellation before starting
     delete_transient('import_cancel');
     error_log('[PUNTWORK] Cleared import_cancel transient');
@@ -498,6 +508,16 @@ function run_manual_import_async() {
     error_log('[PUNTWORK] Manual async import started - Action Scheduler hook fired');
     error_log('[PUNTWORK] Current time: ' . date('Y-m-d H:i:s'));
     error_log('[PUNTWORK] Function called with arguments: ' . print_r(func_get_args(), true));
+
+    // Check for cancellation before starting manual async import
+    if (get_transient('import_cancel') === true) {
+        error_log('[PUNTWORK] Manual async import cancelled - not starting');
+        PuntWorkLogger::info('Manual async import cancelled before execution', PuntWorkLogger::CONTEXT_SCHEDULER, [
+            'reason' => 'import_cancel_transient_set',
+            'action' => 'skipped_manual_async_import'
+        ]);
+        return;
+    }
 
     // Clear any previous cancellation before starting
     delete_transient('import_cancel');
