@@ -23,6 +23,9 @@ require_once __DIR__ . '/../utilities/options-utilities.php';
 // Include import batch utilities for timeout functions
 require_once __DIR__ . '/../import/import-batch.php';
 
+// Include concurrent processing utilities
+require_once __DIR__ . '/../import/process-batch-items-concurrent.php';
+
 /**
  * Batch processing logic
  * Handles the core batch processing operations for job imports
@@ -447,8 +450,10 @@ function process_batch_items_logic($setup) {
             $batch_time = microtime(true) - $batch_start_time;
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Individual processing complete: Processed {$result['processed_count']} items (published: $published, updated: $updated, skipped: $skipped, duplicates: $duplicates_drafted)";
 
-            // Update performance metrics with batch time, not total time
-            update_batch_metrics($batch_time, $result['processed_count'], $batch_size);
+            // Update performance metrics with concurrent processing data
+            $avg_time_per_item = $result['avg_time_per_item'] ?? 0;
+            $concurrency_used = $result['concurrency_used'] ?? 1;
+            update_batch_metrics_concurrent($batch_time, $result['processed_count'], $batch_size, $avg_time_per_item, $concurrency_used);
 
             // Store batch timing data for status retrieval
             retry_option_operation(function() use ($batch_time) {
@@ -617,9 +622,10 @@ function process_batch_data($batch_guids, $batch_items, &$logs, &$published, &$u
     $acf_fields = get_acf_fields();
     $zero_empty_fields = get_zero_empty_fields();
 
-    process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $logs, $updated, $published, $skipped, $processed_count);
+    // Use concurrent processing for better performance
+    $result = process_batch_items_concurrent($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $logs, $updated, $published, $skipped, $processed_count);
 
-    return ['processed_count' => $processed_count];
+    return $result;
 }
 
 /**
