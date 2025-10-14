@@ -40,7 +40,7 @@ function process_batch_items_logic($setup) {
     try {
         extract($setup);
 
-        PuntWorkLogger::info('Starting batch processing', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::info('Starting individual item processing', PuntWorkLogger::CONTEXT_BATCH, [
             'start_index' => $start_index ?? 'unknown',
             'total' => $total ?? 'unknown',
             'batch_start_time' => $batch_start_time
@@ -119,7 +119,7 @@ function process_batch_items_logic($setup) {
         $inferred_benefits = 0;
         $schema_generated = 0;
 
-        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Starting batch from $start_index to $end_index (size $batch_size)";
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Starting individual processing from $start_index to $end_index (size $batch_size)";
 
         // Load batch from JSONL
         try {
@@ -179,10 +179,10 @@ function process_batch_items_logic($setup) {
                         $timeout_status = get_import_status();
                         $timeout_status['processed'] = $partial_processed;
                         $timeout_status['last_update'] = time();
-                        $timeout_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Batch paused mid-processing due to time/memory limits at item ' . ($current_index + 1);
+                        $timeout_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Processing paused mid-batch due to time/memory limits at item ' . ($current_index + 1);
                         set_import_status($timeout_status);
 
-                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Batch paused mid-processing due to limits - processed ' . $items_processed_in_batch . '/' . $batch_size . ' items in this batch';
+                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Processing paused mid-batch due to limits - processed ' . $items_processed_in_batch . '/' . $batch_size . ' items in this batch';
 
                         return [
                             'success' => true,
@@ -203,7 +203,7 @@ function process_batch_items_logic($setup) {
                             'schema_generated' => $schema_generated,
                             'batch_time' => microtime(true) - $batch_start_time,
                             'batch_processed' => $items_processed_in_batch,
-                            'message' => 'Batch paused mid-processing due to time/memory limits'
+                            'message' => 'Processing paused mid-batch due to time/memory limits'
                         ];
                     }
 
@@ -332,7 +332,7 @@ function process_batch_items_logic($setup) {
         unset($batch_json_items);
 
         $valid_items_count = count($batch_guids);
-        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Prepared $valid_items_count valid items for processing (skipped " . ($loaded_count - $valid_items_count) . " items)";
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Prepared $valid_items_count valid items for individual processing (skipped " . ($loaded_count - $valid_items_count) . " items)";
 
         if (empty($batch_guids)) {
             try {
@@ -445,7 +445,7 @@ function process_batch_items_logic($setup) {
 
             $time_elapsed = microtime(true) - $start_time;
             $batch_time = microtime(true) - $batch_start_time;
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Batch complete: Processed {$result['processed_count']} items (published: $published, updated: $updated, skipped: $skipped, duplicates: $duplicates_drafted)";
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Individual processing complete: Processed {$result['processed_count']} items (published: $published, updated: $updated, skipped: $skipped, duplicates: $duplicates_drafted)";
 
             // Update performance metrics with batch time, not total time
             update_batch_metrics($batch_time, $result['processed_count'], $batch_size);
@@ -503,7 +503,7 @@ function process_batch_items_logic($setup) {
             // Continue with return even if status update fails
         }
 
-        PuntWorkLogger::info('Batch processing completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::info('Individual item processing completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
             'processed_count' => $result['processed_count'] ?? 0,
             'published' => $published,
             'updated' => $updated,
