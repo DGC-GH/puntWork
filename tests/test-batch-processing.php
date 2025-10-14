@@ -26,7 +26,7 @@ class BatchProcessingTest extends TestCase {
      */
     public function test_get_batch_size() {
         // Test default batch size
-        $this->assertEquals(10, get_batch_size());
+        $this->assertEquals(20, get_batch_size());
 
         // Test with option set
         update_option('job_import_batch_size', 100);
