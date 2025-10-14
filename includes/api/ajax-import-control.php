@@ -336,6 +336,30 @@ function get_job_import_status_ajax() {
     try {
         // Get status first to determine if we should log
         $progress = get_import_status() ?: initialize_import_status(0, '', null);
+
+        // Validate that progress is an array
+        if (!is_array($progress)) {
+            PuntWorkLogger::error('Import status is not an array', PuntWorkLogger::CONTEXT_AJAX, [
+                'status_type' => gettype($progress),
+                'status_value' => is_scalar($progress) ? $progress : 'non-scalar'
+            ]);
+            wp_send_json_error(['message' => 'Import status data is corrupted']);
+            return;
+        }
+
+        // Debug log the status data (only in debug mode to avoid spam)
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            PuntWorkLogger::debug('Import status retrieved', PuntWorkLogger::CONTEXT_AJAX, [
+                'total' => $total,
+                'processed' => $processed,
+                'complete' => $complete,
+                'has_start_time' => isset($progress['start_time']),
+                'start_time' => $progress['start_time'] ?? null,
+                'logs_count' => count($progress['logs'] ?? []),
+                'is_counting_phase' => ($total == 0 && isset($progress['start_time']) && $progress['start_time'] > 0)
+            ]);
+        }
+
         $total = $progress['total'] ?? 0;
         $processed = $progress['processed'] ?? 0;
         $complete = $progress['complete'] ?? false;
@@ -371,13 +395,16 @@ function get_job_import_status_ajax() {
             }
 
             // Detect stuck imports with multiple criteria:
-            // 1. No progress for 5+ minutes (300 seconds)
+            // 1. No progress for 5+ minutes (300 seconds) - but be more lenient if we're still counting items
             // 2. Import running for more than 2 hours without completion (7200 seconds)
             // 3. No status update for 10+ minutes (600 seconds)
             $is_stuck = false;
             $stuck_reason = '';
 
-            if ($progress['processed'] == 0 && $time_elapsed > 300) {
+            // Check if we're in the counting phase (total = 0 but import has started)
+            $is_counting_phase = ($progress['total'] == 0 && isset($progress['start_time']) && $progress['start_time'] > 0);
+
+            if ($progress['processed'] == 0 && $time_elapsed > 300 && !$is_counting_phase) {
                 $is_stuck = true;
                 $stuck_reason = 'no progress for 5+ minutes';
             } elseif ($time_elapsed > 7200) { // 2 hours
@@ -472,7 +499,16 @@ function get_job_import_status_ajax() {
             ];
             send_ajax_success('get_job_import_status', $progress, $sanitized_log_data);
         } else {
-            // For initial polling before import starts, just send response without logging
+            // For initial polling or counting phase, still send response but with minimal logging
+            // Check if we're in counting phase (import started but total still 0)
+            $is_counting_phase = isset($progress['start_time']) && $progress['start_time'] > 0 && $progress['total'] == 0;
+            if ($is_counting_phase && defined('WP_DEBUG') && WP_DEBUG) {
+                PuntWorkLogger::debug('Import status requested during counting phase', PuntWorkLogger::CONTEXT_AJAX, [
+                    'start_time' => $progress['start_time'] ?? null,
+                    'time_elapsed' => $progress['job_importing_time_elapsed'] ?? $progress['time_elapsed'] ?? 0,
+                    'logs_count' => count($progress['logs'] ?? [])
+                ]);
+            }
             wp_send_json_success($progress);
         }
 
