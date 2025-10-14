@@ -18,7 +18,8 @@ require_once __DIR__ . '/puntwork-logger.php';
  * @return bool True if validation passes, false if it fails (response sent)
  */
 function validate_ajax_request($action_name, $log_request = true) {
-    if ($log_request) {
+    // NOTE: To enable AJAX request debug logs, define PUNTWORK_DEBUG_POLLING as true in wp-config.php
+    if ($log_request && defined('PUNTWORK_DEBUG_POLLING') && PUNTWORK_DEBUG_POLLING) {
         PuntWorkLogger::logAjaxRequest($action_name, $_POST);
     }
 

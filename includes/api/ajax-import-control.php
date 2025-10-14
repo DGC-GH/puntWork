@@ -599,7 +599,7 @@ function get_job_import_status_ajax() {
         $should_log = $processed > 0 || $complete === true;
 
         // Validate request (conditionally log based on import state)
-        if (!validate_ajax_request('get_job_import_status', $should_log)) {
+        if (!validate_ajax_request('get_job_import_status', false)) {
             return;
         }
 
