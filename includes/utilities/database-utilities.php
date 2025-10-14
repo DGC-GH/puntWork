@@ -140,7 +140,7 @@ function create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, &$log
  */
 function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$logs, &$error_message) {
     $guid = $item['guid'] ?? '';
-    $xml_title = $item['functiontitle'] ?? '';
+    $xml_title = $item['title'] ?? $item['functiontitle'] ?? '';
     $xml_validfrom = $item['validfrom'] ?? '';
     $xml_updated = $item['updated'] ?? null;
     $post_modified = $xml_updated ?: current_time('mysql');

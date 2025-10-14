@@ -580,10 +580,20 @@ function process_batch_data($batch_guids, $batch_items, $json_path, $start_index
     $acf_fields = get_acf_fields();
     $zero_empty_fields = get_zero_empty_fields();
 
-    // Use concurrent processing for better performance
-    $result = process_batch_items_concurrent($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, $logs, $updated, $published, $skipped, $processed_count);
+    // Temporarily disable concurrent processing for debugging
+    // $result = process_batch_items_concurrent($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, $logs, $updated, $published, $skipped, $processed_count);
 
-    return $result;
+    // Use sequential processing instead
+    $user_id = get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : get_current_user_id();
+    process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, $logs, $updated, $published, $skipped, $processed_count);
+
+    $result = [
+        'processed_count' => $processed_count,
+        'total_time' => 0,
+        'avg_time_per_item' => 0,
+        'item_timings' => [],
+        'concurrency_used' => 1
+    ];
 }
 
 /**
