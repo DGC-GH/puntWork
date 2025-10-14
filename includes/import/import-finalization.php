@@ -148,7 +148,7 @@ function cleanup_old_job_posts($import_start_time) {
     $logs = []; // Initialize logs array
 
     PuntWorkLogger::info('Starting cleanup of old job posts based on current feed GUIDs', PuntWorkLogger::CONTEXT_BATCH, [
-        'import_start_time' => date('Y-m-d H:i:s', $import_start_time)
+        'import_start_time' => date('Y-m-d H:i:s', (int)$import_start_time)
     ]);
 
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Starting cleanup of old job posts';
