@@ -395,12 +395,25 @@ function process_single_item_callback($guid, $json_path, $start_index, $acf_fiel
             $current_status = [];
         }
 
+        // CRITICAL: Multiple checks to prevent status updates after import completion
+        $is_complete = ($current_status['complete'] ?? false) === true;
+        $has_end_time = isset($current_status['end_time']) && $current_status['end_time'] > 0;
+        $processed_equals_total = isset($current_status['processed']) && isset($current_status['total']) &&
+                                 $current_status['processed'] >= $current_status['total'] &&
+                                 $current_status['total'] > 0;
+        $completion_locked = ($current_status['import_completion_locked'] ?? false) === true;
+
         // If import is already complete, don't update the status to avoid interfering with completion
-        if (($current_status['complete'] ?? false) === true) {
+        if ($is_complete || $has_end_time || $processed_equals_total || $completion_locked) {
             PuntWorkLogger::debug('Skipping status update for concurrent item - import already complete', PuntWorkLogger::CONTEXT_BATCH, [
                 'guid' => $guid,
                 'processed' => $current_status['processed'] ?? 0,
-                'total' => $current_status['total'] ?? 0
+                'total' => $current_status['total'] ?? 0,
+                'complete' => $is_complete,
+                'has_end_time' => $has_end_time,
+                'processed_equals_total' => $processed_equals_total,
+                'completion_locked' => $completion_locked,
+                'end_time' => $current_status['end_time'] ?? null
             ]);
             return; // Exit early without updating status
         }
@@ -442,11 +455,23 @@ function process_single_item_callback($guid, $json_path, $start_index, $acf_fiel
             $current_status = [];
         }
 
+        // CRITICAL: Multiple checks to prevent status updates after import completion
+        $is_complete = ($current_status['complete'] ?? false) === true;
+        $has_end_time = isset($current_status['end_time']) && $current_status['end_time'] > 0;
+        $processed_equals_total = isset($current_status['processed']) && isset($current_status['total']) &&
+                                 $current_status['processed'] >= $current_status['total'] &&
+                                 $current_status['total'] > 0;
+        $completion_locked = ($current_status['import_completion_locked'] ?? false) === true;
+
         // If import is already complete, don't update the status to avoid interfering with completion
-        if (($current_status['complete'] ?? false) === true) {
+        if ($is_complete || $has_end_time || $processed_equals_total || $completion_locked) {
             PuntWorkLogger::debug('Skipping status update for concurrent item error - import already complete', PuntWorkLogger::CONTEXT_BATCH, [
                 'guid' => $guid,
-                'error' => 'error occurred but import complete'
+                'error' => 'error occurred but import complete',
+                'complete' => $is_complete,
+                'has_end_time' => $has_end_time,
+                'processed_equals_total' => $processed_equals_total,
+                'completion_locked' => $completion_locked
             ]);
             return; // Exit early without updating status
         }

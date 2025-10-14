@@ -684,13 +684,18 @@ function get_job_import_status_ajax() {
         // Add resume_progress for JavaScript
         $progress['resume_progress'] = get_import_progress();
 
-        // Track job importing start time
-        if (($progress['total'] ?? 0) > 1 && !isset($progress['job_import_start_time']) && !($progress['complete'] ?? false)) {
+        // Track job importing start time - only initialize if import is not complete and hasn't started yet
+        $is_import_complete = ($progress['complete'] ?? false) === true;
+        $has_job_start_time = isset($progress['job_import_start_time']) && $progress['job_import_start_time'] > 0;
+
+        if (($progress['total'] ?? 0) > 1 && !$has_job_start_time && !$is_import_complete) {
             $progress['job_import_start_time'] = microtime(true);
             set_import_status($progress);
             PuntWorkLogger::debug('Job import start time initialized', PuntWorkLogger::CONTEXT_BATCH, [
                 'job_import_start_time' => date('Y-m-d H:i:s', (int)$progress['job_import_start_time']),
-                'total_jobs' => $progress['total']
+                'total_jobs' => $progress['total'],
+                'is_import_complete' => $is_import_complete,
+                'has_job_start_time' => $has_job_start_time
             ]);
         }
 

@@ -527,11 +527,14 @@ if (!function_exists('import_all_jobs_from_json')) {
             $max_wait_time = 300; // 5 minutes max wait
             $check_interval = 2; // Check every 2 seconds
             $all_complete = false;
+            $consecutive_complete_checks = 0;
+            $required_consecutive_complete = 3; // Require 3 consecutive complete checks for stability
 
             while (!$all_complete && (microtime(true) - $wait_start) < $max_wait_time) {
                 $all_complete = true;
                 $pending_count = 0;
                 $completed_count = 0;
+                $failed_count = 0;
 
                 foreach ($all_action_ids as $action_id) {
                     try {
@@ -539,6 +542,13 @@ if (!function_exists('import_all_jobs_from_json')) {
                         if ($action && !$action->is_finished()) {
                             $all_complete = false;
                             $pending_count++;
+                        } elseif ($action && $action->get_status() === \ActionScheduler_Store::STATUS_FAILED) {
+                            // Failed actions are considered finished, but log them
+                            $failed_count++;
+                            PuntWorkLogger::warning('Action Scheduler job failed', PuntWorkLogger::CONTEXT_BATCH, [
+                                'action_id' => $action_id,
+                                'status' => 'failed'
+                            ]);
                         } else {
                             $completed_count++;
                         }
@@ -552,26 +562,42 @@ if (!function_exists('import_all_jobs_from_json')) {
                     }
                 }
 
-                if (!$all_complete) {
+                if ($all_complete) {
+                    $consecutive_complete_checks++;
+                    if ($consecutive_complete_checks >= $required_consecutive_complete) {
+                        // Require multiple consecutive complete checks for stability
+                        break;
+                    }
+                    // Reset counter if we find pending actions again
+                } else {
+                    $consecutive_complete_checks = 0;
+                }
+
+                if (!$all_complete || $consecutive_complete_checks < $required_consecutive_complete) {
                     PuntWorkLogger::debug('Waiting for concurrent actions to complete', PuntWorkLogger::CONTEXT_BATCH, [
                         'pending' => $pending_count,
                         'completed' => $completed_count,
-                        'wait_time' => round(microtime(true) - $wait_start, 1)
+                        'failed' => $failed_count,
+                        'wait_time' => round(microtime(true) - $wait_start, 1),
+                        'consecutive_complete_checks' => $consecutive_complete_checks
                     ]);
                     sleep($check_interval);
                 }
             }
 
+            $wait_duration = microtime(true) - $wait_start;
             if (!$all_complete) {
                 PuntWorkLogger::warning('Timeout waiting for concurrent actions to complete', PuntWorkLogger::CONTEXT_BATCH, [
                     'total_actions' => count($all_action_ids),
-                    'wait_time' => round(microtime(true) - $wait_start, 1),
-                    'max_wait_time' => $max_wait_time
+                    'wait_time' => round($wait_duration, 1),
+                    'max_wait_time' => $max_wait_time,
+                    'pending_count' => $pending_count ?? 0
                 ]);
             } else {
                 PuntWorkLogger::info('All concurrent actions completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
                     'total_actions' => count($all_action_ids),
-                    'wait_time' => round(microtime(true) - $wait_start, 1)
+                    'wait_time' => round($wait_duration, 1),
+                    'consecutive_checks' => $consecutive_complete_checks
                 ]);
             }
         } elseif (!empty($all_action_ids)) {
@@ -692,6 +718,7 @@ if (!function_exists('import_all_jobs_from_json')) {
             'cleanup_phase' => false, // Cleanup complete
             'cleanup_total' => $deleted_count,
             'cleanup_processed' => $deleted_count,
+            'import_completion_locked' => true, // CRITICAL: Lock to prevent further status updates
         ]);
         // When complete, ensure processed equals total
         if ($final_status['complete'] && $final_status['processed'] < $final_status['total']) {
