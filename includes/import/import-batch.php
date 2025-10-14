@@ -222,9 +222,81 @@ if (!function_exists('import_all_jobs_from_json')) {
             error_log('[PUNTWORK] Peak memory usage: ' . memory_get_peak_usage(true) / 1024 / 1024 . ' MB');
             error_log('[PUNTWORK] Execution time so far: ' . (microtime(true) - $start_time) . ' seconds');
 
+            // Check for cancellation at the start of each batch loop iteration
+            if (get_transient('import_cancel') === true) {
+                error_log('[PUNTWORK] Import cancelled during batch processing loop');
+                PuntWorkLogger::info('Import cancelled during batch loop', PuntWorkLogger::CONTEXT_BATCH, [
+                    'batches_completed' => $batch_count,
+                    'items_processed' => $total_processed,
+                    'action' => 'terminated_batch_loop'
+                ]);
+
+                // Update status to show cancellation
+                $cancelled_status = get_import_status([]);
+                $cancelled_status['success'] = false;
+                $cancelled_status['complete'] = true;
+                $cancelled_status['error_message'] = 'Import cancelled by user';
+                $cancelled_status['end_time'] = microtime(true);
+                $cancelled_status['last_update'] = time();
+                if (!is_array($cancelled_status['logs'] ?? null)) {
+                    $cancelled_status['logs'] = [];
+                }
+                $cancelled_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Import cancelled by user during batch processing';
+                set_import_status($cancelled_status);
+
+                return [
+                    'success' => false,
+                    'processed' => $total_processed,
+                    'total' => $total_items,
+                    'published' => $total_published,
+                    'updated' => $total_updated,
+                    'skipped' => $total_skipped,
+                    'duplicates_drafted' => $total_duplicates_drafted,
+                    'time_elapsed' => microtime(true) - $start_time + $accumulated_time,
+                    'complete' => true,
+                    'message' => 'Import cancelled by user'
+                ];
+            }
+
             // Check if we should continue processing (time/memory limits)
             if (!should_continue_batch_processing()) {
                 error_log('[PUNTWORK] Batch processing should stop due to limits');
+
+                // Check for cancellation before scheduling continuation
+                if (get_transient('import_cancel') === true) {
+                    error_log('[PUNTWORK] Import was cancelled - not scheduling continuation');
+                    PuntWorkLogger::info('Cancelled import continuation prevented', PuntWorkLogger::CONTEXT_BATCH, [
+                        'reason' => 'import_cancel_transient_set_during_limits_check',
+                        'action' => 'skipped_continuation_scheduling'
+                    ]);
+
+                    // Update status to show cancellation
+                    $current_status = get_import_status([]);
+                    $current_status['success'] = false;
+                    $current_status['complete'] = true;
+                    $current_status['error_message'] = 'Import cancelled by user';
+                    $current_status['end_time'] = microtime(true);
+                    $current_status['last_update'] = time();
+                    if (!is_array($current_status['logs'] ?? null)) {
+                        $current_status['logs'] = [];
+                    }
+                    $current_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Import cancelled by user - stopping continuation';
+                    set_import_status($current_status);
+
+                    return [
+                        'success' => false,
+                        'processed' => $total_processed,
+                        'total' => $total_items,
+                        'published' => $total_published,
+                        'updated' => $total_updated,
+                        'skipped' => $total_skipped,
+                        'duplicates_drafted' => $total_duplicates_drafted,
+                        'time_elapsed' => microtime(true) - $start_time + $accumulated_time,
+                        'complete' => true,
+                        'message' => 'Import cancelled by user'
+                    ];
+                }
+
                 // Pause processing and schedule continuation
                 $current_status = get_import_status([]);
                 $current_status['paused'] = true;
@@ -611,6 +683,30 @@ if (!function_exists('import_all_jobs_from_json')) {
  */
 function continue_paused_import() {
     error_log('[PUNTWORK] Continuing paused import process');
+
+    // Check for cancellation before resuming
+    if (get_transient('import_cancel') === true) {
+        error_log('[PUNTWORK] Import was cancelled - not resuming paused import');
+        PuntWorkLogger::info('Cancelled import continuation prevented', PuntWorkLogger::CONTEXT_BATCH, [
+            'reason' => 'import_cancel_transient_set',
+            'action' => 'skipped_continuation'
+        ]);
+
+        // Update status to show cancellation
+        $status = get_import_status([]);
+        $status['success'] = false;
+        $status['complete'] = true;
+        $status['error_message'] = 'Import cancelled by user';
+        $status['end_time'] = microtime(true);
+        $status['last_update'] = time();
+        if (!is_array($status['logs'] ?? null)) {
+            $status['logs'] = [];
+        }
+        $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Import cancelled by user - not resuming';
+        set_import_status($status);
+
+        return;
+    }
 
     // Check if import is actually paused
     $status = get_import_status([]);

@@ -21,6 +21,20 @@ require_once __DIR__ . '/../utilities/options-utilities.php';
  * Run the scheduled import
  */
 function run_scheduled_import($test_mode = false) {
+    // Check for cancellation before starting scheduled import
+    if (get_transient('import_cancel') === true) {
+        error_log('[PUNTWORK] Scheduled import cancelled - not starting new import');
+        PuntWorkLogger::info('Scheduled import cancelled before execution', PuntWorkLogger::CONTEXT_SCHEDULER, [
+            'reason' => 'import_cancel_transient_set',
+            'test_mode' => $test_mode,
+            'action' => 'skipped_scheduled_import'
+        ]);
+        return [
+            'success' => false,
+            'message' => 'Scheduled import cancelled by user'
+        ];
+    }
+
     // Check if scheduling is still enabled (skip this check for test mode)
     if (!$test_mode) {
         $schedule = get_option('puntwork_import_schedule', ['enabled' => false]);
