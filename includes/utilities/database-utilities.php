@@ -145,6 +145,13 @@ function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$log
     $xml_updated = $item['updated'] ?? null;
     $post_modified = $xml_updated ?: current_time('mysql');
 
+    PuntWorkLogger::debug('Starting update_job_post', PuntWorkLogger::CONTEXT_BATCH, [
+        'post_id' => $post_id,
+        'guid' => $guid,
+        'title' => substr($xml_title, 0, 50) . (strlen($xml_title) > 50 ? '...' : ''),
+        'acf_fields_count' => count($acf_fields)
+    ]);
+
     $post_data = [
         'ID' => $post_id,
         'post_title' => $xml_title,
@@ -154,14 +161,32 @@ function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$log
         'post_modified' => $post_modified,
     ];
 
-    $update_result = retry_database_operation(function() use ($post_data) {
-        return wp_update_post($post_data);
-    }, [$post_data], [
-        'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
-        'operation' => 'update_existing_post',
-        'post_id' => $post_id,
-        'guid' => $guid
-    ]);
+    try {
+        $update_result = retry_database_operation(function() use ($post_data) {
+            return wp_update_post($post_data);
+        }, [$post_data], [
+            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+            'operation' => 'update_existing_post',
+            'post_id' => $post_id,
+            'guid' => $guid
+        ]);
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Exception during wp_update_post', PuntWorkLogger::CONTEXT_BATCH, [
+            'post_id' => $post_id,
+            'guid' => $guid,
+            'error' => $e->getMessage()
+        ]);
+        $error_message = 'Failed to update ID: ' . $post_id . ' GUID: ' . $guid . ' - ' . $e->getErrorMessage();
+        return new \WP_Error('update_failed', $error_message);
+    } catch (\Throwable $t) {
+        PuntWorkLogger::error('Fatal error during wp_update_post', PuntWorkLogger::CONTEXT_BATCH, [
+            'post_id' => $post_id,
+            'guid' => $guid,
+            'error' => $t->getMessage()
+        ]);
+        $error_message = 'Fatal error updating ID: ' . $post_id . ' GUID: ' . $guid . ' - ' . $t->getMessage();
+        return new \WP_Error('fatal_update_error', $error_message);
+    }
 
     if (is_wp_error($update_result)) {
         PuntWorkLogger::error('Failed to update existing post', PuntWorkLogger::CONTEXT_BATCH, [
@@ -198,25 +223,50 @@ function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$log
         ]);
 
         // Update ACF fields
+        PuntWorkLogger::debug('Starting ACF field updates', PuntWorkLogger::CONTEXT_BATCH, [
+            'post_id' => $post_id,
+            'guid' => $guid,
+            'acf_fields_count' => count($acf_fields)
+        ]);
         foreach ($acf_fields as $field) {
-            $value = $item[$field] ?? '';
-            $is_special = in_array($field, $zero_empty_fields);
-            $set_value = $is_special && $value === '0' ? '' : $value;
+            try {
+                $value = $item[$field] ?? '';
+                $is_special = in_array($field, $zero_empty_fields);
+                $set_value = $is_special && $value === '0' ? '' : $value;
 
-            // Serialize arrays if needed
-            if (is_array($set_value)) {
-                $set_value = serialize($set_value);
+                // Serialize arrays if needed
+                if (is_array($set_value)) {
+                    $set_value = serialize($set_value);
+                }
+
+                retry_database_operation(function() use ($post_id, $field, $set_value) {
+                    return update_post_meta($post_id, $field, $set_value);
+                }, [$post_id, $field, $set_value], [
+                    'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                    'operation' => 'update_acf_field_meta',
+                    'post_id' => $post_id,
+                    'field' => $field,
+                    'guid' => $guid
+                ]);
+            } catch (\Exception $e) {
+                PuntWorkLogger::error('Failed to update ACF field', PuntWorkLogger::CONTEXT_BATCH, [
+                    'post_id' => $post_id,
+                    'guid' => $guid,
+                    'field' => $field,
+                    'error' => $e->getMessage()
+                ]);
+                // Continue with other fields instead of failing completely
+                continue;
+            } catch (\Throwable $t) {
+                PuntWorkLogger::error('Fatal error updating ACF field', PuntWorkLogger::CONTEXT_BATCH, [
+                    'post_id' => $post_id,
+                    'guid' => $guid,
+                    'field' => $field,
+                    'error' => $t->getMessage()
+                ]);
+                // Continue with other fields
+                continue;
             }
-
-            retry_database_operation(function() use ($post_id, $field, $set_value) {
-                return update_post_meta($post_id, $field, $set_value);
-            }, [$post_id, $field, $set_value], [
-                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
-                'operation' => 'update_acf_field_meta',
-                'post_id' => $post_id,
-                'field' => $field,
-                'guid' => $guid
-            ]);
         }
 
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Updated ID: ' . $post_id . ' GUID: ' . $guid;
@@ -230,6 +280,14 @@ function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$log
         ]);
         $error_message = 'Meta update failed for ID: ' . $post_id . ' GUID: ' . $guid . ' - ' . $e->getMessage();
         return new \WP_Error('meta_update_failed', $error_message);
+    } catch (\Throwable $t) {
+        PuntWorkLogger::error('Fatal error updating post meta for existing post', PuntWorkLogger::CONTEXT_BATCH, [
+            'post_id' => $post_id,
+            'guid' => $guid,
+            'error' => $t->getMessage()
+        ]);
+        $error_message = 'Fatal meta update error for ID: ' . $post_id . ' GUID: ' . $guid . ' - ' . $t->getMessage();
+        return new \WP_Error('fatal_meta_update_error', $error_message);
     }
 }
 
