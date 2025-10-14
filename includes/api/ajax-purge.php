@@ -81,7 +81,7 @@ function job_import_purge_ajax() {
             }
 
             // Log the current state for debugging
-            error_log('Purge check - Import progress: ' . json_encode($import_progress));
+            error_log('Purge check - Import progress: processed=' . ($import_progress['processed'] ?? 0) . ', total=' . ($import_progress['total'] ?? 0) . ', complete=' . (($import_progress['complete'] ?? false) ? 'true' : 'false'));
             error_log('Purge check - Processed GUIDs count: ' . count($processed_guids));
             error_log('Purge check - Has processed data: ' . ($has_processed_data ? 'yes' : 'no'));
 

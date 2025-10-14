@@ -177,6 +177,15 @@ function get_import_run_history_ajax() {
     send_ajax_success('get_import_run_history', [
         'history' => $history,
         'count' => count($history)
+    ], [
+        'history_count' => count($history),
+        'latest_entry' => count($history) > 0 ? [
+            'timestamp' => $history[0]['timestamp'] ?? null,
+            'success' => $history[0]['success'] ?? null,
+            'processed' => $history[0]['processed'] ?? null,
+            'total' => $history[0]['total'] ?? null,
+            'duration' => $history[0]['duration'] ?? null
+        ] : null
     ]);
 }
 
@@ -194,6 +203,12 @@ function test_import_schedule_ajax() {
     send_ajax_success('test_import_schedule', [
         'message' => 'Test import completed',
         'result' => $result
+    ], [
+        'message' => 'Test import completed',
+        'success' => $result['success'] ?? null,
+        'processed' => $result['processed'] ?? null,
+        'total' => $result['total'] ?? null,
+        'time_elapsed' => $result['time_elapsed'] ?? null
     ]);
 }
 
@@ -265,7 +280,7 @@ function run_scheduled_import_ajax() {
         $status_message = $is_manual ? 'Manual import started - preparing feeds...' : 'Scheduled import started - preparing feeds...';
         $initial_status = initialize_import_status(0, $status_message);
         set_import_status($initial_status);
-        error_log('[PUNTWORK] Initialized import status for ' . ($is_manual ? 'manual' : 'scheduled') . ' run: ' . json_encode($initial_status));
+        error_log('[PUNTWORK] Initialized import status for ' . ($is_manual ? 'manual' : 'scheduled') . ' run: total=0, complete=false');
 
         // Clear any previous cancellation before starting
         delete_transient('import_cancel');
@@ -290,6 +305,13 @@ function run_scheduled_import_ajax() {
                 send_ajax_success('run_scheduled_import', [
                     'message' => 'Import completed successfully',
                     'result' => $result,
+                    'async' => false
+                ], [
+                    'message' => 'Import completed successfully',
+                    'success' => $result['success'] ?? null,
+                    'processed' => $result['processed'] ?? null,
+                    'total' => $result['total'] ?? null,
+                    'time_elapsed' => $result['time_elapsed'] ?? null,
                     'async' => false
                 ]);
             } else {
@@ -344,7 +366,7 @@ function run_scheduled_import_async() {
 
     // Check if an import is already running
     $import_status = get_import_status([]);
-    error_log('[PUNTWORK] Current import status at async start: ' . json_encode($import_status));
+    error_log('[PUNTWORK] Current import status at async start: processed=' . ($import_status['processed'] ?? 0) . ', total=' . ($import_status['total'] ?? 0) . ', complete=' . ($import_status['complete'] ? 'true' : 'false'));
 
     // Check for stuck imports (similar to AJAX handler logic)
     if (isset($import_status['complete']) && !$import_status['complete']) {
@@ -398,7 +420,7 @@ function run_scheduled_import_async() {
 
     try {
         $result = run_scheduled_import();
-        error_log('[PUNTWORK] Import result: ' . print_r($result, true));
+        error_log('[PUNTWORK] Import result: success=' . ($result['success'] ? 'true' : 'false') . ', processed=' . ($result['processed'] ?? 0) . ', total=' . ($result['total'] ?? 0) . ', time_elapsed=' . round($result['time_elapsed'] ?? 0, 2));
 
         // Import runs to completion without pausing
         if ($result['success']) {
@@ -435,7 +457,7 @@ function run_manual_import_async() {
 
     // Check if an import is already running
     $import_status = get_import_status([]);
-    error_log('[PUNTWORK] Current import status at manual async start: ' . json_encode($import_status));
+    error_log('[PUNTWORK] Current import status at manual async start: processed=' . ($import_status['processed'] ?? 0) . ', total=' . ($import_status['total'] ?? 0) . ', complete=' . ($import_status['complete'] ? 'true' : 'false'));
 
     // Check for stuck imports (similar to AJAX handler logic)
     if (isset($import_status['complete']) && !$import_status['complete']) {
@@ -489,7 +511,7 @@ function run_manual_import_async() {
 
     try {
         $result = run_manual_import();
-        error_log('[PUNTWORK] Manual import result: ' . print_r($result, true));
+        error_log('[PUNTWORK] Manual import result: success=' . ($result['success'] ? 'true' : 'false') . ', processed=' . ($result['processed'] ?? 0) . ', total=' . ($result['total'] ?? 0) . ', time_elapsed=' . round($result['time_elapsed'] ?? 0, 2));
 
         // Import runs to completion without pausing
         if ($result['success']) {
