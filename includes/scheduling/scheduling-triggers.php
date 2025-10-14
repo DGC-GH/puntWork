@@ -44,7 +44,7 @@ add_action('puntwork_scheduled_import', function() {
     if (isset($import_status['paused']) && $import_status['paused']) {
         error_log('[PUNTWORK] Scheduled import cron continuing paused import');
         try {
-            \Puntwork\continue_paused_import();
+            continue_paused_import();
             return;
         } catch (\Exception $e) {
             error_log('[PUNTWORK] Failed to continue paused import: ' . $e->getMessage());
@@ -53,7 +53,7 @@ add_action('puntwork_scheduled_import', function() {
     }
 
     try {
-        $result = \Puntwork\run_scheduled_import();
+        $result = run_scheduled_import();
 
         if ($result['success']) {
             error_log('[PUNTWORK] Scheduled import cron completed successfully');
