@@ -203,8 +203,8 @@ function get_job_import_status_ajax() {
         $progress = get_import_status() ?: initialize_import_status(0, '', null);
         $total = $progress['total'] ?? 0;
         $processed = $progress['processed'] ?? 0;
-        $complete = $progress['complete'] ?? null;
-        $should_log = $total > 0 || $processed > 0 || $complete !== null;
+        $complete = $progress['complete'] ?? false;
+        $should_log = $processed > 0 || $complete === true;
 
         // Validate request (conditionally log based on import state)
         if (!validate_ajax_request('get_job_import_status', $should_log)) {
@@ -305,27 +305,8 @@ function get_job_import_status_ajax() {
         // Add a last_modified timestamp for client-side caching (use microtime for better precision)
         $progress['last_modified'] = microtime(true);
 
-        // Log response summary instead of full data to prevent large debug logs
-        $log_summary = [
-            'total' => $progress['total'] ?? 0,
-            'processed' => $progress['processed'] ?? 0,
-            'published' => $progress['published'] ?? 0,
-            'updated' => $progress['updated'] ?? 0,
-            'skipped' => $progress['skipped'] ?? 0,
-            'complete' => $progress['complete'] ?? true,
-            'success' => $progress['success'] ?? false,
-            'time_elapsed' => $progress['time_elapsed'] ?? 0,
-            'job_importing_time_elapsed' => $progress['job_importing_time_elapsed'] ?? 0,
-            'estimated_time_remaining' => $progress['estimated_time_remaining'] ?? 0,
-            'batch_time' => $progress['batch_time'] ?? 0,
-            'batch_processed' => $progress['batch_processed'] ?? 0,
-            'logs_count' => is_array($progress['logs'] ?? null) ? count($progress['logs']) : 0,
-            'has_error' => !empty($progress['error_message'] ?? ''),
-            'last_modified' => $progress['last_modified'] ?? microtime(true)
-        ];
-
         // Only log AJAX response when import has meaningful progress to reduce log spam
-        if ($total > 0 || $processed > 0 || $complete !== null) {
+        if ($total > 0 || $processed > 0 || $complete === true) {
             send_ajax_success('get_job_import_status', $progress, $log_summary);
         } else {
             // For initial polling before import starts, just send response without logging
