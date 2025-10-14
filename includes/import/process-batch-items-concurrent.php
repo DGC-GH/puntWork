@@ -394,6 +394,17 @@ function process_single_item_callback($guid, $json_path, $start_index, $acf_fiel
         if (!is_array($current_status)) {
             $current_status = [];
         }
+
+        // If import is already complete, don't update the status to avoid interfering with completion
+        if (($current_status['complete'] ?? false) === true) {
+            PuntWorkLogger::debug('Skipping status update for concurrent item - import already complete', PuntWorkLogger::CONTEXT_BATCH, [
+                'guid' => $guid,
+                'processed' => $current_status['processed'] ?? 0,
+                'total' => $current_status['total'] ?? 0
+            ]);
+            return; // Exit early without updating status
+        }
+
         $current_status['published'] = ($current_status['published'] ?? 0) + $published;
         $current_status['updated'] = ($current_status['updated'] ?? 0) + $updated;
         $current_status['skipped'] = ($current_status['skipped'] ?? 0) + $skipped;
@@ -430,6 +441,16 @@ function process_single_item_callback($guid, $json_path, $start_index, $acf_fiel
         if (!is_array($current_status)) {
             $current_status = [];
         }
+
+        // If import is already complete, don't update the status to avoid interfering with completion
+        if (($current_status['complete'] ?? false) === true) {
+            PuntWorkLogger::debug('Skipping status update for concurrent item error - import already complete', PuntWorkLogger::CONTEXT_BATCH, [
+                'guid' => $guid,
+                'error' => 'error occurred but import complete'
+            ]);
+            return; // Exit early without updating status
+        }
+
         $current_status['skipped'] = ($current_status['skipped'] ?? 0) + $skipped;
         $current_status['processed'] = ($current_status['processed'] ?? 0) + $processed_count;
         $current_status['last_update'] = time();
