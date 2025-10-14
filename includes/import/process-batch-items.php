@@ -133,7 +133,17 @@ if (!function_exists('process_batch_items')) {
 
                         // Update post immediately
                         $error_message = '';
+                        PuntWorkLogger::debug('About to call update_job_post', PuntWorkLogger::CONTEXT_BATCH, [
+                            'post_id' => $post_id,
+                            'guid' => $guid,
+                            'acf_fields_count' => count($acf_fields)
+                        ]);
                         $update_result = update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, $logs, $error_message);
+                        PuntWorkLogger::debug('update_job_post returned', PuntWorkLogger::CONTEXT_BATCH, [
+                            'post_id' => $post_id,
+                            'guid' => $guid,
+                            'is_wp_error' => is_wp_error($update_result)
+                        ]);
                         if (is_wp_error($update_result)) {
                             PuntWorkLogger::error('Failed to update post', PuntWorkLogger::CONTEXT_BATCH, [
                                 'post_id' => $post_id,
