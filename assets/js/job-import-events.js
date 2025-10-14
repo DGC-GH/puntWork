@@ -236,14 +236,19 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
                 function processScheduleChecks() {
                     if (!scheduleCheckComplete || !activeImportsCheckComplete) {
+                        console.log('[PUNTWORK] Waiting for both checks - schedule:', scheduleCheckComplete, 'active:', activeImportsCheckComplete);
                         return; // Wait for both checks to complete
                     }
 
-                    console.log('[PUNTWORK] Both schedule checks complete - scheduleData:', scheduleData, 'activeImportsData:', activeImportsData);
+                    console.log('[PUNTWORK] Both schedule checks complete - processing results');
+                    console.log('[PUNTWORK] Schedule data:', scheduleData);
+                    console.log('[PUNTWORK] Active imports data:', activeImportsData);
 
-                    if (scheduleData && scheduleData.success && scheduleData.data.schedule) {
+                    if (scheduleData && scheduleData.success && scheduleData.data && scheduleData.data.schedule) {
                         isScheduledImport = scheduleData.data.schedule.enabled;
                         console.log('[PUNTWORK] Schedule enabled:', isScheduledImport);
+                    } else {
+                        console.log('[PUNTWORK] Schedule data invalid or not enabled');
                     }
 
                     if (activeImportsData && activeImportsData.success && activeImportsData.data) {
@@ -255,6 +260,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             hasIncompleteImport = true;
                             console.log('[PUNTWORK] Detected active scheduled imports, setting hasIncompleteImport to true');
                         }
+                    } else {
+                        console.log('[PUNTWORK] Active imports data invalid');
                     }
 
                     // For scheduled imports, also consider imports active if they have a start_time and are recent
@@ -271,6 +278,11 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
                     console.log('[PUNTWORK] Final decision - hasIncompleteImport:', hasIncompleteImport, 'isScheduledImport:', isScheduledImport, 'has_active_imports:', activeScheduledImports ? activeScheduledImports.has_active_imports : false);
 
+                    // Now proceed with UI logic based on the results
+                    finalizeInitialStatusCheck();
+                }
+
+                function finalizeInitialStatusCheck() {
                     if (hasIncompleteImport) {
                         console.log('[PUNTWORK] Showing incomplete import UI');
                         JobImportUI.updateProgress(statusData);
@@ -293,7 +305,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             $('#status-message').text('Import in progress...');
 
                             // Show import type indicator if this appears to be a scheduled import
-                            if (isScheduledImport) {
+                            if (isScheduledImport || (activeScheduledImports && activeScheduledImports.has_active_imports)) {
                                 $('#import-type-indicator').show();
                                 $('#import-type-text').text('Scheduled import is currently running');
                                 console.log('[PUNTWORK] Showing scheduled import indicator');
@@ -334,16 +346,27 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     }
                 }
 
+                console.log('[PUNTWORK] Making parallel API calls...');
                 JobImportAPI.call('get_import_schedule', {}, function(scheduleResponse) {
-                    console.log('[PUNTWORK] Schedule response:', scheduleResponse);
+                    console.log('[PUNTWORK] Schedule API response received:', scheduleResponse);
                     scheduleData = scheduleResponse;
+                    scheduleCheckComplete = true;
+                    processScheduleChecks();
+                }).catch(function(scheduleError) {
+                    console.log('[PUNTWORK] Schedule API error:', scheduleError);
+                    scheduleData = {success: false, error: scheduleError};
                     scheduleCheckComplete = true;
                     processScheduleChecks();
                 });
 
                 JobImportAPI.call('get_active_scheduled_imports', {}, function(activeResponse) {
-                    console.log('[PUNTWORK] Active scheduled imports response:', activeResponse);
+                    console.log('[PUNTWORK] Active scheduled imports API response received:', activeResponse);
                     activeImportsData = activeResponse;
+                    activeImportsCheckComplete = true;
+                    processScheduleChecks();
+                }).catch(function(activeError) {
+                    console.log('[PUNTWORK] Active imports API error:', activeError);
+                    activeImportsData = {success: false, error: activeError};
                     activeImportsCheckComplete = true;
                     processScheduleChecks();
                 });
@@ -527,42 +550,82 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         // Only check this periodically to avoid too many API calls
                         if (pollCount % 5 === 0) { // Check every 5 polls for more responsive detection
                             console.log('[PUNTWORK] Checking for scheduled import at poll', pollCount, '- currentTotal:', currentTotal, 'complete:', statusData.complete, 'start_time:', statusData.start_time);
-                            JobImportAPI.call('get_import_schedule', {}, function(scheduleResponse) {
-                                console.log('[PUNTWORK] Schedule check response:', scheduleResponse);
-                                if (scheduleResponse.success && scheduleResponse.data.schedule) {
-                                    var isScheduledEnabled = scheduleResponse.data.schedule.enabled;
-                                    var hasActiveImport = currentTotal > 0 && !statusData.complete;
-                                    var hasRecentStartTime = statusData.start_time && (Date.now() / 1000 - statusData.start_time) < 3600; // Started within last hour
-                                    var isCountingPhase = statusData.start_time && currentTotal === 0 && !statusData.complete;
-                                    
-                                    console.log('[PUNTWORK] Schedule check details:', {
-                                        isScheduledEnabled: isScheduledEnabled,
-                                        hasActiveImport: hasActiveImport,
-                                        hasRecentStartTime: hasRecentStartTime,
-                                        isCountingPhase: isCountingPhase,
-                                        start_time: statusData.start_time,
-                                        currentTime: Date.now() / 1000,
-                                        timeDiff: Date.now() / 1000 - statusData.start_time
-                                    });
-                                    
-                                    if (isScheduledEnabled && (hasActiveImport || hasRecentStartTime || isCountingPhase)) {
-                                        $('#import-type-indicator').show();
-                                        $('#import-type-text').text('Scheduled import is currently running');
-                                        console.log('[PUNTWORK] SHOWING scheduled import indicator');
-                                    } else if (!isScheduledEnabled && hasActiveImport) {
-                                        $('#import-type-indicator').show();
-                                        $('#import-type-text').text('Manual import is currently running');
-                                        console.log('[PUNTWORK] SHOWING manual import indicator');
-                                    } else {
-                                        $('#import-type-indicator').hide();
-                                        console.log('[PUNTWORK] HIDING import type indicator');
-                                    }
-                                } else {
-                                    console.log('[PUNTWORK] Schedule check failed');
+
+                            // Check both schedule and active imports in parallel during polling
+                            var pollScheduleCheckComplete = false;
+                            var pollActiveImportsCheckComplete = false;
+                            var pollScheduleData = null;
+                            var pollActiveImportsData = null;
+
+                            function processPollScheduleChecks() {
+                                if (!pollScheduleCheckComplete || !pollActiveImportsCheckComplete) {
+                                    return; // Wait for both checks to complete
                                 }
+
+                                console.log('[PUNTWORK] Poll schedule checks complete - schedule:', pollScheduleData, 'active:', pollActiveImportsData);
+
+                                var isScheduledEnabled = false;
+                                var hasActiveScheduledImports = false;
+
+                                if (pollScheduleData && pollScheduleData.success && pollScheduleData.data && pollScheduleData.data.schedule) {
+                                    isScheduledEnabled = pollScheduleData.data.schedule.enabled;
+                                }
+
+                                if (pollActiveImportsData && pollActiveImportsData.success && pollActiveImportsData.data) {
+                                    hasActiveScheduledImports = pollActiveImportsData.data.has_active_imports;
+                                }
+
+                                var hasActiveImport = currentTotal > 0 && !statusData.complete;
+                                var hasRecentStartTime = statusData.start_time && (Date.now() / 1000 - statusData.start_time) < 3600; // Started within last hour
+                                var isCountingPhase = statusData.start_time && currentTotal === 0 && !statusData.complete;
+
+                                console.log('[PUNTWORK] Poll schedule check details:', {
+                                    isScheduledEnabled: isScheduledEnabled,
+                                    hasActiveScheduledImports: hasActiveScheduledImports,
+                                    hasActiveImport: hasActiveImport,
+                                    hasRecentStartTime: hasRecentStartTime,
+                                    isCountingPhase: isCountingPhase,
+                                    start_time: statusData.start_time,
+                                    currentTime: Date.now() / 1000,
+                                    timeDiff: Date.now() / 1000 - statusData.start_time
+                                });
+
+                                if ((isScheduledEnabled && (hasActiveImport || hasRecentStartTime || isCountingPhase)) || hasActiveScheduledImports) {
+                                    $('#import-type-indicator').show();
+                                    $('#import-type-text').text('Scheduled import is currently running');
+                                    console.log('[PUNTWORK] SHOWING scheduled import indicator');
+                                } else if (!isScheduledEnabled && hasActiveImport) {
+                                    $('#import-type-indicator').show();
+                                    $('#import-type-text').text('Manual import is currently running');
+                                    console.log('[PUNTWORK] SHOWING manual import indicator');
+                                } else {
+                                    $('#import-type-indicator').hide();
+                                    console.log('[PUNTWORK] HIDING import type indicator');
+                                }
+                            }
+
+                            JobImportAPI.call('get_import_schedule', {}, function(scheduleResponse) {
+                                console.log('[PUNTWORK] Poll schedule check response:', scheduleResponse);
+                                pollScheduleData = scheduleResponse;
+                                pollScheduleCheckComplete = true;
+                                processPollScheduleChecks();
                             }).catch(function(scheduleError) {
-                                console.log('[PUNTWORK] Schedule check error:', scheduleError);
-                                // Ignore schedule check errors, continue with polling
+                                console.log('[PUNTWORK] Poll schedule check error:', scheduleError);
+                                pollScheduleData = {success: false, error: scheduleError};
+                                pollScheduleCheckComplete = true;
+                                processPollScheduleChecks();
+                            });
+
+                            JobImportAPI.call('get_active_scheduled_imports', {}, function(activeResponse) {
+                                console.log('[PUNTWORK] Poll active scheduled imports response:', activeResponse);
+                                pollActiveImportsData = activeResponse;
+                                pollActiveImportsCheckComplete = true;
+                                processPollScheduleChecks();
+                            }).catch(function(activeError) {
+                                console.log('[PUNTWORK] Poll active imports check error:', activeError);
+                                pollActiveImportsData = {success: false, error: activeError};
+                                pollActiveImportsCheckComplete = true;
+                                processPollScheduleChecks();
                             });
                         }
 
