@@ -18,7 +18,7 @@ require_once plugin_dir_path(__FILE__) . '../utilities/options-utilities.php';
  */
 
 // Batch size configuration constants
-const DEFAULT_BATCH_SIZE = 5;
+const DEFAULT_BATCH_SIZE = 50;
 const MAX_BATCH_SIZE = 100;
 const MIN_BATCH_SIZE = 1;
 
