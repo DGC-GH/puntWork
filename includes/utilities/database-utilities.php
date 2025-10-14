@@ -89,6 +89,14 @@ function create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, &$log
             'guid' => $guid
         ]);
 
+        // Validate inputs before ACF field processing
+        if (!is_array($acf_fields)) {
+            throw new \Exception('acf_fields must be an array, got: ' . gettype($acf_fields));
+        }
+        if (!is_array($item)) {
+            throw new \Exception('item must be an array, got: ' . gettype($item) . ' with value: ' . substr((string)$item, 0, 100));
+        }
+
         // Set ACF fields
         foreach ($acf_fields as $field) {
             $value = $item[$field] ?? '';
@@ -222,11 +230,21 @@ function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$log
             'guid' => $guid
         ]);
 
+        // Validate inputs before ACF field processing
+        if (!is_array($acf_fields)) {
+            throw new \Exception('acf_fields must be an array, got: ' . gettype($acf_fields));
+        }
+        if (!is_array($item)) {
+            throw new \Exception('item must be an array, got: ' . gettype($item) . ' with value: ' . substr((string)$item, 0, 100));
+        }
+
         // Update ACF fields
         PuntWorkLogger::debug('Starting ACF field updates', PuntWorkLogger::CONTEXT_BATCH, [
             'post_id' => $post_id,
             'guid' => $guid,
-            'acf_fields_count' => count($acf_fields)
+            'acf_fields_count' => count($acf_fields),
+            'item_type' => gettype($item),
+            'acf_fields_type' => gettype($acf_fields)
         ]);
         foreach ($acf_fields as $field) {
             try {
