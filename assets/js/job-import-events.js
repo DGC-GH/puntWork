@@ -290,6 +290,13 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     // Now proceed with UI logic based on the results
                     finalizeInitialStatusCheck();
                     
+                    // Always start background polling when scheduling is enabled, even in clean state
+                    // This ensures scheduled imports that start in background are detected
+                    if (isScheduledImport) {
+                        console.log('[PUNTWORK] Starting background polling for scheduled imports');
+                        JobImportEvents.startStatusPolling(true); // true = background mode
+                    }
+                    
                     // Always start polling when scheduling is enabled, even in clean state
                     // This ensures scheduled imports that start in background are detected
                     if (isScheduledImport) {
@@ -532,9 +539,9 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
                         // Check if we need to switch from background to active polling mode
                         var importJustStarted = !hasSeenImportRunning && (currentProcessed > 0 || (currentTotal > 0 && !statusData.complete));
-                        if (this.isBackgroundMode && importJustStarted) {
+                        if (JobImportEvents.isBackgroundMode && importJustStarted) {
                             console.log('[PUNTWORK] Import detected in background mode, switching to active polling');
-                            this.switchToActivePolling();
+                            JobImportEvents.switchToActivePolling();
                             hasSeenImportRunning = true;
                             isStartingNewImport = false;
                         }
