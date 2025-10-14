@@ -26,6 +26,9 @@ require_once __DIR__ . '/../import/import-batch.php';
 // Include concurrent processing utilities
 require_once __DIR__ . '/../import/process-batch-items-concurrent.php';
 
+// Include sequential processing utilities as fallback
+require_once __DIR__ . '/../import/process-batch-items.php';
+
 /**
  * Batch processing logic
  * Handles the core batch processing operations for job imports
@@ -612,8 +615,18 @@ function process_batch_data($batch_guids, $batch_items, $json_path, $start_index
     $acf_fields = get_acf_fields();
     $zero_empty_fields = get_zero_empty_fields();
 
-    // Use concurrent processing
-    $result = process_batch_items_concurrent($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, $logs, $updated, $published, $skipped, $processed_count);
+    // Check if Action Scheduler is available for concurrent processing
+    if (function_exists('as_schedule_single_action')) {
+        PuntWorkLogger::debug('Using concurrent processing with Action Scheduler', PuntWorkLogger::CONTEXT_BATCH, [
+            'batch_guids_count' => count($batch_guids)
+        ]);
+        $result = process_batch_items_concurrent($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, $logs, $updated, $published, $skipped, $processed_count);
+    } else {
+        PuntWorkLogger::warning('Action Scheduler not available, falling back to sequential processing', PuntWorkLogger::CONTEXT_BATCH, [
+            'batch_guids_count' => count($batch_guids)
+        ]);
+        $result = process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, $logs, $updated, $published, $skipped, $processed_count);
+    }
 
     return $result;
 }
