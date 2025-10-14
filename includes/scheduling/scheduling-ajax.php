@@ -15,9 +15,18 @@ add_action('wp_ajax_debug_trigger_async', function() {
         wp_die('Permission denied');
     }
 
-    error_log('[PUNTWORK] === MANUAL DEBUG TRIGGER ===');
+    PuntWorkLogger::info('Manual debug trigger initiated', PuntWorkLogger::CONTEXT_SCHEDULING, [
+        'action' => 'debug_trigger_async',
+        'user_id' => get_current_user_id(),
+        'timestamp' => time()
+    ]);
+
     run_scheduled_import_async();
-    error_log('[PUNTWORK] === MANUAL DEBUG TRIGGER COMPLETED ===');
+
+    PuntWorkLogger::info('Manual debug trigger completed', PuntWorkLogger::CONTEXT_SCHEDULING, [
+        'action' => 'debug_trigger_async',
+        'status' => 'completed'
+    ]);
 
     wp_die('Async function triggered - check debug.log');
 });
@@ -30,7 +39,13 @@ add_action('wp_ajax_debug_clear_import_status', function() {
 
     delete_import_status();
     delete_transient('import_cancel');
-    error_log('[PUNTWORK] === DEBUG: Cleared import status and cancel transient ===');
+
+    PuntWorkLogger::info('Debug import status clear executed', PuntWorkLogger::CONTEXT_SCHEDULING, [
+        'action' => 'debug_clear_import_status',
+        'user_id' => get_current_user_id(),
+        'cleared_items' => ['import_status', 'import_cancel_transient'],
+        'timestamp' => time()
+    ]);
 
     wp_die('Import status cleared - you can now try Run Now again');
 });
@@ -66,24 +81,47 @@ function save_import_schedule_ajax() {
     $minute = intval($_POST['minute'] ?? 0);
 
     // Debug logging
-    error_log('[PUNTWORK] Save schedule AJAX received: enabled=' . ($enabled ? 'true' : 'false') . ', frequency=' . $frequency);
+    PuntWorkLogger::info('Save schedule AJAX request received', PuntWorkLogger::CONTEXT_SCHEDULING, [
+        'enabled' => $enabled,
+        'frequency' => $frequency,
+        'interval' => $interval,
+        'hour' => $hour,
+        'minute' => $minute,
+        'user_id' => get_current_user_id()
+    ]);
 
     // Validate frequency
     $valid_frequencies = ['hourly', '3hours', '6hours', '12hours', 'daily', 'custom'];
     if (!in_array($frequency, $valid_frequencies)) {
+        PuntWorkLogger::error('Invalid frequency in schedule save request', PuntWorkLogger::CONTEXT_SCHEDULING, [
+            'provided_frequency' => $frequency,
+            'valid_frequencies' => $valid_frequencies
+        ]);
         send_ajax_error('save_import_schedule', 'Invalid frequency');
     }
 
     // Validate time
     if ($hour < 0 || $hour > 23) {
+        PuntWorkLogger::error('Invalid hour in schedule save request', PuntWorkLogger::CONTEXT_SCHEDULING, [
+            'provided_hour' => $hour,
+            'valid_range' => '0-23'
+        ]);
         send_ajax_error('save_import_schedule', 'Hour must be between 0 and 23');
     }
     if ($minute < 0 || $minute > 59) {
+        PuntWorkLogger::error('Invalid minute in schedule save request', PuntWorkLogger::CONTEXT_SCHEDULING, [
+            'provided_minute' => $minute,
+            'valid_range' => '0-59'
+        ]);
         send_ajax_error('save_import_schedule', 'Minute must be between 0 and 59');
     }
 
     // Validate custom interval
     if ($frequency === 'custom' && ($interval < 1 || $interval > 168)) {
+        PuntWorkLogger::error('Invalid custom interval in schedule save request', PuntWorkLogger::CONTEXT_SCHEDULING, [
+            'provided_interval' => $interval,
+            'valid_range' => '1-168 hours'
+        ]);
         send_ajax_error('save_import_schedule', 'Custom interval must be between 1 and 168 hours');
     }
 
@@ -101,7 +139,11 @@ function save_import_schedule_ajax() {
 
     // Verify the data was saved
     $saved_data = get_option('puntwork_import_schedule');
-    error_log('[PUNTWORK] Data saved to database: enabled=' . ($saved_data['enabled'] ? 'true' : 'false'));
+    PuntWorkLogger::info('Schedule data saved to database', PuntWorkLogger::CONTEXT_SCHEDULING, [
+        'saved_enabled' => $saved_data['enabled'] ?? null,
+        'saved_frequency' => $saved_data['frequency'] ?? null,
+        'data_integrity_check' => ($saved_data['enabled'] === $enabled)
+    ]);
 
     // Update WordPress cron
     update_cron_schedule($schedule_data);
@@ -109,7 +151,11 @@ function save_import_schedule_ajax() {
     $last_run = get_last_import_run(null);
     $last_run_details = get_last_import_details(null);
 
-    error_log('[PUNTWORK] Save schedule AJAX response: enabled=' . ($schedule_data['enabled'] ? 'true' : 'false'));
+    PuntWorkLogger::info('Save schedule AJAX response sent', PuntWorkLogger::CONTEXT_SCHEDULING, [
+        'response_enabled' => $schedule_data['enabled'],
+        'next_run_scheduled' => get_next_scheduled_time(),
+        'last_run_timestamp' => $last_run['timestamp'] ?? null
+    ]);
 
     send_ajax_success('save_import_schedule', [
         'message' => 'Schedule saved successfully',
@@ -145,7 +191,12 @@ function get_import_schedule_ajax() {
         'updated_by' => null
     ]);
 
-    error_log('[PUNTWORK] Get schedule AJAX loaded: enabled=' . ($schedule['enabled'] ? 'true' : 'false'));
+    PuntWorkLogger::info('Get schedule AJAX request processed', PuntWorkLogger::CONTEXT_SCHEDULING, [
+        'schedule_enabled' => $schedule['enabled'],
+        'schedule_frequency' => $schedule['frequency'],
+        'schedule_updated_at' => $schedule['updated_at'],
+        'user_id' => get_current_user_id()
+    ]);
 
     $last_run = get_last_import_run(null);
     $last_run_details = get_last_import_details(null);
@@ -241,33 +292,77 @@ function run_scheduled_import_ajax() {
     // Always clear any existing import status before starting a new one
     delete_import_status();
     delete_transient('import_cancel');
-    error_log('[PUNTWORK] Cleared any existing import status and cancel transient before starting new import');
+
+    PuntWorkLogger::info('Import initiation started', PuntWorkLogger::CONTEXT_SCHEDULING, [
+        'import_type' => $is_manual ? 'manual' : 'scheduled',
+        'cleared_existing_status' => true,
+        'cleared_cancel_transient' => true,
+        'user_id' => get_current_user_id(),
+        'timestamp' => time()
+    ]);
 
     try {
         // Initialize import status for immediate UI feedback
         $status_message = $is_manual ? 'Manual import started - preparing feeds...' : 'Scheduled import started - preparing feeds...';
         $initial_status = initialize_import_status(0, $status_message);
         set_import_status($initial_status);
-        error_log('[PUNTWORK] Initialized import status for ' . ($is_manual ? 'manual' : 'scheduled') . ' run: total=0, complete=false');
+
+        PuntWorkLogger::info('Import status initialized', PuntWorkLogger::CONTEXT_SCHEDULING, [
+            'import_type' => $is_manual ? 'manual' : 'scheduled',
+            'initial_total' => 0,
+            'initial_message' => $status_message,
+            'start_time' => $initial_status['start_time'] ?? null
+        ]);
 
         // Clear any previous cancellation before starting
         delete_transient('import_cancel');
-        error_log('[PUNTWORK] Cleared import_cancel transient for ' . ($is_manual ? 'manual' : 'scheduled') . ' run');
+
+        PuntWorkLogger::info('Import cancel transient cleared', PuntWorkLogger::CONTEXT_SCHEDULING, [
+            'import_type' => $is_manual ? 'manual' : 'scheduled',
+            'action' => 'preparation_complete'
+        ]);
 
         // Schedule the import to run on shutdown for immediate execution
         add_action('shutdown', function() use ($is_manual) {
-            error_log('[PUNTWORK] Shutdown hook triggered for ' . ($is_manual ? 'manual' : 'scheduled') . ' import');
+            PuntWorkLogger::info('Shutdown hook triggered for import execution', PuntWorkLogger::CONTEXT_SCHEDULING, [
+                'import_type' => $is_manual ? 'manual' : 'scheduled',
+                'execution_mode' => 'immediate_via_shutdown'
+            ]);
+
             try {
                 $result = $is_manual ? run_manual_import() : run_scheduled_import();
-                error_log('[PUNTWORK] Shutdown import result: success=' . ($result['success'] ? 'true' : 'false') . ', processed=' . ($result['processed'] ?? 0) . ', total=' . ($result['total'] ?? 0));
+
+                PuntWorkLogger::info('Shutdown import execution completed', PuntWorkLogger::CONTEXT_SCHEDULING, [
+                    'import_type' => $is_manual ? 'manual' : 'scheduled',
+                    'success' => $result['success'] ?? false,
+                    'processed' => $result['processed'] ?? 0,
+                    'total' => $result['total'] ?? 0,
+                    'time_elapsed' => $result['time_elapsed'] ?? 0
+                ]);
             } catch (\Exception $e) {
-                error_log('[PUNTWORK] Shutdown import error: ' . $e->getMessage());
+                PuntWorkLogger::error('Shutdown import execution failed', PuntWorkLogger::CONTEXT_SCHEDULING, [
+                    'import_type' => $is_manual ? 'manual' : 'scheduled',
+                    'error_message' => $e->getMessage(),
+                    'error_code' => $e->getCode(),
+                    'error_file' => $e->getFile(),
+                    'error_line' => $e->getLine()
+                ]);
             }
         });
-        error_log('[PUNTWORK] ' . ($is_manual ? 'Manual' : 'Scheduled') . ' import scheduled to run on shutdown (immediate execution)');
+
+        PuntWorkLogger::info('Import scheduled for immediate execution', PuntWorkLogger::CONTEXT_SCHEDULING, [
+            'import_type' => $is_manual ? 'manual' : 'scheduled',
+            'execution_method' => 'shutdown_hook',
+            'expected_timing' => 'immediate'
+        ]);
 
         // Return success immediately so UI can start polling
-        error_log('[PUNTWORK] ' . ($is_manual ? 'Manual' : 'Scheduled') . ' import initiated asynchronously');
+        PuntWorkLogger::info('Import initiation response sent', PuntWorkLogger::CONTEXT_SCHEDULING, [
+            'import_type' => $is_manual ? 'manual' : 'scheduled',
+            'response_type' => 'async_success',
+            'ui_polling_enabled' => true
+        ]);
+
         send_ajax_success('run_scheduled_import', [
             'message' => 'Import started successfully',
             'async' => true
@@ -278,7 +373,14 @@ function run_scheduled_import_ajax() {
         ]);
 
     } catch (\Exception $e) {
-        error_log('[PUNTWORK] Run ' . ($is_manual ? 'manual' : 'scheduled') . ' import AJAX error: ' . $e->getMessage());
+        PuntWorkLogger::error('Import initiation failed', PuntWorkLogger::CONTEXT_SCHEDULING, [
+            'import_type' => $is_manual ? 'manual' : 'scheduled',
+            'error_message' => $e->getMessage(),
+            'error_code' => $e->getCode(),
+            'error_file' => $e->getFile(),
+            'error_line' => $e->getLine()
+        ]);
+
         send_ajax_error('run_scheduled_import', 'Failed to start import: ' . $e->getMessage());
     }
 }

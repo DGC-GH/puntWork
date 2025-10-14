@@ -76,18 +76,34 @@ function job_import_purge_ajax() {
 
             if (!$has_processed_data) {
                 delete_transient('job_import_purge_lock');
-                error_log('Purge skipped: no processed data found');
+                PuntWorkLogger::warn('Purge operation skipped - no processed data found', PuntWorkLogger::CONTEXT_BATCH, [
+                    'processed_guids_count' => count($processed_guids),
+                    'import_progress_total' => $import_progress['total'] ?? 0,
+                    'import_progress_processed' => $import_progress['processed'] ?? 0,
+                    'import_progress_complete' => $import_progress['complete'] ?? false,
+                    'reason' => 'no_import_data_available'
+                ]);
                 wp_send_json_error(['message' => 'No import data found. Please run an import first before purging.']);
             }
 
             // Log the current state for debugging
-            error_log('Purge check - Import progress: processed=' . ($import_progress['processed'] ?? 0) . ', total=' . ($import_progress['total'] ?? 0) . ', complete=' . (($import_progress['complete'] ?? false) ? 'true' : 'false'));
-            error_log('Purge check - Processed GUIDs count: ' . count($processed_guids));
-            error_log('Purge check - Has processed data: ' . ($has_processed_data ? 'yes' : 'no'));
+            PuntWorkLogger::info('Purge operation state check', PuntWorkLogger::CONTEXT_BATCH, [
+                'import_progress' => [
+                    'processed' => $import_progress['processed'] ?? 0,
+                    'total' => $import_progress['total'] ?? 0,
+                    'complete' => $import_progress['complete'] ?? false
+                ],
+                'processed_guids_count' => count($processed_guids),
+                'has_processed_data' => $has_processed_data,
+                'purge_lock_set' => true
+            ]);
 
             // Get total count for progress calculation
             $total_jobs = get_jobs_count(['guid' => '']); // Jobs with GUID meta
             update_progress('purge', ['total_jobs' => $total_jobs]);
+            PuntWorkLogger::debug('Purge total jobs count retrieved', PuntWorkLogger::CONTEXT_BATCH, [
+                'total_jobs_with_guid' => $total_jobs
+            ]);
         }
 
         // Get batch of jobs to check
@@ -190,7 +206,14 @@ function job_import_purge_ajax() {
 
     } catch (\Exception $e) {
         release_operation_lock('purge');
-        error_log('Purge failed: ' . $e->getMessage());
+        PuntWorkLogger::error('Purge operation failed with exception', PuntWorkLogger::CONTEXT_BATCH, [
+            'error_message' => $e->getMessage(),
+            'error_code' => $e->getCode(),
+            'error_file' => $e->getFile(),
+            'error_line' => $e->getLine(),
+            'operation_stage' => 'batch_processing',
+            'progress_state' => $progress ?? null
+        ]);
         send_ajax_error('job_import_purge', 'Purge failed: ' . $e->getMessage());
     }
 }
