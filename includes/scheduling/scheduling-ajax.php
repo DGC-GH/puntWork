@@ -254,6 +254,8 @@ function run_scheduled_import_ajax() {
         $last_update = isset($import_status['last_update']) ? $import_status['last_update'] : 0;
         $time_since_last_update = $current_time - $last_update;
 
+        error_log('[PUNTWORK] Checking for stuck import: processed=' . $import_status['processed'] . ', time_elapsed=' . $time_elapsed . ', time_since_last_update=' . $time_since_last_update);
+
         // Detect stuck imports with multiple criteria:
         // 1. No progress for 5+ minutes (300 seconds)
         // 2. Import running for more than 2 hours without completion (7200 seconds)
@@ -264,6 +266,9 @@ function run_scheduled_import_ajax() {
         if ($import_status['processed'] == 0 && $time_elapsed > 300) {
             $is_stuck = true;
             $stuck_reason = 'no progress for 5+ minutes';
+        } elseif ($import_status['processed'] > 0 && $import_status['processed'] < 50 && $time_elapsed > 600) { // Low progress
+            $is_stuck = true;
+            $stuck_reason = 'low progress (<50 items) for more than 10 minutes';
         } elseif ($time_elapsed > 7200) { // 2 hours
             $is_stuck = true;
             $stuck_reason = 'running for more than 2 hours';
