@@ -429,14 +429,16 @@ function check_active_scheduled_imports() {
 
     // Check if import is currently running (from status)
     $import_status = get_import_status([]);
-    $is_running = isset($import_status['complete']) && !$import_status['complete'] && isset($import_status['start_time']);
+    $is_running = isset($import_status['complete']) && !$import_status['complete'] &&
+                  (isset($import_status['start_time']) || ($import_status['processed'] ?? 0) > 0);
 
     PuntWorkLogger::debug('Current import status check', PuntWorkLogger::CONTEXT_AJAX, [
         'is_running' => $is_running,
         'complete' => $import_status['complete'] ?? 'undefined',
         'start_time' => $import_status['start_time'] ?? 'undefined',
         'processed' => $import_status['processed'] ?? 0,
-        'total' => $import_status['total'] ?? 0
+        'total' => $import_status['total'] ?? 0,
+        'detection_reason' => isset($import_status['start_time']) ? 'start_time_present' : (($import_status['processed'] ?? 0) > 0 ? 'active_processing' : 'none')
     ]);
 
     if ($is_running) {
