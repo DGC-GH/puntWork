@@ -28,6 +28,7 @@ require_once __DIR__ . '/../utilities/options-utilities.php';
  * @return array|WP_Error Setup data or error.
  */
 function prepare_import_setup($batch_start = 0) {
+    error_log('[PUNTWORK] prepare_import_setup called with batch_start: ' . $batch_start);
     do_action('qm/cease'); // Disable Query Monitor data collection to reduce memory usage
     ini_set('memory_limit', '512M');
     set_time_limit(1800);
@@ -54,6 +55,7 @@ function prepare_import_setup($batch_start = 0) {
     }
 
     $json_path = PUNTWORK_PATH . 'feeds/combined-jobs.jsonl';
+    error_log('[PUNTWORK] JSONL path set to: ' . $json_path);
 
     if (!file_exists($json_path)) {
         error_log('JSONL file not found: ' . $json_path);
@@ -74,8 +76,13 @@ function prepare_import_setup($batch_start = 0) {
 
     // Cache existing job GUIDs if not already cached
     if (false === get_existing_guids()) {
+        error_log('[PUNTWORK] Starting GUID cache query...');
         $all_jobs = $wpdb->get_results("SELECT p.ID, pm.meta_value AS guid FROM $wpdb->posts p JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = 'job' AND pm.meta_key = 'guid'");
+        error_log('[PUNTWORK] GUID cache query completed, found ' . count($all_jobs) . ' jobs');
         set_existing_guids($all_jobs);
+        error_log('[PUNTWORK] GUID cache stored');
+    } else {
+        error_log('[PUNTWORK] GUID cache already exists, skipping query');
     }
 
     $processed_guids = get_processed_guids();
@@ -154,8 +161,10 @@ function prepare_import_setup($batch_start = 0) {
  * @return int Total item count.
  */
 function get_json_item_count($json_path) {
+    error_log('[PUNTWORK] Starting JSONL item count for: ' . $json_path);
     $count = 0;
     if (($handle = fopen($json_path, "r")) !== false) {
+        error_log('[PUNTWORK] JSONL file opened successfully');
         while (($line = fgets($handle)) !== false) {
             $line = trim($line);
             if (!empty($line)) {
@@ -164,8 +173,15 @@ function get_json_item_count($json_path) {
                     $count++;
                 }
             }
+            // Log progress every 1000 items
+            if ($count % 1000 === 0 && $count > 0) {
+                error_log('[PUNTWORK] Counted ' . $count . ' items so far...');
+            }
         }
         fclose($handle);
+        error_log('[PUNTWORK] JSONL count completed: ' . $count . ' items');
+    } else {
+        error_log('[PUNTWORK] Failed to open JSONL file: ' . $json_path);
     }
     return $count;
 }
