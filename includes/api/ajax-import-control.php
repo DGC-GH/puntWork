@@ -1032,3 +1032,37 @@ function cleanup_old_published_jobs_ajax() {
         wp_send_json_error(['message' => 'Cleanup failed: ' . $e->getMessage()]);
     }
 }
+
+/**
+ * Calculate estimated time remaining for import completion
+ *
+ * @param array $status The current import status array
+ * @return float Estimated time remaining in seconds.
+ */
+function calculate_estimated_time_remaining($status) {
+    // Ensure we have required data with safe defaults
+    $is_complete = $status['complete'] ?? false;
+    $processed = $status['processed'] ?? 0;
+    $total = $status['total'] ?? 0;
+    $job_importing_time_elapsed = $status['job_importing_time_elapsed'] ?? 0;
+
+    if ($is_complete || $processed <= 0 || $total <= 0 || $job_importing_time_elapsed <= 0) {
+        return 0;
+    }
+
+    $items_remaining = $total - $processed;
+    if ($items_remaining <= 0) {
+        return 0;
+    }
+
+    $time_per_item = $job_importing_time_elapsed / $processed;
+    $estimated_seconds = $items_remaining * $time_per_item;
+
+    // Ensure we don't return negative or infinite values
+    if (!is_finite($estimated_seconds) || $estimated_seconds < 0) {
+        return 0;
+    }
+
+    // Cap at a reasonable maximum (24 hours)
+    return min($estimated_seconds, 86400);
+}
