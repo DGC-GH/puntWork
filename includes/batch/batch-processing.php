@@ -148,7 +148,10 @@ function process_batch_items_logic($setup) {
         $next_progress_update = $start_index + $progress_update_interval;
         $items_processed_in_batch = 0;
 
-        for ($i = 0; $i < count($batch_json_items); $i++) {
+        // Store original count to avoid issues with unset() modifying the array during iteration
+        $original_batch_count = count($batch_json_items);
+
+        for ($i = 0; $i < $original_batch_count; $i++) {
             try {
                 $current_index = $start_index + $i;
 
@@ -221,6 +224,10 @@ function process_batch_items_logic($setup) {
                 }
 
                 $item = $batch_json_items[$i];
+                if (!isset($item)) {
+                    // Item was already processed or unset
+                    continue;
+                }
                 $guid = $item['guid'] ?? '';
 
                 if (empty($guid)) {
