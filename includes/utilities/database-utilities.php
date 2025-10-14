@@ -277,6 +277,14 @@ function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$log
                     'value_length' => is_string($value) ? strlen($value) : 'N/A'
                 ]);
 
+                PuntWorkLogger::debug('About to check is_special', PuntWorkLogger::CONTEXT_BATCH, [
+                    'post_id' => $post_id,
+                    'guid' => $guid,
+                    'field' => $field,
+                    'zero_empty_fields_type' => gettype($zero_empty_fields),
+                    'zero_empty_fields_value' => is_array($zero_empty_fields) ? json_encode($zero_empty_fields) : substr((string)$zero_empty_fields, 0, 100)
+                ]);
+
                 $is_special = in_array($field, $zero_empty_fields);
                 $set_value = $is_special && $value === '0' ? '' : $value;
 
@@ -304,6 +312,7 @@ function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$log
                 // Continue with other fields instead of failing completely
                 continue;
             } catch (\Throwable $t) {
+                error_log("DEBUG: Caught Throwable in ACF field processing: " . $t->getMessage() . " for field $field, post_id $post_id, guid $guid");
                 PuntWorkLogger::error('Fatal error updating ACF field', PuntWorkLogger::CONTEXT_BATCH, [
                     'post_id' => $post_id,
                     'guid' => $guid,
@@ -329,6 +338,7 @@ function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$log
         $error_message = 'Meta update failed for ID: ' . $post_id . ' GUID: ' . $guid . ' - ' . $e->getMessage();
         return new \WP_Error('meta_update_failed', $error_message);
     } catch (\Throwable $t) {
+        error_log("DEBUG: Caught Throwable in outer catch: " . $t->getMessage() . " for post_id $post_id, guid $guid");
         PuntWorkLogger::error('Fatal error updating post meta for existing post', PuntWorkLogger::CONTEXT_BATCH, [
             'post_id' => $post_id,
             'guid' => $guid,
