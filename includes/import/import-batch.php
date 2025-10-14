@@ -138,6 +138,13 @@ if (!function_exists('import_all_jobs_from_json')) {
         $batch_count = 0;
         $total_items = 0;
 
+        // Get existing batch count if preserving status (resuming paused import)
+        if ($preserve_status) {
+            $existing_status = get_import_status([]);
+            $batch_count = $existing_status['batch_count'] ?? 0;
+            error_log('[PUNTWORK] Resuming import from batch ' . ($batch_count + 1));
+        }
+
         error_log('[PUNTWORK] ===== STARTING FULL IMPORT =====');
         error_log('[PUNTWORK] PHP Memory limit: ' . ini_get('memory_limit'));
         error_log('[PUNTWORK] PHP Max execution time: ' . ini_get('max_execution_time'));
@@ -162,6 +169,7 @@ if (!function_exists('import_all_jobs_from_json')) {
                 'updated' => 0,
                 'skipped' => 0,
                 'duplicates_drafted' => 0,
+                'batch_count' => 0,
                 'time_elapsed' => 0,
                 'complete' => false,
                 'success' => false,
@@ -184,6 +192,7 @@ if (!function_exists('import_all_jobs_from_json')) {
         if (!$preserve_status) {
             error_log('[PUNTWORK] Initializing import status...');
             $initial_status = initialize_import_status(0, 'Scheduled import started - preparing feeds...', $start_time);
+            $initial_status['batch_count'] = 0;
             error_log('[PUNTWORK] Setting import status...');
             set_import_status($initial_status);
         } else {
@@ -369,6 +378,7 @@ if (!function_exists('import_all_jobs_from_json')) {
             $current_status['updated'] = $total_updated;
             $current_status['skipped'] = $total_skipped;
             $current_status['duplicates_drafted'] = $total_duplicates_drafted;
+            $current_status['batch_count'] = $batch_count;
             $current_status['time_elapsed'] = microtime(true) - $start_time;
             $current_status['last_update'] = time();
             $current_status['logs'] = array_slice($all_logs, -50); // Keep last 50 log entries for UI
@@ -515,6 +525,7 @@ if (!function_exists('import_all_jobs_from_json')) {
             'updated' => $total_updated,
             'skipped' => $total_skipped,
             'duplicates_drafted' => $total_duplicates_drafted,
+            'batch_count' => $batch_count,
             'time_elapsed' => $total_duration,
             'complete' => true,
             'success' => true,
