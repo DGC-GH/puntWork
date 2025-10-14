@@ -288,6 +288,9 @@ function cleanup_old_job_posts($import_start_time) {
         $cleanup_progress_status = get_import_status([]);
         $cleanup_progress_status['cleanup_processed'] = $total_deleted;
         $cleanup_progress_status['last_update'] = time();
+        if (!is_array($cleanup_progress_status['logs'] ?? null)) {
+            $cleanup_progress_status['logs'] = [];
+        }
         $cleanup_progress_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Cleanup progress: ' . $total_deleted . '/' . $total_old_posts . ' old jobs deleted';
         set_import_status($cleanup_progress_status);
 

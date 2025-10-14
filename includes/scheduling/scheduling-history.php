@@ -50,6 +50,9 @@ function run_scheduled_import($test_mode = false) {
                 // Update status after feed refresh
                 $feed_status = get_import_status([]);
                 if (!empty($feed_status)) {
+                    if (!is_array($feed_status['logs'] ?? null)) {
+                        $feed_status['logs'] = [];
+                    }
                     $feed_status['logs'][] = 'Feed data refreshed successfully';
                     set_import_status($feed_status);
                 }

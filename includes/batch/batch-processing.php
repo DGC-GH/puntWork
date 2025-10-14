@@ -180,6 +180,9 @@ function process_batch_items_logic($setup) {
 
                         // Update status to show partial completion
                         $timeout_status = get_import_status();
+                        if (!is_array($timeout_status['logs'] ?? null)) {
+                            $timeout_status['logs'] = [];
+                        }
                         $timeout_status['processed'] = $partial_processed;
                         $timeout_status['last_update'] = time();
                         $timeout_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Processing paused mid-batch due to time/memory limits at item ' . ($current_index + 1);
@@ -213,6 +216,9 @@ function process_batch_items_logic($setup) {
                     // HEARTBEAT: Update status every 5 items to prevent server timeout detection
                     if ($i % 5 === 0) {
                         $heartbeat_status = get_import_status();
+                        if (!is_array($heartbeat_status['logs'] ?? null)) {
+                            $heartbeat_status['logs'] = [];
+                        }
                         $heartbeat_status['last_update'] = time();
                         $heartbeat_status['processed'] = $start_index + $items_processed_in_batch;
                         $heartbeat_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Heartbeat: Processing item ' . ($current_index + 1) . '/' . $total;

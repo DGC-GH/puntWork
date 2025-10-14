@@ -135,7 +135,17 @@ function create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, &$log
             }
         }
 
-        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Published ID: ' . $post_id . ' GUID: ' . $guid;
+        if (!is_array($logs)) {
+            PuntWorkLogger::error('logs is not array in create_job_post, resetting', PuntWorkLogger::CONTEXT_BATCH, [
+                'post_id' => $post_id,
+                'guid' => $guid,
+                'logs_type' => gettype($logs),
+                'logs_value' => is_scalar($logs) ? substr((string)$logs, 0, 100) : 'non-scalar'
+            ]);
+            $logs = [];
+        }
+
+        array_push($logs, '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Published ID: ' . $post_id . ' GUID: ' . $guid);
         return $post_id;
 
     } catch (\Exception $e) {
@@ -366,8 +376,9 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
             'guid' => $guid
         ]);
 
+        // Ensure logs is an array before appending
         if (!is_array($logs)) {
-            PuntWorkLogger::error('logs is not array in update_job_post, resetting', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::error('logs is not array in update_job_post before append, resetting', PuntWorkLogger::CONTEXT_BATCH, [
                 'post_id' => $post_id,
                 'guid' => $guid,
                 'logs_type' => gettype($logs),
@@ -376,7 +387,7 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
             $logs = [];
         }
 
-        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Updated ID: ' . $post_id . ' GUID: ' . $guid;
+        array_push($logs, '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Updated ID: ' . $post_id . ' GUID: ' . $guid);
 
         PuntWorkLogger::debug('Added to logs', PuntWorkLogger::CONTEXT_BATCH, [
             'post_id' => $post_id,
