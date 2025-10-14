@@ -28,6 +28,8 @@ require_once plugin_dir_path(__FILE__) . '../utilities/database-utilities.php';
  * @param array $acf_fields ACF fields to process
  * @param array $zero_empty_fields Fields that should be empty when value is '0'
  * @param array $post_ids_by_guid Post IDs indexed by GUID
+ * @param string $json_path Path to JSONL file
+ * @param int $start_index Starting index in JSONL file
  * @param array &$logs Reference to logs array
  * @param int &$updated Reference to updated count
  * @param int &$published Reference to published count
@@ -35,7 +37,7 @@ require_once plugin_dir_path(__FILE__) . '../utilities/database-utilities.php';
  * @param int &$processed_count Reference to processed count
  * @return array Processing results with timing data
  */
-function process_batch_items_concurrent($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, &$logs, &$updated, &$published, &$skipped, &$processed_count) {
+function process_batch_items_concurrent($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, &$logs, &$updated, &$published, &$skipped, &$processed_count) {
     $start_time = microtime(true);
 
     PuntWorkLogger::info('Starting concurrent item processing', PuntWorkLogger::CONTEXT_BATCH, [
@@ -67,12 +69,10 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
             'puntwork_process_item_chunk',
             [
                 'chunk_guids' => $chunk_guids,
-                'batch_items' => array_intersect_key($batch_items, array_flip($chunk_guids)),
-                'last_updates' => $last_updates,
-                'all_hashes_by_post' => $all_hashes_by_post,
+                'json_path' => $setup['json_path'] ?? '',
+                'start_index' => $setup['start_index'] ?? 0,
                 'acf_fields' => $acf_fields,
                 'zero_empty_fields' => $zero_empty_fields,
-                'post_ids_by_guid' => array_intersect_key($post_ids_by_guid, array_flip($chunk_guids)),
                 'user_id' => $user_id,
                 'chunk_index' => $chunk_index,
                 'total_chunks' => count($batch_chunks)
@@ -221,7 +221,7 @@ function calculate_optimal_concurrency($batch_size) {
 /**
  * Action Scheduler callback for processing a chunk of items concurrently
  */
-function process_item_chunk_callback($chunk_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $user_id, $chunk_index, $total_chunks) {
+function process_item_chunk_callback($chunk_guids, $json_path, $start_index, $acf_fields, $zero_empty_fields, $user_id, $chunk_index, $total_chunks) {
     $chunk_start_time = microtime(true);
     $item_timings = [];
 
@@ -237,13 +237,89 @@ function process_item_chunk_callback($chunk_guids, $batch_items, $last_updates, 
     $skipped = 0;
     $processed_count = 0;
 
+    try {
+        // Re-read the specific items for this chunk from JSONL
+        $batch_items = [];
+        if (!empty($json_path) && file_exists($json_path)) {
+            $handle = fopen($json_path, "r");
+            if ($handle) {
+                $current_index = 0;
+                while (($line = fgets($handle)) !== false) {
+                    if ($current_index >= $start_index) {
+                        $line = trim($line);
+                        if (!empty($line)) {
+                            $item = json_decode($line, true);
+                            if ($item !== null && isset($item['guid']) && in_array($item['guid'], $chunk_guids)) {
+                                $batch_items[$item['guid']] = ['item' => $item, 'index' => $current_index];
+                            }
+                        }
+                    }
+                    $current_index++;
+                }
+                fclose($handle);
+            }
+        }
+
+        // Re-fetch database data for this chunk
+        global $wpdb;
+
+        // Bulk existing post_ids for this chunk
+        $guid_placeholders = implode(',', array_fill(0, count($chunk_guids), '%s'));
+        $existing_meta = $wpdb->get_results($wpdb->prepare(
+            "SELECT post_id, meta_value AS guid FROM $wpdb->postmeta WHERE meta_key = 'guid' AND meta_value IN ($guid_placeholders)",
+            $chunk_guids
+        ));
+        $existing_by_guid = [];
+        foreach ($existing_meta as $row) {
+            $existing_by_guid[$row->guid][] = $row->post_id;
+        }
+
+        $post_ids_by_guid = [];
+        // Simple duplicate handling for this chunk
+        foreach ($chunk_guids as $guid) {
+            if (isset($existing_by_guid[$guid])) {
+                $post_ids_by_guid[$guid] = $existing_by_guid[$guid][0]; // Take first post for this GUID
+            }
+        }
+
+        // Bulk fetch last updates and hashes for existing posts in this chunk
+        $post_ids = array_values($post_ids_by_guid);
+        $last_updates = [];
+        $all_hashes_by_post = [];
+
+        if (!empty($post_ids)) {
+            $placeholders = implode(',', array_fill(0, count($post_ids), '%d'));
+            $chunk_last = $wpdb->get_results($wpdb->prepare(
+                "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_last_import_update' AND post_id IN ($placeholders)",
+                $post_ids
+            ), OBJECT_K);
+            $last_updates = (array)$chunk_last;
+
+            $chunk_hashes = $wpdb->get_results($wpdb->prepare(
+                "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
+                $post_ids
+            ), OBJECT_K);
+            foreach ($chunk_hashes as $id => $obj) {
+                $all_hashes_by_post[$id] = $obj->meta_value;
+            }
+        }
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Failed to prepare data for concurrent chunk', PuntWorkLogger::CONTEXT_BATCH, [
+            'chunk_index' => $chunk_index,
+            'error' => $e->getMessage(),
+            'json_path' => $json_path
+        ]);
+        return;
+    }
+
     foreach ($chunk_guids as $guid) {
         $item_start_time = microtime(true);
 
         try {
-            $item = $batch_items[$guid]['item'] ?? null;
-            if (!$item) {
-                PuntWorkLogger::warning('Item not found in batch', PuntWorkLogger::CONTEXT_BATCH, [
+            $item_data = $batch_items[$guid]['item'] ?? null;
+            if (!$item_data) {
+                PuntWorkLogger::warning('Item not found in chunk', PuntWorkLogger::CONTEXT_BATCH, [
                     'guid' => $guid,
                     'chunk_index' => $chunk_index
                 ]);
@@ -252,7 +328,7 @@ function process_item_chunk_callback($chunk_guids, $batch_items, $last_updates, 
                 continue;
             }
 
-            $xml_updated = isset($item['updated']) ? $item['updated'] : '';
+            $xml_updated = isset($item_data['updated']) ? $item_data['updated'] : '';
             $xml_updated_ts = strtotime($xml_updated);
             $post_id = isset($post_ids_by_guid[$guid]) ? $post_ids_by_guid[$guid] : null;
 
@@ -295,7 +371,7 @@ function process_item_chunk_callback($chunk_guids, $batch_items, $last_updates, 
                     update_post_meta($post_id, 'guid', $guid);
 
                     $current_hash = $all_hashes_by_post[$post_id] ?? '';
-                    $item_hash = md5(json_encode($item));
+                    $item_hash = md5(json_encode($item_data));
 
                     // Skip if content hasn't changed (temporarily disabled for full processing)
                     // if ($current_hash === $item_hash) {
@@ -306,7 +382,7 @@ function process_item_chunk_callback($chunk_guids, $batch_items, $last_updates, 
 
                     // Update post immediately
                     $error_message = '';
-                    $update_result = update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, $logs, $error_message);
+                    $update_result = update_job_post($post_id, $item_data, $acf_fields, $zero_empty_fields, $logs, $error_message);
                     if (is_wp_error($update_result)) {
                         PuntWorkLogger::error('Failed to update post in concurrent chunk', PuntWorkLogger::CONTEXT_BATCH, [
                             'post_id' => $post_id,
@@ -335,7 +411,7 @@ function process_item_chunk_callback($chunk_guids, $batch_items, $last_updates, 
             } else {
                 // Create new post immediately
                 $error_message = '';
-                $create_result = create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, $logs, $error_message);
+                $create_result = create_job_post($item_data, $acf_fields, $zero_empty_fields, $user_id, $logs, $error_message);
                 if (is_wp_error($create_result)) {
                     PuntWorkLogger::error('Failed to create post in concurrent chunk', PuntWorkLogger::CONTEXT_BATCH, [
                         'guid' => $guid,
@@ -402,7 +478,7 @@ function process_item_chunk_callback($chunk_guids, $batch_items, $last_updates, 
 }
 
 // Hook the callback function
-add_action('puntwork_process_item_chunk', 'Puntwork\process_item_chunk_callback', 10, 10);
+add_action('puntwork_process_item_chunk', 'Puntwork\process_item_chunk_callback', 10, 8);
 
 /**
  * Enhanced batch metrics update with concurrent processing data
