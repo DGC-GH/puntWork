@@ -236,6 +236,8 @@ function process_batch_items_logic($setup) {
                 if (get_transient('import_cancel') === true) {
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Import cancelled at #' . ($current_index + 1);
                     set_import_progress($current_index);
+                    // Resume cache invalidation on user cancellation
+                    wp_resume_cache_invalidation();
                     return ['success' => false, 'message' => 'Import cancelled by user', 'logs' => $logs];
                 }
 
@@ -243,12 +245,16 @@ function process_batch_items_logic($setup) {
                 if (get_transient('import_force_cancel') === true) {
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Import force cancelled at #' . ($current_index + 1);
                     set_import_progress($current_index);
+                    // Resume cache invalidation on force cancellation
+                    wp_resume_cache_invalidation();
                     return ['success' => false, 'message' => 'Import force cancelled by user', 'logs' => $logs];
                 }
 
                 if (get_transient('import_emergency_stop') === true) {
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Import emergency stopped at #' . ($current_index + 1);
                     set_import_progress($current_index);
+                    // Resume cache invalidation on emergency stop
+                    wp_resume_cache_invalidation();
                     return ['success' => false, 'message' => 'Import emergency stopped', 'logs' => $logs];
                 }
 
