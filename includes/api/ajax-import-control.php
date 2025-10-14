@@ -125,6 +125,13 @@ function run_job_import_batch_ajax() {
                     'message' => 'Import completed successfully',
                     'result' => $result,
                     'async' => false
+                ], [
+                    'message' => 'Import completed successfully',
+                    'success' => $result['success'] ?? null,
+                    'processed' => $result['processed'] ?? null,
+                    'total' => $result['total'] ?? null,
+                    'time_elapsed' => $result['time_elapsed'] ?? null,
+                    'async' => false
                 ]);
             } else {
                 error_log('[PUNTWORK] Synchronous manual import failed: ' . ($result['message'] ?? 'Unknown error'));
@@ -141,6 +148,10 @@ function run_job_import_batch_ajax() {
         send_ajax_success('run_job_import_batch', [
             'message' => 'Import started successfully',
             'async' => true
+        ], [
+            'message' => 'Import started successfully',
+            'async' => true,
+            'import_type' => 'manual'
         ]);
 
     } catch (\Exception $e) {

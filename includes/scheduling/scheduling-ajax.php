@@ -117,6 +117,13 @@ function save_import_schedule_ajax() {
         'next_run' => get_next_scheduled_time(),
         'last_run' => $last_run,
         'last_run_details' => $last_run_details
+    ], [
+        'message' => 'Schedule saved successfully',
+        'schedule_enabled' => $schedule_data['enabled'] ?? false,
+        'schedule_frequency' => $schedule_data['frequency'] ?? 'daily',
+        'next_run' => get_next_scheduled_time(),
+        'last_run_timestamp' => $last_run['timestamp'] ?? null,
+        'last_run_success' => $last_run['success'] ?? null
     ]);
 }
 
@@ -154,6 +161,12 @@ function get_import_schedule_ajax() {
         'next_run' => get_next_scheduled_time(),
         'last_run' => $last_run,
         'last_run_details' => $last_run_details
+    ], [
+        'schedule_enabled' => $schedule['enabled'] ?? false,
+        'schedule_frequency' => $schedule['frequency'] ?? 'daily',
+        'next_run' => get_next_scheduled_time(),
+        'last_run_timestamp' => $last_run['timestamp'] ?? null,
+        'last_run_success' => $last_run['success'] ?? null
     ]);
 }
 
@@ -329,6 +342,10 @@ function run_scheduled_import_ajax() {
         send_ajax_success('run_scheduled_import', [
             'message' => 'Import started successfully',
             'async' => true
+        ], [
+            'message' => 'Import started successfully',
+            'async' => true,
+            'import_type' => $is_manual ? 'manual' : 'scheduled'
         ]);
 
     } catch (\Exception $e) {
