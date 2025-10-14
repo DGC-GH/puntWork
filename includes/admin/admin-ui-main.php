@@ -141,6 +141,12 @@ function render_main_import_ui() {
             <h2 style="font-size: 20px; font-weight: 600; margin: 0 0 16px;">Import Controls</h2>
             <p style="font-size: 14px; color: #8e8e93; margin: 0 0 16px;">Start, pause, or resume job imports from configured feeds.</p>
 
+            <!-- Import Type Indicator -->
+            <div id="import-type-indicator" style="display: none; margin-bottom: 16px; padding: 8px 12px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #0ea5e9; border-radius: 8px; font-size: 13px; color: #0c4a6e;">
+                <i class="fas fa-clock" style="margin-right: 6px;"></i>
+                <span id="import-type-text">Scheduled import is currently running</span>
+            </div>
+
             <div style="display: flex; gap: 12px; align-items: center;">
                 <button id="start-import" class="button button-primary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #007aff; border: none; color: white;">
                     <span id="start-text">Start Import</span>
