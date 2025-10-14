@@ -580,7 +580,8 @@ function get_job_import_status_ajax() {
         }
 
         // Debug log the status data (only in debug mode to avoid spam)
-        if (defined('WP_DEBUG') && WP_DEBUG) {
+        // NOTE: To enable polling debug logs, define PUNTWORK_DEBUG_POLLING as true in wp-config.php
+        if (defined('WP_DEBUG') && WP_DEBUG && defined('PUNTWORK_DEBUG_POLLING') && PUNTWORK_DEBUG_POLLING) {
             PuntWorkLogger::debug('Import status retrieved', PuntWorkLogger::CONTEXT_AJAX, [
                 'total' => $progress['total'] ?? 0,
                 'processed' => $progress['processed'] ?? 0,
@@ -755,7 +756,7 @@ function get_job_import_status_ajax() {
             // For initial polling or counting phase, still send response but with minimal logging
             // Check if we're in counting phase (import started but total still 0)
             $is_counting_phase = isset($progress['start_time']) && $progress['start_time'] > 0 && $progress['total'] == 0;
-            if ($is_counting_phase && defined('WP_DEBUG') && WP_DEBUG) {
+            if ($is_counting_phase && defined('WP_DEBUG') && WP_DEBUG && defined('PUNTWORK_DEBUG_POLLING') && PUNTWORK_DEBUG_POLLING) {
                 PuntWorkLogger::debug('Import status requested during counting phase', PuntWorkLogger::CONTEXT_AJAX, [
                     'start_time' => $progress['start_time'] ?? null,
                     'time_elapsed' => $progress['job_importing_time_elapsed'] ?? $progress['time_elapsed'] ?? 0,
