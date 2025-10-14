@@ -116,23 +116,12 @@ function create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, &$log
             // }
 
             if (!function_exists('update_field')) {
-                PuntWorkLogger::debug('update_field not available in create, using update_post_meta', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::debug('update_field not available in create, skipping ACF field update', PuntWorkLogger::CONTEXT_BATCH, [
                     'post_id' => $post_id,
                     'guid' => $guid,
                     'field' => $field
                 ]);
-                if (is_array($set_value)) {
-                    $set_value = serialize($set_value);
-                }
-                retry_database_operation(function() use ($post_id, $field, $set_value) {
-                    return update_post_meta($post_id, $field, $set_value);
-                }, [$post_id, $field, $set_value], [
-                    'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
-                    'operation' => 'set_acf_field_meta_new_fallback',
-                    'post_id' => $post_id,
-                    'field' => $field,
-                    'guid' => $guid
-                ]);
+                continue;
             } else {
                 retry_database_operation(function() use ($post_id, $field, $set_value) {
                     return update_field($field, $set_value, $post_id);
@@ -350,23 +339,12 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
                 // }
 
                 if (!function_exists('update_field')) {
-                    PuntWorkLogger::debug('update_field not available, using update_post_meta', PuntWorkLogger::CONTEXT_BATCH, [
+                    PuntWorkLogger::debug('update_field not available, skipping ACF field update', PuntWorkLogger::CONTEXT_BATCH, [
                         'post_id' => $post_id,
                         'guid' => $guid,
                         'field' => $field
                     ]);
-                    if (is_array($set_value)) {
-                        $set_value = serialize($set_value);
-                    }
-                    retry_database_operation(function() use ($post_id, $field, $set_value) {
-                        return update_post_meta($post_id, $field, $set_value);
-                    }, [$post_id, $field, $set_value], [
-                        'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
-                        'operation' => 'update_acf_field_meta_fallback',
-                        'post_id' => $post_id,
-                        'field' => $field,
-                        'guid' => $guid
-                    ]);
+                    continue;
                 } else {
                     retry_database_operation(function() use ($post_id, $field, $set_value) {
                         return update_field($field, $set_value, $post_id);
