@@ -199,17 +199,26 @@ function reset_job_import_ajax() {
 add_action('wp_ajax_get_job_import_status', __NAMESPACE__ . '\\get_job_import_status_ajax');
 function get_job_import_status_ajax() {
     try {
-        if (!validate_ajax_request('get_job_import_status')) {
+        // Get status first to determine if we should log
+        $progress = get_import_status() ?: initialize_import_status(0, '', null);
+        $total = $progress['total'] ?? 0;
+        $processed = $progress['processed'] ?? 0;
+        $complete = $progress['complete'] ?? null;
+        $should_log = $total > 0 || $processed > 0 || $complete !== null;
+
+        // Validate request (conditionally log based on import state)
+        if (!validate_ajax_request('get_job_import_status', $should_log)) {
             return;
         }
 
-        $progress = get_import_status() ?: initialize_import_status(0, '', null);
-
-        PuntWorkLogger::debug('Retrieved import status', PuntWorkLogger::CONTEXT_BATCH, [
-            'total' => $progress['total'] ?? 0,
-            'processed' => $progress['processed'] ?? 0,
-            'complete' => $progress['complete'] ?? null
-        ]);
+        // Only log debug when import has meaningful progress to reduce log spam
+        if ($should_log) {
+            PuntWorkLogger::debug('Retrieved import status', PuntWorkLogger::CONTEXT_BATCH, [
+                'total' => $total,
+                'processed' => $processed,
+                'complete' => $complete
+            ]);
+        }
 
         // Check for stuck or stale imports and clear them
         if (isset($progress['complete']) && !$progress['complete'] && isset($progress['total']) && $progress['total'] > 0) {
@@ -315,7 +324,13 @@ function get_job_import_status_ajax() {
             'last_modified' => $progress['last_modified'] ?? microtime(true)
         ];
 
-        send_ajax_success('get_job_import_status', $progress, $log_summary);
+        // Only log AJAX response when import has meaningful progress to reduce log spam
+        if ($total > 0 || $processed > 0 || $complete !== null) {
+            send_ajax_success('get_job_import_status', $progress, $log_summary);
+        } else {
+            // For initial polling before import starts, just send response without logging
+            wp_send_json_success($progress);
+        }
 
     } catch (\Exception $e) {
         PuntWorkLogger::error('Fatal error in get_job_import_status_ajax', PuntWorkLogger::CONTEXT_AJAX, [
