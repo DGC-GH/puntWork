@@ -34,6 +34,7 @@ function run_scheduled_import($test_mode = false) {
     }
 
     $start_time = microtime(true);
+    $end_time = 0; // Initialize to prevent undefined variable warnings
 
     try {
         // Log the scheduled run
@@ -205,6 +206,7 @@ function cleanup_scheduled_imports() {
  */
 function run_manual_import() {
     $start_time = microtime(true);
+    $end_time = 0; // Initialize to prevent undefined variable warnings
 
     try {
         // Log the manual run
