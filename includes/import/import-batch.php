@@ -201,6 +201,9 @@ if (!function_exists('import_all_jobs_from_json')) {
             error_log('[PUNTWORK] Preserving existing status...');
             // Update existing status to indicate import is resuming (don't reset start_time to preserve elapsed time)
             $existing_status = get_import_status([]);
+            if (!is_array($existing_status['logs'] ?? null)) {
+                $existing_status['logs'] = [];
+            }
             $existing_status['logs'][] = 'Scheduled import resumed - processing batches...';
             // Note: start_time is preserved from original import start
             set_import_status($existing_status);
@@ -227,6 +230,9 @@ if (!function_exists('import_all_jobs_from_json')) {
                 $current_status['paused'] = true;
                 $current_status['pause_reason'] = 'time_limit_exceeded';
                 $current_status['last_update'] = time();
+                if (!is_array($current_status['logs'] ?? null)) {
+                    $current_status['logs'] = [];
+                }
                 $current_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Import paused due to time/memory limits - will continue automatically';
                 set_import_status($current_status);
 
@@ -588,6 +594,9 @@ if (!function_exists('import_all_jobs_from_json')) {
             $failed_status['error_message'] = $fatal_error;
             $failed_status['end_time'] = microtime(true);
             $failed_status['last_update'] = time();
+            if (!is_array($failed_status['logs'] ?? null)) {
+                $failed_status['logs'] = [];
+            }
             $failed_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] FATAL ERROR: ' . $fatal_error;
             set_import_status($failed_status);
             
@@ -613,6 +622,9 @@ function continue_paused_import() {
     // Reset pause status
     $status['paused'] = false;
     unset($status['pause_reason']);
+    if (!is_array($status['logs'] ?? null)) {
+        $status['logs'] = [];
+    }
     $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Resuming paused import';
     set_import_status($status);
 

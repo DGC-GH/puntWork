@@ -20,6 +20,15 @@ require_once plugin_dir_path(__FILE__) . 'retry-utility.php';
 function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates_drafted, &$post_ids_by_guid) {
     global $wpdb;
 
+    // Ensure logs is an array
+    if (!is_array($logs)) {
+        PuntWorkLogger::error('logs is not array in handle_duplicates, resetting', PuntWorkLogger::CONTEXT_BATCH, [
+            'logs_type' => gettype($logs),
+            'logs_value' => is_scalar($logs) ? substr((string)$logs, 0, 100) : 'non-scalar'
+        ]);
+        $logs = [];
+    }
+
     PuntWorkLogger::info('Starting duplicate handling', PuntWorkLogger::CONTEXT_BATCH, [
         'batch_guids_count' => count($batch_guids),
         'existing_by_guid_count' => count($existing_by_guid)

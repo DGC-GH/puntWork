@@ -11,13 +11,35 @@ namespace Puntwork;
  * Get import status with default structure
  */
 function get_import_status() {
-    return get_option('job_import_status', []);
+    $status = get_option('job_import_status', []);
+    
+    // Ensure status is an array and sanitize the logs field
+    if (!is_array($status)) {
+        $status = [];
+    }
+    
+    // Ensure logs is always an array
+    if (!isset($status['logs']) || !is_array($status['logs'])) {
+        $status['logs'] = [];
+    }
+    
+    return $status;
 }
 
 /**
  * Set import status with validation
  */
 function set_import_status($status) {
+    // Ensure status is an array
+    if (!is_array($status)) {
+        $status = [];
+    }
+    
+    // Ensure logs is always an array
+    if (!isset($status['logs']) || !is_array($status['logs'])) {
+        $status['logs'] = [];
+    }
+    
     update_option('job_import_status', $status, false);
 }
 

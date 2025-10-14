@@ -25,6 +25,15 @@ if (!function_exists('process_batch_items')) {
             'batch_items_count' => count($batch_items)
         ]);
 
+        // Ensure logs is an array
+        if (!is_array($logs)) {
+            PuntWorkLogger::error('logs is not array in process_batch_items, resetting', PuntWorkLogger::CONTEXT_BATCH, [
+                'logs_type' => gettype($logs),
+                'logs_value' => is_scalar($logs) ? substr((string)$logs, 0, 100) : 'non-scalar'
+            ]);
+            $logs = [];
+        }
+
         $user_id = get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : get_current_user_id();
 
         // Debug: Log first few GUIDs and items
