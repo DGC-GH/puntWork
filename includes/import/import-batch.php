@@ -383,6 +383,8 @@ if (!function_exists('import_all_jobs_from_json')) {
             $current_status['last_update'] = time();
             $current_status['logs'] = array_slice($all_logs, -50); // Keep last 50 log entries for UI
             set_import_status($current_status);
+            // Also update the progress option for continuation
+            set_import_progress($total_processed);
             error_log(sprintf('[PUNTWORK] Updated import status after batch %d: processed=%d/%d, complete=%s', 
                 $batch_count, $total_processed, $total_items, ($total_processed >= $total_items ? 'true' : 'false')));
 

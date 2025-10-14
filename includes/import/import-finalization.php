@@ -200,13 +200,13 @@ function cleanup_old_job_posts($import_start_time) {
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Found ' . count($current_guids) . ' current GUIDs in feed';
 
     // Get all published job GUIDs and compare against current feed GUIDs
-    $published_jobs = $wpdb->get_results($wpdb->prepare("
+    $published_jobs = $wpdb->get_results("
         SELECT DISTINCT p.ID, pm.meta_value as guid
         FROM {$wpdb->posts} p
         JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
         WHERE p.post_type = 'job'
         AND p.post_status = 'publish'
-    "));
+    ");
 
     $old_post_ids = [];
     $current_guids_set = array_flip($current_guids); // For fast lookup
