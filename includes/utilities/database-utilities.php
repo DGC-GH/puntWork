@@ -304,31 +304,7 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
         ]);
         foreach ($acf_fields as $field_index => $field) {
             try {
-                PuntWorkLogger::debug('Processing ACF field', PuntWorkLogger::CONTEXT_BATCH, [
-                    'post_id' => $post_id,
-                    'guid' => $guid,
-                    'field_index' => $field_index,
-                    'field' => $field,
-                    'field_type' => gettype($field)
-                ]);
-
                 $value = $item[$field] ?? '';
-                PuntWorkLogger::debug('ACF field value retrieved', PuntWorkLogger::CONTEXT_BATCH, [
-                    'post_id' => $post_id,
-                    'guid' => $guid,
-                    'field' => $field,
-                    'value_type' => gettype($value),
-                    'value_length' => is_string($value) ? strlen($value) : 'N/A'
-                ]);
-
-                PuntWorkLogger::debug('About to check is_special', PuntWorkLogger::CONTEXT_BATCH, [
-                    'post_id' => $post_id,
-                    'guid' => $guid,
-                    'field' => $field,
-                    'zero_empty_fields_type' => gettype($zero_empty_fields),
-                    'zero_empty_fields_value' => is_array($zero_empty_fields) ? json_encode($zero_empty_fields) : substr((string)$zero_empty_fields, 0, 100)
-                ]);
-
                 $is_special = in_array($field, $zero_empty_fields);
                 $set_value = $is_special && $value === '0' ? '' : $value;
 
