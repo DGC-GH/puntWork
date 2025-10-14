@@ -317,11 +317,16 @@ if (!function_exists('import_all_jobs_from_json')) {
                 $current_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Import paused due to time/memory limits - will continue automatically';
                 set_import_status($current_status);
 
-                // Schedule continuation via WordPress cron (runs in background)
-                if (!wp_next_scheduled('puntwork_continue_import')) {
-                    wp_schedule_single_event(time() + 10, 'puntwork_continue_import'); // Continue in 10 seconds (more aggressive)
-                    error_log('[PUNTWORK] Scheduled import continuation in 10 seconds');
-                }
+                // IMPLEMENT FALLBACK MECHANISMS FOR CRON-BASED CONTINUATION
+                $pause_time = microtime(true);
+                $current_status['pause_time'] = $pause_time;
+                $current_status['continuation_attempts'] = 0;
+                $current_status['last_continuation_attempt'] = null;
+                $current_status['continuation_strategy'] = 'cron_fallback';
+                set_import_status($current_status);
+
+                // Schedule multiple fallback continuation mechanisms
+                schedule_import_continuation_with_fallbacks($pause_time);
 
                 return [
                     'success' => true,
@@ -334,7 +339,7 @@ if (!function_exists('import_all_jobs_from_json')) {
                     'time_elapsed' => microtime(true) - $start_time + $accumulated_time,
                     'complete' => false,
                     'paused' => true,
-                    'message' => 'Import paused due to time limits - will continue automatically in background'
+                    'message' => 'Import paused due to time limits - multiple continuation mechanisms scheduled'
                 ];
             }
 
@@ -809,7 +814,22 @@ if (!function_exists('import_all_jobs_from_json')) {
  * Called by WordPress cron when import needs to resume after timeout
  */
 function continue_paused_import() {
-    error_log('[PUNTWORK] Continuing paused import process');
+    $attempt_time = microtime(true);
+    error_log('[PUNTWORK] Primary continuation attempt starting');
+
+    // Update continuation attempt tracking
+    $status = get_import_status([]);
+    $status['continuation_attempts'] = ($status['continuation_attempts'] ?? 0) + 1;
+    $status['last_continuation_attempt'] = $attempt_time;
+    $status['continuation_method'] = 'primary_cron';
+    set_import_status($status);
+
+    PuntWorkLogger::info('Primary continuation attempt initiated', PuntWorkLogger::CONTEXT_BATCH, [
+        'attempt_number' => $status['continuation_attempts'],
+        'pause_time' => $status['pause_time'] ?? null,
+        'time_since_pause' => $status['pause_time'] ? ($attempt_time - $status['pause_time']) : null,
+        'method' => 'primary_cron'
+    ]);
 
     // Check for cancellation before resuming
     if (get_transient('import_cancel') === true || get_transient('import_force_cancel') === true || get_transient('import_emergency_stop') === true) {
@@ -819,7 +839,8 @@ function continue_paused_import() {
         PuntWorkLogger::info('Cancelled import continuation prevented', PuntWorkLogger::CONTEXT_BATCH, [
             'reason' => 'import_cancel_transient_set',
             'action' => 'skipped_continuation',
-            'cancel_type' => $cancel_type
+            'cancel_type' => $cancel_type,
+            'method' => 'primary_cron'
         ]);
 
         // Update status to show cancellation
@@ -835,6 +856,9 @@ function continue_paused_import() {
         $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Import ' . $cancel_type . ' by user - not resuming';
         set_import_status($status);
 
+        // Clear remaining fallback schedules
+        clear_import_continuation_schedules();
+
         return;
     }
 
@@ -842,6 +866,14 @@ function continue_paused_import() {
     $status = get_import_status([]);
     if (!isset($status['paused']) || !$status['paused']) {
         error_log('[PUNTWORK] No paused import found - skipping continuation');
+        PuntWorkLogger::info('Continuation skipped - import not paused', PuntWorkLogger::CONTEXT_BATCH, [
+            'current_status' => $status,
+            'method' => 'primary_cron'
+        ]);
+
+        // Clear remaining fallback schedules
+        clear_import_continuation_schedules();
+
         return;
     }
 
@@ -851,7 +883,7 @@ function continue_paused_import() {
     if (!is_array($status['logs'] ?? null)) {
         $status['logs'] = [];
     }
-    $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Resuming paused import';
+    $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Resuming paused import (primary continuation)';
     set_import_status($status);
 
     // Reset start time for new timeout window
@@ -861,19 +893,345 @@ function continue_paused_import() {
     $result = import_all_jobs_from_json(true); // preserve status for continuation
 
     if ($result['success']) {
-        PuntWorkLogger::info('Paused import continuation completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::info('Primary continuation completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
             'processed' => $result['processed'] ?? 0,
             'total' => $result['total'] ?? 0,
-            'time_elapsed' => $result['time_elapsed'] ?? 0
+            'time_elapsed' => $result['time_elapsed'] ?? 0,
+            'attempts_used' => $status['continuation_attempts'] ?? 1
         ]);
+
+        // Clear remaining fallback schedules since we succeeded
+        clear_import_continuation_schedules();
     } else {
-        PuntWorkLogger::error('Paused import continuation failed', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('Primary continuation failed', PuntWorkLogger::CONTEXT_BATCH, [
             'error' => $result['message'] ?? 'Unknown error',
             'processed' => $result['processed'] ?? 0,
-            'total' => $result['total'] ?? 0
+            'total' => $result['total'] ?? 0,
+            'attempts_used' => $status['continuation_attempts'] ?? 1,
+            'fallback_available' => true
         ]);
+
+        // Don't clear schedules - let fallback mechanisms try
+        error_log('[PUNTWORK] Primary continuation failed - fallback mechanisms still active');
     }
 }
 
 // Register the continuation hook
 add_action('puntwork_continue_import', __NAMESPACE__ . '\\continue_paused_import');
+add_action('puntwork_continue_import_retry', __NAMESPACE__ . '\\continue_paused_import_retry');
+add_action('puntwork_continue_import_manual', __NAMESPACE__ . '\\continue_paused_import_manual');
+add_action('puntwork_check_continuation_status', __NAMESPACE__ . '\\check_continuation_status');
+
+/**
+ * Schedule multiple fallback mechanisms for import continuation
+ *
+ * @param float $pause_time When the import was paused
+ */
+function schedule_import_continuation_with_fallbacks($pause_time) {
+    $current_time = time();
+
+    // Clear any existing continuation schedules first
+    wp_clear_scheduled_hook('puntwork_continue_import');
+    wp_clear_scheduled_hook('puntwork_continue_import_retry');
+    wp_clear_scheduled_hook('puntwork_continue_import_manual');
+    wp_clear_scheduled_hook('puntwork_check_continuation_status');
+
+    // PRIMARY: Immediate cron continuation (10 seconds)
+    if (!wp_next_scheduled('puntwork_continue_import')) {
+        wp_schedule_single_event($current_time + 10, 'puntwork_continue_import');
+        PuntWorkLogger::info('Scheduled primary import continuation', PuntWorkLogger::CONTEXT_BATCH, [
+            'delay_seconds' => 10,
+            'scheduled_time' => date('Y-m-d H:i:s', $current_time + 10),
+            'pause_time' => $pause_time
+        ]);
+    }
+
+    // FALLBACK 1: Retry continuation (2 minutes) - in case primary cron fails
+    if (!wp_next_scheduled('puntwork_continue_import_retry')) {
+        wp_schedule_single_event($current_time + 120, 'puntwork_continue_import_retry');
+        PuntWorkLogger::info('Scheduled fallback retry continuation', PuntWorkLogger::CONTEXT_BATCH, [
+            'delay_seconds' => 120,
+            'scheduled_time' => date('Y-m-d H:i:s', $current_time + 120),
+            'purpose' => 'retry_if_primary_fails'
+        ]);
+    }
+
+    // FALLBACK 2: Manual trigger continuation (5 minutes) - for admin intervention
+    if (!wp_next_scheduled('puntwork_continue_import_manual')) {
+        wp_schedule_single_event($current_time + 300, 'puntwork_continue_import_manual');
+        PuntWorkLogger::info('Scheduled manual trigger continuation', PuntWorkLogger::CONTEXT_BATCH, [
+            'delay_seconds' => 300,
+            'scheduled_time' => date('Y-m-d H:i:s', $current_time + 300),
+            'purpose' => 'admin_manual_trigger'
+        ]);
+    }
+
+    // MONITORING: Status check (every 30 seconds for first 10 minutes, then hourly)
+    for ($i = 1; $i <= 20; $i++) { // 20 checks = 10 minutes
+        $check_time = $current_time + ($i * 30);
+        if ($check_time < $current_time + 3600) { // Within first hour
+            wp_schedule_single_event($check_time, 'puntwork_check_continuation_status');
+        }
+    }
+    // Then hourly checks for up to 24 hours
+    for ($i = 1; $i <= 24; $i++) {
+        wp_schedule_single_event($current_time + 3600 + ($i * 3600), 'puntwork_check_continuation_status');
+    }
+
+    PuntWorkLogger::info('Multiple continuation mechanisms scheduled', PuntWorkLogger::CONTEXT_BATCH, [
+        'mechanisms' => ['primary_cron', 'retry_fallback', 'manual_trigger', 'status_monitoring'],
+        'total_scheduled_events' => 3 + 20 + 24, // primary + retry + manual + status checks
+        'monitoring_duration_hours' => 24
+    ]);
+}
+
+/**
+ * Retry continuation fallback mechanism
+ */
+function continue_paused_import_retry() {
+    $attempt_time = microtime(true);
+    error_log('[PUNTWORK] Retry continuation fallback starting');
+
+    // Check if primary already succeeded
+    $status = get_import_status([]);
+    if (isset($status['complete']) && $status['complete'] && isset($status['success']) && $status['success']) {
+        PuntWorkLogger::info('Retry continuation skipped - import already completed', PuntWorkLogger::CONTEXT_BATCH, [
+            'method' => 'retry_fallback',
+            'reason' => 'already_completed'
+        ]);
+        return;
+    }
+
+    // Update continuation attempt tracking
+    $status['continuation_attempts'] = ($status['continuation_attempts'] ?? 0) + 1;
+    $status['last_continuation_attempt'] = $attempt_time;
+    $status['continuation_method'] = 'retry_fallback';
+    set_import_status($status);
+
+    PuntWorkLogger::info('Retry continuation fallback initiated', PuntWorkLogger::CONTEXT_BATCH, [
+        'attempt_number' => $status['continuation_attempts'],
+        'pause_time' => $status['pause_time'] ?? null,
+        'time_since_pause' => $status['pause_time'] ? ($attempt_time - $status['pause_time']) : null,
+        'method' => 'retry_fallback'
+    ]);
+
+    // Check for cancellation
+    if (get_transient('import_cancel') === true || get_transient('import_force_cancel') === true || get_transient('import_emergency_stop') === true) {
+        $cancel_type = get_transient('import_emergency_stop') === true ? 'emergency stopped' :
+                      (get_transient('import_force_cancel') === true ? 'force cancelled' : 'cancelled');
+        PuntWorkLogger::info('Retry continuation cancelled', PuntWorkLogger::CONTEXT_BATCH, [
+            'reason' => 'import_cancel_transient_set',
+            'cancel_type' => $cancel_type,
+            'method' => 'retry_fallback'
+        ]);
+        clear_import_continuation_schedules();
+        return;
+    }
+
+    // Check if still paused
+    if (!isset($status['paused']) || !$status['paused']) {
+        PuntWorkLogger::info('Retry continuation skipped - import not paused', PuntWorkLogger::CONTEXT_BATCH, [
+            'method' => 'retry_fallback'
+        ]);
+        clear_import_continuation_schedules();
+        return;
+    }
+
+    // Reset pause status
+    $status['paused'] = false;
+    unset($status['pause_reason']);
+    if (!is_array($status['logs'] ?? null)) {
+        $status['logs'] = [];
+    }
+    $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Resuming paused import (retry fallback)';
+    set_import_status($status);
+
+    // Reset start time
+    set_import_start_time(microtime(true));
+
+    // Continue the import
+    $result = import_all_jobs_from_json(true);
+
+    if ($result['success']) {
+        PuntWorkLogger::info('Retry continuation completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
+            'processed' => $result['processed'] ?? 0,
+            'total' => $result['total'] ?? 0,
+            'time_elapsed' => $result['time_elapsed'] ?? 0,
+            'method' => 'retry_fallback'
+        ]);
+        clear_import_continuation_schedules();
+    } else {
+        PuntWorkLogger::error('Retry continuation failed', PuntWorkLogger::CONTEXT_BATCH, [
+            'error' => $result['message'] ?? 'Unknown error',
+            'processed' => $result['processed'] ?? 0,
+            'total' => $result['total'] ?? 0,
+            'method' => 'retry_fallback',
+            'next_fallback' => 'manual_trigger'
+        ]);
+    }
+}
+
+/**
+ * Manual trigger continuation fallback
+ */
+function continue_paused_import_manual() {
+    $attempt_time = microtime(true);
+    error_log('[PUNTWORK] Manual trigger continuation starting');
+
+    // Check if already completed
+    $status = get_import_status([]);
+    if (isset($status['complete']) && $status['complete'] && isset($status['success']) && $status['success']) {
+        PuntWorkLogger::info('Manual continuation skipped - import already completed', PuntWorkLogger::CONTEXT_BATCH, [
+            'method' => 'manual_trigger',
+            'reason' => 'already_completed'
+        ]);
+        return;
+    }
+
+    // Update continuation attempt tracking
+    $status['continuation_attempts'] = ($status['continuation_attempts'] ?? 0) + 1;
+    $status['last_continuation_attempt'] = $attempt_time;
+    $status['continuation_method'] = 'manual_trigger';
+    set_import_status($status);
+
+    PuntWorkLogger::info('Manual trigger continuation initiated', PuntWorkLogger::CONTEXT_BATCH, [
+        'attempt_number' => $status['continuation_attempts'],
+        'pause_time' => $status['pause_time'] ?? null,
+        'time_since_pause' => $status['pause_time'] ? ($attempt_time - $status['pause_time']) : null,
+        'method' => 'manual_trigger'
+    ]);
+
+    // Check for cancellation
+    if (get_transient('import_cancel') === true || get_transient('import_force_cancel') === true || get_transient('import_emergency_stop') === true) {
+        $cancel_type = get_transient('import_emergency_stop') === true ? 'emergency stopped' :
+                      (get_transient('import_force_cancel') === true ? 'force cancelled' : 'cancelled');
+        PuntWorkLogger::info('Manual continuation cancelled', PuntWorkLogger::CONTEXT_BATCH, [
+            'reason' => 'import_cancel_transient_set',
+            'cancel_type' => $cancel_type,
+            'method' => 'manual_trigger'
+        ]);
+        clear_import_continuation_schedules();
+        return;
+    }
+
+    // Check if still paused
+    if (!isset($status['paused']) || !$status['paused']) {
+        PuntWorkLogger::info('Manual continuation skipped - import not paused', PuntWorkLogger::CONTEXT_BATCH, [
+            'method' => 'manual_trigger'
+        ]);
+        clear_import_continuation_schedules();
+        return;
+    }
+
+    // Reset pause status
+    $status['paused'] = false;
+    unset($status['pause_reason']);
+    if (!is_array($status['logs'] ?? null)) {
+        $status['logs'] = [];
+    }
+    $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Resuming paused import (manual trigger fallback)';
+    set_import_status($status);
+
+    // Reset start time
+    set_import_start_time(microtime(true));
+
+    // Continue the import
+    $result = import_all_jobs_from_json(true);
+
+    if ($result['success']) {
+        PuntWorkLogger::info('Manual trigger continuation completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
+            'processed' => $result['processed'] ?? 0,
+            'total' => $result['total'] ?? 0,
+            'time_elapsed' => $result['time_elapsed'] ?? 0,
+            'method' => 'manual_trigger'
+        ]);
+        clear_import_continuation_schedules();
+    } else {
+        PuntWorkLogger::error('Manual trigger continuation failed - no more fallbacks available', PuntWorkLogger::CONTEXT_BATCH, [
+            'error' => $result['message'] ?? 'Unknown error',
+            'processed' => $result['processed'] ?? 0,
+            'total' => $result['total'] ?? 0,
+            'method' => 'manual_trigger',
+            'final_attempt' => true
+        ]);
+
+        // Mark as failed since all fallbacks exhausted
+        $status = get_import_status([]);
+        $status['success'] = false;
+        $status['complete'] = true;
+        $status['error_message'] = 'All continuation attempts failed - manual intervention required';
+        $status['end_time'] = microtime(true);
+        $status['last_update'] = microtime(true);
+        if (!is_array($status['logs'] ?? null)) {
+            $status['logs'] = [];
+        }
+        $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] CRITICAL: All continuation mechanisms failed';
+        set_import_status($status);
+
+        clear_import_continuation_schedules();
+    }
+}
+
+/**
+ * Status monitoring function to check continuation progress
+ */
+function check_continuation_status() {
+    $status = get_import_status([]);
+    $current_time = microtime(true);
+
+    // Skip if import completed
+    if (isset($status['complete']) && $status['complete']) {
+        return;
+    }
+
+    $pause_time = $status['pause_time'] ?? null;
+    $attempts = $status['continuation_attempts'] ?? 0;
+    $last_attempt = $status['last_continuation_attempt'] ?? null;
+
+    $time_since_pause = $pause_time ? ($current_time - $pause_time) : null;
+    $time_since_last_attempt = $last_attempt ? ($current_time - $last_attempt) : null;
+
+    // Alert if import has been paused too long without continuation attempts
+    if ($time_since_pause && $time_since_pause > 1800 && $attempts === 0) { // 30 minutes
+        PuntWorkLogger::error('Import continuation failure detected', PuntWorkLogger::CONTEXT_BATCH, [
+            'issue' => 'no_continuation_attempts',
+            'time_since_pause' => round($time_since_pause / 60, 1) . ' minutes',
+            'continuation_attempts' => $attempts,
+            'recommendation' => 'check_cron_system'
+        ]);
+    }
+
+    // Alert if last attempt was too long ago
+    if ($time_since_last_attempt && $time_since_last_attempt > 3600 && !isset($status['complete'])) { // 1 hour
+        PuntWorkLogger::warning('Import continuation may be stalled', PuntWorkLogger::CONTEXT_BATCH, [
+            'time_since_last_attempt' => round($time_since_last_attempt / 60, 1) . ' minutes',
+            'continuation_attempts' => $attempts,
+            'paused' => $status['paused'] ?? false,
+            'recommendation' => 'manual_intervention_may_be_needed'
+        ]);
+    }
+
+    // Log status for monitoring
+    PuntWorkLogger::debug('Continuation status check', PuntWorkLogger::CONTEXT_BATCH, [
+        'paused' => $status['paused'] ?? false,
+        'complete' => $status['complete'] ?? false,
+        'continuation_attempts' => $attempts,
+        'time_since_pause_minutes' => $time_since_pause ? round($time_since_pause / 60, 1) : null,
+        'time_since_last_attempt_minutes' => $time_since_last_attempt ? round($time_since_last_attempt / 60, 1) : null,
+        'cron_scheduled' => wp_next_scheduled('puntwork_continue_import') ? 'yes' : 'no'
+    ]);
+}
+
+/**
+ * Clear all import continuation schedules
+ */
+function clear_import_continuation_schedules() {
+    wp_clear_scheduled_hook('puntwork_continue_import');
+    wp_clear_scheduled_hook('puntwork_continue_import_retry');
+    wp_clear_scheduled_hook('puntwork_continue_import_manual');
+    wp_clear_scheduled_hook('puntwork_check_continuation_status');
+
+    PuntWorkLogger::info('Import continuation schedules cleared', PuntWorkLogger::CONTEXT_BATCH, [
+        'action' => 'cleanup_completed'
+    ]);
+}
