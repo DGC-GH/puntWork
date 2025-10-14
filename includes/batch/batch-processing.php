@@ -58,13 +58,20 @@ function process_batch_items_logic($setup) {
         $last_peak_memory = get_last_peak_memory();
         $last_memory_ratio = $last_peak_memory / $memory_limit_bytes;
 
+        // For concurrent processing, allow larger batches but cap to prevent overwhelming Action Scheduler
+        $cpu_cores = function_exists('shell_exec') ? (int) shell_exec('nproc 2>/dev/null') : 2;
+        $max_concurrent_batch_size = min(100, $cpu_cores * 10); // Cap at 100 or 10x CPU cores, whichever smaller
+        $batch_size = min($batch_size, $max_concurrent_batch_size);
+
         // Get current and previous batch times for dynamic adjustment
         $current_batch_time = get_last_batch_time();
         $previous_batch_time = get_previous_batch_time();
 
         try {
-            $adjustment_result = adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time);
+            $adjustment_result = adjust_batch_size_concurrent($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time, $cpu_cores);
             $batch_size = $adjustment_result['batch_size'];
+            // Ensure batch size doesn't exceed concurrent cap
+            $batch_size = min($batch_size, $max_concurrent_batch_size);
         } catch (\Exception $e) {
             PuntWorkLogger::error('Failed to adjust batch size, using default', PuntWorkLogger::CONTEXT_BATCH, [
                 'error' => $e->getMessage(),
@@ -586,20 +593,8 @@ function process_batch_data($batch_guids, $batch_items, $json_path, $start_index
     $acf_fields = get_acf_fields();
     $zero_empty_fields = get_zero_empty_fields();
 
-    // Temporarily disable concurrent processing for debugging
-    // $result = process_batch_items_concurrent($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, $logs, $updated, $published, $skipped, $processed_count);
-
-    // Use sequential processing instead
-    $user_id = get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : get_current_user_id();
-    process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $logs, $updated, $published, $skipped, $processed_count);
-
-    $result = [
-        'processed_count' => $processed_count,
-        'total_time' => 0,
-        'avg_time_per_item' => 0,
-        'item_timings' => [],
-        'concurrency_used' => 1
-    ];
+    // Use concurrent processing
+    $result = process_batch_items_concurrent($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, $logs, $updated, $published, $skipped, $processed_count);
 
     return $result;
 }
@@ -715,4 +710,64 @@ function load_json_batch($json_path, $start_index, $batch_size) {
         ]);
         throw $e; // Re-throw to let calling function handle it
     }
+}
+
+/**
+ * Adjust batch size dynamically for concurrent processing.
+ * Since items run concurrently, batch time is much shorter, so we use more conservative adjustments.
+ *
+ * @param int $current_batch_size Current batch size.
+ * @param int $memory_limit_bytes Memory limit in bytes.
+ * @param float $last_memory_ratio Last memory usage ratio.
+ * @param float $current_batch_time Current batch time.
+ * @param float $previous_batch_time Previous batch time.
+ * @param int $cpu_cores Number of CPU cores.
+ * @return array Adjustment result with new batch_size and reason.
+ */
+function adjust_batch_size_concurrent($current_batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time, $cpu_cores) {
+    $new_batch_size = $current_batch_size;
+    $reason = 'no_change';
+
+    // Base adjustments on concurrent processing characteristics
+    $max_batch_size = min(100, $cpu_cores * 10); // Cap at 100 or 10x CPU cores
+
+    // Memory-based adjustment (more conservative for concurrent)
+    if ($last_memory_ratio > 0.8) {
+        $new_batch_size = max(5, floor($current_batch_size * 0.7));
+        $reason = 'high_memory_usage_concurrent';
+    } elseif ($last_memory_ratio < 0.4) {
+        $new_batch_size = min($max_batch_size, ceil($current_batch_size * 1.2));
+        $reason = 'low_memory_usage_concurrent';
+    }
+
+    // Time-based adjustment (batch time is shorter in concurrent mode)
+    if ($current_batch_time > 0 && $previous_batch_time > 0) {
+        $time_ratio = $current_batch_time / $previous_batch_time;
+        if ($time_ratio > 1.5) {
+            // Slower than previous - reduce batch size conservatively
+            $new_batch_size = max(5, floor($current_batch_size * 0.8));
+            $reason = 'slower_batch_time_concurrent';
+        } elseif ($time_ratio < 0.7) {
+            // Faster than previous - increase batch size moderately
+            $new_batch_size = min($max_batch_size, ceil($current_batch_size * 1.3));
+            $reason = 'faster_batch_time_concurrent';
+        }
+    }
+
+    // Consecutive batch logic (more aggressive ramp-up for concurrent)
+    $consecutive_batches = get_consecutive_batches();
+    if ($consecutive_batches > 5 && $new_batch_size < $max_batch_size) {
+        $new_batch_size = min($max_batch_size, ceil($new_batch_size * 1.1));
+        $reason = 'consecutive_batches_ramp_up_concurrent';
+    }
+
+    // Ensure minimum and maximum bounds
+    $new_batch_size = max(5, min($max_batch_size, $new_batch_size));
+
+    return [
+        'batch_size' => $new_batch_size,
+        'reason' => $reason,
+        'max_allowed' => $max_batch_size,
+        'cpu_cores' => $cpu_cores
+    ];
 }
