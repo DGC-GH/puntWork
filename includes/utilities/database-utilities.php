@@ -280,10 +280,13 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
             'guid' => $guid
         ]);
 
-        PuntWorkLogger::debug('last import meta updated', PuntWorkLogger::CONTEXT_BATCH, [
-            'post_id' => $post_id,
-            'guid' => $guid
-        ]);
+        // NOTE: To enable item processing debug logs, define PUNTWORK_DEBUG_ITEM_PROCESSING as true in wp-config.php
+        if (defined('PUNTWORK_DEBUG_ITEM_PROCESSING') && PUNTWORK_DEBUG_ITEM_PROCESSING) {
+            PuntWorkLogger::debug('last import meta updated', PuntWorkLogger::CONTEXT_BATCH, [
+                'post_id' => $post_id,
+                'guid' => $guid
+            ]);
+        }
 
         if ($debug_job_updates) {
             PuntWorkLogger::debug('About to update import hash', PuntWorkLogger::CONTEXT_BATCH, [
