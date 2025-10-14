@@ -299,47 +299,17 @@ function run_scheduled_import_ajax() {
         delete_transient('import_cancel');
         error_log('[PUNTWORK] Cleared import_cancel transient for ' . ($is_manual ? 'manual' : 'scheduled') . ' run');
 
-        // Schedule the import to run asynchronously
-        if (function_exists('as_enqueue_async_action')) {
-            // Use Action Scheduler async action for immediate execution
-            error_log('[PUNTWORK] Enqueueing async import using Action Scheduler (immediate execution)');
-            as_enqueue_async_action($is_manual ? 'puntwork_manual_import_async' : 'puntwork_scheduled_import_async');
-        } elseif (function_exists('as_schedule_single_action')) {
-            // Use Action Scheduler if available
-            error_log('[PUNTWORK] Scheduling async import using Action Scheduler');
-            as_schedule_single_action(time(), $is_manual ? 'puntwork_manual_import_async' : 'puntwork_scheduled_import_async');
-        } elseif (function_exists('wp_schedule_single_event')) {
-            // Fallback: Use WordPress cron for near-immediate execution
-            error_log('[PUNTWORK] Action Scheduler not available, using WordPress cron');
-            wp_schedule_single_event(time() + 1, $is_manual ? 'puntwork_manual_import_async' : 'puntwork_scheduled_import_async');
-        } else {
-            // Final fallback: Run synchronously (not ideal for UI but maintains functionality)
-            error_log('[PUNTWORK] No async scheduling available, running synchronously');
-            $result = $is_manual ? run_manual_import() : run_scheduled_import();
-            
-            if ($result['success']) {
-                error_log('[PUNTWORK] Synchronous ' . ($is_manual ? 'manual' : 'scheduled') . ' import completed successfully');
-                send_ajax_success('run_scheduled_import', [
-                    'message' => 'Import completed successfully',
-                    'result' => $result,
-                    'async' => false
-                ], [
-                    'message' => 'Import completed successfully',
-                    'success' => $result['success'] ?? null,
-                    'processed' => $result['processed'] ?? null,
-                    'total' => $result['total'] ?? null,
-                    'time_elapsed' => $result['time_elapsed'] ?? null,
-                    'async' => false
-                ]);
-            } else {
-                error_log('[PUNTWORK] Synchronous ' . ($is_manual ? 'manual' : 'scheduled') . ' import failed: ' . ($result['message'] ?? 'Unknown error'));
-                // Reset import status on failure so future attempts can start
-                delete_import_status();
-                error_log('[PUNTWORK] Reset job_import_status due to import failure');
-                send_ajax_error('run_scheduled_import', 'Import failed: ' . ($result['message'] ?? 'Unknown error'));
+        // Schedule the import to run on shutdown for immediate execution
+        add_action('shutdown', function() use ($is_manual) {
+            error_log('[PUNTWORK] Shutdown hook triggered for ' . ($is_manual ? 'manual' : 'scheduled') . ' import');
+            try {
+                $result = $is_manual ? run_manual_import() : run_scheduled_import();
+                error_log('[PUNTWORK] Shutdown import result: success=' . ($result['success'] ? 'true' : 'false') . ', processed=' . ($result['processed'] ?? 0) . ', total=' . ($result['total'] ?? 0));
+            } catch (\Exception $e) {
+                error_log('[PUNTWORK] Shutdown import error: ' . $e->getMessage());
             }
-            return;
-        }
+        });
+        error_log('[PUNTWORK] ' . ($is_manual ? 'Manual' : 'Scheduled') . ' import scheduled to run on shutdown (immediate execution)');
 
         // Return success immediately so UI can start polling
         error_log('[PUNTWORK] ' . ($is_manual ? 'Manual' : 'Scheduled') . ' import initiated asynchronously');
