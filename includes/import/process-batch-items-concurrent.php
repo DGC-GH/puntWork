@@ -192,9 +192,12 @@ function process_single_item_callback($guid, $json_path, $start_index, $acf_fiel
         return; // Skip processing this item
     }
 
-    PuntWorkLogger::debug('Processing concurrent single item', PuntWorkLogger::CONTEXT_BATCH, [
-        'guid' => $guid
-    ]);
+    // NOTE: To enable item processing debug logs, define PUNTWORK_DEBUG_ITEM_PROCESSING as true in wp-config.php
+    if (defined('PUNTWORK_DEBUG_ITEM_PROCESSING') && PUNTWORK_DEBUG_ITEM_PROCESSING) {
+        PuntWorkLogger::debug('Processing concurrent single item', PuntWorkLogger::CONTEXT_BATCH, [
+            'guid' => $guid
+        ]);
+    }
 
     $logs = [];
     $updated = 0;
@@ -374,14 +377,17 @@ function process_single_item_callback($guid, $json_path, $start_index, $acf_fiel
 
         $item_time = microtime(true) - $item_start_time;
 
-        PuntWorkLogger::debug('Concurrent single item completed', PuntWorkLogger::CONTEXT_BATCH, [
-            'guid' => $guid,
-            'processed_count' => $processed_count,
-            'published' => $published,
-            'updated' => $updated,
-            'skipped' => $skipped,
-            'item_time' => $item_time
-        ]);
+        // NOTE: To enable item processing debug logs, define PUNTWORK_DEBUG_ITEM_PROCESSING as true in wp-config.php
+        if (defined('PUNTWORK_DEBUG_ITEM_PROCESSING') && PUNTWORK_DEBUG_ITEM_PROCESSING) {
+            PuntWorkLogger::debug('Concurrent single item completed', PuntWorkLogger::CONTEXT_BATCH, [
+                'guid' => $guid,
+                'processed_count' => $processed_count,
+                'published' => $published,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'item_time' => $item_time
+            ]);
+        }
 
         // Update import status asynchronously with item results
         $current_status = get_import_status();
@@ -400,10 +406,13 @@ function process_single_item_callback($guid, $json_path, $start_index, $acf_fiel
         $current_status['logs'] = array_slice($current_status['logs'], -50); // Keep last 50
         set_import_status($current_status);
 
-        PuntWorkLogger::debug('Import status updated with item results', PuntWorkLogger::CONTEXT_BATCH, [
-            'guid' => $guid,
-            'status_updated' => true
-        ]);
+        // NOTE: To enable item processing debug logs, define PUNTWORK_DEBUG_ITEM_PROCESSING as true in wp-config.php
+        if (defined('PUNTWORK_DEBUG_ITEM_PROCESSING') && PUNTWORK_DEBUG_ITEM_PROCESSING) {
+            PuntWorkLogger::debug('Import status updated with item results', PuntWorkLogger::CONTEXT_BATCH, [
+                'guid' => $guid,
+                'status_updated' => true
+            ]);
+        }
 
     } catch (\Exception $e) {
         PuntWorkLogger::error('Critical error processing item', PuntWorkLogger::CONTEXT_BATCH, [
