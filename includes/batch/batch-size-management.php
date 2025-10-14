@@ -58,7 +58,7 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
 
         // Skip time-based and efficiency adjustments for first batch (no real metrics available)
         $has_previous_metrics = ($current_batch_time > 0 || $previous_batch_time > 0);
-        $is_first_batch = (Puntwork\get_consecutive_batches() == 0);
+        $is_first_batch = (get_consecutive_batches() == 0);
 
         // Enhanced memory-based adjustment with tiered thresholds and absolute limits
         $memory_adjusted = false;
@@ -85,7 +85,7 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
             }
         } elseif ($last_memory_bytes < $absolute_very_low_memory || $last_memory_ratio < 0.15) {
             // Very low memory usage - conservative batch size increase
-            $consecutive_batches = Puntwork\get_consecutive_batches();
+            $consecutive_batches = get_consecutive_batches();
             if ($consecutive_batches < 3) {
                 // First 3 batches: 1.5x the batch size for gradual ramp-up
                 $new_size = min(MAX_BATCH_SIZE, $batch_size * 1.5);
@@ -246,11 +246,11 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
         }
 
         // Adaptive learning: track consecutive successful batches for gradual ramp-up
-        $consecutive_batches = Puntwork\get_consecutive_batches();
+        $consecutive_batches = get_consecutive_batches();
         if (!$time_adjusted && !$memory_adjusted && $batch_size < MAX_BATCH_SIZE) {
             // No adjustments needed - this batch was successful
             $consecutive_batches++;
-            Puntwork\set_consecutive_batches($consecutive_batches);
+            set_consecutive_batches($consecutive_batches);
 
             // Conservative ramp-up for stability
             if ($consecutive_batches <= 5) {
@@ -292,13 +292,13 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
             }
         } else {
             // Batch had issues - reset consecutive counter
-            Puntwork\set_consecutive_batches(0);
+            set_consecutive_batches(0);
         }
 
         // Minimum batch size recovery mechanism - simplified to prevent oscillations
         if ($batch_size <= 2) {
             try {
-                $consecutive_small_batches = Puntwork\get_consecutive_small_batches();
+                $consecutive_small_batches = get_consecutive_small_batches();
 
                 // Only attempt recovery if we have consistent small batches AND good memory conditions
                 if ($consecutive_small_batches >= 5 && $last_memory_ratio < 0.25) {
@@ -310,7 +310,7 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
 
                     // Reset counter on successful recovery
                     retry_option_operation(function() {
-                        return Puntwork\set_consecutive_small_batches(0);
+                        return set_consecutive_small_batches(0);
                     }, [], [
                         'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                         'operation' => 'reset_consecutive_small_batches'
@@ -324,7 +324,7 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
                 } else {
                     // Increment counter for tracking
                     retry_option_operation(function() use ($consecutive_small_batches) {
-                        return Puntwork\set_consecutive_small_batches($consecutive_small_batches + 1);
+                        return set_consecutive_small_batches($consecutive_small_batches + 1);
                     }, [$consecutive_small_batches], [
                         'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                         'operation' => 'increment_consecutive_small_batches'
@@ -341,7 +341,7 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
             // Reset counter when batch size is healthy
             try {
                 retry_option_operation(function() {
-                    return Puntwork\set_consecutive_small_batches(0);
+                    return set_consecutive_small_batches(0);
                 }, [], [
                     'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                     'operation' => 'reset_consecutive_small_batches_recovery'
@@ -466,9 +466,9 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
 function update_batch_metrics($time_elapsed, $processed_count, $batch_size) {
     try {
         // Store previous batch time before updating
-        $previous_batch_time = Puntwork\get_last_batch_time();
+        $previous_batch_time = get_last_batch_time();
         retry_option_operation(function() use ($previous_batch_time) {
-            return Puntwork\set_previous_batch_time($previous_batch_time);
+            return set_previous_batch_time($previous_batch_time);
         }, [$previous_batch_time], [
             'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
             'operation' => 'update_previous_batch_time'
@@ -476,9 +476,9 @@ function update_batch_metrics($time_elapsed, $processed_count, $batch_size) {
 
         // Update stored metrics for next batch
         $time_per_item = $processed_count > 0 ? $time_elapsed / $processed_count : 0;
-        $prev_time_per_item = Puntwork\get_time_per_job();
+        $prev_time_per_item = get_time_per_job();
         retry_option_operation(function() use ($time_per_item) {
-            return Puntwork\set_time_per_job($time_per_item);
+            return set_time_per_job($time_per_item);
         }, [$time_per_item], [
             'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
             'operation' => 'update_time_per_job'
@@ -486,24 +486,24 @@ function update_batch_metrics($time_elapsed, $processed_count, $batch_size) {
 
         $peak_memory = memory_get_peak_usage(true);
         retry_option_operation(function() use ($peak_memory) {
-            return Puntwork\set_last_peak_memory($peak_memory);
+            return set_last_peak_memory($peak_memory);
         }, [$peak_memory], [
             'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
             'operation' => 'update_peak_memory'
         ]);
 
         // Use rolling average for time_per_item to stabilize adjustments
-        $avg_time_per_item = Puntwork\get_avg_time_per_job($time_per_item);
+        $avg_time_per_item = get_avg_time_per_job($time_per_item);
         $avg_time_per_item = ($avg_time_per_item * 0.7) + ($time_per_item * 0.3);
         retry_option_operation(function() use ($avg_time_per_item) {
-            return Puntwork\set_avg_time_per_job($avg_time_per_item);
+            return set_avg_time_per_job($avg_time_per_item);
         }, [$avg_time_per_item], [
             'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
             'operation' => 'update_avg_time_per_job'
         ]);
 
         retry_option_operation(function() use ($batch_size) {
-            return Puntwork\set_batch_size($batch_size);
+            return set_batch_size($batch_size);
         }, [$batch_size], [
             'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
             'operation' => 'update_batch_size_metric'
@@ -511,16 +511,16 @@ function update_batch_metrics($time_elapsed, $processed_count, $batch_size) {
 
         // Track consecutive small batches for recovery mechanism
         if ($batch_size <= 3) {
-            $consecutive = Puntwork\get_consecutive_small_batches() + 1;
+            $consecutive = get_consecutive_small_batches() + 1;
             retry_option_operation(function() use ($consecutive) {
-                return Puntwork\set_consecutive_small_batches($consecutive);
+                return set_consecutive_small_batches($consecutive);
             }, [$consecutive], [
                 'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                 'operation' => 'update_consecutive_small_batches'
             ]);
         } else {
             retry_option_operation(function() {
-                return Puntwork\set_consecutive_small_batches(0);
+                return set_consecutive_small_batches(0);
             }, [], [
                 'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
                 'operation' => 'reset_consecutive_small_batches_metric'
@@ -528,9 +528,9 @@ function update_batch_metrics($time_elapsed, $processed_count, $batch_size) {
         }
 
         // Increment consecutive batches counter for aggressive ramp-up logic
-        $consecutive_batches = Puntwork\get_consecutive_batches() + 1;
+        $consecutive_batches = get_consecutive_batches() + 1;
         retry_option_operation(function() use ($consecutive_batches) {
-            return Puntwork\set_consecutive_batches($consecutive_batches);
+            return set_consecutive_batches($consecutive_batches);
         }, [$consecutive_batches], [
             'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
             'operation' => 'increment_consecutive_batches'

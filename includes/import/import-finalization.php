@@ -32,7 +32,7 @@ function finalize_batch_import($result) {
         return $result;
     }
 
-    $status = PuntWork\get_import_status() ?: [
+    $status = get_import_status() ?: [
         'total' => $result['total'],
         'processed' => 0,
         'published' => 0,
@@ -75,7 +75,7 @@ function finalize_batch_import($result) {
     $status['schema_generated'] += $result['schema_generated'];
     $status['last_update'] = time();
 
-    PuntWork\set_import_status($status);
+    set_import_status($status);
 
     // Log completed manual imports to history (only when in AJAX context and import is complete)
     if ($result['complete'] && $result['success'] && function_exists('wp_doing_ajax') && wp_doing_ajax()) {
@@ -92,11 +92,11 @@ function finalize_batch_import($result) {
         ];
 
         // Import the function if not already available
-        if (!function_exists('Puntwork\log_import_run')) {
+        if (!function_exists('log_import_run')) {
             require_once __DIR__ . '/../scheduling/scheduling-history.php';
         }
 
-        \Puntwork\log_import_run($import_details, 'manual');
+        \log_import_run($import_details, 'manual');
 
         PuntWorkLogger::info('Logged completed manual import to history', PuntWorkLogger::CONTEXT_BATCH, [
             'processed' => $result['processed'],
@@ -118,21 +118,21 @@ function cleanup_import_data() {
     delete_transient('import_cancel');
 
     // Clean up options that are no longer needed after successful import
-    PuntWork\delete_import_progress();
-    PuntWork\delete_processed_guids();
-    PuntWork\delete_existing_guids();
+    delete_import_progress();
+    delete_processed_guids();
+    delete_existing_guids();
 
     // Reset performance metrics for next import
-    PuntWork\delete_time_per_job();
-    PuntWork\delete_avg_time_per_job();
-    PuntWork\delete_last_peak_memory();
-    PuntWork\delete_batch_size();
-    PuntWork\delete_consecutive_small_batches();
-    PuntWork\delete_consecutive_batches();
+    delete_time_per_job();
+    delete_avg_time_per_job();
+    delete_last_peak_memory();
+    delete_batch_size();
+    delete_consecutive_small_batches();
+    delete_consecutive_batches();
 
     // Clean up batch timing data
-    PuntWork\delete_last_batch_time();
-    PuntWork\delete_last_batch_processed();
+    delete_last_batch_time();
+    delete_last_batch_processed();
 }
 
 /**
@@ -236,11 +236,11 @@ function cleanup_old_job_posts($import_start_time) {
     }
 
     // Update status to show cleanup progress starting
-    $cleanup_start_status = PuntWork\get_import_status([]);
+    $cleanup_start_status = get_import_status([]);
     $cleanup_start_status['cleanup_total'] = $total_old_posts;
     $cleanup_start_status['cleanup_processed'] = 0;
     $cleanup_start_status['last_update'] = time();
-    PuntWork\set_import_status($cleanup_start_status);
+    set_import_status($cleanup_start_status);
 
     // Process deletions in batches to avoid memory issues and timeouts
     $batch_size = 100; // Delete 100 posts at a time
@@ -285,11 +285,11 @@ function cleanup_old_job_posts($import_start_time) {
         }
 
         // Update progress every batch (every 100 deletions)
-        $cleanup_progress_status = PuntWork\get_import_status([]);
+        $cleanup_progress_status = get_import_status([]);
         $cleanup_progress_status['cleanup_processed'] = $total_deleted;
         $cleanup_progress_status['last_update'] = time();
         $cleanup_progress_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Cleanup progress: ' . $total_deleted . '/' . $total_old_posts . ' old jobs deleted';
-        PuntWork\set_import_status($cleanup_progress_status);
+        set_import_status($cleanup_progress_status);
 
         PuntWorkLogger::debug('Batch deletion completed', PuntWorkLogger::CONTEXT_BATCH, [
             'batch' => $batches_processed,
@@ -308,10 +308,10 @@ function cleanup_old_job_posts($import_start_time) {
     }
 
     // Final cleanup status update
-    $final_cleanup_status = PuntWork\get_import_status([]);
+    $final_cleanup_status = get_import_status([]);
     $final_cleanup_status['cleanup_processed'] = $total_deleted;
     $final_cleanup_status['last_update'] = time();
-    PuntWork\set_import_status($final_cleanup_status);
+    set_import_status($final_cleanup_status);
 
     PuntWorkLogger::info('Cleanup of old published job posts completed', PuntWorkLogger::CONTEXT_BATCH, [
         'deleted_count' => $total_deleted,
