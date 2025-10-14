@@ -432,7 +432,7 @@ function process_item_chunk_callback($chunk_guids, $json_path, $start_index, $ac
 
                     // Update post immediately
                     $error_message = '';
-                    $update_result = update_job_post($post_id, $item_data, $acf_fields, $zero_empty_fields, $logs, $error_message);
+                    $update_result = update_job_post($post_id, $guid, $item_data, $acf_fields, $zero_empty_fields, $logs, $error_message);
                     if (is_wp_error($update_result)) {
                         PuntWorkLogger::error('Failed to update post in concurrent chunk', PuntWorkLogger::CONTEXT_BATCH, [
                             'post_id' => $post_id,

@@ -152,7 +152,7 @@ function create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, &$log
  * @param string &$error_message Reference to error message variable
  * @return int|WP_Error Post ID on success, WP_Error on failure
  */
-function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$logs, &$error_message) {
+function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields, &$logs, &$error_message) {
     // Validate inputs at the very beginning before any array access
     if (!is_array($acf_fields)) {
         $error_message = 'acf_fields must be an array, got: ' . gettype($acf_fields);

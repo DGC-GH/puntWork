@@ -138,7 +138,7 @@ if (!function_exists('process_batch_items')) {
                             'guid' => $guid,
                             'acf_fields_count' => count($acf_fields)
                         ]);
-                        $update_result = update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, $logs, $error_message);
+                        $update_result = update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields, $logs, $error_message);
                         PuntWorkLogger::debug('update_job_post returned', PuntWorkLogger::CONTEXT_BATCH, [
                             'post_id' => $post_id,
                             'guid' => $guid,
