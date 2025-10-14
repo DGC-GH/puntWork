@@ -254,11 +254,19 @@ function clear_import_cancel_ajax() {
     }
 
     $transient_existed = get_transient('import_cancel') !== false;
-    delete_transient('import_cancel');
+    $force_cancel_existed = get_transient('import_force_cancel') !== false;
+    $emergency_stop_existed = get_transient('import_emergency_stop') !== false;
 
-    PuntWorkLogger::info('Import cancellation flag cleared', PuntWorkLogger::CONTEXT_BATCH, [
-        'transient_existed' => $transient_existed,
-        'action' => 'clear_cancellation_flag'
+    // Clear all cancellation flags
+    delete_transient('import_cancel');
+    delete_transient('import_force_cancel');
+    delete_transient('import_emergency_stop');
+
+    PuntWorkLogger::info('Import cancellation flags cleared', PuntWorkLogger::CONTEXT_BATCH, [
+        'import_cancel_existed' => $transient_existed,
+        'import_force_cancel_existed' => $force_cancel_existed,
+        'import_emergency_stop_existed' => $emergency_stop_existed,
+        'action' => 'clear_cancellation_flags'
     ]);
 
     send_ajax_success('clear_import_cancel', []);
@@ -288,7 +296,10 @@ function reset_job_import_ajax() {
         delete_option($option);
     }
 
+    // Clear all cancellation transients
     delete_transient('import_cancel');
+    delete_transient('import_force_cancel');
+    delete_transient('import_emergency_stop');
 
     PuntWorkLogger::info('Import system completely reset', PuntWorkLogger::CONTEXT_BATCH, [
         'import_status_before_reset' => [
@@ -298,7 +309,7 @@ function reset_job_import_ajax() {
             'time_elapsed' => $before_reset['time_elapsed'] ?? 0
         ],
         'options_cleared' => $cleared_options,
-        'transient_cleared' => 'import_cancel',
+        'transients_cleared' => ['import_cancel', 'import_force_cancel', 'import_emergency_stop'],
         'reset_type' => 'complete_system_reset'
     ]);
 
@@ -654,6 +665,8 @@ function get_job_import_status_ajax() {
                 delete_option('job_import_batch_size');
                 delete_option('job_import_consecutive_small_batches');
                 delete_transient('import_cancel');
+                delete_transient('import_force_cancel');
+                delete_transient('import_emergency_stop');
 
                 // Return fresh status
                 $progress = initialize_import_status(0, '', null);
@@ -1452,6 +1465,29 @@ function cancel_all_import_processes() {
             PuntWorkLogger::debug('POSIX signals available but limited in web context', PuntWorkLogger::CONTEXT_BATCH);
         }
 
+        // 5.5. FORCE IMMEDIATE STATUS RESET (NUCLEAR OPTION)
+        // This completely wipes the import state to force any running process to stop
+        $nuclear_reset = [
+            'job_import_status' => [],
+            'job_import_progress' => 0,
+            'job_import_processed_guids' => [],
+            'job_import_last_batch_time' => 0,
+            'job_import_last_batch_processed' => 0,
+            'job_import_batch_size' => get_batch_size(), // Keep batch size
+            'job_import_consecutive_small_batches' => 0,
+            'job_import_consecutive_batches' => 0,
+            'job_import_start_time' => 0,
+        ];
+
+        foreach ($nuclear_reset as $option => $value) {
+            update_option($option, $value, false); // Force immediate update
+        }
+
+        PuntWorkLogger::info('NUCLEAR RESET executed - Import state completely wiped', PuntWorkLogger::CONTEXT_BATCH, [
+            'nuclear_options_reset' => array_keys($nuclear_reset),
+            'method' => 'complete_state_wipe'
+        ]);
+
         // 6. FORCE GARBAGE COLLECTION AND MEMORY CLEANUP
         if (function_exists('gc_collect_cycles')) {
             gc_collect_cycles();
@@ -1467,23 +1503,14 @@ function cancel_all_import_processes() {
             'kill_signals_sent' => $kill_signals_sent,
             'total_processes_cancelled' => $cancelled_count,
             'cancellation_timestamp' => time(),
-            '<?php
-/**
- * AJAX handlers for import control operations
- * Handles batch processing, cancellation, and status retrieval
- *
- * @package    Puntwork
- * @subpackage AJAX
- * @since      1.0.0
- */
+        ]);
 
-namespace Puntwork;
-
-// Prevent direct access
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('CRITICAL ERROR during import cancellation', PuntWorkLogger::CONTEXT_BATCH, [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+            'method' => 'cancel_all_import_processes'
+        ]);
+        throw $e; // Re-throw to let caller handle
+    }
 }
-
-require_once __DIR__ . '/../utilities/ajax-utilities.php';
-require_once __DIR__ . '/../utilities/file-utilities.php';
-require_once __DIR__ . '/../utilities/options-utilities.php';

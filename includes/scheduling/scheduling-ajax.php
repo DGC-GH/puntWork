@@ -409,11 +409,14 @@ function run_scheduled_import_async() {
     error_log('[PUNTWORK] Function called with arguments: ' . print_r(func_get_args(), true));
 
     // Check for cancellation before starting async import
-    if (get_transient('import_cancel') === true) {
-        error_log('[PUNTWORK] Async scheduled import cancelled - not starting');
-        PuntWorkLogger::info('Async scheduled import cancelled before execution', PuntWorkLogger::CONTEXT_SCHEDULER, [
+    if (get_transient('import_cancel') === true || get_transient('import_force_cancel') === true || get_transient('import_emergency_stop') === true) {
+        $cancel_type = get_transient('import_emergency_stop') === true ? 'emergency stopped' :
+                      (get_transient('import_force_cancel') === true ? 'force cancelled' : 'cancelled');
+        error_log('[PUNTWORK] Async scheduled import ' . $cancel_type . ' - not starting');
+        PuntWorkLogger::info('Async scheduled import ' . $cancel_type . ' before execution', PuntWorkLogger::CONTEXT_SCHEDULER, [
             'reason' => 'import_cancel_transient_set',
-            'action' => 'skipped_async_scheduled_import'
+            'action' => 'skipped_async_scheduled_import',
+            'cancel_type' => $cancel_type
         ]);
         return;
     }
@@ -510,11 +513,14 @@ function run_manual_import_async() {
     error_log('[PUNTWORK] Function called with arguments: ' . print_r(func_get_args(), true));
 
     // Check for cancellation before starting manual async import
-    if (get_transient('import_cancel') === true) {
-        error_log('[PUNTWORK] Manual async import cancelled - not starting');
-        PuntWorkLogger::info('Manual async import cancelled before execution', PuntWorkLogger::CONTEXT_SCHEDULER, [
+    if (get_transient('import_cancel') === true || get_transient('import_force_cancel') === true || get_transient('import_emergency_stop') === true) {
+        $cancel_type = get_transient('import_emergency_stop') === true ? 'emergency stopped' :
+                      (get_transient('import_force_cancel') === true ? 'force cancelled' : 'cancelled');
+        error_log('[PUNTWORK] Manual async import ' . $cancel_type . ' - not starting');
+        PuntWorkLogger::info('Manual async import ' . $cancel_type . ' before execution', PuntWorkLogger::CONTEXT_SCHEDULER, [
             'reason' => 'import_cancel_transient_set',
-            'action' => 'skipped_manual_async_import'
+            'action' => 'skipped_manual_async_import',
+            'cancel_type' => $cancel_type
         ]);
         return;
     }
