@@ -488,7 +488,7 @@ function update_sequential_success_metrics($total_items, $successful_operations,
     $stats['total_successful'] += $successful_operations;
     $stats['total_skipped'] += $skipped;
     $stats['last_success_rate'] = $success_rate;
-    $stats['last_update'] = time();
+    $stats['last_update'] = microtime(true);
 
     set_sequential_processing_stats($stats);
 

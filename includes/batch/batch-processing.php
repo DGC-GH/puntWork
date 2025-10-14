@@ -194,7 +194,7 @@ function process_batch_items_logic($setup) {
                             $timeout_status['logs'] = [];
                         }
                         $timeout_status['processed'] = $partial_processed;
-                        $timeout_status['last_update'] = time();
+                        $timeout_status['last_update'] = microtime(true);
                         $timeout_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Processing paused mid-batch due to time/memory limits at item ' . ($current_index + 1);
                         set_import_status($timeout_status);
 
@@ -229,7 +229,7 @@ function process_batch_items_logic($setup) {
                         if (!is_array($heartbeat_status['logs'] ?? null)) {
                             $heartbeat_status['logs'] = [];
                         }
-                        $heartbeat_status['last_update'] = time();
+                        $heartbeat_status['last_update'] = microtime(true);
                         $heartbeat_status['processed'] = $start_index + $items_processed_in_batch;
                         $heartbeat_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Heartbeat: Processing item ' . ($current_index + 1) . '/' . $total;
                         set_import_status($heartbeat_status);
@@ -365,7 +365,7 @@ function process_batch_items_logic($setup) {
                 $current_status['schema_generated'] = ($current_status['schema_generated'] ?? 0) + $schema_generated;
                 $current_status['start_time'] = $start_time;
                 $current_status['end_time'] = $current_status['complete'] ? microtime(true) : null;
-                $current_status['last_update'] = time();
+                $current_status['last_update'] = microtime(true);
                 $current_status['logs'] = array_slice($logs, -50);
 
                 retry_option_operation(function() use ($current_status) {
@@ -479,7 +479,7 @@ function process_batch_items_logic($setup) {
             $current_status['schema_generated'] = ($current_status['schema_generated'] ?? 0) + $schema_generated;
             $current_status['start_time'] = $start_time;
             $current_status['end_time'] = $current_status['complete'] ? microtime(true) : null;
-            $current_status['last_update'] = time();
+            $current_status['last_update'] = microtime(true);
             $current_status['logs'] = array_slice($logs, -50); // Keep last 50 log entries
 
             retry_option_operation(function() use ($current_status) {

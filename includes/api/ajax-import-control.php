@@ -48,7 +48,7 @@ function run_job_import_batch_ajax() {
         }
 
         // Check for stuck imports and clear them automatically
-        $current_time = time();
+        $current_time = microtime(true);
         $last_update = isset($import_status['last_update']) ? $import_status['last_update'] : 0;
         $time_since_last_update = $current_time - $last_update;
 
@@ -517,7 +517,7 @@ function get_active_scheduled_imports_ajax() {
             'schedule_frequency' => $schedule_frequency,
             'active_imports' => $active_imports,
             'has_active_imports' => !empty($active_imports),
-            'last_checked' => time()
+            'last_checked' => microtime(true)
         ];
 
         PuntWorkLogger::debug('Active scheduled imports check response', PuntWorkLogger::CONTEXT_AJAX, $response);
@@ -621,7 +621,7 @@ function get_job_import_status_ajax() {
 
         // Check for stuck or stale imports and clear them
         if (isset($progress['complete']) && !$progress['complete'] && isset($progress['total']) && $progress['total'] > 0) {
-            $current_time = time();
+            $current_time = microtime(true);
             $time_elapsed = 0;
             $last_update = isset($progress['last_update']) ? $progress['last_update'] : 0;
             $time_since_last_update = $current_time - $last_update;
@@ -1651,7 +1651,7 @@ function cancel_all_import_processes() {
     $cancelled_count = 0;
 
     PuntWorkLogger::info('Deploying POISON PILL - Aggressive import cancellation initiated', PuntWorkLogger::CONTEXT_BATCH, [
-        'timestamp' => time(),
+        'timestamp' => microtime(true),
         'method' => 'comprehensive_cancellation'
     ]);
 
@@ -1793,7 +1793,7 @@ function cancel_all_import_processes() {
             'options_cleared' => $options_cleared,
             'kill_signals_sent' => $kill_signals_sent,
             'total_processes_cancelled' => $cancelled_count,
-            'cancellation_timestamp' => time(),
+            'cancellation_timestamp' => microtime(true),
         ]);
 
     } catch (\Exception $e) {

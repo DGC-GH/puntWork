@@ -731,7 +731,7 @@ function initialize_import_status($total = 0, $initial_message = 'Import started
         'schema_generated' => 0,
         'start_time' => $start_time,
         'end_time' => null,
-        'last_update' => time(),
+        'last_update' => microtime(true),
         'logs' => [$initial_message],
     ];
 }

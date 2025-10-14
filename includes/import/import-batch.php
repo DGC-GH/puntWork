@@ -185,7 +185,7 @@ if (!function_exists('import_all_jobs_from_json')) {
                 'schema_generated' => 0,
                 'start_time' => $start_time,
                 'end_time' => null,
-                'last_update' => time(),
+                'last_update' => microtime(true),
                 'logs' => ['Fresh import started'],
             ];
             update_option('job_import_status', $fresh_status, false);
@@ -243,7 +243,7 @@ if (!function_exists('import_all_jobs_from_json')) {
                 $cancelled_status['complete'] = true;
                 $cancelled_status['error_message'] = 'Import ' . $cancel_type . ' by user';
                 $cancelled_status['end_time'] = microtime(true);
-                $cancelled_status['last_update'] = time();
+                $cancelled_status['last_update'] = microtime(true);
                 if (!is_array($cancelled_status['logs'] ?? null)) {
                     $cancelled_status['logs'] = [];
                 }
@@ -285,7 +285,7 @@ if (!function_exists('import_all_jobs_from_json')) {
                     $current_status['complete'] = true;
                     $current_status['error_message'] = 'Import ' . $cancel_type . ' by user';
                     $current_status['end_time'] = microtime(true);
-                    $current_status['last_update'] = time();
+                    $current_status['last_update'] = microtime(true);
                     if (!is_array($current_status['logs'] ?? null)) {
                         $current_status['logs'] = [];
                     }
@@ -310,7 +310,7 @@ if (!function_exists('import_all_jobs_from_json')) {
                 $current_status = get_import_status([]);
                 $current_status['paused'] = true;
                 $current_status['pause_reason'] = 'time_limit_exceeded';
-                $current_status['last_update'] = time();
+                $current_status['last_update'] = microtime(true);
                 if (!is_array($current_status['logs'] ?? null)) {
                     $current_status['logs'] = [];
                 }
@@ -478,7 +478,7 @@ if (!function_exists('import_all_jobs_from_json')) {
             $current_status['duplicates_drafted'] = $total_duplicates_drafted;
             $current_status['batch_count'] = $batch_count;
             $current_status['time_elapsed'] = microtime(true) - $start_time + $accumulated_time;
-            $current_status['last_update'] = time();
+            $current_status['last_update'] = microtime(true);
             $current_status['logs'] = array_slice($all_logs, -50); // Keep last 50 log entries for UI
             set_import_status($current_status);
             // Also update the progress option for continuation
@@ -726,7 +726,7 @@ if (!function_exists('import_all_jobs_from_json')) {
             'success' => true,
             'error_message' => '',
             'end_time' => $end_time,
-            'last_update' => time(),
+            'last_update' => microtime(true),
             'logs' => array_slice($all_logs, -50),
             'cleanup_phase' => false, // Cleanup complete
             'cleanup_total' => $deleted_count,
@@ -789,7 +789,7 @@ if (!function_exists('import_all_jobs_from_json')) {
             $failed_status['complete'] = true;
             $failed_status['error_message'] = $fatal_error;
             $failed_status['end_time'] = microtime(true);
-            $failed_status['last_update'] = time();
+            $failed_status['last_update'] = microtime(true);
             if (!is_array($failed_status['logs'] ?? null)) {
                 $failed_status['logs'] = [];
             }
@@ -828,7 +828,7 @@ function continue_paused_import() {
         $status['complete'] = true;
         $status['error_message'] = 'Import ' . $cancel_type . ' by user';
         $status['end_time'] = microtime(true);
-        $status['last_update'] = time();
+        $status['last_update'] = microtime(true);
         if (!is_array($status['logs'] ?? null)) {
             $status['logs'] = [];
         }
