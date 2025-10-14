@@ -604,7 +604,8 @@ function get_job_import_status_ajax() {
         }
 
         // Only log debug when import has meaningful progress to reduce log spam
-        if ($should_log) {
+        // NOTE: To enable polling debug logs, define PUNTWORK_DEBUG_POLLING as true in wp-config.php
+        if ($should_log && defined('PUNTWORK_DEBUG_POLLING') && PUNTWORK_DEBUG_POLLING) {
             PuntWorkLogger::debug('Import status retrieved with active progress', PuntWorkLogger::CONTEXT_BATCH, [
                 'total' => $total,
                 'processed' => $processed,
