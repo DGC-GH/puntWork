@@ -594,6 +594,8 @@ function process_batch_data($batch_guids, $batch_items, $json_path, $start_index
         'item_timings' => [],
         'concurrency_used' => 1
     ];
+
+    return $result;
 }
 
 /**
