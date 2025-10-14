@@ -384,28 +384,35 @@ function bulk_delete_job_posts_sql($post_ids) {
 }
 
 /**
- * Calculate estimated time remaining for import.
+ * Calculate estimated time remaining for import completion
  *
- * @param array $status Current import status.
+ * @param array $status The current import status array
  * @return float Estimated time remaining in seconds.
  */
 function calculate_estimated_time_remaining($status) {
-    if (($status['complete'] ?? false) || ($status['processed'] ?? 0) == 0 || ($status['job_importing_time_elapsed'] ?? 0) == 0) {
+    // Ensure we have required data with safe defaults
+    $is_complete = $status['complete'] ?? false;
+    $processed = $status['processed'] ?? 0;
+    $total = $status['total'] ?? 0;
+    $job_importing_time_elapsed = $status['job_importing_time_elapsed'] ?? 0;
+
+    if ($is_complete || $processed <= 0 || $total <= 0 || $job_importing_time_elapsed <= 0) {
         return 0;
     }
 
-    $items_remaining = $status['total'] - $status['processed'];
-    $time_per_item = $status['job_importing_time_elapsed'] / $status['processed'];
+    $items_remaining = $total - $processed;
+    if ($items_remaining <= 0) {
+        return 0;
+    }
+
+    $time_per_item = $job_importing_time_elapsed / $processed;
     $estimated_seconds = $items_remaining * $time_per_item;
 
-    // PuntWorkLogger::debug('PHP time calculation', PuntWorkLogger::CONTEXT_BATCH, [
-    //     'total' => $status['total'],
-    //     'processed' => $status['processed'],
-    //     'job_importing_time_elapsed' => $status['job_importing_time_elapsed'],
-    //     'items_remaining' => $items_remaining,
-    //     'time_per_item' => $time_per_item,
-    //     'estimated_seconds' => $estimated_seconds
-    // ]);
+    // Ensure we don't return negative or infinite values
+    if (!is_finite($estimated_seconds) || $estimated_seconds < 0) {
+        return 0;
+    }
 
-    return $estimated_seconds;
+    // Cap at a reasonable maximum (24 hours)
+    return min($estimated_seconds, 86400);
 }

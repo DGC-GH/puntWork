@@ -198,113 +198,132 @@ function reset_job_import_ajax() {
 
 add_action('wp_ajax_get_job_import_status', __NAMESPACE__ . '\\get_job_import_status_ajax');
 function get_job_import_status_ajax() {
-    if (!validate_ajax_request('get_job_import_status')) {
-        return;
-    }
-
-    $progress = Puntwork\get_import_status() ?: initialize_import_status(0, '', null);
-
-    PuntWorkLogger::debug('Retrieved import status', PuntWorkLogger::CONTEXT_BATCH, [
-        'total' => $progress['total'],
-        'processed' => $progress['processed'],
-        'complete' => $progress['complete'] ?? null
-    ]);
-
-    // Check for stuck or stale imports and clear them
-    if (isset($progress['complete']) && !$progress['complete'] && isset($progress['total']) && $progress['total'] > 0) {
-        $current_time = time();
-        $time_elapsed = 0;
-        $last_update = isset($progress['last_update']) ? $progress['last_update'] : 0;
-        $time_since_last_update = $current_time - $last_update;
-
-        if (isset($progress['start_time']) && $progress['start_time'] > 0) {
-            $time_elapsed = microtime(true) - $progress['start_time'];
-        } elseif (isset($progress['time_elapsed'])) {
-            $time_elapsed = $progress['time_elapsed'];
+    try {
+        if (!validate_ajax_request('get_job_import_status')) {
+            return;
         }
 
-        // Detect stuck imports with multiple criteria:
-        // 1. No progress for 5+ minutes (300 seconds)
-        // 2. Import running for more than 2 hours without completion (7200 seconds)
-        // 3. No status update for 10+ minutes (600 seconds)
-        $is_stuck = false;
-        $stuck_reason = '';
+        $progress = Puntwork\get_import_status() ?: initialize_import_status(0, '', null);
 
-        if ($progress['processed'] == 0 && $time_elapsed > 300) {
-            $is_stuck = true;
-            $stuck_reason = 'no progress for 5+ minutes';
-        } elseif ($time_elapsed > 7200) { // 2 hours
-            $is_stuck = true;
-            $stuck_reason = 'running for more than 2 hours';
-        } elseif ($time_since_last_update > 600) { // 10 minutes since last update
-            $is_stuck = true;
-            $stuck_reason = 'no status update for 10+ minutes';
+        PuntWorkLogger::debug('Retrieved import status', PuntWorkLogger::CONTEXT_BATCH, [
+            'total' => $progress['total'] ?? 0,
+            'processed' => $progress['processed'] ?? 0,
+            'complete' => $progress['complete'] ?? null
+        ]);
+
+        // Check for stuck or stale imports and clear them
+        if (isset($progress['complete']) && !$progress['complete'] && isset($progress['total']) && $progress['total'] > 0) {
+            $current_time = time();
+            $time_elapsed = 0;
+            $last_update = isset($progress['last_update']) ? $progress['last_update'] : 0;
+            $time_since_last_update = $current_time - $last_update;
+
+            if (isset($progress['start_time']) && $progress['start_time'] > 0) {
+                $time_elapsed = microtime(true) - $progress['start_time'];
+            } elseif (isset($progress['time_elapsed'])) {
+                $time_elapsed = $progress['time_elapsed'];
+            }
+
+            // Detect stuck imports with multiple criteria:
+            // 1. No progress for 5+ minutes (300 seconds)
+            // 2. Import running for more than 2 hours without completion (7200 seconds)
+            // 3. No status update for 10+ minutes (600 seconds)
+            $is_stuck = false;
+            $stuck_reason = '';
+
+            if ($progress['processed'] == 0 && $time_elapsed > 300) {
+                $is_stuck = true;
+                $stuck_reason = 'no progress for 5+ minutes';
+            } elseif ($time_elapsed > 7200) { // 2 hours
+                $is_stuck = true;
+                $stuck_reason = 'running for more than 2 hours';
+            } elseif ($time_since_last_update > 600) { // 10 minutes since last update
+                $is_stuck = true;
+                $stuck_reason = 'no status update for 10+ minutes';
+            }
+
+            if ($is_stuck) {
+                PuntWorkLogger::info('Detected stuck import in status check, clearing status', PuntWorkLogger::CONTEXT_BATCH, [
+                    'processed' => $progress['processed'] ?? 0,
+                    'total' => $progress['total'] ?? 0,
+                    'time_elapsed' => $time_elapsed,
+                    'time_since_last_update' => $time_since_last_update,
+                    'reason' => $stuck_reason
+                ]);
+                delete_option('job_import_status');
+                delete_option('job_import_progress');
+                delete_option('job_import_processed_guids');
+                delete_option('job_import_last_batch_time');
+                delete_option('job_import_last_batch_processed');
+                delete_option('job_import_batch_size');
+                delete_option('job_import_consecutive_small_batches');
+                delete_transient('import_cancel');
+
+                // Return fresh status
+                $progress = initialize_import_status(0, '', null);
+            }
         }
 
-        if ($is_stuck) {
-            PuntWorkLogger::info('Detected stuck import in status check, clearing status', PuntWorkLogger::CONTEXT_BATCH, [
-                'processed' => $progress['processed'],
-                'total' => $progress['total'],
-                'time_elapsed' => $time_elapsed,
-                'time_since_last_update' => $time_since_last_update,
-                'reason' => $stuck_reason
+        // Add resume_progress for JavaScript
+        $progress['resume_progress'] = Puntwork\get_import_progress();
+
+        // Track job importing start time
+        if (($progress['total'] ?? 0) > 1 && !isset($progress['job_import_start_time'])) {
+            $progress['job_import_start_time'] = microtime(true);
+            Puntwork\set_import_status($progress);
+        }
+
+        // Calculate job importing elapsed time with safe defaults
+        $job_import_start_time = $progress['job_import_start_time'] ?? null;
+        $time_elapsed = $progress['time_elapsed'] ?? 0;
+        $progress['job_importing_time_elapsed'] = $job_import_start_time ? microtime(true) - $job_import_start_time : $time_elapsed;
+
+        // Add batch timing data for accurate time calculations
+        $progress['batch_time'] = Puntwork\get_last_batch_time();
+        $progress['batch_processed'] = Puntwork\get_last_batch_processed();
+
+        // Add estimated time remaining calculation from PHP with error handling
+        try {
+            $progress['estimated_time_remaining'] = calculate_estimated_time_remaining($progress);
+        } catch (\Exception $e) {
+            PuntWorkLogger::error('Error calculating estimated time remaining', PuntWorkLogger::CONTEXT_BATCH, [
+                'error' => $e->getMessage(),
+                'progress' => $progress
             ]);
-            delete_option('job_import_status');
-            delete_option('job_import_progress');
-            delete_option('job_import_processed_guids');
-            delete_option('job_import_last_batch_time');
-            delete_option('job_import_last_batch_processed');
-            delete_option('job_import_batch_size');
-            delete_option('job_import_consecutive_small_batches');
-            delete_transient('import_cancel');
-
-            // Return fresh status
-            $progress = initialize_import_status(0, '', null);
+            $progress['estimated_time_remaining'] = 0;
         }
+
+        // Add a last_modified timestamp for client-side caching (use microtime for better precision)
+        $progress['last_modified'] = microtime(true);
+
+        // Log response summary instead of full data to prevent large debug logs
+        $log_summary = [
+            'total' => $progress['total'] ?? 0,
+            'processed' => $progress['processed'] ?? 0,
+            'published' => $progress['published'] ?? 0,
+            'updated' => $progress['updated'] ?? 0,
+            'skipped' => $progress['skipped'] ?? 0,
+            'complete' => $progress['complete'] ?? true,
+            'success' => $progress['success'] ?? false,
+            'time_elapsed' => $progress['time_elapsed'] ?? 0,
+            'job_importing_time_elapsed' => $progress['job_importing_time_elapsed'] ?? 0,
+            'estimated_time_remaining' => $progress['estimated_time_remaining'] ?? 0,
+            'batch_time' => $progress['batch_time'] ?? 0,
+            'batch_processed' => $progress['batch_processed'] ?? 0,
+            'logs_count' => is_array($progress['logs'] ?? null) ? count($progress['logs']) : 0,
+            'has_error' => !empty($progress['error_message'] ?? ''),
+            'last_modified' => $progress['last_modified'] ?? microtime(true)
+        ];
+
+        send_ajax_success('get_job_import_status', $progress, $log_summary);
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Fatal error in get_job_import_status_ajax', PuntWorkLogger::CONTEXT_AJAX, [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        wp_send_json_error(['message' => 'Internal server error occurred while retrieving import status']);
     }
-
-    // Add resume_progress for JavaScript
-    $progress['resume_progress'] = Puntwork\get_import_progress();
-
-    // Track job importing start time
-    if ($progress['total'] > 1 && !isset($progress['job_import_start_time'])) {
-        $progress['job_import_start_time'] = microtime(true);
-        Puntwork\set_import_status($progress);
-    }
-
-    // Calculate job importing elapsed time
-    $progress['job_importing_time_elapsed'] = isset($progress['job_import_start_time']) ? microtime(true) - $progress['job_import_start_time'] : $progress['time_elapsed'];
-
-    // Add batch timing data for accurate time calculations
-    $progress['batch_time'] = Puntwork\get_last_batch_time();
-    $progress['batch_processed'] = Puntwork\get_last_batch_processed();
-
-    // Add estimated time remaining calculation from PHP
-    $progress['estimated_time_remaining'] = calculate_estimated_time_remaining($progress);
-
-    // Add a last_modified timestamp for client-side caching (use microtime for better precision)
-    $progress['last_modified'] = microtime(true);
-
-    // Log response summary instead of full data to prevent large debug logs
-    $log_summary = [
-        'total' => $progress['total'] ?? 0,
-        'processed' => $progress['processed'] ?? 0,
-        'published' => $progress['published'] ?? 0,
-        'updated' => $progress['updated'] ?? 0,
-        'skipped' => $progress['skipped'] ?? 0,
-        'complete' => $progress['complete'] ?? true,
-        'success' => $progress['success'] ?? false,
-        'time_elapsed' => $progress['time_elapsed'] ?? 0,
-        'job_importing_time_elapsed' => $progress['job_importing_time_elapsed'] ?? 0,
-        'estimated_time_remaining' => $progress['estimated_time_remaining'] ?? 0,
-        'batch_time' => $progress['batch_time'] ?? 0,
-        'batch_processed' => $progress['batch_processed'] ?? 0,
-        'logs_count' => is_array($progress['logs'] ?? null) ? count($progress['logs']) : 0,
-        'has_error' => !empty($progress['error_message'] ?? ''),
-        'last_modified' => $progress['last_modified'] ?? microtime(true)
-    ];
-
-    send_ajax_success('get_job_import_status', $progress, $log_summary);
 }
 
 add_action('wp_ajax_cleanup_trashed_jobs', __NAMESPACE__ . '\\cleanup_trashed_jobs_ajax');
