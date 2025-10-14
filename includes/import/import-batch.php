@@ -138,7 +138,13 @@ if (!function_exists('import_all_jobs_from_json')) {
         $batch_count = 0;
         $total_items = 0;
 
-        error_log('[PUNTWORK] Starting full import - processing all batches without time limit');
+        error_log('[PUNTWORK] ===== STARTING FULL IMPORT =====');
+        error_log('[PUNTWORK] PHP Memory limit: ' . ini_get('memory_limit'));
+        error_log('[PUNTWORK] PHP Max execution time: ' . ini_get('max_execution_time'));
+        error_log('[PUNTWORK] WordPress memory limit: ' . WP_MEMORY_LIMIT);
+        error_log('[PUNTWORK] Preserve status: ' . ($preserve_status ? 'true' : 'false'));
+
+        try {
 
         // Only reset status if not preserving existing status
         if (!$preserve_status) {
@@ -197,9 +203,14 @@ if (!function_exists('import_all_jobs_from_json')) {
         error_log('[PUNTWORK] Entering main processing loop...');
 
         while (true) {
-            error_log('[PUNTWORK] While loop iteration - checking continue processing...');
+            error_log('[PUNTWORK] ===== BATCH LOOP ITERATION =====');
+            error_log('[PUNTWORK] Current memory usage: ' . memory_get_usage(true) / 1024 / 1024 . ' MB');
+            error_log('[PUNTWORK] Peak memory usage: ' . memory_get_peak_usage(true) / 1024 / 1024 . ' MB');
+            error_log('[PUNTWORK] Execution time so far: ' . (microtime(true) - $start_time) . ' seconds');
+
             // Check if we should continue processing (time/memory limits)
             if (!should_continue_batch_processing()) {
+                error_log('[PUNTWORK] Batch processing should stop due to limits');
                 // Pause processing and schedule continuation
                 $current_status = get_import_status([]);
                 $current_status['paused'] = true;
@@ -263,14 +274,18 @@ if (!function_exists('import_all_jobs_from_json')) {
             }
 
             $batch_count++;
+            error_log(sprintf('[PUNTWORK] ===== PROCESSING BATCH %d =====', $batch_count));
             error_log(sprintf('[PUNTWORK] Processing batch %d starting at index %d', $batch_count, $batch_start));
 
             try {
                 // Process this batch
+                error_log('[PUNTWORK] Calling process_batch_items_logic...');
                 $result = process_batch_items_logic($setup);
+                error_log('[PUNTWORK] process_batch_items_logic completed');
                 
                 if (!$result['success']) {
                     $error_msg = 'Batch ' . $batch_count . ' failed: ' . ($result['message'] ?? 'Unknown error');
+                    error_log('[PUNTWORK] BATCH FAILED: ' . $error_msg);
                     PuntWorkLogger::error('Import process failed during batch processing', PuntWorkLogger::CONTEXT_BATCH, [
                         'error' => $error_msg,
                         'batch' => $batch_count,
@@ -279,8 +294,11 @@ if (!function_exists('import_all_jobs_from_json')) {
                     ]);
                     return ['success' => false, 'message' => $error_msg, 'logs' => $result['logs'] ?? []];
                 }
+                error_log('[PUNTWORK] Batch processing successful');
             } catch (Exception $e) {
                 $error_msg = 'Exception in batch ' . $batch_count . ': ' . $e->getMessage();
+                error_log('[PUNTWORK] BATCH EXCEPTION: ' . $error_msg);
+                error_log('[PUNTWORK] Exception trace: ' . $e->getTraceAsString());
                 PuntWorkLogger::error('Import process failed with exception', PuntWorkLogger::CONTEXT_BATCH, [
                     'error' => $error_msg,
                     'batch' => $batch_count,
@@ -441,6 +459,33 @@ if (!function_exists('import_all_jobs_from_json')) {
         }
 
         return finalize_batch_import($final_result);
+        } catch (Exception $e) {
+            $fatal_error = 'Fatal error in import_all_jobs_from_json: ' . $e->getMessage();
+            error_log('[PUNTWORK] FATAL ERROR: ' . $fatal_error);
+            error_log('[PUNTWORK] Fatal exception trace: ' . $e->getTraceAsString());
+            
+            PuntWorkLogger::error('Fatal import error', PuntWorkLogger::CONTEXT_IMPORT, [
+                'error' => $fatal_error,
+                'trace' => $e->getTraceAsString(),
+                'memory_peak' => memory_get_peak_usage(true) / 1024 / 1024 . ' MB',
+                'memory_current' => memory_get_usage(true) / 1024 / 1024 . ' MB',
+                'batches_processed' => $batch_count,
+                'total_processed' => $total_processed,
+                'execution_time' => microtime(true) - $start_time
+            ]);
+            
+            // Update status to failed
+            $failed_status = get_import_status([]);
+            $failed_status['success'] = false;
+            $failed_status['complete'] = true;
+            $failed_status['error_message'] = $fatal_error;
+            $failed_status['end_time'] = microtime(true);
+            $failed_status['last_update'] = time();
+            $failed_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] FATAL ERROR: ' . $fatal_error;
+            set_import_status($failed_status);
+            
+            return ['success' => false, 'message' => $fatal_error, 'logs' => [$fatal_error]];
+        }
     }
 }
 
