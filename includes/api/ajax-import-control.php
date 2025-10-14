@@ -395,7 +395,7 @@ function check_active_scheduled_imports() {
                 'actions' => array_map(function($action) {
                     return [
                         'id' => $action->get_id(),
-                        'status' => $action->get_status(),
+                        'status' => \ActionScheduler::store()->get_status($action->get_id()),
                         'scheduled' => $action->get_schedule()->get_date()->format('Y-m-d H:i:s'),
                         'args' => $action->get_args()
                     ];
@@ -421,7 +421,7 @@ function check_active_scheduled_imports() {
                 'actions' => array_map(function($action) {
                     return [
                         'id' => $action->get_id(),
-                        'status' => $action->get_status(),
+                        'status' => \ActionScheduler::store()->get_status($action->get_id()),
                         'scheduled' => $action->get_schedule()->get_date()->format('Y-m-d H:i:s'),
                         'args' => $action->get_args()
                     ];
