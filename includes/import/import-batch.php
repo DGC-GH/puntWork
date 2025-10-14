@@ -555,7 +555,7 @@ if (!function_exists('import_all_jobs_from_json')) {
                         if ($action && !$action->is_finished()) {
                             $all_complete = false;
                             $pending_count++;
-                        } elseif ($action && $action->get_status() === \ActionScheduler_Store::STATUS_FAILED) {
+                        } elseif ($action && \ActionScheduler::store()->get_status($action_id) === \ActionScheduler_Store::STATUS_FAILED) {
                             // Failed actions are considered finished, but log them
                             $failed_count++;
                             PuntWorkLogger::warning('Action Scheduler job failed', PuntWorkLogger::CONTEXT_BATCH, [

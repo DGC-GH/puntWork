@@ -159,7 +159,7 @@ function monitor_concurrent_job_completion($action_ids, $timeout_seconds = 300, 
                     continue;
                 }
 
-                $status = $action->get_status();
+                $status = \ActionScheduler::store()->get_status($action_id);
                 if (in_array($status, [\ActionScheduler_Store::STATUS_COMPLETE, \ActionScheduler_Store::STATUS_CANCELED])) {
                     $completed_actions[] = $action_id;
                     $just_completed[] = $action_id;
