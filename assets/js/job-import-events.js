@@ -219,11 +219,22 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     (!statusData.complete && timeSinceLastUpdate < 600) // Incomplete and recently updated (for scheduled imports)
                 );
 
-                // Check if scheduling is enabled to determine import type
+                // Check if scheduling is enabled to determine if we should consider scheduled imports
                 var isScheduledImport = false;
                 JobImportAPI.call('get_import_schedule', {}, function(scheduleResponse) {
                     if (scheduleResponse.success && scheduleResponse.data.schedule) {
                         isScheduledImport = scheduleResponse.data.schedule.enabled;
+                        
+                        // For scheduled imports, also consider imports active if they have a start_time and are recent
+                        if (isScheduledImport && !hasIncompleteImport) {
+                            var hasRecentStartTime = statusData.start_time && (currentTime - statusData.start_time) < 3600; // Started within last hour
+                            var isCountingPhase = statusData.start_time && statusData.total === 0 && !statusData.complete;
+                            
+                            if (hasRecentStartTime || isCountingPhase) {
+                                hasIncompleteImport = true;
+                                console.log('[PUNTWORK] Detected active scheduled import in counting phase or recently started');
+                            }
+                        }
                     }
 
                     if (hasIncompleteImport) {
@@ -277,6 +288,12 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         $('#import-type-indicator').hide();
                         JobImportUI.hideImportUI();
                         console.log('[PUNTWORK] Clean state detected - showing start button only');
+                        
+                        // If scheduling is enabled, start polling anyway to catch scheduled imports
+                        if (isScheduledImport) {
+                            JobImportEvents.startStatusPolling();
+                            console.log('[PUNTWORK] Started polling for potential scheduled imports in clean state');
+                        }
                     }
                 }).catch(function(scheduleError) {
                     console.log('[PUNTWORK] Failed to get schedule status, assuming manual import mode');
@@ -474,15 +491,17 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                             return;
                         }
 
-                        // Check if this is a scheduled import by looking at schedule status
+                        // Check if a scheduled import is running by looking at schedule status and import state
                         // Only check this periodically to avoid too many API calls
-                        if (pollCount % 10 === 0) { // Check every 10 polls (roughly every 10-80 seconds depending on interval)
+                        if (pollCount % 5 === 0) { // Check every 5 polls for more responsive detection
                             JobImportAPI.call('get_import_schedule', {}, function(scheduleResponse) {
                                 if (scheduleResponse.success && scheduleResponse.data.schedule) {
                                     var isScheduledEnabled = scheduleResponse.data.schedule.enabled;
                                     var hasActiveImport = currentTotal > 0 && !statusData.complete;
+                                    var hasRecentStartTime = statusData.start_time && (Date.now() / 1000 - statusData.start_time) < 3600; // Started within last hour
+                                    var isCountingPhase = statusData.start_time && currentTotal === 0 && !statusData.complete;
                                     
-                                    if (isScheduledEnabled && hasActiveImport) {
+                                    if (isScheduledEnabled && (hasActiveImport || hasRecentStartTime || isCountingPhase)) {
                                         $('#import-type-indicator').show();
                                         $('#import-type-text').text('Scheduled import is currently running');
                                     } else if (!isScheduledEnabled && hasActiveImport) {
