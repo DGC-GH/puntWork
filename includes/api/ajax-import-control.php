@@ -219,11 +219,15 @@ function cancel_job_import_ajax() {
 
     $before_cancel = get_import_status([]);
     set_transient('import_cancel', true, 3600);
+
+    // POISON PILL: Aggressively cancel all import-related processes
+    $cancelled_count = cancel_all_import_processes();
+
     // Also clear the import status to reset the UI
     delete_option('job_import_status');
     delete_option('job_import_batch_size');
 
-    PuntWorkLogger::info('Import cancellation initiated', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Import cancellation initiated - POISON PILL deployed', PuntWorkLogger::CONTEXT_BATCH, [
         'import_status_before_cancel' => [
             'processed' => $before_cancel['processed'] ?? 0,
             'total' => $before_cancel['total'] ?? 0,
@@ -232,10 +236,15 @@ function cancel_job_import_ajax() {
         ],
         'transient_set' => true,
         'transient_expiry' => 3600,
-        'options_cleared' => ['job_import_status', 'job_import_batch_size']
+        'options_cleared' => ['job_import_status', 'job_import_batch_size'],
+        'poison_pill_processes_cancelled' => $cancelled_count,
+        'cancellation_method' => 'aggressive_poison_pill'
     ]);
 
-    send_ajax_success('cancel_job_import', []);
+    send_ajax_success('cancel_job_import', [
+        'cancelled_processes' => $cancelled_count,
+        'method' => 'poison_pill'
+    ]);
 }
 
 add_action('wp_ajax_clear_import_cancel', __NAMESPACE__ . '\\clear_import_cancel_ajax');
@@ -1326,3 +1335,155 @@ function cleanup_old_published_jobs_ajax() {
         wp_send_json_error(['message' => 'Cleanup failed: ' . $e->getMessage()]);
     }
 }
+
+/**
+ * POISON PILL: Aggressively cancel all import-related background processes
+ * This function implements a comprehensive cancellation system that interrupts
+ * running imports at multiple levels for immediate termination.
+ *
+ * @return int Number of processes cancelled
+ */
+function cancel_all_import_processes() {
+    $cancelled_count = 0;
+
+    PuntWorkLogger::info('Deploying POISON PILL - Aggressive import cancellation initiated', PuntWorkLogger::CONTEXT_BATCH, [
+        'timestamp' => time(),
+        'method' => 'comprehensive_cancellation'
+    ]);
+
+    try {
+        // 1. CANCEL WORDPRESS CRON JOBS
+        // Clear any scheduled import continuations
+        $cron_cancelled = 0;
+        if (wp_next_scheduled('puntwork_continue_import')) {
+            wp_clear_scheduled_hook('puntwork_continue_import');
+            $cron_cancelled++;
+            PuntWorkLogger::info('WordPress cron continuation job cancelled', PuntWorkLogger::CONTEXT_BATCH);
+        }
+
+        if (wp_next_scheduled('puntwork_manual_import_async')) {
+            wp_clear_scheduled_hook('puntwork_manual_import_async');
+            $cron_cancelled++;
+            PuntWorkLogger::info('WordPress cron manual async job cancelled', PuntWorkLogger::CONTEXT_BATCH);
+        }
+
+        if (wp_next_scheduled('puntwork_scheduled_import')) {
+            wp_clear_scheduled_hook('puntwork_scheduled_import');
+            $cron_cancelled++;
+            PuntWorkLogger::info('WordPress cron scheduled import job cancelled', PuntWorkLogger::CONTEXT_BATCH);
+        }
+
+        $cancelled_count += $cron_cancelled;
+
+        // 2. CANCEL ACTION SCHEDULER JOBS (if available)
+        $as_cancelled = 0;
+        if (function_exists('as_unschedule_all_actions')) {
+            // Cancel all import-related Action Scheduler jobs
+            $import_hooks = [
+                'puntwork_process_single_item',
+                'puntwork_manual_import_async',
+                'puntwork_scheduled_import_async',
+                'puntwork_continue_import'
+            ];
+
+            foreach ($import_hooks as $hook) {
+                try {
+                    $unscheduled = as_unschedule_all_actions($hook);
+                    if ($unscheduled > 0) {
+                        $as_cancelled += $unscheduled;
+                        PuntWorkLogger::info('Action Scheduler jobs cancelled', PuntWorkLogger::CONTEXT_BATCH, [
+                            'hook' => $hook,
+                            'jobs_cancelled' => $unscheduled
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    PuntWorkLogger::warning('Failed to cancel Action Scheduler jobs for hook', PuntWorkLogger::CONTEXT_BATCH, [
+                        'hook' => $hook,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+        } else {
+            PuntWorkLogger::debug('Action Scheduler not available for job cancellation', PuntWorkLogger::CONTEXT_BATCH);
+        }
+
+        $cancelled_count += $as_cancelled;
+
+        // 3. CANCEL RUNNING PROCESSES VIA DATABASE SIGNALS
+        // Set multiple cancellation flags for maximum coverage
+        $db_flags_set = 0;
+        $cancellation_flags = [
+            'import_cancel' => true,           // Main cancellation flag
+            'import_force_cancel' => true,     // Force cancellation flag
+            'import_emergency_stop' => true,   // Emergency stop flag
+        ];
+
+        foreach ($cancellation_flags as $flag => $value) {
+            set_transient($flag, $value, 3600); // 1 hour expiry
+            $db_flags_set++;
+        }
+
+        // 4. CLEAR IMPORT PROGRESS AND FORCE RESET
+        $options_cleared = 0;
+        $import_options = [
+            'job_import_progress',
+            'job_import_processed_guids',
+            'job_import_last_batch_time',
+            'job_import_last_batch_processed',
+            'job_import_batch_size',
+            'job_import_consecutive_small_batches',
+            'job_import_consecutive_batches',
+            'job_import_start_time',
+            'puntwork_last_import_run',
+            'puntwork_last_import_details'
+        ];
+
+        foreach ($import_options as $option) {
+            if (delete_option($option)) {
+                $options_cleared++;
+            }
+        }
+
+        // 5. SEND KILL SIGNAL TO RUNNING PROCESSES (if possible)
+        // This is a more aggressive approach for processes that might be stuck
+        $kill_signals_sent = 0;
+        if (function_exists('posix_kill') && function_exists('getmypid')) {
+            // Try to find and kill any child processes (limited effectiveness in web context)
+            PuntWorkLogger::debug('POSIX signals available but limited in web context', PuntWorkLogger::CONTEXT_BATCH);
+        }
+
+        // 6. FORCE GARBAGE COLLECTION AND MEMORY CLEANUP
+        if (function_exists('gc_collect_cycles')) {
+            gc_collect_cycles();
+            PuntWorkLogger::debug('Garbage collection forced during cancellation', PuntWorkLogger::CONTEXT_BATCH);
+        }
+
+        // 7. LOG COMPREHENSIVE CANCELLATION REPORT
+        PuntWorkLogger::info('POISON PILL DEPLOYMENT COMPLETE - Import processes terminated', PuntWorkLogger::CONTEXT_BATCH, [
+            'cron_jobs_cancelled' => $cron_cancelled,
+            'action_scheduler_jobs_cancelled' => $as_cancelled,
+            'database_flags_set' => $db_flags_set,
+            'options_cleared' => $options_cleared,
+            'kill_signals_sent' => $kill_signals_sent,
+            'total_processes_cancelled' => $cancelled_count,
+            'cancellation_timestamp' => time(),
+            '<?php
+/**
+ * AJAX handlers for import control operations
+ * Handles batch processing, cancellation, and status retrieval
+ *
+ * @package    Puntwork
+ * @subpackage AJAX
+ * @since      1.0.0
+ */
+
+namespace Puntwork;
+
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+require_once __DIR__ . '/../utilities/ajax-utilities.php';
+require_once __DIR__ . '/../utilities/file-utilities.php';
+require_once __DIR__ . '/../utilities/options-utilities.php';
