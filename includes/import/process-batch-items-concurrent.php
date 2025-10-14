@@ -155,6 +155,19 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
     $total_time = microtime(true) - $start_time;
     $avg_time_per_item = !empty($item_timings) ? array_sum($item_timings) / count($item_timings) : 0;
 
+    // Update concurrent success metrics
+    $chunks_completed = count($chunk_results);
+    $total_expected_chunks = count($action_ids);
+    $total_processed_items = array_sum(array_column($chunk_results, 'processed_count'));
+
+    $success_rate = update_concurrent_success_metrics(
+        $concurrency,
+        $chunks_completed,
+        $total_expected_chunks,
+        $total_processed_items,
+        count($batch_guids)
+    );
+
     PuntWorkLogger::info('Concurrent item processing completed', PuntWorkLogger::CONTEXT_BATCH, [
         'total_processed' => $processed_count,
         'published' => $published,
@@ -163,7 +176,9 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
         'total_time' => $total_time,
         'avg_time_per_item' => $avg_time_per_item,
         'concurrency_level' => $concurrency,
-        'chunks_completed' => count($chunk_results),
+        'chunks_completed' => $chunks_completed,
+        'total_expected_chunks' => $total_expected_chunks,
+        'success_rate' => $success_rate,
         'timeout_exceeded' => (microtime(true) - $start_wait) >= $timeout
     ]);
 
@@ -178,6 +193,7 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
 
 /**
  * Calculate optimal concurrency level based on system resources and batch size
+ * Includes validation to ensure concurrent processing is working before increasing levels
  *
  * @param int $batch_size Number of items in batch
  * @return int Optimal concurrency level
@@ -202,17 +218,51 @@ function calculate_optimal_concurrency($batch_size) {
     // Take the minimum of all constraints
     $optimal_concurrency = min($memory_based_concurrency, $cpu_based_concurrency, $batch_based_concurrency);
 
+    // VALIDATION: Check if concurrent processing has been working before allowing higher levels
+    $last_concurrency_level = get_last_concurrency_level();
+    $concurrent_success_rate = get_concurrent_success_rate();
+
+    // If we've used concurrent processing before, validate it's working
+    if ($last_concurrency_level > 1) {
+        // Only allow concurrency increase if:
+        // 1. Success rate is 100% (all chunks completed successfully)
+        // 2. Or we're maintaining the same level (not increasing)
+        if ($optimal_concurrency > $last_concurrency_level && $concurrent_success_rate < 1.0) {
+            PuntWorkLogger::warning('Reducing concurrency due to low success rate', PuntWorkLogger::CONTEXT_BATCH, [
+                'requested_concurrency' => $optimal_concurrency,
+                'last_concurrency' => $last_concurrency_level,
+                'success_rate' => $concurrent_success_rate,
+                'reason' => 'insufficient concurrent processing success'
+            ]);
+
+            // Reduce to last successful level or 1, whichever is higher
+            $optimal_concurrency = max(1, $last_concurrency_level - 1);
+        }
+
+        // If concurrent processing has completely failed recently, fall back to sequential
+        if ($concurrent_success_rate < 0.5) {
+            PuntWorkLogger::warning('Falling back to sequential processing due to repeated concurrent failures', PuntWorkLogger::CONTEXT_BATCH, [
+                'success_rate' => $concurrent_success_rate,
+                'last_concurrency' => $last_concurrency_level
+            ]);
+            $optimal_concurrency = 1;
+        }
+    }
+
     // Cap at reasonable maximum
     $optimal_concurrency = min($optimal_concurrency, 20);
 
-    PuntWorkLogger::debug('Calculated optimal concurrency', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::debug('Calculated optimal concurrency with validation', PuntWorkLogger::CONTEXT_BATCH, [
         'batch_size' => $batch_size,
         'memory_based' => $memory_based_concurrency,
         'cpu_based' => $cpu_based_concurrency,
         'batch_based' => $batch_based_concurrency,
+        'last_concurrency_level' => $last_concurrency_level,
+        'concurrent_success_rate' => $concurrent_success_rate,
         'optimal' => $optimal_concurrency,
         'available_memory_mb' => $available_memory / (1024 * 1024),
-        'cpu_cores' => $cpu_cores
+        'cpu_cores' => $cpu_cores,
+        'validation_applied' => $last_concurrency_level > 1 && $optimal_concurrency < min($memory_based_concurrency, $cpu_based_concurrency, $batch_based_concurrency)
     ]);
 
     return $optimal_concurrency;

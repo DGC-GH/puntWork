@@ -344,31 +344,49 @@ function set_cleanup_old_published_progress($progress) {
 }
 
 /**
- * Clear all import-related options (for reset/cleanup)
+ * Get last concurrency level used
  */
-function clear_import_options() {
-    $options_to_delete = [
-        'job_import_status',
-        'job_import_progress',
-        'job_import_batch_size',
-        'job_import_processed_guids',
-        'job_existing_guids',
-        'job_import_start_time',
-        'job_import_consecutive_batches',
-        'job_import_consecutive_small_batches',
-        'job_import_time_per_job',
-        'job_import_avg_time_per_job',
-        'job_import_last_batch_time',
-        'job_import_last_batch_processed',
-        'job_import_last_peak_memory',
-        'job_import_previous_batch_time',
-        'job_cleanup_trashed_progress',
-        'job_cleanup_drafted_progress',
-        'job_cleanup_guids',
-        'job_cleanup_old_published_progress'
-    ];
+function get_last_concurrency_level() {
+    return (int) get_option('job_import_last_concurrency', 1);
+}
 
-    foreach ($options_to_delete as $option) {
-        delete_option($option);
-    }
+/**
+ * Set last concurrency level used
+ */
+function set_last_concurrency_level($level) {
+    update_option('job_import_last_concurrency', (int)$level, false);
+}
+
+/**
+ * Get concurrent processing success rate (0.0 to 1.0)
+ */
+function get_concurrent_success_rate() {
+    return (float) get_option('job_import_concurrent_success_rate', 1.0);
+}
+
+/**
+ * Set concurrent processing success rate
+ */
+function set_concurrent_success_rate($rate) {
+    update_option('job_import_concurrent_success_rate', (float) max(0, min(1, $rate)), false);
+}
+
+/**
+ * Update concurrent processing success metrics
+ */
+function update_concurrent_success_metrics($concurrency_used, $chunks_completed, $total_chunks, $items_processed, $total_items) {
+    $success_rate = $total_chunks > 0 ? $chunks_completed / $total_chunks : 1.0;
+    $processing_success_rate = $total_items > 0 ? $items_processed / $total_items : 1.0;
+
+    // Combined success rate considers both chunk completion and item processing
+    $combined_success_rate = ($success_rate + $processing_success_rate) / 2;
+
+    // Use rolling average to stabilize the metric
+    $current_rate = get_concurrent_success_rate();
+    $new_rate = ($current_rate * 0.7) + ($combined_success_rate * 0.3);
+
+    set_concurrent_success_rate($new_rate);
+    set_last_concurrency_level($concurrency_used);
+
+    return $new_rate;
 }
