@@ -28,7 +28,7 @@ require_once __DIR__ . '/../utilities/options-utilities.php';
  * @return array|WP_Error Setup data or error.
  */
 function prepare_import_setup($batch_start = 0) {
-    PuntWorkLogger::info('Import setup preparation started', PuntWorkLogger::CONTEXT_SETUP, [
+    PuntWorkLogger::info('Import setup preparation started', PuntWorkLogger::CONTEXT_IMPORT, [
         'batch_start' => $batch_start,
         'memory_limit' => ini_get('memory_limit'),
         'time_limit' => ini_get('max_execution_time'),
@@ -54,7 +54,7 @@ function prepare_import_setup($batch_start = 0) {
     $existing_status = get_import_status();
     if ($existing_status && isset($existing_status['start_time']) && $existing_status['start_time'] > 0) {
         $start_time = $existing_status['start_time'];
-        PuntWorkLogger::info('Using existing import start time', PuntWorkLogger::CONTEXT_SETUP, [
+        PuntWorkLogger::info('Using existing import start time', PuntWorkLogger::CONTEXT_IMPORT, [
             'existing_start_time' => $start_time,
             'import_status' => $existing_status
         ]);
@@ -64,7 +64,7 @@ function prepare_import_setup($batch_start = 0) {
     }
 
     $json_path = PUNTWORK_PATH . 'feeds/combined-jobs.jsonl';
-    PuntWorkLogger::info('JSONL feed path configured', PuntWorkLogger::CONTEXT_SETUP, [
+    PuntWorkLogger::info('JSONL feed path configured', PuntWorkLogger::CONTEXT_IMPORT, [
         'json_path' => $json_path,
         'file_exists' => file_exists($json_path),
         'file_readable' => is_readable($json_path),
@@ -72,7 +72,7 @@ function prepare_import_setup($batch_start = 0) {
     ]);
 
     if (!file_exists($json_path)) {
-        PuntWorkLogger::error('JSONL feed file not found', PuntWorkLogger::CONTEXT_SETUP, [
+        PuntWorkLogger::error('JSONL feed file not found', PuntWorkLogger::CONTEXT_IMPORT, [
             'json_path' => $json_path,
             'expected_location' => PUNTWORK_PATH . 'feeds/',
             'error_type' => 'file_not_found'
@@ -81,7 +81,7 @@ function prepare_import_setup($batch_start = 0) {
     }
 
     if (!is_readable($json_path)) {
-        PuntWorkLogger::error('JSONL feed file not readable', PuntWorkLogger::CONTEXT_SETUP, [
+        PuntWorkLogger::error('JSONL feed file not readable', PuntWorkLogger::CONTEXT_IMPORT, [
             'json_path' => $json_path,
             'file_permissions' => fileperms($json_path),
             'error_type' => 'file_not_readable'
@@ -93,7 +93,7 @@ function prepare_import_setup($batch_start = 0) {
     $existing_status = get_import_status();
     if ($existing_status && isset($existing_status['total']) && $existing_status['total'] > 0) {
         $total = $existing_status['total'];
-        PuntWorkLogger::info('Using cached total item count', PuntWorkLogger::CONTEXT_SETUP, [
+        PuntWorkLogger::info('Using cached total item count', PuntWorkLogger::CONTEXT_IMPORT, [
             'cached_total' => $total,
             'cache_source' => 'import_status'
         ]);
@@ -102,7 +102,7 @@ function prepare_import_setup($batch_start = 0) {
     }
 
     if ($total == 0) {
-        PuntWorkLogger::error('JSONL feed file is empty or contains no valid items', PuntWorkLogger::CONTEXT_SETUP, [
+        PuntWorkLogger::error('JSONL feed file is empty or contains no valid items', PuntWorkLogger::CONTEXT_IMPORT, [
             'json_path' => $json_path,
             'file_size' => filesize($json_path),
             'error_type' => 'empty_feed_file'
@@ -112,7 +112,7 @@ function prepare_import_setup($batch_start = 0) {
 
     // Cache existing job GUIDs if not already cached
     if (false === get_existing_guids()) {
-        PuntWorkLogger::info('Starting GUID cache query for existing jobs', PuntWorkLogger::CONTEXT_SETUP, [
+        PuntWorkLogger::info('Starting GUID cache query for existing jobs', PuntWorkLogger::CONTEXT_IMPORT, [
             'cache_status' => 'not_cached',
             'query_type' => 'existing_job_guids'
         ]);
@@ -120,7 +120,7 @@ function prepare_import_setup($batch_start = 0) {
             $start_guid_query = microtime(true);
             $all_jobs = $wpdb->get_results("SELECT p.ID, pm.meta_value AS guid FROM $wpdb->posts p JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = 'job' AND pm.meta_key = 'guid'");
             $guid_query_time = microtime(true) - $start_guid_query;
-            PuntWorkLogger::info('GUID cache query completed', PuntWorkLogger::CONTEXT_SETUP, [
+            PuntWorkLogger::info('GUID cache query completed', PuntWorkLogger::CONTEXT_IMPORT, [
                 'query_duration_seconds' => round($guid_query_time, 3),
                 'jobs_found' => count($all_jobs),
                 'query_success' => true
@@ -128,7 +128,7 @@ function prepare_import_setup($batch_start = 0) {
 
             // Only cache if not too many jobs (to avoid memory issues)
             if (count($all_jobs) > 10000) {
-                PuntWorkLogger::warn('Skipping GUID cache due to excessive job count', PuntWorkLogger::CONTEXT_SETUP, [
+                PuntWorkLogger::warn('Skipping GUID cache due to excessive job count', PuntWorkLogger::CONTEXT_IMPORT, [
                     'job_count' => count($all_jobs),
                     'threshold' => 10000,
                     'reason' => 'memory_optimization',
@@ -137,13 +137,13 @@ function prepare_import_setup($batch_start = 0) {
                 set_existing_guids([]); // Set empty array to avoid re-querying
             } else {
                 set_existing_guids($all_jobs);
-                PuntWorkLogger::info('GUID cache stored successfully', PuntWorkLogger::CONTEXT_SETUP, [
+                PuntWorkLogger::info('GUID cache stored successfully', PuntWorkLogger::CONTEXT_IMPORT, [
                     'cached_job_count' => count($all_jobs),
                     'cache_memory_usage' => 'optimized'
                 ]);
             }
         } catch (Exception $e) {
-            PuntWorkLogger::error('GUID cache query failed', PuntWorkLogger::CONTEXT_SETUP, [
+            PuntWorkLogger::error('GUID cache query failed', PuntWorkLogger::CONTEXT_IMPORT, [
                 'error_message' => $e->getMessage(),
                 'error_code' => $e->getCode(),
                 'fallback_action' => 'continue_without_cache'
@@ -151,7 +151,7 @@ function prepare_import_setup($batch_start = 0) {
             set_existing_guids([]); // Set empty to avoid re-querying
         }
     } else {
-        PuntWorkLogger::info('GUID cache already exists, skipping query', PuntWorkLogger::CONTEXT_SETUP, [
+        PuntWorkLogger::info('GUID cache already exists, skipping query', PuntWorkLogger::CONTEXT_IMPORT, [
             'cache_status' => 'already_cached',
             'action' => 'skip_query'
         ]);
@@ -233,7 +233,7 @@ function prepare_import_setup($batch_start = 0) {
  * @return int Total item count.
  */
 function get_json_item_count($json_path) {
-    PuntWorkLogger::info('Starting JSONL item count operation', PuntWorkLogger::CONTEXT_SETUP, [
+    PuntWorkLogger::info('Starting JSONL item count operation', PuntWorkLogger::CONTEXT_IMPORT, [
         'json_path' => $json_path,
         'operation' => 'count_items',
         'timeout_limit_seconds' => 30
@@ -244,7 +244,7 @@ function get_json_item_count($json_path) {
     $max_time = 30; // 30 second timeout
 
     if (($handle = fopen($json_path, "r")) !== false) {
-        PuntWorkLogger::debug('JSONL file opened successfully for counting', PuntWorkLogger::CONTEXT_SETUP, [
+        PuntWorkLogger::debug('JSONL file opened successfully for counting', PuntWorkLogger::CONTEXT_IMPORT, [
             'file_handle' => 'opened',
             'file_path' => $json_path
         ]);
@@ -252,7 +252,7 @@ function get_json_item_count($json_path) {
         while (($line = fgets($handle)) !== false) {
             // Check for timeout
             if (microtime(true) - $start_time > $max_time) {
-                PuntWorkLogger::warn('JSONL count operation timed out', PuntWorkLogger::CONTEXT_SETUP, [
+                PuntWorkLogger::warn('JSONL count operation timed out', PuntWorkLogger::CONTEXT_IMPORT, [
                     'elapsed_seconds' => round(microtime(true) - $start_time, 1),
                     'timeout_limit' => $max_time,
                     'items_counted_so_far' => $count,
@@ -270,7 +270,7 @@ function get_json_item_count($json_path) {
             }
             // Log progress every 1000 items
             if ($count % 1000 === 0 && $count > 0) {
-                PuntWorkLogger::debug('JSONL counting progress milestone', PuntWorkLogger::CONTEXT_SETUP, [
+                PuntWorkLogger::debug('JSONL counting progress milestone', PuntWorkLogger::CONTEXT_IMPORT, [
                     'items_counted' => $count,
                     'elapsed_seconds' => round(microtime(true) - $start_time, 1),
                     'items_per_second' => round($count / (microtime(true) - $start_time), 1)
@@ -278,14 +278,14 @@ function get_json_item_count($json_path) {
             }
         }
         fclose($handle);
-        PuntWorkLogger::info('JSONL count operation completed', PuntWorkLogger::CONTEXT_SETUP, [
+        PuntWorkLogger::info('JSONL count operation completed', PuntWorkLogger::CONTEXT_IMPORT, [
             'total_items' => $count,
             'elapsed_seconds' => round(microtime(true) - $start_time, 1),
             'items_per_second' => round($count / (microtime(true) - $start_time), 1),
             'operation_success' => true
         ]);
     } else {
-        PuntWorkLogger::error('Failed to open JSONL file for counting', PuntWorkLogger::CONTEXT_SETUP, [
+        PuntWorkLogger::error('Failed to open JSONL file for counting', PuntWorkLogger::CONTEXT_IMPORT, [
             'json_path' => $json_path,
             'error_type' => 'file_open_failed',
             'file_exists' => file_exists($json_path),
