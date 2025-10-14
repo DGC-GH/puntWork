@@ -300,7 +300,11 @@ function run_scheduled_import_ajax() {
         error_log('[PUNTWORK] Cleared import_cancel transient for ' . ($is_manual ? 'manual' : 'scheduled') . ' run');
 
         // Schedule the import to run asynchronously
-        if (function_exists('as_schedule_single_action')) {
+        if (function_exists('as_enqueue_async_action')) {
+            // Use Action Scheduler async action for immediate execution
+            error_log('[PUNTWORK] Enqueueing async import using Action Scheduler (immediate execution)');
+            as_enqueue_async_action($is_manual ? 'puntwork_manual_import_async' : 'puntwork_scheduled_import_async');
+        } elseif (function_exists('as_schedule_single_action')) {
             // Use Action Scheduler if available
             error_log('[PUNTWORK] Scheduling async import using Action Scheduler');
             as_schedule_single_action(time(), $is_manual ? 'puntwork_manual_import_async' : 'puntwork_scheduled_import_async');
