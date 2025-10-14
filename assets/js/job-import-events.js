@@ -289,6 +289,13 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
                     // Now proceed with UI logic based on the results
                     finalizeInitialStatusCheck();
+                    
+                    // Always start polling when scheduling is enabled, even in clean state
+                    // This ensures scheduled imports that start in background are detected
+                    if (isScheduledImport) {
+                        console.log('[PUNTWORK] Starting background polling for scheduled imports');
+                        JobImportEvents.startStatusPolling(true); // true = background mode
+                    }
                 }
 
                 function finalizeInitialStatusCheck() {
@@ -297,8 +304,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         JobImportUI.updateProgress(statusData);
                         JobImportUI.appendLogs(statusData.logs || []);
 
-                        // Removed automatic polling - status will be checked manually only
-                        // JobImportEvents.startStatusPolling();
+                        // Start polling for real-time updates when import is active
+                        JobImportEvents.startStatusPolling();
 
                         // Determine import type for UI display
                         var importType = 'manual';
@@ -424,8 +431,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
         /**
          * Start polling for import status updates (used for scheduled imports and manual imports)
          */
-        startStatusPolling: function() {
-            console.log('[PUNTWORK] === STARTING STATUS POLLING ===');
+        startStatusPolling: function(isBackgroundMode = false) {
+            console.log('[PUNTWORK] === STARTING STATUS POLLING ===', isBackgroundMode ? '(background mode)' : '(active mode)');
 
             // Clear any existing polling interval
             if (this.statusPollingInterval) {
@@ -434,16 +441,17 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             }
 
             // Initialize smart polling variables
-            this.currentPollingInterval = 1000; // Start with 1 second for more responsive polling during large batches
+            this.isBackgroundMode = isBackgroundMode;
+            this.currentPollingInterval = isBackgroundMode ? 10000 : 1000; // Slower polling in background mode
             this.lastProcessedCount = -1;
             this.lastProgressTimestamp = Date.now();
             this.noProgressCount = 0;
-            this.maxNoProgressBeforeSlow = 15; // After 15 polls with no progress (15 seconds), slow down
-            this.maxNoProgressBeforeStop = 300; // After 300 polls with no progress (5 minutes at 1s intervals), stop polling
+            this.maxNoProgressBeforeSlow = isBackgroundMode ? 60 : 15; // More patient in background mode
+            this.maxNoProgressBeforeStop = isBackgroundMode ? 720 : 300; // Much more patient in background mode (2 hours vs 5 minutes)
             this.completeDetectedCount = 0;
             this.maxCompletePolls = 2; // Continue polling for 2 more polls after detecting complete
             var totalZeroCount = 0;
-            this.maxTotalZeroPolls = 20; // Stop polling after 20 polls with total=0 (20 seconds)
+            this.maxTotalZeroPolls = isBackgroundMode ? 60 : 20; // More patient for total=0 in background mode
             var isStartingNewImport = true;
             var hasSeenImportRunning = false;
             var lastLogTime = 0; // Track when we last logged to reduce log spam
@@ -521,6 +529,15 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
                         // Update our last modified timestamp
                         lastModifiedTimestamp = serverLastModified;
+
+                        // Check if we need to switch from background to active polling mode
+                        var importJustStarted = !hasSeenImportRunning && (currentProcessed > 0 || (currentTotal > 0 && !statusData.complete));
+                        if (this.isBackgroundMode && importJustStarted) {
+                            console.log('[PUNTWORK] Import detected in background mode, switching to active polling');
+                            this.switchToActivePolling();
+                            hasSeenImportRunning = true;
+                            isStartingNewImport = false;
+                        }
 
                         // Check if total is still 0 (import hasn't started)
                         // Be more tolerant in the first few polls after starting an import
@@ -638,6 +655,11 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                                 $('#cancel-import').show();
                                 $('#reset-import').show();
                                 $('#status-message').text('Import in progress...');
+                                
+                                // Determine import type for display
+                                var importType = 'scheduled'; // Default to scheduled for background detections
+                                $('#import-type-indicator').show();
+                                $('#import-type-text').text(importType.charAt(0).toUpperCase() + importType.slice(1) + ' import is currently running');
                             }
                             
                             if (timeSinceLastLog > 10000 || currentProcessed !== JobImportEvents.lastProcessedCount) {
@@ -737,6 +759,18 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             // Update interval and restart with the stored polling function
             JobImportEvents.currentPollingInterval = newInterval;
             JobImportEvents.statusPollingInterval = setInterval(JobImportEvents.pollStatus, JobImportEvents.currentPollingInterval);
+        },
+
+        /**
+         * Switch from background polling mode to active polling mode
+         */
+        switchToActivePolling: function() {
+            console.log('[PUNTWORK] Switching from background to active polling mode');
+            this.isBackgroundMode = false;
+            this.maxNoProgressBeforeSlow = 15; // Reset to active mode values
+            this.maxNoProgressBeforeStop = 300;
+            this.maxTotalZeroPolls = 20;
+            this.adjustPollingInterval(1000); // Switch to fast polling
         },
 
         /**
