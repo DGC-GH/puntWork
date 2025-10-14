@@ -14,12 +14,180 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-require_once __DIR__ . '/../utilities/options-utilities.php';
-
 /**
- * Import finalization and status management
- * Handles completion of import batches and status updates
+ * Validate feed integrity before performing cleanup operations
+ *
+ * @param string $json_path Path to the feed file
+ * @return array Validation result with 'valid' boolean and 'errors' array
  */
+function validate_feed_integrity($json_path) {
+    $validation_result = [
+        'valid' => true,
+        'errors' => [],
+        'warnings' => [],
+        'stats' => []
+    ];
+
+    PuntWorkLogger::info('Starting feed integrity validation', PuntWorkLogger::CONTEXT_BATCH, [
+        'feed_path' => $json_path
+    ]);
+
+    // 1. Check if file exists and is readable
+    if (!file_exists($json_path)) {
+        $validation_result['valid'] = false;
+        $validation_result['errors'][] = 'Feed file does not exist';
+        return $validation_result;
+    }
+
+    if (!is_readable($json_path)) {
+        $validation_result['valid'] = false;
+        $validation_result['errors'][] = 'Feed file is not readable';
+        return $validation_result;
+    }
+
+    // 2. Check file size and modification time
+    $file_size = filesize($json_path);
+    $file_modified = filemtime($json_path);
+    $file_age_hours = (time() - $file_modified) / 3600;
+
+    $validation_result['stats']['file_size_bytes'] = $file_size;
+    $validation_result['stats']['file_modified'] = date('Y-m-d H:i:s', $file_modified);
+    $validation_result['stats']['file_age_hours'] = $file_age_hours;
+
+    // Warn if file is very old (more than 24 hours)
+    if ($file_age_hours > 24) {
+        $validation_result['warnings'][] = sprintf('Feed file is %.1f hours old - may be stale', $file_age_hours);
+    }
+
+    // Check if file is suspiciously small (less than 1KB)
+    if ($file_size < 1024) {
+        $validation_result['warnings'][] = 'Feed file is very small - may be incomplete';
+    }
+
+    // 3. Validate JSONL format and content
+    $handle = fopen($json_path, 'r');
+    if (!$handle) {
+        $validation_result['valid'] = false;
+        $validation_result['errors'][] = 'Cannot open feed file for reading';
+        return $validation_result;
+    }
+
+    $line_count = 0;
+    $valid_entries = 0;
+    $invalid_entries = 0;
+    $guids = [];
+    $duplicate_guids = [];
+    $missing_guids = 0;
+    $sample_entries = [];
+
+    // Sample first 100 lines for validation
+    $max_sample_lines = 100;
+    $sampled_lines = 0;
+
+    while (($line = fgets($handle)) !== false && $sampled_lines < $max_sample_lines) {
+        $line_count++;
+        $line = trim($line);
+
+        if (empty($line)) {
+            continue; // Skip empty lines
+        }
+
+        $sampled_lines++;
+
+        // Try to decode JSON
+        $entry = json_decode($line, true);
+        if ($entry === null) {
+            $invalid_entries++;
+            continue;
+        }
+
+        $valid_entries++;
+
+        // Check for required GUID field
+        if (!isset($entry['guid']) || empty($entry['guid'])) {
+            $missing_guids++;
+            continue;
+        }
+
+        // Check for duplicate GUIDs
+        $guid = $entry['guid'];
+        if (isset($guids[$guid])) {
+            if (!isset($duplicate_guids[$guid])) {
+                $duplicate_guids[$guid] = 1;
+            }
+            $duplicate_guids[$guid]++;
+        } else {
+            $guids[$guid] = true;
+        }
+
+        // Store sample entries for analysis
+        if (count($sample_entries) < 3) {
+            $sample_entries[] = [
+                'guid' => $guid,
+                'has_title' => isset($entry['title']) && !empty($entry['title']),
+                'has_description' => isset($entry['description']) && !empty($entry['description']),
+                'field_count' => count($entry)
+            ];
+        }
+    }
+
+    fclose($handle);
+
+    $validation_result['stats']['total_lines'] = $line_count;
+    $validation_result['stats']['sampled_lines'] = $sampled_lines;
+    $validation_result['stats']['valid_entries'] = $valid_entries;
+    $validation_result['stats']['invalid_entries'] = $invalid_entries;
+    $validation_result['stats']['unique_guids'] = count($guids);
+    $validation_result['stats']['duplicate_guids'] = count($duplicate_guids);
+    $validation_result['stats']['missing_guids'] = $missing_guids;
+    $validation_result['stats']['sample_entries'] = $sample_entries;
+
+    // 4. Validation checks
+    if ($valid_entries === 0) {
+        $validation_result['valid'] = false;
+        $validation_result['errors'][] = 'No valid JSON entries found in feed';
+    }
+
+    if ($missing_guids > 0) {
+        $validation_result['valid'] = false;
+        $validation_result['errors'][] = sprintf('%d entries missing required GUID field', $missing_guids);
+    }
+
+    if (count($duplicate_guids) > 0) {
+        $validation_result['warnings'][] = sprintf('%d duplicate GUIDs found', count($duplicate_guids));
+        // Don't fail validation for duplicates, just warn
+    }
+
+    // Check for reasonable number of entries (at least 10 for a valid feed)
+    if ($valid_entries < 10) {
+        $validation_result['warnings'][] = sprintf('Feed contains only %d valid entries - may be incomplete', $valid_entries);
+    }
+
+    // Check if invalid entries exceed 10% of total
+    $invalid_percentage = $line_count > 0 ? ($invalid_entries / $line_count) * 100 : 0;
+    if ($invalid_percentage > 10) {
+        $validation_result['valid'] = false;
+        $validation_result['errors'][] = sprintf('%.1f%% of feed entries are invalid JSON', $invalid_percentage);
+    }
+
+    // 5. Log validation results
+    if ($validation_result['valid']) {
+        PuntWorkLogger::info('Feed integrity validation passed', PuntWorkLogger::CONTEXT_BATCH, [
+            'valid_entries' => $valid_entries,
+            'unique_guids' => count($guids),
+            'warnings_count' => count($validation_result['warnings']),
+            'file_age_hours' => round($file_age_hours, 1)
+        ]);
+    } else {
+        PuntWorkLogger::error('Feed integrity validation failed', PuntWorkLogger::CONTEXT_BATCH, [
+            'errors' => $validation_result['errors'],
+            'warnings' => $validation_result['warnings'],
+            'stats' => $validation_result['stats']
+        ]);
+    }
+
+    return $validation_result;
+}
 
 /**
  * Finalize batch import and update status.
@@ -167,6 +335,51 @@ function cleanup_old_job_posts($import_start_time) {
             'logs' => $logs
         ];
     }
+
+    // FEED INTEGRITY VALIDATION: Ensure feed is valid before proceeding with cleanup
+    PuntWorkLogger::info('Validating feed integrity before cleanup operations', PuntWorkLogger::CONTEXT_BATCH, [
+        'feed_path' => $json_path
+    ]);
+
+    $feed_validation = validate_feed_integrity($json_path);
+
+    if (!$feed_validation['valid']) {
+        PuntWorkLogger::error('Feed integrity validation failed - cannot proceed with cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+            'validation_errors' => $feed_validation['errors'],
+            'validation_warnings' => $feed_validation['warnings']
+        ]);
+
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ERROR: Feed integrity validation failed - skipping cleanup to prevent data loss';
+        foreach ($feed_validation['errors'] as $error) {
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] VALIDATION ERROR: ' . $error;
+        }
+        foreach ($feed_validation['warnings'] as $warning) {
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] VALIDATION WARNING: ' . $warning;
+        }
+
+        return [
+            'deleted_count' => 0,
+            'logs' => $logs
+        ];
+    }
+
+    // Log validation warnings even if validation passed
+    if (!empty($feed_validation['warnings'])) {
+        foreach ($feed_validation['warnings'] as $warning) {
+            PuntWorkLogger::warning('Feed validation warning during cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+                'warning' => $warning,
+                'feed_stats' => $feed_validation['stats']
+            ]);
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] VALIDATION WARNING: ' . $warning;
+        }
+    }
+
+    PuntWorkLogger::info('Feed integrity validation passed - proceeding with cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+        'valid_entries' => $feed_validation['stats']['valid_entries'] ?? 0,
+        'unique_guids' => $feed_validation['stats']['unique_guids'] ?? 0
+    ]);
+
+    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Feed integrity validation passed - proceeding with cleanup';
 
     // MEMORY-SAFE: Load GUIDs in chunks to prevent memory exhaustion
     $guid_chunk_size = 1000;
