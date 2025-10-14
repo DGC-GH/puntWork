@@ -115,6 +115,13 @@ function job_import_purge_ajax() {
                 'total_deleted' => $final_progress['total_deleted'],
                 'time_elapsed' => $final_progress['time_elapsed'],
                 'logs' => array_slice($final_progress['logs'], -50)
+            ], [
+                'message' => $message,
+                'complete' => true,
+                'total_processed' => $final_progress['total_processed'],
+                'total_deleted' => $final_progress['total_deleted'],
+                'time_elapsed' => $final_progress['time_elapsed'],
+                'logs_count' => count($final_progress['logs'])
             ]);
         }
 
@@ -170,6 +177,15 @@ function job_import_purge_ajax() {
             'total_deleted' => $new_deleted,
             'progress_percentage' => $progress_percentage,
             'logs' => array_slice($current_progress['logs'], -20)
+        ], [
+            'message' => "Batch processed: {$new_processed}/{$current_progress['total_jobs']} jobs ({$progress_percentage}%), deleted {$deleted_count} old jobs this batch",
+            'complete' => false,
+            'next_offset' => $new_offset,
+            'batch_size' => $batch_size,
+            'total_processed' => $new_processed,
+            'total_deleted' => $new_deleted,
+            'progress_percentage' => $progress_percentage,
+            'logs_count' => count($current_progress['logs'])
         ]);
 
     } catch (\Exception $e) {
