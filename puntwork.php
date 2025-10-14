@@ -18,6 +18,9 @@ define( 'PUNTWORK_PATH', plugin_dir_path( __FILE__ ) );
 define( 'PUNTWORK_URL', plugin_dir_url( __FILE__ ) );
 define( 'PUNTWORK_LOGS', PUNTWORK_PATH . 'logs/import.log' );
 
+// Debug configuration - set to true to enable detailed job update logging
+define( 'PUNTWORK_DEBUG_JOB_UPDATES', false );
+
 // Activation hook
 register_activation_hook( __FILE__, __NAMESPACE__ . '\\job_import_activate' );
 function job_import_activate() {
