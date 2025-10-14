@@ -81,16 +81,19 @@ function import_memory_exceeded() {
  * @return bool True if processing should continue
  */
 function should_continue_batch_processing() {
+    error_log('[PUNTWORK] Checking import time limit...');
     if (import_time_exceeded()) {
         error_log('[PUNTWORK] Import time limit exceeded - pausing batch processing');
         return false;
     }
 
+    error_log('[PUNTWORK] Checking import memory limit...');
     if (import_memory_exceeded()) {
         error_log('[PUNTWORK] Import memory limit exceeded - pausing batch processing');
         return false;
     }
 
+    error_log('[PUNTWORK] Continue processing checks passed');
     return true;
 }
 
@@ -139,18 +142,24 @@ if (!function_exists('import_all_jobs_from_json')) {
 
         // Only reset status if not preserving existing status
         if (!$preserve_status) {
+            error_log('[PUNTWORK] Resetting import progress...');
             // Reset import progress for fresh start
             set_import_progress(0);
+            error_log('[PUNTWORK] Resetting processed GUIDs...');
             set_processed_guids([]);
+            error_log('[PUNTWORK] Deleting import status...');
             delete_import_status();
         }
 
         // Initialize import status for UI tracking (only if not preserving)
         $initial_status = [];
         if (!$preserve_status) {
+            error_log('[PUNTWORK] Initializing import status...');
             $initial_status = initialize_import_status(0, 'Scheduled import started - preparing feeds...', $start_time);
+            error_log('[PUNTWORK] Setting import status...');
             set_import_status($initial_status);
         } else {
+            error_log('[PUNTWORK] Preserving existing status...');
             // Update existing status to indicate import is resuming (don't reset start_time to preserve elapsed time)
             $existing_status = get_import_status([]);
             $existing_status['logs'][] = 'Scheduled import resumed - processing batches...';
@@ -160,9 +169,13 @@ if (!function_exists('import_all_jobs_from_json')) {
         }
 
         // Store import start time for timeout checking
+        error_log('[PUNTWORK] Setting import start time...');
         set_import_start_time($start_time);
 
+        error_log('[PUNTWORK] Entering main processing loop...');
+
         while (true) {
+            error_log('[PUNTWORK] While loop iteration - checking continue processing...');
             // Check if we should continue processing (time/memory limits)
             if (!should_continue_batch_processing()) {
                 // Pause processing and schedule continuation
