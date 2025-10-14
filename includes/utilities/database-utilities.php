@@ -28,6 +28,10 @@ function create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, &$log
         $error_message = 'item must be an array, got: ' . gettype($item) . ' with value: ' . substr((string)$item, 0, 100);
         return new \WP_Error('invalid_item', $error_message);
     }
+    if (!is_array($zero_empty_fields)) {
+        $error_message = 'zero_empty_fields must be an array, got: ' . gettype($zero_empty_fields);
+        return new \WP_Error('invalid_zero_empty_fields', $error_message);
+    }
 
     $guid = $item['guid'] ?? '';
     $xml_title = $item['title'] ?? '';
@@ -157,6 +161,10 @@ function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$log
     if (!is_array($item)) {
         $error_message = 'item must be an array, got: ' . gettype($item) . ' with value: ' . substr((string)$item, 0, 100);
         return new \WP_Error('invalid_item', $error_message);
+    }
+    if (!is_array($zero_empty_fields)) {
+        $error_message = 'zero_empty_fields must be an array, got: ' . gettype($zero_empty_fields);
+        return new \WP_Error('invalid_zero_empty_fields', $error_message);
     }
 
     $guid = $item['guid'] ?? '';

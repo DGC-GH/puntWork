@@ -118,7 +118,7 @@ class PuntWorkLogger {
         error_log($formattedMessage);
 
         // Also add to admin logs if in admin context
-        if (is_admin() && isset($GLOBALS['import_logs'])) {
+        if (is_admin() && isset($GLOBALS['import_logs']) && is_array($GLOBALS['import_logs'])) {
             $timestamp = date('d-M-Y H:i:s T');
             $adminMessage = "[{$timestamp}] {$formattedMessage}";
             $GLOBALS['import_logs'][] = $adminMessage;
