@@ -99,7 +99,7 @@ function run_job_import_batch_ajax() {
         // Initialize import status for immediate UI feedback
         $initial_status = initialize_import_status(0, 'Manual import started - preparing feeds...');
         set_import_status($initial_status);
-        error_log('[PUNTWORK] Initialized import status for manual run: ' . json_encode($initial_status));
+        error_log('[PUNTWORK] Initialized import status for manual run: total=0, complete=false');
 
         // Clear any previous cancellation before starting
         delete_transient('import_cancel');
@@ -307,10 +307,20 @@ function get_job_import_status_ajax() {
 
         // Only log AJAX response when import has meaningful progress to reduce log spam
         if ($total > 0 || $processed > 0 || $complete === true) {
-            // Create sanitized log data that excludes the full logs array to reduce debug.log spam
-            $sanitized_log_data = $progress;
-            $sanitized_log_data['logs_count'] = count($progress['logs'] ?? []);
-            $sanitized_log_data['last_log_entry'] = end($progress['logs'] ?? []);
+            // Create highly condensed log data to prevent extremely long log lines
+            $sanitized_log_data = [
+                'total' => $progress['total'] ?? 0,
+                'processed' => $progress['processed'] ?? 0,
+                'published' => $progress['published'] ?? 0,
+                'updated' => $progress['updated'] ?? 0,
+                'skipped' => $progress['skipped'] ?? 0,
+                'duplicates_drafted' => $progress['duplicates_drafted'] ?? 0,
+                'complete' => $progress['complete'] ?? false,
+                'time_elapsed' => round($progress['time_elapsed'] ?? 0, 2),
+                'batch_count' => $progress['batch_count'] ?? 0,
+                'logs_count' => count($progress['logs'] ?? []),
+                'last_log_entry' => end($progress['logs'] ?? []) ?: null
+            ];
             send_ajax_success('get_job_import_status', $progress, $sanitized_log_data);
         } else {
             // For initial polling before import starts, just send response without logging
