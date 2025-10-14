@@ -456,13 +456,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             this.consecutiveFastUpdates = 0; // Track consecutive fast progress updates
 
             // Show the progress UI immediately when starting polling
-            console.log('[PUNTWORK] Showing import UI for import');
-            JobImportUI.showImportUI();
-            $('#start-import').hide();
-            $('#resume-import').hide();
-            $('#cancel-import').show();
-            $('#reset-import').show();
-            $('#status-message').text('Import in progress...');
+            console.log('[PUNTWORK] Starting smart status polling (initial: 1000ms)');
 
             console.log('[PUNTWORK] Starting smart status polling (initial: 1000ms)');
 
@@ -748,7 +742,17 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         var isCountingPhase = currentTotal === 0 && currentProcessed > 0 && !statusData.complete;
 
                         if (currentTotal > 0 || isCountingPhase) {
-                            // Only update UI if we have meaningful progress data or are in counting phase
+                            // Only show UI and update if we have meaningful progress data or are in counting phase
+                            if (!hasSeenImportRunning) {
+                                console.log('[PUNTWORK] Showing import UI for detected import');
+                                JobImportUI.showImportUI();
+                                $('#start-import').hide();
+                                $('#resume-import').hide();
+                                $('#cancel-import').show();
+                                $('#reset-import').show();
+                                $('#status-message').text('Import in progress...');
+                            }
+                            
                             if (timeSinceLastLog > 10000 || currentProcessed !== JobImportEvents.lastProcessedCount) {
                                 var progressText = currentTotal > 0 ?
                                     'total: ' + currentTotal + ', processed: ' + currentProcessed + ', percent: ' + Math.round((currentProcessed / currentTotal) * 100) :
