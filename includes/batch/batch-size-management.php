@@ -166,31 +166,78 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
         if (!$time_adjusted && $has_previous_metrics && !$is_first_batch && $batch_size > 0) {
             $time_per_item = $current_batch_time / $batch_size;
 
-            // Good performance threshold (2.0 sec/item or better)
-            if ($time_per_item <= 2.0) { // Good performance
-                // Modestly increase batch size for good performance
-                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.15));
+            // Enhanced performance thresholds for more aggressive optimization
+            if ($time_per_item <= 0.5) { // Excellent performance - aggressive increase
+                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.5));
+                if ($new_size > $batch_size) {
+                    $batch_size = $new_size;
+                    PuntWorkLogger::debug('Efficiency-based increase: excellent performance (aggressive)', PuntWorkLogger::CONTEXT_BATCH, [
+                        'time_per_item' => $time_per_item,
+                        'threshold' => 0.5,
+                        'old_batch_size' => $old_batch_size,
+                        'new_batch_size' => $batch_size,
+                        'growth_factor' => 1.5,
+                        'performance_rating' => 'excellent'
+                    ]);
+                }
+            } elseif ($time_per_item <= 1.0) { // Very good performance - moderate increase
+                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.3));
+                if ($new_size > $batch_size) {
+                    $batch_size = $new_size;
+                    PuntWorkLogger::debug('Efficiency-based increase: very good performance', PuntWorkLogger::CONTEXT_BATCH, [
+                        'time_per_item' => $time_per_item,
+                        'threshold' => 1.0,
+                        'old_batch_size' => $old_batch_size,
+                        'new_batch_size' => $batch_size,
+                        'growth_factor' => 1.3,
+                        'performance_rating' => 'very_good'
+                    ]);
+                }
+            } elseif ($time_per_item <= 1.5) { // Good performance - slight increase
+                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.2));
                 if ($new_size > $batch_size) {
                     $batch_size = $new_size;
                     PuntWorkLogger::debug('Efficiency-based increase: good performance', PuntWorkLogger::CONTEXT_BATCH, [
                         'time_per_item' => $time_per_item,
+                        'threshold' => 1.5,
+                        'old_batch_size' => $old_batch_size,
+                        'new_batch_size' => $batch_size,
+                        'growth_factor' => 1.2,
+                        'performance_rating' => 'good'
+                    ]);
+                }
+            } elseif ($time_per_item <= 2.0) { // Moderate performance - minimal increase
+                $new_size = min(MAX_BATCH_SIZE, floor($batch_size * 1.1));
+                if ($new_size > $batch_size) {
+                    $batch_size = $new_size;
+                    PuntWorkLogger::debug('Efficiency-based increase: moderate performance', PuntWorkLogger::CONTEXT_BATCH, [
+                        'time_per_item' => $time_per_item,
                         'threshold' => 2.0,
                         'old_batch_size' => $old_batch_size,
                         'new_batch_size' => $batch_size,
-                        'growth_factor' => 1.15
+                        'growth_factor' => 1.1,
+                        'performance_rating' => 'moderate'
                     ]);
                 }
-            } elseif ($time_per_item > 4.0) { // Poor performance - reduce
-                $batch_size = max(DEFAULT_BATCH_SIZE, (int)($batch_size * 0.9)); // Conservative reduction
-                PuntWorkLogger::info('Efficiency-based batch size reduction applied', PuntWorkLogger::CONTEXT_BATCH, [
+            } elseif ($time_per_item > 3.0 && $time_per_item <= 4.0) { // Poor performance - slight reduction
+                $batch_size = max(DEFAULT_BATCH_SIZE, (int)($batch_size * 0.95));
+                PuntWorkLogger::info('Efficiency-based batch size reduction: poor performance', PuntWorkLogger::CONTEXT_BATCH, [
+                    'time_per_item' => $time_per_item,
+                    'threshold' => 3.0,
+                    'old_batch_size' => $old_batch_size,
+                    'new_batch_size' => $batch_size,
+                    'reduction_factor' => 0.95,
+                    'performance_rating' => 'poor'
+                ]);
+            } elseif ($time_per_item > 4.0) { // Very poor performance - moderate reduction
+                $batch_size = max(DEFAULT_BATCH_SIZE, (int)($batch_size * 0.85));
+                PuntWorkLogger::info('Efficiency-based batch size reduction: very poor performance', PuntWorkLogger::CONTEXT_BATCH, [
                     'time_per_item' => $time_per_item,
                     'threshold' => 4.0,
                     'old_batch_size' => $old_batch_size,
                     'new_batch_size' => $batch_size,
-                    'memory_ratio' => $last_memory_ratio,
-                    'memory_bytes' => $last_memory_bytes,
-                    'current_batch_time' => $current_batch_time,
-                    'batch_size' => $batch_size
+                    'reduction_factor' => 0.85,
+                    'performance_rating' => 'very_poor'
                 ]);
             }
         }

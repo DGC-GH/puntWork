@@ -242,6 +242,10 @@ if (!function_exists('import_all_jobs_from_json')) {
 
             $batch_start = (int) get_import_progress(0);
 
+            // Get current batch size before processing this batch
+            $current_batch_size = get_batch_size();
+            error_log(sprintf('[PUNTWORK] Current batch size for batch %d: %d', $batch_count + 1, $current_batch_size));
+
             // Prepare setup for this batch
             $setup = prepare_import_setup($batch_start);
             if (is_wp_error($setup)) {
@@ -319,6 +323,45 @@ if (!function_exists('import_all_jobs_from_json')) {
                 $all_logs = array_merge($all_logs, $result['logs']);
             }
 
+            // Calculate and log time per item for performance optimization
+            $batch_processed_count = $result['batch_processed'] ?? $result['processed'] ?? 0;
+            $batch_time = $result['batch_time'] ?? 0;
+            $time_per_item = $batch_processed_count > 0 ? $batch_time / $batch_processed_count : 0;
+            
+            error_log(sprintf('[PUNTWORK] ===== BATCH %d PERFORMANCE =====', $batch_count));
+            error_log(sprintf('[PUNTWORK] Batch %d completed in %.3f seconds', $batch_count, $batch_time));
+            error_log(sprintf('[PUNTWORK] Processed %d items in batch %d', $batch_processed_count, $batch_count));
+            error_log(sprintf('[PUNTWORK] Time per item: %.3f seconds', $time_per_item));
+            error_log(sprintf('[PUNTWORK] Items per second: %.2f', $time_per_item > 0 ? 1 / $time_per_item : 0));
+            
+            // Log performance classification
+            if ($time_per_item <= 1.0) {
+                error_log('[PUNTWORK] Performance: EXCELLENT (≤1.0 sec/item)');
+            } elseif ($time_per_item <= 2.0) {
+                error_log('[PUNTWORK] Performance: GOOD (1.0-2.0 sec/item)');
+            } elseif ($time_per_item <= 3.0) {
+                error_log('[PUNTWORK] Performance: MODERATE (2.0-3.0 sec/item)');
+            } elseif ($time_per_item <= 5.0) {
+                error_log('[PUNTWORK] Performance: SLOW (3.0-5.0 sec/item)');
+            } else {
+                error_log('[PUNTWORK] Performance: VERY SLOW (>5.0 sec/item)');
+            }
+            
+            // Store time per item for batch size optimization
+            PuntWorkLogger::info('Batch performance metrics', PuntWorkLogger::CONTEXT_BATCH, [
+                'batch_number' => $batch_count,
+                'batch_time' => $batch_time,
+                'items_processed' => $batch_processed_count,
+                'time_per_item' => $time_per_item,
+                'items_per_second' => $time_per_item > 0 ? 1 / $time_per_item : 0,
+                'performance_rating' => $time_per_item <= 1.0 ? 'excellent' : 
+                                       ($time_per_item <= 2.0 ? 'good' : 
+                                       ($time_per_item <= 3.0 ? 'moderate' : 
+                                       ($time_per_item <= 5.0 ? 'slow' : 'very_slow'))),
+                'batch_size_used' => $result['batch_size'] ?? get_batch_size(),
+                'memory_peak_mb' => memory_get_peak_usage(true) / 1024 / 1024
+            ]);
+
             // Update import status for UI tracking
             $current_status = get_import_status($initial_status);
             $current_status['processed'] = $total_processed;
@@ -339,6 +382,16 @@ if (!function_exists('import_all_jobs_from_json')) {
                 break;
             }
 
+            // Check if batch size changed after this batch and log it
+            $new_batch_size = get_batch_size();
+            if ($new_batch_size != $current_batch_size) {
+                error_log(sprintf('[PUNTWORK] Batch size changed from %d to %d after batch %d', 
+                    $current_batch_size, $new_batch_size, $batch_count));
+                error_log(sprintf('[PUNTWORK] Batch size change: %+.1f (%+.1f%%)', 
+                    $new_batch_size - $current_batch_size, 
+                    $current_batch_size > 0 ? (($new_batch_size - $current_batch_size) / $current_batch_size) * 100 : 0));
+            }
+
             // Safety check to prevent infinite loops
             if ($batch_count > 1000) {
                 $error_msg = 'Import aborted - too many batches processed (possible infinite loop)';
@@ -357,6 +410,45 @@ if (!function_exists('import_all_jobs_from_json')) {
 
         $end_time = microtime(true);
         $total_duration = $end_time - $start_time;
+
+        // Calculate overall performance metrics
+        $overall_time_per_item = $total_processed > 0 ? $total_duration / $total_processed : 0;
+        $overall_items_per_second = $overall_time_per_item > 0 ? 1 / $overall_time_per_item : 0;
+        
+        error_log('[PUNTWORK] ===== IMPORT PERFORMANCE SUMMARY =====');
+        error_log(sprintf('[PUNTWORK] Total import time: %.2f seconds', $total_duration));
+        error_log(sprintf('[PUNTWORK] Total items processed: %d', $total_processed));
+        error_log(sprintf('[PUNTWORK] Overall time per item: %.3f seconds', $overall_time_per_item));
+        error_log(sprintf('[PUNTWORK] Overall items per second: %.2f', $overall_items_per_second));
+        error_log(sprintf('[PUNTWORK] Total batches processed: %d', $batch_count));
+        error_log(sprintf('[PUNTWORK] Average batch size: %.1f', $batch_count > 0 ? $total_processed / $batch_count : 0));
+        
+        // Log performance classification
+        if ($overall_time_per_item <= 1.0) {
+            error_log('[PUNTWORK] Overall Performance: EXCELLENT (≤1.0 sec/item)');
+        } elseif ($overall_time_per_item <= 2.0) {
+            error_log('[PUNTWORK] Overall Performance: GOOD (1.0-2.0 sec/item)');
+        } elseif ($overall_time_per_item <= 3.0) {
+            error_log('[PUNTWORK] Overall Performance: MODERATE (2.0-3.0 sec/item)');
+        } elseif ($overall_time_per_item <= 5.0) {
+            error_log('[PUNTWORK] Overall Performance: SLOW (3.0-5.0 sec/item)');
+        } else {
+            error_log('[PUNTWORK] Overall Performance: VERY SLOW (>5.0 sec/item)');
+        }
+        
+        PuntWorkLogger::info('Import performance summary', PuntWorkLogger::CONTEXT_IMPORT, [
+            'total_duration' => $total_duration,
+            'total_items_processed' => $total_processed,
+            'overall_time_per_item' => $overall_time_per_item,
+            'overall_items_per_second' => $overall_items_per_second,
+            'total_batches' => $batch_count,
+            'average_batch_size' => $batch_count > 0 ? $total_processed / $batch_count : 0,
+            'performance_rating' => $overall_time_per_item <= 1.0 ? 'excellent' : 
+                                   ($overall_time_per_item <= 2.0 ? 'good' : 
+                                   ($overall_time_per_item <= 3.0 ? 'moderate' : 
+                                   ($overall_time_per_item <= 5.0 ? 'slow' : 'very_slow'))),
+            'final_memory_peak_mb' => memory_get_peak_usage(true) / 1024 / 1024
+        ]);
 
         // Clean up old job posts that are no longer in the feed BEFORE creating final result
         // Add timeout protection for cleanup phase
