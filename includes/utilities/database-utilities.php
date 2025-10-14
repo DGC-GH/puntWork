@@ -390,6 +390,16 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
             'guid' => $guid
         ]);
 
+        if (!is_array($logs)) {
+            PuntWorkLogger::error('logs is not array in update_job_post, resetting', PuntWorkLogger::CONTEXT_BATCH, [
+                'post_id' => $post_id,
+                'guid' => $guid,
+                'logs_type' => gettype($logs),
+                'logs_value' => is_scalar($logs) ? substr((string)$logs, 0, 100) : 'non-scalar'
+            ]);
+            $logs = [];
+        }
+
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Updated ID: ' . $post_id . ' GUID: ' . $guid;
 
         PuntWorkLogger::debug('Added to logs', PuntWorkLogger::CONTEXT_BATCH, [
