@@ -229,7 +229,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     // Check if import appears to be currently running (updated within last 5 minutes)
                     var isRecentlyActive = timeSinceLastUpdate < 300; // 5 minutes
                     
-                    if (isRecentlyActive && statusData.processed > 0) {
+                    if (isRecentlyActive) {
                         // Import appears to be currently running - show progress UI with cancel and reset
                         $('#start-import').hide();
                         $('#resume-import').hide();
