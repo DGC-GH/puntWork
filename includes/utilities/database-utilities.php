@@ -153,6 +153,16 @@ function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$log
     $xml_updated = $item['updated'] ?? null;
     $post_modified = $xml_updated ?: current_time('mysql');
 
+    // Validate inputs at the very beginning before any array access
+    if (!is_array($acf_fields)) {
+        $error_message = 'acf_fields must be an array, got: ' . gettype($acf_fields);
+        return new \WP_Error('invalid_acf_fields', $error_message);
+    }
+    if (!is_array($item)) {
+        $error_message = 'item must be an array, got: ' . gettype($item) . ' with value: ' . substr((string)$item, 0, 100);
+        return new \WP_Error('invalid_item', $error_message);
+    }
+
     PuntWorkLogger::debug('Starting update_job_post', PuntWorkLogger::CONTEXT_BATCH, [
         'post_id' => $post_id,
         'guid' => $guid,
@@ -229,14 +239,6 @@ function update_job_post($post_id, $item, $acf_fields, $zero_empty_fields, &$log
             'post_id' => $post_id,
             'guid' => $guid
         ]);
-
-        // Validate inputs before ACF field processing
-        if (!is_array($acf_fields)) {
-            throw new \Exception('acf_fields must be an array, got: ' . gettype($acf_fields));
-        }
-        if (!is_array($item)) {
-            throw new \Exception('item must be an array, got: ' . gettype($item) . ' with value: ' . substr((string)$item, 0, 100));
-        }
 
         // Update ACF fields
         PuntWorkLogger::debug('Starting ACF field updates', PuntWorkLogger::CONTEXT_BATCH, [
