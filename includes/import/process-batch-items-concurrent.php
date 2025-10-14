@@ -19,7 +19,212 @@ require_once plugin_dir_path(__FILE__) . '../utilities/retry-utility.php';
 require_once plugin_dir_path(__FILE__) . '../utilities/database-utilities.php';
 
 /**
- * Process batch items concurrently using Action Scheduler
+ * Validate Action Scheduler health and capability for concurrent processing
+ *
+ * @return array Validation result with status and details
+ */
+function validate_action_scheduler_health() {
+    $validation = [
+        'healthy' => false,
+        'issues' => [],
+        'recommendations' => []
+    ];
+
+    // Check 1: Action Scheduler function availability
+    if (!function_exists('as_schedule_single_action')) {
+        $validation['issues'][] = 'Action Scheduler functions not available';
+        $validation['recommendations'][] = 'Install and activate Action Scheduler plugin';
+        return $validation;
+    }
+
+    // Check 2: Action Scheduler store availability
+    try {
+        $store = \ActionScheduler::store();
+        if (!$store) {
+            $validation['issues'][] = 'Action Scheduler store not available';
+            $validation['recommendations'][] = 'Check Action Scheduler database tables';
+            return $validation;
+        }
+    } catch (\Exception $e) {
+        $validation['issues'][] = 'Action Scheduler store error: ' . $e->getMessage();
+        $validation['recommendations'][] = 'Check Action Scheduler configuration';
+        return $validation;
+    }
+
+    // Check 3: Queue runner status
+    try {
+        $runner = \ActionScheduler::runner();
+        if (!$runner) {
+            $validation['issues'][] = 'Action Scheduler runner not available';
+            $validation['recommendations'][] = 'Check Action Scheduler queue runner';
+            return $validation;
+        }
+    } catch (\Exception $e) {
+        $validation['issues'][] = 'Action Scheduler runner error: ' . $e->getMessage();
+        $validation['recommendations'][] = 'Check Action Scheduler queue runner configuration';
+        return $validation;
+    }
+
+    // Check 4: Test job scheduling and execution
+    try {
+        $test_action_id = as_schedule_single_action(
+            time() + 1, // Schedule 1 second from now
+            'puntwork_test_action_scheduler',
+            ['test_timestamp' => time()],
+            'puntwork-test'
+        );
+
+        if (!$test_action_id) {
+            $validation['issues'][] = 'Failed to schedule test action';
+            $validation['recommendations'][] = 'Check Action Scheduler permissions and database';
+            return $validation;
+        }
+
+        // Clean up test action
+        as_unschedule_action('puntwork_test_action_scheduler', ['test_timestamp' => time()], 'puntwork-test');
+
+    } catch (\Exception $e) {
+        $validation['issues'][] = 'Test action scheduling failed: ' . $e->getMessage();
+        $validation['recommendations'][] = 'Check Action Scheduler database and permissions';
+        return $validation;
+    }
+
+    // Check 5: Queue status and pending actions
+    try {
+        $pending_actions = $store->query_actions([
+            'status' => \ActionScheduler_Store::STATUS_PENDING,
+            'per_page' => 100
+        ]);
+
+        if (count($pending_actions) > 1000) {
+            $validation['issues'][] = 'Large number of pending actions (' . count($pending_actions) . ')';
+            $validation['recommendations'][] = 'Clear pending Action Scheduler queue or increase processing capacity';
+        }
+
+        // Check for stuck actions (older than 1 hour)
+        $stuck_actions = $store->query_actions([
+            'status' => \ActionScheduler_Store::STATUS_PENDING,
+            'date' => time() - HOUR_IN_SECONDS,
+            'per_page' => 10
+        ]);
+
+        if (!empty($stuck_actions)) {
+            $validation['issues'][] = 'Found stuck pending actions';
+            $validation['recommendations'][] = 'Check Action Scheduler processing and clear stuck actions';
+        }
+
+    } catch (\Exception $e) {
+        $validation['issues'][] = 'Queue status check failed: ' . $e->getMessage();
+        $validation['recommendations'][] = 'Check Action Scheduler database integrity';
+        return $validation;
+    }
+
+    $validation['healthy'] = true;
+    return $validation;
+}
+
+/**
+ * Monitor completion of concurrent Action Scheduler jobs
+ *
+ * @param array $action_ids Array of Action Scheduler action IDs to monitor
+ * @param int $timeout_seconds Maximum time to wait for completion
+ * @param int $check_interval_seconds How often to check completion status
+ * @return array Monitoring results
+ */
+function monitor_concurrent_job_completion($action_ids, $timeout_seconds = 300, $check_interval_seconds = 5) {
+    $start_time = time();
+    $completed_actions = [];
+    $failed_actions = [];
+    $pending_actions = $action_ids;
+
+    PuntWorkLogger::info('Starting concurrent job completion monitoring', PuntWorkLogger::CONTEXT_BATCH, [
+        'action_ids_count' => count($action_ids),
+        'timeout_seconds' => $timeout_seconds,
+        'check_interval_seconds' => $check_interval_seconds
+    ]);
+
+    while (!empty($pending_actions) && (time() - $start_time) < $timeout_seconds) {
+        $store = \ActionScheduler::store();
+        $current_pending = [];
+        $just_completed = [];
+
+        foreach ($pending_actions as $action_id) {
+            try {
+                $action = $store->fetch_action($action_id);
+                if (!$action) {
+                    PuntWorkLogger::warning('Action not found in store', PuntWorkLogger::CONTEXT_BATCH, [
+                        'action_id' => $action_id
+                    ]);
+                    $failed_actions[] = $action_id;
+                    continue;
+                }
+
+                $status = $action->get_status();
+                if (in_array($status, [\ActionScheduler_Store::STATUS_COMPLETE, \ActionScheduler_Store::STATUS_CANCELED])) {
+                    $completed_actions[] = $action_id;
+                    $just_completed[] = $action_id;
+                } elseif (in_array($status, [\ActionScheduler_Store::STATUS_FAILED, \ActionScheduler_Store::STATUS_CANCELED])) {
+                    $failed_actions[] = $action_id;
+                } else {
+                    $current_pending[] = $action_id;
+                }
+            } catch (\Exception $e) {
+                PuntWorkLogger::error('Error checking action status', PuntWorkLogger::CONTEXT_BATCH, [
+                    'action_id' => $action_id,
+                    'error' => $e->getMessage()
+                ]);
+                $failed_actions[] = $action_id;
+            }
+        }
+
+        $pending_actions = $current_pending;
+
+        if (!empty($just_completed)) {
+            PuntWorkLogger::debug('Concurrent jobs completed in this check', PuntWorkLogger::CONTEXT_BATCH, [
+                'completed_count' => count($just_completed),
+                'remaining_pending' => count($pending_actions),
+                'elapsed_seconds' => time() - $start_time
+            ]);
+        }
+
+        // Wait before next check if there are still pending actions
+        if (!empty($pending_actions)) {
+            sleep($check_interval_seconds);
+        }
+    }
+
+    $elapsed_time = time() - $start_time;
+    $success_rate = count($action_ids) > 0 ? count($completed_actions) / count($action_ids) : 0;
+
+    $result = [
+        'all_completed' => empty($pending_actions),
+        'completed_count' => count($completed_actions),
+        'failed_count' => count($failed_actions),
+        'pending_count' => count($pending_actions),
+        'total_count' => count($action_ids),
+        'success_rate' => $success_rate,
+        'elapsed_time' => $elapsed_time,
+        'timed_out' => $elapsed_time >= $timeout_seconds,
+        'completed_action_ids' => $completed_actions,
+        'failed_action_ids' => $failed_actions,
+        'pending_action_ids' => $pending_actions
+    ];
+
+    PuntWorkLogger::info('Concurrent job completion monitoring finished', PuntWorkLogger::CONTEXT_BATCH, [
+        'all_completed' => $result['all_completed'],
+        'completed_count' => $result['completed_count'],
+        'failed_count' => $result['failed_count'],
+        'pending_count' => $result['pending_count'],
+        'success_rate' => $result['success_rate'],
+        'elapsed_time' => $result['elapsed_time'],
+        'timed_out' => $result['timed_out']
+    ]);
+
+    return $result;
+}
+
+/**
+ * Process batch items concurrently with validation and monitoring
  *
  * @param array $batch_guids Array of GUIDs in batch
  * @param array $batch_items Array of batch items
@@ -40,15 +245,42 @@ require_once plugin_dir_path(__FILE__) . '../utilities/database-utilities.php';
 function process_batch_items_concurrent($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, &$logs, &$updated, &$published, &$skipped, &$processed_count) {
     $start_time = microtime(true);
 
-    PuntWorkLogger::info('Starting concurrent item processing', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Starting concurrent item processing with validation', PuntWorkLogger::CONTEXT_BATCH, [
         'batch_guids_count' => count($batch_guids),
         'batch_items_count' => count($batch_items),
         'concurrency_enabled' => true
     ]);
 
+    // VALIDATION: Check Action Scheduler health before proceeding
+    $health_check = validate_action_scheduler_health();
+    if (!$health_check['healthy']) {
+        PuntWorkLogger::warning('Action Scheduler health check failed, cannot use concurrent processing', PuntWorkLogger::CONTEXT_BATCH, [
+            'issues' => $health_check['issues'],
+            'recommendations' => $health_check['recommendations']
+        ]);
+
+        // Log the issues for debugging
+        foreach ($health_check['issues'] as $issue) {
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Action Scheduler Issue: ' . $issue;
+        }
+        foreach ($health_check['recommendations'] as $recommendation) {
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Recommendation: ' . $recommendation;
+        }
+
+        // Return error result to trigger fallback to sequential processing
+        return [
+            'success' => false,
+            'error' => 'Action Scheduler health check failed',
+            'issues' => $health_check['issues'],
+            'recommendations' => $health_check['recommendations'],
+            'fallback_to_sequential' => true
+        ];
+    }
+
     $user_id = get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : get_current_user_id();
 
     $action_ids = [];
+    $scheduling_errors = 0;
 
     // Schedule concurrent processing for each item in the batch
     foreach ($batch_guids as $guid) {
@@ -73,27 +305,86 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
                 'action_id' => $action_id
             ]);
         } else {
+            $scheduling_errors++;
             PuntWorkLogger::error('Failed to schedule concurrent item', PuntWorkLogger::CONTEXT_BATCH, [
-                'guid' => $guid
+                'guid' => $guid,
+                'scheduling_errors' => $scheduling_errors
             ]);
         }
     }
 
-    // Return immediately with async processing info
-    PuntWorkLogger::info('Concurrent item processing scheduled asynchronously', PuntWorkLogger::CONTEXT_BATCH, [
+    // Check if we had significant scheduling failures
+    $scheduling_success_rate = count($action_ids) / count($batch_guids);
+    if ($scheduling_success_rate < 0.9) { // Less than 90% success
+        PuntWorkLogger::warning('High scheduling failure rate, concurrent processing may be unreliable', PuntWorkLogger::CONTEXT_BATCH, [
+            'total_items' => count($batch_guids),
+            'scheduled_count' => count($action_ids),
+            'scheduling_success_rate' => $scheduling_success_rate
+        ]);
+
+        // Cancel scheduled actions and return error to trigger fallback
+        foreach ($action_ids as $action_id) {
+            as_unschedule_action('puntwork_process_single_item', [], 'puntwork-import');
+        }
+
+        return [
+            'success' => false,
+            'error' => 'High scheduling failure rate',
+            'scheduling_success_rate' => $scheduling_success_rate,
+            'fallback_to_sequential' => true
+        ];
+    }
+
+    // MONITOR: Track job completion with timeout
+    $monitoring_result = monitor_concurrent_job_completion($action_ids, 300, 5); // 5 minute timeout, check every 5 seconds
+
+    if (!$monitoring_result['all_completed']) {
+        PuntWorkLogger::warning('Concurrent jobs did not complete successfully', PuntWorkLogger::CONTEXT_BATCH, [
+            'completed_count' => $monitoring_result['completed_count'],
+            'failed_count' => $monitoring_result['failed_count'],
+            'pending_count' => $monitoring_result['pending_count'],
+            'success_rate' => $monitoring_result['success_rate'],
+            'timed_out' => $monitoring_result['timed_out']
+        ]);
+
+        // For partial completion, we still return results but log the issues
+        if ($monitoring_result['success_rate'] < 0.8) { // Less than 80% success
+            PuntWorkLogger::error('Low concurrent job completion rate, results may be incomplete', PuntWorkLogger::CONTEXT_BATCH, [
+                'success_rate' => $monitoring_result['success_rate'],
+                'recommendation' => 'Consider using sequential processing for better reliability'
+            ]);
+        }
+    }
+
+    // Update concurrent success metrics for future decisions
+    update_concurrent_success_metrics(
+        count($batch_guids), // concurrency_used
+        $monitoring_result['completed_count'], // chunks_completed
+        count($batch_guids), // total_chunks
+        $monitoring_result['completed_count'], // items_processed
+        $monitoring_result['total_count'] // total_items
+    );
+
+    PuntWorkLogger::info('Concurrent item processing completed with monitoring', PuntWorkLogger::CONTEXT_BATCH, [
         'total_items' => count($batch_guids),
         'actions_scheduled' => count($action_ids),
-        'async' => true
+        'completed_count' => $monitoring_result['completed_count'],
+        'failed_count' => $monitoring_result['failed_count'],
+        'success_rate' => $monitoring_result['success_rate'],
+        'elapsed_time' => $monitoring_result['elapsed_time'],
+        'async' => false // Now actually synchronous with monitoring
     ]);
 
     return [
-        'processed_count' => count($batch_guids), // Estimated
-        'total_time' => 0,
-        'avg_time_per_item' => 0,
-        'item_timings' => [],
+        'processed_count' => $monitoring_result['completed_count'],
+        'total_time' => microtime(true) - $start_time,
+        'avg_time_per_item' => $monitoring_result['completed_count'] > 0 ? (microtime(true) - $start_time) / $monitoring_result['completed_count'] : 0,
+        'item_timings' => [], // Could be enhanced to track individual item times
         'concurrency_used' => count($batch_guids),
-        'async' => true,
-        'action_ids' => $action_ids
+        'async' => false, // Now synchronous with monitoring
+        'action_ids' => $action_ids,
+        'monitoring_result' => $monitoring_result,
+        'success' => $monitoring_result['success_rate'] >= 0.8 // Consider successful if 80%+ completed
     ];
 }
 
@@ -508,6 +799,15 @@ function process_single_item_callback($guid, $json_path, $start_index, $acf_fiel
 
 // Hook the callback function
 add_action('puntwork_process_single_item', 'Puntwork\process_single_item_callback', 10, 6);
+
+// Test action hook for Action Scheduler validation
+add_action('puntwork_test_action_scheduler', function($test_timestamp) {
+    // Simple test action that just logs completion
+    PuntWorkLogger::debug('Action Scheduler test action executed successfully', PuntWorkLogger::CONTEXT_GENERAL, [
+        'test_timestamp' => $test_timestamp,
+        'execution_time' => time()
+    ]);
+}, 10, 1);
 
 /**
  * Enhanced batch metrics update with concurrent processing data
