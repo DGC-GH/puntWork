@@ -159,17 +159,27 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
 
     // Initialize all curl handles
     foreach ($download_tasks as $feed_key => $task) {
+        $fp = fopen($task['xml_path'], 'w');
+        if (!$fp) {
+            PuntWorkLogger::error('Failed to open file for writing', PuntWorkLogger::CONTEXT_FEED, [
+                'feed_key' => $feed_key,
+                'xml_path' => $task['xml_path']
+            ]);
+            continue;
+        }
+
         $ch = curl_init($task['url']);
-        curl_setopt($ch, CURLOPT_FILE, fopen($task['xml_path'], 'w'));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // Get response as string
         curl_setopt($ch, CURLOPT_TIMEOUT, 300); // 5 minutes timeout per feed
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_USERAGENT, 'WordPress puntWork Importer');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, false); // We're writing to file
+        curl_setopt($ch, CURLOPT_HEADER, false); // Don't include headers in response
 
         curl_multi_add_handle($mh, $ch);
         $handles[$feed_key] = $ch;
         $results[$feed_key] = [
             'handle' => $ch,
+            'file_handle' => $fp,
             'xml_path' => $task['xml_path'],
             'url' => $task['url'],
             'feed_key' => $feed_key,
@@ -186,33 +196,52 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
         }
     } while ($active && $status == CURLM_OK);
 
-    // Process results and close handles
+        // Process results and close handles
     $successful_downloads = 0;
     foreach ($results as $feed_key => $result) {
         $ch = $result['handle'];
+        $fp = $result['file_handle'];
         $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $download_time = microtime(true) - $result['start_time'];
 
-        if ($http_code === 200 && filesize($result['xml_path']) > 1000) {
+        // Get the response content
+        $response_content = curl_multi_getcontent($ch);
+
+        // Write content to file
+        if ($fp && !empty($response_content)) {
+            fwrite($fp, $response_content);
+            fclose($fp);
+        } elseif ($fp) {
+            fclose($fp);
+        }
+
+        $file_size = file_exists($result['xml_path']) ? filesize($result['xml_path']) : 0;
+
+        if ($http_code === 200 && $file_size > 1000) {
             $successful_downloads++;
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Parallel download successful: ' . $feed_key . ' (' . filesize($result['xml_path']) . ' bytes in ' . round($download_time, 2) . 's)';
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Parallel download successful: ' . $feed_key . ' (' . $file_size . ' bytes in ' . round($download_time, 2) . 's)';
 
             PuntWorkLogger::info('Feed download completed successfully', PuntWorkLogger::CONTEXT_FEED, [
                 'feed_key' => $feed_key,
                 'url' => $result['url'],
-                'file_size' => filesize($result['xml_path']),
+                'file_size' => $file_size,
                 'download_time' => $download_time,
                 'http_code' => $http_code
             ]);
         } else {
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Parallel download failed: ' . $feed_key . ' (HTTP ' . $http_code . ', size: ' . filesize($result['xml_path']) . ')';
+            // Read first 500 bytes of response for debugging
+            $response_preview = substr($response_content, 0, 500);
+
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Parallel download failed: ' . $feed_key . ' (HTTP ' . $http_code . ', size: ' . $file_size . ')';
 
             PuntWorkLogger::error('Feed download failed', PuntWorkLogger::CONTEXT_FEED, [
                 'feed_key' => $feed_key,
                 'url' => $result['url'],
                 'http_code' => $http_code,
-                'file_size' => filesize($result['xml_path']),
-                'download_time' => $download_time
+                'file_size' => $file_size,
+                'download_time' => $download_time,
+                'response_length' => strlen($response_content),
+                'response_preview' => $response_preview
             ]);
         }
 
