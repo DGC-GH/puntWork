@@ -802,7 +802,7 @@ function cleanup_trashed_jobs_ajax() {
 
     // Initialize progress tracking for first batch
     if (!$is_continue) {
-        // Get total count first
+        // MEMORY-SAFE: Get total count without loading all data
         $total_count = $wpdb->get_var($wpdb->prepare("
             SELECT COUNT(*) FROM {$wpdb->posts}
             WHERE post_type = 'job' AND post_status = 'trash'
@@ -815,14 +815,32 @@ function cleanup_trashed_jobs_ajax() {
             'current_offset' => 0,
             'complete' => false,
             'start_time' => microtime(true),
-            'logs' => []
+            'logs' => [],
+            'memory_peak_start' => memory_get_peak_usage(true)
         ]);
     }
 
     $progress = get_cleanup_trashed_progress();
 
+    // MEMORY CHECK: Adjust batch size based on available memory
+    $memory_limit = get_memory_limit_bytes();
+    $current_memory = memory_get_usage(true);
+    $available_memory = $memory_limit - $current_memory;
+    $memory_ratio = $current_memory / $memory_limit;
+
+    // Reduce batch size if memory usage is high
+    if ($memory_ratio > 0.7) {
+        $batch_size = max(10, $batch_size / 2);
+        PuntWorkLogger::warning('Reducing batch size due to high memory usage in trashed cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+            'original_batch_size' => isset($_POST['batch_size']) ? intval($_POST['batch_size']) : 50,
+            'adjusted_batch_size' => $batch_size,
+            'memory_ratio' => $memory_ratio,
+            'available_memory_mb' => $available_memory / (1024 * 1024)
+        ]);
+    }
+
     try {
-        // Get batch of trashed jobs to process
+        // MEMORY-SAFE: Get batch of trashed jobs to process with memory monitoring
         $trashed_posts = $wpdb->get_results($wpdb->prepare("
             SELECT ID, post_title
             FROM {$wpdb->posts}
@@ -836,12 +854,16 @@ function cleanup_trashed_jobs_ajax() {
             $progress['complete'] = true;
             $progress['end_time'] = microtime(true);
             $progress['time_elapsed'] = $progress['end_time'] - $progress['start_time'];
+            $progress['memory_peak_end'] = memory_get_peak_usage(true);
+            $progress['memory_peak_mb'] = $progress['memory_peak_end'] / (1024 * 1024);
             set_cleanup_trashed_progress($progress);
 
             $message = "Cleanup completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} trashed jobs";
             PuntWorkLogger::info('Cleanup of trashed jobs completed', PuntWorkLogger::CONTEXT_BATCH, [
                 'total_processed' => $progress['total_processed'],
-                'total_deleted' => $progress['total_deleted']
+                'total_deleted' => $progress['total_deleted'],
+                'memory_peak_mb' => $progress['memory_peak_mb'],
+                'time_elapsed' => $progress['time_elapsed']
             ]);
 
             wp_send_json_success([
@@ -854,11 +876,29 @@ function cleanup_trashed_jobs_ajax() {
             ]);
         }
 
-        // Process this batch
+        // Process this batch with memory monitoring
         $deleted_count = 0;
         $logs = $progress['logs'];
+        $batch_memory_start = memory_get_usage(true);
 
         foreach ($trashed_posts as $post) {
+            // MEMORY CHECK: Monitor memory usage during processing
+            $current_memory = memory_get_usage(true);
+            $current_ratio = $current_memory / $memory_limit;
+
+            if ($current_ratio > 0.85) {
+                PuntWorkLogger::warning('High memory usage detected during trashed cleanup processing', PuntWorkLogger::CONTEXT_BATCH, [
+                    'current_memory_ratio' => $current_ratio,
+                    'post_id' => $post->ID,
+                    'processed_in_batch' => $deleted_count
+                ]);
+
+                // Force garbage collection and continue
+                if (function_exists('gc_collect_cycles')) {
+                    gc_collect_cycles();
+                }
+            }
+
             $result = wp_delete_post($post->ID, true); // true = force delete, skip trash
             if ($result) {
                 $deleted_count++;
@@ -867,13 +907,27 @@ function cleanup_trashed_jobs_ajax() {
                 $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Failed to delete trashed job: ' . $post->post_title . ' (ID: ' . $post->ID . ')';
             }
 
-            // Clean up memory after each deletion
-            if ($deleted_count % 10 === 0) {
+            // MEMORY CLEANUP: Aggressive cleanup every 5 deletions
+            if ($deleted_count % 5 === 0) {
                 if (function_exists('gc_collect_cycles')) {
                     gc_collect_cycles();
                 }
+                // Clear any cached WordPress object caches that might be holding memory
+                if (function_exists('wp_cache_flush')) {
+                    wp_cache_flush();
+                }
             }
         }
+
+        $batch_memory_end = memory_get_usage(true);
+        $batch_memory_used = $batch_memory_end - $batch_memory_start;
+
+        PuntWorkLogger::debug('Batch processing completed with memory monitoring', PuntWorkLogger::CONTEXT_BATCH, [
+            'batch_size' => count($trashed_posts),
+            'deleted_count' => $deleted_count,
+            'batch_memory_used_mb' => $batch_memory_used / (1024 * 1024),
+            'current_memory_ratio' => memory_get_usage(true) / $memory_limit
+        ]);
 
         // Update progress
         $progress['total_processed'] += count($trashed_posts);
@@ -898,7 +952,9 @@ function cleanup_trashed_jobs_ajax() {
 
     } catch (\Exception $e) {
         PuntWorkLogger::error('Cleanup of trashed jobs failed', PuntWorkLogger::CONTEXT_BATCH, [
-            'error' => $e->getMessage()
+            'error' => $e->getMessage(),
+            'memory_usage_mb' => memory_get_usage(true) / (1024 * 1024),
+            'memory_limit_mb' => $memory_limit / (1024 * 1024)
         ]);
         wp_send_json_error(['message' => 'Cleanup failed: ' . $e->getMessage()]);
     }
@@ -925,19 +981,51 @@ function cleanup_drafted_jobs_ajax() {
 
     // Initialize progress tracking for first batch
     if (!$is_continue) {
-        // Get all draft job IDs first to avoid offset issues during deletion
-        $draft_job_ids = $wpdb->get_col($wpdb->prepare("
-            SELECT ID FROM {$wpdb->posts}
-            WHERE post_type = 'job' AND post_status = 'draft'
-            ORDER BY ID DESC
-        "));
+        // MEMORY-SAFE: Get draft job IDs in chunks to avoid loading all into memory
+        $draft_job_ids = [];
+        $offset_temp = 0;
+        $chunk_size = 1000; // Load GUIDs in chunks of 1000
+
+        while (true) {
+            $chunk = $wpdb->get_col($wpdb->prepare("
+                SELECT ID FROM {$wpdb->posts}
+                WHERE post_type = 'job' AND post_status = 'draft'
+                ORDER BY ID DESC
+                LIMIT %d OFFSET %d
+            ", $chunk_size, $offset_temp));
+
+            if (empty($chunk)) {
+                break;
+            }
+
+            $draft_job_ids = array_merge($draft_job_ids, $chunk);
+            $offset_temp += $chunk_size;
+
+            // MEMORY CHECK: Prevent excessive memory usage during initialization
+            $current_memory = memory_get_usage(true);
+            $memory_ratio = $current_memory / get_memory_limit_bytes();
+
+            if ($memory_ratio > 0.6) {
+                PuntWorkLogger::warning('High memory usage during draft job ID collection, reducing chunk size', PuntWorkLogger::CONTEXT_BATCH, [
+                    'collected_count' => count($draft_job_ids),
+                    'memory_ratio' => $memory_ratio,
+                    'chunk_size_reduced' => true
+                ]);
+                $chunk_size = max(100, $chunk_size / 2);
+            }
+
+            // Force cleanup between chunks
+            if (function_exists('gc_collect_cycles')) {
+                gc_collect_cycles();
+            }
+        }
 
         $total_count = count($draft_job_ids);
 
-        PuntWorkLogger::info('Draft cleanup initialized', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::info('Draft cleanup initialized with memory-safe ID collection', PuntWorkLogger::CONTEXT_BATCH, [
             'total_draft_jobs_found' => $total_count,
-            'first_5_ids' => array_slice($draft_job_ids, 0, 5),
-            'last_5_ids' => array_slice($draft_job_ids, -5)
+            'memory_usage_mb' => memory_get_usage(true) / (1024 * 1024),
+            'chunks_loaded' => ceil($total_count / 1000)
         ]);
 
         set_cleanup_drafted_progress([
@@ -948,11 +1036,29 @@ function cleanup_drafted_jobs_ajax() {
             'current_index' => 0,
             'complete' => false,
             'start_time' => microtime(true),
-            'logs' => []
+            'logs' => [],
+            'memory_peak_start' => memory_get_peak_usage(true)
         ]);
     }
 
     $progress = get_cleanup_drafted_progress();
+
+    // MEMORY CHECK: Adjust batch size based on available memory
+    $memory_limit = get_memory_limit_bytes();
+    $current_memory = memory_get_usage(true);
+    $available_memory = $memory_limit - $current_memory;
+    $memory_ratio = $current_memory / $memory_limit;
+
+    // Reduce batch size if memory usage is high
+    if ($memory_ratio > 0.7) {
+        $batch_size = max(5, $batch_size / 2);
+        PuntWorkLogger::warning('Reducing batch size due to high memory usage in drafted cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+            'original_batch_size' => isset($_POST['batch_size']) ? intval($_POST['batch_size']) : 50,
+            'adjusted_batch_size' => $batch_size,
+            'memory_ratio' => $memory_ratio,
+            'available_memory_mb' => $available_memory / (1024 * 1024)
+        ]);
+    }
 
     // If already completed, return completion response
     if ($progress['complete']) {
@@ -1041,11 +1147,29 @@ function cleanup_drafted_jobs_ajax() {
             WHERE ID IN ({$placeholders})
         ", $batch_posts));
 
-        // Process this batch
+        // Process this batch with memory monitoring
         $deleted_count = 0;
         $logs = $progress['logs'];
+        $batch_memory_start = memory_get_usage(true);
 
         foreach ($posts_details as $post) {
+            // MEMORY CHECK: Monitor memory usage during processing
+            $current_memory = memory_get_usage(true);
+            $current_ratio = $current_memory / $memory_limit;
+
+            if ($current_ratio > 0.85) {
+                PuntWorkLogger::warning('High memory usage detected during drafted cleanup processing', PuntWorkLogger::CONTEXT_BATCH, [
+                    'current_memory_ratio' => $current_ratio,
+                    'post_id' => $post->ID,
+                    'processed_in_batch' => $deleted_count
+                ]);
+
+                // Force garbage collection and continue
+                if (function_exists('gc_collect_cycles')) {
+                    gc_collect_cycles();
+                }
+            }
+
             // Check if post still exists before deletion
             $post_exists_before = $wpdb->get_var($wpdb->prepare("SELECT ID FROM {$wpdb->posts} WHERE ID = %d", $post->ID));
 
@@ -1085,13 +1209,27 @@ function cleanup_drafted_jobs_ajax() {
                 ]);
             }
 
-            // Clean up memory after each deletion
-            if ($deleted_count % 10 === 0) {
+            // MEMORY CLEANUP: Aggressive cleanup every 3 deletions
+            if ($deleted_count % 3 === 0) {
                 if (function_exists('gc_collect_cycles')) {
                     gc_collect_cycles();
                 }
+                // Clear any cached WordPress object caches that might be holding memory
+                if (function_exists('wp_cache_flush')) {
+                    wp_cache_flush();
+                }
             }
         }
+
+        $batch_memory_end = memory_get_usage(true);
+        $batch_memory_used = $batch_memory_end - $batch_memory_start;
+
+        PuntWorkLogger::debug('Draft batch processing completed with memory monitoring', PuntWorkLogger::CONTEXT_BATCH, [
+            'batch_size' => count($posts_details),
+            'deleted_count' => $deleted_count,
+            'batch_memory_used_mb' => $batch_memory_used / (1024 * 1024),
+            'current_memory_ratio' => memory_get_usage(true) / $memory_limit
+        ]);
 
         // Update progress
         $progress['total_processed'] += count($posts_details);
@@ -1159,44 +1297,113 @@ function cleanup_old_published_jobs_ajax() {
             wp_send_json_error(['message' => 'No current feed data found. Please run an import first to generate feed data.']);
         }
 
-        // Get all current GUIDs from the combined JSONL file
+        // MEMORY-SAFE: Get current GUIDs in chunks to avoid loading all into memory
         $current_guids = [];
-        if (($handle = fopen($json_path, "r")) !== false) {
-            while (($line = fgets($handle)) !== false) {
-                $line = trim($line);
-                if (!empty($line)) {
-                    $item = json_decode($line, true);
-                    if ($item !== null && isset($item['guid'])) {
-                        $current_guids[] = $item['guid'];
+        $guid_chunk_size = 500; // Process GUIDs in chunks of 500
+        $guid_offset = 0;
+
+        PuntWorkLogger::info('Starting memory-safe GUID collection for old published cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+            'json_path' => $json_path,
+            'chunk_size' => $guid_chunk_size
+        ]);
+
+        while (true) {
+            $chunk_guids = [];
+            if (($handle = fopen($json_path, "r")) !== false) {
+                $current_index = 0;
+                $guids_in_chunk = 0;
+
+                while (($line = fgets($handle)) !== false) {
+                    if ($current_index >= $guid_offset && $guids_in_chunk < $guid_chunk_size) {
+                        $line = trim($line);
+                        if (!empty($line)) {
+                            $item = json_decode($line, true);
+                            if ($item !== null && isset($item['guid'])) {
+                                $chunk_guids[] = $item['guid'];
+                                $guids_in_chunk++;
+                            }
+                        }
+                    } elseif ($guids_in_chunk >= $guid_chunk_size) {
+                        break;
                     }
+                    $current_index++;
                 }
+                fclose($handle);
             }
-            fclose($handle);
+
+            if (empty($chunk_guids)) {
+                break;
+            }
+
+            $current_guids = array_merge($current_guids, $chunk_guids);
+            $guid_offset += $guid_chunk_size;
+
+            // MEMORY CHECK: Prevent excessive memory usage during GUID collection
+            $current_memory = memory_get_usage(true);
+            $memory_ratio = $current_memory / get_memory_limit_bytes();
+
+            if ($memory_ratio > 0.6) {
+                PuntWorkLogger::warning('High memory usage during GUID collection, reducing chunk size', PuntWorkLogger::CONTEXT_BATCH, [
+                    'collected_guids' => count($current_guids),
+                    'memory_ratio' => $memory_ratio,
+                    'chunk_size_reduced' => true
+                ]);
+                $guid_chunk_size = max(100, $guid_chunk_size / 2);
+            }
+
+            // Force cleanup between chunks
+            if (function_exists('gc_collect_cycles')) {
+                gc_collect_cycles();
+            }
+
+            PuntWorkLogger::debug('GUID collection chunk processed', PuntWorkLogger::CONTEXT_BATCH, [
+                'chunk_guids_collected' => count($chunk_guids),
+                'total_guids_collected' => count($current_guids),
+                'memory_usage_mb' => $current_memory / (1024 * 1024)
+            ]);
         }
 
         if (empty($current_guids)) {
             wp_send_json_error(['message' => 'No valid job data found in current feeds.']);
         }
 
-        // Store GUIDs in option for batch processing
-        set_cleanup_guids($current_guids);
+        // MEMORY-SAFE: Get total count using chunked GUID processing
+        $total_count = 0;
+        $guid_chunks = array_chunk($current_guids, 1000); // Process in chunks of 1000 for SQL IN() clauses
 
-        // Get total count of posts to process
-        $placeholders = implode(',', array_fill(0, count($current_guids), '%s'));
-        $total_count = $wpdb->get_var($wpdb->prepare("
-            SELECT COUNT(*)
-            FROM {$wpdb->posts} p
-            JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
-            WHERE p.post_type = 'job'
-            AND p.post_status = 'publish'
-            AND pm.meta_value NOT IN ({$placeholders})
-        ", $current_guids));
+        foreach ($guid_chunks as $guid_chunk) {
+            $placeholders = implode(',', array_fill(0, count($guid_chunk), '%s'));
+            $chunk_count = $wpdb->get_var($wpdb->prepare("
+                SELECT COUNT(*)
+                FROM {$wpdb->posts} p
+                JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
+                WHERE p.post_type = 'job'
+                AND p.post_status = 'publish'
+                AND pm.meta_value NOT IN ({$placeholders})
+            ", $guid_chunk));
 
-        PuntWorkLogger::info('Old published cleanup initialized', PuntWorkLogger::CONTEXT_BATCH, [
+            $total_count += $chunk_count;
+
+            // Memory cleanup between chunks
+            if (function_exists('gc_collect_cycles')) {
+                gc_collect_cycles();
+            }
+        }
+
+        PuntWorkLogger::info('Old published cleanup initialized with memory-safe processing', PuntWorkLogger::CONTEXT_BATCH, [
             'current_guids_count' => count($current_guids),
-            'total_old_jobs_found' => $total_count
+            'total_old_jobs_found' => $total_count,
+            'guid_chunks_processed' => count($guid_chunks),
+            'memory_usage_mb' => memory_get_usage(true) / (1024 * 1024)
         ]);
 
+        // Store GUIDs in option for batch processing (in chunks to save memory)
+        $guid_chunks_stored = [];
+        foreach (array_chunk($current_guids, 2000) as $i => $chunk) {
+            $guid_chunks_stored["chunk_$i"] = $chunk;
+        }
+
+        set_cleanup_guids($guid_chunks_stored);
         set_cleanup_old_published_progress([
             'total_processed' => 0,
             'total_deleted' => 0,
@@ -1204,11 +1411,29 @@ function cleanup_old_published_jobs_ajax() {
             'current_offset' => 0,
             'complete' => false,
             'start_time' => microtime(true),
-            'logs' => []
+            'logs' => [],
+            'memory_peak_start' => memory_get_peak_usage(true)
         ]);
     }
 
     $progress = get_cleanup_old_published_progress();
+
+    // MEMORY CHECK: Adjust batch size based on available memory
+    $memory_limit = get_memory_limit_bytes();
+    $current_memory = memory_get_usage(true);
+    $available_memory = $memory_limit - $current_memory;
+    $memory_ratio = $current_memory / $memory_limit;
+
+    // Reduce batch size if memory usage is high
+    if ($memory_ratio > 0.7) {
+        $batch_size = max(5, $batch_size / 2);
+        PuntWorkLogger::warning('Reducing batch size due to high memory usage in old published cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+            'original_batch_size' => isset($_POST['batch_size']) ? intval($_POST['batch_size']) : 50,
+            'adjusted_batch_size' => $batch_size,
+            'memory_ratio' => $memory_ratio,
+            'available_memory_mb' => $available_memory / (1024 * 1024)
+        ]);
+    }
 
     // If already completed, return completion response
     if ($progress['complete']) {
@@ -1237,27 +1462,48 @@ function cleanup_old_published_jobs_ajax() {
         'complete' => $progress['complete']
     ]);
 
-    $current_guids = get_cleanup_guids();
+    $current_guids_chunked = get_cleanup_guids();
 
     try {
-        // Get batch of old published jobs to process
-        $placeholders = implode(',', array_fill(0, count($current_guids), '%s'));
-        $old_published_posts = $wpdb->get_results($wpdb->prepare("
-            SELECT p.ID, p.post_title, pm.meta_value as guid
-            FROM {$wpdb->posts} p
-            JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
-            WHERE p.post_type = 'job'
-            AND p.post_status = 'publish'
-            AND pm.meta_value NOT IN ({$placeholders})
-            ORDER BY p.ID
-            LIMIT %d OFFSET %d
-        ", array_merge($current_guids, [$batch_size, $offset])));
+        // MEMORY-SAFE: Get batch of old published jobs using chunked GUID processing
+        $old_published_posts = [];
 
-        PuntWorkLogger::debug('Old published jobs query results', PuntWorkLogger::CONTEXT_BATCH, [
-            'current_guids_count' => count($current_guids),
-            'batch_size' => $batch_size,
+        // Process GUIDs in chunks to avoid memory issues with large IN() clauses
+        foreach ($current_guids_chunked as $chunk_key => $guid_chunk) {
+            if (empty($guid_chunk)) continue;
+
+            $placeholders = implode(',', array_fill(0, count($guid_chunk), '%s'));
+            $chunk_posts = $wpdb->get_results($wpdb->prepare("
+                SELECT p.ID, p.post_title, pm.meta_value as guid
+                FROM {$wpdb->posts} p
+                JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
+                WHERE p.post_type = 'job'
+                AND p.post_status = 'publish'
+                AND pm.meta_value NOT IN ({$placeholders})
+                ORDER BY p.ID
+                LIMIT %d OFFSET %d
+            ", array_merge($guid_chunk, [$batch_size, $offset])));
+
+            $old_published_posts = array_merge($old_published_posts, $chunk_posts);
+
+            // Limit total results to batch_size to prevent memory issues
+            if (count($old_published_posts) >= $batch_size) {
+                $old_published_posts = array_slice($old_published_posts, 0, $batch_size);
+                break;
+            }
+
+            // Memory cleanup between chunks
+            if (function_exists('gc_collect_cycles')) {
+                gc_collect_cycles();
+            }
+        }
+
+        PuntWorkLogger::debug('Old published jobs query results with chunked processing', PuntWorkLogger::CONTEXT_BATCH, [
+            'guid_chunks_processed' => count($current_guids_chunked),
+            'batch_size_requested' => $batch_size,
             'offset' => $offset,
             'found_jobs_count' => count($old_published_posts),
+            'memory_usage_mb' => memory_get_usage(true) / (1024 * 1024),
             'first_few_job_ids' => array_slice(array_column($old_published_posts, 'ID'), 0, 5)
         ]);
 
@@ -1302,11 +1548,29 @@ function cleanup_old_published_jobs_ajax() {
             ]);
         }
 
-        // Process this batch
+        // Process this batch with memory monitoring
         $deleted_count = 0;
         $logs = $progress['logs'];
+        $batch_memory_start = memory_get_usage(true);
 
         foreach ($old_published_posts as $post) {
+            // MEMORY CHECK: Monitor memory usage during processing
+            $current_memory = memory_get_usage(true);
+            $current_ratio = $current_memory / $memory_limit;
+
+            if ($current_ratio > 0.85) {
+                PuntWorkLogger::warning('High memory usage detected during old published cleanup processing', PuntWorkLogger::CONTEXT_BATCH, [
+                    'current_memory_ratio' => $current_ratio,
+                    'post_id' => $post->ID,
+                    'processed_in_batch' => $deleted_count
+                ]);
+
+                // Force garbage collection and continue
+                if (function_exists('gc_collect_cycles')) {
+                    gc_collect_cycles();
+                }
+            }
+
             $result = wp_delete_post($post->ID, true); // true = force delete, skip trash
             if ($result) {
                 $deleted_count++;
@@ -1315,13 +1579,27 @@ function cleanup_old_published_jobs_ajax() {
                 $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Failed to delete old published job: ' . $post->post_title . ' (ID: ' . $post->ID . ', GUID: ' . $post->guid . ')';
             }
 
-            // Clean up memory after each deletion
-            if ($deleted_count % 10 === 0) {
+            // MEMORY CLEANUP: Aggressive cleanup every 3 deletions
+            if ($deleted_count % 3 === 0) {
                 if (function_exists('gc_collect_cycles')) {
                     gc_collect_cycles();
                 }
+                // Clear any cached WordPress object caches that might be holding memory
+                if (function_exists('wp_cache_flush')) {
+                    wp_cache_flush();
+                }
             }
         }
+
+        $batch_memory_end = memory_get_usage(true);
+        $batch_memory_used = $batch_memory_end - $batch_memory_start;
+
+        PuntWorkLogger::debug('Old published batch processing completed with memory monitoring', PuntWorkLogger::CONTEXT_BATCH, [
+            'batch_size' => count($old_published_posts),
+            'deleted_count' => $deleted_count,
+            'batch_memory_used_mb' => $batch_memory_used / (1024 * 1024),
+            'current_memory_ratio' => memory_get_usage(true) / $memory_limit
+        ]);
 
         // Update progress
         $progress['total_processed'] += count($old_published_posts);
