@@ -452,6 +452,18 @@ function check_active_scheduled_imports() {
         PuntWorkLogger::debug('No WordPress cron scheduled import found', PuntWorkLogger::CONTEXT_AJAX);
     }
 
+    // Check for WordPress cron for manual imports
+    $next_manual = wp_next_scheduled('puntwork_manual_import');
+    if ($next_manual) {
+        PuntWorkLogger::debug('Found WordPress cron manual import', PuntWorkLogger::CONTEXT_AJAX, [
+            'next_run_timestamp' => $next_manual,
+            'next_run_formatted' => date('Y-m-d H:i:s', (int)$next_manual)
+        ]);
+        $active_imports['wp_cron_manual'] = $next_manual;
+    } else {
+        PuntWorkLogger::debug('No WordPress cron manual import found', PuntWorkLogger::CONTEXT_AJAX);
+    }
+
     // Check if import is currently running (from status)
     $import_status = get_import_status([]);
     $is_complete = $import_status['complete'] ?? false;
