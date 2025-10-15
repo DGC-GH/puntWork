@@ -204,6 +204,12 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             PuntWorkJSLogger.debug('Updating progress with data', 'UI', data);
             console.log('[PUNTWORK] Progress data received:', data);
 
+            // Check if server sent a phase update and set it
+            if (data.phase && data.phase !== this.currentPhase) {
+                console.log('[PUNTWORK] Server phase update:', data.phase, 'current:', this.currentPhase);
+                this.setPhase(data.phase);
+            }
+
             // Set start time if not set and we're starting (only once per import session)
             if (this.startTime === null && (data.processed > 0 || this.currentPhase !== 'idle')) {
                 // Try to sync with JobImportLogic's startTime if available

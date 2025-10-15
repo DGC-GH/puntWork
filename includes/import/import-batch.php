@@ -198,6 +198,7 @@ if (!function_exists('import_all_jobs_from_json')) {
             error_log('[PUNTWORK] Initializing import status...');
             $initial_status = initialize_import_status(0, 'Scheduled import started - preparing feeds...', $start_time);
             $initial_status['batch_count'] = 0;
+            $initial_status['phase'] = 'job-importing'; // Set phase for job importing
             error_log('[PUNTWORK] Setting import status...');
             set_import_status($initial_status);
         } else {
