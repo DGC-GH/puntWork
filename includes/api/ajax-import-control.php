@@ -77,8 +77,8 @@ function run_job_import_batch_ajax() {
                 'time_elapsed' => $time_elapsed,
                 'time_since_last_update' => $time_since_last_update,
                 'reason' => $stuck_reason,
-                'start_time' => isset($import_status['start_time']) ? date('Y-m-d H:i:s', $import_status['start_time']) : 'unknown',
-                'last_update' => isset($import_status['last_update']) ? date('Y-m-d H:i:s', $import_status['last_update']) : 'unknown',
+                'start_time' => isset($import_status['start_time']) ? date('Y-m-d H:i:s', (int)$import_status['start_time']) : 'unknown',
+                'last_update' => isset($import_status['last_update']) ? date('Y-m-d H:i:s', (int)$import_status['last_update']) : 'unknown',
                 'batch_size' => $import_status['batch_size'] ?? 'unknown',
                 'complete' => $import_status['complete'] ?? false
             ]);
@@ -108,8 +108,8 @@ function run_job_import_batch_ajax() {
             'status_total' => $initial_status['total'],
             'status_complete' => $initial_status['complete'],
             'batch_size' => $initial_status['batch_size'],
-            'start_time' => date('Y-m-d H:i:s', $initial_status['start_time']),
-            'last_update' => date('Y-m-d H:i:s', $initial_status['last_update'])
+            'start_time' => date('Y-m-d H:i:s', (int)$initial_status['start_time']),
+            'last_update' => date('Y-m-d H:i:s', (int)$initial_status['last_update'])
         ]);
 
         // Clear any previous cancellation before starting
@@ -444,7 +444,7 @@ function check_active_scheduled_imports() {
     if ($next_scheduled) {
         PuntWorkLogger::debug('Found WordPress cron scheduled import', PuntWorkLogger::CONTEXT_AJAX, [
             'next_run_timestamp' => $next_scheduled,
-            'next_run_formatted' => date('Y-m-d H:i:s', $next_scheduled)
+            'next_run_formatted' => date('Y-m-d H:i:s', (int)$next_scheduled)
         ]);
         $active_imports['wp_cron_scheduled'] = $next_scheduled;
     } else {
@@ -660,9 +660,9 @@ function get_job_import_status_ajax() {
                     'time_elapsed' => round($time_elapsed, 2),
                     'time_since_last_update' => $time_since_last_update,
                     'reason' => $stuck_reason,
-                    'start_time' => isset($progress['start_time']) ? date('Y-m-d H:i:s', $progress['start_time']) : 'unknown',
-                    'last_update' => isset($progress['last_update']) ? date('Y-m-d H:i:s', $progress['last_update']) : 'unknown',
-                    'current_time' => date('Y-m-d H:i:s', $current_time),
+                    'start_time' => isset($progress['start_time']) ? date('Y-m-d H:i:s', (int)$progress['start_time']) : 'unknown',
+                    'last_update' => isset($progress['last_update']) ? date('Y-m-d H:i:s', (int)$progress['last_update']) : 'unknown',
+                    'current_time' => date('Y-m-d H:i:s', (int)$current_time),
                     'action' => 'cleared_stuck_import'
                 ]);
                 delete_option('job_import_status');
