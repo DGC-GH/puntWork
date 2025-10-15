@@ -211,7 +211,8 @@ function run_job_import_batch_ajax() {
         ]);
         send_ajax_error('run_job_import_batch', 'Failed to start import: ' . $e->getMessage());
     }
-}add_action('wp_ajax_cancel_job_import', __NAMESPACE__ . '\\cancel_job_import_ajax');
+}
+add_action('wp_ajax_cancel_job_import', __NAMESPACE__ . '\\cancel_job_import_ajax');
 function cancel_job_import_ajax() {
     if (!validate_ajax_request('cancel_job_import')) {
         return;

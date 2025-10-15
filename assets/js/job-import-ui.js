@@ -235,8 +235,9 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
 
             if (this.currentPhase === 'feed-processing') {
                 // Feed processing phase: 0-100% for this phase only
-                // Use feed count as the total for this phase
-                var feedCount = Object.keys(jobImportData.feeds || {}).length;
+                // Use total from server data (which represents feed count during this phase)
+                // or fall back to pre-loaded feed count if available
+                var feedCount = data.total || Object.keys(jobImportData.feeds || {}).length;
                 if (feedCount > 0) {
                     phaseTotal = feedCount;
                     phaseProgress = Math.min(processed / phaseTotal, 1.0);
