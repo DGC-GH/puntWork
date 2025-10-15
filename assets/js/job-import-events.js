@@ -352,9 +352,10 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         }
 
                         // Show the import progress section and update UI
-                        JobImportUI.showImportProgress();
+                        JobImportUI.showImportUI();
                         JobImportUI.updateProgress(statusData.processed, statusData.total, statusData.complete);
-                        JobImportUI.showImportType(importType);
+                        $('#import-type-indicator').show();
+                        $('#import-type-text').text(importType.charAt(0).toUpperCase() + importType.slice(1) + ' import is currently running');
 
                         // Show appropriate control buttons based on import type and state
                         if (importType === 'scheduled') {
