@@ -330,7 +330,7 @@ function run_scheduled_import_ajax() {
             ]);
 
             try {
-                $result = $is_manual ? run_manual_import() : run_scheduled_import();
+                $result = $is_manual ? run_manual_import() : run_scheduled_import(false, true);
 
                 PuntWorkLogger::info('Shutdown import execution completed', PuntWorkLogger::CONTEXT_SCHEDULING, [
                     'import_type' => $is_manual ? 'manual' : 'scheduled',
@@ -457,9 +457,9 @@ function run_scheduled_import_async() {
         $current_time = time();
         $last_update = isset($import_status['last_update']) ? $import_status['last_update'] : 0;
         $time_since_last_update = $current_time - $last_update;
-        if ($time_since_last_update > 600) { // 10 minutes since last update
+        if ($time_since_last_update > 300) { // 5 minutes since last update
             $is_stuck = true;
-            $stuck_reason = 'no status update for 10+ minutes';
+            $stuck_reason = 'no status update for 5+ minutes';
         }
 
         if ($is_stuck) {
@@ -557,9 +557,9 @@ function run_manual_import_async() {
         $current_time = time();
         $last_update = isset($import_status['last_update']) ? $import_status['last_update'] : 0;
         $time_since_last_update = $current_time - $last_update;
-        if ($time_since_last_update > 600) { // 10 minutes since last update
+        if ($time_since_last_update > 300) { // 5 minutes since last update
             $is_stuck = true;
-            $stuck_reason = 'no status update for 10+ minutes';
+            $stuck_reason = 'no status update for 5+ minutes';
         }
 
         if ($is_stuck) {

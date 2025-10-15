@@ -20,7 +20,7 @@ require_once __DIR__ . '/../utilities/options-utilities.php';
 /**
  * Run the scheduled import
  */
-function run_scheduled_import($test_mode = false) {
+function run_scheduled_import($test_mode = false, $force = false) {
     // Check for cancellation before starting scheduled import
     if (get_transient('import_cancel') === true || get_transient('import_force_cancel') === true || get_transient('import_emergency_stop') === true) {
         $cancel_type = get_transient('import_emergency_stop') === true ? 'emergency stopped' :
@@ -38,8 +38,52 @@ function run_scheduled_import($test_mode = false) {
         ];
     }
 
-    // Check if an import is already running (skip this check for test mode)
+    // Check for stuck imports before checking if already running
     if (!$test_mode) {
+        $import_status = get_import_status([]);
+        if (isset($import_status['complete']) && !$import_status['complete']) {
+            // Calculate actual time elapsed
+            $time_elapsed = 0;
+            if (isset($import_status['start_time']) && $import_status['start_time'] > 0) {
+                $time_elapsed = microtime(true) - $import_status['start_time'];
+            } elseif (isset($import_status['time_elapsed'])) {
+                $time_elapsed = $import_status['time_elapsed'];
+            }
+
+            // Check for stuck imports with multiple criteria:
+            // 1. No progress for 5+ minutes (300 seconds)
+            // 2. Import running for more than 2 hours without completion (7200 seconds)
+            // 3. No status update for 10+ minutes (600 seconds)
+            $is_stuck = false;
+            $stuck_reason = '';
+
+            if ($import_status['processed'] == 0 && $time_elapsed > 300) {
+                $is_stuck = true;
+                $stuck_reason = 'no progress for 5+ minutes';
+            } elseif ($time_elapsed > 7200) { // 2 hours
+                $is_stuck = true;
+                $stuck_reason = 'running for more than 2 hours';
+            }
+
+            $current_time = time();
+            $last_update = isset($import_status['last_update']) ? $import_status['last_update'] : 0;
+            $time_since_last_update = $current_time - $last_update;
+            if ($time_since_last_update > 300) { // 5 minutes since last update
+                $is_stuck = true;
+                $stuck_reason = 'no status update for 5+ minutes';
+            }
+
+            if ($is_stuck) {
+                error_log('[PUNTWORK] Detected stuck import in scheduled import (processed: ' . ($import_status['processed'] ?? 'null') . ', time_elapsed: ' . $time_elapsed . ', time_since_last_update: ' . $time_since_last_update . ', reason: ' . $stuck_reason . '), clearing status for new run');
+                delete_import_status();
+                delete_transient('import_cancel');
+                $import_status = []; // Reset for fresh start
+            }
+        }
+    }
+
+    // Check if an import is already running (skip this check for test mode or force)
+    if (!$test_mode && !$force) {
         $import_status = get_import_status([]);
         // Block fresh scheduled imports if another import is actively running (but allow paused imports to be continued)
         if (isset($import_status['complete']) && $import_status['complete'] === false &&
@@ -250,6 +294,48 @@ function run_manual_import() {
     $end_time = 0; // Initialize to prevent undefined variable warnings
 
     try {
+        // Check for stuck imports before starting manual import
+        $import_status = get_import_status([]);
+        if (isset($import_status['complete']) && !$import_status['complete']) {
+            // Calculate actual time elapsed
+            $time_elapsed = 0;
+            if (isset($import_status['start_time']) && $import_status['start_time'] > 0) {
+                $time_elapsed = microtime(true) - $import_status['start_time'];
+            } elseif (isset($import_status['time_elapsed'])) {
+                $time_elapsed = $import_status['time_elapsed'];
+            }
+
+            // Check for stuck imports with multiple criteria:
+            // 1. No progress for 5+ minutes (300 seconds)
+            // 2. Import running for more than 2 hours without completion (7200 seconds)
+            // 3. No status update for 10+ minutes (600 seconds)
+            $is_stuck = false;
+            $stuck_reason = '';
+
+            if ($import_status['processed'] == 0 && $time_elapsed > 300) {
+                $is_stuck = true;
+                $stuck_reason = 'no progress for 5+ minutes';
+            } elseif ($time_elapsed > 7200) { // 2 hours
+                $is_stuck = true;
+                $stuck_reason = 'running for more than 2 hours';
+            }
+
+            $current_time = time();
+            $last_update = isset($import_status['last_update']) ? $import_status['last_update'] : 0;
+            $time_since_last_update = $current_time - $last_update;
+            if ($time_since_last_update > 300) { // 5 minutes since last update
+                $is_stuck = true;
+                $stuck_reason = 'no status update for 5+ minutes';
+            }
+
+            if ($is_stuck) {
+                error_log('[PUNTWORK] Detected stuck import in manual import (processed: ' . ($import_status['processed'] ?? 'null') . ', time_elapsed: ' . $time_elapsed . ', time_since_last_update: ' . $time_since_last_update . ', reason: ' . $stuck_reason . '), clearing status for new run');
+                delete_import_status();
+                delete_transient('import_cancel');
+                $import_status = []; // Reset for fresh start
+            }
+        }
+
         // Log the manual run
         error_log('[PUNTWORK] Manual import started');
 
