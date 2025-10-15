@@ -135,11 +135,30 @@ function process_one_feed($feed_key, $url, $output_dir, $fallback_domain, &$logs
 function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$logs) {
     $total_items = 0;
     $start_time = microtime(true);
+    $total_feeds = count($feeds);
+    $processed_feeds = 0;
 
     PuntWorkLogger::info('Starting parallel feed downloads', PuntWorkLogger::CONTEXT_FEED, [
-        'feed_count' => count($feeds),
+        'feed_count' => $total_feeds,
         'output_dir' => $output_dir
     ]);
+
+    // Initialize import status for feed processing phase
+    $feed_status = [
+        'phase' => 'feed-processing',
+        'total' => $total_feeds,
+        'processed' => 0,
+        'published' => 0,
+        'updated' => 0,
+        'skipped' => 0,
+        'duplicates_drafted' => 0,
+        'time_elapsed' => 0,
+        'start_time' => $start_time,
+        'success' => null,
+        'error_message' => '',
+        'logs' => []
+    ];
+    set_import_status($feed_status);
 
     // Prepare download tasks
     $download_tasks = [];
@@ -266,6 +285,32 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
         if (file_exists($task['xml_path']) && filesize($task['xml_path']) > 1000) {
             $count = process_feed_after_download($feed_key, $task['xml_path'], $output_dir, $fallback_domain, $logs);
             $total_items += $count;
+
+            // Update progress after processing each feed
+            $processed_feeds++;
+            $feed_status['processed'] = $processed_feeds;
+            $feed_status['time_elapsed'] = microtime(true) - $start_time;
+            set_import_status($feed_status);
+
+            PuntWorkLogger::debug('Feed processing progress update', PuntWorkLogger::CONTEXT_FEED, [
+                'feed_key' => $feed_key,
+                'processed_feeds' => $processed_feeds,
+                'total_feeds' => $total_feeds,
+                'items_in_feed' => $count,
+                'total_items_so_far' => $total_items
+            ]);
+        } else {
+            // Count failed feeds as processed but log the failure
+            $processed_feeds++;
+            $feed_status['processed'] = $processed_feeds;
+            $feed_status['time_elapsed'] = microtime(true) - $start_time;
+            set_import_status($feed_status);
+
+            PuntWorkLogger::warning('Feed processing skipped - download failed', PuntWorkLogger::CONTEXT_FEED, [
+                'feed_key' => $feed_key,
+                'processed_feeds' => $processed_feeds,
+                'total_feeds' => $total_feeds
+            ]);
         }
     }
 
@@ -316,6 +361,37 @@ function fetch_and_generate_combined_json() {
     // Parallel feed downloads for improved performance
     $total_items = download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, $import_logs);
 
+    // Update status for JSONL combination phase
+    $jsonl_status = [
+        'phase' => 'jsonl-combining',
+        'total' => 1, // This phase processes 1 item (the combination)
+        'processed' => 0,
+        'published' => 0,
+        'updated' => 0,
+        'skipped' => 0,
+        'duplicates_drafted' => 0,
+        'time_elapsed' => microtime(true) - $start_time,
+        'start_time' => $start_time,
+        'success' => null,
+        'error_message' => '',
+        'logs' => []
+    ];
+    set_import_status($jsonl_status);
+
+    PuntWorkLogger::info('Starting JSONL combination phase', PuntWorkLogger::CONTEXT_FEED, [
+        'total_items' => $total_items
+    ]);
+
     combine_jsonl_files($feeds, $output_dir, $total_items, $import_logs);
+
+    // Mark JSONL combination as complete
+    $jsonl_status['processed'] = 1;
+    $jsonl_status['time_elapsed'] = microtime(true) - $start_time;
+    set_import_status($jsonl_status);
+
+    PuntWorkLogger::info('JSONL combination phase completed', PuntWorkLogger::CONTEXT_FEED, [
+        'total_items' => $total_items
+    ]);
+
     return $import_logs;
 }
