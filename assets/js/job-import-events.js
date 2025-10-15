@@ -303,7 +303,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     console.log('[PUNTWORK] Final decision - hasIncompleteImport:', hasIncompleteImport, 'isScheduledImport:', isScheduledImport, 'has_active_imports:', activeScheduledImports ? activeScheduledImports.has_active_imports : false, 'isLikelyScheduledImport:', isLikelyScheduledImport);
 
                     // Now proceed with UI logic based on the results
-                    finalizeInitialStatusCheck();
+                    finalizeInitialStatusCheck(isLikelyScheduledImport);
                     
                     // Heartbeat handles real-time updates - no need for manual polling
                     // Always start background polling when scheduling is enabled, even in clean state
@@ -314,7 +314,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     // }
                 }
 
-                function finalizeInitialStatusCheck() {
+                function finalizeInitialStatusCheck(isLikelyScheduledImport) {
                     if (hasIncompleteImport) {
                         console.log('[PUNTWORK] Showing incomplete import UI');
                         JobImportUI.updateProgress(statusData);
