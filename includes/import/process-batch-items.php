@@ -70,11 +70,11 @@ if (!function_exists('process_batch_items')) {
 
                 // If post exists, check if it needs updating
                 if ($post_id) {
-                    PuntWorkLogger::info('Updating existing job post', PuntWorkLogger::CONTEXT_BATCH, [
-                        'guid' => $guid,
-                        'post_id' => $post_id,
-                        'title' => $item['title'] ?? 'none'
-                    ]);
+                    // PuntWorkLogger::info('Updating existing job post', PuntWorkLogger::CONTEXT_BATCH, [
+                    //     'guid' => $guid,
+                    //     'post_id' => $post_id,
+                    //     'title' => $item['title'] ?? 'none'
+                    // ]);
 
                     try {
                         // First, ensure the job is published if it's in the feed
@@ -178,10 +178,10 @@ if (!function_exists('process_batch_items')) {
                             ]);
                             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Failed to update ID: ' . $post_id . ' - ' . $error_message;
                         } else {
-                            PuntWorkLogger::info('Post updated successfully', PuntWorkLogger::CONTEXT_BATCH, [
+                            PuntWorkLogger::info('Updated', PuntWorkLogger::CONTEXT_BATCH, [
                                 'guid' => $guid,
                                 'post_id' => $post_id,
-                                'result' => 'updated'
+                                'title' => $item['title'] ?? 'none'
                             ]);
                             $updated++;
                         }
@@ -205,10 +205,10 @@ if (!function_exists('process_batch_items')) {
                     }
 
                 } else {
-                    PuntWorkLogger::info('Creating new job post', PuntWorkLogger::CONTEXT_BATCH, [
-                        'guid' => $guid,
-                        'title' => $item['title'] ?? 'none'
-                    ]);
+                    // PuntWorkLogger::info('Creating new job post', PuntWorkLogger::CONTEXT_BATCH, [
+                    //     'guid' => $guid,
+                    //     'title' => $item['title'] ?? 'none'
+                    // ]);
 
                     // Create new post immediately
                     $error_message = '';
@@ -225,10 +225,10 @@ if (!function_exists('process_batch_items')) {
                         ]);
                         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Failed to create GUID: ' . $guid . ' - ' . $error_message;
                     } else {
-                        PuntWorkLogger::info('Post created successfully', PuntWorkLogger::CONTEXT_BATCH, [
+                        PuntWorkLogger::info('Created', PuntWorkLogger::CONTEXT_BATCH, [
                             'guid' => $guid,
                             'post_id' => $create_result,
-                            'result' => 'created'
+                            'title' => $item['title'] ?? 'none'
                         ]);
                         $published++;
                     }
