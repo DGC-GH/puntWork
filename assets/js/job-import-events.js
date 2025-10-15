@@ -46,11 +46,9 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 console.log('[PUNTWORK] Cancel button clicked!');
                 JobImportEvents.handleCancelImport();
             });
-            $('#reset-import').on('click', function(e) {
-                console.log('[PUNTWORK] Reset button clicked!');
-                e.preventDefault(); // Prevent any default action
-                if ($(this).prop('disabled')) return; // Prevent multiple clicks
-                JobImportEvents.handleResetImport();
+            $('#resume-stuck-import').on('click', function(e) {
+                console.log('[PUNTWORK] Resume stuck import button clicked!');
+                JobImportEvents.handleResumeStuckImport();
             });
 
             // Cleanup buttons for jobs dashboard
@@ -139,6 +137,23 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
             } else {
                 console.log('[PUNTWORK] User cancelled reset');
                 $('#reset-import').prop('disabled', false); // Re-enable if cancelled
+            }
+        },
+
+        /**
+         * Handle resume stuck import button click
+         */
+        handleResumeStuckImport: function() {
+            console.log('[PUNTWORK] Resume stuck import handler called');
+
+            if (confirm('This will attempt to manually resume a stuck import by clearing continuation schedules and restarting the import process. Continue?')) {
+                console.log('[PUNTWORK] User confirmed resume stuck import');
+                $('#resume-stuck-text').hide();
+                $('#resume-stuck-loading').show();
+                $('#import-status').text('Resuming stuck import...');
+                JobImportLogic.handleResumeStuckImport();
+            } else {
+                console.log('[PUNTWORK] User cancelled resume stuck import');
             }
         },
 
@@ -316,6 +331,26 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
 
                         console.log('[PUNTWORK] Determined import type:', importType);
 
+                        // Check if this might be a stuck import
+                        var isStuckImport = false;
+                        var currentTime = Math.floor(Date.now() / 1000);
+                        var timeSinceLastUpdate = currentTime - (statusData.last_update || 0);
+                        var timeSinceStart = currentTime - (statusData.start_time || 0);
+
+                        // Consider it stuck if:
+                        // 1. No progress for more than 10 minutes (600 seconds)
+                        // 2. Import has been running for more than 2 hours (7200 seconds)
+                        // 3. Has continuation attempts but still paused
+                        if (timeSinceLastUpdate > 600 || timeSinceStart > 7200 || (statusData.paused && (statusData.continuation_attempts || 0) > 0)) {
+                            isStuckImport = true;
+                            console.log('[PUNTWORK] Detected stuck import - showing resume stuck button', {
+                                timeSinceLastUpdate: timeSinceLastUpdate,
+                                timeSinceStart: timeSinceStart,
+                                paused: statusData.paused,
+                                continuation_attempts: statusData.continuation_attempts
+                            });
+                        }
+
                         // Show the import progress section and update UI
                         JobImportUI.showImportProgress();
                         JobImportUI.updateProgress(statusData.processed, statusData.total, statusData.complete);
@@ -329,12 +364,18 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                                 JobImportUI.showResetButton();
                                 JobImportUI.hideResumeButton();
                                 JobImportUI.hideStartButton();
+                                if (isStuckImport) {
+                                    JobImportUI.showResumeStuckButton();
+                                } else {
+                                    JobImportUI.hideResumeStuckButton();
+                                }
                                 console.log('[PUNTWORK] Showing cancel and reset buttons for active scheduled import');
                             } else {
                                 // Scheduled import completed or not running
                                 JobImportUI.hideCancelButton();
                                 JobImportUI.hideResumeButton();
                                 JobImportUI.hideResetButton();
+                                JobImportUI.hideResumeStuckButton();
                                 JobImportUI.showStartButton();
                                 console.log('[PUNTWORK] Scheduled import not active, showing start button');
                             }
@@ -345,12 +386,18 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                                 JobImportUI.showResetButton();
                                 JobImportUI.hideCancelButton();
                                 JobImportUI.hideStartButton();
+                                if (isStuckImport) {
+                                    JobImportUI.showResumeStuckButton();
+                                } else {
+                                    JobImportUI.hideResumeStuckButton();
+                                }
                                 console.log('[PUNTWORK] Showing resume/reset buttons for incomplete manual import');
                             } else {
                                 JobImportUI.showStartButton();
                                 JobImportUI.hideResumeButton();
                                 JobImportUI.hideResetButton();
                                 JobImportUI.hideCancelButton();
+                                JobImportUI.hideResumeStuckButton();
                                 console.log('[PUNTWORK] Showing start button for completed manual import');
                             }
                         }
@@ -360,6 +407,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         $('#resume-import').hide();
                         $('#cancel-import').hide();
                         $('#reset-import').hide();
+                        $('#resume-stuck-import').hide();
                         $('#import-type-indicator').hide();
                         JobImportUI.hideImportUI();
                         console.log('[PUNTWORK] Clean state detected - showing start button only');
