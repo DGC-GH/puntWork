@@ -361,6 +361,10 @@ function fetch_and_generate_combined_json() {
     // Parallel feed downloads for improved performance
     $total_items = download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, $import_logs);
 
+    // Get start_time from existing import status
+    $current_status = get_import_status();
+    $start_time = $current_status['start_time'] ?? microtime(true);
+
     // Update status for JSONL combination phase
     $jsonl_status = [
         'phase' => 'jsonl-combining',
