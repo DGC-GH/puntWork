@@ -329,6 +329,16 @@ function run_scheduled_import_ajax() {
                 'execution_mode' => 'immediate_via_shutdown'
             ]);
 
+            // Check if import is already processing to prevent multiple concurrent starts
+            $status = get_import_status([]);
+            if (($status['processed'] ?? 0) > 0) {
+                PuntWorkLogger::info('Shutdown hook skipped - import already processing items', PuntWorkLogger::CONTEXT_SCHEDULING, [
+                    'processed' => $status['processed'],
+                    'reason' => 'prevent_multiple_concurrent_imports'
+                ]);
+                return;
+            }
+
             try {
                 $result = $is_manual ? run_manual_import() : run_scheduled_import(false, true);
 
