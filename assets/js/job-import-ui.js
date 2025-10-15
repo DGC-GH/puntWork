@@ -162,30 +162,33 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             // Some responses have data directly, others have it in .data property
             var data = response.data || response;
 
-            // Ensure all counter fields are present and numeric
-            data.total = parseInt(data.total) || 0;
-            data.processed = parseInt(data.processed) || 0;
-            data.published = parseInt(data.published) || 0;
-            data.updated = parseInt(data.updated) || 0;
-            data.skipped = parseInt(data.skipped) || 0;
-            data.duplicates_drafted = parseInt(data.duplicates_drafted) || 0;
-            data.time_elapsed = parseFloat(data.time_elapsed) || 0;
-            data.success = data.success !== undefined ? data.success : null;
-            data.error_message = data.error_message || '';
+            // Create a copy of all properties first to avoid readonly property issues
+            var normalizedData = Object.assign({}, data);
+
+            // Ensure all counter fields are present and numeric, overriding the copied values
+            normalizedData.total = parseInt(normalizedData.total) || 0;
+            normalizedData.processed = parseInt(normalizedData.processed) || 0;
+            normalizedData.published = parseInt(normalizedData.published) || 0;
+            normalizedData.updated = parseInt(normalizedData.updated) || 0;
+            normalizedData.skipped = parseInt(normalizedData.skipped) || 0;
+            normalizedData.duplicates_drafted = parseInt(normalizedData.duplicates_drafted) || 0;
+            normalizedData.time_elapsed = parseFloat(normalizedData.time_elapsed) || 0;
+            normalizedData.success = normalizedData.success !== undefined ? normalizedData.success : null;
+            normalizedData.error_message = normalizedData.error_message || '';
 
             PuntWorkJSLogger.debug('Normalized response data', 'UI', {
-                total: data.total,
-                processed: data.processed,
-                published: data.published,
-                updated: data.updated,
-                skipped: data.skipped,
-                duplicates_drafted: data.duplicates_drafted,
-                time_elapsed: data.time_elapsed,
-                success: data.success,
-                error_message: data.error_message
+                total: normalizedData.total,
+                processed: normalizedData.processed,
+                published: normalizedData.published,
+                updated: normalizedData.updated,
+                skipped: normalizedData.skipped,
+                duplicates_drafted: normalizedData.duplicates_drafted,
+                time_elapsed: normalizedData.time_elapsed,
+                success: normalizedData.success,
+                error_message: normalizedData.error_message
             });
 
-            return data;
+            return normalizedData;
         },
 
         /**
