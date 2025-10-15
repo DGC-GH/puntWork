@@ -290,19 +290,13 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     // Now proceed with UI logic based on the results
                     finalizeInitialStatusCheck();
                     
+                    // Heartbeat handles real-time updates - no need for manual polling
                     // Always start background polling when scheduling is enabled, even in clean state
                     // This ensures scheduled imports that start in background are detected
-                    if (isScheduledImport) {
-                        console.log('[PUNTWORK] Starting background polling for scheduled imports');
-                        JobImportEvents.startStatusPolling(true); // true = background mode
-                    }
-                    
-                    // Always start polling when scheduling is enabled, even in clean state
-                    // This ensures scheduled imports that start in background are detected
-                    if (isScheduledImport) {
-                        console.log('[PUNTWORK] Starting background polling for scheduled imports');
-                        JobImportEvents.startStatusPolling(true); // true = background mode
-                    }
+                    // if (isScheduledImport) {
+                    //     console.log('[PUNTWORK] Starting background polling for scheduled imports');
+                    //     JobImportEvents.startStatusPolling(true); // true = background mode
+                    // }
                 }
 
                 function finalizeInitialStatusCheck() {
@@ -311,8 +305,8 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                         JobImportUI.updateProgress(statusData);
                         JobImportUI.appendLogs(statusData.logs || []);
 
-                        // Start polling for real-time updates when import is active
-                        JobImportEvents.startStatusPolling();
+                        // Start heartbeat monitoring for real-time updates when import is active
+                        JobImportEvents.startHeartbeatMonitoring();
 
                         // Determine import type for UI display
                         var importType = 'manual';
@@ -781,20 +775,51 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
         },
 
         /**
-         * Stop polling for import status updates
+         * Start heartbeat monitoring for import status (replaces polling)
+         */
+        startHeartbeatMonitoring: function() {
+            console.log('[PUNTWORK] Starting heartbeat monitoring for import status');
+
+            // Ensure JobImportHeartbeat is available and initialized
+            if (typeof JobImportHeartbeat !== 'undefined') {
+                // Force a status refresh to ensure we have current data
+                JobImportHeartbeat.forceStatusRefresh();
+                console.log('[PUNTWORK] Heartbeat monitoring active - real-time updates enabled');
+            } else {
+                console.log('[PUNTWORK] JobImportHeartbeat not available, falling back to periodic checks');
+                // Fallback: periodic manual checks every 30 seconds
+                this.heartbeatFallbackInterval = setInterval(function() {
+                    JobImportAPI.getImportStatus().then(function(response) {
+                        if (response.success) {
+                            var status = JobImportUI.normalizeResponseData(response);
+                            JobImportUI.updateProgress(status);
+                            if (status.logs && status.logs.length > 0) {
+                                JobImportUI.appendLogs(status.logs);
+                            }
+                        }
+                    });
+                }, 30000); // Check every 30 seconds
+            }
+        },
+
+        /**
+         * Stop heartbeat monitoring
+         */
+        stopHeartbeatMonitoring: function() {
+            console.log('[PUNTWORK] Stopping heartbeat monitoring');
+            if (this.heartbeatFallbackInterval) {
+                clearInterval(this.heartbeatFallbackInterval);
+                this.heartbeatFallbackInterval = null;
+            }
+        },
+
+        /**
+         * Stop polling for import status updates (legacy function for compatibility)
          */
         stopStatusPolling: function() {
-            if (JobImportEvents.statusPollingInterval) {
-                clearInterval(JobImportEvents.statusPollingInterval);
-                JobImportEvents.statusPollingInterval = null;
-                console.log('[PUNTWORK] Stopped status polling');
-            }
-            if (JobImportEvents.statusPollingTimeout) {
-                clearTimeout(JobImportEvents.statusPollingTimeout);
-                JobImportEvents.statusPollingTimeout = null;
-                console.log('[PUNTWORK] Cleared status polling timeout');
-            }
-        }
+            console.log('[PUNTWORK] stopStatusPolling called - delegating to stopHeartbeatMonitoring');
+            JobImportEvents.stopHeartbeatMonitoring();
+        },
     };
 
     // Expose to global scope

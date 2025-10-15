@@ -401,7 +401,7 @@
                         $button.prop('disabled', false).html('Run Now');
                         
                         // Show success notification
-                        self.showNotification('Import started successfully - refresh manually to check progress', 'success');
+                        self.showNotification('Import started successfully - progress updates will appear automatically', 'success');
                         
                         // Refresh the schedule settings and history after a short delay
                         setTimeout(function() {
