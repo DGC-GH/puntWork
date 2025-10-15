@@ -154,6 +154,10 @@ function render_main_import_ui() {
                 </button>
                 <button id="cancel-import" class="button button-secondary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #ff3b30; border: none; color: white; display: none;">Cancel Import</button>
                 <button id="resume-import" class="button button-secondary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #34c759; border: none; color: white; display: none;">Resume Import</button>
+                <button id="resume-stuck-import" class="button button-secondary" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: #ff9500; border: none; color: white; display: none;">
+                    <span id="resume-stuck-text">Resume Stuck Import</span>
+                    <span id="resume-stuck-loading" style="display: none;">Resuming...</span>
+                </button>
                 <button id="reset-import" class="button button-outline" style="border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; background-color: transparent; border: 1px solid #d1d1d6; color: #424245; transition: all 0.2s ease;">
                     <i class="fas fa-undo" style="margin-right: 6px;"></i>Reset Import
                 </button>

@@ -47,7 +47,7 @@ require_once __DIR__ . '/../core/core-structure-logic.php';
  */
 function import_time_exceeded() {
     $start_time = get_import_start_time(microtime(true));
-    $time_limit = apply_filters('puntwork_import_time_limit', 60); // Reduced to 1 minute to trigger pause before server timeout
+    $time_limit = apply_filters('puntwork_import_time_limit', 300); // Increased to 5 minutes for better continuation
     $current_time = microtime(true);
 
     if (($current_time - $start_time) >= $time_limit) {
@@ -886,8 +886,8 @@ function continue_paused_import() {
     $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Resuming paused import (primary continuation)';
     set_import_status($status);
 
-    // Reset start time for new timeout window
-    set_import_start_time(microtime(true));
+    // DON'T reset start time for continuation - allow full time limit for resumed import
+    // set_import_start_time(microtime(true)); // Commented out - preserve original start time
 
     // Continue the import
     $result = import_all_jobs_from_json(true); // preserve status for continuation
@@ -1046,8 +1046,8 @@ function continue_paused_import_retry() {
     $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Resuming paused import (retry fallback)';
     set_import_status($status);
 
-    // Reset start time
-    set_import_start_time(microtime(true));
+    // DON'T reset start time for continuation - allow full time limit for resumed import
+    // set_import_start_time(microtime(true)); // Commented out - preserve original start time
 
     // Continue the import
     $result = import_all_jobs_from_json(true);
@@ -1132,8 +1132,8 @@ function continue_paused_import_manual() {
     $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Resuming paused import (manual trigger fallback)';
     set_import_status($status);
 
-    // Reset start time
-    set_import_start_time(microtime(true));
+    // DON'T reset start time for continuation - allow full time limit for resumed import
+    // set_import_start_time(microtime(true)); // Commented out - preserve original start time
 
     // Continue the import
     $result = import_all_jobs_from_json(true);
@@ -1234,4 +1234,69 @@ function clear_import_continuation_schedules() {
     PuntWorkLogger::info('Import continuation schedules cleared', PuntWorkLogger::CONTEXT_BATCH, [
         'action' => 'cleanup_completed'
     ]);
+}
+
+/**
+ * Manually resume a stuck import (admin function)
+ */
+function manually_resume_stuck_import() {
+    error_log('[PUNTWORK] Manual import resume triggered by admin');
+
+    // Check current status
+    $status = get_import_status([]);
+    if (isset($status['complete']) && $status['complete']) {
+        error_log('[PUNTWORK] Import already completed - not resuming');
+        return ['success' => false, 'message' => 'Import already completed'];
+    }
+
+    if (!isset($status['paused']) || !$status['paused']) {
+        error_log('[PUNTWORK] Import not paused - not resuming');
+        return ['success' => false, 'message' => 'Import not paused'];
+    }
+
+    // Clear any existing continuation schedules
+    clear_import_continuation_schedules();
+
+    // Reset pause status
+    $status['paused'] = false;
+    unset($status['pause_reason']);
+    $status['continuation_attempts'] = ($status['continuation_attempts'] ?? 0) + 1;
+    $status['last_continuation_attempt'] = microtime(true);
+    $status['continuation_method'] = 'manual_admin_resume';
+    if (!is_array($status['logs'] ?? null)) {
+        $status['logs'] = [];
+    }
+    $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Manually resuming stuck import (admin intervention)';
+    set_import_status($status);
+
+    // DON'T reset start time - allow full time limit for resumed import
+    // set_import_start_time(microtime(true)); // Commented out - preserve original start time
+
+    PuntWorkLogger::info('Manual import resume initiated', PuntWorkLogger::CONTEXT_BATCH, [
+        'attempt_number' => $status['continuation_attempts'],
+        'processed' => $status['processed'] ?? 0,
+        'total' => $status['total'] ?? 0,
+        'method' => 'manual_admin_resume'
+    ]);
+
+    // Continue the import
+    $result = import_all_jobs_from_json(true);
+
+    if ($result['success']) {
+        PuntWorkLogger::info('Manual import resume completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
+            'processed' => $result['processed'] ?? 0,
+            'total' => $result['total'] ?? 0,
+            'time_elapsed' => $result['time_elapsed'] ?? 0,
+            'method' => 'manual_admin_resume'
+        ]);
+        return ['success' => true, 'message' => 'Import resumed and completed successfully', 'result' => $result];
+    } else {
+        PuntWorkLogger::error('Manual import resume failed', PuntWorkLogger::CONTEXT_BATCH, [
+            'error' => $result['message'] ?? 'Unknown error',
+            'processed' => $result['processed'] ?? 0,
+            'total' => $result['total'] ?? 0,
+            'method' => 'manual_admin_resume'
+        ]);
+        return ['success' => false, 'message' => 'Import resume failed: ' . ($result['message'] ?? 'Unknown error'), 'result' => $result];
+    }
 }

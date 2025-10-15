@@ -1640,6 +1640,44 @@ function cleanup_old_published_jobs_ajax() {
     }
 }
 
+add_action('wp_ajax_manually_resume_stuck_import', __NAMESPACE__ . '\\manually_resume_stuck_import_ajax');
+function manually_resume_stuck_import_ajax() {
+    if (!validate_ajax_request('manually_resume_stuck_import')) {
+        return;
+    }
+
+    try {
+        PuntWorkLogger::info('Manual stuck import resume initiated via AJAX', PuntWorkLogger::CONTEXT_AJAX);
+
+        // Call the manual resume function
+        $result = manually_resume_stuck_import();
+
+        if ($result['success']) {
+            PuntWorkLogger::info('Manual stuck import resume completed successfully', PuntWorkLogger::CONTEXT_AJAX, [
+                'result' => $result
+            ]);
+            send_ajax_success('manually_resume_stuck_import', [
+                'message' => $result['message'],
+                'result' => $result['result'] ?? null
+            ]);
+        } else {
+            PuntWorkLogger::error('Manual stuck import resume failed', PuntWorkLogger::CONTEXT_AJAX, [
+                'error_message' => $result['message'],
+                'result' => $result
+            ]);
+            send_ajax_error('manually_resume_stuck_import', $result['message']);
+        }
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Manual stuck import resume AJAX failed', PuntWorkLogger::CONTEXT_AJAX, [
+            'error_message' => $e->getMessage(),
+            'error_file' => $e->getFile(),
+            'error_line' => $e->getLine()
+        ]);
+        send_ajax_error('manually_resume_stuck_import', 'Failed to resume stuck import: ' . $e->getMessage());
+    }
+}
+
 /**
  * POISON PILL: Aggressively cancel all import-related background processes
  * This function implements a comprehensive cancellation system that interrupts

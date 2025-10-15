@@ -694,6 +694,7 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             $('#cancel-import').hide();
             $('#resume-import').hide();
             $('#reset-import').hide();
+            $('#resume-stuck-import').hide();
             $('#start-import').show().text('Start Import').prop('disabled', false);
         },
 
@@ -737,6 +738,20 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
          */
         hideResetButton: function() {
             $('#reset-import').hide();
+        },
+
+        /**
+         * Show resume stuck button
+         */
+        showResumeStuckButton: function() {
+            $('#resume-stuck-import').show();
+        },
+
+        /**
+         * Hide resume stuck button
+         */
+        hideResumeStuckButton: function() {
+            $('#resume-stuck-import').hide();
         },
 
         /**

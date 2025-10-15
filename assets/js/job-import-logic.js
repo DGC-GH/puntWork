@@ -378,6 +378,80 @@
         },
 
         /**
+         * Handle resume stuck import process - manual intervention for stuck imports
+         */
+        handleResumeStuckImport: function() {
+            PuntWorkJSLogger.info('Resume Stuck Import clicked', 'LOGIC');
+
+            // Stop any ongoing import
+            this.isImporting = false;
+
+            // Stop status polling
+            if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
+                window.JobImportEvents.stopStatusPolling();
+            }
+
+            JobImportAPI.call('manually_resume_stuck_import', {}).then(function(response) {
+                PuntWorkJSLogger.debug('Resume stuck import response', 'LOGIC', response);
+                console.log('[PUNTWORK] Resume stuck import API response:', response);
+
+                if (response.success) {
+                    JobImportUI.appendLogs(['Stuck import manually resumed']);
+                    $('#status-message').text('Stuck import resumed - monitoring progress...');
+
+                    // Show import progress UI
+                    JobImportUI.showImportUI();
+
+                    // Update progress with current status
+                    if (response.result && response.result.processed !== undefined) {
+                        JobImportUI.updateProgress(response.result.processed, response.result.total, response.result.complete);
+                    }
+
+                    // Show appropriate buttons
+                    $('#start-import').hide();
+                    $('#resume-import').hide();
+                    $('#resume-stuck-import').hide();
+                    $('#cancel-import').show();
+                    $('#reset-import').show();
+
+                    // Show import type indicator
+                    $('#import-type-indicator').show();
+                    $('#import-type-text').text('Manual import is currently running');
+
+                    // Start status polling to monitor progress
+                    if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
+                        window.JobImportEvents.startStatusPolling();
+                    }
+
+                    console.log('[PUNTWORK] Resume stuck import completed successfully');
+                } else {
+                    // Resume failed - show error
+                    var errorMsg = response.message || 'Unknown error';
+                    JobImportUI.appendLogs(['Resume stuck import failed: ' + errorMsg]);
+                    $('#status-message').text('Resume failed: ' + errorMsg);
+
+                    // Reset button states
+                    $('#resume-stuck-text').show();
+                    $('#resume-stuck-loading').hide();
+                    $('#import-status').text('');
+
+                    console.log('[PUNTWORK] Resume stuck import failed:', response);
+                }
+            }).catch(function(xhr, status, error) {
+                PuntWorkJSLogger.error('Resume stuck import AJAX error', 'LOGIC', error);
+                JobImportUI.appendLogs(['Resume stuck import AJAX error: ' + error]);
+                $('#status-message').text('Resume stuck import failed - please try again');
+
+                // Reset button states
+                $('#resume-stuck-text').show();
+                $('#resume-stuck-loading').hide();
+                $('#import-status').text('');
+
+                console.log('[PUNTWORK] Resume stuck import AJAX error:', error);
+            });
+        },
+
+        /**
          * Handle cleanup trashed jobs
          */
         handleCleanupTrashedJobs: function() {
