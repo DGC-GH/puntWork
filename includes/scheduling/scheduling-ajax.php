@@ -475,10 +475,6 @@ function run_scheduled_import_async() {
 
     error_log('[PUNTWORK] Starting actual import process...');
 
-    // Clear import_cancel transient again just before starting the import
-    delete_transient('import_cancel');
-    error_log('[PUNTWORK] Cleared import_cancel transient again before import');
-
     try {
         $result = run_scheduled_import();
         error_log('[PUNTWORK] Import result: success=' . ($result['success'] ? 'true' : 'false') . ', processed=' . ($result['processed'] ?? 0) . ', total=' . ($result['total'] ?? 0) . ', time_elapsed=' . round($result['time_elapsed'] ?? 0, 2));
@@ -578,10 +574,6 @@ function run_manual_import_async() {
     }
 
     error_log('[PUNTWORK] Starting actual manual import process...');
-
-    // Clear import_cancel transient again just before starting the import
-    delete_transient('import_cancel');
-    error_log('[PUNTWORK] Cleared import_cancel transient again before manual import');
 
     try {
         $result = run_manual_import();
