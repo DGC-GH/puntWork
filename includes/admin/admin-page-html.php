@@ -21,7 +21,6 @@ require_once __DIR__ . '/admin-ui-scheduling.php';
 require_once __DIR__ . '/admin-ui-debug.php';
 
 function feeds_dashboard_page() {
-    error_log('[PUNTWORK] feeds_dashboard_page() called');
     wp_enqueue_script('jquery');
 
     // Render main import UI
