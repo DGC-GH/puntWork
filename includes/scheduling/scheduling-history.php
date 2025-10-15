@@ -38,6 +38,27 @@ function run_scheduled_import($test_mode = false) {
         ];
     }
 
+    // Check if an import is already running (skip this check for test mode)
+    if (!$test_mode) {
+        $import_status = get_import_status([]);
+        // Block fresh scheduled imports if another import is actively running (but allow paused imports to be continued)
+        if (isset($import_status['complete']) && $import_status['complete'] === false &&
+            isset($import_status['processed']) && $import_status['processed'] > 0 &&
+            (!isset($import_status['paused']) || !$import_status['paused'])) {
+            error_log('[PUNTWORK] Scheduled import skipped - import already running (processed: ' . $import_status['processed'] . ')');
+            PuntWorkLogger::info('Scheduled import skipped - import already running', PuntWorkLogger::CONTEXT_SCHEDULER, [
+                'reason' => 'import_already_running',
+                'current_processed' => $import_status['processed'] ?? 0,
+                'current_total' => $import_status['total'] ?? 0,
+                'action' => 'skipped_scheduled_import'
+            ]);
+            return [
+                'success' => false,
+                'message' => 'Scheduled import skipped - import already running'
+            ];
+        }
+    }
+
     // Check if scheduling is still enabled (skip this check for test mode)
     if (!$test_mode) {
         $schedule = get_option('puntwork_import_schedule', ['enabled' => false]);
