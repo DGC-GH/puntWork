@@ -322,48 +322,14 @@ function run_scheduled_import_ajax() {
             'action' => 'preparation_complete'
         ]);
 
-        // Schedule the import to run on shutdown for immediate execution
-        add_action('shutdown', function() use ($is_manual) {
-            PuntWorkLogger::info('Shutdown hook triggered for import execution', PuntWorkLogger::CONTEXT_SCHEDULING, [
-                'import_type' => $is_manual ? 'manual' : 'scheduled',
-                'execution_mode' => 'immediate_via_shutdown'
-            ]);
+        // Schedule the import to run asynchronously via WordPress cron
+        wp_schedule_single_event(time(), $is_manual ? 'puntwork_manual_import' : 'puntwork_scheduled_import_async');
 
-            // Check if import is already processing to prevent multiple concurrent starts
-            $status = get_import_status([]);
-            if (($status['processed'] ?? 0) > 0) {
-                PuntWorkLogger::info('Shutdown hook skipped - import already processing items', PuntWorkLogger::CONTEXT_SCHEDULING, [
-                    'processed' => $status['processed'],
-                    'reason' => 'prevent_multiple_concurrent_imports'
-                ]);
-                return;
-            }
-
-            try {
-                $result = $is_manual ? run_manual_import() : run_scheduled_import(false, true);
-
-                PuntWorkLogger::info('Shutdown import execution completed', PuntWorkLogger::CONTEXT_SCHEDULING, [
-                    'import_type' => $is_manual ? 'manual' : 'scheduled',
-                    'success' => $result['success'] ?? false,
-                    'processed' => $result['processed'] ?? 0,
-                    'total' => $result['total'] ?? 0,
-                    'time_elapsed' => $result['time_elapsed'] ?? 0
-                ]);
-            } catch (\Exception $e) {
-                PuntWorkLogger::error('Shutdown import execution failed', PuntWorkLogger::CONTEXT_SCHEDULING, [
-                    'import_type' => $is_manual ? 'manual' : 'scheduled',
-                    'error_message' => $e->getMessage(),
-                    'error_code' => $e->getCode(),
-                    'error_file' => $e->getFile(),
-                    'error_line' => $e->getLine()
-                ]);
-            }
-        });
-
-        PuntWorkLogger::info('Import scheduled for immediate execution', PuntWorkLogger::CONTEXT_SCHEDULING, [
+        PuntWorkLogger::info('Import scheduled for asynchronous execution', PuntWorkLogger::CONTEXT_SCHEDULING, [
             'import_type' => $is_manual ? 'manual' : 'scheduled',
-            'execution_method' => 'shutdown_hook',
-            'expected_timing' => 'immediate'
+            'execution_method' => 'wordpress_cron',
+            'scheduled_hook' => $is_manual ? 'puntwork_manual_import' : 'puntwork_scheduled_import_async',
+            'expected_timing' => 'immediate_via_cron'
         ]);
 
         // Return success immediately so UI can start polling
