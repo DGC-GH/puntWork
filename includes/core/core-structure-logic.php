@@ -192,6 +192,14 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
     curl_setopt($ch, CURLOPT_TIMEOUT, 300); // 5 minutes timeout per feed
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    // Allow all encodings (gzip/deflate) to be handled by libcurl
+    curl_setopt($ch, CURLOPT_ENCODING, '');
+    // Helpful for debugging — capture verbose output into a temp stream
+    $verbose_stream = fopen('php://temp', 'w+');
+    if ($verbose_stream) {
+        curl_setopt($ch, CURLOPT_VERBOSE, true);
+        curl_setopt($ch, CURLOPT_STDERR, $verbose_stream);
+    }
     curl_setopt($ch, CURLOPT_USERAGENT, 'WordPress puntWork Importer');
     curl_setopt($ch, CURLOPT_HEADER, false); // Don't include headers in response
 
@@ -203,7 +211,8 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
             'xml_path' => $task['xml_path'],
             'url' => $task['url'],
             'feed_key' => $feed_key,
-            'start_time' => microtime(true)
+            'start_time' => microtime(true),
+            'verbose_stream' => isset($verbose_stream) ? $verbose_stream : null
         ];
     }
 
@@ -283,12 +292,44 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
 
         $file_size = file_exists($result['xml_path']) ? filesize($result['xml_path']) : 0;
 
+        // If file size is unexpectedly small or zero but HTTP returned 200, attempt a fallback using WordPress HTTP API
+        $attempted_fallback = false;
+        if (($file_size < 1000 && $http_code === 200) || ($file_size === 0 && !empty($curl_error))) {
+            try {
+                $attempted_fallback = true;
+                PuntWorkLogger::info('Attempting fallback download using wp_remote_get', PuntWorkLogger::CONTEXT_FEED, [
+                    'feed_key' => $feed_key,
+                    'url' => $result['url'],
+                    'previous_file_size' => $file_size,
+                    'http_code' => $http_code,
+                    'curl_error' => $curl_error
+                ]);
+                // Use existing download_feed helper which supports wp_remote_get fallback
+                require_once __DIR__ . '/../import/download-feed.php';
+                $fallback_logs = [];
+                $fallback_ok = download_feed($result['url'], $result['xml_path'], $output_dir, $fallback_logs, true);
+                // Merge fallback logs into main logs for visibility
+                foreach ($fallback_logs as $l) $logs[] = $l;
+                $file_size = file_exists($result['xml_path']) ? filesize($result['xml_path']) : 0;
+                if ($fallback_ok && $file_size > 1000) {
+                    $http_code = 200; // override if fallback succeeded
+                    $curl_error = '';
+                }
+            } catch (\Exception $e) {
+                PuntWorkLogger::error('Fallback download failed', PuntWorkLogger::CONTEXT_FEED, [
+                    'feed_key' => $feed_key,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
         // If handle still exists, attempt to gather any missing info, but do not assume it's present
         if ($ch) {
             if ($http_code === null) $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             if (empty($curl_error)) $curl_error = curl_error($ch);
         }
 
+        // Also accept files that were recovered via fallback
         if ($http_code === 200 && $file_size > 1000 && empty($curl_error)) {
             $successful_downloads++;
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Parallel download successful: ' . $feed_key . ' (' . $file_size . ' bytes in ' . round($download_time, 2) . 's)';
@@ -310,8 +351,15 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
                     fclose($fp_preview);
                 }
             }
+            // If verbose output was captured from curl, include it for debugging
+            $curl_verbose = '';
+            if (!empty($verbose_stream) && is_resource($verbose_stream)) {
+                rewind($verbose_stream);
+                $curl_verbose = stream_get_contents($verbose_stream);
+                fclose($verbose_stream);
+            }
 
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Parallel download failed: ' . $feed_key . ' (HTTP ' . $http_code . ', size: ' . $file_size . ', curl_error: ' . $curl_error . ')';
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Parallel download failed: ' . $feed_key . ' (HTTP ' . $http_code . ', size: ' . $file_size . ', curl_error: ' . $curl_error . ', attempted_fallback: ' . ($attempted_fallback ? 'true' : 'false') . ')';
 
             PuntWorkLogger::error('Feed download failed', PuntWorkLogger::CONTEXT_FEED, [
                 'feed_key' => $feed_key,
@@ -320,8 +368,10 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
                 'file_size' => $file_size,
                 'download_time' => $download_time,
                 'curl_error' => $curl_error,
+                'attempted_fallback' => $attempted_fallback,
                 'response_length' => $file_size,
-                'response_preview' => $response_preview
+                'response_preview' => $response_preview,
+                'curl_verbose' => $curl_verbose
             ]);
         }
 
