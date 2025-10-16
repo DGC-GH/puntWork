@@ -211,7 +211,8 @@ if (!function_exists('import_all_jobs_from_json')) {
         error_log('[PUNTWORK] ===== STARTING FULL IMPORT =====');
         error_log('[PUNTWORK] PHP Memory limit: ' . ini_get('memory_limit'));
         error_log('[PUNTWORK] PHP Max execution time: ' . ini_get('max_execution_time'));
-        error_log('[PUNTWORK] WordPress memory limit: ' . WP_MEMORY_LIMIT);
+        error_log('[PUNTWORK] WordPress Memory Limit (WP_MEMORY_LIMIT): ' . WP_MEMORY_LIMIT . ' (' . wp_convert_hr_to_bytes(WP_MEMORY_LIMIT) . ' bytes)');
+        error_log('[PUNTWORK] PHP Memory Limit (ini_get): ' . ini_get('memory_limit') . ' (' . wp_convert_hr_to_bytes(ini_get('memory_limit')) . ' bytes)');
         error_log('[PUNTWORK] Preserve status: ' . ($preserve_status ? 'true' : 'false'));
 
         try {
