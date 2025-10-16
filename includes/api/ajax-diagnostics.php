@@ -16,8 +16,17 @@ use function Puntwork\get_import_status;
 add_action('wp_ajax_puntwork_import_diagnostics', __NAMESPACE__ . '\\puntwork_import_diagnostics_ajax');
 
 function puntwork_import_diagnostics_ajax() {
-    if (!validate_ajax_request('puntwork_import_diagnostics')) {
-        return;
+    // Perform a nonce check but don't abort diagnostics on failure — allow admins to fetch diagnostics even if the nonce is stripped by a WAF.
+    $nonce_ok = check_ajax_referer('job_import_nonce', 'nonce', false);
+    if (!$nonce_ok) {
+        // Log the missing/invalid nonce for debugging, but continue if the user is an admin.
+        try {
+            if (class_exists('\Puntwork\PuntWorkLogger')) {
+                \Puntwork\PuntWorkLogger::warn('Diagnostics called without valid nonce (continuing for admin)', \Puntwork\PuntWorkLogger::CONTEXT_AJAX, ['action' => 'puntwork_import_diagnostics']);
+            }
+        } catch (\Throwable $t) {
+            // swallow logger errors for diagnostics endpoint
+        }
     }
 
     // restrict to administrators
