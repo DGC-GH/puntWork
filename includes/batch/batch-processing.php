@@ -170,10 +170,10 @@ function process_batch_items_logic($setup) {
 
                 // CRITICAL: Check for timeouts during batch processing to prevent server kills
                 if ($i % 25 === 0) { // Check every 25 items (reduced from 5 for performance)
-                    static $last_check_time = 0;
+                    static $last_check_time_2 = 0;
                     $current_time = microtime(true);
-                    if ($current_time - $last_check_time >= 1) { // Cache checks for 1 second
-                        $last_check_time = $current_time;
+                    if ($current_time - $last_check_time_2 >= 1) { // Cache checks for 1 second
+                        $last_check_time_2 = $current_time;
                         if (import_time_exceeded() || import_memory_exceeded()) {
                         PuntWorkLogger::warning('Timeout/memory limit detected mid-batch, saving progress', PuntWorkLogger::CONTEXT_BATCH, [
                             'current_index' => $current_index,
@@ -381,6 +381,7 @@ function process_batch_items_logic($setup) {
                     }
                 }
                 unset($batch_json_items[$i]);
+            }
             } catch (\Exception $e) {
                 PuntWorkLogger::error('Error processing batch item', PuntWorkLogger::CONTEXT_BATCH, [
                     'error' => $e->getMessage(),
