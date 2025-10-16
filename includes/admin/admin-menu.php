@@ -63,4 +63,14 @@ add_action('admin_menu', function() {
         'puntwork-diagnostics',
         __NAMESPACE__ . '\\puntwork_diagnostics_page'
     );
+
+    // Import Settings - Phase 2 enhancement for configuration management
+    add_submenu_page(
+        'puntwork-dashboard',
+        'Import Settings',
+        'Import Settings',
+        'manage_options',
+        'puntwork-import-settings',
+        __NAMESPACE__ . '\\render_import_settings_page'
+    );
 });
