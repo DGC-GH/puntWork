@@ -23,8 +23,8 @@ function enqueue_job_import_scripts() {
     $post_type = isset($_GET['post_type']) ? $_GET['post_type'] : '';
     $current_screen = get_current_screen();
 
-    // Load scripts on job import dashboard and jobs dashboard pages
-    $should_load = in_array($current_page, ['job-feed-dashboard', 'jobs-dashboard']);
+    // Load scripts on job import dashboard, jobs dashboard and diagnostics pages
+    $should_load = in_array($current_page, ['job-feed-dashboard', 'jobs-dashboard', 'puntwork-diagnostics']);
 
     if ($should_load) {
         // Font Awesome for icons
