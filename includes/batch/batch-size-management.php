@@ -700,12 +700,18 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
 
 /**
  * Calculate recommended maximum batch size based on system constraints.
+ * Uses caching to avoid repeated calculations during the same import session.
  *
  * @param float $memory_limit_bytes Memory limit in bytes.
  * @param float $current_memory_ratio Current memory usage ratio.
  * @return int Recommended maximum batch size.
  */
 function calculate_recommended_max_batch_size($memory_limit_bytes, $current_memory_ratio) {
+    // Use static cache to avoid recalculating during the same request/session
+    static $cached_result = null;
+    static $last_memory_limit = null;
+    static $last_cpu_cores = null;
+
     try {
         // Validate inputs
         if (!is_numeric($memory_limit_bytes) || $memory_limit_bytes <= 0) {
@@ -713,6 +719,16 @@ function calculate_recommended_max_batch_size($memory_limit_bytes, $current_memo
         }
         if (!is_numeric($current_memory_ratio) || $current_memory_ratio < 0 || $current_memory_ratio > 1) {
             $current_memory_ratio = min(1, max(0, $current_memory_ratio));
+        }
+
+        // Get current CPU cores
+        $cpu_cores = function_exists('shell_exec') ? (int) shell_exec('nproc 2>/dev/null') : 2;
+
+        // Check if we can use cached result (only if memory limit and CPU cores haven't changed)
+        if ($cached_result !== null &&
+            $last_memory_limit === $memory_limit_bytes &&
+            $last_cpu_cores === $cpu_cores) {
+            return $cached_result;
         }
 
         // Calculate available memory
@@ -727,7 +743,6 @@ function calculate_recommended_max_batch_size($memory_limit_bytes, $current_memo
         $memory_based_max = max(1, floor($available_memory / $memory_per_item_bytes));
 
         // CPU-based constraints
-        $cpu_cores = function_exists('shell_exec') ? (int) shell_exec('nproc 2>/dev/null') : 2;
         $cpu_based_max = max(1, $cpu_cores * 25); // 25 items per CPU core
 
         // Time-based constraints (prevent batches longer than 5 minutes)
@@ -739,6 +754,11 @@ function calculate_recommended_max_batch_size($memory_limit_bytes, $current_memo
         // Apply absolute bounds
         $recommended_max = max(MIN_BATCH_SIZE, min(MAX_BATCH_SIZE * 2, $recommended_max));
 
+        // Cache the result for future calls
+        $cached_result = $recommended_max;
+        $last_memory_limit = $memory_limit_bytes;
+        $last_cpu_cores = $cpu_cores;
+
         PuntWorkLogger::debug('Calculated recommended maximum batch size', PuntWorkLogger::CONTEXT_BATCH, [
             'recommended_max' => $recommended_max,
             'memory_based_max' => $memory_based_max,
@@ -747,7 +767,8 @@ function calculate_recommended_max_batch_size($memory_limit_bytes, $current_memo
             'available_memory_mb' => $available_mb,
             'current_memory_ratio' => $current_memory_ratio,
             'cpu_cores' => $cpu_cores,
-            'memory_per_item_kb' => $memory_per_item_kb
+            'memory_per_item_kb' => $memory_per_item_kb,
+            'cached' => false
         ]);
 
         return $recommended_max;
