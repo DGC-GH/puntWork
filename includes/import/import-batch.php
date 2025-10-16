@@ -50,10 +50,15 @@ function import_time_exceeded() {
     $time_limit = apply_filters('puntwork_import_time_limit', 120); // Reduced to 2 minutes for Hostinger
     $current_time = microtime(true);
 
+    $elapsed = $current_time - $start_time;
+    error_log('[PUNTWORK] TIME CHECK: start_time=' . $start_time . ', current_time=' . $current_time . ', elapsed=' . $elapsed . ', limit=' . $time_limit);
+
     if (($current_time - $start_time) >= $time_limit) {
+        error_log('[PUNTWORK] TIME EXCEEDED: elapsed ' . $elapsed . ' >= limit ' . $time_limit);
         return true;
     }
 
+    error_log('[PUNTWORK] TIME OK: elapsed ' . $elapsed . ' < limit ' . $time_limit);
     return apply_filters('puntwork_import_time_exceeded', false);
 }
 
@@ -67,10 +72,14 @@ function import_memory_exceeded() {
     $memory_limit = get_memory_limit_bytes() * 0.9; // 90% of max memory
     $current_memory = memory_get_usage(true);
 
+    error_log('[PUNTWORK] MEMORY CHECK: current=' . $current_memory . ' bytes (' . round($current_memory / 1024 / 1024, 1) . ' MB), limit=' . $memory_limit . ' bytes (' . round($memory_limit / 1024 / 1024, 1) . ' MB)');
+
     if ($current_memory >= $memory_limit) {
+        error_log('[PUNTWORK] MEMORY EXCEEDED: ' . round($current_memory / 1024 / 1024, 1) . ' MB >= ' . round($memory_limit / 1024 / 1024, 1) . ' MB');
         return true;
     }
 
+    error_log('[PUNTWORK] MEMORY OK: ' . round($current_memory / 1024 / 1024, 1) . ' MB < ' . round($memory_limit / 1024 / 1024, 1) . ' MB');
     return apply_filters('puntwork_import_memory_exceeded', false);
 }
 
@@ -147,7 +156,15 @@ if (!function_exists('import_all_jobs_from_json')) {
             $existing_status = get_import_status([]);
             $batch_count = $existing_status['batch_count'] ?? 0;
             $accumulated_time = $existing_status['time_elapsed'] ?? 0; // Preserve previous elapsed time
-            error_log('[PUNTWORK] Resuming import from batch ' . ($batch_count + 1) . ', accumulated time: ' . $accumulated_time . ' seconds');
+            error_log('[PUNTWORK] CONTINUATION: Resuming import from batch ' . ($batch_count + 1) . ', accumulated time: ' . $accumulated_time . ' seconds');
+            error_log('[PUNTWORK] CONTINUATION: Existing status details: ' . json_encode([
+                'processed' => $existing_status['processed'] ?? 0,
+                'total' => $existing_status['total'] ?? 0,
+                'paused' => $existing_status['paused'] ?? false,
+                'complete' => $existing_status['complete'] ?? false,
+                'batch_count' => $batch_count,
+                'time_elapsed' => $accumulated_time
+            ]));
         }
 
         error_log('[PUNTWORK] ===== STARTING FULL IMPORT =====');
@@ -225,6 +242,10 @@ if (!function_exists('import_all_jobs_from_json')) {
             error_log('[PUNTWORK] Current memory usage: ' . memory_get_usage(true) / 1024 / 1024 . ' MB');
             error_log('[PUNTWORK] Peak memory usage: ' . memory_get_peak_usage(true) / 1024 / 1024 . ' MB');
             error_log('[PUNTWORK] Execution time so far: ' . (microtime(true) - $start_time) . ' seconds');
+            error_log('[PUNTWORK] Preserve status mode: ' . ($preserve_status ? 'true' : 'false'));
+            error_log('[PUNTWORK] Current batch count: ' . $batch_count);
+            error_log('[PUNTWORK] Total processed so far: ' . $total_processed);
+            error_log('[PUNTWORK] Total items: ' . $total_items);
 
             // Check for cancellation at the start of each batch loop iteration
             if (get_transient('import_cancel') === true || get_transient('import_force_cancel') === true || get_transient('import_emergency_stop') === true) {
@@ -855,6 +876,12 @@ function continue_paused_import() {
     error_log('[PUNTWORK] Current memory: ' . memory_get_usage(true) / 1024 / 1024 . ' MB');
     error_log('[PUNTWORK] Peak memory: ' . memory_get_peak_usage(true) / 1024 / 1024 . ' MB');
 
+    // CRITICAL: Check WordPress cron system status
+    error_log('[PUNTWORK] WordPress cron status check:');
+    error_log('[PUNTWORK] - DISABLE_WP_CRON constant: ' . (defined('DISABLE_WP_CRON') ? (DISABLE_WP_CRON ? 'true' : 'false') : 'not defined'));
+    error_log('[PUNTWORK] - wp_next_scheduled for our hook: ' . (wp_next_scheduled('puntwork_continue_import') ? 'scheduled' : 'not scheduled'));
+    error_log('[PUNTWORK] - Current cron array size: ' . count(_get_cron_array()));
+
     // Update continuation attempt tracking
     $status = get_import_status([]);
     error_log('[PUNTWORK] Current import status before continuation: ' . json_encode([
@@ -862,7 +889,9 @@ function continue_paused_import() {
         'complete' => $status['complete'] ?? false,
         'processed' => $status['processed'] ?? 0,
         'total' => $status['total'] ?? 0,
-        'continuation_attempts' => $status['continuation_attempts'] ?? 0
+        'continuation_attempts' => $status['continuation_attempts'] ?? 0,
+        'batch_count' => $status['batch_count'] ?? 0,
+        'time_elapsed' => $status['time_elapsed'] ?? 0
     ]));
 
     $status['continuation_attempts'] = ($status['continuation_attempts'] ?? 0) + 1;
@@ -874,7 +903,9 @@ function continue_paused_import() {
         'attempt_number' => $status['continuation_attempts'],
         'pause_time' => $status['pause_time'] ?? null,
         'time_since_pause' => $status['pause_time'] ? ($attempt_time - $status['pause_time']) : null,
-        'method' => 'primary_cron'
+        'method' => 'primary_cron',
+        'wp_cron_disabled' => defined('DISABLE_WP_CRON') ? DISABLE_WP_CRON : false,
+        'cron_scheduled' => wp_next_scheduled('puntwork_continue_import') ? true : false
     ]);
 
     // Check for cancellation before resuming
