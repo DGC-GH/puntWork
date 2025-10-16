@@ -621,6 +621,10 @@ if (!function_exists('import_all_jobs_from_json')) {
             ]);
         }
         
+        // Calculate performance metrics
+        $overall_time_per_item = $total_processed > 0 ? $total_duration / $total_processed : 0;
+        $overall_items_per_second = $total_duration > 0 ? $total_processed / $total_duration : 0;
+        
         error_log('[PUNTWORK] ===== IMPORT PERFORMANCE SUMMARY =====');
         error_log(sprintf('[PUNTWORK] Total import time: %.2f seconds', $total_duration));
         error_log(sprintf('[PUNTWORK] Total items processed: %d', $total_processed));
