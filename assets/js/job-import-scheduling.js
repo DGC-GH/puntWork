@@ -378,6 +378,16 @@
                         // Show success notification
                         self.showNotification('Import started successfully - progress updates will appear automatically', 'success');
                         
+                        // Start heartbeat monitoring for real-time updates
+                        if (typeof JobImportEvents !== 'undefined' && JobImportEvents.startHeartbeatMonitoring) {
+                            JobImportEvents.startHeartbeatMonitoring();
+                        }
+                        
+                        // Force an immediate heartbeat refresh to start monitoring the import
+                        if (typeof JobImportHeartbeat !== 'undefined' && JobImportHeartbeat.forceStatusRefresh) {
+                            JobImportHeartbeat.forceStatusRefresh();
+                        }
+                        
                         // Refresh the schedule settings and history after a short delay
                         setTimeout(function() {
                             self.loadScheduleSettings();

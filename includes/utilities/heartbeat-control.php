@@ -113,11 +113,13 @@ add_filter('heartbeat_send', function($response, $screen_id) {
         // 1. Not complete, or
         // 2. Completed within last 30 seconds, or
         // 3. Started within last 5 minutes, or
-        // 4. Updated within last 2 minutes (for scheduled imports)
+        // 4. Updated within last 2 minutes (for scheduled imports), or
+        // 5. Has a start_time and is not complete (for async scheduled imports)
         $is_active = !$import_status['complete'] ||
                     ($import_status['complete'] && $time_since_update < 30) ||
                     ($start_time > 0 && $time_since_start < 300) ||
-                    ($last_update > 0 && $time_since_update < 120);
+                    ($last_update > 0 && $time_since_update < 120) ||
+                    ($start_time > 0 && !$import_status['complete']);
     }
 
     if ($is_active) {
@@ -132,7 +134,16 @@ add_filter('heartbeat_send', function($response, $screen_id) {
                 'is_active' => true
             );
             $last_sent_hash = $current_hash;
+
+            // Debug logging for heartbeat sends
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[PUNTWORK] Heartbeat sending import update: processed=' . ($import_status['processed'] ?? 0) . ', total=' . ($import_status['total'] ?? 0) . ', complete=' . ($import_status['complete'] ? 'true' : 'false'));
+            }
+        } elseif (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] Heartbeat skipping send - status unchanged');
         }
+    } elseif (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] Heartbeat not active: is_active=' . ($is_active ? 'true' : 'false') . ', status_empty=' . (empty($import_status) ? 'true' : 'false'));
     }
 
     return $response;
