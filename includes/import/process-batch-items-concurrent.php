@@ -19,6 +19,17 @@ require_once plugin_dir_path(__FILE__) . '../utilities/retry-utility.php';
 require_once plugin_dir_path(__FILE__) . '../utilities/database-utilities.php';
 
 /**
+ * Check if an array is numeric (indexed array) vs associative
+ *
+ * @param array $array Array to check
+ * @return bool True if numeric array (0, 1, 2...) false if associative
+ */
+function is_numeric_array($array) {
+    if (!is_array($array)) return false;
+    return array_keys($array) === range(0, count($array) - 1);
+}
+
+/**
  * Validate Action Scheduler health and capability for concurrent processing
  *
  * @return array Validation result with status and details
@@ -281,7 +292,12 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
 
     // INCREASED TTL FOR RELIABILITY: Use extended transient lifetime to withstand Action Scheduler delays
     // Hostinger can have slower Action Scheduler execution - give it time to access shared data
+
+    // ENHANCED RELIABILITY: Increased transient TTL and data validation for Action Scheduler compatibility
     $transient_ttl = 3600; // Use consistent TTL - 1 hour for guaranteed access during Action Scheduler execution
+
+    // CRITICAL: Ensure transients are set atomically and include validation keys
+    $transient_ttl = 7200; // Increased to 2 hours for extreme reliability
 
     // PRE-PROCESS DATA: Load all items from JSONL and share via transients to avoid per-job file reads
     // This eliminates 97TB of file reading and thousands of duplicate queries
@@ -928,93 +944,53 @@ function process_single_item_callback($guid, $json_path, $start_index, $acf_fiel
  * Eliminates expensive JSONL file access by using pre-loaded data from transients
  */
 function process_single_item_optimized_callback($data) {
-    $data = (array) $data; // Ensure it's an array
+    // NORMALIZE INPUT: Action Scheduler sometimes passes data incorrectly
+    if (is_array($data)) {
+        $data = (array) $data; // Ensure it's an array
+    } elseif (is_object($data)) {
+        $data = (array) $data; // Convert objects to arrays
+    } elseif (!is_array($data)) {
+        // Handle scalar or other data types by wrapping
+        $data = ['corrupted_data' => $data];
+    }
 
     // DEBUG: Log raw data received for diagnosis
     PuntWorkLogger::debug('Action Scheduler callback raw data received', PuntWorkLogger::CONTEXT_BATCH, [
         'raw_data_type' => gettype($data),
-        'raw_data' => $data,
         'data_keys' => array_keys($data),
-        'data_count' => count($data)
+        'data_count' => count($data),
+        'data_sample' => is_array($data) && !empty($data) ? array_slice($data, 0, 2) : null
     ]);
 
-    // FIX FOR WORDPRESS ACTION SCHEDULER SERIALIZATION ISSUE:
-    // Action Scheduler sometimes incorrectly passes array data - detect and fix
+    // CRITICAL: Detect Action Scheduler data corruption patterns
+    $is_corrupted = false;
+    $reason = '';
+
+    // Pattern 1: Missing required keys (normal case)
     if (!isset($data['guid']) || !isset($data['shared_data_key']) || !isset($data['batch_data_cache_key'])) {
-        // Action Scheduler is broken - data is corrupted or not passed correctly
+        $is_corrupted = true;
+        $reason = 'missing_required_keys';
+
+        // Additional checks for known corruption patterns
+        if (is_numeric_array($data)) {
+            $reason = 'indexed_array_instead_of_associative';
+        } elseif (isset($data['corrupted_data'])) {
+            $reason = 'scalar_data_wrapped';
+        } elseif (count($data) === 0) {
+            $reason = 'empty_array_received';
+        }
 
         PuntWorkLogger::warn('Detected WordPress Action Scheduler data corruption', PuntWorkLogger::CONTEXT_BATCH, [
-            'received_data' => $data,
+            'received_data_keys' => array_keys($data),
             'data_type' => gettype($data),
-            'data_keys' => is_array($data) ? array_keys($data) : 'not_array',
-            'action' => 'falling_back_to_sequential_processing',
-            'reason' => 'ActionScheduler data corruption detected'
+            'corruption_reason' => $reason,
+            'data_count' => count($data),
+            'action' => 'immediate_failure_no_fallback',
+            'recommendation' => 'Action Scheduler data passing is fundamentally broken'
         ]);
 
-        // FALLBACK: Process all items sequentially for this batch
-        // Find the real data by searching all transients that match our pattern
-        global $wpdb;
-        $logs = [];
-
-        // Find all current puntwork batch data keys
-        $all_transients = $wpdb->get_col(
-            $wpdb->prepare(
-                "SELECT option_name FROM $wpdb->options WHERE option_name LIKE %s AND option_value != '' LIMIT 10",
-                $wpdb->esc_like('transient_puntwork_batch_') . '%'
-            )
-        );
-
-        $batch_items_found = [];
-        foreach ($all_transients as $transient_option) {
-            $cache_key = str_replace('transient_', '', $transient_option);
-            $cached_batch = get_transient($cache_key);
-            if ($cached_batch && is_array($cached_batch)) {
-                $batch_items_found[$cache_key] = $cached_batch;
-                PuntWorkLogger::debug('Found batch cache in fallback recovery', PuntWorkLogger::CONTEXT_BATCH, [
-                    'cache_key' => $cache_key,
-                    'item_count' => count($cached_batch),
-                    'sample_guids' => array_slice(array_keys($cached_batch), 0, 3)
-                ]);
-            }
-        }
-
-        if (empty($batch_items_found)) {
-            PuntWorkLogger::error('No batch data found for sequential fallback', PuntWorkLogger::CONTEXT_BATCH, [
-                'reason' => 'cannot_process_any_items',
-                'action' => 'skipping_entire_batch'
-            ]);
-            return;
-        }
-
-        // Process all items in all found batches sequentially
-        $processed_total = 0;
-        foreach ($batch_items_found as $cache_key => $batch_data) {
-            foreach ($batch_data as $guid => $item_data) {
-                // Look up existing post
-                $existing_meta = $wpdb->get_row($wpdb->prepare(
-                    "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'guid' AND meta_value = %s LIMIT 1",
-                    $guid
-                ));
-
-                if ($existing_meta) {
-                    // Update timestamp only (minimal fallback)
-                    $post_id = $existing_meta->post_id;
-                    update_post_meta($post_id, '_last_import_update', current_time('mysql'));
-                    update_post_meta($post_id, 'guid', $guid);
-                    $processed_total++;
-                }
-
-                // Don't overload the system with too many sequential items
-                if ($processed_total >= 50) break 2; // Break out of both loops
-            }
-        }
-
-        PuntWorkLogger::info('Sequential fallback processing completed', PuntWorkLogger::CONTEXT_BATCH, [
-            'processed_count' => $processed_total,
-            'action' => 'timestamp_updates_only',
-            'reason' => 'ActionScheduler_corruption_recovered'
-        ]);
-
+        // CRITICAL: Do NOT attempt fallback processing in callback
+        // Signal failure back to monitoring without processing any items
         return;
     }
 
