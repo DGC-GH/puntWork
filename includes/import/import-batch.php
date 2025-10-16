@@ -667,11 +667,11 @@ if (!function_exists('import_all_jobs_from_json')) {
 
                 foreach ($all_action_ids as $action_id) {
                     try {
-                        $action = ActionScheduler::store()->fetch_action($action_id);
+                        $action = \ActionScheduler::store()->fetch_action($action_id);
                         if ($action && !$action->is_finished()) {
                             $all_complete = false;
                             $pending_count++;
-                        } elseif ($action && \ActionScheduler::store()->get_status($action_id) === \ActionScheduler_Store::STATUS_FAILED) {
+                        } elseif ($action && strtolower((string) \ActionScheduler::store()->get_status($action_id)) === 'failed') {
                             // Failed actions are considered finished, but log them
                             $failed_count++;
                             PuntWorkLogger::warn('Action Scheduler job failed', PuntWorkLogger::CONTEXT_BATCH, [
@@ -781,16 +781,15 @@ if (!function_exists('import_all_jobs_from_json')) {
 
         try {
             $cleanup_result = cleanup_old_job_posts($start_time);
-            $deleted_count = $cleanup_result['deleted_count'];
-            $cleanup_logs = $cleanup_result['logs'];
+            $deleted_count = $cleanup_result['deleted_count'] ?? 0;
+            $cleanup_logs = $cleanup_result['logs'] ?? [];
 
             $cleanup_duration = microtime(true) - $cleanup_start_time;
             PuntWorkLogger::info('Cleanup phase completed', PuntWorkLogger::CONTEXT_BATCH, [
                 'duration' => $cleanup_duration,
                 'deleted_count' => $deleted_count
             ]);
-
-            } catch (\Exception $e) {
+        } catch (\Exception $e) {
             PuntWorkLogger::error('Cleanup phase failed', PuntWorkLogger::CONTEXT_BATCH, [
                 'error' => $e->getMessage(),
                 'duration' => microtime(true) - $cleanup_start_time
@@ -1126,6 +1125,19 @@ function schedule_import_continuation_with_fallbacks($pause_time) {
         ]);
     }
 
+    // Action Scheduler fallbacks (if Action Scheduler is available, schedule persistent actions)
+    if (function_exists('as_schedule_single_action')) {
+        try {
+            // Use unique hooks to avoid duplicates
+            as_schedule_single_action($current_time + 10, 'puntwork_continue_import_as', [], 'puntwork');
+            as_schedule_single_action($current_time + 120, 'puntwork_continue_import_retry_as', [], 'puntwork');
+            as_schedule_single_action($current_time + 300, 'puntwork_continue_import_manual_as', [], 'puntwork');
+            PuntWorkLogger::info('Action Scheduler fallback actions scheduled for import continuation', PuntWorkLogger::CONTEXT_BATCH, ['times' => [$current_time + 10, $current_time + 120, $current_time + 300]]);
+        } catch (\Exception $e) {
+            PuntWorkLogger::warn('Failed to schedule Action Scheduler fallback actions', PuntWorkLogger::CONTEXT_BATCH, ['error' => $e->getMessage()]);
+        }
+    }
+
     // MONITORING: Status check (every 30 seconds for first 10 minutes, then hourly)
     for ($i = 1; $i <= 20; $i++) { // 20 checks = 10 minutes
         $check_time = $current_time + ($i * 30);
@@ -1402,6 +1414,18 @@ function clear_import_continuation_schedules() {
 
     // Record diagnostics when schedules cleared
     add_import_diagnostics('cleared_import_continuation_schedules');
+
+    // Clear Action Scheduler fallback actions as well
+    if (function_exists('as_unschedule_all_actions')) {
+        try {
+            as_unschedule_all_actions('puntwork_continue_import_as');
+            as_unschedule_all_actions('puntwork_continue_import_retry_as');
+            as_unschedule_all_actions('puntwork_continue_import_manual_as');
+            PuntWorkLogger::info('Action Scheduler fallback actions cleared', PuntWorkLogger::CONTEXT_BATCH);
+        } catch (\Exception $e) {
+            PuntWorkLogger::warn('Failed to clear Action Scheduler fallback actions', PuntWorkLogger::CONTEXT_BATCH, ['error' => $e->getMessage()]);
+        }
+    }
 }
 
 /**
