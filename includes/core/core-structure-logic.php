@@ -15,9 +15,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 function get_feeds() {
-    // Clear cache for debugging
-    delete_transient('puntwork_feeds');
-    
     $feeds = get_transient('puntwork_feeds');
     if (false === $feeds) {
         $feeds = [];
@@ -187,12 +184,14 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
             continue;
         }
 
-        $ch = curl_init($task['url']);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // Get response as string
-        curl_setopt($ch, CURLOPT_TIMEOUT, 300); // 5 minutes timeout per feed
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'WordPress puntWork Importer');
-        curl_setopt($ch, CURLOPT_HEADER, false); // Don't include headers in response
+    $ch = curl_init($task['url']);
+    // Stream directly to file handle to avoid buffering entire response in memory
+    curl_setopt($ch, CURLOPT_FILE, $fp);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 300); // 5 minutes timeout per feed
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_USERAGENT, 'WordPress puntWork Importer');
+    curl_setopt($ch, CURLOPT_HEADER, false); // Don't include headers in response
 
         curl_multi_add_handle($mh, $ch);
         $handles[$feed_key] = $ch;
@@ -223,14 +222,9 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
         $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $download_time = microtime(true) - $result['start_time'];
 
-        // Get the response content
-        $response_content = curl_multi_getcontent($ch);
-
-        // Write content to file
-        if ($fp && !empty($response_content)) {
-            fwrite($fp, $response_content);
-            fclose($fp);
-        } elseif ($fp) {
+        // When streaming to file with CURLOPT_FILE the response is written directly to $fp.
+        // Ensure the file handle is closed.
+        if ($fp) {
             fclose($fp);
         }
 
@@ -248,8 +242,15 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
                 'http_code' => $http_code
             ]);
         } else {
-            // Read first 500 bytes of response for debugging
-            $response_preview = substr($response_content, 0, 500);
+            // Read first 500 bytes of the file for debugging (if any)
+            $response_preview = '';
+            if (file_exists($result['xml_path'])) {
+                $fp_preview = @fopen($result['xml_path'], 'r');
+                if ($fp_preview) {
+                    $response_preview = @fread($fp_preview, 500);
+                    fclose($fp_preview);
+                }
+            }
 
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Parallel download failed: ' . $feed_key . ' (HTTP ' . $http_code . ', size: ' . $file_size . ')';
 
@@ -259,7 +260,7 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
                 'http_code' => $http_code,
                 'file_size' => $file_size,
                 'download_time' => $download_time,
-                'response_length' => strlen($response_content),
+                'response_length' => $file_size,
                 'response_preview' => $response_preview
             ]);
         }
