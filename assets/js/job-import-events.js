@@ -577,6 +577,43 @@ console.log('[PUNTWORK] job-import-events.js loaded');
                             $('#import-type-indicator').hide();
                         } else {
                             JobImportEvents.completeDetectedCount = 0;
+
+                            // FALLBACK CONTINUATION: Check if import is paused and try AJAX continuation
+                            if (statusData.paused && !statusData.complete && currentTotal > 0) {
+                                var timeSincePause = statusData.pause_time ? (now / 1000) - statusData.pause_time : null;
+                                var continuationAttempts = statusData.continuation_attempts || 0;
+
+                                // Only attempt AJAX continuation if:
+                                // 1. Import has been paused for more than 30 seconds (give cron time to work)
+                                // 2. We haven't already tried AJAX continuation recently
+                                // 3. We haven't exceeded max attempts
+                                if (timeSincePause && timeSincePause > 30 && continuationAttempts < 5) {
+                                    var lastAttempt = statusData.last_continuation_attempt || 0;
+                                    var timeSinceLastAttempt = (now / 1000) - lastAttempt;
+
+                                    if (timeSinceLastAttempt > 60) { // Wait at least 1 minute between attempts
+                                        console.log('[PUNTWORK] Attempting AJAX continuation of paused import');
+                                        $('#status-message').text('Attempting to resume paused import...');
+
+                                        JobImportAPI.continuePausedImportAjax().then(function(continueResponse) {
+                                            if (continueResponse.success) {
+                                                console.log('[PUNTWORK] AJAX continuation successful');
+                                                $('#status-message').text('Import resumed successfully');
+                                                // Force a status refresh
+                                                setTimeout(function() {
+                                                    JobImportEvents.pollStatus();
+                                                }, 1000);
+                                            } else {
+                                                console.log('[PUNTWORK] AJAX continuation failed:', continueResponse.message);
+                                                $('#status-message').text('Failed to resume import automatically');
+                                            }
+                                        }).catch(function(continueError) {
+                                            console.log('[PUNTWORK] AJAX continuation error:', continueError);
+                                            $('#status-message').text('Error resuming import');
+                                        });
+                                    }
+                                }
+                            }
                         }
                     }
                 }).catch(function(error) {

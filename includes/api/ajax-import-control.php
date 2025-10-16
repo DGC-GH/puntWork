@@ -1618,6 +1618,103 @@ function manually_resume_stuck_import_ajax() {
     }
 }
 
+add_action('wp_ajax_continue_paused_import_ajax', __NAMESPACE__ . '\\continue_paused_import_ajax');
+function continue_paused_import_ajax() {
+    if (!validate_ajax_request('continue_paused_import_ajax')) {
+        return;
+    }
+
+    try {
+        PuntWorkLogger::info('AJAX continuation of paused import initiated', PuntWorkLogger::CONTEXT_AJAX);
+
+        // Check current status
+        $status = get_import_status([]);
+        if (isset($status['complete']) && $status['complete']) {
+            PuntWorkLogger::info('AJAX continuation skipped - import already completed', PuntWorkLogger::CONTEXT_AJAX);
+            send_ajax_success('continue_paused_import_ajax', [
+                'message' => 'Import already completed',
+                'already_complete' => true
+            ]);
+            return;
+        }
+
+        if (!isset($status['paused']) || !$status['paused']) {
+            PuntWorkLogger::info('AJAX continuation skipped - import not paused', PuntWorkLogger::CONTEXT_AJAX);
+            send_ajax_success('continue_paused_import_ajax', [
+                'message' => 'Import not paused',
+                'not_paused' => true
+            ]);
+            return;
+        }
+
+        // Check for cancellation
+        if (get_transient('import_cancel') === true || get_transient('import_force_cancel') === true || get_transient('import_emergency_stop') === true) {
+            $cancel_type = get_transient('import_emergency_stop') === true ? 'emergency stopped' :
+                          (get_transient('import_force_cancel') === true ? 'force cancelled' : 'cancelled');
+            PuntWorkLogger::info('AJAX continuation cancelled', PuntWorkLogger::CONTEXT_AJAX, [
+                'reason' => 'import_cancel_transient_set',
+                'cancel_type' => $cancel_type
+            ]);
+            send_ajax_error('continue_paused_import_ajax', 'Import was ' . $cancel_type . ' by user');
+            return;
+        }
+
+        // Update continuation attempt tracking
+        $status['continuation_attempts'] = ($status['continuation_attempts'] ?? 0) + 1;
+        $status['last_continuation_attempt'] = microtime(true);
+        $status['continuation_method'] = 'ajax_fallback';
+        set_import_status($status);
+
+        PuntWorkLogger::info('AJAX continuation attempt initiated', PuntWorkLogger::CONTEXT_AJAX, [
+            'attempt_number' => $status['continuation_attempts'],
+            'pause_time' => $status['pause_time'] ?? null,
+            'time_since_pause' => $status['pause_time'] ? (microtime(true) - $status['pause_time']) : null,
+            'method' => 'ajax_fallback'
+        ]);
+
+        // Reset pause status
+        $status['paused'] = false;
+        unset($status['pause_reason']);
+        if (!is_array($status['logs'] ?? null)) {
+            $status['logs'] = [];
+        }
+        $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Resuming paused import (AJAX fallback continuation)';
+        set_import_status($status);
+
+        // Continue the import
+        $result = import_all_jobs_from_json(true); // preserve status for continuation
+
+        if ($result['success']) {
+            PuntWorkLogger::info('AJAX continuation completed successfully', PuntWorkLogger::CONTEXT_AJAX, [
+                'processed' => $result['processed'] ?? 0,
+                'total' => $result['total'] ?? 0,
+                'time_elapsed' => $result['time_elapsed'] ?? 0,
+                'attempts_used' => $status['continuation_attempts'] ?? 1
+            ]);
+            send_ajax_success('continue_paused_import_ajax', [
+                'message' => 'Import resumed and completed successfully',
+                'result' => $result
+            ]);
+        } else {
+            PuntWorkLogger::error('AJAX continuation failed', PuntWorkLogger::CONTEXT_AJAX, [
+                'error' => $result['message'] ?? 'Unknown error',
+                'processed' => $result['processed'] ?? 0,
+                'total' => $result['total'] ?? 0,
+                'attempts_used' => $status['continuation_attempts'] ?? 1
+            ]);
+            send_ajax_error('continue_paused_import_ajax', 'Import continuation failed: ' . ($result['message'] ?? 'Unknown error'));
+        }
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('AJAX continuation failed with exception', PuntWorkLogger::CONTEXT_AJAX, [
+            'error_message' => $e->getMessage(),
+            'error_file' => $e->getFile(),
+            'error_line' => $e->getLine()
+        ]);
+        send_ajax_error('continue_paused_import_ajax', 'Failed to continue import: ' . $e->getMessage());
+    }
+}
+
 /**
  * WordPress Heartbeat handler for real-time import status updates
  * Responds to heartbeat requests with current import status data

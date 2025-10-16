@@ -146,14 +146,17 @@ console.log('[PUNTWORK] job-import-api.js loaded');
         },
 
         /**
-         * Cleanup old published job posts not in current feeds
+         * Continue a paused import via AJAX (fallback mechanism)
          * @returns {Promise} AJAX promise
          */
-        cleanupOldPublishedJobs: function() {
+        continuePausedImportAjax: function() {
             return $.ajax({
                 url: jobImportData.ajaxurl,
                 type: 'POST',
-                data: { action: 'cleanup_old_published_jobs', nonce: jobImportData.nonce }
+                data: { 
+                    action: 'continue_paused_import_ajax', 
+                    nonce: jobImportData.nonce 
+                }
             });
         },
 
