@@ -403,12 +403,13 @@ if (!function_exists('import_all_jobs_from_json')) {
                 set_import_status($current_status);
 
                 // IMPLEMENT FALLBACK MECHANISMS FOR CRON-BASED CONTINUATION
-                $pause_time = microtime(true);
-                $current_status['pause_time'] = $pause_time;
-                $current_status['continuation_attempts'] = 0;
-                $current_status['last_continuation_attempt'] = null;
-                $current_status['continuation_strategy'] = 'cron_fallback';
-                set_import_status($current_status);
+    $pause_time = microtime(true);
+    $current_status['pause_time'] = $pause_time;
+    $current_status['continuation_attempts'] = $current_status['continuation_attempts'] ?? 0; // Safely increment
+    $current_status['last_continuation_attempt'] = null;
+    $current_status['continuation_strategy'] = 'cron_fallback';
+    // Ensure pause_time is properly initialized for status checks
+    set_import_status($current_status);
 
                 // Schedule multiple fallback continuation mechanisms
                 schedule_import_continuation_with_fallbacks($pause_time);
