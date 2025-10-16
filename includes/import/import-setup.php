@@ -142,7 +142,7 @@ function prepare_import_setup($batch_start = 0) {
                     'cache_memory_usage' => 'optimized'
                 ]);
             }
-        } catch (Exception $e) {
+    } catch (\Exception $e) {
             PuntWorkLogger::error('GUID cache query failed', PuntWorkLogger::CONTEXT_IMPORT, [
                 'error_message' => $e->getMessage(),
                 'error_code' => $e->getCode(),

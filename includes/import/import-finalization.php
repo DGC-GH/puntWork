@@ -706,7 +706,7 @@ function bulk_delete_job_posts_sql($post_ids) {
 
         return $result;
 
-    } catch (Exception $e) {
+    } catch (\Exception $e) {
         // Rollback on error
         $wpdb->query('ROLLBACK');
         PuntWorkLogger::error('Bulk delete failed, rolled back', PuntWorkLogger::CONTEXT_BATCH, [
