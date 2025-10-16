@@ -509,8 +509,6 @@ function get_active_scheduled_imports_ajax() {
         return;
     }
 
-    PuntWorkLogger::debug('get_active_scheduled_imports AJAX endpoint called', PuntWorkLogger::CONTEXT_AJAX);
-
     try {
         $active_imports = check_active_scheduled_imports();
 
@@ -520,9 +518,10 @@ function get_active_scheduled_imports_ajax() {
         $schedule_frequency = get_option('puntwork_import_schedule', ['frequency' => 'daily']);
         $schedule_frequency = $schedule_frequency['frequency'] ?? 'daily';
 
-        PuntWorkLogger::debug('Scheduling settings retrieved', PuntWorkLogger::CONTEXT_AJAX, [
+        PuntWorkLogger::info('Scheduling settings checked', PuntWorkLogger::CONTEXT_AJAX, [
             'schedule_enabled' => $schedule_enabled,
-            'schedule_frequency' => $schedule_frequency
+            'schedule_frequency' => $schedule_frequency,
+            'active_imports_count' => count($active_imports)
         ]);
 
         $response = [
@@ -532,8 +531,6 @@ function get_active_scheduled_imports_ajax() {
             'has_active_imports' => !empty($active_imports),
             'last_checked' => microtime(true)
         ];
-
-        PuntWorkLogger::debug('Active scheduled imports check response', PuntWorkLogger::CONTEXT_AJAX, $response);
 
         wp_send_json_success($response);
 
@@ -935,13 +932,6 @@ function cleanup_trashed_jobs_ajax() {
         $batch_memory_end = memory_get_usage(true);
         $batch_memory_used = $batch_memory_end - $batch_memory_start;
 
-        PuntWorkLogger::debug('Batch processing completed with memory monitoring', PuntWorkLogger::CONTEXT_BATCH, [
-            'batch_size' => count($trashed_posts),
-            'deleted_count' => $deleted_count,
-            'batch_memory_used_mb' => $batch_memory_used / (1024 * 1024),
-            'current_memory_ratio' => memory_get_usage(true) / $memory_limit
-        ]);
-
         // Update progress
         $progress['total_processed'] += count($trashed_posts);
         $progress['total_deleted'] += $deleted_count;
@@ -985,12 +975,6 @@ function cleanup_drafted_jobs_ajax() {
     $batch_size = isset($_POST['batch_size']) ? intval($_POST['batch_size']) : 50;
     $offset = isset($_POST['offset']) ? intval($_POST['offset']) : 0;
     $is_continue = isset($_POST['is_continue']) && $_POST['is_continue'] === 'true';
-
-    PuntWorkLogger::debug('Cleanup drafted jobs function called', PuntWorkLogger::CONTEXT_AJAX, [
-        'batch_size' => $batch_size,
-        'offset' => $offset,
-        'is_continue' => $is_continue
-    ]);
 
     // Initialize progress tracking for first batch
     if (!$is_continue) {
@@ -1076,7 +1060,6 @@ function cleanup_drafted_jobs_ajax() {
     // If already completed, return completion response
     if ($progress['complete']) {
         $message = "Cleanup completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} drafted jobs";
-        PuntWorkLogger::debug('Returning cached completion response for drafted jobs', PuntWorkLogger::CONTEXT_BATCH);
         
         wp_send_json_success([
             'message' => $message,
@@ -1092,13 +1075,6 @@ function cleanup_drafted_jobs_ajax() {
         ]);
         return;
     }
-
-    PuntWorkLogger::debug('Retrieved progress data', PuntWorkLogger::CONTEXT_BATCH, [
-        'total_processed' => $progress['total_processed'],
-        'total_jobs' => $progress['total_jobs'],
-        'current_index' => $progress['current_index'],
-        'complete' => $progress['complete']
-    ]);
 
     $draft_job_ids = $progress['draft_job_ids'] ?? [];
     $current_index = $progress['current_index'] ?? 0;
@@ -1127,16 +1103,6 @@ function cleanup_drafted_jobs_ajax() {
                 'total_deleted' => $progress['total_deleted'],
                 'final_draft_count' => $final_count,
                 'expected_remaining' => $progress['total_jobs'] - $progress['total_deleted']
-            ]);
-
-            PuntWorkLogger::debug('Sending completion progress update', PuntWorkLogger::CONTEXT_BATCH, [
-                'processed' => $progress['total_processed'],
-                'total' => $progress['total_jobs'],
-                'deleted' => $progress['total_deleted'],
-                'offset' => $progress['current_index'],
-                'progress_percentage' => 100,
-                'complete' => false,
-                'status' => 'completed'
             ]);
 
             wp_send_json_success([
@@ -1190,10 +1156,6 @@ function cleanup_drafted_jobs_ajax() {
             $locked = wp_check_post_lock($post->ID);
             if ($locked) {
                 $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Skipped locked draft job: ' . $post->post_title . ' (ID: ' . $post->ID . ', locked by user: ' . $locked . ')';
-                PuntWorkLogger::debug('Skipped locked post', PuntWorkLogger::CONTEXT_BATCH, [
-                    'post_id' => $post->ID,
-                    'locked_by' => $locked
-                ]);
                 continue;
             }
 
@@ -1205,12 +1167,6 @@ function cleanup_drafted_jobs_ajax() {
             if ($result && !$post_exists_after) {
                 $deleted_count++;
                 $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Successfully deleted draft job: ' . $post->post_title . ' (ID: ' . $post->ID . ')';
-                PuntWorkLogger::debug('Post deletion verified', PuntWorkLogger::CONTEXT_BATCH, [
-                    'post_id' => $post->ID,
-                    'post_title' => $post->post_title,
-                    'existed_before' => $post_exists_before ? 'yes' : 'no',
-                    'exists_after' => $post_exists_after ? 'yes' : 'no'
-                ]);
             } else {
                 $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Failed to delete draft job: ' . $post->post_title . ' (ID: ' . $post->ID . ') - wp_delete_post returned: ' . ($result ? 'true' : 'false') . ', still exists: ' . ($post_exists_after ? 'yes' : 'no');
                 PuntWorkLogger::error('Post deletion failed', PuntWorkLogger::CONTEXT_BATCH, [
@@ -1236,13 +1192,6 @@ function cleanup_drafted_jobs_ajax() {
 
         $batch_memory_end = memory_get_usage(true);
         $batch_memory_used = $batch_memory_end - $batch_memory_start;
-
-        PuntWorkLogger::debug('Draft batch processing completed with memory monitoring', PuntWorkLogger::CONTEXT_BATCH, [
-            'batch_size' => count($posts_details),
-            'deleted_count' => $deleted_count,
-            'batch_memory_used_mb' => $batch_memory_used / (1024 * 1024),
-            'current_memory_ratio' => memory_get_usage(true) / $memory_limit
-        ]);
 
         // Update progress
         $progress['total_processed'] += count($posts_details);
@@ -1295,12 +1244,6 @@ function cleanup_old_published_jobs_ajax() {
     $batch_size = isset($_POST['batch_size']) ? intval($_POST['batch_size']) : 50;
     $offset = isset($_POST['offset']) ? intval($_POST['offset']) : 0;
     $is_continue = isset($_POST['is_continue']) && $_POST['is_continue'] === 'true';
-
-    PuntWorkLogger::debug('Cleanup old published jobs function called', PuntWorkLogger::CONTEXT_AJAX, [
-        'batch_size' => $batch_size,
-        'offset' => $offset,
-        'is_continue' => $is_continue
-    ]);
 
     // Initialize progress tracking for first batch
     if (!$is_continue) {
@@ -1368,12 +1311,6 @@ function cleanup_old_published_jobs_ajax() {
             if (function_exists('gc_collect_cycles')) {
                 gc_collect_cycles();
             }
-
-            PuntWorkLogger::debug('GUID collection chunk processed', PuntWorkLogger::CONTEXT_BATCH, [
-                'chunk_guids_collected' => count($chunk_guids),
-                'total_guids_collected' => count($current_guids),
-                'memory_usage_mb' => $current_memory / (1024 * 1024)
-            ]);
         }
 
         if (empty($current_guids)) {
@@ -1451,7 +1388,6 @@ function cleanup_old_published_jobs_ajax() {
     // If already completed, return completion response
     if ($progress['complete']) {
         $message = "Cleanup completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} old published jobs";
-        PuntWorkLogger::debug('Returning cached completion response for old published jobs', PuntWorkLogger::CONTEXT_BATCH);
         
         wp_send_json_success([
             'message' => $message,
@@ -1467,13 +1403,6 @@ function cleanup_old_published_jobs_ajax() {
         ]);
         return;
     }
-
-    PuntWorkLogger::debug('Retrieved old published progress data', PuntWorkLogger::CONTEXT_BATCH, [
-        'total_processed' => $progress['total_processed'],
-        'total_jobs' => $progress['total_jobs'],
-        'current_offset' => $progress['current_offset'],
-        'complete' => $progress['complete']
-    ]);
 
     $current_guids_chunked = get_cleanup_guids();
 
@@ -1511,15 +1440,6 @@ function cleanup_old_published_jobs_ajax() {
             }
         }
 
-        PuntWorkLogger::debug('Old published jobs query results with chunked processing', PuntWorkLogger::CONTEXT_BATCH, [
-            'guid_chunks_processed' => count($current_guids_chunked),
-            'batch_size_requested' => $batch_size,
-            'offset' => $offset,
-            'found_jobs_count' => count($old_published_posts),
-            'memory_usage_mb' => memory_get_usage(true) / (1024 * 1024),
-            'first_few_job_ids' => array_slice(array_column($old_published_posts, 'ID'), 0, 5)
-        ]);
-
         if (empty($old_published_posts)) {
             // No more jobs to process
             $progress['complete'] = true;
@@ -1535,16 +1455,6 @@ function cleanup_old_published_jobs_ajax() {
                 'total_processed' => $progress['total_processed'],
                 'total_deleted' => $progress['total_deleted'],
                 'current_feed_jobs' => count($current_guids)
-            ]);
-
-            PuntWorkLogger::debug('Sending completion progress update for old published jobs', PuntWorkLogger::CONTEXT_BATCH, [
-                'processed' => $progress['total_processed'],
-                'total' => $progress['total_jobs'],
-                'deleted' => $progress['total_deleted'],
-                'offset' => $progress['current_offset'],
-                'progress_percentage' => 100,
-                'complete' => false,
-                'status' => 'completed'
             ]);
 
             wp_send_json_success([
@@ -1606,13 +1516,6 @@ function cleanup_old_published_jobs_ajax() {
 
         $batch_memory_end = memory_get_usage(true);
         $batch_memory_used = $batch_memory_end - $batch_memory_start;
-
-        PuntWorkLogger::debug('Old published batch processing completed with memory monitoring', PuntWorkLogger::CONTEXT_BATCH, [
-            'batch_size' => count($old_published_posts),
-            'deleted_count' => $deleted_count,
-            'batch_memory_used_mb' => $batch_memory_used / (1024 * 1024),
-            'current_memory_ratio' => memory_get_usage(true) / $memory_limit
-        ]);
 
         // Update progress
         $progress['total_processed'] += count($old_published_posts);
