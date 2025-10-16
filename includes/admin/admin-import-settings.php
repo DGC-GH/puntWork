@@ -18,17 +18,11 @@ require_once __DIR__ . '/../import/import-config.php';
 require_once __DIR__ . '/../import/import-monitoring.php';
 
 /**
- * Add import settings to admin menu
+ * Add import settings to admin menu - DISABLED as we use main menu now
  */
 function add_import_settings_menu() {
-    add_submenu_page(
-        'puntwork-admin',
-        'Import Settings',
-        'Import Settings',
-        'manage_options',
-        'puntwork-import-settings',
-        __NAMESPACE__ . '\\render_import_settings_page'
-    );
+    // Disabled - using main menu integration instead
+    // This function is kept for compatibility but not used
 }
 add_action('admin_menu', __NAMESPACE__ . '\\add_import_settings_menu');
 
