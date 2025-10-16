@@ -325,8 +325,11 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
             ]);
         }
 
-        curl_multi_remove_handle($mh, $ch);
-        curl_close($ch);
+        // Only remove/close if the curl handle still exists (it may have been closed earlier)
+        if ($ch) {
+            @curl_multi_remove_handle($mh, $ch);
+            @curl_close($ch);
+        }
     }
 
     curl_multi_close($mh);
