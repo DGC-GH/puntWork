@@ -294,7 +294,7 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
                 $batch_data_indexed[$item['guid']] = $item;
             }
         }
-        set_transient($batch_data_cache_key, $batch_data_indexed, 3600);
+        set_transient($batch_data_cache_key, $batch_data_indexed, 86400); // 24 hours instead of 1 hour
     } catch (\Exception $e) {
         PuntWorkLogger::error('Failed to pre-load batch data', PuntWorkLogger::CONTEXT_BATCH, [
             'error' => $e->getMessage(),
@@ -310,7 +310,7 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
         ];
     }
 
-    // Cache shared data to avoid per-job loading
+    // Cache shared data to avoid per-job loading - increased TTL to prevent expiration during long batch processing
     $shared_data_key = 'puntwork_shared_' . uniqid() . '_' . microtime(true);
     $shared_data = [
         'acf_fields' => $acf_fields,
@@ -319,7 +319,7 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
         'batch_start_index' => $start_index,
         'batch_size' => count($batch_guids)
     ];
-    set_transient($shared_data_key, $shared_data, 3600);
+    set_transient($shared_data_key, $shared_data, 86400); // 24 hours instead of 1 hour
 
     $action_ids = [];
     $scheduling_errors = 0;
