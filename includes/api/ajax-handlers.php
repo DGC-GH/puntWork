@@ -28,5 +28,8 @@ require_once __DIR__ . '/ajax-feed-processing.php';
 // Include purge handlers
 require_once __DIR__ . '/ajax-purge.php';
 
+// Diagnostics settings (save REST token)
+require_once __DIR__ . '/ajax-diagnostics-settings.php';
+
 // Include scheduling handlers
 require_once __DIR__ . '/../scheduling/scheduling-ajax.php';

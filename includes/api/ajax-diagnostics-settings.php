@@ -1,0 +1,38 @@
+<?php
+/**
+ * AJAX handlers for diagnostics settings (save REST token)
+ */
+namespace Puntwork\API;
+
+require_once __DIR__ . '/../utilities/ajax-utilities.php';
+
+use function Puntwork\validate_ajax_request;
+use function Puntwork\send_ajax_error;
+use function Puntwork\send_ajax_success;
+
+add_action('wp_ajax_puntwork_save_rest_token', __NAMESPACE__ . '\\puntwork_save_rest_token_ajax');
+
+function puntwork_save_rest_token_ajax() {
+    // require manage_options capability
+    if ( ! current_user_can('manage_options') ) {
+        send_ajax_error('puntwork_save_rest_token', 'Permission denied');
+        return;
+    }
+
+    // validate nonce if provided (best-effort)
+    if ( isset($_REQUEST['nonce']) ) {
+        check_admin_referer('puntwork_admin_settings', 'nonce');
+    }
+
+    $token = isset($_POST['token']) ? trim( (string) $_POST['token'] ) : '';
+    if ( empty( $token ) ) {
+        // allow clearing
+        update_option('puntwork_rest_token', '');
+        send_ajax_success('puntwork_save_rest_token', ['message' => 'Token cleared']);
+        return;
+    }
+
+    // persist token
+    update_option('puntwork_rest_token', $token);
+    send_ajax_success('puntwork_save_rest_token', ['message' => 'Token saved']);
+}
