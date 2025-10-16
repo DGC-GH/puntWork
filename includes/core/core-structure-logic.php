@@ -207,32 +207,68 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
         ];
     }
 
-    // Execute all downloads in parallel
-    $active = null;
-    do {
-        $status = curl_multi_exec($mh, $active);
-        if ($active) {
-            curl_multi_select($mh, 1.0); // Wait up to 1 second
-        }
-    } while ($active && $status == CURLM_OK);
+    // Execute downloads in parallel using a robust curl_multi loop.
+    // Map curl handle resource ids to feed keys so we can process completions as they arrive.
+    $handle_map = [];
+    foreach ($handles as $fk => $h) {
+        $handle_map[(int) $h] = $fk;
+    }
 
-        // Process results and close handles
+    $running = null;
+    $mrc = curl_multi_exec($mh, $running);
+    // Drive initial transfers
+    while ($mrc == CURLM_CALL_MULTI_PERFORM) {
+        $mrc = curl_multi_exec($mh, $running);
+    }
+
+    // Main loop: wait for activity and continue until no handles are running
+    while ($running && $mrc == CURLM_OK) {
+        $select = curl_multi_select($mh, 1.0);
+        if ($select === -1) {
+            // On some systems select returns -1; avoid busy loop
+            usleep(100000); // 100ms
+        }
+
+        // Continue performing transfers
+        do {
+            $mrc = curl_multi_exec($mh, $running);
+        } while ($mrc == CURLM_CALL_MULTI_PERFORM);
+
+        // Read information about messages (completed handles)
+        while ($info = curl_multi_info_read($mh)) {
+            $ch = $info['handle'];
+            $key = $handle_map[(int) $ch] ?? null;
+            $result = &$results[$key];
+
+            // Record transfer end time
+            $result['end_time'] = microtime(true);
+
+            // Close the file handle if still open
+            if (!empty($result['file_handle'])) {
+                @fclose($result['file_handle']);
+                $result['file_handle'] = null;
+            }
+
+            // No immediate logging here; we'll inspect all handles below
+        }
+    }
+
+    // Process results and close handles
     $successful_downloads = 0;
     foreach ($results as $feed_key => $result) {
         $ch = $result['handle'];
-        $fp = $result['file_handle'];
         $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $download_time = microtime(true) - $result['start_time'];
+        $download_time = (isset($result['end_time']) ? $result['end_time'] : microtime(true)) - $result['start_time'];
 
-        // When streaming to file with CURLOPT_FILE the response is written directly to $fp.
-        // Ensure the file handle is closed.
-        if ($fp) {
-            fclose($fp);
+        // Ensure any remaining file handle is closed
+        if (!empty($result['file_handle'])) {
+            @fclose($result['file_handle']);
         }
 
         $file_size = file_exists($result['xml_path']) ? filesize($result['xml_path']) : 0;
+        $curl_error = curl_error($ch);
 
-        if ($http_code === 200 && $file_size > 1000) {
+        if ($http_code === 200 && $file_size > 1000 && empty($curl_error)) {
             $successful_downloads++;
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Parallel download successful: ' . $feed_key . ' (' . $file_size . ' bytes in ' . round($download_time, 2) . 's)';
 
@@ -254,7 +290,7 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
                 }
             }
 
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Parallel download failed: ' . $feed_key . ' (HTTP ' . $http_code . ', size: ' . $file_size . ')';
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Parallel download failed: ' . $feed_key . ' (HTTP ' . $http_code . ', size: ' . $file_size . ', curl_error: ' . $curl_error . ')';
 
             PuntWorkLogger::error('Feed download failed', PuntWorkLogger::CONTEXT_FEED, [
                 'feed_key' => $feed_key,
@@ -262,6 +298,7 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
                 'http_code' => $http_code,
                 'file_size' => $file_size,
                 'download_time' => $download_time,
+                'curl_error' => $curl_error,
                 'response_length' => $file_size,
                 'response_preview' => $response_preview
             ]);

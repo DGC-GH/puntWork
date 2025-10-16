@@ -33,10 +33,17 @@ function download_feed($url, $xml_path, $output_dir, &$logs, $force_use_wp_remot
             curl_setopt($ch, CURLOPT_USERAGENT, 'WordPress puntWork Importer');
             $success = curl_exec($ch);
             $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curl_error = curl_error($ch);
             curl_close($ch);
             fclose($fp);
-            if (!$success || $http_code !== 200 || filesize($xml_path) < 1000) {
-                throw new \Exception("cURL download failed (HTTP $http_code, size: " . filesize($xml_path) . ")");
+
+            $file_size = file_exists($xml_path) ? filesize($xml_path) : 0;
+            if (!$success || $http_code !== 200 || $file_size < 1000 || !empty($curl_error)) {
+                // Remove partial file to avoid downstream processing of empty/corrupt files
+                if (file_exists($xml_path)) {
+                    @unlink($xml_path);
+                }
+                throw new \Exception("cURL download failed (HTTP $http_code, size: $file_size, curl_error: $curl_error)");
             }
         } else {
             // Allow tests to inject a custom HTTP GET callable that returns either a string body or an array with 'body'
@@ -56,11 +63,25 @@ function download_feed($url, $xml_path, $output_dir, &$logs, $force_use_wp_remot
             }
 
             if (empty($body) || strlen($body) < 1000) throw new \Exception('Empty or small response');
-            file_put_contents($xml_path, $body);
+            // Write body atomically
+            $tmp = $xml_path . '.tmp';
+            $written = file_put_contents($tmp, $body);
+            if ($written === false) {
+                if (file_exists($tmp)) @unlink($tmp);
+                throw new \Exception('Failed to write response to temporary file');
+            }
+            if (!rename($tmp, $xml_path)) {
+                if (file_exists($tmp)) @unlink($tmp);
+                throw new \Exception('Failed to move temporary file into place');
+            }
         }
-        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Downloaded XML: " . filesize($xml_path) . " bytes";
-        error_log("Downloaded XML: " . filesize($xml_path) . " bytes");
-        @chmod($xml_path, 0644);
+        $size = file_exists($xml_path) ? filesize($xml_path) : 0;
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Downloaded XML: " . $size . " bytes";
+        error_log("Downloaded XML: " . $size . " bytes");
+        if (!chmod($xml_path, 0644)) {
+            // Log a warning but do not treat as fatal
+            error_log('[PUNTWORK] Warning: chmod failed on ' . $xml_path);
+        }
     } catch (\Exception $e) {
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Download error: " . $e->getMessage();
         return false;
