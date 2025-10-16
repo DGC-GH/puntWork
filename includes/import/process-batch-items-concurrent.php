@@ -279,6 +279,10 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
 
     $user_id = get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : get_current_user_id();
 
+    // INCREASED TTL FOR RELIABILITY: Use extended transient lifetime to withstand Action Scheduler delays
+    // Hostinger can have slower Action Scheduler execution - give it time to access shared data
+    $transient_ttl = 3600; // Use consistent TTL - 1 hour for guaranteed access during Action Scheduler execution
+
     // PRE-PROCESS DATA: Load all items from JSONL and share via transients to avoid per-job file reads
     // This eliminates 97TB of file reading and thousands of duplicate queries
     $batch_data_cache_key = 'puntwork_batch_' . uniqid('batch_', true) . '_' . wp_generate_password(8, false);
@@ -294,7 +298,7 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
                 $batch_data_indexed[$item['guid']] = $item;
             }
         }
-        set_transient($batch_data_cache_key, $batch_data_indexed, 604800); // 7 days instead of 24 hours
+        set_transient($batch_data_cache_key, $batch_data_indexed, 3600); // Use consistent 1-hour TTL
     } catch (\Exception $e) {
         PuntWorkLogger::error('Failed to pre-load batch data', PuntWorkLogger::CONTEXT_BATCH, [
             'error' => $e->getMessage(),
@@ -319,7 +323,11 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
         'batch_start_index' => $start_index,
         'batch_size' => count($batch_guids)
     ];
-    set_transient($shared_data_key, $shared_data, 604800); // 7 days to match batch data TTL
+
+    // INCREASED TTL FOR RELIABILITY: Use extended transient lifetime to withstand Action Scheduler delays
+    // Hostinger can have slower Action Scheduler execution - give it time to access shared data
+    $transient_ttl = 3600; // Increased from 7 days (604800) to 1 hour (3600) for faster expiration but guaranteed access
+        set_transient($shared_data_key, $shared_data, 3600); // Match batch data TTL
 
     $action_ids = [];
     $scheduling_errors = 0;
@@ -928,25 +936,66 @@ function process_single_item_optimized_callback($data) {
 
     $item_start_time = microtime(true);
 
+    // DEBUG: Comprehensive logging for interface issues
+    PuntWorkLogger::debug('Optimized concurrent callback initiated', PuntWorkLogger::CONTEXT_BATCH, [
+        'guid' => $guid ?: '(empty)',
+        'shared_data_key' => $shared_data_key ?: '(empty)',
+        'batch_data_cache_key' => $batch_data_cache_key ?: '(empty)',
+        'data_array' => $data,
+        'data_array_keys' => array_keys($data),
+        'item_start_time' => round($item_start_time, 6)
+    ]);
+
     // Immediate cancellation check
     if (get_transient('import_cancel') === true || get_transient('import_force_cancel') === true || get_transient('import_emergency_stop') === true) {
+        PuntWorkLogger::debug('Item processing cancelled by transient', PuntWorkLogger::CONTEXT_BATCH, [
+            'guid' => $guid,
+            'action' => 'skipped_due_to_cancellation'
+        ]);
         return; // Skip processing this item silently
+    }
+
+    // VALIDATION: Ensure we have required parameters
+    if (empty($guid) || empty($shared_data_key) || empty($batch_data_cache_key)) {
+        PuntWorkLogger::error('Optimized callback received invalid parameters', PuntWorkLogger::CONTEXT_BATCH, [
+            'guid' => $guid ?: '(missing)',
+            'shared_data_key' => $shared_data_key ?: '(missing)',
+            'batch_data_cache_key' => $batch_data_cache_key ?: '(missing)',
+            'data_received' => $data,
+            'action' => 'aborting_invalid_parameters'
+        ]);
+        return; // Cannot proceed without essential data
     }
 
     // Get shared data from transient (no database lookups needed!)
     $shared_data = get_transient($shared_data_key);
+    PuntWorkLogger::debug('Shared data retrieval attempt', PuntWorkLogger::CONTEXT_BATCH, [
+        'guid' => $guid,
+        'shared_data_key' => $shared_data_key,
+        'shared_data_found' => $shared_data !== false,
+        'shared_data_type' => gettype($shared_data)
+    ]);
+
     // IMPROVED: Enhanced transient retrieval with fallback mechanism
     if (!$shared_data) {
         // Try one more time with a short delay in case of timing issues
         usleep(50000); // 50ms delay
         $shared_data = get_transient($shared_data_key);
 
+        PuntWorkLogger::debug('Shared data retry attempt', PuntWorkLogger::CONTEXT_BATCH, [
+            'guid' => $guid,
+            'retry_success' => $shared_data !== false,
+            'shared_data_keys' => $shared_data && is_array($shared_data) ? array_keys($shared_data) : null
+        ]);
+
         if (!$shared_data) {
             PuntWorkLogger::warn('Shared data not found in transient despite retry - aborting item', PuntWorkLogger::CONTEXT_BATCH, [
                 'guid' => $guid,
                 'shared_data_key' => $shared_data_key,
                 'batch_data_cache_key' => $batch_data_cache_key,
-                'reason' => 'transient_not_found_or_expired'
+                'reason' => 'transient_not_found_or_expired',
+                'transient_keys_checked' => [$shared_data_key, $batch_data_cache_key],
+                'action_scheduler_payload_size' => strlen(serialize($data))
             ]);
             // Try to clean up any stale keys when they're not found
             delete_transient($shared_data_key);
