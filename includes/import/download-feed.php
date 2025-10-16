@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-function download_feed($url, $xml_path, $output_dir, &$logs) {
+function download_feed($url, $xml_path, $output_dir, &$logs, $force_use_wp_remote = false, ?callable $http_get_callable = null) {
     // Validate file paths for security
     if (!is_dir($output_dir) || !is_writable($output_dir)) {
         throw new \Exception('Output directory is not accessible or writable');
@@ -23,7 +23,7 @@ function download_feed($url, $xml_path, $output_dir, &$logs) {
         throw new \Exception('Invalid file path: XML path must be within output directory');
     }
     try {
-        if (function_exists('curl_init')) {
+        if (!$force_use_wp_remote && function_exists('curl_init')) {
             $ch = curl_init($url);
             $fp = fopen($xml_path, 'w');
             if (!$fp) throw new \Exception("Can't open $xml_path for write");
@@ -39,9 +39,22 @@ function download_feed($url, $xml_path, $output_dir, &$logs) {
                 throw new \Exception("cURL download failed (HTTP $http_code, size: " . filesize($xml_path) . ")");
             }
         } else {
-            $response = wp_remote_get($url, ['timeout' => 300]);
-            if (is_wp_error($response)) throw new \Exception($response->get_error_message());
-            $body = wp_remote_retrieve_body($response);
+            // Allow tests to inject a custom HTTP GET callable that returns either a string body or an array with 'body'
+            if ($http_get_callable !== null) {
+                $resp = $http_get_callable($url, ['timeout' => 300]);
+                if (is_array($resp) && isset($resp['body'])) {
+                    $body = $resp['body'];
+                } elseif (is_string($resp)) {
+                    $body = $resp;
+                } else {
+                    throw new \Exception('Invalid response from injected HTTP callable');
+                }
+            } else {
+                $response = wp_remote_get($url, ['timeout' => 300]);
+                if (is_wp_error($response)) throw new \Exception($response->get_error_message());
+                $body = wp_remote_retrieve_body($response);
+            }
+
             if (empty($body) || strlen($body) < 1000) throw new \Exception('Empty or small response');
             file_put_contents($xml_path, $body);
         }
