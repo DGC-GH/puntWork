@@ -668,6 +668,52 @@ function process_single_item_callback($guid, $json_path, $start_index, $acf_fiel
 
         $item_time = microtime(true) - $item_start_time;
 
+        // PERFORMANCE TRACKING: Store timing data for optimization analysis
+        if (!empty($processed_count)) {
+            // Store individual item timing metrics for ongoing optimization
+            $timing_data = [
+                'guid' => $guid,
+                'processing_time' => $item_time,
+                'operation_type' => $updated > 0 ? 'update' : ($published > 0 ? 'create' : 'skip'),
+                'timestamp' => microtime(true),
+                'item_index' => $current_index ?? 0
+            ];
+
+            // Append to timing log (limited to prevent memory bloat)
+            $existing_timings = get_option('job_import_item_timings', []);
+            if (!is_array($existing_timings)) {
+                $existing_timings = [];
+            }
+
+            // Keep only last 1000 timings to prevent excessive storage
+            $existing_timings[] = $timing_data;
+            if (count($existing_timings) > 1000) {
+                $existing_timings = array_slice($existing_timings, -1000);
+            }
+
+            update_option('job_import_item_timings', $existing_timings, false);
+
+            // Update aggregate timing statistics
+            $current_avg_time = get_option('job_import_avg_item_time', 0);
+            $timing_count = get_option('job_import_timing_count', 0);
+
+            // Rolling average: weight recent timings more heavily
+            $new_avg_time = (($current_avg_time * $timing_count) + $item_time) / ($timing_count + 1);
+            update_option('job_import_avg_item_time', $new_avg_time, false);
+            update_option('job_import_timing_count', $timing_count + 1, false);
+
+            // Track timing distribution for optimization insights
+            $time_bucket = ceil($item_time * 10) / 10; // Round to nearest 0.1 second
+            $time_distribution = get_option('job_import_time_distribution', []);
+            if (!is_array($time_distribution)) {
+                $time_distribution = [];
+            }
+
+            $distribution_key = $time_bucket . 's';
+            $time_distribution[$distribution_key] = ($time_distribution[$distribution_key] ?? 0) + 1;
+            update_option('job_import_time_distribution', $time_distribution, false);
+        }
+
         // NOTE: To enable item processing debug logs, define PUNTWORK_DEBUG_ITEM_PROCESSING as true in wp-config.php
         if (defined('PUNTWORK_DEBUG_ITEM_PROCESSING') && PUNTWORK_DEBUG_ITEM_PROCESSING) {
             PuntWorkLogger::debug('Concurrent single item completed', PuntWorkLogger::CONTEXT_BATCH, [
@@ -676,7 +722,8 @@ function process_single_item_callback($guid, $json_path, $start_index, $acf_fiel
                 'published' => $published,
                 'updated' => $updated,
                 'skipped' => $skipped,
-                'item_time' => $item_time
+                'item_time' => $item_time,
+                'avg_time_tracked' => $new_avg_time ?? null
             ]);
         }
 
