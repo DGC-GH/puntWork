@@ -65,8 +65,100 @@ function process_batch_items_logic($setup) {
         // Calculate optimal batch size dynamically based on system resources and concurrent requirements
         $batch_size_config = calculate_dynamic_batch_size_for_concurrent($batch_size, $memory_limit_bytes);
 
-        // Apply the calculated optimal batch size
-        $batch_size = $batch_size_config['optimal_batch_size'];
+        // START WITH 10 CONCURRENT JOBS: Conservative initial batch size for first import
+        // Then dynamically increase based on performance in subsequent batches
+        $initial_concurrent_batch = 10; // Conservative starting point
+        $max_concurrent_batch = 100; // Maximum safe batch size
+
+        // For first batch (batch count 0 or no historical data), always start with 10
+        $is_first_batch = $batch_size <= $initial_concurrent_batch ||
+                         !get_option('last_concurrent_batch_processed', false);
+
+        if ($is_first_batch) {
+            $batch_size = $initial_concurrent_batch;
+            PuntWorkLogger::info('Using initial conservative batch size of 10 for first concurrent batch', PuntWorkLogger::CONTEXT_BATCH, [
+                'is_first_batch' => true,
+                'batch_size' => $batch_size,
+                'reason' => 'initial_conservative_start'
+            ]);
+        } else {
+            // Dynamic sizing for subsequent batches based on performance
+            $last_concurrent_batch_processed = get_option('last_concurrent_batch_processed', 0);
+            $last_concurrent_batch_time = get_option('last_concurrent_batch_time', 0);
+            $last_concurrent_success_rate = get_option('last_concurrent_success_rate', 1.0);
+
+            if ($last_concurrent_batch_processed > 0 && $last_concurrent_batch_time > 0) {
+                // Calculate performance metrics from last batch
+                $last_time_per_item = $last_concurrent_batch_time / $last_concurrent_batch_processed;
+                $items_per_second = $last_time_per_item > 0 ? 1 / $last_time_per_item : 0;
+
+                // Dynamic scaling logic:
+                // - Excellent performance (< 1 sec/item, >95% success): increase by 10
+                // - Good performance (1-2 sec/item, >80% success): increase by 5
+                // - Moderate performance (2-3 sec/item): maintain
+                // - Poor performance (> 3 sec/item or <80% success): reduce by 5, minimum 10
+                if ($last_time_per_item < 1.0 && $last_concurrent_success_rate >= 0.95) {
+                    $new_batch_size = min($max_concurrent_batch, $batch_size + 10);
+                    PuntWorkLogger::info('Scaling UP batch size - excellent performance detected', PuntWorkLogger::CONTEXT_BATCH, [
+                        'previous_batch_size' => $batch_size,
+                        'new_batch_size' => $new_batch_size,
+                        'last_time_per_item' => round($last_time_per_item, 2),
+                        'last_success_rate' => round($last_concurrent_success_rate, 2),
+                        'increase_amount' => 10,
+                        'reason' => 'excellent_performance_auto_scale_up'
+                    ]);
+                    $batch_size = $new_batch_size;
+                } elseif ($last_time_per_item < 2.0 && $last_concurrent_success_rate >= 0.80) {
+                    $new_batch_size = min($max_concurrent_batch, $batch_size + 5);
+                    PuntWorkLogger::info('Scaling UP batch size - good performance detected', PuntWorkLogger::CONTEXT_BATCH, [
+                        'previous_batch_size' => $batch_size,
+                        'new_batch_size' => $new_batch_size,
+                        'last_time_per_item' => round($last_time_per_item, 2),
+                        'last_success_rate' => round($last_concurrent_success_rate, 2),
+                        'increase_amount' => 5,
+                        'reason' => 'good_performance_auto_scale_up'
+                    ]);
+                    $batch_size = $new_batch_size;
+                } elseif ($last_time_per_item > 3.0 || $last_concurrent_success_rate < 0.70) {
+                    $new_batch_size = max($initial_concurrent_batch, $batch_size - 5);
+                    PuntWorkLogger::info('Scaling DOWN batch size - poor performance detected', PuntWorkLogger::CONTEXT_BATCH, [
+                        'previous_batch_size' => $batch_size,
+                        'new_batch_size' => $new_batch_size,
+                        'last_time_per_item' => round($last_time_per_item, 2),
+                        'last_success_rate' => round($last_concurrent_success_rate, 2),
+                        'decrease_amount' => 5,
+                        'reason' => 'poor_performance_auto_scale_down'
+                    ]);
+                    $batch_size = $new_batch_size;
+                } else {
+                    PuntWorkLogger::info('Maintaining batch size - moderate performance', PuntWorkLogger::CONTEXT_BATCH, [
+                        'batch_size' => $batch_size,
+                        'last_time_per_item' => round($last_time_per_item, 2),
+                        'last_success_rate' => round($last_concurrent_success_rate, 2),
+                        'reason' => 'moderate_performance_maintain'
+                    ]);
+                }
+
+                // Emergency override: if system can handle more, gradually increase
+                if ($batch_size_config['optimal_batch_size'] > $batch_size * 2) {
+                    $emergency_increase = min(10, floor($batch_size_config['optimal_batch_size'] - $batch_size) / 2);
+                    $new_batch_size = min($max_concurrent_batch, $batch_size + $emergency_increase);
+                    if ($new_batch_size > $batch_size) {
+                        PuntWorkLogger::info('Emergency batch size increase - system has capacity', PuntWorkLogger::CONTEXT_BATCH, [
+                            'previous_batch_size' => $batch_size,
+                            'new_batch_size' => $new_batch_size,
+                            'system_optimal' => $batch_size_config['optimal_batch_size'],
+                            'increase_amount' => $emergency_increase,
+                            'reason' => 'system_capacity_emergency_override'
+                        ]);
+                        $batch_size = $new_batch_size;
+                    }
+                }
+            }
+        }
+
+        // Final validation: ensure batch size is within safe bounds
+        $batch_size = max($initial_concurrent_batch, min($max_concurrent_batch, $batch_size));
 
         PuntWorkLogger::info('Dynamic batch size calculated for concurrent processing', PuntWorkLogger::CONTEXT_BATCH, [
             'calculated_batch_size' => $batch_size,
@@ -445,25 +537,32 @@ function process_batch_items_logic($setup) {
             $batch_time = microtime(true) - $batch_start_time;
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Individual processing complete: Processed {$result['processed_count']} items (published: $published, updated: $updated, skipped: $skipped, duplicates: $duplicates_drafted)";
 
-            // Update performance metrics with concurrent processing data
+            // Store batch performance data for next batch optimization
             $avg_time_per_item = $result['avg_time_per_item'] ?? 0;
             $concurrency_used = $result['concurrency_used'] ?? 1;
+
+            // Calculate success rate from this batch for adaptive sizing
+            // $batch_guids is local to this scope, so we need to use the actual processed count
+            // We assume if processing started and got to this point, the batch was valid
+            $batch_success_rate = isset($result['success_rate']) ? $result['success_rate'] :
+                                 ($result['processed_count'] > 0 ? 1.0 : 0.8); // Assume 80% if some items processed
+
+            // Store performance data for dynamic batch sizing
+            update_option('last_concurrent_batch_processed', $result['processed_count'], false);
+            update_option('last_concurrent_batch_time', $batch_time, false);
+            update_option('last_concurrent_success_rate', $batch_success_rate, false);
+
+            PuntWorkLogger::info('Stored batch performance data for future optimization', PuntWorkLogger::CONTEXT_BATCH, [
+                'processed_count' => $result['processed_count'],
+                'batch_time' => $batch_time,
+                'success_rate' => $batch_success_rate,
+                'avg_time_per_item' => $avg_time_per_item,
+                'concurrency_used' => $concurrency_used,
+                'current_batch_size' => $batch_size
+            ]);
+
+            // Update performance metrics with concurrent processing data
             update_batch_metrics_concurrent($batch_time, $result['processed_count'], $batch_size, $avg_time_per_item, $concurrency_used);
-
-            // Store batch timing data for status retrieval
-            retry_option_operation(function() use ($batch_time) {
-                return set_last_batch_time($batch_time);
-            }, [], [
-                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
-                'operation' => 'update_last_batch_time'
-            ]);
-
-            retry_option_operation(function() use ($result) {
-                return set_last_batch_processed($result['processed_count']);
-            }, [], [
-                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
-                'operation' => 'update_last_batch_processed'
-            ]);
 
             // Update import status for UI polling
             $current_status = get_import_status();
