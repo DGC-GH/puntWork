@@ -665,7 +665,7 @@ if (!function_exists('import_all_jobs_from_json')) {
             }
 
             // OPTIMIZED: Reduced delay between batches to improve performance while avoiding server overload
-            usleep(25000); // Reduced from 0.1 to 0.025 seconds for better throughput
+            // PERFORMANCE OPTIMIZATION: Remove delay between batches - use optimized streaming instead
         }
 
         $end_time = microtime(true);
