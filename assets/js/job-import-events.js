@@ -38,6 +38,10 @@ console.log('[PUNTWORK] job-import-events.js loaded');
                 console.log('[PUNTWORK] Cancel import clicked');
                 JobImportEvents.handleCancelImport();
             });
+            $('#reset-import').on('click', function(e) {
+                console.log('[PUNTWORK] Reset import clicked');
+                JobImportEvents.handleResetImport();
+            });
             $('#resume-stuck-import').on('click', function(e) {
                 console.log('[PUNTWORK] Resume stuck import clicked');
                 JobImportEvents.handleResumeStuckImport();
