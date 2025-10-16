@@ -470,7 +470,7 @@ if (!function_exists('import_all_jobs_from_json')) {
                     return ['success' => false, 'message' => $error_msg, 'logs' => $result['logs'] ?? []];
                 }
                 error_log('[PUNTWORK] Batch processing successful');
-            } catch (Exception $e) {
+            } catch (\Exception $e) {
                 $error_msg = 'Exception in batch ' . $batch_count . ': ' . $e->getMessage();
                 error_log('[PUNTWORK] BATCH EXCEPTION: ' . $error_msg);
                 error_log('[PUNTWORK] Exception trace: ' . $e->getTraceAsString());
@@ -771,7 +771,7 @@ if (!function_exists('import_all_jobs_from_json')) {
                 'deleted_count' => $deleted_count
             ]);
 
-        } catch (Exception $e) {
+            } catch (\Exception $e) {
             PuntWorkLogger::error('Cleanup phase failed', PuntWorkLogger::CONTEXT_BATCH, [
                 'error' => $e->getMessage(),
                 'duration' => microtime(true) - $cleanup_start_time
@@ -873,7 +873,7 @@ if (!function_exists('import_all_jobs_from_json')) {
         wp_suspend_cache_invalidation(false);
 
         return finalize_batch_import($final_result);
-        } catch (Exception $e) {
+    } catch (\Exception $e) {
             $fatal_error = 'Fatal error in import_all_jobs_from_json: ' . $e->getMessage();
             error_log('[PUNTWORK] FATAL ERROR: ' . $fatal_error);
             error_log('[PUNTWORK] Fatal exception trace: ' . $e->getTraceAsString());
