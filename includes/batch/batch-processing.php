@@ -740,45 +740,55 @@ function process_batch_data($batch_guids, $batch_items, $json_path, $start_index
     $acf_fields = get_acf_fields();
     $zero_empty_fields = get_zero_empty_fields();
 
-    // CONCURRENT-FIRST PROCESSING DECISION: Default to concurrent, fallback to sequential only in rare failure cases
+    // CONCURRENT-FIRST PROCESSING DECISION: Default to concurrent, fallback to sequential only in critical failure cases
+    $action_scheduler_available = function_exists('as_schedule_single_action');
+
+    // FORCE CONCURRENT-FIRST: Reset historical metrics to enable concurrent processing
+    update_option('job_import_concurrent_success_rate', 1.0, false); // Reset to perfect success rate
+    update_option('job_import_concurrent_total_attempts', 0, false);   // Reset attempt counter
+    update_option('job_import_concurrent_successful_attempts', 0, false); // Reset success counter
+
     $concurrent_success_rate = get_concurrent_success_rate();
     $sequential_success_rate = get_sequential_success_rate();
-    $action_scheduler_available = function_exists('as_schedule_single_action');
 
     // Default to concurrent processing - sequential is now rare fallback
     $use_concurrent = true; // Default to concurrent
-    $decision_reason = 'concurrent_default';
+    $decision_reason = 'concurrent_first_reset';
+
+    PuntWorkLogger::info('Concurrent-first processing initiated - resetting historical metrics', PuntWorkLogger::CONTEXT_BATCH, [
+        'reset_concurrent_success_rate' => 1.0,
+        'action_scheduler_available' => $action_scheduler_available,
+        'decision_reason' => $decision_reason
+    ]);
 
     // CRITICAL: Check Action Scheduler health - concurrent requires it
     if (!$action_scheduler_available) {
         $use_concurrent = false;
         $decision_reason = 'no_action_scheduler';
-    }
-    // ONLY fallback to sequential in rare failure cases
-    elseif ($concurrent_success_rate < 0.8) { // Below 80% success = problems
-        $use_concurrent = false;
-        $decision_reason = 'concurrent_failures';
-        PuntWorkLogger::warn('Concurrent processing disabled due to poor success rate', PuntWorkLogger::CONTEXT_BATCH, [
-            'concurrent_success_rate' => $concurrent_success_rate,
+        PuntWorkLogger::error('Concurrent processing impossible - Action Scheduler not available', PuntWorkLogger::CONTEXT_BATCH, [
             'action_scheduler_available' => $action_scheduler_available,
             'reason' => 'falling back to sequential processing'
         ]);
     }
-    // If Action Scheduler has fundamental issues, use sequential
+    // EXTREMELY RARE: Only fallback on complete Action Scheduler breakdown
     elseif ($action_scheduler_available) {
         try {
             $health_check = validate_action_scheduler_health();
             if (!$health_check['healthy']) {
                 $use_concurrent = false;
-                $decision_reason = 'action_scheduler_unhealthy';
-                PuntWorkLogger::warn('Concurrent processing disabled due to Action Scheduler health issues', PuntWorkLogger::CONTEXT_BATCH, [
+                $decision_reason = 'action_scheduler_critical_failure';
+                PuntWorkLogger::error('Concurrent processing disabled due to critical Action Scheduler failure', PuntWorkLogger::CONTEXT_BATCH, [
                     'issues' => $health_check['issues'],
-                    'reason' => 'falling back to sequential processing'
+                    'recommendations' => $health_check['recommendations'],
+                    'reason' => 'emergency fallback to sequential processing'
                 ]);
             }
         } catch (\Exception $e) {
-            $use_concurrent = false;
-            $decision_reason = 'health_check_failed';
+            // Even on health check failure, still attempt concurrent (AS health checks can be unreliable)
+            PuntWorkLogger::warn('Action Scheduler health check failed but attempting concurrent anyway', PuntWorkLogger::CONTEXT_BATCH, [
+                'error' => $e->getMessage(),
+                'action' => 'proceeding_with_concurrent_despite_health_check_failure'
+            ]);
         }
     }
 
