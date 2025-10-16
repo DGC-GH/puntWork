@@ -475,6 +475,37 @@ if (!function_exists('import_all_jobs_from_json')) {
                 'memory_peak_mb' => memory_get_peak_usage(true) / 1024 / 1024
             ]);
 
+            // ===== BATCH LOOP DECISION POINT =====
+            error_log('[PUNTWORK] ===== BATCH LOOP DECISION POINT =====');
+            error_log('[PUNTWORK] Checking if import is complete...');
+            error_log('[PUNTWORK] Current batch count: ' . $batch_count);
+            error_log('[PUNTWORK] Total processed so far: ' . $total_processed);
+            error_log('[PUNTWORK] Total items: ' . $total_items);
+            error_log('[PUNTWORK] Batch start index: ' . $batch_start);
+            error_log('[PUNTWORK] Batch result complete flag: ' . ($result['complete'] ?? 'not set'));
+            error_log('[PUNTWORK] Setup complete flag: ' . ($setup['complete'] ?? 'not set'));
+
+            // Check if this batch completed the import
+            if (isset($result['complete']) && $result['complete']) {
+                error_log('[PUNTWORK] Batch result indicates import complete - breaking loop');
+                break;
+            }
+
+            // Check if we've reached the end of data
+            if ($batch_start >= $total_items) {
+                error_log('[PUNTWORK] Reached end of data (batch_start >= total_items) - breaking loop');
+                break;
+            }
+
+            // Check if setup indicates completion
+            if (isset($setup['success']) && isset($setup['complete']) && $setup['complete']) {
+                error_log('[PUNTWORK] Setup indicates import complete - breaking loop');
+                break;
+            }
+
+            error_log('[PUNTWORK] Continuing to next batch iteration...');
+            error_log('[PUNTWORK] ===== END OF BATCH ' . $batch_count . ' =====');
+
             // Update import status for UI tracking
             $current_status = get_import_status($initial_status);
             $current_status['processed'] = $total_processed;
@@ -819,10 +850,21 @@ if (!function_exists('import_all_jobs_from_json')) {
  */
 function continue_paused_import() {
     $attempt_time = microtime(true);
-    error_log('[PUNTWORK] Primary continuation attempt starting');
+    error_log('[PUNTWORK] ===== PRIMARY CONTINUATION ATTEMPT STARTING =====');
+    error_log('[PUNTWORK] Attempt timestamp: ' . date('Y-m-d H:i:s', $attempt_time));
+    error_log('[PUNTWORK] Current memory: ' . memory_get_usage(true) / 1024 / 1024 . ' MB');
+    error_log('[PUNTWORK] Peak memory: ' . memory_get_peak_usage(true) / 1024 / 1024 . ' MB');
 
     // Update continuation attempt tracking
     $status = get_import_status([]);
+    error_log('[PUNTWORK] Current import status before continuation: ' . json_encode([
+        'paused' => $status['paused'] ?? false,
+        'complete' => $status['complete'] ?? false,
+        'processed' => $status['processed'] ?? 0,
+        'total' => $status['total'] ?? 0,
+        'continuation_attempts' => $status['continuation_attempts'] ?? 0
+    ]));
+
     $status['continuation_attempts'] = ($status['continuation_attempts'] ?? 0) + 1;
     $status['last_continuation_attempt'] = $attempt_time;
     $status['continuation_method'] = 'primary_cron';
@@ -870,6 +912,7 @@ function continue_paused_import() {
     $status = get_import_status([]);
     if (!isset($status['paused']) || !$status['paused']) {
         error_log('[PUNTWORK] No paused import found - skipping continuation');
+        error_log('[PUNTWORK] Import status details: ' . json_encode($status));
         PuntWorkLogger::info('Continuation skipped - import not paused', PuntWorkLogger::CONTEXT_BATCH, [
             'current_status' => $status,
             'method' => 'primary_cron'
@@ -881,6 +924,8 @@ function continue_paused_import() {
         return;
     }
 
+    error_log('[PUNTWORK] Import is paused, proceeding with continuation...');
+
     // Reset pause status
     $status['paused'] = false;
     unset($status['pause_reason']);
@@ -890,11 +935,18 @@ function continue_paused_import() {
     $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Resuming paused import (primary continuation)';
     set_import_status($status);
 
-    // DON'T reset start time for continuation - allow full time limit for resumed import
-    // set_import_start_time(microtime(true)); // Commented out - preserve original start time
+    error_log('[PUNTWORK] Pause status reset, calling import_all_jobs_from_json(true)...');
 
     // Continue the import
     $result = import_all_jobs_from_json(true); // preserve status for continuation
+
+    error_log('[PUNTWORK] Continuation result: ' . json_encode([
+        'success' => $result['success'] ?? false,
+        'processed' => $result['processed'] ?? 0,
+        'total' => $result['total'] ?? 0,
+        'complete' => $result['complete'] ?? false,
+        'message' => $result['message'] ?? 'No message'
+    ]));
 
     if ($result['success']) {
         PuntWorkLogger::info('Primary continuation completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
@@ -918,6 +970,8 @@ function continue_paused_import() {
         // Don't clear schedules - let fallback mechanisms try
         error_log('[PUNTWORK] Primary continuation failed - fallback mechanisms still active');
     }
+
+    error_log('[PUNTWORK] ===== PRIMARY CONTINUATION ATTEMPT COMPLETED =====');
 }
 
 // Register the continuation hook
