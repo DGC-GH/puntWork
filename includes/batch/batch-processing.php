@@ -530,6 +530,9 @@ function process_batch_items_logic($setup) {
             'schema_generated' => $schema_generated,
             'batch_time' => $batch_time,
             'batch_processed' => $result['processed_count'],
+
+            // PERFORMANCE ANALYSIS: Comprehensive timing and optimization insights - commented out to avoid undefined function
+            // 'performance_analysis' => log_concurrent_performance_analysis($result, $batch_time),
             'start_time' => $start_time,
             'message' => '' // No error message for success
         ];

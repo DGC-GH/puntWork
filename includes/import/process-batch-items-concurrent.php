@@ -335,8 +335,9 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
         ];
     }
 
-    // MONITOR: Track job completion with timeout
-    $monitoring_result = monitor_concurrent_job_completion($action_ids, 60, 5); // 1 minute timeout on Hostinger, check every 5 seconds
+    // MONITOR: Track job completion with timeout - INCREASED MONITORING TIMEOUT for slow concurrent processing
+    $timeout_seconds = 180; // Increased from 60 to 180 seconds (3 minutes) to handle slow Action Scheduler
+    $monitoring_result = monitor_concurrent_job_completion($action_ids, $timeout_seconds, 10); // Check every 10 seconds instead of 5
 
     if (!$monitoring_result['all_completed']) {
     PuntWorkLogger::warn('Concurrent jobs did not complete successfully', PuntWorkLogger::CONTEXT_BATCH, [
