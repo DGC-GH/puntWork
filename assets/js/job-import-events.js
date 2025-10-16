@@ -671,7 +671,32 @@ console.log('[PUNTWORK] job-import-events.js loaded');
         startHeartbeatMonitoring: function() {
             // Ensure JobImportHeartbeat is available and initialized
             if (typeof JobImportHeartbeat !== 'undefined') {
-                JobImportHeartbeat.forceStatusRefresh();
+                // Mark heartbeat as active so server-side knows to include active data
+                try {
+                    JobImportHeartbeat.isImportActive = true;
+                } catch (e) {
+                    // ignore
+                }
+
+                // Force a heartbeat status refresh immediately so UI doesn't wait for next tick
+                try {
+                    JobImportHeartbeat.forceStatusRefresh();
+                } catch (e) {
+                    // ignore
+                }
+
+                // Also proactively fetch status once and apply it to the UI immediately to avoid any timing gaps
+                JobImportAPI.getImportStatus().then(function(response) {
+                    if (response && response.success) {
+                        var status = JobImportUI.normalizeResponseData(response);
+                        JobImportUI.updateProgress(status);
+                        if (status.logs && status.logs.length > 0) {
+                            JobImportUI.appendLogs(status.logs);
+                        }
+                    }
+                }).catch(function() {
+                    // If immediate fetch fails, rely on heartbeat as fallback
+                });
             } else {
                 // Fallback: periodic manual checks every 30 seconds
                 this.heartbeatFallbackInterval = setInterval(function() {
