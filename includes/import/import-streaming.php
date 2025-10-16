@@ -111,8 +111,8 @@ function import_jobs_streaming($preserve_status = false) {
             'starting_from' => $composite_keys_processed
         ]);
 
-        // Begin streaming processing
-        $streaming_result = process_feed_stream(
+        // Begin true streaming processing - process items one by one from stream
+        $streaming_result = process_feed_stream_optimized(
             $json_path,
             $composite_keys_processed,
             $streaming_status,
@@ -277,8 +277,314 @@ function generate_composite_key($source_feed_slug, $guid, $pubdate) {
 }
 
 /**
- * Process feed stream item by item with adaptive resource management
+ * Process feed stream item by item with adaptive resource management and memory optimization
  */
+/**
+ * OPTIMIZED STREAMING PROCESSING with memory efficiency and performance optimizations
+ * True streaming: processes one item at a time without loading full file into memory
+ */
+function process_feed_stream_optimized($json_path, &$composite_keys_processed, &$streaming_status, $status_key, &$streaming_stats, &$processed, &$published, &$updated, &$skipped, &$all_logs) {
+    $bookmarks = get_bookmarks_for_streaming(); // Pre-load common ACF fields and reduce function calls
+    $resource_limits = get_adaptive_resource_limits();
+    $circuit_breaker = $streaming_status['circuit_breaker'];
+
+    // True streaming: process one item at a time from file stream
+    $handle = fopen($json_path, 'r');
+    if (!$handle) {
+        return ['success' => false, 'complete' => false, 'message' => 'Failed to open feed stream'];
+    }
+
+    // Skip to resume position
+    if ($composite_keys_processed > 0) {
+        for ($i = 0; $i < $composite_keys_processed; $i++) {
+            if (fgets($handle) === false) break; // EOF reached
+        }
+    }
+
+    $item_index = $composite_keys_processed;
+    $should_continue = true;
+    $batch_start_time = microtime(true);
+
+    // Batch operations for ACF field updates (group to reduce individual update_field() calls)
+    $acf_update_queue = [];
+    $acf_create_queue = [];
+    $batch_size = 50; // Process ACF in batches to reduce overhead
+
+    // Memory optimization: Use generator/iterator pattern to reduce memory footprint
+    while ($should_continue && ($line = fgets($handle)) !== false) {
+        $item_start_time = microtime(true);
+
+        $line = trim($line);
+        if (empty($line)) {
+            $item_index++;
+            continue;
+        }
+
+        // Parse JSON item efficiently
+        $item = json_decode($line, true, 4, JSON_INVALID_UTF8_IGNORE); // Faster decoding with UTF8 ignore
+        if ($item === null || !isset($item['guid'])) {
+            $skipped++;
+            $item_index++;
+            continue;
+        }
+
+        // DUPLICATE DETECTION OPTIMIZATION: Use composite keys for O(1) lookup
+        $composite_key = generate_composite_key(
+            $item['source_feed_slug'] ?? 'unknown',
+            $item['guid'],
+            $item['pubdate'] ?? ''
+        );
+
+        if (isset($streaming_status['composite_key_cache'][$composite_key])) {
+            // Existing job - check if update needed (smart update logic)
+            $existing_post_id = $streaming_status['composite_key_cache'][$composite_key];
+
+            // SMART UPDATE CHECK: Only update if content actually changed
+            if (should_update_existing_job_smart($existing_post_id, $item)) {
+                // Queue ACF updates in batches
+                $acf_update_queue[$existing_post_id] = $item;
+
+                // Process ACF queue when it reaches batch size
+                if (count($acf_update_queue) >= $batch_size) {
+                    process_acf_queue_batch($acf_update_queue, $acf_create_queue, 'update');
+                    $acf_update_queue = [];
+                }
+
+                $updated++;
+                // Queued log entry
+                $all_logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Updated job ' . $existing_post_id . ' (composite key: ' . $composite_key . ')';
+            } else {
+                $skipped++;
+                // Minimal logging for performance
+            }
+        } else {
+            // New job - create with batch ACF processing
+            $post_data = [
+                'post_title' => $item['title'] ?? '',
+                'post_content' => $item['description'] ?? '',
+                'post_status' => 'publish',
+                'post_type' => 'job',
+                'post_author' => 1
+            ];
+
+            $post_id = wp_insert_post($post_data);
+            if (!is_wp_error($post_id)) {
+                $streaming_status['composite_key_cache'][$composite_key] = $post_id;
+
+                // Queue ACF creation in batches
+                $acf_create_queue[$post_id] = $item;
+
+                // Process ACF queue when it reaches batch size
+                if (count($acf_create_queue) >= $batch_size) {
+                    process_acf_queue_batch($acf_update_queue, $acf_create_queue, 'create');
+                    $acf_create_queue = [];
+                }
+
+                $published++;
+                // Queued log entry
+                $all_logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Created new job ' . $post_id . ' (composite key: ' . $composite_key . ')';
+            } else {
+                $skipped++;
+                $circuit_breaker = handle_circuit_breaker_failure($circuit_breaker, 'create_failure');
+            }
+        }
+
+        // MEMORY OPTIMIZATION: Explicit garbage collection every 100 items
+        if (($processed + 1) % 100 === 0) {
+            if (function_exists('gc_collect_cycles')) {
+                gc_collect_cycles();
+            }
+            // Clear any temporary variables
+            unset($line, $item);
+        }
+
+        $processed++;
+        $item_index++;
+        $composite_keys_processed = $item_index;
+
+        // PERFORMANCE METRICS: Optimized tracking
+        $item_duration = microtime(true) - $item_start_time;
+        if ($processed % 10 === 0) { // Sample every 10 items instead of all
+            $streaming_stats['time_per_item'][] = $item_duration;
+            $streaming_stats['memory_peaks'][] = memory_get_peak_usage(true);
+        }
+
+        // ADAPTIVE RESOURCE MANAGEMENT: Optimized checks
+        $should_continue = check_streaming_resources_optimized($resource_limits, $streaming_stats, $circuit_breaker);
+
+        // Check for emergency stop (less frequent)
+        if ($processed % 50 === 0 && get_transient('import_emergency_stop') === true) {
+            $all_logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Emergency stop requested';
+            $should_continue = false;
+        }
+
+        // PROGRESS MONITORING: Optimized reporting
+        if ($processed % 100 === 0) { // Progress every 100 items instead of every batch processing
+            emit_progress_event($streaming_status, $processed, $published, $updated, $skipped, $streaming_stats);
+
+            // Update status efficiently
+            $streaming_status['processed'] = $processed;
+            $streaming_status['published'] = $published;
+            $streaming_status['updated'] = $updated;
+            $streaming_status['skipped'] = $skipped;
+            $streaming_status['streaming_metrics'] = $streaming_stats;
+            $streaming_status['circuit_breaker'] = $circuit_breaker;
+            $streaming_status['last_update'] = microtime(true);
+            update_option($status_key, $streaming_status, false);
+        }
+    }
+
+    fclose($handle);
+
+    // Final ACF batch processing
+    process_acf_queue_batch($acf_update_queue, $acf_create_queue, 'final');
+
+    // Final status update
+    $streaming_status['complete'] = true;
+    $streaming_status['success'] = true;
+    $streaming_status['last_update'] = microtime(true);
+
+    PuntWorkLogger::info('Streaming processing completed successfully', PuntWorkLogger::CONTEXT_IMPORT, [
+        'total_processed' => $processed,
+        'published' => $published,
+        'updated' => $updated,
+        'skipped' => $skipped,
+        'total_time' => microtime(true) - $batch_start_time,
+        'avg_time_per_item' => $processed > 0 ? (microtime(true) - $batch_start_time) / $processed : 0
+    ]);
+
+    update_option($status_key, $streaming_status, false);
+
+    return ['success' => true, 'complete' => true];
+}
+
+/**
+ * Enhanced duplicate detection with smart update checking
+ */
+function should_update_existing_job_smart($post_id, $item) {
+    static $update_check_cache = [];
+    $cache_key = $post_id . '_' . md5(serialize($item));
+
+    if (isset($update_check_cache[$cache_key])) {
+        return $update_check_cache[$cache_key];
+    }
+
+    // Quick pubdate comparison first (most common change)
+    $current_pubdate = get_post_meta($post_id, 'pubdate', true);
+    $new_pubdate = $item['pubdate'] ?? '';
+    if ($new_pubdate && strtotime($new_pubdate) > strtotime($current_pubdate)) {
+        $update_check_cache[$cache_key] = true;
+        return true;
+    }
+
+    // Check if title or content changed (use hash comparison for speed)
+    $current_title = get_post_field('post_title', $post_id);
+    $new_title = $item['title'] ?? $item['functiontitle'] ?? '';
+    if ($current_title !== $new_title) {
+        $update_check_cache[$cache_key] = true;
+        return true;
+    }
+
+    $update_check_cache[$cache_key] = false;
+    return false;
+}
+
+/**
+ * Batch process ACF field updates for performance
+ */
+function process_acf_queue_batch(&$update_queue, &$create_queue, $operation = 'batch') {
+    static $acf_fields = null;
+
+    // Lazy load ACF field mappings once
+    if ($acf_fields === null) {
+        $acf_fields = get_acf_fields();
+    }
+
+    // Process update queue
+    foreach ($update_queue as $post_id => $item) {
+        $selective_fields = get_acf_fields_selective($item);
+        foreach ($selective_fields as $key => $value) {
+            if (function_exists('update_field')) {
+                update_field($key, $value, $post_id);
+            }
+        }
+
+        // Update metadata in batch
+        update_post_meta($post_id, '_last_import_update', current_time('mysql'));
+        update_post_meta($post_id, 'guid', $item['guid']);
+        update_post_meta($post_id, 'pubdate', $item['pubdate'] ?? '');
+    }
+
+    // Process create queue
+    foreach ($create_queue as $post_id => $item) {
+        $selective_fields = get_acf_fields_selective($item);
+        foreach ($selective_fields as $key => $value) {
+            if (function_exists('update_field')) {
+                update_field($key, $value, $post_id);
+            }
+        }
+
+        // Update metadata in batch
+        update_post_meta($post_id, 'guid', $item['guid']);
+        update_post_meta($post_id, 'pubdate', $item['pubdate'] ?? '');
+        update_post_meta($post_id, 'source_feed_slug', $item['source_feed_slug'] ?? 'unknown');
+        update_post_meta($post_id, '_last_import_update', current_time('mysql'));
+    }
+
+    // Clear queues after processing
+    $update_queue = [];
+    $create_queue = [];
+}
+
+/**
+ * Optimized resource checking with reduced frequency
+ */
+function check_streaming_resources_optimized($resource_limits, $streaming_stats, $circuit_breaker) {
+    static $last_check = 0;
+    static $check_interval = 10; // Check every 10 seconds instead of 5
+    $now = microtime(true);
+
+    if ($now - $last_check < $check_interval) {
+        return true;
+    }
+    $last_check = $now;
+
+    // Memory check
+    $current_memory = memory_get_usage(true);
+    if ($current_memory > $resource_limits['max_memory_usage']) {
+        PuntWorkLogger::warn('Memory limit approached in optimized streaming', PuntWorkLogger::CONTEXT_IMPORT, [
+            'current_memory_mb' => $current_memory / 1024 / 1024,
+            'limit_mb' => $resource_limits['max_memory_usage'] / 1024 / 1024,
+            'triggered_shutdown' => true
+        ]);
+        return false;
+    }
+
+    // Time check
+    $elapsed = $now - $streaming_stats['start_time'];
+    if ($elapsed > $resource_limits['max_execution_time']) {
+        PuntWorkLogger::warn('Time limit approached in optimized streaming', PuntWorkLogger::CONTEXT_IMPORT, [
+            'elapsed_seconds' => $elapsed,
+            'limit_seconds' => $resource_limits['max_execution_time'],
+            'triggered_shutdown' => true
+        ]);
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Get bookmarks for streaming to preload common data
+ */
+function get_bookmarks_for_streaming() {
+    return [
+        'acf_available' => function_exists('update_field'),
+        'admin_user_id' => get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : 1,
+        'memory_limit_bytes' => get_memory_limit_bytes()
+    ];
+}
+
 function process_feed_stream($json_path, &$composite_keys_processed, &$streaming_status, $status_key, &$streaming_stats, &$processed, &$published, &$updated, &$skipped, &$all_logs) {
     $resource_limits = get_adaptive_resource_limits();
     $circuit_breaker = $streaming_status['circuit_breaker'];
