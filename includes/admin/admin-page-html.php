@@ -19,6 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once __DIR__ . '/admin-ui-main.php';
 require_once __DIR__ . '/admin-ui-scheduling.php';
 require_once __DIR__ . '/admin-ui-debug.php';
+require_once __DIR__ . '/admin-diagnostics-page.php';
 
 function feeds_dashboard_page() {
     wp_enqueue_script('jquery');
