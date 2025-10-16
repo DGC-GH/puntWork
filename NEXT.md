@@ -57,7 +57,7 @@ Implement fallback mechanisms for cron-based continuation
 Add feed integrity validation before cleanup operations
 
 
-1 - Question every requirement: Attach a specific person’s name to each requirement (not just a department). Then challenge it, no matter who it came from—even if it’s from Musk himself. The goal is to make requirements “less dumb,” as smart people’s ideas can be the most dangerous if unquestioned.
+1 - Question every requirement: Then challenge it, no matter who it came from. The goal is to make requirements “less dumb,” as smart people’s ideas can be the most dangerous if unquestioned.
 
 2 - Delete any part of the process you can: Subtract aggressively. Musk advises deleting more than feels comfortable, noting you might add back 10% later—if you don’t, you probably didn’t delete enough.
 
