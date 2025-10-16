@@ -46,10 +46,8 @@ add_action('admin_enqueue_scripts', function($hook) {
  * Handle heartbeat ticks and respond with import status when needed
  */
 add_filter('heartbeat_received', function($response, $data, $screen_id) {
-    // Only respond on our dashboard page
-    if ($screen_id !== 'puntwork-dashboard_page_job-feed-dashboard') {
-        return $response;
-    }
+    // Always respond to heartbeat requests for import status, regardless of screen
+    // This ensures import status is available across the admin interface
 
     // Check if client requested import status
     if (isset($data['puntwork_import_status'])) {
@@ -98,12 +96,8 @@ add_filter('heartbeat_received', function($response, $data, $screen_id) {
  * Handle heartbeat ticks from client and send import status updates
  */
 add_filter('heartbeat_send', function($response, $screen_id) {
-    // Only respond on our dashboard page
-    if ($screen_id !== 'puntwork-dashboard_page_job-feed-dashboard') {
-        return $response;
-    }
-
-    // Always include basic import status in heartbeat response
+    // Always include basic import status in heartbeat response for any admin page
+    // This ensures import status is available across the admin interface
     $import_status = get_import_status([]);
 
     // Check if import is active (running or recently completed)
@@ -118,10 +112,12 @@ add_filter('heartbeat_send', function($response, $screen_id) {
         // Consider active if:
         // 1. Not complete, or
         // 2. Completed within last 30 seconds, or
-        // 3. Started within last 5 minutes
+        // 3. Started within last 5 minutes, or
+        // 4. Updated within last 2 minutes (for scheduled imports)
         $is_active = !$import_status['complete'] ||
                     ($import_status['complete'] && $time_since_update < 30) ||
-                    ($start_time > 0 && $time_since_start < 300);
+                    ($start_time > 0 && $time_since_start < 300) ||
+                    ($last_update > 0 && $time_since_update < 120);
     }
 
     if ($is_active) {

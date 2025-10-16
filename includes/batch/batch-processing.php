@@ -223,8 +223,8 @@ function process_batch_items_logic($setup) {
                         ];
                     }
 
-                    // HEARTBEAT: Update status every 5 items to prevent server timeout detection
-                    if ($i % 5 === 0) {
+                    // HEARTBEAT: Update status every 2 items for responsive UI updates
+                    if ($i % 2 === 0) {
                         $heartbeat_status = get_import_status();
                         if (!is_array($heartbeat_status['logs'] ?? null)) {
                             $heartbeat_status['logs'] = [];
