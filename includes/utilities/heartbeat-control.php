@@ -21,8 +21,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 add_action('admin_enqueue_scripts', function($hook) {
     // Only enable heartbeat on the job feed dashboard
     if ($hook === 'puntwork-dashboard_page_job-feed-dashboard') {
-        // Ensure heartbeat is available (don't deregister it)
-        // wp_deregister_script('heartbeat'); // Removed - we need heartbeat for real-time updates
+        // Ensure heartbeat is available for our dashboard
+        // Note: We don't deregister heartbeat globally anymore to avoid breaking wp-auth-check dependencies
 
         // Enqueue our heartbeat handler script
         wp_enqueue_script(
@@ -38,10 +38,8 @@ add_action('admin_enqueue_scripts', function($hook) {
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('heartbeat-nonce')
         ));
-    } else {
-        // Disable heartbeat on other admin pages to reduce server load
-        wp_deregister_script('heartbeat');
     }
+    // Removed global heartbeat deregistration to prevent wp-auth-check dependency issues
 });
 
 /**
