@@ -47,13 +47,26 @@ require_once __DIR__ . '/../core/core-structure-logic.php';
  */
 function import_time_exceeded() {
     $start_time = get_import_start_time(microtime(true));
-    $time_limit = apply_filters('puntwork_import_time_limit', 120); // Reduced to 2 minutes for Hostinger
+    // Plugin soft time limit (used for performance tuning)
+    $time_limit = apply_filters('puntwork_import_time_limit', 120); // default 120s
+    // Safe run threshold to pre-empt host kills (seconds)
+    if (!defined('PUNTWORK_SAFE_RUN_SECONDS')) {
+        define('PUNTWORK_SAFE_RUN_SECONDS', 180);
+    }
+    $safe_threshold = apply_filters('puntwork_safe_run_seconds', PUNTWORK_SAFE_RUN_SECONDS);
     $current_time = microtime(true);
 
     $elapsed = $current_time - $start_time;
 
-    if (($current_time - $start_time) >= $time_limit) {
+    // If we've exceeded the plugin's soft time limit, treat as exceeded
+    if ($elapsed >= $time_limit) {
         error_log('[PUNTWORK] TIME EXCEEDED: elapsed ' . $elapsed . ' >= limit ' . $time_limit);
+        return true;
+    }
+
+    // If we've hit the safe threshold (pre-emptive pause), treat as exceeded to pause gracefully
+    if ($elapsed >= $safe_threshold) {
+        error_log('[PUNTWORK] SAFE THRESHOLD REACHED: elapsed ' . $elapsed . ' >= safe_threshold ' . $safe_threshold);
         return true;
     }
 
@@ -94,7 +107,7 @@ function import_memory_exceeded() {
  */
 function should_continue_batch_processing() {
     error_log('[PUNTWORK] Checking import time limit...');
-    if (import_time_exceeded()) {
+        if (import_time_exceeded()) {
         error_log('[PUNTWORK] Import time limit exceeded - pausing batch processing');
         return false;
     }
