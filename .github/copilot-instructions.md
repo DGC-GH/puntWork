@@ -3,6 +3,10 @@
 ## Architecture Overview
 puntWork is a WordPress plugin that imports jobs from XML feeds using a custom post type 'job-feed' for feed URLs. It processes feeds in parallel, converts XML to JSONL format, and handles batch processing for large-scale imports. Key architectural decisions include modular organization under `includes/` and parallel feed downloads for performance.
 
+## Environment Variables
+Read the .env file for local development settings (FTP and SSH credentials, REST API keys, etc.)
+
+## Custom Post Types
 Custom post types are already created using ACF Pro:
 - **Job Feed Post Type** (`job-feed`): Stores feed URLs and metadata
 - **Job Post Type** (`job`): Stores imported job listings
