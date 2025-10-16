@@ -238,10 +238,22 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
         while ($info = curl_multi_info_read($mh)) {
             $ch = $info['handle'];
             $key = $handle_map[(int) $ch] ?? null;
+            if ($key === null) {
+                // Unknown handle; ensure it's removed to avoid surprises
+                @curl_multi_remove_handle($mh, $ch);
+                @curl_close($ch);
+                continue;
+            }
             $result = &$results[$key];
 
-            // Record transfer end time
+            // Record transfer end time and capture info while handle is still valid
             $result['end_time'] = microtime(true);
+            $result['curl_errno'] = $info['result'] ?? null;
+            $result['curl_error'] = curl_error($ch);
+            $result['http_code'] = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+            // Remove the handle from the multi-handle before closing resources
+            curl_multi_remove_handle($mh, $ch);
 
             // Close the file handle if still open
             if (!empty($result['file_handle'])) {
@@ -249,15 +261,19 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
                 $result['file_handle'] = null;
             }
 
-            // No immediate logging here; we'll inspect all handles below
+            // Close the curl handle and mark as closed so later processing doesn't touch it
+            curl_close($ch);
+            $result['handle'] = null;
+            $result['completed'] = true;
         }
     }
 
     // Process results and close handles
     $successful_downloads = 0;
     foreach ($results as $feed_key => $result) {
-        $ch = $result['handle'];
-        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $ch = $result['handle'] ?? null;
+        $http_code = $result['http_code'] ?? null;
+        $curl_error = $result['curl_error'] ?? '';
         $download_time = (isset($result['end_time']) ? $result['end_time'] : microtime(true)) - $result['start_time'];
 
         // Ensure any remaining file handle is closed
@@ -266,7 +282,12 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
         }
 
         $file_size = file_exists($result['xml_path']) ? filesize($result['xml_path']) : 0;
-        $curl_error = curl_error($ch);
+
+        // If handle still exists, attempt to gather any missing info, but do not assume it's present
+        if ($ch) {
+            if ($http_code === null) $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            if (empty($curl_error)) $curl_error = curl_error($ch);
+        }
 
         if ($http_code === 200 && $file_size > 1000 && empty($curl_error)) {
             $successful_downloads++;
