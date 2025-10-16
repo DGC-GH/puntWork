@@ -1079,6 +1079,12 @@ add_action('puntwork_continue_import', __NAMESPACE__ . '\\continue_paused_import
 add_action('puntwork_continue_import_retry', __NAMESPACE__ . '\\continue_paused_import_retry');
 add_action('puntwork_continue_import_manual', __NAMESPACE__ . '\\continue_paused_import_manual');
 add_action('puntwork_check_continuation_status', __NAMESPACE__ . '\\check_continuation_status');
+// Action Scheduler persistent fallbacks wiring
+if (function_exists('add_action')) {
+    add_action('puntwork_continue_import_as', __NAMESPACE__ . '\\continue_paused_import');
+    add_action('puntwork_continue_import_retry_as', __NAMESPACE__ . '\\continue_paused_import_retry');
+    add_action('puntwork_continue_import_manual_as', __NAMESPACE__ . '\\continue_paused_import_manual');
+}
 
 /**
  * Schedule multiple fallback mechanisms for import continuation
