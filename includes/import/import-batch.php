@@ -51,7 +51,7 @@ function import_time_exceeded() {
     $time_limit = apply_filters('puntwork_import_time_limit', 120); // default 120s
     // Safe run threshold to pre-empt host kills (seconds)
     if (!defined('PUNTWORK_SAFE_RUN_SECONDS')) {
-        define('PUNTWORK_SAFE_RUN_SECONDS', 90);
+        define('PUNTWORK_SAFE_RUN_SECONDS', 60);
     }
     $safe_threshold = apply_filters('puntwork_safe_run_seconds', PUNTWORK_SAFE_RUN_SECONDS);
     $current_time = microtime(true);
