@@ -7,7 +7,13 @@ namespace Puntwork\API;
 require_once __DIR__ . '/../utilities/ajax-utilities.php';
 require_once __DIR__ . '/../utilities/options-utilities.php';
 
-add_action('wp_ajax_puntwork_import_diagnostics', __NAMESPACE__ . '\puntwork_import_diagnostics_ajax');
+// Import helper functions from the root Puntwork namespace so they resolve correctly
+use function Puntwork\validate_ajax_request;
+use function Puntwork\send_ajax_error;
+use function Puntwork\send_ajax_success;
+use function Puntwork\get_import_status;
+
+add_action('wp_ajax_puntwork_import_diagnostics', __NAMESPACE__ . '\\puntwork_import_diagnostics_ajax');
 
 function puntwork_import_diagnostics_ajax() {
     if (!validate_ajax_request('puntwork_import_diagnostics')) {
@@ -21,7 +27,7 @@ function puntwork_import_diagnostics_ajax() {
     }
 
     try {
-        $status = \Puntwork\Utilities\get_import_status();
+        $status = get_import_status();
     } catch (\Exception $e) {
         $status = ['error' => 'failed to get status', 'message' => $e->getMessage()];
     }
