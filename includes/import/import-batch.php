@@ -1009,7 +1009,7 @@ function continue_paused_import() {
     if (!isset($status['paused']) || !$status['paused']) {
         error_log('[PUNTWORK] No paused import found - skipping continuation');
         error_log('[PUNTWORK] Import status details: ' . json_encode($status));
-        PuntWorkLogger::info('Continuation skipped - import not paused', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::info('Continuation skipped - import not paused (schedules retained)', PuntWorkLogger::CONTEXT_BATCH, [
             'current_status' => $status,
             'method' => 'primary_cron',
             'processed' => $status['processed'] ?? 0,
@@ -1018,8 +1018,10 @@ function continue_paused_import() {
             'phase' => $status['phase'] ?? 'unknown'
         ]);
 
-        // Clear remaining fallback schedules
-        clear_import_continuation_schedules();
+        // NOTE: Do NOT clear continuation schedules here. Another pause may occur later
+        // while the import is still active; clearing schedules prematurely prevents
+        // future fallback attempts. Leave scheduled fallbacks intact so they can
+        // resume the import if it pauses again.
 
         return;
     }
@@ -1213,10 +1215,11 @@ function continue_paused_import_retry() {
 
     // Check if still paused
     if (!isset($status['paused']) || !$status['paused']) {
-        PuntWorkLogger::info('Retry continuation skipped - import not paused', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::info('Retry continuation skipped - import not paused (schedules retained)', PuntWorkLogger::CONTEXT_BATCH, [
             'method' => 'retry_fallback'
         ]);
-        clear_import_continuation_schedules();
+        // Keep fallback schedules in place so that if the import pauses again,
+        // other fallbacks can resume it. Do not clear schedules here.
         return;
     }
 
@@ -1299,10 +1302,10 @@ function continue_paused_import_manual() {
 
     // Check if still paused
     if (!isset($status['paused']) || !$status['paused']) {
-        PuntWorkLogger::info('Manual continuation skipped - import not paused', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::info('Manual continuation skipped - import not paused (schedules retained)', PuntWorkLogger::CONTEXT_BATCH, [
             'method' => 'manual_trigger'
         ]);
-        clear_import_continuation_schedules();
+        // Do not clear schedules here; retain them for future fallback attempts.
         return;
     }
 
