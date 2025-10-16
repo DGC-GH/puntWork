@@ -17,6 +17,15 @@ function puntwork_diagnostics_page() {
         <p>
             <button id="puntwork-diagnostics-refresh" class="button button-primary">Refresh</button>
         </p>
+
+        <h2>REST API token (optional)</h2>
+        <p>Set a token to allow non-interactive access to <code>/wp-json/puntwork/v1/diagnostics</code>. Leave empty to require admin session.</p>
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+            <input id="puntwork-rest-token" type="text" style="width:420px;" placeholder="Enter or generate token" />
+            <button id="puntwork-generate-token" class="button">Generate</button>
+            <button id="puntwork-save-token" class="button button-primary">Save</button>
+            <button id="puntwork-test-token" class="button">Test</button>
+        </div>
         <pre id="puntwork-diagnostics-output" style="white-space:pre-wrap; background:#fff; padding:12px; border:1px solid #ddd; max-height:60vh; overflow:auto;"></pre>
     </div>
     <script>
@@ -52,6 +61,65 @@ function puntwork_diagnostics_page() {
                 show('Fetch failed: ' + e.message);
             }
         });
+
+        // Token UI logic
+        const tokenInput = document.getElementById('puntwork-rest-token');
+        const genBtn = document.getElementById('puntwork-generate-token');
+        const saveBtn = document.getElementById('puntwork-save-token');
+        const testBtn = document.getElementById('puntwork-test-token');
+
+        genBtn.addEventListener('click', function(){
+            // simple random token
+            const token = Array.from(crypto.getRandomValues(new Uint8Array(24))).map(b => b.toString(16).padStart(2, '0')).join('');
+            tokenInput.value = token;
+        });
+
+        saveBtn.addEventListener('click', async function(){
+            const token = tokenInput.value.trim();
+            show('Saving token...');
+            try {
+                const form = new FormData();
+                form.append('action', 'puntwork_save_rest_token');
+                form.append('token', token);
+                // include nonce if available
+                if (typeof jobImportData !== 'undefined' && jobImportData.nonce) {
+                    form.append('nonce', jobImportData.nonce);
+                }
+                const res = await fetch(jobImportData.ajaxurl, { method: 'POST', credentials: 'same-origin', body: form });
+                const text = await res.text();
+                let parsed; try { parsed = JSON.parse(text); } catch (e) { parsed = text; }
+                show(JSON.stringify({ status: res.status, body: parsed }, null, 2));
+            } catch (e) {
+                show('Save failed: ' + e.message);
+            }
+        });
+
+        testBtn.addEventListener('click', async function(){
+            const token = tokenInput.value.trim();
+            if (!token) { show('Enter a token or save one before testing.'); return; }
+            show('Testing REST endpoint...');
+            try {
+                const res = await fetch('/wp-json/puntwork/v1/diagnostics', { method: 'GET', headers: { 'X-PUNTWORK-TOKEN': token } });
+                const text = await res.text();
+                let parsed; try { parsed = JSON.parse(text); } catch (e) { parsed = text; }
+                show(JSON.stringify({ status: res.status, body: parsed }, null, 2));
+            } catch (e) {
+                show('Test failed: ' + e.message);
+            }
+        });
+
+        // initialize input with saved value via REST call (if admin session)
+        (async function initToken() {
+            try {
+                // try to read current option via REST (admin session required) by calling the diagnostics endpoint without token
+                const res = await fetch('/wp-json/puntwork/v1/diagnostics', { method: 'GET', credentials: 'same-origin' });
+                if (res.status === 200) {
+                    // no-op; just show that the endpoint is available
+                }
+            } catch (e) {
+                // ignore
+            }
+        })();
     })();
     </script>
     <?php
