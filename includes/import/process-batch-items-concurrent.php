@@ -429,9 +429,10 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
         ];
     }
 
-    // MONITOR: Track job completion with timeout - INCREASED MONITORING TIMEOUT for slow concurrent processing
-    $timeout_seconds = 180; // Increased from 60 to 180 seconds (3 minutes) to handle slow Action Scheduler
-    $monitoring_result = monitor_concurrent_job_completion($action_ids, $timeout_seconds, 10); // Check every 10 seconds instead of 5
+    // MONITOR: Track job completion with fast-fail timeout for data corruption scenarios
+    // Use shorter timeout when Action Scheduler data passing appears unreliable
+    $timeout_seconds = 60; // Reduced timeout for faster failure detection
+    $monitoring_result = monitor_concurrent_job_completion($action_ids, $timeout_seconds, 5); // Check every 5 seconds for faster response
 
     if (!$monitoring_result['all_completed']) {
     PuntWorkLogger::warn('Concurrent jobs did not complete successfully', PuntWorkLogger::CONTEXT_BATCH, [
