@@ -935,7 +935,7 @@ if (!function_exists('import_all_jobs_from_json')) {
 function continue_paused_import() {
     $attempt_time = microtime(true);
     error_log('[PUNTWORK] ===== PRIMARY CONTINUATION ATTEMPT STARTING =====');
-    error_log('[PUNTWORK] Attempt timestamp: ' . date('Y-m-d H:i:s', $attempt_time));
+    error_log('[PUNTWORK] Attempt timestamp: ' . date('Y-m-d H:i:s', (int) $attempt_time));
     error_log('[PUNTWORK] Current memory: ' . memory_get_usage(true) / 1024 / 1024 . ' MB');
     error_log('[PUNTWORK] Peak memory: ' . memory_get_peak_usage(true) / 1024 / 1024 . ' MB');
 
