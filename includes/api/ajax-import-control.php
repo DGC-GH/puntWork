@@ -666,6 +666,42 @@ function get_job_import_status_ajax() {
                 $time_elapsed = $progress['time_elapsed'];
             }
 
+            // ENHANCED STUCK IMPORT DETECTION LOGIC
+            // Check if we're in a feed processing phase (jsonl-combining, feed-downloading, etc.)
+            $is_feed_processing_phase = false;
+            $current_phase = $progress['phase'] ?? '';
+            $feed_processing_phases = ['jsonl-combining', 'feed-downloading', 'feed-processing'];
+
+            if (in_array($current_phase, $feed_processing_phases)) {
+                $is_feed_processing_phase = true;
+                PuntWorkLogger::debug('Stuck import detection skipped - currently in feed processing phase', PuntWorkLogger::CONTEXT_BATCH, [
+                    'current_phase' => $current_phase,
+                    'processed' => $progress['processed'] ?? 0,
+                    'total' => $progress['total'] ?? 0,
+                    'time_elapsed' => round($time_elapsed, 2),
+                    'reason' => 'feed_processing_active'
+                ]);
+            }
+
+            // Check for suspiciously low totals that indicate incomplete status initialization
+            $is_suspiciously_low_total = false;
+            $total_items = $progress['total'] ?? 0;
+            $processed_items = $progress['processed'] ?? 0;
+
+            // If total is 1 or very low but we have meaningful processing activity, it's likely incomplete
+            if ($total_items <= 5 && $processed_items == 0 && $time_elapsed > 60) {
+                $is_suspiciously_low_total = true;
+                PuntWorkLogger::debug('Stuck import detection skipped - suspiciously low total indicates incomplete status', PuntWorkLogger::CONTEXT_BATCH, [
+                    'total' => $total_items,
+                    'processed' => $processed_items,
+                    'time_elapsed' => round($time_elapsed, 2),
+                    'reason' => 'suspiciously_low_total'
+                ]);
+            }
+
+            // Check if import just started (within first 2 minutes) - give it time to initialize
+            $is_recently_started = ($time_elapsed < 120); // 2 minutes grace period
+
             // Detect stuck imports with multiple criteria:
             // 1. No progress for 5+ minutes (300 seconds) - but be more lenient if we're still counting items
             // 2. Import running for more than 2 hours without completion (7200 seconds)
@@ -673,18 +709,18 @@ function get_job_import_status_ajax() {
             $is_stuck = false;
             $stuck_reason = '';
 
-            // Check if we're in the counting phase (total = 0 but import has started)
-            $is_counting_phase = ($progress['total'] == 0 && isset($progress['start_time']) && $progress['start_time'] > 0);
-
-            if ($progress['processed'] == 0 && $time_elapsed > 300 && !$is_counting_phase) {
-                $is_stuck = true;
-                $stuck_reason = 'no progress for 5+ minutes';
-            } elseif ($time_elapsed > 7200) { // 2 hours
-                $is_stuck = true;
-                $stuck_reason = 'running for more than 2 hours';
-            } elseif ($time_since_last_update > 600) { // 10 minutes since last update
-                $is_stuck = true;
-                $stuck_reason = 'no status update for 10+ minutes';
+            // Skip stuck detection during feed processing or with suspicious totals
+            if (!$is_feed_processing_phase && !$is_suspiciously_low_total && !$is_recently_started) {
+                if ($progress['processed'] == 0 && $time_elapsed > 300) {
+                    $is_stuck = true;
+                    $stuck_reason = 'no progress for 5+ minutes';
+                } elseif ($time_elapsed > 7200) { // 2 hours
+                    $is_stuck = true;
+                    $stuck_reason = 'running for more than 2 hours';
+                } elseif ($time_since_last_update > 600) { // 10 minutes since last update
+                    $is_stuck = true;
+                    $stuck_reason = 'no status update for 10+ minutes';
+                }
             }
 
             if ($is_stuck) {
@@ -697,6 +733,10 @@ function get_job_import_status_ajax() {
                     'start_time' => isset($progress['start_time']) ? date('Y-m-d H:i:s', (int)$progress['start_time']) : 'unknown',
                     'last_update' => isset($progress['last_update']) ? date('Y-m-d H:i:s', (int)$progress['last_update']) : 'unknown',
                     'current_time' => date('Y-m-d H:i:s', (int)$current_time),
+                    'current_phase' => $current_phase,
+                    'is_feed_processing_phase' => $is_feed_processing_phase,
+                    'is_suspiciously_low_total' => $is_suspiciously_low_total,
+                    'is_recently_started' => $is_recently_started,
                     'action' => 'cleared_stuck_import'
                 ]);
                 delete_option('job_import_status');
@@ -712,6 +752,24 @@ function get_job_import_status_ajax() {
 
                 // Return fresh status
                 $progress = initialize_import_status(0, '', null);
+            } else {
+                // Log why stuck detection was skipped (for debugging)
+                if ($is_feed_processing_phase || $is_suspiciously_low_total || $is_recently_started) {
+                    PuntWorkLogger::debug('Stuck import detection evaluation completed', PuntWorkLogger::CONTEXT_BATCH, [
+                        'is_stuck' => false,
+                        'processed' => $progress['processed'] ?? 0,
+                        'total' => $progress['total'] ?? 0,
+                        'time_elapsed' => round($time_elapsed, 2),
+                        'time_since_last_update' => round($time_since_last_update, 2),
+                        'current_phase' => $current_phase,
+                        'is_feed_processing_phase' => $is_feed_processing_phase,
+                        'is_suspiciously_low_total' => $is_suspiciously_low_total,
+                        'is_recently_started' => $is_recently_started,
+                        'reason_not_stuck' => $is_feed_processing_phase ? 'feed_processing_phase' :
+                                            ($is_suspiciously_low_total ? 'suspiciously_low_total' :
+                                            ($is_recently_started ? 'recently_started' : 'other'))
+                    ]);
+                }
             }
         }
 

@@ -204,9 +204,17 @@ if (!function_exists('import_all_jobs_from_json')) {
                 'end_time' => null,
                 'last_update' => microtime(true),
                 'logs' => ['Fresh import started'],
+                'phase' => 'initializing' // Track import phase for stuck detection
             ];
             update_option('job_import_status', $fresh_status, false);
             error_log('[PUNTWORK] Import status cleared and reset');
+            PuntWorkLogger::info('Fresh import initialized', PuntWorkLogger::CONTEXT_IMPORT, [
+                'start_time' => $start_time,
+                'batch_size' => get_batch_size(),
+                'phase' => 'initializing',
+                'memory_limit' => ini_get('memory_limit'),
+                'time_limit' => ini_get('max_execution_time')
+            ]);
         }
 
         // Initialize import status for UI tracking (only if not preserving)
@@ -215,9 +223,14 @@ if (!function_exists('import_all_jobs_from_json')) {
             error_log('[PUNTWORK] Initializing import status...');
             $initial_status = initialize_import_status(0, 'Scheduled import started - preparing feeds...', $start_time);
             $initial_status['batch_count'] = 0;
-            $initial_status['phase'] = 'job-importing'; // Set phase for job importing
+            $initial_status['phase'] = 'feed-downloading'; // Set phase for feed processing
             error_log('[PUNTWORK] Setting import status...');
             set_import_status($initial_status);
+            PuntWorkLogger::info('Feed processing phase started', PuntWorkLogger::CONTEXT_IMPORT, [
+                'phase' => 'feed-downloading',
+                'start_time' => $start_time,
+                'action' => 'initializing_feed_processing'
+            ]);
         } else {
             error_log('[PUNTWORK] Preserving existing status...');
             // Update existing status to indicate import is resuming (don't reset start_time to preserve elapsed time)
@@ -229,6 +242,14 @@ if (!function_exists('import_all_jobs_from_json')) {
             // Note: start_time is preserved from original import start
             set_import_status($existing_status);
             $initial_status = $existing_status; // Use existing status as initial_status for later updates
+            PuntWorkLogger::info('Import continuation resumed', PuntWorkLogger::CONTEXT_BATCH, [
+                'phase' => $existing_status['phase'] ?? 'unknown',
+                'processed' => $existing_status['processed'] ?? 0,
+                'total' => $existing_status['total'] ?? 0,
+                'batch_count' => $existing_status['batch_count'] ?? 0,
+                'accumulated_time' => $accumulated_time,
+                'action' => 'resuming_paused_import'
+            ]);
         }
 
         // Store import start time for timeout checking
@@ -350,6 +371,17 @@ if (!function_exists('import_all_jobs_from_json')) {
                 // Schedule multiple fallback continuation mechanisms
                 schedule_import_continuation_with_fallbacks($pause_time);
 
+                PuntWorkLogger::info('Import paused due to time/memory limits', PuntWorkLogger::CONTEXT_BATCH, [
+                    'pause_time' => $pause_time,
+                    'processed' => $total_processed,
+                    'total' => $total_items,
+                    'batch_count' => $batch_count,
+                    'time_elapsed' => microtime(true) - $start_time + $accumulated_time,
+                    'pause_reason' => 'time_limit_exceeded',
+                    'continuation_strategy' => 'cron_fallback',
+                    'fallback_mechanisms' => ['primary_cron_10s', 'retry_fallback_2min', 'manual_trigger_5min', 'status_monitoring']
+                ]);
+
                 return [
                     'success' => true,
                     'processed' => $total_processed,
@@ -391,6 +423,15 @@ if (!function_exists('import_all_jobs_from_json')) {
                 $initial_status['total'] = $total_items;
                 update_option('job_import_status', $initial_status, false);
                 error_log('[PUNTWORK] Set total items for import: ' . $total_items);
+                PuntWorkLogger::info('Total items determined, transitioning to job processing', PuntWorkLogger::CONTEXT_IMPORT, [
+                    'total_items' => $total_items,
+                    'phase' => 'job-importing',
+                    'batch_count' => $batch_count,
+                    'action' => 'total_items_set'
+                ]);
+                // Update phase to job importing now that we have totals
+                $initial_status['phase'] = 'job-importing';
+                update_option('job_import_status', $initial_status, false);
             }
 
             // Check if import is complete
@@ -946,7 +987,11 @@ function continue_paused_import() {
         error_log('[PUNTWORK] Import status details: ' . json_encode($status));
         PuntWorkLogger::info('Continuation skipped - import not paused', PuntWorkLogger::CONTEXT_BATCH, [
             'current_status' => $status,
-            'method' => 'primary_cron'
+            'method' => 'primary_cron',
+            'processed' => $status['processed'] ?? 0,
+            'total' => $status['total'] ?? 0,
+            'complete' => $status['complete'] ?? false,
+            'phase' => $status['phase'] ?? 'unknown'
         ]);
 
         // Clear remaining fallback schedules
@@ -1031,7 +1076,8 @@ function schedule_import_continuation_with_fallbacks($pause_time) {
         PuntWorkLogger::info('Scheduled primary import continuation', PuntWorkLogger::CONTEXT_BATCH, [
             'delay_seconds' => 10,
             'scheduled_time' => date('Y-m-d H:i:s', $current_time + 10),
-            'pause_time' => $pause_time
+            'pause_time' => $pause_time,
+            'cron_disabled' => defined('DISABLE_WP_CRON') ? DISABLE_WP_CRON : false
         ]);
     }
 
@@ -1070,7 +1116,9 @@ function schedule_import_continuation_with_fallbacks($pause_time) {
     PuntWorkLogger::info('Multiple continuation mechanisms scheduled', PuntWorkLogger::CONTEXT_BATCH, [
         'mechanisms' => ['primary_cron', 'retry_fallback', 'manual_trigger', 'status_monitoring'],
         'total_scheduled_events' => 3 + 20 + 24, // primary + retry + manual + status checks
-        'monitoring_duration_hours' => 24
+        'monitoring_duration_hours' => 24,
+        'pause_time' => $pause_time,
+        'current_wp_cron_status' => defined('DISABLE_WP_CRON') ? (DISABLE_WP_CRON ? 'disabled' : 'enabled') : 'not_defined'
     ]);
 }
 
