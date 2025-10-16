@@ -65,14 +65,12 @@ add_action('admin_menu', function() {
     );
 
     // Import Settings - Phase 2 enhancement for configuration management
-    if (function_exists(__NAMESPACE__ . '\\render_import_settings_page')) {
-        add_submenu_page(
-            'puntwork-dashboard',
-            'Import Settings',
-            'Import Settings',
-            'manage_options',
-            'puntwork-import-settings',
-            __NAMESPACE__ . '\\render_import_settings_page'
-        );
-    }
+    add_submenu_page(
+        'puntwork-dashboard',
+        'Import Settings',
+        'Import Settings',
+        'manage_options',
+        'puntwork-import-settings',
+        __NAMESPACE__ . '\\render_import_settings_page'
+    );
 });
