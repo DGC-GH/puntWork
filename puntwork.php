@@ -101,10 +101,12 @@ function setup_job_import() {
         'admin/admin-ui-scheduling.php',
         
         // API handlers
-        'api/ajax-feed-processing.php',
+    'api/ajax-feed-processing.php',
         'api/ajax-handlers.php',
         'api/ajax-import-control.php',
-        'api/ajax-purge.php',
+    'api/ajax-purge.php',
+    // REST endpoints
+    'api/rest-diagnostics.php',
         
         // Batch processing
         'batch/batch-core.php',
