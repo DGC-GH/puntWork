@@ -102,7 +102,7 @@ add_action('save_post', function($post_id, $post, $update) {
     }
 }, 10, 3);
 
-function process_one_feed($feed_key, $url, $output_dir, $fallback_domain, &$logs) {
+function process_one_feed($feed_key, $url, $output_dir, $fallback_domain, &$logs, $force_use_wp_remote = false) {
     // Ensure output directory exists
     if (!wp_mkdir_p($output_dir) || !is_writable($output_dir)) {
         throw new \Exception('Output directory not writable');
@@ -113,7 +113,7 @@ function process_one_feed($feed_key, $url, $output_dir, $fallback_domain, &$logs
     $json_path = $output_dir . $json_filename;
     $gz_json_path = $json_path . '.gz';
 
-    if (!download_feed($url, $xml_path, $output_dir, $logs)) {
+    if (!download_feed($url, $xml_path, $output_dir, $logs, $force_use_wp_remote)) {
         return 0;
     }
 
@@ -170,229 +170,44 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
         ];
     }
 
-    // Execute downloads in parallel using multi-curl
-    $mh = curl_multi_init();
-    $handles = [];
-    $results = [];
+    // For this deployment we intentionally use sequential downloads for reliability.
+    PuntWorkLogger::info('Starting feed downloads (sequential wp_remote_get)', PuntWorkLogger::CONTEXT_FEED, [
+        'feed_count' => count($download_tasks),
+        'output_dir' => $output_dir,
+        'method' => 'sequential_wp_remote_get'
+    ]);
 
-    // Initialize all curl handles
-    foreach ($download_tasks as $feed_key => $task) {
-        $fp = fopen($task['xml_path'], 'w');
-        if (!$fp) {
-            PuntWorkLogger::error('Failed to open file for writing', PuntWorkLogger::CONTEXT_FEED, [
-                'feed_key' => $feed_key,
-                'xml_path' => $task['xml_path']
-            ]);
-            continue;
-        }
-
-    $ch = curl_init($task['url']);
-    // Stream directly to file handle to avoid buffering entire response in memory
-    curl_setopt($ch, CURLOPT_FILE, $fp);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 300); // 5 minutes timeout per feed
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    // Allow all encodings (gzip/deflate) to be handled by libcurl
-    curl_setopt($ch, CURLOPT_ENCODING, '');
-    // Helpful for debugging — capture verbose output into a temp stream
-    $verbose_stream = fopen('php://temp', 'w+');
-    if ($verbose_stream) {
-        curl_setopt($ch, CURLOPT_VERBOSE, true);
-        curl_setopt($ch, CURLOPT_STDERR, $verbose_stream);
-    }
-    curl_setopt($ch, CURLOPT_USERAGENT, 'WordPress puntWork Importer');
-    curl_setopt($ch, CURLOPT_HEADER, false); // Don't include headers in response
-
-        curl_multi_add_handle($mh, $ch);
-        $handles[$feed_key] = $ch;
-        $results[$feed_key] = [
-            'handle' => $ch,
-            'file_handle' => $fp,
-            'xml_path' => $task['xml_path'],
-            'url' => $task['url'],
-            'feed_key' => $feed_key,
-            'start_time' => microtime(true),
-            'verbose_stream' => isset($verbose_stream) ? $verbose_stream : null
-        ];
-    }
-
-    // Execute downloads in parallel using a robust curl_multi loop.
-    // Map curl handle resource ids to feed keys so we can process completions as they arrive.
-    $handle_map = [];
-    foreach ($handles as $fk => $h) {
-        $handle_map[(int) $h] = $fk;
-    }
-
-    $running = null;
-    $mrc = curl_multi_exec($mh, $running);
-    // Drive initial transfers
-    while ($mrc == CURLM_CALL_MULTI_PERFORM) {
-        $mrc = curl_multi_exec($mh, $running);
-    }
-
-    // Main loop: wait for activity and continue until no handles are running
-    while ($running && $mrc == CURLM_OK) {
-        $select = curl_multi_select($mh, 1.0);
-        if ($select === -1) {
-            // On some systems select returns -1; avoid busy loop
-            usleep(100000); // 100ms
-        }
-
-        // Continue performing transfers
-        do {
-            $mrc = curl_multi_exec($mh, $running);
-        } while ($mrc == CURLM_CALL_MULTI_PERFORM);
-
-        // Read information about messages (completed handles)
-        while ($info = curl_multi_info_read($mh)) {
-            $ch = $info['handle'];
-            $key = $handle_map[(int) $ch] ?? null;
-            if ($key === null) {
-                // Unknown handle; ensure it's removed to avoid surprises
-                @curl_multi_remove_handle($mh, $ch);
-                @curl_close($ch);
-                continue;
-            }
-            $result = &$results[$key];
-
-            // Record transfer end time and capture info while handle is still valid
-            $result['end_time'] = microtime(true);
-            $result['curl_errno'] = $info['result'] ?? null;
-            $result['curl_error'] = curl_error($ch);
-            $result['http_code'] = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-            // Remove the handle from the multi-handle before closing resources
-            curl_multi_remove_handle($mh, $ch);
-
-            // Close the file handle if still open
-            if (!empty($result['file_handle'])) {
-                @fclose($result['file_handle']);
-                $result['file_handle'] = null;
-            }
-
-            // Close the curl handle and mark as closed so later processing doesn't touch it
-            curl_close($ch);
-            $result['handle'] = null;
-            $result['completed'] = true;
-        }
-    }
-
-    // Process results and close handles
     $successful_downloads = 0;
-    foreach ($results as $feed_key => $result) {
-        $ch = $result['handle'] ?? null;
-        $http_code = $result['http_code'] ?? null;
-        $curl_error = $result['curl_error'] ?? '';
-        $download_time = (isset($result['end_time']) ? $result['end_time'] : microtime(true)) - $result['start_time'];
-
-        // Ensure any remaining file handle is closed
-        if (!empty($result['file_handle'])) {
-            @fclose($result['file_handle']);
-        }
-
-        $file_size = file_exists($result['xml_path']) ? filesize($result['xml_path']) : 0;
-
-        // If file size is unexpectedly small or zero but HTTP returned 200, attempt a fallback using WordPress HTTP API
-        $attempted_fallback = false;
-        if (($file_size < 1000 && $http_code === 200) || ($file_size === 0 && !empty($curl_error))) {
-            try {
-                $attempted_fallback = true;
-                PuntWorkLogger::info('Attempting fallback download using wp_remote_get', PuntWorkLogger::CONTEXT_FEED, [
-                    'feed_key' => $feed_key,
-                    'url' => $result['url'],
-                    'previous_file_size' => $file_size,
-                    'http_code' => $http_code,
-                    'curl_error' => $curl_error
-                ]);
-                // Use existing download_feed helper which supports wp_remote_get fallback
-                require_once __DIR__ . '/../import/download-feed.php';
-                $fallback_logs = [];
-                $fallback_ok = download_feed($result['url'], $result['xml_path'], $output_dir, $fallback_logs, true);
-                // Merge fallback logs into main logs for visibility
-                foreach ($fallback_logs as $l) $logs[] = $l;
-                $file_size = file_exists($result['xml_path']) ? filesize($result['xml_path']) : 0;
-                if ($fallback_ok && $file_size > 1000) {
-                    $http_code = 200; // override if fallback succeeded
-                    $curl_error = '';
-                }
-            } catch (\Exception $e) {
-                PuntWorkLogger::error('Fallback download failed', PuntWorkLogger::CONTEXT_FEED, [
-                    'feed_key' => $feed_key,
-                    'error' => $e->getMessage()
-                ]);
-            }
-        }
-
-        // If handle still exists, attempt to gather any missing info, but do not assume it's present
-        if ($ch) {
-            if ($http_code === null) $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            if (empty($curl_error)) $curl_error = curl_error($ch);
-        }
-
-        // Also accept files that were recovered via fallback
-        if ($http_code === 200 && $file_size > 1000 && empty($curl_error)) {
-            $successful_downloads++;
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Parallel download successful: ' . $feed_key . ' (' . $file_size . ' bytes in ' . round($download_time, 2) . 's)';
-
-            PuntWorkLogger::info('Feed download completed successfully', PuntWorkLogger::CONTEXT_FEED, [
+    foreach ($download_tasks as $feed_key => $task) {
+        try {
+            // Force the use of wp_remote_get inside process_one_feed
+            $count = process_one_feed($feed_key, $task['url'], $output_dir, $fallback_domain, $logs, true);
+            if ($count > 0) $successful_downloads++;
+            $total_items += $count;
+        } catch (\Exception $e) {
+            PuntWorkLogger::error('Sequential feed download failed', PuntWorkLogger::CONTEXT_FEED, [
                 'feed_key' => $feed_key,
-                'url' => $result['url'],
-                'file_size' => $file_size,
-                'download_time' => $download_time,
-                'http_code' => $http_code
-            ]);
-        } else {
-            // Read first 500 bytes of the file for debugging (if any)
-            $response_preview = '';
-            if (file_exists($result['xml_path'])) {
-                $fp_preview = @fopen($result['xml_path'], 'r');
-                if ($fp_preview) {
-                    $response_preview = @fread($fp_preview, 500);
-                    fclose($fp_preview);
-                }
-            }
-            // If verbose output was captured from curl, include it for debugging
-            $curl_verbose = '';
-            if (!empty($verbose_stream) && is_resource($verbose_stream)) {
-                rewind($verbose_stream);
-                $curl_verbose = stream_get_contents($verbose_stream);
-                fclose($verbose_stream);
-            }
-
-            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Parallel download failed: ' . $feed_key . ' (HTTP ' . $http_code . ', size: ' . $file_size . ', curl_error: ' . $curl_error . ', attempted_fallback: ' . ($attempted_fallback ? 'true' : 'false') . ')';
-
-            PuntWorkLogger::error('Feed download failed', PuntWorkLogger::CONTEXT_FEED, [
-                'feed_key' => $feed_key,
-                'url' => $result['url'],
-                'http_code' => $http_code,
-                'file_size' => $file_size,
-                'download_time' => $download_time,
-                'curl_error' => $curl_error,
-                'attempted_fallback' => $attempted_fallback,
-                'response_length' => $file_size,
-                'response_preview' => $response_preview,
-                'curl_verbose' => $curl_verbose
+                'url' => $task['url'],
+                'error' => $e->getMessage()
             ]);
         }
 
-        // Only remove/close if the curl handle still exists (it may have been closed earlier)
-        if ($ch) {
-            @curl_multi_remove_handle($mh, $ch);
-            @curl_close($ch);
-        }
+        // Update progress after processing each feed
+        $processed_feeds++;
+        $feed_status['processed'] = $processed_feeds;
+        $feed_status['time_elapsed'] = microtime(true) - $start_time;
+        set_import_status($feed_status);
     }
-
-    curl_multi_close($mh);
 
     $parallel_download_time = microtime(true) - $start_time;
-    PuntWorkLogger::info('Parallel feed downloads completed', PuntWorkLogger::CONTEXT_FEED, [
+    PuntWorkLogger::info('Sequential feed downloads completed', PuntWorkLogger::CONTEXT_FEED, [
         'total_feeds' => count($feeds),
         'successful_downloads' => $successful_downloads,
         'total_download_time' => $parallel_download_time,
         'average_time_per_feed' => count($feeds) > 0 ? $parallel_download_time / count($feeds) : 0
     ]);
 
-    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Parallel downloads completed: ' . $successful_downloads . '/' . count($feeds) . ' feeds in ' . round($parallel_download_time, 2) . 's';
+    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Sequential downloads completed: ' . $successful_downloads . '/' . count($feeds) . ' feeds in ' . round($parallel_download_time, 2) . 's';
 
     // Process downloaded feeds sequentially (XML processing can't be easily parallelized)
     foreach ($download_tasks as $feed_key => $task) {
