@@ -1064,20 +1064,31 @@ function continue_paused_import() {
     ]));
 
     if ($result['success']) {
-        PuntWorkLogger::info('Primary continuation completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
-            'processed' => $result['processed'] ?? 0,
-            'total' => $result['total'] ?? 0,
-            'time_elapsed' => $result['time_elapsed'] ?? 0,
-            'attempts_used' => $status['continuation_attempts'] ?? 1
-        ]);
+        // Re-read persisted status to decide whether we actually resumed or were paused again
+        $post_status = get_import_status([]);
+        if (!(!empty($post_status['paused']))) {
+            // Import is not paused after continuation -> success, clear schedules
+            PuntWorkLogger::info('Primary continuation completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
+                'processed' => $result['processed'] ?? 0,
+                'total' => $result['total'] ?? 0,
+                'time_elapsed' => $result['time_elapsed'] ?? 0,
+                'attempts_used' => $status['continuation_attempts'] ?? 1
+            ]);
+            clear_import_continuation_schedules();
+        } else {
+            // Import is still paused (or paused again) - retain schedules so fallbacks can run
+            PuntWorkLogger::info('Primary continuation paused again - retaining continuation schedules', PuntWorkLogger::CONTEXT_BATCH, [
+                'processed' => $result['processed'] ?? 0,
+                'total' => $result['total'] ?? 0,
+                'time_elapsed' => $result['time_elapsed'] ?? 0,
+                'attempts_used' => $status['continuation_attempts'] ?? 1
+            ]);
+        }
 
-        // Clear remaining fallback schedules since we succeeded
-        clear_import_continuation_schedules();
-        // Clear continuation_in_progress flag
-        $status = get_import_status([]);
-        $status['continuation_in_progress'] = false;
-        $status['continuation_finished_at'] = microtime(true);
-        set_import_status($status);
+        // Always clear the in-progress guard so other fallbacks may run if needed
+        $post_status['continuation_in_progress'] = false;
+        $post_status['continuation_finished_at'] = microtime(true);
+        set_import_status($post_status);
     } else {
         PuntWorkLogger::error('Primary continuation failed', PuntWorkLogger::CONTEXT_BATCH, [
             'error' => $result['message'] ?? 'Unknown error',
@@ -1271,18 +1282,29 @@ function continue_paused_import_retry() {
     $result = import_all_jobs_from_json(true);
 
     if ($result['success']) {
-        PuntWorkLogger::info('Retry continuation completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
-            'processed' => $result['processed'] ?? 0,
-            'total' => $result['total'] ?? 0,
-            'time_elapsed' => $result['time_elapsed'] ?? 0,
-            'method' => 'retry_fallback'
-        ]);
-        clear_import_continuation_schedules();
-        // Clear continuation_in_progress flag
-        $status = get_import_status([]);
-        $status['continuation_in_progress'] = false;
-        $status['continuation_finished_at'] = microtime(true);
-        set_import_status($status);
+        // Re-read persisted status to decide whether to clear schedules
+        $post_status = get_import_status([]);
+        if (!(!empty($post_status['paused']))) {
+            PuntWorkLogger::info('Retry continuation completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
+                'processed' => $result['processed'] ?? 0,
+                'total' => $result['total'] ?? 0,
+                'time_elapsed' => $result['time_elapsed'] ?? 0,
+                'method' => 'retry_fallback'
+            ]);
+            clear_import_continuation_schedules();
+        } else {
+            PuntWorkLogger::info('Retry continuation paused again - retaining continuation schedules', PuntWorkLogger::CONTEXT_BATCH, [
+                'processed' => $result['processed'] ?? 0,
+                'total' => $result['total'] ?? 0,
+                'time_elapsed' => $result['time_elapsed'] ?? 0,
+                'method' => 'retry_fallback'
+            ]);
+        }
+
+        // Always clear the in-progress guard
+        $post_status['continuation_in_progress'] = false;
+        $post_status['continuation_finished_at'] = microtime(true);
+        set_import_status($post_status);
     } else {
         PuntWorkLogger::error('Retry continuation failed', PuntWorkLogger::CONTEXT_BATCH, [
             'error' => $result['message'] ?? 'Unknown error',
@@ -1371,18 +1393,29 @@ function continue_paused_import_manual() {
     $result = import_all_jobs_from_json(true);
 
     if ($result['success']) {
-        PuntWorkLogger::info('Manual trigger continuation completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
-            'processed' => $result['processed'] ?? 0,
-            'total' => $result['total'] ?? 0,
-            'time_elapsed' => $result['time_elapsed'] ?? 0,
-            'method' => 'manual_trigger'
-        ]);
-        clear_import_continuation_schedules();
-        // Clear continuation_in_progress flag
-        $status = get_import_status([]);
-        $status['continuation_in_progress'] = false;
-        $status['continuation_finished_at'] = microtime(true);
-        set_import_status($status);
+        // Re-read persisted status to decide whether to clear schedules
+        $post_status = get_import_status([]);
+        if (!(!empty($post_status['paused']))) {
+            PuntWorkLogger::info('Manual trigger continuation completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
+                'processed' => $result['processed'] ?? 0,
+                'total' => $result['total'] ?? 0,
+                'time_elapsed' => $result['time_elapsed'] ?? 0,
+                'method' => 'manual_trigger'
+            ]);
+            clear_import_continuation_schedules();
+        } else {
+            PuntWorkLogger::info('Manual continuation paused again - retaining continuation schedules', PuntWorkLogger::CONTEXT_BATCH, [
+                'processed' => $result['processed'] ?? 0,
+                'total' => $result['total'] ?? 0,
+                'time_elapsed' => $result['time_elapsed'] ?? 0,
+                'method' => 'manual_trigger'
+            ]);
+        }
+
+        // Always clear the in-progress guard
+        $post_status['continuation_in_progress'] = false;
+        $post_status['continuation_finished_at'] = microtime(true);
+        set_import_status($post_status);
     } else {
         PuntWorkLogger::error('Manual trigger continuation failed - no more fallbacks available', PuntWorkLogger::CONTEXT_BATCH, [
             'error' => $result['message'] ?? 'Unknown error',
