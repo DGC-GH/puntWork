@@ -50,3 +50,26 @@ Custom post types are already created using ACF Pro:
 - ACF plugin for custom fields (fallback to post_meta)
 - External XML/JSONL feeds with gzip compression
 - Database storage via WordPress options and custom posts
+
+## API Endpoints (discovered)
+This plugin exposes a mix of WP REST routes and admin-ajax actions. Use these for diagnostics and automation. Be careful with destructive actions — most admin-ajax endpoints require authentication.
+
+REST routes:
+- GET /wp-json/puntwork/v1/diagnostics — plugin diagnostics snapshot. If the `puntwork_rest_token` option is set, send it in the `X-PUNTWORK-TOKEN` header; otherwise the route requires an authenticated user with `manage_options`.
+
+Common admin-ajax actions (admin-ajax.php?action=...):
+- get_job_import_status — Read-only: returns current import progress and status.
+- puntwork_import_diagnostics — Diagnostics fetch used by admin UI (may be blocked by host WAF for POST requests; the diagnostics page now uses GET to improve reliability).
+- run_job_import_batch — Triggers an import batch run (destructive/long-running; authenticated only).
+- continue_paused_import_ajax — Attempt to continue a paused import (authenticated only).
+- manually_resume_stuck_import — Admin-initiated resume for stuck imports.
+- cancel_job_import — Cancel an active import run.
+- clear_import_cancel — Clear a previously-set cancel flag.
+- reset_job_import — Reset import state (destructive; authenticated only).
+- get_active_scheduled_imports — Lists scheduled WP-Cron / Action Scheduler tasks related to imports.
+- puntwork_save_rest_token — Save the REST diagnostics token from the admin UI (authenticated).
+- puntwork_get_rest_token — Retrieve the saved REST diagnostics token for the admin UI (authenticated).
+
+Notes & troubleshooting:
+- On some shared hosts (observed Hostinger), POSTs to `admin-ajax.php` may be blocked or have body/nonces stripped by host WAFs. If admin-ajax POSTs fail with HTTP 400 and body "0", use the REST diagnostics endpoint with the saved token as a reliable alternative.
+- For programmatic automation, the REST diagnostics endpoint is recommended. Consider adding a webhook or WP-CLI resume command if the host prevents loopback requests or scheduled events from firing reliably.
