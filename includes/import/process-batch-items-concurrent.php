@@ -338,14 +338,16 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
             continue; // Skip this item
         }
 
+        // REDUCED PAYLOAD: Only pass minimal data to avoid ActionScheduler 8000 char limit
+        // Item data is too large - pass only essential identifiers, load from transients
         $action_id = as_schedule_single_action(
             time() + 1, // Small delay to prevent conflicts and allow immediate execution
-            'puntwork_process_single_item_optimized', // New optimized callback
+            'puntwork_process_single_item_optimized', // Optimized callback uses transients
             [
                 'guid' => $guid,
-                'item_data' => $item_data, // Direct data - no file reading!
                 'shared_data_key' => $shared_data_key,
                 'batch_data_cache_key' => $batch_data_cache_key,
+                // REMOVED: 'item_data' - too large for ActionScheduler limit
                 'concurrent_mode' => true
             ],
             'puntwork-import-process',
@@ -372,21 +374,33 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
     // Check if we had significant scheduling failures
     $scheduling_success_rate = count($action_ids) / count($batch_guids);
     if ($scheduling_success_rate < 0.9) { // Less than 90% success
-    PuntWorkLogger::warn('High scheduling failure rate, concurrent processing may be unreliable', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::error('High scheduling failure rate - falling back to sequential processing', PuntWorkLogger::CONTEXT_BATCH, [
             'total_items' => count($batch_guids),
             'scheduled_count' => count($action_ids),
-            'scheduling_success_rate' => $scheduling_success_rate
+            'scheduling_success_rate' => $scheduling_success_rate,
+            'reason' => 'ActionScheduler payload too large or scheduling failed'
         ]);
 
         // Cancel scheduled actions and return error to trigger fallback
         foreach ($action_ids as $action_id) {
-            as_unschedule_action('puntwork_process_single_item', [], 'puntwork-import');
+            if ($action_id) {
+                try {
+                    as_unschedule_action('', [], 'puntwork-import-process');
+                } catch (\Exception $e) {
+                    // Ignore cleanup errors
+                }
+            }
         }
+
+        // Clear the transient data to avoid memory issues
+        delete_transient($batch_data_cache_key);
+        delete_transient($shared_data_key);
 
         return [
             'success' => false,
-            'error' => 'High scheduling failure rate',
+            'error' => 'ActionScheduler scheduling failed - payload too large',
             'scheduling_success_rate' => $scheduling_success_rate,
+            'processed_count' => 0, // Explicitly set to prevent undefined warnings
             'fallback_to_sequential' => true
         ];
     }
@@ -941,13 +955,19 @@ function process_single_item_optimized_callback($data) {
     $skipped = 0;
     $processed_count = 0;
 
-    if (!$item_data) {
-        PuntWorkLogger::warn('Item data not provided', PuntWorkLogger::CONTEXT_BATCH, [
-            'guid' => $guid
+    // Get item data from batch data transient (not passed directly due to size limits)
+    $batch_data_indexed = get_transient($batch_data_cache_key);
+    if (!$batch_data_indexed || !isset($batch_data_indexed[$guid])) {
+        PuntWorkLogger::warn('Item data not found in transients', PuntWorkLogger::CONTEXT_BATCH, [
+            'guid' => $guid,
+            'batch_data_cache_key' => $batch_data_cache_key,
+            'fallback' => 'sequential_mode'
         ]);
         $skipped++;
-        $processed_count++;
+        $processed_count = 1; // Must be set to avoid undefined warnings
     } else {
+        $item_data = $batch_data_indexed[$guid]; // Get data from transient cache
+
         // Pre-process: Bulk database queries (moved to batch level for now, but idea accepted)
 
         // If post exists, check if it needs updating

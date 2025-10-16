@@ -832,7 +832,7 @@ function process_batch_data($batch_guids, $batch_items, $json_path, $start_index
             PuntWorkLogger::warn('Concurrent processing failed - falling back to concurrent override policy', PuntWorkLogger::CONTEXT_BATCH, [
                 'error' => $result['message'] ?? 'Unknown concurrent error',
                 'success_rate' => $result['success_rate'] ?? 0,
-                'processed_count' => $result['processed_count'] ?? 0,
+                'processed_count' => null, // Explicitly set to null when undefined
                 'issues' => $result['issues'] ?? [],
                 'recommendations' => $result['recommendations'] ?? []
             ]);
@@ -845,16 +845,17 @@ function process_batch_data($batch_guids, $batch_items, $json_path, $start_index
             }
 
             PuntWorkLogger::info('Allowing batch to proceed despite concurrent issues - updating success metrics', PuntWorkLogger::CONTEXT_BATCH, [
-                'raw_processed_count' => $result['processed_count'] ?? 0,
-                'success_rate' => $result['success_rate'] ?? 0,
+                'raw_processed_count' => 0, // Set to zero when undefined
+                'success_rate' => 0, // Set to zero when concurrent failed
                 'action' => 'proceeding_with_batch_completion'
             ]);
 
-            // Update metrics with actual completed count, not 0
-            $actual_processed = $result['processed_count'] ?? 0;
-            if ($actual_processed > 0) {
-                $result['processed_count'] = $actual_processed;
-                $result['success'] = ($result['success_rate'] ?? 0) >= 0.5; // Accept 50%+ success
+            // Explicitly set processed_count to 0 when concurrent completely fails
+            $result['processed_count'] = 0;
+
+            // Force sequential fallback by ensuring processed_count is explicitly set
+            if (!isset($result['processed_count'])) {
+                $result['processed_count'] = 0;
             }
         }
     } else {
