@@ -63,7 +63,7 @@ function process_batch_items_logic($setup) {
 
         // For concurrent processing, allow larger batches but cap to prevent overwhelming Action Scheduler
         $cpu_cores = function_exists('shell_exec') ? (int) shell_exec('nproc 2>/dev/null') : 2;
-        $max_concurrent_batch_size = min(25, $cpu_cores * 5); // Reduced cap for Hostinger: 25 or 5x CPU cores, whichever smaller
+        $max_concurrent_batch_size = min(100, $cpu_cores * 5); // Increased cap for performance: 100 or 5x CPU cores, whichever smaller
         $batch_size = min($batch_size, $max_concurrent_batch_size);
 
         // Get current and previous batch times for dynamic adjustment
@@ -169,8 +169,12 @@ function process_batch_items_logic($setup) {
                 $current_index = $start_index + $i;
 
                 // CRITICAL: Check for timeouts during batch processing to prevent server kills
-                if ($i % 5 === 0) { // Check every 5 items (more aggressive)
-                    if (import_time_exceeded() || import_memory_exceeded()) {
+                if ($i % 25 === 0) { // Check every 25 items (reduced from 5 for performance)
+                    static $last_check_time = 0;
+                    $current_time = microtime(true);
+                    if ($current_time - $last_check_time >= 1) { // Cache checks for 1 second
+                        $last_check_time = $current_time;
+                        if (import_time_exceeded() || import_memory_exceeded()) {
                         PuntWorkLogger::warning('Timeout/memory limit detected mid-batch, saving progress', PuntWorkLogger::CONTEXT_BATCH, [
                             'current_index' => $current_index,
                             'items_processed_in_batch' => $items_processed_in_batch,
@@ -305,11 +309,76 @@ function process_batch_items_logic($setup) {
 
                 $items_processed_in_batch++;
 
-                if ($i % 5 === 0) {
-                    if (ob_get_level() > 0) {
-                        ob_flush();
+                if ($i % 25 === 0) { // Check every 25 items (reduced from 5 for performance)
+                    static $last_check_time = 0;
+                    $current_time = microtime(true);
+                    if ($current_time - $last_check_time >= 1) { // Cache checks for 1 second
+                        $last_check_time = $current_time;
+                        if (import_time_exceeded() || import_memory_exceeded()) {
+                            PuntWorkLogger::warning('Timeout/memory limit detected mid-batch, saving progress', PuntWorkLogger::CONTEXT_BATCH, [
+                                'current_index' => $current_index,
+                                'items_processed_in_batch' => $items_processed_in_batch,
+                                'batch_size' => $batch_size,
+                                'time_exceeded' => import_time_exceeded(),
+                                'memory_exceeded' => import_memory_exceeded()
+                            ]);
+
+                            // Save partial progress before timeout
+                            $partial_processed = $start_index + $items_processed_in_batch;
+                            retry_option_operation(function() use ($partial_processed) {
+                                return set_import_progress($partial_processed);
+                            }, [], [
+                                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                                'operation' => 'save_partial_progress_timeout'
+                            ]);
+
+                            // Update status to show partial completion
+                            $timeout_status = get_import_status();
+                            if (!is_array($timeout_status['logs'] ?? null)) {
+                                $timeout_status['logs'] = [];
+                            }
+                            $timeout_status['processed'] = $partial_processed;
+                            $timeout_status['last_update'] = microtime(true);
+                            $timeout_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Processing paused mid-batch due to time/memory limits at item ' . ($current_index + 1);
+                            set_import_status($timeout_status);
+
+                            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Processing paused mid-batch due to limits - processed ' . $items_processed_in_batch . '/' . $batch_size . ' items in this batch';
+
+                            return [
+                                'success' => true,
+                                'processed' => $partial_processed,
+                                'total' => $total,
+                                'published' => $published,
+                                'updated' => $updated,
+                                'skipped' => $skipped,
+                                'duplicates_drafted' => $duplicates_drafted,
+                                'time_elapsed' => microtime(true) - $start_time,
+                                'complete' => false,
+                                'paused' => true,
+                                'pause_reason' => 'mid_batch_timeout',
+                                'logs' => $logs,
+                                'batch_size' => $batch_size,
+                                'inferred_languages' => $inferred_languages,
+                                'inferred_benefits' => $inferred_benefits,
+                                'schema_generated' => $schema_generated,
+                                'batch_time' => microtime(true) - $batch_start_time,
+                                'batch_processed' => $items_processed_in_batch,
+                                'message' => 'Processing paused mid-batch due to time/memory limits'
+                            ];
+                        }
+
+                        // HEARTBEAT: Update status every 10 items for responsive UI updates
+                        if ($i % 10 === 0) {
+                            $heartbeat_status = get_import_status();
+                            if (!is_array($heartbeat_status['logs'] ?? null)) {
+                                $heartbeat_status['logs'] = [];
+                            }
+                            $heartbeat_status['last_update'] = microtime(true);
+                            $heartbeat_status['processed'] = $start_index + $items_processed_in_batch;
+                            $heartbeat_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Heartbeat: Processing item ' . ($current_index + 1) . '/' . $total;
+                            set_import_status($heartbeat_status);
+                        }
                     }
-                    flush();
                 }
                 unset($batch_json_items[$i]);
             } catch (\Exception $e) {
@@ -627,25 +696,21 @@ function process_batch_data($batch_guids, $batch_items, $json_path, $start_index
     $action_scheduler_available = function_exists('as_schedule_single_action');
 
     // Decision logic based on success rates and availability
-    $use_concurrent = false; // Force sequential processing for Hostinger compatibility
-    $decision_reason = 'forced_sequential_for_hostinger';
+    $use_concurrent = false; // Default to sequential
+    $decision_reason = 'default_sequential';
 
-    if ($action_scheduler_available && $concurrent_success_rate >= 0.95 && $concurrent_success_rate > $sequential_success_rate) {
-        // Only use concurrent if it has very high success rate and Action Scheduler is working perfectly
+    if ($action_scheduler_available && $concurrent_success_rate >= 1.0 && $concurrent_success_rate > $sequential_success_rate) {
+        // Only use concurrent if it has perfect success rate (100%)
         $use_concurrent = true;
-        $decision_reason = 'concurrent_high_success_rate';
-    } elseif ($sequential_success_rate >= 0.95 && $sequential_success_rate > $concurrent_success_rate) {
-        // Use sequential if it has very high success rate and is better than concurrent
+        $decision_reason = 'concurrent_perfect_success_rate';
+    } elseif ($sequential_success_rate >= 0.95) {
+        // Use sequential if it has high success rate
         $use_concurrent = false;
         $decision_reason = 'sequential_high_success_rate';
-    } elseif ($concurrent_success_rate >= 0.8) {
-        // Use concurrent if success rate is acceptable
-        $use_concurrent = false; // Still force sequential for Hostinger
-        $decision_reason = 'concurrent_acceptable_but_disabled_for_hostinger';
     } else {
-        // Default to sequential if concurrent success rate is low
+        // Default to sequential if concurrent success rate is not perfect
         $use_concurrent = false;
-        $decision_reason = 'concurrent_low_success_rate_fallback';
+        $decision_reason = 'concurrent_not_perfect_fallback';
     }
 
     PuntWorkLogger::info('Processing mode decision based on success rates', PuntWorkLogger::CONTEXT_BATCH, [
@@ -664,32 +729,27 @@ function process_batch_data($batch_guids, $batch_items, $json_path, $start_index
         ]);
         $result = process_batch_items_concurrent($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, $logs, $updated, $published, $skipped, $processed_count);
 
-        // VALIDATION: Check if concurrent processing failed validation and needs fallback
-        if (isset($result['success']) && $result['success'] === false && isset($result['fallback_to_sequential']) && $result['fallback_to_sequential']) {
-            PuntWorkLogger::warning('Concurrent processing validation failed, falling back to sequential processing', PuntWorkLogger::CONTEXT_BATCH, [
-                'error' => $result['error'] ?? 'Unknown validation error',
+        // VALIDATION: Check if concurrent processing failed - stop import if concurrent fails
+        if (isset($result['success']) && $result['success'] === false) {
+            PuntWorkLogger::error('Concurrent processing failed - stopping import as per policy', PuntWorkLogger::CONTEXT_BATCH, [
+                'error' => $result['message'] ?? 'Unknown concurrent error',
                 'issues' => $result['issues'] ?? [],
-                'recommendations' => $result['recommendations'] ?? [],
-                'scheduling_success_rate' => $result['scheduling_success_rate'] ?? null
+                'recommendations' => $result['recommendations'] ?? []
             ]);
 
-            // Log validation issues to the batch logs
+            // Log issues to the batch logs
             if (isset($result['issues']) && is_array($result['issues'])) {
                 foreach ($result['issues'] as $issue) {
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Concurrent Processing Issue: ' . $issue;
-                }
-            }
-            if (isset($result['recommendations']) && is_array($result['recommendations'])) {
-                foreach ($result['recommendations'] as $recommendation) {
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Recommendation: ' . $recommendation;
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Concurrent Processing Failed: ' . $issue;
                 }
             }
 
-            // Fall back to sequential processing
-            PuntWorkLogger::info('Starting fallback sequential processing', PuntWorkLogger::CONTEXT_BATCH, [
-                'batch_guids_count' => count($batch_guids)
-            ]);
-            $result = process_batch_items($batch_guids, $batch_items, $last_updates, $all_hashes_by_post, $acf_fields, $zero_empty_fields, $post_ids_by_guid, $json_path, $start_index, $logs, $updated, $published, $skipped, $processed_count);
+            // Stop the import instead of falling back
+            return [
+                'success' => false,
+                'message' => 'Concurrent processing failed - import stopped as concurrent must have 100% success rate',
+                'logs' => $logs
+            ];
         }
     } else {
         PuntWorkLogger::info('Using sequential processing based on success rate decision', PuntWorkLogger::CONTEXT_BATCH, [
