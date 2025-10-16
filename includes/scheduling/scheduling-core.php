@@ -50,6 +50,70 @@ add_filter('cron_schedules', function($schedules) {
 });
 
 /**
+ * Attempt to trigger WP-Cron via HTTP loopback requests.
+ * Multiple async requests are made to increase chance of triggering cron on hostile hosts.
+ */
+function puntwork_kick_wp_cron() {
+    try {
+        $cron_url = site_url('wp-cron.php?doing_wp_cron');
+        // Try a few async requests to increase the chance the host will process one
+        for ($i = 0; $i < 3; $i++) {
+            // Non-blocking, very small timeout
+            wp_remote_post($cron_url, [
+                'timeout' => 0.1,
+                'blocking' => false,
+                'sslverify' => apply_filters('https_local_ssl_verify', false),
+            ]);
+        }
+        PuntWorkLogger::info('Attempted to kick wp-cron via loopback', PuntWorkLogger::CONTEXT_SYSTEM, ['cron_url' => $cron_url]);
+    } catch (\Exception $e) {
+        PuntWorkLogger::warn('Failed to kick wp-cron loopback', PuntWorkLogger::CONTEXT_SYSTEM, ['error' => $e->getMessage()]);
+    }
+}
+
+/**
+ * Watchdog: on each request, ensure paused imports have continuation scheduled.
+ * This helps hosts without reliable WP-Cron by scheduling continuation and attempting a cron kick.
+ */
+function puntwork_watchdog_maybe_kick_cron() {
+    // Lightweight check - bail early if no import status exists
+    $status = get_option('job_import_status', []);
+    if (!is_array($status) || empty($status)) {
+        return;
+    }
+
+    // Only act when an import is paused and no primary continuation is scheduled
+    if (isset($status['paused']) && $status['paused'] && !wp_next_scheduled('puntwork_continue_import')) {
+        // Schedule primary continuation and fallback checks (small, conservative set)
+        $current_time = time();
+        wp_clear_scheduled_hook('puntwork_continue_import');
+        wp_clear_scheduled_hook('puntwork_continue_import_retry');
+        wp_clear_scheduled_hook('puntwork_continue_import_manual');
+        wp_clear_scheduled_hook('puntwork_check_continuation_status');
+
+        wp_schedule_single_event($current_time + 10, 'puntwork_continue_import');
+        wp_schedule_single_event($current_time + 120, 'puntwork_continue_import_retry');
+        wp_schedule_single_event($current_time + 300, 'puntwork_continue_import_manual');
+
+        // A few monitoring checks in the first 10 minutes
+        for ($i = 1; $i <= 10; $i++) {
+            wp_schedule_single_event($current_time + ($i * 60), 'puntwork_check_continuation_status');
+        }
+
+        PuntWorkLogger::info('Watchdog scheduled continuation fallbacks for paused import', PuntWorkLogger::CONTEXT_SYSTEM, [
+            'scheduled_time_primary' => date('Y-m-d H:i:s', $current_time + 10),
+            'scheduled_time_retry' => date('Y-m-d H:i:s', $current_time + 120)
+        ]);
+
+        // Attempt to kick WP-Cron immediately
+        puntwork_kick_wp_cron();
+    }
+}
+
+// Attach the watchdog to init (runs on every request) but keep logic small and guarded above
+add_action('init', __NAMESPACE__ . '\\puntwork_watchdog_maybe_kick_cron');
+
+/**
  * Calculate the next run time based on schedule settings
  * Uses UTC for all time calculations (WordPress standard)
  */
