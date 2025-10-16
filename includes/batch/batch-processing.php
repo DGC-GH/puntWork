@@ -123,11 +123,13 @@ function process_batch_items_logic($setup) {
         // Re-align start_index with new batch_size to avoid skips
         // Removed to prevent stuck imports when batch_size changes
 
-        $end_index = min($start_index + $batch_size, $total);
-        $published = 0;
-        $updated = 0;
-        $skipped = 0;
-        $duplicates_drafted = 0;
+    $end_index = min($start_index + $batch_size, $total);
+    $published = 0;
+    $updated = 0;
+    $skipped = 0;
+    $duplicates_drafted = 0;
+    // Initialize processed_guids to collect GUIDs processed in this batch
+    $processed_guids = [];
         $inferred_languages = 0;
         $inferred_benefits = 0;
         $schema_generated = 0;
