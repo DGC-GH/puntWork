@@ -237,8 +237,8 @@ console.log('[PUNTWORK] job-import-events.js loaded');
 
                     // For scheduled imports, also consider imports active if they have a start_time and are recent
                     if (isScheduledImport && !hasIncompleteImport) {
-                        var hasRecentStartTime = statusData.start_time && (currentTime - statusData.start_time) < 3600; // Started within last hour
-                        var isCountingPhase = statusData.start_time && statusData.total === 0 && !statusData.complete && statusData.processed > 0; // Counting phase with processed items
+                        var hasRecentStartTime = statusData.start_time && typeof statusData.start_time === 'number' && (currentTime - statusData.start_time) < 3600; // Started within last hour
+                        var isCountingPhase = statusData.start_time && typeof statusData.start_time === 'number' && statusData.total === 0 && statusData.complete === false && (statusData.processed || 0) > 0; // Counting phase with processed items
 
                         if (hasRecentStartTime || isCountingPhase) {
                             hasIncompleteImport = true;
@@ -248,7 +248,7 @@ console.log('[PUNTWORK] job-import-events.js loaded');
                     // Additional check: If we have an incomplete import with a start_time and scheduling is enabled,
                     // it's likely a scheduled import that's currently running
                     var isLikelyScheduledImport = false;
-                    if (hasIncompleteImport && statusData.start_time && isScheduledImport) {
+                    if (hasIncompleteImport && statusData.start_time && typeof statusData.start_time === 'number' && isScheduledImport) {
                         var timeSinceStart = currentTime - statusData.start_time;
                         isLikelyScheduledImport = timeSinceStart < 7200; // Within last 2 hours
                     }
@@ -274,14 +274,16 @@ console.log('[PUNTWORK] job-import-events.js loaded');
                         // Check if this might be a stuck import
                         var isStuckImport = false;
                         var currentTime = Math.floor(Date.now() / 1000);
-                        var timeSinceLastUpdate = currentTime - (statusData.last_update || 0);
-                        var timeSinceStart = currentTime - (statusData.start_time || 0);
+                        var timeSinceLastUpdate = statusData.last_update && typeof statusData.last_update === 'number' ? currentTime - statusData.last_update : null;
+                        var timeSinceStart = statusData.start_time && typeof statusData.start_time === 'number' ? currentTime - statusData.start_time : null;
 
                         // Consider it stuck if:
-                        // 1. No progress for more than 10 minutes (600 seconds)
-                        // 2. Import has been running for more than 2 hours (7200 seconds)
+                        // 1. No progress for more than 10 minutes (600 seconds) AND we have a valid last_update time
+                        // 2. Import has been running for more than 2 hours (7200 seconds) AND we have a valid start_time
                         // 3. Has continuation attempts but still paused
-                        if (timeSinceLastUpdate > 600 || timeSinceStart > 7200 || (statusData.paused && (statusData.continuation_attempts || 0) > 0)) {
+                        if ((timeSinceLastUpdate !== null && timeSinceLastUpdate > 600) ||
+                            (timeSinceStart !== null && timeSinceStart > 7200) ||
+                            (statusData.paused && (statusData.continuation_attempts || 0) > 0)) {
                             isStuckImport = true;
                         }
 

@@ -176,6 +176,17 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             normalizedData.success = normalizedData.success !== undefined ? normalizedData.success : null;
             normalizedData.error_message = normalizedData.error_message || '';
 
+            // Normalize timestamp fields to prevent undefined errors
+            normalizedData.start_time = normalizedData.start_time !== undefined ? parseFloat(normalizedData.start_time) || null : null;
+            normalizedData.last_update = normalizedData.last_update !== undefined ? parseFloat(normalizedData.last_update) || null : null;
+            normalizedData.complete = normalizedData.complete !== undefined ? Boolean(normalizedData.complete) : false;
+
+            // Normalize other potential undefined fields
+            normalizedData.resume_progress = parseInt(normalizedData.resume_progress) || 0;
+            normalizedData.batch_count = parseInt(normalizedData.batch_count) || 0;
+            normalizedData.job_importing_time_elapsed = parseFloat(normalizedData.job_importing_time_elapsed) || 0;
+            normalizedData.estimated_time_remaining = parseFloat(normalizedData.estimated_time_remaining) || 0;
+
             PuntWorkJSLogger.debug('Normalized response data', 'UI', {
                 total: normalizedData.total,
                 processed: normalizedData.processed,
@@ -185,7 +196,10 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 duplicates_drafted: normalizedData.duplicates_drafted,
                 time_elapsed: normalizedData.time_elapsed,
                 success: normalizedData.success,
-                error_message: normalizedData.error_message
+                error_message: normalizedData.error_message,
+                start_time: normalizedData.start_time,
+                last_update: normalizedData.last_update,
+                complete: normalizedData.complete
             });
 
             return normalizedData;
