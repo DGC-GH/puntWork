@@ -47,7 +47,7 @@ require_once __DIR__ . '/../core/core-structure-logic.php';
  */
 function import_time_exceeded() {
     $start_time = get_import_start_time(microtime(true));
-    $time_limit = apply_filters('puntwork_import_time_limit', 300); // Increased to 5 minutes for better continuation
+    $time_limit = apply_filters('puntwork_import_time_limit', 120); // Reduced to 2 minutes for Hostinger
     $current_time = microtime(true);
 
     if (($current_time - $start_time) >= $time_limit) {
@@ -538,7 +538,7 @@ if (!function_exists('import_all_jobs_from_json')) {
 
             // Wait for all actions to complete (with timeout)
             $wait_start = microtime(true);
-            $max_wait_time = 300; // 5 minutes max wait
+            $max_wait_time = 60; // 1 minute max wait on Hostinger
             $check_interval = 2; // Check every 2 seconds
             $all_complete = false;
             $consecutive_complete_checks = 0;
@@ -656,10 +656,9 @@ if (!function_exists('import_all_jobs_from_json')) {
             'final_memory_peak_mb' => memory_get_peak_usage(true) / 1024 / 1024
         ]);
 
-        // Clean up old job posts that are no longer in the feed BEFORE creating final result
         // Add timeout protection for cleanup phase
         $cleanup_start_time = microtime(true);
-        $cleanup_timeout = 300; // 5 minutes max for cleanup
+        $cleanup_timeout = 60; // 1 minute max for cleanup on Hostinger
 
         try {
             $cleanup_result = cleanup_old_job_posts($start_time);

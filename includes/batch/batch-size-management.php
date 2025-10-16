@@ -18,8 +18,8 @@ require_once plugin_dir_path(__FILE__) . '../utilities/options-utilities.php';
  */
 
 // Batch size configuration constants
-const DEFAULT_BATCH_SIZE = 20;
-const MAX_BATCH_SIZE = 100;
+const DEFAULT_BATCH_SIZE = 10; // Reduced for Hostinger shared hosting compatibility
+const MAX_BATCH_SIZE = 50; // Reduced for Hostinger shared hosting compatibility
 const MIN_BATCH_SIZE = 1;
 
 // Include retry utility
