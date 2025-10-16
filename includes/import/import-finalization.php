@@ -662,6 +662,311 @@ function cleanup_old_job_posts($import_start_time) {
 }
 
 /**
+ * Smart cleanup system for expired jobs
+ * Implements retention policies instead of auto-deletion
+ */
+function smart_cleanup_expired_jobs() {
+    $config = get_import_config();
+    $cleanup_config = $config['cleanup'];
+
+    if ($cleanup_config['strategy'] === 'none') {
+        PuntWorkLogger::info('Cleanup disabled by configuration', PuntWorkLogger::CONTEXT_IMPORT);
+        return ['action' => 'disabled', 'deleted_count' => 0];
+    }
+
+    PuntWorkLogger::info('Starting smart cleanup of expired jobs', PuntWorkLogger::CONTEXT_IMPORT, [
+        'strategy' => $cleanup_config['strategy'],
+        'retention_days' => $cleanup_config['retention_days']
+    ]);
+
+    if ($cleanup_config['strategy'] === 'smart_retention') {
+        return smart_retention_cleanup($cleanup_config);
+    } elseif ($cleanup_config['strategy'] === 'auto_delete') {
+        return legacy_cleanup_old_posts();
+    }
+
+    return ['action' => 'unknown_strategy', 'deleted_count' => 0];
+}
+
+/**
+ * Smart retention cleanup - marks jobs as expired instead of deleting
+ */
+function smart_retention_cleanup($cleanup_config) {
+    global $wpdb;
+
+    $retention_days = $cleanup_config['retention_days'];
+    $cutoff_date = date('Y-m-d H:i:s', strtotime("-{$retention_days} days"));
+    $batch_size = $cleanup_config['batch_size'];
+
+    PuntWorkLogger::info('Executing smart retention cleanup', PuntWorkLogger::CONTEXT_IMPORT, [
+        'retention_days' => $retention_days,
+        'cutoff_date' => $cutoff_date,
+        'batch_size' => $batch_size
+    ]);
+
+    // Find jobs older than retention period that are still published
+    $expired_jobs = $wpdb->get_results($wpdb->prepare("
+        SELECT p.ID, p.post_title,
+               pm_last_import.meta_value as last_import,
+               pm_guid.meta_value as guid
+        FROM {$wpdb->posts} p
+        LEFT JOIN {$wpdb->postmeta} pm_last_import ON p.ID = pm_last_import.post_id AND pm_last_import.meta_key = '_last_import_update'
+        LEFT JOIN {$wpdb->postmeta} pm_guid ON p.ID = pm_guid.post_id AND pm_guid.meta_key = 'guid'
+        WHERE p.post_type = 'job'
+        AND p.post_status = 'publish'
+        AND (
+            pm_last_import.meta_value IS NULL
+            OR pm_last_import.meta_value < %s
+        )
+        LIMIT %d
+    ", $cutoff_date, $batch_size));
+
+    $processed_count = 0;
+    $expired_count = 0;
+
+    foreach ($expired_jobs as $job) {
+        // Check if job is still in current feed before expiring
+        $still_active = is_job_still_active($job->guid);
+
+        if (!$still_active) {
+            // Mark as expired instead of deleting
+            expire_job_post($job->ID, $job->guid);
+            $expired_count++;
+
+            PuntWorkLogger::debug('Job marked as expired (smart retention)', PuntWorkLogger::CONTEXT_IMPORT, [
+                'post_id' => $job->ID,
+                'guid' => $job->guid,
+                'last_import' => $job->last_import,
+                'retention_days' => $retention_days
+            ]);
+        }
+
+        $processed_count++;
+    }
+
+    // Clean up truly orphaned jobs (no GUID, very old) - safety cleanup
+    $orphaned_cleanup = cleanup_orphaned_jobs($cleanup_config);
+
+    $result = [
+        'action' => 'smart_retention',
+        'expired_count' => $expired_count,
+        'processed_count' => $processed_count,
+        'orphaned_cleaned' => $orphaned_cleanup['deleted_count'],
+        'retention_days' => $retention_days
+    ];
+
+    PuntWorkLogger::info('Smart retention cleanup completed', PuntWorkLogger::CONTEXT_IMPORT, $result);
+
+    return $result;
+}
+
+/**
+ * Check if a job is still active in the current feed
+ */
+function is_job_still_active($guid) {
+    static $current_guids = null;
+
+    // Lazy load current GUIDs from feed
+    if ($current_guids === null) {
+        $current_guids = [];
+        $json_path = PUNTWORK_PATH . 'feeds/combined-jobs.jsonl';
+
+        if (file_exists($json_path) && ($handle = fopen($json_path, 'r'))) {
+            while (($line = fgets($handle)) !== false) {
+                $line = trim($line);
+                if (!empty($line)) {
+                    $item = json_decode($line, true);
+                    if ($item && isset($item['guid'])) {
+                        $current_guids[$item['guid']] = true;
+                    }
+                }
+            }
+            fclose($handle);
+        }
+    }
+
+    return isset($current_guids[$guid]);
+}
+
+/**
+ * Mark a job post as expired (status change, not deletion)
+ */
+function expire_job_post($post_id, $guid) {
+    global $wpdb;
+
+    // Change status to 'expired' or 'draft' instead of deleting
+    $result = $wpdb->update(
+        $wpdb->posts,
+        [
+            'post_status' => 'draft',
+            'post_modified' => current_time('mysql'),
+            'post_modified_gmt' => current_time('mysql', true)
+        ],
+        ['ID' => $post_id],
+        ['%s', '%s', '%s'],
+        ['%d']
+    );
+
+    if ($result !== false) {
+        // Add metadata to track expiration
+        update_post_meta($post_id, '_expired_at', current_time('mysql'));
+        update_post_meta($post_id, '_expired_reason', 'smart_retention_policy');
+
+        // Keep job searchable but marked as inactive
+        update_post_meta($post_id, '_job_status', 'expired');
+
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Clean up truly orphaned jobs (safeguard cleanup)
+ */
+function cleanup_orphaned_jobs($cleanup_config) {
+    global $wpdb;
+
+    // Only clean jobs that have no GUID and are very old (>180 days)
+    $very_old_cutoff = date('Y-m-d H:i:s', strtotime('-180 days'));
+    $max_cleanup_batch = min($cleanup_config['batch_size'], 50); // Limit to 50 for safety
+
+    $orphaned_jobs = $wpdb->get_col($wpdb->prepare("
+        SELECT p.ID
+        FROM {$wpdb->posts} p
+        LEFT JOIN {$wpdb->postmeta} pm_guid ON p.ID = pm_guid.post_id AND pm_guid.meta_key = 'guid'
+        LEFT JOIN {$wpdb->postmeta} pm_last_import ON p.ID = pm_last_import.post_id AND pm_last_import.meta_key = '_last_import_update'
+        WHERE p.post_type = 'job'
+        AND p.post_status IN ('publish', 'draft')
+        AND pm_guid.meta_value IS NULL
+        AND (
+            pm_last_import.meta_value IS NULL
+            OR pm_last_import.meta_value < %s
+        )
+        LIMIT %d
+    ", $very_old_cutoff, $max_cleanup_batch));
+
+    $deleted_count = 0;
+    foreach ($orphaned_jobs as $post_id) {
+        if (wp_delete_post($post_id, true)) { // Force delete
+            $deleted_count++;
+        }
+    }
+
+    PuntWorkLogger::info('Orphaned job cleanup completed', PuntWorkLogger::CONTEXT_IMPORT, [
+        'deleted_count' => $deleted_count,
+        'cutoff_date' => $very_old_cutoff,
+        'batch_size' => $max_cleanup_batch
+    ]);
+
+    return ['deleted_count' => $deleted_count];
+}
+
+/**
+ * Legacy cleanup - hard deletes old posts
+ */
+function legacy_cleanup_old_posts() {
+    global $wpdb;
+
+    $cutoff_date = date('Y-m-d H:i:s', strtotime('-30 days'));
+
+    // Get old published jobs
+    $old_jobs = $wpdb->get_col($wpdb->prepare("
+        SELECT p.ID
+        FROM {$wpdb->posts} p
+        LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_last_import_update'
+        WHERE p.post_type = 'job'
+        AND p.post_status = 'publish'
+        AND (pm.meta_value IS NULL OR pm.meta_value < %s)
+        LIMIT 500
+    ", $cutoff_date));
+
+    $deleted_count = 0;
+    foreach ($old_jobs as $post_id) {
+        if (wp_delete_post($post_id, true)) {
+            $deleted_count++;
+        }
+    }
+
+    return [
+        'action' => 'auto_delete',
+        'deleted_count' => $deleted_count,
+        'cutoff_date' => $cutoff_date
+    ];
+}
+
+/**
+ * Get cleanup statistics for reporting
+ */
+function get_cleanup_statistics() {
+    global $wpdb;
+
+    $stats = $wpdb->get_row("
+        SELECT
+            COUNT(CASE WHEN p.post_status = 'publish' THEN 1 END) as active_jobs,
+            COUNT(CASE WHEN p.post_status = 'draft' AND pm_expired.meta_value IS NOT NULL THEN 1 END) as expired_jobs,
+            COUNT(*) as total_jobs
+        FROM {$wpdb->posts} p
+        LEFT JOIN {$wpdb->postmeta} pm_expired ON p.ID = pm_expired.post_id AND pm_expired.meta_key = '_expired_at'
+        WHERE p.post_type = 'job'
+    ", ARRAY_A);
+
+    // Get age distribution
+    $age_stats = $wpdb->get_results("
+        SELECT
+            CASE
+                WHEN pm_last.meta_value > DATE_SUB(NOW(), INTERVAL 1 DAY) THEN '1_day'
+                WHEN pm_last.meta_value > DATE_SUB(NOW(), INTERVAL 7 DAY) THEN '7_days'
+                WHEN pm_last.meta_value > DATE_SUB(NOW(), INTERVAL 30 DAY) THEN '30_days'
+                WHEN pm_last.meta_value > DATE_SUB(NOW(), INTERVAL 90 DAY) THEN '90_days'
+                ELSE 'older'
+            END as age_group,
+            COUNT(*) as count
+        FROM {$wpdb->posts} p
+        LEFT JOIN {$wpdb->postmeta} pm_last ON p.ID = pm_last.post_id AND pm_last.meta_key = '_last_import_update'
+        WHERE p.post_type = 'job'
+        AND p.post_status IN ('publish', 'draft')
+        GROUP BY age_group
+    ", ARRAY_A);
+
+    $config = get_import_config();
+
+    return [
+        'current_stats' => $stats,
+        'age_distribution' => $age_stats,
+        'config' => $config['cleanup'],
+        'next_cleanup_estimate' => estimate_next_cleanup()
+    ];
+}
+
+/**
+ * Estimate when next cleanup will run
+ */
+function estimate_next_cleanup() {
+    global $wpdb;
+
+    // Find old jobs that would be affected
+    $retention_days = get_import_config_value('cleanup.retention_days', 90);
+    $cutoff_date = date('Y-m-d H:i:s', strtotime("-{$retention_days} days"));
+
+    $expiring_soon = $wpdb->get_var($wpdb->prepare("
+        SELECT COUNT(*)
+        FROM {$wpdb->posts} p
+        LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_last_import_update'
+        WHERE p.post_type = 'job'
+        AND p.post_status = 'publish'
+        AND pm.meta_value < DATE_SUB(%s, INTERVAL -7 DAY)
+        AND pm.meta_value > %s
+    ", $cutoff_date, $cutoff_date));
+
+    return [
+        'expiring_within_7_days' => $expiring_soon,
+        'retention_days' => $retention_days,
+        'cleanup_strategy' => get_import_config_value('cleanup.strategy', 'smart_retention')
+    ];
+}
+
+/**
  * Clean up old job posts using direct SQL for maximum performance.
  * WARNING: This bypasses WordPress hooks and should only be used when wp_delete_post is too slow.
  * Use with extreme caution and thorough testing.
