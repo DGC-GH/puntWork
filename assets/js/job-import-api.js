@@ -110,8 +110,7 @@ console.log('[PUNTWORK] job-import-api.js loaded');
          * @returns {Promise} AJAX promise
          */
         getImportStatus: function() {
-            console.log('[PUNTWORK] API: getImportStatus called');
-            var ajaxRequest = $.ajax({
+            return $.ajax({
                 url: jobImportData.ajaxurl,
                 type: 'POST',
                 data: { 
@@ -120,14 +119,6 @@ console.log('[PUNTWORK] job-import-api.js loaded');
                     _cache_bust: Date.now() // Prevent caching
                 }
             });
-            
-            ajaxRequest.done(function(response) {
-                console.log('[PUNTWORK] API: getImportStatus success:', response);
-            }).fail(function(xhr, status, error) {
-                console.log('[PUNTWORK] API: getImportStatus failed:', status, error, 'Response:', xhr.responseText);
-            });
-            
-            return ajaxRequest;
         },
 
         /**
@@ -135,7 +126,6 @@ console.log('[PUNTWORK] job-import-api.js loaded');
          * @returns {Promise} AJAX promise
          */
         cleanupTrashedJobs: function() {
-            console.log('[PUNTWORK] API: Making cleanup trashed jobs request');
             return $.ajax({
                 url: jobImportData.ajaxurl,
                 type: 'POST',
@@ -148,7 +138,6 @@ console.log('[PUNTWORK] job-import-api.js loaded');
          * @returns {Promise} AJAX promise
          */
         cleanupDraftedJobs: function() {
-            console.log('[PUNTWORK] API: Making cleanup drafted jobs request');
             return $.ajax({
                 url: jobImportData.ajaxurl,
                 type: 'POST',
@@ -161,7 +150,6 @@ console.log('[PUNTWORK] job-import-api.js loaded');
          * @returns {Promise} AJAX promise
          */
         cleanupOldPublishedJobs: function() {
-            console.log('[PUNTWORK] API: Making cleanup old published jobs request');
             return $.ajax({
                 url: jobImportData.ajaxurl,
                 type: 'POST',
@@ -177,7 +165,6 @@ console.log('[PUNTWORK] job-import-api.js loaded');
          * @param {function} errorCallback - Error callback function
          */
         call: function(action, data, callback, errorCallback) {
-            console.log('[PUNTWORK] API: call() called with action:', action, 'data:', data);
             var ajaxData = {
                 action: action,
                 nonce: jobImportData.nonce
@@ -188,25 +175,17 @@ console.log('[PUNTWORK] job-import-api.js loaded');
                 ajaxData = $.extend(ajaxData, data);
             }
 
-            PuntWorkJSLogger.debug('Making API call: ' + action, 'API', ajaxData);
-
             return $.ajax({
                 url: jobImportData.ajaxurl,
                 type: 'POST',
                 data: ajaxData,
                 success: function(response) {
-                    console.log('[PUNTWORK] API: call() success for', action, ':', response);
-                    PuntWorkJSLogger.debug('API call successful: ' + action, 'API', response);
                     if (callback && typeof callback === 'function') {
                         callback(response);
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.log('[PUNTWORK] API: call() failed for', action, ':', status, error, 'Response:', xhr.responseText);
-                    PuntWorkJSLogger.error('API call failed: ' + action + ' - ' + error, 'API', {
-                        status: xhr.status,
-                        responseText: xhr.responseText
-                    });
+                    console.log('[PUNTWORK] API call failed:', action, error);
                     if (errorCallback && typeof errorCallback === 'function') {
                         errorCallback(xhr, status, error);
                     }

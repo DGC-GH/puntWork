@@ -13,11 +13,6 @@
          * Initialize scheduling functionality
          */
         init: function() {
-            console.log('[PUNTWORK] JobImportScheduling.init() called');
-            console.log('[PUNTWORK] jQuery version:', $.fn.jquery);
-            console.log('[PUNTWORK] Document ready state:', document.readyState);
-            console.log('[PUNTWORK] Run Now button exists:', $('#run-now').length);
-
             this.bindEvents();
             this.loadScheduleSettings();
             this.loadRunHistory();
@@ -273,20 +268,12 @@
             $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Saving...');
 
             JobImportAPI.call('save_import_schedule', settings, function(response) {
-                console.log('[SCHEDULING] Raw response:', response);
-                console.log('[SCHEDULING] Response success:', response.success);
-                console.log('[SCHEDULING] Response data:', response.data);
-                if (response.data && response.data.schedule) {
-                    console.log('[SCHEDULING] Response schedule.enabled:', response.data.schedule.enabled);
-                }
-
                 // Re-enable button
                 $button.prop('disabled', false).html('Save Settings');
 
                 if (response.success) {
                     // Update currentSchedule with the response data (which has proper boolean values)
                     self.currentSchedule = response.data.schedule;
-                    console.log('[SCHEDULING] Updated currentSchedule:', self.currentSchedule);
                     self.updateUI(response.data);
 
                     // Show success message
@@ -333,17 +320,13 @@
          * Run import now
          */
         runNow: function() {
-            console.log('[PUNTWORK] JobImportScheduling.runNow() called');
-
             var self = this;
             var $button = $('#run-now');
 
             if (!confirm('This will start the import immediately. Continue?')) {
-                console.log('[PUNTWORK] User cancelled runNow');
                 return;
             }
 
-            console.log('[PUNTWORK] User confirmed runNow, proceeding...');
             $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Starting Import...');
 
             // Show the progress UI immediately
@@ -357,11 +340,7 @@
             $('#cancel-import').show();
             $('#reset-import').show();
 
-            // Don't start polling yet - wait for the AJAX response to determine if it's async
-            // JobImportEvents.startStatusPolling(); // Removed - will start after AJAX response
-
             JobImportAPI.call('run_scheduled_import', {}, function(response) {
-                console.log('[PUNTWORK] run_scheduled_import response:', response);
                 PuntWorkJSLogger.debug('Run scheduled import response', 'SCHEDULING', {
                     success: response.success,
                     async: response.data?.async,
@@ -372,7 +351,6 @@
                     // Check if import ran asynchronously or synchronously
                     if (response.data.async === false) {
                         // Import completed synchronously - show results directly
-                        console.log('[PUNTWORK] Import completed synchronously');
                         PuntWorkJSLogger.info('Import completed synchronously', 'SCHEDULING');
                         $button.prop('disabled', false).html('Run Now');
                         
@@ -393,10 +371,7 @@
                         self.loadRunHistory();
                     } else {
                         // Import started asynchronously - polling removed to prevent automatic loops
-                        console.log('[PUNTWORK] Import started asynchronously, polling disabled');
                         PuntWorkJSLogger.info('Import started asynchronously, automatic polling disabled', 'SCHEDULING');
-                        
-                        // Removed automatic polling: JobImportEvents.startStatusPolling();
                         
                         $button.prop('disabled', false).html('Run Now');
                         
@@ -410,7 +385,6 @@
                         }, 2000);
                     }
                 } else {
-                    console.log('[PUNTWORK] Import failed to start:', response.data);
                     PuntWorkJSLogger.error('Import failed to start', 'SCHEDULING', response.data);
                     $button.prop('disabled', false).html('Run Now');
                     
@@ -430,35 +404,23 @@
          * Monitor import progress in real-time
          */
         monitorImportProgress: function(scheduledTime, nextCheckTime) {
-            console.log('[PUNTWORK] === MONITORING STARTED ===');
-            console.log('[PUNTWORK] monitorImportProgress called with:', {scheduledTime, nextCheckTime});
-
             var self = this;
             var startTime = Date.now();
 
-            // Removed automatic polling to prevent loops
-            // JobImportEvents.startStatusPolling();
-
             var checkInterval = setInterval(function() {
-                console.log('[PUNTWORK] Monitoring check interval fired');
                 // Check if it's time to look for results
                 if (Date.now() / 1000 >= nextCheckTime) {
-                    console.log('[PUNTWORK] Time to check results, calling loadScheduleSettings');
                     self.loadScheduleSettings();
                     self.loadRunHistory();
 
                     // Check if import has started by looking at the status
                     JobImportAPI.call('get_import_schedule', {}, function(response) {
-                        console.log('[PUNTWORK] get_import_schedule response:', response);
                         if (response.success) {
                             // Check if there's a currently running import
                             if (typeof window.JobImport !== 'undefined' && window.JobImport.getStatus) {
-                                console.log('[PUNTWORK] Checking JobImport.getStatus');
                                 window.JobImport.getStatus(function(statusResponse) {
-                                    console.log('[PUNTWORK] JobImport.getStatus response:', statusResponse);
                                     if (statusResponse.success && statusResponse.data && !statusResponse.data.complete) {
                                         // Import is currently running - ensure progress UI is visible
-                                        console.log('[PUNTWORK] Import is running, ensuring UI is visible');
                                         JobImportUI.showImportUI();
                                         return;
                                     }
@@ -470,7 +432,6 @@
                                 var lastRun = response.data.last_run_details;
                                 if (lastRun.success !== undefined) {
                                     // Import has completed
-                                    console.log('[PUNTWORK] Import completed, stopping monitoring');
                                     clearInterval(checkInterval);
                                     JobImportEvents.stopStatusPolling();
                                     $('#run-now').html('Run Now');
@@ -503,7 +464,6 @@
 
             // Stop monitoring after 5 minutes to prevent infinite loops
             setTimeout(function() {
-                console.log('[PUNTWORK] Monitoring timeout reached, stopping');
                 clearInterval(checkInterval);
                 JobImportEvents.stopStatusPolling();
                 $('#run-now').html('Run Now');

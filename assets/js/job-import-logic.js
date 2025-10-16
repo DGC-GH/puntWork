@@ -15,7 +15,6 @@
          */
         init: function() {
             // No initialization needed for this module
-            console.log('[PUNTWORK] JobImportLogic initialized');
         },
 
         /**
@@ -45,9 +44,6 @@
                     const statusResponse = await JobImportAPI.getImportStatus();
                     if (statusResponse.success) {
                         var batchData = JobImportUI.normalizeResponseData(statusResponse);
-                        console.log('[PUNTWORK] Batch completed, status updated:', batchData);
-                    } else {
-                        console.log('[PUNTWORK] Status fetch failed after batch, continuing...');
                     }
 
                     let total = response.data.total || 0;
@@ -64,7 +60,6 @@
                             if (response.success) {
                                 // Status polling handles UI updates, just update our local tracking
                                 current = response.data.processed || current;
-                                console.log('[PUNTWORK] Next batch completed, current processed:', current);
                             } else {
                                 throw new Error('Import batch failed: ' + (response.message || response.data?.message || 'Unknown error'));
                             }
@@ -200,10 +195,8 @@
          */
         handleStartImport: async function() {
             PuntWorkJSLogger.info('Start Import clicked', 'LOGIC');
-            console.log('[PUNTWORK] Start Import clicked');
 
             if (this.isImporting) {
-                console.log('[PUNTWORK] Import already in progress');
                 return;
             }
 
@@ -341,7 +334,6 @@
 
             JobImportAPI.resetImport().then(function(response) {
                 PuntWorkJSLogger.debug('Reset response', 'LOGIC', response);
-                console.log('[PUNTWORK] Reset API response:', response);
 
                 if (response.success) {
                     JobImportUI.appendLogs(['Import system completely reset']);
@@ -359,21 +351,17 @@
 
                     // Hide import type indicator on reset
                     $('#import-type-indicator').hide();
-
-                    console.log('[PUNTWORK] Reset completed successfully');
                 } else {
                     // Reset failed - show error but don't change UI state
                     JobImportUI.appendLogs(['Reset failed: ' + (response.message || 'Unknown error')]);
                     $('#status-message').text('Reset failed - please try again');
                     $('#reset-import').prop('disabled', false);
-                    console.log('[PUNTWORK] Reset failed:', response);
                 }
             }).catch(function(xhr, status, error) {
                 PuntWorkJSLogger.error('Reset AJAX error', 'LOGIC', error);
                 JobImportUI.appendLogs(['Reset AJAX error: ' + error]);
                 $('#status-message').text('Reset failed - please try again');
                 $('#reset-import').prop('disabled', false);
-                console.log('[PUNTWORK] Reset AJAX error:', error);
             });
         },
 
@@ -393,7 +381,6 @@
 
             JobImportAPI.call('manually_resume_stuck_import', {}).then(function(response) {
                 PuntWorkJSLogger.debug('Resume stuck import response', 'LOGIC', response);
-                console.log('[PUNTWORK] Resume stuck import API response:', response);
 
                 if (response.success) {
                     JobImportUI.appendLogs(['Stuck import manually resumed']);
@@ -422,8 +409,6 @@
                     if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
                         window.JobImportEvents.startStatusPolling();
                     }
-
-                    console.log('[PUNTWORK] Resume stuck import completed successfully');
                 } else {
                     // Resume failed - show error
                     var errorMsg = response.message || 'Unknown error';
@@ -434,8 +419,6 @@
                     $('#resume-stuck-text').show();
                     $('#resume-stuck-loading').hide();
                     $('#import-status').text('');
-
-                    console.log('[PUNTWORK] Resume stuck import failed:', response);
                 }
             }).catch(function(xhr, status, error) {
                 PuntWorkJSLogger.error('Resume stuck import AJAX error', 'LOGIC', error);
@@ -446,8 +429,6 @@
                 $('#resume-stuck-text').show();
                 $('#resume-stuck-loading').hide();
                 $('#import-status').text('');
-
-                console.log('[PUNTWORK] Resume stuck import AJAX error:', error);
             });
         },
 
@@ -518,8 +499,6 @@
          * @param {number} batchSize - Size of batch to process
          */
         processCleanupBatch: function(operation, offset, batchSize) {
-            console.log('[PUNTWORK] Processing cleanup batch - operation:', operation, 'offset:', offset, 'batchSize:', batchSize);
-
             var actionMap = {
                 'trashed': 'cleanup_trashed_jobs',
                 'drafted': 'cleanup_drafted_jobs',
@@ -528,7 +507,7 @@
 
             var action = actionMap[operation];
             if (!action) {
-                console.error('[PUNTWORK] Unknown cleanup operation:', operation);
+                PuntWorkJSLogger.error('Unknown cleanup operation', 'LOGIC', operation);
                 return;
             }
 
@@ -540,12 +519,9 @@
             });
 
             apiCall.then(function(response) {
-                console.log('[PUNTWORK] Cleanup API response:', response);
                 PuntWorkJSLogger.debug('Cleanup response', 'LOGIC', response);
 
                 if (response.success) {
-                    console.log('[PUNTWORK] Cleanup response successful, complete:', response.data.complete);
-
                     // Update progress UI
                     JobImportUI.updateCleanupProgress(response.data);
                     JobImportUI.appendCleanupLogs(response.data.logs || []);
@@ -589,7 +565,6 @@
                         JobImportLogic.processCleanupBatch(operation, response.data.next_offset, batchSize);
                     }
                 } else {
-                    console.log('[PUNTWORK] Cleanup response failed:', response.data);
                     $('#cleanup-status').text('Cleanup failed: ' + (response.data || 'Unknown error'));
 
                     // Reset button states on failure
@@ -615,8 +590,6 @@
                     JobImportUI.clearCleanupProgress();
                 }
             }).catch(function(xhr, status, error) {
-                console.log('[PUNTWORK] Cleanup API error:', error);
-                console.log('[PUNTWORK] XHR status:', xhr.status, 'response:', xhr.responseText);
                 PuntWorkJSLogger.error('Cleanup AJAX error', 'LOGIC', error);
                 $('#cleanup-status').text('Cleanup failed: ' + error);
                 JobImportUI.appendCleanupLogs(['Cleanup AJAX error: ' + error]);
