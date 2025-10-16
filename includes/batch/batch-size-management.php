@@ -706,12 +706,8 @@ function adjust_batch_size($batch_size, $memory_limit_bytes, $last_memory_ratio,
  * @param float $current_memory_ratio Current memory usage ratio.
  * @return int Recommended maximum batch size.
  */
-function calculate_recommended_max_batch_size($memory_limit_bytes, $current_memory_ratio) {
-    // Use static cache to avoid recalculating during the same request/session
-    static $cached_result = null;
-    static $last_memory_limit = null;
-    static $last_cpu_cores = null;
-
+function calculate_recommended_max_batch_size($memory_limit_bytes, $current_memory_ratio, $force = false) {
+    // Use transient cache to avoid recalculating frequently across requests
     try {
         // Validate inputs
         if (!is_numeric($memory_limit_bytes) || $memory_limit_bytes <= 0) {
@@ -721,14 +717,40 @@ function calculate_recommended_max_batch_size($memory_limit_bytes, $current_memo
             $current_memory_ratio = min(1, max(0, $current_memory_ratio));
         }
 
-        // Get current CPU cores
-        $cpu_cores = function_exists('shell_exec') ? (int) shell_exec('nproc 2>/dev/null') : 2;
+        // Determine CPU cores once and cache long-term (system property)
+        $cpu_cores = get_option('puntwork_cached_cpu_cores');
+        if ($cpu_cores === false || empty($cpu_cores)) {
+            $detected = 2;
+            if (function_exists('shell_exec')) {
+                try {
+                    $out = @shell_exec('nproc 2>/dev/null');
+                    if ($out !== null) {
+                        $detected = (int) trim($out);
+                        if ($detected <= 0) {
+                            $detected = 2;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    $detected = 2;
+                }
+            }
+            $cpu_cores = max(1, (int) $detected);
+            // Cache CPU cores for 24 hours - unlikely to change
+            update_option('puntwork_cached_cpu_cores', $cpu_cores);
+        }
 
-        // Check if we can use cached result (only if memory limit and CPU cores haven't changed)
-        if ($cached_result !== null &&
-            $last_memory_limit === $memory_limit_bytes &&
-            $last_cpu_cores === $cpu_cores) {
-            return $cached_result;
+        // Transient key depends on memory limit and cpu cores to ensure relevance
+        $transient_key = 'puntwork_recommended_max_' . md5($memory_limit_bytes . '|' . $cpu_cores);
+        $cached = get_transient($transient_key);
+
+        if (!$force && $cached !== false && is_array($cached)) {
+            // Return cached value quickly and log minimally
+            PuntWorkLogger::debug('Calculated recommended maximum batch size (from transient cache)', PuntWorkLogger::CONTEXT_BATCH, [
+                'recommended_max' => $cached['value'],
+                'cached' => true,
+                'cached_at' => $cached['cached_at'] ?? null
+            ]);
+            return (int) $cached['value'];
         }
 
         // Calculate available memory
@@ -754,10 +776,14 @@ function calculate_recommended_max_batch_size($memory_limit_bytes, $current_memo
         // Apply absolute bounds
         $recommended_max = max(MIN_BATCH_SIZE, min(MAX_BATCH_SIZE * 2, $recommended_max));
 
-        // Cache the result for future calls
-        $cached_result = $recommended_max;
-        $last_memory_limit = $memory_limit_bytes;
-        $last_cpu_cores = $cpu_cores;
+        // Cache the result in a transient for 5 minutes to avoid tight-loop recalculation
+        $cache_payload = [
+            'value' => (int) $recommended_max,
+            'memory_limit' => $memory_limit_bytes,
+            'cpu_cores' => $cpu_cores,
+            'cached_at' => microtime(true)
+        ];
+        set_transient($transient_key, $cache_payload, 300); // 5 minutes
 
         PuntWorkLogger::debug('Calculated recommended maximum batch size', PuntWorkLogger::CONTEXT_BATCH, [
             'recommended_max' => $recommended_max,
@@ -771,7 +797,7 @@ function calculate_recommended_max_batch_size($memory_limit_bytes, $current_memo
             'cached' => false
         ]);
 
-        return $recommended_max;
+        return (int) $recommended_max;
 
     } catch (\Exception $e) {
         PuntWorkLogger::error('Error calculating recommended maximum batch size', PuntWorkLogger::CONTEXT_BATCH, [
@@ -943,7 +969,8 @@ function update_batch_metrics($time_elapsed, $processed_count, $batch_size) {
         ]);
 
         // Use rolling average for time_per_item to stabilize adjustments
-        $avg_time_per_item = get_avg_time_per_job($time_per_item);
+    // Retrieve the previously stored average time per job
+    $avg_time_per_item = get_avg_time_per_job();
         $avg_time_per_item = ($avg_time_per_item * 0.7) + ($time_per_item * 0.3);
         retry_option_operation(function() use ($avg_time_per_item) {
             return set_avg_time_per_job($avg_time_per_item);
