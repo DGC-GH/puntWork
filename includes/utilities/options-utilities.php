@@ -10,7 +10,13 @@ namespace Puntwork;
 /**
  * Get import status with default structure
  */
-function get_import_status() {
+/**
+ * Get import status with optional overrides
+ *
+ * @param array $overrides Optional array of values to merge into the returned status.
+ * @return array
+ */
+function get_import_status($overrides = []) {
     $status = get_option('job_import_status', []);
     
     // Ensure status is an array and sanitize the logs field
@@ -50,7 +56,14 @@ function get_import_status() {
     ];
     
     // Merge defaults with existing status, ensuring all fields are present
-    return array_merge($defaults, $status);
+    $merged = array_merge($defaults, is_array($status) ? $status : []);
+
+    // Apply optional overrides passed by callers (used in some places to seed status)
+    if (is_array($overrides) && !empty($overrides)) {
+        $merged = array_merge($merged, $overrides);
+    }
+
+    return $merged;
 }
 
 /**
@@ -123,7 +136,7 @@ function set_import_status_atomic($status, $max_retries = 5, $lock_timeout_secon
 
     if (!$lock_acquired) {
         // Failed to acquire lock after all retries
-        PuntWorkLogger::warning('Failed to acquire import status lock after retries', PuntWorkLogger::CONTEXT_GENERAL, [
+    PuntWorkLogger::warn('Failed to acquire import status lock after retries', PuntWorkLogger::CONTEXT_SYSTEM, [
             'max_retries' => $max_retries,
             'lock_timeout' => $lock_timeout_seconds,
             'retry_count' => $retry_count
@@ -135,7 +148,7 @@ function set_import_status_atomic($status, $max_retries = 5, $lock_timeout_secon
         // Lock acquired, safely update the status
         update_option('job_import_status', $status, false);
 
-        PuntWorkLogger::debug('Import status updated atomically', PuntWorkLogger::CONTEXT_GENERAL, [
+    PuntWorkLogger::debug('Import status updated atomically', PuntWorkLogger::CONTEXT_SYSTEM, [
             'processed' => $status['processed'] ?? 0,
             'total' => $status['total'] ?? 0,
             'published' => $status['published'] ?? 0,
@@ -168,7 +181,7 @@ function get_batch_size($skip_system_validation = false) {
 
     // VALIDATE RETRIEVED VALUE
     if (!is_numeric($batch_size)) {
-        PuntWorkLogger::warning('Invalid batch size retrieved from options, using default', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::warn('Invalid batch size retrieved from options, using default', PuntWorkLogger::CONTEXT_BATCH, [
             'retrieved_value' => $batch_size,
             'retrieved_type' => gettype($batch_size),
             'fallback_value' => DEFAULT_BATCH_SIZE
@@ -178,7 +191,7 @@ function get_batch_size($skip_system_validation = false) {
 
     // Ensure batch size is within reasonable bounds
     if ($batch_size < 1) {
-        PuntWorkLogger::warning('Batch size too small, correcting to minimum', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::warn('Batch size too small, correcting to minimum', PuntWorkLogger::CONTEXT_BATCH, [
             'original_value' => $batch_size,
             'corrected_value' => 1,
             'minimum_allowed' => 1
@@ -187,7 +200,7 @@ function get_batch_size($skip_system_validation = false) {
     }
 
     if ($batch_size > MAX_BATCH_SIZE * 2) {
-        PuntWorkLogger::warning('Batch size excessively large, capping to maximum', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::warn('Batch size excessively large, capping to maximum', PuntWorkLogger::CONTEXT_BATCH, [
             'original_value' => $batch_size,
             'capped_value' => MAX_BATCH_SIZE,
             'maximum_allowed' => MAX_BATCH_SIZE
@@ -203,7 +216,7 @@ function get_batch_size($skip_system_validation = false) {
         $recommended_max = calculate_recommended_max_batch_size($memory_limit, $current_memory_ratio);
 
         if ($batch_size > $recommended_max) {
-            PuntWorkLogger::warning('Stored batch size exceeds recommended maximum for current system', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::warn('Stored batch size exceeds recommended maximum for current system', PuntWorkLogger::CONTEXT_BATCH, [
                 'stored_batch_size' => $batch_size,
                 'recommended_max' => $recommended_max,
                 'memory_limit' => $memory_limit,
@@ -229,8 +242,14 @@ function set_batch_size($size) {
 /**
  * Get import progress
  */
-function get_import_progress() {
-    return (int) get_option('job_import_progress', 0);
+/**
+ * Get import progress
+ *
+ * @param int $default Default value to return if option not set.
+ * @return int
+ */
+function get_import_progress($default = 0) {
+    return (int) get_option('job_import_progress', $default);
 }
 
 /**
@@ -271,8 +290,106 @@ function set_existing_guids($guids) {
 /**
  * Get import start time
  */
-function get_import_start_time() {
-    return get_option('job_import_start_time', microtime(true));
+/**
+ * Get import start time
+ *
+ * @param float|null $default Optional default to use if start time option not set.
+ * @return float
+ */
+function get_import_start_time($default = null) {
+    $fallback = $default ?? microtime(true);
+    return get_option('job_import_start_time', $fallback);
+}
+
+/**
+ * Delete helper functions for cleanup
+ */
+function delete_import_progress() {
+    delete_option('job_import_progress');
+}
+
+function delete_processed_guids() {
+    delete_option('job_import_processed_guids');
+}
+
+function delete_existing_guids() {
+    delete_option('job_existing_guids');
+}
+
+function delete_time_per_job() {
+    delete_option('job_import_time_per_job');
+}
+
+function delete_avg_time_per_job() {
+    delete_option('job_import_avg_time_per_job');
+}
+
+function delete_last_peak_memory() {
+    delete_option('job_import_last_peak_memory');
+}
+
+function delete_batch_size() {
+    delete_option('job_import_batch_size');
+}
+
+function delete_consecutive_small_batches() {
+    delete_option('job_import_consecutive_small_batches');
+}
+
+function delete_consecutive_batches() {
+    delete_option('job_import_consecutive_batches');
+}
+
+function delete_last_batch_time() {
+    delete_option('job_import_last_batch_time');
+}
+
+function delete_last_batch_processed() {
+    delete_option('job_import_last_batch_processed');
+}
+
+/**
+ * Append a diagnostics entry to job_import_diagnostics option to help debugging continuation and cron issues.
+ * Keeps last 50 entries.
+ *
+ * @param string $note Short note describing context
+ * @param array $extra Additional data to include
+ */
+function add_import_diagnostics($note = '', $extra = []) {
+    global $wpdb;
+    $diagnostics = get_option('job_import_diagnostics', []);
+
+    $entry = [
+        'timestamp' => microtime(true),
+        'note' => $note,
+        'disable_wp_cron' => defined('DISABLE_WP_CRON') ? (DISABLE_WP_CRON ? true : false) : null,
+        'wp_next_puntwork' => wp_next_scheduled('puntwork_continue_import'),
+        'wp_next_retry' => wp_next_scheduled('puntwork_continue_import_retry'),
+        'wp_next_manual' => wp_next_scheduled('puntwork_continue_import_manual'),
+        'cron_array_size' => function_exists('_get_cron_array') ? count(_get_cron_array()) : null,
+        'action_scheduler_available' => function_exists('\ActionScheduler') || class_exists('\ActionScheduler'),
+        'extra' => $extra
+    ];
+
+    // If Action Scheduler tables exist, include counts (wrap in try/catch)
+    try {
+        $tables = $wpdb->get_results("SHOW TABLES LIKE 'action_scheduler_actions'", ARRAY_N);
+        if (!empty($tables)) {
+            $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}action_scheduler_actions");
+            $entry['action_scheduler_action_count'] = (int) $count;
+        }
+    } catch (\Exception $e) {
+        // Ignore DB errors in diagnostics
+        $entry['action_scheduler_action_count'] = null;
+    }
+
+    $diagnostics[] = $entry;
+    // Keep a rolling window of last 50 entries
+    if (count($diagnostics) > 50) {
+        $diagnostics = array_slice($diagnostics, -50);
+    }
+
+    update_option('job_import_diagnostics', $diagnostics, false);
 }
 
 /**

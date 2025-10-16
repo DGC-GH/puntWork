@@ -306,7 +306,7 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
             $feed_status['time_elapsed'] = microtime(true) - $start_time;
             set_import_status($feed_status);
 
-            PuntWorkLogger::warning('Feed processing skipped - download failed', PuntWorkLogger::CONTEXT_FEED, [
+            PuntWorkLogger::warn('Feed processing skipped - download failed', PuntWorkLogger::CONTEXT_FEED, [
                 'feed_key' => $feed_key,
                 'processed_feeds' => $processed_feeds,
                 'total_feeds' => $total_feeds

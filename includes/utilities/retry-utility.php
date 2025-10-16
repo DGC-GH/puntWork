@@ -46,7 +46,7 @@ class RetryUtility {
 
         // Check circuit breaker
         if (self::isCircuitBreakerOpen($operationKey)) {
-            PuntWorkLogger::warning('Circuit breaker open, skipping operation', $context['logger_context'] ?? PuntWorkLogger::CONTEXT_GENERAL, [
+            PuntWorkLogger::warn('Circuit breaker open, skipping operation', $context['logger_context'] ?? PuntWorkLogger::CONTEXT_SYSTEM, [
                 'operation_key' => $operationKey,
                 'remaining_timeout' => self::getCircuitBreakerRemainingTime($operationKey)
             ]);
@@ -90,7 +90,7 @@ class RetryUtility {
                 // Calculate delay with exponential backoff and jitter
                 $delay = self::calculateDelay($attempt, $baseDelay, $maxDelay);
 
-                PuntWorkLogger::warning('Operation failed, retrying', $context['logger_context'] ?? PuntWorkLogger::CONTEXT_GENERAL, [
+                PuntWorkLogger::warn('Operation failed, retrying', $context['logger_context'] ?? PuntWorkLogger::CONTEXT_SYSTEM, [
                     'operation_key' => $operationKey,
                     'attempt' => $attempt,
                     'max_retries' => $maxRetries,

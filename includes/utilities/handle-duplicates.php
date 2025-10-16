@@ -57,7 +57,7 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
                         ]) ?: [];
 
                         if (empty($existing)) {
-                            PuntWorkLogger::warning('No posts found for duplicate GUID', PuntWorkLogger::CONTEXT_BATCH, [
+                            PuntWorkLogger::warn('No posts found for duplicate GUID', PuntWorkLogger::CONTEXT_BATCH, [
                                 'guid' => $guid,
                                 'ids' => $ids
                             ]);

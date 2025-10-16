@@ -366,7 +366,7 @@ function cleanup_old_job_posts($import_start_time) {
     // Log validation warnings even if validation passed
     if (!empty($feed_validation['warnings'])) {
         foreach ($feed_validation['warnings'] as $warning) {
-            PuntWorkLogger::warning('Feed validation warning during cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::warn('Feed validation warning during cleanup', PuntWorkLogger::CONTEXT_BATCH, [
                 'warning' => $warning,
                 'feed_stats' => $feed_validation['stats']
             ]);
@@ -428,7 +428,7 @@ function cleanup_old_job_posts($import_start_time) {
         $memory_ratio = $current_memory / get_memory_limit_bytes();
 
         if ($memory_ratio > 0.6) {
-            PuntWorkLogger::warning('High memory usage during finalization GUID collection, reducing chunk size', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::warn('High memory usage during finalization GUID collection, reducing chunk size', PuntWorkLogger::CONTEXT_BATCH, [
                 'guids_loaded' => $total_guids_loaded,
                 'memory_ratio' => $memory_ratio,
                 'chunk_size_reduced' => true
@@ -549,7 +549,7 @@ function cleanup_old_job_posts($import_start_time) {
             $old_batch_size = $batch_size;
             $batch_size = max(10, intval($batch_size * 0.5)); // Reduce to 50%, minimum 10
 
-            PuntWorkLogger::warning('High memory usage during finalization cleanup, reducing batch size', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::warn('High memory usage during finalization cleanup, reducing batch size', PuntWorkLogger::CONTEXT_BATCH, [
                 'memory_ratio' => $memory_ratio,
                 'old_batch_size' => $old_batch_size,
                 'new_batch_size' => $batch_size,
@@ -595,7 +595,7 @@ function cleanup_old_job_posts($import_start_time) {
                     $deleted_in_batch++;
                     $total_deleted++;
                 } else {
-                    PuntWorkLogger::warning('Failed to delete post', PuntWorkLogger::CONTEXT_BATCH, [
+                    PuntWorkLogger::warn('Failed to delete post', PuntWorkLogger::CONTEXT_BATCH, [
                         'post_id' => $post_id
                     ]);
                 }

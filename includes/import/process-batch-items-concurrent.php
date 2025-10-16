@@ -152,7 +152,7 @@ function monitor_concurrent_job_completion($action_ids, $timeout_seconds = 300, 
             try {
                 $action = $store->fetch_action($action_id);
                 if (!$action) {
-                    PuntWorkLogger::warning('Action not found in store', PuntWorkLogger::CONTEXT_BATCH, [
+                    PuntWorkLogger::warn('Action not found in store', PuntWorkLogger::CONTEXT_BATCH, [
                         'action_id' => $action_id
                     ]);
                     $failed_actions[] = $action_id;
@@ -254,7 +254,7 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
     // VALIDATION: Check Action Scheduler health before proceeding
     $health_check = validate_action_scheduler_health();
     if (!$health_check['healthy']) {
-        PuntWorkLogger::warning('Action Scheduler health check failed, cannot use concurrent processing', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::warn('Action Scheduler health check failed, cannot use concurrent processing', PuntWorkLogger::CONTEXT_BATCH, [
             'issues' => $health_check['issues'],
             'recommendations' => $health_check['recommendations']
         ]);
@@ -316,7 +316,7 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
     // Check if we had significant scheduling failures
     $scheduling_success_rate = count($action_ids) / count($batch_guids);
     if ($scheduling_success_rate < 0.9) { // Less than 90% success
-        PuntWorkLogger::warning('High scheduling failure rate, concurrent processing may be unreliable', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::warn('High scheduling failure rate, concurrent processing may be unreliable', PuntWorkLogger::CONTEXT_BATCH, [
             'total_items' => count($batch_guids),
             'scheduled_count' => count($action_ids),
             'scheduling_success_rate' => $scheduling_success_rate
@@ -339,7 +339,7 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
     $monitoring_result = monitor_concurrent_job_completion($action_ids, 60, 5); // 1 minute timeout on Hostinger, check every 5 seconds
 
     if (!$monitoring_result['all_completed']) {
-        PuntWorkLogger::warning('Concurrent jobs did not complete successfully', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::warn('Concurrent jobs did not complete successfully', PuntWorkLogger::CONTEXT_BATCH, [
             'completed_count' => $monitoring_result['completed_count'],
             'failed_count' => $monitoring_result['failed_count'],
             'pending_count' => $monitoring_result['pending_count'],
@@ -425,7 +425,7 @@ function calculate_optimal_concurrency($batch_size) {
         // 1. Success rate is 100% (all chunks completed successfully)
         // 2. Or we're maintaining the same level (not increasing)
         if ($optimal_concurrency > $last_concurrency_level && $concurrent_success_rate < 1.0) {
-            PuntWorkLogger::warning('Reducing concurrency due to low success rate', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::warn('Reducing concurrency due to low success rate', PuntWorkLogger::CONTEXT_BATCH, [
                 'requested_concurrency' => $optimal_concurrency,
                 'last_concurrency' => $last_concurrency_level,
                 'success_rate' => $concurrent_success_rate,
@@ -438,7 +438,7 @@ function calculate_optimal_concurrency($batch_size) {
 
         // If concurrent processing has completely failed recently, fall back to sequential
         if ($concurrent_success_rate < 0.5) {
-            PuntWorkLogger::warning('Falling back to sequential processing due to repeated concurrent failures', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::warn('Falling back to sequential processing due to repeated concurrent failures', PuntWorkLogger::CONTEXT_BATCH, [
                 'success_rate' => $concurrent_success_rate,
                 'last_concurrency' => $last_concurrency_level
             ]);
@@ -568,7 +568,7 @@ function process_single_item_callback($guid, $json_path, $start_index, $acf_fiel
     try {
         $item_data = $batch_items[$guid]['item'] ?? null;
         if (!$item_data) {
-            PuntWorkLogger::warning('Item not found', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::warn('Item not found', PuntWorkLogger::CONTEXT_BATCH, [
                 'guid' => $guid
             ]);
             $skipped++;
@@ -723,7 +723,7 @@ function process_single_item_callback($guid, $json_path, $start_index, $acf_fiel
         // Use atomic status update to prevent race conditions in concurrent processing
         $status_updated = set_import_status_atomic($current_status);
         if (!$status_updated) {
-            PuntWorkLogger::warning('Failed to update import status atomically for concurrent item', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::warn('Failed to update import status atomically for concurrent item', PuntWorkLogger::CONTEXT_BATCH, [
                 'guid' => $guid,
                 'processed_increment' => $processed_count,
                 'published_increment' => $published,
@@ -787,7 +787,7 @@ function process_single_item_callback($guid, $json_path, $start_index, $acf_fiel
         // Use atomic status update to prevent race conditions in concurrent processing
         $status_updated = set_import_status_atomic($current_status);
         if (!$status_updated) {
-            PuntWorkLogger::warning('Failed to update import status atomically for concurrent item error', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::warn('Failed to update import status atomically for concurrent item error', PuntWorkLogger::CONTEXT_BATCH, [
                 'guid' => $guid,
                 'processed_increment' => $processed_count,
                 'skipped_increment' => $skipped,

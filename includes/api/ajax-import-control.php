@@ -923,7 +923,7 @@ function cleanup_trashed_jobs_ajax() {
     // Reduce batch size if memory usage is high
     if ($memory_ratio > 0.7) {
         $batch_size = max(10, $batch_size / 2);
-        PuntWorkLogger::warning('Reducing batch size due to high memory usage in trashed cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::warn('Reducing batch size due to high memory usage in trashed cleanup', PuntWorkLogger::CONTEXT_BATCH, [
             'original_batch_size' => isset($_POST['batch_size']) ? intval($_POST['batch_size']) : 50,
             'adjusted_batch_size' => $batch_size,
             'memory_ratio' => $memory_ratio,
@@ -979,7 +979,7 @@ function cleanup_trashed_jobs_ajax() {
             $current_ratio = $current_memory / $memory_limit;
 
             if ($current_ratio > 0.85) {
-                PuntWorkLogger::warning('High memory usage detected during trashed cleanup processing', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::warn('High memory usage detected during trashed cleanup processing', PuntWorkLogger::CONTEXT_BATCH, [
                     'current_memory_ratio' => $current_ratio,
                     'post_id' => $post->ID,
                     'processed_in_batch' => $deleted_count
@@ -1085,7 +1085,7 @@ function cleanup_drafted_jobs_ajax() {
             $memory_ratio = $current_memory / get_memory_limit_bytes();
 
             if ($memory_ratio > 0.6) {
-                PuntWorkLogger::warning('High memory usage during draft job ID collection, reducing chunk size', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::warn('High memory usage during draft job ID collection, reducing chunk size', PuntWorkLogger::CONTEXT_BATCH, [
                     'collected_count' => count($draft_job_ids),
                     'memory_ratio' => $memory_ratio,
                     'chunk_size_reduced' => true
@@ -1131,7 +1131,7 @@ function cleanup_drafted_jobs_ajax() {
     // Reduce batch size if memory usage is high
     if ($memory_ratio > 0.7) {
         $batch_size = max(5, $batch_size / 2);
-        PuntWorkLogger::warning('Reducing batch size due to high memory usage in drafted cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::warn('Reducing batch size due to high memory usage in drafted cleanup', PuntWorkLogger::CONTEXT_BATCH, [
             'original_batch_size' => isset($_POST['batch_size']) ? intval($_POST['batch_size']) : 50,
             'adjusted_batch_size' => $batch_size,
             'memory_ratio' => $memory_ratio,
@@ -1219,7 +1219,7 @@ function cleanup_drafted_jobs_ajax() {
             $current_ratio = $current_memory / $memory_limit;
 
             if ($current_ratio > 0.85) {
-                PuntWorkLogger::warning('High memory usage detected during drafted cleanup processing', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::warn('High memory usage detected during drafted cleanup processing', PuntWorkLogger::CONTEXT_BATCH, [
                     'current_memory_ratio' => $current_ratio,
                     'post_id' => $post->ID,
                     'processed_in_batch' => $deleted_count
@@ -1381,7 +1381,7 @@ function cleanup_old_published_jobs_ajax() {
             $memory_ratio = $current_memory / get_memory_limit_bytes();
 
             if ($memory_ratio > 0.6) {
-                PuntWorkLogger::warning('High memory usage during GUID collection, reducing chunk size', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::warn('High memory usage during GUID collection, reducing chunk size', PuntWorkLogger::CONTEXT_BATCH, [
                     'collected_guids' => count($current_guids),
                     'memory_ratio' => $memory_ratio,
                     'chunk_size_reduced' => true
@@ -1459,7 +1459,7 @@ function cleanup_old_published_jobs_ajax() {
     // Reduce batch size if memory usage is high
     if ($memory_ratio > 0.7) {
         $batch_size = max(5, $batch_size / 2);
-        PuntWorkLogger::warning('Reducing batch size due to high memory usage in old published cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::warn('Reducing batch size due to high memory usage in old published cleanup', PuntWorkLogger::CONTEXT_BATCH, [
             'original_batch_size' => isset($_POST['batch_size']) ? intval($_POST['batch_size']) : 50,
             'adjusted_batch_size' => $batch_size,
             'memory_ratio' => $memory_ratio,
@@ -1564,7 +1564,7 @@ function cleanup_old_published_jobs_ajax() {
             $current_ratio = $current_memory / $memory_limit;
 
             if ($current_ratio > 0.85) {
-                PuntWorkLogger::warning('High memory usage detected during old published cleanup processing', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::warn('High memory usage detected during old published cleanup processing', PuntWorkLogger::CONTEXT_BATCH, [
                     'current_memory_ratio' => $current_ratio,
                     'post_id' => $post->ID,
                     'processed_in_batch' => $deleted_count
@@ -1906,7 +1906,7 @@ function cancel_all_import_processes() {
                         ]);
                     }
                 } catch (\Exception $e) {
-                    PuntWorkLogger::warning('Failed to cancel Action Scheduler jobs for hook', PuntWorkLogger::CONTEXT_BATCH, [
+                    PuntWorkLogger::warn('Failed to cancel Action Scheduler jobs for hook', PuntWorkLogger::CONTEXT_BATCH, [
                         'hook' => $hook,
                         'error' => $e->getMessage()
                     ]);
