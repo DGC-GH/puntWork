@@ -51,14 +51,16 @@ function import_time_exceeded() {
     $current_time = microtime(true);
 
     $elapsed = $current_time - $start_time;
-    error_log('[PUNTWORK] TIME CHECK: start_time=' . $start_time . ', current_time=' . $current_time . ', elapsed=' . $elapsed . ', limit=' . $time_limit);
 
     if (($current_time - $start_time) >= $time_limit) {
         error_log('[PUNTWORK] TIME EXCEEDED: elapsed ' . $elapsed . ' >= limit ' . $time_limit);
         return true;
     }
 
-    error_log('[PUNTWORK] TIME OK: elapsed ' . $elapsed . ' < limit ' . $time_limit);
+    // Only log OK if debugging
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] TIME OK: elapsed ' . $elapsed . ' < limit ' . $time_limit);
+    }
     return apply_filters('puntwork_import_time_exceeded', false);
 }
 
@@ -72,14 +74,15 @@ function import_memory_exceeded() {
     $memory_limit = get_memory_limit_bytes() * 0.9; // 90% of max memory
     $current_memory = memory_get_usage(true);
 
-    error_log('[PUNTWORK] MEMORY CHECK: current=' . $current_memory . ' bytes (' . round($current_memory / 1024 / 1024, 1) . ' MB), limit=' . $memory_limit . ' bytes (' . round($memory_limit / 1024 / 1024, 1) . ' MB)');
-
     if ($current_memory >= $memory_limit) {
         error_log('[PUNTWORK] MEMORY EXCEEDED: ' . round($current_memory / 1024 / 1024, 1) . ' MB >= ' . round($memory_limit / 1024 / 1024, 1) . ' MB');
         return true;
     }
 
-    error_log('[PUNTWORK] MEMORY OK: ' . round($current_memory / 1024 / 1024, 1) . ' MB < ' . round($memory_limit / 1024 / 1024, 1) . ' MB');
+    // Only log OK if debugging
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[PUNTWORK] MEMORY OK: ' . round($current_memory / 1024 / 1024, 1) . ' MB < ' . round($memory_limit / 1024 / 1024, 1) . ' MB');
+    }
     return apply_filters('puntwork_import_memory_exceeded', false);
 }
 
