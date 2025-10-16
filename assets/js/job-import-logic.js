@@ -78,8 +78,8 @@
                                 this.isImporting = false; // Reset flag on failure
                                 
                                 // Stop status polling on failure
-                                if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
-                                    window.JobImportEvents.stopStatusPolling();
+                                if (window.JobImportEvents && window.JobImportEvents.stopHeartbeatMonitoring) {
+                                    window.JobImportEvents.stopHeartbeatMonitoring();
                                 }
                                 
                                 return; // Exit the import process
@@ -106,8 +106,8 @@
                     JobImportUI.resetButtons();
                     
                     // Stop status polling on error
-                    if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
-                        window.JobImportEvents.stopStatusPolling();
+                    if (window.JobImportEvents && window.JobImportEvents.stopHeartbeatMonitoring) {
+                        window.JobImportEvents.stopHeartbeatMonitoring();
                     }
                 }
             } catch (e) {
@@ -129,8 +129,8 @@
                 this.isImporting = false; // Ensure importing flag is reset on error
                 
                 // Stop status polling on error
-                if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
-                    window.JobImportEvents.stopStatusPolling();
+                if (window.JobImportEvents && window.JobImportEvents.stopHeartbeatMonitoring) {
+                    window.JobImportEvents.stopHeartbeatMonitoring();
                 }
             }
         },
@@ -184,8 +184,8 @@
             $('#import-type-indicator').hide();
             
             // Stop status polling on completion
-            if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
-                window.JobImportEvents.stopStatusPolling();
+            if (window.JobImportEvents && window.JobImportEvents.stopHeartbeatMonitoring) {
+                window.JobImportEvents.stopHeartbeatMonitoring();
             }
         },
 
@@ -201,8 +201,8 @@
             }
 
             // Stop any existing status polling (from scheduled imports)
-            if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
-                window.JobImportEvents.stopStatusPolling();
+            if (window.JobImportEvents && window.JobImportEvents.stopHeartbeatMonitoring) {
+                window.JobImportEvents.stopHeartbeatMonitoring();
             }
 
             this.isImporting = true;
@@ -241,8 +241,8 @@
                 }
 
                 // Start status polling for real-time updates
-                if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
-                    window.JobImportEvents.startStatusPolling();
+                if (window.JobImportEvents && window.JobImportEvents.startHeartbeatMonitoring) {
+                    window.JobImportEvents.startHeartbeatMonitoring();
                 }
 
                 // The import is now running asynchronously
@@ -305,8 +305,8 @@
                     $('#import-type-indicator').hide();
                     
                     // Stop status polling on cancel
-                    if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
-                        window.JobImportEvents.stopStatusPolling();
+                    if (window.JobImportEvents && window.JobImportEvents.stopHeartbeatMonitoring) {
+                        window.JobImportEvents.stopHeartbeatMonitoring();
                     }
                 }
             }).catch(function(xhr, status, error) {

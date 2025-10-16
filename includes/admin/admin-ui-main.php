@@ -133,7 +133,7 @@ function render_jobs_dashboard_ui() {
  */
 function render_main_import_ui() {
     ?>
-    <div class="wrap" style="max-width: 800px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1d1d1f; padding: 0 20px;">
+    <div id="job-import-dashboard" class="wrap" style="max-width: 800px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1d1d1f; padding: 0 20px;">
         <h1 style="font-size: 34px; font-weight: 600; text-align: center; margin: 40px 0 20px;">Feeds Dashboard</h1>
 
         <!-- Import Controls Section -->
