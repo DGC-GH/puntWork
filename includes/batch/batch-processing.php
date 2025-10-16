@@ -175,8 +175,8 @@ function process_batch_items_logic($setup) {
                     $maybe = check_import_limits_and_heartbeat($logs, $i, $current_index, $items_processed_in_batch, $batch_size, $start_index, $total, $published, $updated, $skipped, $duplicates_drafted, $inferred_languages, $inferred_benefits, $schema_generated, $start_time, $batch_start_time, null, 'check1');
                     if (is_array($maybe)) return $maybe;
                 }
-                    // HEARTBEAT: Update status every 2 items for responsive UI updates
-                    if ($i % 2 === 0) {
+                    // HEARTBEAT: Update status every 100 items for performance (reduced from every 2 items)
+                    if ($i % 100 === 0 && $i > 0) {
                         $heartbeat_status = get_import_status();
                         if (!is_array($heartbeat_status['logs'] ?? null)) {
                             $heartbeat_status['logs'] = [];
@@ -314,17 +314,8 @@ function process_batch_items_logic($setup) {
                             ];
                         }
 
-                        // HEARTBEAT: Update status every 10 items for responsive UI updates
-                        if ($i % 10 === 0) {
-                            $heartbeat_status = get_import_status();
-                            if (!is_array($heartbeat_status['logs'] ?? null)) {
-                                $heartbeat_status['logs'] = [];
-                            }
-                            $heartbeat_status['last_update'] = microtime(true);
-                            $heartbeat_status['processed'] = $start_index + $items_processed_in_batch;
-                            $heartbeat_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Heartbeat: Processing item ' . ($current_index + 1) . '/' . $total;
-                            set_import_status($heartbeat_status);
-                        }
+                        // HEARTBEAT DISABLED: Removed frequent status updates for performance - now only every 100 items
+                        // Heartbeat updates were causing significant performance degradation with every 10 items
                     }
                 }
                 unset($batch_json_items[$i]);
