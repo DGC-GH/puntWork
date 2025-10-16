@@ -53,4 +53,14 @@ add_action('admin_menu', function() {
         'jobs-dashboard',
         __NAMESPACE__ . '\\jobs_dashboard_page'
     );
+
+    // Diagnostics page for admin troubleshooting
+    add_submenu_page(
+        'puntwork-dashboard',
+        'Diagnostics',
+        'Diagnostics',
+        'manage_options',
+        'puntwork-diagnostics',
+        __NAMESPACE__ . '\\puntwork_diagnostics_page'
+    );
 });
