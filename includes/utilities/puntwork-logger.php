@@ -78,6 +78,16 @@ class PuntWorkLogger {
      */
     public static function error($message, $context = self::CONTEXT_SYSTEM, $data = []) {
         self::log($message, self::ERROR, $context, $data);
+
+        // Dispatch error event for observer pattern
+        if (function_exists('dispatch_import_event')) {
+            dispatch_import_event('error_logged', [
+                'level' => 'error',
+                'message' => $message,
+                'context' => $context,
+                'data' => $data
+            ], [], false);
+        }
     }
 
     /**
