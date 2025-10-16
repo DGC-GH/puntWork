@@ -243,28 +243,18 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                 var activeScheduledImports = null;
                 console.log('[PUNTWORK] Checking schedule status and active imports...');
 
-                // Check both schedule and active imports in parallel
-                var scheduleCheckComplete = false;
+                // Check active imports (schedule data is loaded by JobImportScheduling.init())
                 var activeImportsCheckComplete = false;
-                var scheduleData = null;
                 var activeImportsData = null;
 
                 function processScheduleChecks() {
-                    if (!scheduleCheckComplete || !activeImportsCheckComplete) {
-                        console.log('[PUNTWORK] Waiting for both checks - schedule:', scheduleCheckComplete, 'active:', activeImportsCheckComplete);
-                        return; // Wait for both checks to complete
+                    if (!activeImportsCheckComplete) {
+                        console.log('[PUNTWORK] Waiting for active imports check');
+                        return; // Wait for active imports check to complete
                     }
 
-                    console.log('[PUNTWORK] Both schedule checks complete - processing results');
-                    console.log('[PUNTWORK] Schedule data:', scheduleData);
+                    console.log('[PUNTWORK] Active imports check complete - processing results');
                     console.log('[PUNTWORK] Active imports data:', activeImportsData);
-
-                    if (scheduleData && scheduleData.success && scheduleData.data && scheduleData.data.schedule) {
-                        isScheduledImport = scheduleData.data.schedule.enabled;
-                        console.log('[PUNTWORK] Schedule enabled:', isScheduledImport);
-                    } else {
-                        console.log('[PUNTWORK] Schedule data invalid or not enabled');
-                    }
 
                     if (activeImportsData && activeImportsData.success && activeImportsData.data) {
                         activeScheduledImports = activeImportsData.data;
@@ -278,6 +268,32 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     } else {
                         console.log('[PUNTWORK] Active imports data invalid');
                     }
+
+                    // For scheduled imports, also consider imports active if they have a start_time and are recent
+                    if (isScheduledImport && !hasIncompleteImport) {
+                        var hasRecentStartTime = statusData.start_time && (currentTime - statusData.start_time) < 3600; // Started within last hour
+                        var isCountingPhase = statusData.start_time && statusData.total === 0 && !statusData.complete && statusData.processed > 0; // Counting phase with processed items
+                        console.log('[PUNTWORK] Checking scheduled import conditions - start_time:', statusData.start_time, 'hasRecentStartTime:', hasRecentStartTime, 'isCountingPhase:', isCountingPhase, 'processed:', statusData.processed);
+
+                        if (hasRecentStartTime || isCountingPhase) {
+                            hasIncompleteImport = true;
+                            console.log('[PUNTWORK] Detected active scheduled import in counting phase or recently started');
+                        }
+                    }
+
+                    // Additional check: If we have an incomplete import with a start_time and scheduling is enabled,
+                    // it's likely a scheduled import that's currently running
+                    var isLikelyScheduledImport = false;
+                    if (hasIncompleteImport && statusData.start_time && isScheduledImport) {
+                        var timeSinceStart = currentTime - statusData.start_time;
+                        isLikelyScheduledImport = timeSinceStart < 7200; // Within last 2 hours
+                        console.log('[PUNTWORK] Incomplete import with start_time detected - likely scheduled:', isLikelyScheduledImport, 'timeSinceStart:', timeSinceStart);
+                    }
+
+                    console.log('[PUNTWORK] Final decision - hasIncompleteImport:', hasIncompleteImport, 'isScheduledImport:', isScheduledImport, 'has_active_imports:', activeScheduledImports ? activeScheduledImports.has_active_imports : false, 'isLikelyScheduledImport:', isLikelyScheduledImport);
+
+                    // Now proceed with UI logic based on the results
+                    finalizeInitialStatusCheck(isLikelyScheduledImport);
 
                     // For scheduled imports, also consider imports active if they have a start_time and are recent
                     if (isScheduledImport && !hasIncompleteImport) {
@@ -418,20 +434,7 @@ console.log('[PUNTWORK] job-import-events.js loaded - DEBUG MODE');
                     }
                 }
 
-                console.log('[PUNTWORK] Making parallel API calls... ABOUT TO CALL get_import_schedule AND get_active_scheduled_imports');
-                console.log('[PUNTWORK] CALLING get_import_schedule NOW...');
-                JobImportAPI.call('get_import_schedule', {}, function(scheduleResponse) {
-                    console.log('[PUNTWORK] get_import_schedule RESPONSE RECEIVED:', scheduleResponse);
-                    scheduleData = scheduleResponse;
-                    scheduleCheckComplete = true;
-                    processScheduleChecks();
-                }).catch(function(scheduleError) {
-                    console.log('[PUNTWORK] get_import_schedule ERROR:', scheduleError);
-                    scheduleData = {success: false, error: scheduleError};
-                    scheduleCheckComplete = true;
-                    processScheduleChecks();
-                });
-
+                console.log('[PUNTWORK] Making parallel API calls... ABOUT TO CALL get_active_scheduled_imports');
                 console.log('[PUNTWORK] CALLING get_active_scheduled_imports NOW...');
                 JobImportAPI.call('get_active_scheduled_imports', {}, function(activeResponse) {
                     console.log('[PUNTWORK] get_active_scheduled_imports RESPONSE RECEIVED:', activeResponse);
