@@ -93,11 +93,26 @@ function set_import_status_atomic($status, $max_retries = 5, $lock_timeout_secon
     $retry_count = 0;
     $lock_acquired = false;
 
-    // Try to acquire lock with retries
+    // Try to acquire lock with retries. If an existing lock is stale (older than $lock_timeout_seconds)
+    // allow stealing it to avoid permanent deadlocks when a previous process crashed.
     while ($retry_count < $max_retries && !$lock_acquired) {
-        $lock_acquired = set_transient($lock_key, time(), $lock_timeout_seconds);
+        $now = time();
+        // Attempt to create the lock atomically
+        $lock_acquired = add_option($lock_key, $now);
 
-        if (!$lock_acquired) {
+        if ($lock_acquired === false) {
+            // Check if existing lock is stale
+            $existing = get_option($lock_key, 0);
+            if (is_numeric($existing) && ($now - (int)$existing) > $lock_timeout_seconds) {
+                // Stale lock detected - remove and retry immediately
+                delete_option($lock_key);
+                // Try to acquire again immediately
+                $lock_acquired = add_option($lock_key, $now);
+                if ($lock_acquired !== false) {
+                    break;
+                }
+            }
+
             // Lock is held by another process, wait and retry
             $retry_count++;
             if ($retry_count < $max_retries) {
@@ -130,8 +145,9 @@ function set_import_status_atomic($status, $max_retries = 5, $lock_timeout_secon
 
         return true;
     } finally {
-        // Always release the lock
-        delete_transient($lock_key);
+        // Always release the lock - remove the option used as lock
+        // Use @ to suppress transient deletion warnings if option was auto-removed
+        delete_option($lock_key);
     }
 }
 
