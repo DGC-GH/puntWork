@@ -26,10 +26,11 @@ function puntwork_diagnostics_page() {
             if (typeof jobImportData === 'undefined') { show('jobImportData not found — open the import admin page to ensure scripts are enqueued.'); return; }
             show('Fetching...');
             try {
-                const form = new URLSearchParams();
-                form.append('action', 'puntwork_import_diagnostics');
-                form.append('nonce', jobImportData.nonce);
-                const res = await fetch(jobImportData.ajaxurl, { method: 'POST', body: form, credentials: 'same-origin' });
+                // Use GET query string to avoid some WAFs/mod_security rules that block POST bodies
+                const url = new URL(jobImportData.ajaxurl, location.href);
+                url.searchParams.append('action', 'puntwork_import_diagnostics');
+                url.searchParams.append('nonce', jobImportData.nonce);
+                const res = await fetch(url.toString(), { method: 'GET', credentials: 'same-origin' });
 
                 // Collect status, statusText and a small subset of headers for debugging
                 const statusInfo = {
