@@ -231,7 +231,7 @@ function enqueue_job_import_scripts() {
             /* Notification styles */
             .job-import-notification {
                 position: fixed;
-                top: 24px;
+                top: 48px;
                 right: 24px;
                 background: #ffffff;
                 border-radius: 12px;
