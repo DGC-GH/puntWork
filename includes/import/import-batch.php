@@ -373,6 +373,12 @@ if (!function_exists('import_all_jobs_from_json')) {
 
                 // Schedule multiple fallback continuation mechanisms
                 schedule_import_continuation_with_fallbacks($pause_time);
+                // Record diagnostics snapshot for debugging continuation scheduling
+                add_import_diagnostics('paused_and_scheduled_continuation', [
+                    'pause_time' => $pause_time,
+                    'batch_count' => $batch_count,
+                    'processed' => $total_processed
+                ]);
 
                 PuntWorkLogger::info('Import paused due to time/memory limits', PuntWorkLogger::CONTEXT_BATCH, [
                     'pause_time' => $pause_time,
@@ -655,7 +661,7 @@ if (!function_exists('import_all_jobs_from_json')) {
                         } elseif ($action && \ActionScheduler::store()->get_status($action_id) === \ActionScheduler_Store::STATUS_FAILED) {
                             // Failed actions are considered finished, but log them
                             $failed_count++;
-                            PuntWorkLogger::warning('Action Scheduler job failed', PuntWorkLogger::CONTEXT_BATCH, [
+                            PuntWorkLogger::warn('Action Scheduler job failed', PuntWorkLogger::CONTEXT_BATCH, [
                                 'action_id' => $action_id,
                                 'status' => 'failed'
                             ]);
@@ -663,7 +669,7 @@ if (!function_exists('import_all_jobs_from_json')) {
                             $completed_count++;
                         }
                     } catch (\Exception $e) {
-                        PuntWorkLogger::warning('Error checking action status', PuntWorkLogger::CONTEXT_BATCH, [
+                        PuntWorkLogger::warn('Error checking action status', PuntWorkLogger::CONTEXT_BATCH, [
                             'action_id' => $action_id,
                             'error' => $e->getMessage()
                         ]);
@@ -697,7 +703,7 @@ if (!function_exists('import_all_jobs_from_json')) {
 
             $wait_duration = microtime(true) - $wait_start;
             if (!$all_complete) {
-                PuntWorkLogger::warning('Timeout waiting for concurrent actions to complete', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::warn('Timeout waiting for concurrent actions to complete', PuntWorkLogger::CONTEXT_BATCH, [
                     'total_actions' => count($all_action_ids),
                     'wait_time' => round($wait_duration, 1),
                     'max_wait_time' => $max_wait_time,
@@ -711,7 +717,7 @@ if (!function_exists('import_all_jobs_from_json')) {
                 ]);
             }
         } elseif (!empty($all_action_ids)) {
-            PuntWorkLogger::warning('Action Scheduler not available for waiting on concurrent actions', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::warn('Action Scheduler not available for waiting on concurrent actions', PuntWorkLogger::CONTEXT_BATCH, [
                 'total_actions' => count($all_action_ids),
                 'action_scheduler_available' => function_exists('ActionScheduler') && class_exists('ActionScheduler')
             ]);
@@ -952,6 +958,9 @@ function continue_paused_import() {
         'cron_scheduled' => wp_next_scheduled('puntwork_continue_import') ? true : false
     ]);
 
+    // Diagnostic snapshot on continuation attempt
+    add_import_diagnostics('primary_continuation_attempt', ['attempt_number' => $status['continuation_attempts']]);
+
     // Check for cancellation before resuming
     if (get_transient('import_cancel') === true || get_transient('import_force_cancel') === true || get_transient('import_emergency_stop') === true) {
         $cancel_type = get_transient('import_emergency_stop') === true ? 'emergency stopped' :
@@ -1123,6 +1132,9 @@ function schedule_import_continuation_with_fallbacks($pause_time) {
         'pause_time' => $pause_time,
         'current_wp_cron_status' => defined('DISABLE_WP_CRON') ? (DISABLE_WP_CRON ? 'disabled' : 'enabled') : 'not_defined'
     ]);
+
+    // Add diagnostics entry when schedules are set
+    add_import_diagnostics('scheduled_import_continuation', ['pause_time' => $pause_time]);
 }
 
 /**
@@ -1343,7 +1355,7 @@ function check_continuation_status() {
 
     // Alert if last attempt was too long ago
     if ($time_since_last_attempt && $time_since_last_attempt > 3600 && !isset($status['complete'])) { // 1 hour
-        PuntWorkLogger::warning('Import continuation may be stalled', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::warn('Import continuation may be stalled', PuntWorkLogger::CONTEXT_BATCH, [
             'time_since_last_attempt' => round($time_since_last_attempt / 60, 1) . ' minutes',
             'continuation_attempts' => $attempts,
             'paused' => $status['paused'] ?? false,
@@ -1374,6 +1386,9 @@ function clear_import_continuation_schedules() {
     PuntWorkLogger::info('Import continuation schedules cleared', PuntWorkLogger::CONTEXT_BATCH, [
         'action' => 'cleanup_completed'
     ]);
+
+    // Record diagnostics when schedules cleared
+    add_import_diagnostics('cleared_import_continuation_schedules');
 }
 
 /**

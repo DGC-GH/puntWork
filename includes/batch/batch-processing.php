@@ -243,7 +243,7 @@ function process_batch_items_logic($setup) {
                 if ($current_memory_ratio > 0.9) {
                     $emergency_batch_size = max(1, floor($batch_size * 0.5));
                     if ($emergency_batch_size < $batch_size) {
-                        PuntWorkLogger::warning('Emergency batch size reduction due to high memory usage', PuntWorkLogger::CONTEXT_BATCH, [
+                        PuntWorkLogger::warn('Emergency batch size reduction due to high memory usage', PuntWorkLogger::CONTEXT_BATCH, [
                             'current_memory_ratio' => $current_memory_ratio,
                             'original_batch_size' => $batch_size,
                             'emergency_batch_size' => $emergency_batch_size
@@ -262,7 +262,7 @@ function process_batch_items_logic($setup) {
                     if ($current_time - $last_check_time >= 1) { // Cache checks for 1 second
                         $last_check_time = $current_time;
                         if (import_time_exceeded() || import_memory_exceeded()) {
-                            PuntWorkLogger::warning('Timeout/memory limit detected mid-batch, saving progress', PuntWorkLogger::CONTEXT_BATCH, [
+                            PuntWorkLogger::warn('Timeout/memory limit detected mid-batch, saving progress', PuntWorkLogger::CONTEXT_BATCH, [
                                 'current_index' => $current_index,
                                 'items_processed_in_batch' => $items_processed_in_batch,
                                 'batch_size' => $batch_size,
@@ -597,7 +597,7 @@ function check_import_limits_and_heartbeat(array &$logs, $iteration_index, $curr
     if ($current_time - $last_check_times[$static_id] >= 1) { // Cache checks for 1 second
         $last_check_times[$static_id] = $current_time;
         if (import_time_exceeded() || import_memory_exceeded()) {
-            PuntWorkLogger::warning('Timeout/memory limit detected mid-batch, saving progress', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::warn('Timeout/memory limit detected mid-batch, saving progress', PuntWorkLogger::CONTEXT_BATCH, [
                 'current_index' => $current_index,
                 'items_processed_in_batch' => $items_processed_in_batch,
                 'batch_size' => $batch_size,
@@ -872,7 +872,7 @@ function load_json_batch($json_path, $start_index, $batch_size) {
                     if (!empty($line)) {
                         $item = json_decode($line, true);
                         if ($item === null && json_last_error() !== JSON_ERROR_NONE) {
-                            PuntWorkLogger::warning('JSON decode error in batch', PuntWorkLogger::CONTEXT_BATCH, [
+                            PuntWorkLogger::warn('JSON decode error in batch', PuntWorkLogger::CONTEXT_BATCH, [
                                 'line_number' => $current_index + 1,
                                 'json_error' => json_last_error_msg(),
                                 'line_preview' => substr($line, 0, 100)
