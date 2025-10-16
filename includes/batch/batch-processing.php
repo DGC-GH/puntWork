@@ -170,63 +170,9 @@ function process_batch_items_logic($setup) {
 
                 // CRITICAL: Check for timeouts during batch processing to prevent server kills
                 if ($i % 25 === 0) { // Check every 25 items (reduced from 5 for performance)
-                    static $last_check_time_2 = 0;
-                    $current_time = microtime(true);
-                    if ($current_time - $last_check_time_2 >= 1) { // Cache checks for 1 second
-                        $last_check_time_2 = $current_time;
-                        if (import_time_exceeded() || import_memory_exceeded()) {
-                        PuntWorkLogger::warning('Timeout/memory limit detected mid-batch, saving progress', PuntWorkLogger::CONTEXT_BATCH, [
-                            'current_index' => $current_index,
-                            'items_processed_in_batch' => $items_processed_in_batch,
-                            'batch_size' => $batch_size,
-                            'time_exceeded' => import_time_exceeded(),
-                            'memory_exceeded' => import_memory_exceeded()
-                        ]);
-
-                        // Save partial progress before timeout
-                        $partial_processed = $start_index + $items_processed_in_batch;
-                        retry_option_operation(function() use ($partial_processed) {
-                            return set_import_progress($partial_processed);
-                        }, [], [
-                            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
-                            'operation' => 'save_partial_progress_timeout'
-                        ]);
-
-                        // Update status to show partial completion
-                        $timeout_status = get_import_status();
-                        if (!is_array($timeout_status['logs'] ?? null)) {
-                            $timeout_status['logs'] = [];
-                        }
-                        $timeout_status['processed'] = $partial_processed;
-                        $timeout_status['last_update'] = microtime(true);
-                        $timeout_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Processing paused mid-batch due to time/memory limits at item ' . ($current_index + 1);
-                        set_import_status($timeout_status);
-
-                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Processing paused mid-batch due to limits - processed ' . $items_processed_in_batch . '/' . $batch_size . ' items in this batch';
-
-                        return [
-                            'success' => true,
-                            'processed' => $partial_processed,
-                            'total' => $total,
-                            'published' => $published,
-                            'updated' => $updated,
-                            'skipped' => $skipped,
-                            'duplicates_drafted' => $duplicates_drafted,
-                            'time_elapsed' => microtime(true) - $start_time,
-                            'complete' => false,
-                            'paused' => true,
-                            'pause_reason' => 'mid_batch_timeout',
-                            'logs' => $logs,
-                            'batch_size' => $batch_size,
-                            'inferred_languages' => $inferred_languages,
-                            'inferred_benefits' => $inferred_benefits,
-                            'schema_generated' => $schema_generated,
-                            'batch_time' => microtime(true) - $batch_start_time,
-                            'batch_processed' => $items_processed_in_batch,
-                            'message' => 'Processing paused mid-batch due to time/memory limits'
-                        ];
-                    }
-
+                    $maybe = check_import_limits_and_heartbeat($logs, $i, $current_index, $items_processed_in_batch, $batch_size, $start_index, $total, $published, $updated, $skipped, $duplicates_drafted, $inferred_languages, $inferred_benefits, $schema_generated, $start_time, $batch_start_time, null, 'check1');
+                    if (is_array($maybe)) return $maybe;
+                }
                     // HEARTBEAT: Update status every 2 items for responsive UI updates
                     if ($i % 2 === 0) {
                         $heartbeat_status = get_import_status();
@@ -617,6 +563,108 @@ function process_batch_items_logic($setup) {
             'logs' => $logs
         ];
     }
+}
+
+/**
+ * Check import time/memory limits and optionally emit heartbeat updates.
+ * Extracted to avoid duplicated logic and duplicate static declarations.
+ *
+ * @param array &$logs Reference to logs array.
+ * @param int $iteration_index The loop iteration index ($i).
+ * @param int $current_index Current absolute index in JSONL.
+ * @param int $items_processed_in_batch Number of items processed in this batch so far.
+ * @param int $batch_size Current batch size.
+ * @param int $start_index Batch start index.
+ * @param int $total Total items.
+ * @param int &$published Published count (included in return only).
+ * @param int &$updated Updated count (included in return only).
+ * @param int &$skipped Skipped count (included in return only).
+ * @param int &$duplicates_drafted Duplicates drafted count (included in return only).
+ * @param int $inferred_languages Inferred languages count.
+ * @param int $inferred_benefits Inferred benefits count.
+ * @param int $schema_generated Schema generated count.
+ * @param float $start_time Import start time.
+ * @param float $batch_start_time Batch start time.
+ * @param int|null $heartbeat_mod If set, emit a heartbeat when ($iteration_index % $heartbeat_mod) === 0.
+ * @param string $static_id A unique id used to isolate the static last-check timer per caller.
+ * @return array|null Returns the array to be returned from the caller when processing is paused, or null to continue.
+ */
+function check_import_limits_and_heartbeat(array &$logs, $iteration_index, $current_index, $items_processed_in_batch, $batch_size, $start_index, $total, &$published, &$updated, &$skipped, &$duplicates_drafted, $inferred_languages, $inferred_benefits, $schema_generated, $start_time, $batch_start_time, $heartbeat_mod = null, $static_id = 'default') {
+    static $last_check_times = [];
+    if (!isset($last_check_times[$static_id])) $last_check_times[$static_id] = 0;
+
+    $current_time = microtime(true);
+    if ($current_time - $last_check_times[$static_id] >= 1) { // Cache checks for 1 second
+        $last_check_times[$static_id] = $current_time;
+        if (import_time_exceeded() || import_memory_exceeded()) {
+            PuntWorkLogger::warning('Timeout/memory limit detected mid-batch, saving progress', PuntWorkLogger::CONTEXT_BATCH, [
+                'current_index' => $current_index,
+                'items_processed_in_batch' => $items_processed_in_batch,
+                'batch_size' => $batch_size,
+                'time_exceeded' => import_time_exceeded(),
+                'memory_exceeded' => import_memory_exceeded()
+            ]);
+
+            // Save partial progress before timeout
+            $partial_processed = $start_index + $items_processed_in_batch;
+            retry_option_operation(function() use ($partial_processed) {
+                return set_import_progress($partial_processed);
+            }, [], [
+                'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                'operation' => 'save_partial_progress_timeout'
+            ]);
+
+            // Update status to show partial completion
+            $timeout_status = get_import_status();
+            if (!is_array($timeout_status['logs'] ?? null)) {
+                $timeout_status['logs'] = [];
+            }
+            $timeout_status['processed'] = $partial_processed;
+            $timeout_status['last_update'] = microtime(true);
+            $timeout_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Processing paused mid-batch due to time/memory limits at item ' . ($current_index + 1);
+            set_import_status($timeout_status);
+
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Processing paused mid-batch due to limits - processed ' . $items_processed_in_batch . '/' . $batch_size . ' items in this batch';
+
+            return [
+                'success' => true,
+                'processed' => $partial_processed,
+                'total' => $total,
+                'published' => $published,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'duplicates_drafted' => $duplicates_drafted,
+                'time_elapsed' => microtime(true) - $start_time,
+                'complete' => false,
+                'paused' => true,
+                'pause_reason' => 'mid_batch_timeout',
+                'logs' => $logs,
+                'batch_size' => $batch_size,
+                'inferred_languages' => $inferred_languages,
+                'inferred_benefits' => $inferred_benefits,
+                'schema_generated' => $schema_generated,
+                'batch_time' => microtime(true) - $batch_start_time,
+                'batch_processed' => $items_processed_in_batch,
+                'message' => 'Processing paused mid-batch due to time/memory limits'
+            ];
+        }
+    }
+
+    // Heartbeat update when requested
+    if (!is_null($heartbeat_mod) && $heartbeat_mod > 0) {
+        if (($iteration_index % $heartbeat_mod) === 0) {
+            $heartbeat_status = get_import_status();
+            if (!is_array($heartbeat_status['logs'] ?? null)) {
+                $heartbeat_status['logs'] = [];
+            }
+            $heartbeat_status['last_update'] = microtime(true);
+            $heartbeat_status['processed'] = $start_index + $items_processed_in_batch;
+            $heartbeat_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Heartbeat: Processing item ' . ($current_index + 1) . '/' . $total;
+            set_import_status($heartbeat_status);
+        }
+    }
+
+    return null;
 }
 
 /**
