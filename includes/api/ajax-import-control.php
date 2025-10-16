@@ -219,32 +219,96 @@ function cancel_job_import_ajax() {
     }
 
     $before_cancel = get_import_status([]);
+
+    // FORCE IMMEDIATE CANCELLATION STATUS IN DATABASE
+    $force_cancelled_status = [
+        'complete' => true,
+        'success' => false,
+        'processed' => $before_cancel['processed'] ?? 0,
+        'total' => $before_cancel['total'] ?? 0,
+        'published' => $before_cancel['published'] ?? 0,
+        'updated' => $before_cancel['updated'] ?? 0,
+        'skipped' => $before_cancel['skipped'] ?? 0,
+        'duplicates_drafted' => $before_cancel['duplicates_drafted'] ?? 0,
+        'error_message' => 'Import cancelled by user',
+        'cancelled' => true,
+        'cancelled_at' => date('Y-m-d H:i:s'),
+        'cancelled_timestamp' => microtime(true),
+        'time_elapsed' => $before_cancel['time_elapsed'] ?? 0,
+        'batch_count' => $before_cancel['batch_count'] ?? 0,
+        'batch_size' => $before_cancel['batch_size'] ?? 10,
+        'start_time' => $before_cancel['start_time'] ?? microtime(true),
+        'end_time' => microtime(true),
+        'last_update' => microtime(true),
+        'logs' => array_merge(($before_cancel['logs'] ?? []), [
+            '[' . date('d-M-Y H:i:s') . ' UTC] Import cancelled by user - all processes terminated'
+        ]),
+    ];
+
+    // FORCE UPDATE THE STATUS TO CANCELLED BEFORE CANCELING PROCESSES
+    update_option('job_import_status', $force_cancelled_status, false);
+
+    // Now set cancellation transients
     set_transient('import_cancel', true, 3600);
+    set_transient('import_force_cancel', true, 3600);
+    set_transient('import_emergency_stop', true, 3600);
 
     // POISON PILL: Aggressively cancel all import-related processes
     $cancelled_count = cancel_all_import_processes();
 
-    // Also clear the import status to reset the UI
-    delete_option('job_import_status');
-    delete_option('job_import_batch_size');
+    // AGGRESSIVE CLEANUP: Clear ALL import-related options and transients
+    $all_import_options = [
+        'job_import_status',
+        'job_import_progress',
+        'job_import_processed_guids',
+        'job_import_last_batch_time',
+        'job_import_last_batch_processed',
+        'job_import_batch_size',
+        'job_import_consecutive_small_batches',
+        'job_import_consecutive_batches',
+        'job_import_start_time',
+        'puntwork_last_import_run',
+        'puntwork_last_import_details',
+        'job_import_concurrent_success_rate',
+        'job_import_sequential_success_rate',
+        'job_import_concurrent_total_attempts',
+        'job_import_concurrent_successful_attempts',
+        'job_import_avg_time_per_item_concurrent'
+    ];
 
-    PuntWorkLogger::info('Import cancellation initiated - POISON PILL deployed', PuntWorkLogger::CONTEXT_BATCH, [
+    $cleared_count = 0;
+    foreach ($all_import_options as $option) {
+        if (delete_option($option)) {
+            $cleared_count++;
+        }
+    }
+
+    // Clear Action Scheduler caches to force refresh
+    if (function_exists('wp_cache_flush')) {
+        wp_cache_flush();
+    }
+
+    PuntWorkLogger::info('Import cancellation initiated - POISON PILL deployed with forced cancelled status', PuntWorkLogger::CONTEXT_BATCH, [
         'import_status_before_cancel' => [
             'processed' => $before_cancel['processed'] ?? 0,
             'total' => $before_cancel['total'] ?? 0,
             'complete' => $before_cancel['complete'] ?? false,
             'time_elapsed' => $before_cancel['time_elapsed'] ?? 0
         ],
-        'transient_set' => true,
-        'transient_expiry' => 3600,
-        'options_cleared' => ['job_import_status', 'job_import_batch_size'],
+        'forced_cancelled_status_set' => true,
+        'transients_set' => ['import_cancel', 'import_force_cancel', 'import_emergency_stop'],
+        'options_cleared_count' => $cleared_count,
         'poison_pill_processes_cancelled' => $cancelled_count,
-        'cancellation_method' => 'aggressive_poison_pill'
+        'cache_flushed' => function_exists('wp_cache_flush'),
+        'cancellation_timestamp' => microtime(true),
+        'cancellation_method' => 'aggressive_poison_pill_with_forced_status'
     ]);
 
     send_ajax_success('cancel_job_import', [
         'cancelled_processes' => $cancelled_count,
-        'method' => 'poison_pill'
+        'method' => 'poison_pill_with_forced_status',
+        'options_cleared' => $cleared_count,
+        'forced_cancelled' => true
     ]);
 }
 
