@@ -81,6 +81,13 @@ function set_import_status($status) {
     }
 
     update_option('job_import_status', $status, false);
+
+    // Ensure any persistent/shared object cache invalidates the autoloaded options
+    // so other PHP processes (heartbeat, ajax, Action Scheduler) read the latest value.
+    if (function_exists('wp_cache_delete')) {
+        // Remove cached alloptions so get_option will reload from DB
+        @wp_cache_delete('alloptions', 'options');
+    }
 }
 
 /**
@@ -148,6 +155,11 @@ function set_import_status_atomic($status, $max_retries = 5, $lock_timeout_secon
         // Lock acquired, safely update the status
         update_option('job_import_status', $status, false);
 
+        // Invalidate shared object cache for options so other processes see the update
+        if (function_exists('wp_cache_delete')) {
+            @wp_cache_delete('alloptions', 'options');
+        }
+
     PuntWorkLogger::debug('Import status updated atomically', PuntWorkLogger::CONTEXT_SYSTEM, [
             'processed' => $status['processed'] ?? 0,
             'total' => $status['total'] ?? 0,
@@ -169,6 +181,11 @@ function set_import_status_atomic($status, $max_retries = 5, $lock_timeout_secon
  */
 function delete_import_status() {
     delete_option('job_import_status');
+
+    // Ensure cached alloptions is cleared so subsequent reads fetch fresh data
+    if (function_exists('wp_cache_delete')) {
+        @wp_cache_delete('alloptions', 'options');
+    }
 }
 
 /**
