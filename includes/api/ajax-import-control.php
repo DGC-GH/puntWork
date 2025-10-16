@@ -581,7 +581,31 @@ function calculate_estimated_time_remaining($status) {
 function get_job_import_status_ajax() {
     try {
         // Get status first to determine if we should log
-        $progress = get_import_status() ?: initialize_import_status(0, '', null);
+        $progress = get_import_status();
+
+        // If no import status exists, return a minimal default status without triggering expensive calculations
+        if (!$progress || (is_array($progress) && empty($progress))) {
+            $progress = [
+                'total' => 0,
+                'processed' => 0,
+                'published' => 0,
+                'updated' => 0,
+                'skipped' => 0,
+                'duplicates_drafted' => 0,
+                'time_elapsed' => 0,
+                'complete' => false,
+                'success' => false,
+                'error_message' => '',
+                'batch_size' => DEFAULT_BATCH_SIZE, // Use constant instead of calling get_batch_size()
+                'inferred_languages' => 0,
+                'inferred_benefits' => 0,
+                'schema_generated' => 0,
+                'start_time' => null,
+                'end_time' => null,
+                'last_update' => microtime(true),
+                'logs' => []
+            ];
+        }
 
         // Validate that progress is an array
         if (!is_array($progress)) {
