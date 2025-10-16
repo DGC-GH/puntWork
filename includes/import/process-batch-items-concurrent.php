@@ -281,7 +281,7 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
 
     // PRE-PROCESS DATA: Load all items from JSONL and share via transients to avoid per-job file reads
     // This eliminates 97TB of file reading and thousands of duplicate queries
-    $batch_data_cache_key = 'puntwork_batch_' . uniqid() . '_' . microtime(true);
+    $batch_data_cache_key = 'puntwork_batch_' . uniqid('batch_', true) . '_' . wp_generate_password(8, false);
     $batch_data = [];
 
     // Load all batch items once and store in transient (expires in 1 hour)
@@ -294,7 +294,7 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
                 $batch_data_indexed[$item['guid']] = $item;
             }
         }
-        set_transient($batch_data_cache_key, $batch_data_indexed, 86400); // 24 hours instead of 1 hour
+        set_transient($batch_data_cache_key, $batch_data_indexed, 604800); // 7 days instead of 24 hours
     } catch (\Exception $e) {
         PuntWorkLogger::error('Failed to pre-load batch data', PuntWorkLogger::CONTEXT_BATCH, [
             'error' => $e->getMessage(),
@@ -310,8 +310,8 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
         ];
     }
 
-    // Cache shared data to avoid per-job loading - increased TTL to prevent expiration during long batch processing
-    $shared_data_key = 'puntwork_shared_' . uniqid() . '_' . microtime(true);
+    // Cache shared data to avoid per-job loading - use consistent 7-day TTL like batch data
+    $shared_data_key = 'puntwork_shared_' . uniqid('shared_', true) . '_' . wp_generate_password(8, false);
     $shared_data = [
         'acf_fields' => $acf_fields,
         'zero_empty_fields' => $zero_empty_fields,
@@ -319,7 +319,7 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
         'batch_start_index' => $start_index,
         'batch_size' => count($batch_guids)
     ];
-    set_transient($shared_data_key, $shared_data, 86400); // 24 hours instead of 1 hour
+    set_transient($shared_data_key, $shared_data, 604800); // 7 days to match batch data TTL
 
     $action_ids = [];
     $scheduling_errors = 0;
@@ -935,13 +935,24 @@ function process_single_item_optimized_callback($data) {
 
     // Get shared data from transient (no database lookups needed!)
     $shared_data = get_transient($shared_data_key);
+    // IMPROVED: Enhanced transient retrieval with fallback mechanism
     if (!$shared_data) {
-        PuntWorkLogger::warn('Shared data not found in transient - falling back to old method', PuntWorkLogger::CONTEXT_BATCH, [
-            'guid' => $guid,
-            'shared_data_key' => $shared_data_key,
-            'fallback' => 'sequential_mode'
-        ]);
-        return; // Skip processing
+        // Try one more time with a short delay in case of timing issues
+        usleep(50000); // 50ms delay
+        $shared_data = get_transient($shared_data_key);
+
+        if (!$shared_data) {
+            PuntWorkLogger::warn('Shared data not found in transient despite retry - aborting item', PuntWorkLogger::CONTEXT_BATCH, [
+                'guid' => $guid,
+                'shared_data_key' => $shared_data_key,
+                'batch_data_cache_key' => $batch_data_cache_key,
+                'reason' => 'transient_not_found_or_expired'
+            ]);
+            // Try to clean up any stale keys when they're not found
+            delete_transient($shared_data_key);
+            delete_transient($batch_data_cache_key);
+            return; // Skip processing
+        }
     }
 
     // Extract shared data - no individual queries needed!
@@ -1171,9 +1182,16 @@ function aggregate_concurrent_status_updates() {
 add_action('puntwork_process_single_item', 'Puntwork\process_single_item_callback', 10, 6);
 add_action('puntwork_process_single_item_optimized', 'Puntwork\process_single_item_optimized_callback', 10, 1);
 
-// Schedule status aggregation every 30 seconds
+// Prevent duplicate scheduling of status aggregation cron job with improved check
 if (!wp_next_scheduled('puntwork_aggregate_concurrent_updates')) {
-    wp_schedule_event(time(), '30sec', 'puntwork_aggregate_concurrent_updates');
+    // Check if already registered before scheduling
+    if (!has_action('puntwork_aggregate_concurrent_updates')) {
+        wp_schedule_event(time(), '30sec', 'puntwork_aggregate_concurrent_updates');
+        PuntWorkLogger::debug('Status aggregation cron job scheduled', PuntWorkLogger::CONTEXT_BATCH, [
+            'action' => 'puntwork_aggregate_concurrent_updates',
+            'interval' => '30sec'
+        ]);
+    }
 }
 add_action('puntwork_aggregate_concurrent_updates', 'Puntwork\aggregate_concurrent_status_updates');
 

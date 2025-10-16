@@ -663,8 +663,8 @@ if (!function_exists('import_all_jobs_from_json')) {
                 return ['success' => false, 'message' => $error_msg, 'logs' => $all_logs];
             }
 
-            // Small delay between batches to prevent overwhelming the server
-            usleep(100000); // 0.1 seconds
+            // OPTIMIZED: Reduced delay between batches to improve performance while avoiding server overload
+            usleep(25000); // Reduced from 0.1 to 0.025 seconds for better throughput
         }
 
         $end_time = microtime(true);
@@ -677,82 +677,22 @@ if (!function_exists('import_all_jobs_from_json')) {
                 'action_ids_sample' => array_slice($all_action_ids, 0, 5)
             ]);
 
-            // Wait for all actions to complete (with timeout)
-            $wait_start = microtime(true);
-            $max_wait_time = 60; // 1 minute max wait on Hostinger
-            $check_interval = 2; // Check every 2 seconds
-            $all_complete = false;
-            $consecutive_complete_checks = 0;
-            $required_consecutive_complete = 3; // Require 3 consecutive complete checks for stability
+            // OPTIMIZED: Use monitoring function with progressive memory cleanup
+            $monitoring_result = monitor_concurrent_job_completion($all_action_ids, 60, 2); // 60s timeout, 2s check interval
 
-            while (!$all_complete && (microtime(true) - $wait_start) < $max_wait_time) {
-                $all_complete = true;
-                $pending_count = 0;
-                $completed_count = 0;
-                $failed_count = 0;
-
-                foreach ($all_action_ids as $action_id) {
-                    try {
-                        $action = \ActionScheduler::store()->fetch_action($action_id);
-                        if ($action && !$action->is_finished()) {
-                            $all_complete = false;
-                            $pending_count++;
-                        } elseif ($action && strtolower((string) \ActionScheduler::store()->get_status($action_id)) === 'failed') {
-                            // Failed actions are considered finished, but log them
-                            $failed_count++;
-                            PuntWorkLogger::warn('Action Scheduler job failed', PuntWorkLogger::CONTEXT_BATCH, [
-                                'action_id' => $action_id,
-                                'status' => 'failed'
-                            ]);
-                        } else {
-                            $completed_count++;
-                        }
-                    } catch (\Exception $e) {
-                        PuntWorkLogger::warn('Error checking action status', PuntWorkLogger::CONTEXT_BATCH, [
-                            'action_id' => $action_id,
-                            'error' => $e->getMessage()
-                        ]);
-                        // Assume completed on error to avoid infinite waiting
-                        $completed_count++;
-                    }
-                }
-
-                if ($all_complete) {
-                    $consecutive_complete_checks++;
-                    if ($consecutive_complete_checks >= $required_consecutive_complete) {
-                        // Require multiple consecutive complete checks for stability
-                        break;
-                    }
-                    // Reset counter if we find pending actions again
-                } else {
-                    $consecutive_complete_checks = 0;
-                }
-
-                if (!$all_complete || $consecutive_complete_checks < $required_consecutive_complete) {
-                    PuntWorkLogger::debug('Waiting for concurrent actions to complete', PuntWorkLogger::CONTEXT_BATCH, [
-                        'pending' => $pending_count,
-                        'completed' => $completed_count,
-                        'failed' => $failed_count,
-                        'wait_time' => round(microtime(true) - $wait_start, 1),
-                        'consecutive_complete_checks' => $consecutive_complete_checks
-                    ]);
-                    sleep($check_interval);
-                }
-            }
-
-            $wait_duration = microtime(true) - $wait_start;
-            if (!$all_complete) {
+            if (!$monitoring_result['all_completed']) {
                 PuntWorkLogger::warn('Timeout waiting for concurrent actions to complete', PuntWorkLogger::CONTEXT_BATCH, [
                     'total_actions' => count($all_action_ids),
-                    'wait_time' => round($wait_duration, 1),
-                    'max_wait_time' => $max_wait_time,
-                    'pending_count' => $pending_count ?? 0
+                    'completed_count' => $monitoring_result['completed_count'],
+                    'pending_count' => $monitoring_result['pending_count'],
+                    'success_rate' => $monitoring_result['success_rate'],
+                    'max_wait_time' => 60
                 ]);
             } else {
                 PuntWorkLogger::info('All concurrent actions completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
                     'total_actions' => count($all_action_ids),
-                    'wait_time' => round($wait_duration, 1),
-                    'consecutive_checks' => $consecutive_complete_checks
+                    'success_rate' => $monitoring_result['success_rate'],
+                    'elapsed_time' => $monitoring_result['elapsed_time']
                 ]);
             }
         } elseif (!empty($all_action_ids)) {
