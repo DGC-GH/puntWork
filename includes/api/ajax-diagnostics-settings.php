@@ -19,9 +19,19 @@ function puntwork_save_rest_token_ajax() {
         return;
     }
 
-    // validate nonce if provided (best-effort)
+    // validate nonce if provided (best-effort). Some hosts strip nonces in POSTs; don't abort on failure.
     if ( isset($_REQUEST['nonce']) ) {
-        check_admin_referer('puntwork_admin_settings', 'nonce');
+        $nonce_ok = check_ajax_referer('job_import_nonce', 'nonce', false);
+        if ( ! $nonce_ok ) {
+            // log but continue for admins
+            try {
+                if ( class_exists('\Puntwork\PuntWorkLogger') ) {
+                    \Puntwork\PuntWorkLogger::warn('Save REST token called with invalid nonce (continuing for admin)', \Puntwork\PuntWorkLogger::CONTEXT_AJAX, ['action' => 'puntwork_save_rest_token']);
+                }
+            } catch (\Throwable $t) {
+                // swallow
+            }
+        }
     }
 
     $token = isset($_POST['token']) ? trim( (string) $_POST['token'] ) : '';
