@@ -213,6 +213,12 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             // Normalize the data first
             data = this.normalizeResponseData(data);
 
+            // Clear any previous terminal failure state when new in-progress updates arrive
+            // If server no longer indicates a terminal failure (success === null or progress present), reset importSuccess
+            if (data.success === null || (data.processed > 0 && data.complete !== true)) {
+                this.importSuccess = this.importSuccess === true ? true : null;
+            }
+
             // Check if server sent a phase update and set it
             if (data.phase && data.phase !== this.currentPhase) {
                 this.setPhase(data.phase);
@@ -238,9 +244,15 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 if ((data.success === true && processed >= total && total > 0) || data.complete === true) {
                     this.importSuccess = true;
                 } else if (data.success === false) {
-                    this.importSuccess = false;
+                    // Mark as failed only for terminal failure states: when the import is complete (failed) or an explicit error message is present
+                    if (data.complete === true || (data.error_message && data.error_message.length > 0) || (total > 0 && processed >= total)) {
+                        this.importSuccess = false;
+                    } else {
+                        // Transient non-success state (e.g., paused mid-batch) -> keep as in-progress
+                        this.importSuccess = null;
+                    }
                 }
-                // Don't set to true for in-progress success responses
+                // Capture error message if present
                 this.errorMessage = data.error_message || '';
             }
 
