@@ -336,7 +336,7 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
     }
 
     // MONITOR: Track job completion with timeout
-    $monitoring_result = monitor_concurrent_job_completion($action_ids, 300, 5); // 5 minute timeout, check every 5 seconds
+    $monitoring_result = monitor_concurrent_job_completion($action_ids, 60, 5); // 1 minute timeout on Hostinger, check every 5 seconds
 
     if (!$monitoring_result['all_completed']) {
         PuntWorkLogger::warning('Concurrent jobs did not complete successfully', PuntWorkLogger::CONTEXT_BATCH, [
@@ -410,7 +410,7 @@ function calculate_optimal_concurrency($batch_size) {
     $cpu_based_concurrency = max(1, $cpu_cores);
 
     // Batch size based concurrency
-    $batch_based_concurrency = max(1, min(10, ceil($batch_size / 5))); // At least 5 items per concurrent process
+    $batch_based_concurrency = max(1, min(5, ceil($batch_size / 10))); // At least 10 items per concurrent process, max 5 concurrent
 
     // Take the minimum of all constraints
     $optimal_concurrency = min($memory_based_concurrency, $cpu_based_concurrency, $batch_based_concurrency);
@@ -446,8 +446,8 @@ function calculate_optimal_concurrency($batch_size) {
         }
     }
 
-    // Cap at reasonable maximum
-    $optimal_concurrency = min($optimal_concurrency, 20);
+    // Cap at reasonable maximum for Hostinger
+    $optimal_concurrency = min($optimal_concurrency, 5);
 
     PuntWorkLogger::debug('Calculated optimal concurrency with validation', PuntWorkLogger::CONTEXT_BATCH, [
         'batch_size' => $batch_size,

@@ -63,7 +63,7 @@ function process_batch_items_logic($setup) {
 
         // For concurrent processing, allow larger batches but cap to prevent overwhelming Action Scheduler
         $cpu_cores = function_exists('shell_exec') ? (int) shell_exec('nproc 2>/dev/null') : 2;
-        $max_concurrent_batch_size = min(100, $cpu_cores * 10); // Cap at 100 or 10x CPU cores, whichever smaller
+        $max_concurrent_batch_size = min(25, $cpu_cores * 5); // Reduced cap for Hostinger: 25 or 5x CPU cores, whichever smaller
         $batch_size = min($batch_size, $max_concurrent_batch_size);
 
         // Get current and previous batch times for dynamic adjustment
@@ -627,14 +627,11 @@ function process_batch_data($batch_guids, $batch_items, $json_path, $start_index
     $action_scheduler_available = function_exists('as_schedule_single_action');
 
     // Decision logic based on success rates and availability
-    $use_concurrent = false;
-    $decision_reason = '';
+    $use_concurrent = false; // Force sequential processing for Hostinger compatibility
+    $decision_reason = 'forced_sequential_for_hostinger';
 
-    if (!$action_scheduler_available) {
-        $use_concurrent = false;
-        $decision_reason = 'action_scheduler_not_available';
-    } elseif ($concurrent_success_rate >= 0.95 && $concurrent_success_rate > $sequential_success_rate) {
-        // Use concurrent if it has very high success rate and is better than sequential
+    if ($action_scheduler_available && $concurrent_success_rate >= 0.95 && $concurrent_success_rate > $sequential_success_rate) {
+        // Only use concurrent if it has very high success rate and Action Scheduler is working perfectly
         $use_concurrent = true;
         $decision_reason = 'concurrent_high_success_rate';
     } elseif ($sequential_success_rate >= 0.95 && $sequential_success_rate > $concurrent_success_rate) {
@@ -643,8 +640,8 @@ function process_batch_data($batch_guids, $batch_items, $json_path, $start_index
         $decision_reason = 'sequential_high_success_rate';
     } elseif ($concurrent_success_rate >= 0.8) {
         // Use concurrent if success rate is acceptable
-        $use_concurrent = true;
-        $decision_reason = 'concurrent_acceptable_success_rate';
+        $use_concurrent = false; // Still force sequential for Hostinger
+        $decision_reason = 'concurrent_acceptable_but_disabled_for_hostinger';
     } else {
         // Default to sequential if concurrent success rate is low
         $use_concurrent = false;
