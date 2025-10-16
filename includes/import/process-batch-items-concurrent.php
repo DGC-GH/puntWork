@@ -298,7 +298,7 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
             ],
             'puntwork-import-process', // More specific group
             false, // Allow duplicates for concurrent processing
-            AS_ACTION_PRIORITY_NORMAL // Explicit normal priority
+            defined('\AS_ACTION_PRIORITY_NORMAL') ? \AS_ACTION_PRIORITY_NORMAL : 10 // Explicit normal priority
         );
 
         if ($action_id) {
