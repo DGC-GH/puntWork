@@ -770,9 +770,10 @@ function process_batch_data($batch_guids, $batch_items, $json_path, $start_index
     $concurrent_success_rate = get_concurrent_success_rate();
     $sequential_success_rate = get_sequential_success_rate();
 
-    // Default to concurrent processing - sequential is now rare fallback
-    $use_concurrent = true; // Default to concurrent
-    $decision_reason = 'concurrent_first_reset';
+    // CRITICAL: Force SEQUENTIAL only - concurrent processing has fundamental issues with Action Scheduler data corruption
+    // Based on debug logs showing repeated concurrent failures with success_rate: 0
+    $use_concurrent = false; // FORCE SEQUENTIAL PROCESSING
+    $decision_reason = 'concurrent_disabled_data_corruption';
 
     PuntWorkLogger::info('Concurrent-first processing initiated - resetting historical metrics', PuntWorkLogger::CONTEXT_BATCH, [
         'reset_concurrent_success_rate' => 1.0,
