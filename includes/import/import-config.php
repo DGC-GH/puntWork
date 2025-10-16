@@ -67,7 +67,6 @@ function get_import_config() {
             'retention_days' => 90,
             'batch_size' => 100,
             'safety_checks' => true,
-            'feed_integrity_validation' => true,
         ],
 
         // Performance monitoring
@@ -96,15 +95,9 @@ function get_import_config() {
             'auto_recovery' => true,
             'alert_thresholds' => [
                 'consecutive_failures' => 3,
-                'success_rate_drop' => 0.1, // 10% drop
-                'performance_degradation' => 2.0, // 2x slower
+                'success_rate_drop' => 0.1,
+                'performance_degradation' => 2.0,
             ],
-        ],
-
-        // Legacy compatibility
-        'legacy' => [
-            'batch_fallback' => true,
-            'backward_compatibility' => true,
         ],
     ];
 
@@ -115,9 +108,6 @@ function get_import_config() {
     // Apply server-specific adaptations
     $config = adapt_config_for_server($config);
 
-    // Cache configuration
-    set_transient('puntwork_import_config_cache', $config, 300); // 5 minute cache
-
     return $config;
 }
 
@@ -125,44 +115,23 @@ function get_import_config() {
  * Adapt configuration based on server capabilities
  */
 function adapt_config_for_server($config) {
-    // Get server information
     $cpu_count = function_exists('shell_exec') ? (int)shell_exec('nproc 2>/dev/null') : 2;
     $memory_limit = get_memory_limit_bytes();
-    $time_limit = ini_get('max_execution_time');
 
     // High-performance server detection
     if ($cpu_count >= $config['resources']['cpu_intensive_threshold']) {
         $config['resources']['memory_limit_threshold'] += $config['resources']['adaptive_memory_boost'];
-        $config['processing_mode'] = 'streaming'; // Force streaming on powerful servers
-
         PuntWorkLogger::info('High-performance server detected, optimizing configuration', PuntWorkLogger::CONTEXT_IMPORT, [
             'cpu_cores' => $cpu_count,
-            'memory_limit_bytes' => $memory_limit,
             'adapted_memory_threshold' => $config['resources']['memory_limit_threshold']
         ]);
     }
 
     // Memory-constrained server
     $memory_mb = $memory_limit / 1024 / 1024;
-    if ($memory_mb < 256) { // Less than 256MB
-        $config['streaming']['progress_save_interval'] = 50; // Save more frequently
-        $config['resources']['memory_limit_threshold'] = 0.7; // More conservative memory usage
-
-        PuntWorkLogger::info('Memory-constrained server detected, adjusting limits', PuntWorkLogger::CONTEXT_IMPORT, [
-            'available_memory_mb' => $memory_mb,
-            'conservative_threshold' => $config['resources']['memory_limit_threshold']
-        ]);
-    }
-
-    // Time-constrained server
-    if ($time_limit > 0 && $time_limit < 300) { // Less than 5 minutes
-        $config['streaming']['resource_check_interval'] = 2; // Check more frequently
-        $config['resources']['time_limit_buffer'] = 30; // Smaller buffer
-
-        PuntWorkLogger::info('Time-constrained server detected, adjusting intervals', PuntWorkLogger::CONTEXT_IMPORT, [
-            'max_execution_time' => $time_limit,
-            'resource_check_interval' => $config['streaming']['resource_check_interval']
-        ]);
+    if ($memory_mb < 256) {
+        $config['streaming']['progress_save_interval'] = 50;
+        $config['resources']['memory_limit_threshold'] = 0.7;
     }
 
     return $config;
@@ -175,18 +144,13 @@ function update_import_config($new_config) {
     $current = get_import_config();
     $updated = array_replace_recursive($current, $new_config);
 
-    // Validate configuration
     $validation = validate_import_config($updated);
     if (!$validation['valid']) {
-        PuntWorkLogger::error('Invalid import configuration', PuntWorkLogger::CONTEXT_IMPORT, [
-            'errors' => $validation['errors']
-        ]);
         return ['success' => false, 'errors' => $validation['errors']];
     }
 
-    // Save configuration
     update_option('puntwork_import_config', $updated);
-    delete_transient('puntwork_import_config_cache'); // Clear cache
+    delete_transient('puntwork_import_config_cache');
 
     PuntWorkLogger::info('Import configuration updated', PuntWorkLogger::CONTEXT_IMPORT, [
         'changes' => $new_config
@@ -196,47 +160,21 @@ function update_import_config($new_config) {
 }
 
 /**
- * Validate configuration settings
- */
-function validate_import_config($config) {
-    $errors = [];
-
-    // Processing mode validation
-    if (!in_array($config['processing_mode'], ['streaming', 'batch'])) {
-        $errors[] = 'Invalid processing mode';
-    }
-
-    // Resource validation
-    if ($config['resources']['memory_limit_threshold'] <= 0 || $config['resources']['memory_limit_threshold'] > 1) {
-        $errors[] = 'Memory limit threshold must be between 0 and 1';
-    }
-
-    // Streaming validation
-    if ($config['streaming']['progress_update_interval'] < 1) {
-        $errors[] = 'Progress update interval must be positive';
-    }
-
-    return [
-        'valid' => empty($errors),
-        'errors' => $errors
-    ];
-}
-
-/**
  * Get configuration value with fallback
  */
 function get_import_config_value($key, $default = null) {
     $config = get_import_config();
     $keys = explode('.', $key);
+    $current = $config;
 
     foreach ($keys as $k) {
-        if (!isset($config[$k])) {
+        if (!isset($current[$k])) {
             return $default;
         }
-        $config = $config[$k];
+        $current = $current[$k];
     }
 
-    return $config;
+    return $current;
 }
 
 /**
@@ -259,35 +197,37 @@ function set_import_config_value($key, $value) {
 }
 
 /**
- * Reset configuration to defaults
+ * Validate configuration settings
  */
-function reset_import_config() {
-    delete_option('puntwork_import_config');
-    delete_transient('puntwork_import_config_cache');
+function validate_import_config($config) {
+    $errors = [];
 
-    PuntWorkLogger::info('Import configuration reset to defaults', PuntWorkLogger::CONTEXT_IMPORT);
+    if (!in_array($config['processing_mode'], ['streaming', 'batch'])) {
+        $errors[] = 'Invalid processing mode';
+    }
 
-    return ['success' => true, 'config' => get_import_config()];
+    if ($config['resources']['memory_limit_threshold'] <= 0 || $config['resources']['memory_limit_threshold'] > 1) {
+        $errors[] = 'Memory limit threshold must be between 0 and 1';
+    }
+
+    return ['valid' => empty($errors), 'errors' => $errors];
 }
 
 /**
- * Export configuration for backup/debugging
+ * Export configuration for backup
  */
 function export_import_config() {
     $config = get_import_config();
-    $export = [
+    return [
         'version' => '1.1.0',
         'exported_at' => date('Y-m-d H:i:s'),
         'config' => $config,
         'server_info' => [
-            'php_version' => phpversion(),
             'memory_limit' => ini_get('memory_limit'),
             'max_execution_time' => ini_get('max_execution_time'),
             'cpu_cores' => function_exists('shell_exec') ? (int)shell_exec('nproc 2>/dev/null') : 'unknown',
         ]
     ];
-
-    return $export;
 }
 
 /**
@@ -299,21 +239,12 @@ function import_import_config($export_data) {
     }
 
     $config = $export_data['config'];
-
-    // Validate imported configuration
     $validation = validate_import_config($config);
     if (!$validation['valid']) {
         return ['success' => false, 'errors' => $validation['errors']];
     }
 
-    // Save configuration
     update_option('puntwork_import_config', $config);
-    delete_transient('puntwork_import_config_cache');
-
-    PuntWorkLogger::info('Import configuration imported', PuntWorkLogger::CONTEXT_IMPORT, [
-        'version' => $export_data['version'] ?? 'unknown',
-        'exported_at' => $export_data['exported_at'] ?? 'unknown'
-    ]);
 
     return ['success' => true, 'config' => $config];
 }
