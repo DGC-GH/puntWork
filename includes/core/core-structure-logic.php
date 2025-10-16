@@ -113,9 +113,39 @@ function process_one_feed($feed_key, $url, $output_dir, $fallback_domain, &$logs
     $json_path = $output_dir . $json_filename;
     $gz_json_path = $json_path . '.gz';
 
+    // Update import status: feed download starting
+    try {
+        $status = get_import_status();
+        $status['phase'] = 'feed-downloading';
+        $status['current_feed'] = $feed_key;
+        $status['last_update'] = time();
+        $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Starting download for ' . $feed_key;
+        set_import_status_atomic($status);
+    } catch (\Exception $e) {
+        // Non-fatal; continue
+    }
+
     if (!download_feed($url, $xml_path, $output_dir, $logs, $force_use_wp_remote)) {
+        // Report failed download in import status
+        try {
+            $status = get_import_status();
+            $status['phase'] = 'feed-downloading';
+            $status['last_update'] = time();
+            $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Download failed for ' . $feed_key;
+            set_import_status_atomic($status);
+        } catch (\Exception $e) {}
         return 0;
     }
+
+    // Download succeeded; update import status
+    try {
+        $status = get_import_status();
+        $status['phase'] = 'feed-processing';
+        $status['current_feed'] = $feed_key;
+        $status['last_update'] = time();
+        $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Download complete for ' . $feed_key;
+        set_import_status_atomic($status);
+    } catch (\Exception $e) {}
 
     $handle = fopen($json_path, 'w');
     if (!$handle) throw new \Exception("Can't open $json_path");
@@ -126,8 +156,25 @@ function process_one_feed($feed_key, $url, $output_dir, $fallback_domain, &$logs
     if (!chmod($json_path, 0644)) {
         PuntWorkLogger::warn('Failed to chmod JSONL file', PuntWorkLogger::CONTEXT_FEED, ['path' => $json_path]);
     }
+    // Update import status with count of items processed from this feed
+    try {
+        $status = get_import_status();
+        $status['last_update'] = time();
+        $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Processed ' . $count . ' items for ' . $feed_key;
+        // Keep a running total of items discovered
+        $status['total'] = ($status['total'] ?? 0) + $count;
+        set_import_status_atomic($status);
+    } catch (\Exception $e) {}
 
     gzip_file($json_path, $gz_json_path);
+
+    // Update import status to indicate gzip finished for this feed
+    try {
+        $status = get_import_status();
+        $status['last_update'] = time();
+        $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Gzipped JSONL for ' . $feed_key;
+        set_import_status_atomic($status);
+    } catch (\Exception $e) {}
     return $count;
 }
 
