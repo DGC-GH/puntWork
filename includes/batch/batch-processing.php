@@ -61,28 +61,33 @@ function process_batch_items_logic($setup) {
         $last_peak_memory = get_last_peak_memory();
         $last_memory_ratio = $last_peak_memory / $memory_limit_bytes;
 
-        // For concurrent processing, allow larger batches but cap to prevent overwhelming Action Scheduler
-        $cpu_cores = function_exists('shell_exec') ? (int) shell_exec('nproc 2>/dev/null') : 2;
-        $max_concurrent_batch_size = min(100, $cpu_cores * 5); // Increased cap for performance: 100 or 5x CPU cores, whichever smaller
-        $batch_size = min($batch_size, $max_concurrent_batch_size);
+        // PERFORMANCE OPTIMIZATION: Pre-compute optimal batch size based on system resources
+        // Avoid expensive dynamic recalculations during processing
+        static $optimal_batch_size = null;
+        if ($optimal_batch_size === null) {
+            $cpu_cores = function_exists('shell_exec') ? (int) shell_exec('nproc 2>/dev/null') : 2;
+            $memory_mb = $memory_limit_bytes / 1024 / 1024;
 
-        // Get current and previous batch times for dynamic adjustment
-        $current_batch_time = get_last_batch_time();
-        $previous_batch_time = get_previous_batch_time();
+            // Conservative calculation: base size based on memory and CPU, adjusted for efficiency
+            $memory_based_size = max(25, min(100, round($memory_mb / 50))); // 25-100 based on memory
+            $cpu_based_size = max(25, $cpu_cores * 8); // Conservative CPU scaling
 
-        try {
-            $adjustment_result = adjust_batch_size_concurrent($batch_size, $memory_limit_bytes, $last_memory_ratio, $current_batch_time, $previous_batch_time, $cpu_cores);
-            $batch_size = $adjustment_result['batch_size'];
-            // Ensure batch size doesn't exceed concurrent cap
-            $batch_size = min($batch_size, $max_concurrent_batch_size);
-        } catch (\Exception $e) {
-            PuntWorkLogger::error('Failed to adjust batch size, using default', PuntWorkLogger::CONTEXT_BATCH, [
-                'error' => $e->getMessage(),
-                'original_batch_size' => $old_batch_size
+            $optimal_batch_size = min($memory_based_size, $cpu_based_size, 150); // Cap at 150 for safety
+
+            PuntWorkLogger::info('Pre-calculated optimal batch size', PuntWorkLogger::CONTEXT_BATCH, [
+                'optimal_size' => $optimal_batch_size,
+                'memory_based' => $memory_based_size,
+                'cpu_based' => $cpu_based_size,
+                'memory_mb' => round($memory_mb),
+                'cpu_cores' => $cpu_cores
             ]);
-            $batch_size = $old_batch_size; // Fallback to original size
-            $adjustment_result = ['batch_size' => $batch_size, 'reason' => 'error fallback'];
         }
+
+        $batch_size = min($batch_size, $optimal_batch_size);
+
+        // PERFORMANCE OPTIMIZATION: Skip expensive batch size recalculations during import
+        // Dynamic adjustment removed - now using pre-calculated optimal batch size
+        $adjustment_result = ['batch_size' => $batch_size, 'reason' => 'precalculated'];
 
         // Only update and log if changed
         if ($batch_size != $old_batch_size) {
@@ -674,6 +679,16 @@ function check_import_limits_and_heartbeat(array &$logs, $iteration_index, $curr
  */
 function process_batch_data($batch_guids, $batch_items, $json_path, $start_index, &$logs, &$published, &$updated, &$skipped, &$duplicates_drafted) {
     global $wpdb;
+
+    // PERFORMANCE OPTIMIZATION: Added memory monitoring and proactive garbage collection
+    $memory_before = memory_get_usage(true);
+    $peak_memory_before = memory_get_peak_usage(true);
+
+    PuntWorkLogger::info('Starting batch data processing with memory monitoring', PuntWorkLogger::CONTEXT_BATCH, [
+        'batch_guids_count' => count($batch_guids),
+        'memory_before_mb' => round($memory_before / 1024 / 1024, 2),
+        'peak_memory_before_mb' => round($peak_memory_before / 1024 / 1024, 2)
+    ]);
 
     // Ensure counter variables are integers to prevent type corruption
     $published = is_int($published) ? $published : (int)$published;
