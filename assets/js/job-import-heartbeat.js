@@ -75,6 +75,21 @@
             if (data['puntwork_import_update']) {
                 var update = data['puntwork_import_update'];
 
+                // Timing diagnostics: compare server last_update to client time
+                try {
+                    var serverStatus = update.status || {};
+                    var serverLastUpdate = serverStatus.last_update || serverStatus.last_update === 0 ? serverStatus.last_update : null;
+                    var clientReceive = Math.floor(Date.now() / 1000);
+                    if (serverLastUpdate) {
+                        var lag = clientReceive - serverLastUpdate;
+                        console.log('[PUNTWORK] Heartbeat update: server last_update=', serverLastUpdate, 'client_receive=', clientReceive, 'lag_seconds=', lag);
+                    } else {
+                        console.log('[PUNTWORK] Heartbeat update received (no server last_update) client_receive=', clientReceive);
+                    }
+                } catch (e) {
+                    // ignore diagnostics
+                }
+
                 // Check if status actually changed
                 var currentHash = this.generateStatusHash(update.status);
                 if (currentHash !== this.lastStatusHash) {

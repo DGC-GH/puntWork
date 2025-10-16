@@ -689,6 +689,20 @@ console.log('[PUNTWORK] job-import-events.js loaded');
                 JobImportAPI.getImportStatus().then(function(response) {
                     if (response && response.success) {
                         var status = JobImportUI.normalizeResponseData(response);
+                        // Timing diagnostics: compare server last_update to client time
+                        try {
+                            var serverLastUpdate = status.last_update || status.last_update === 0 ? status.last_update : null;
+                            var clientReceive = Math.floor(Date.now() / 1000);
+                            if (serverLastUpdate) {
+                                var lag = clientReceive - serverLastUpdate;
+                                console.log('[PUNTWORK] Immediate status fetch: server last_update=', serverLastUpdate, 'client_receive=', clientReceive, 'lag_seconds=', lag);
+                            } else {
+                                console.log('[PUNTWORK] Immediate status fetch: server last_update missing, client_receive=', clientReceive);
+                            }
+                        } catch (e) {
+                            // Ignore timing diagnostic failures
+                        }
+
                         JobImportUI.updateProgress(status);
                         if (status.logs && status.logs.length > 0) {
                             JobImportUI.appendLogs(status.logs);
