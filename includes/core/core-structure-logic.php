@@ -123,7 +123,9 @@ function process_one_feed($feed_key, $url, $output_dir, $fallback_domain, &$logs
     $total_items = 0;
     $count = process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
     fclose($handle);
-    @chmod($json_path, 0644);
+    if (!chmod($json_path, 0644)) {
+        PuntWorkLogger::warn('Failed to chmod JSONL file', PuntWorkLogger::CONTEXT_FEED, ['path' => $json_path]);
+    }
 
     gzip_file($json_path, $gz_json_path);
     return $count;
@@ -329,7 +331,9 @@ function process_feed_after_download($feed_key, $xml_path, $output_dir, $fallbac
     $total_items = 0;
     $count = process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
     fclose($handle);
-    @chmod($json_path, 0644);
+    if (!chmod($json_path, 0644)) {
+        PuntWorkLogger::warn('Failed to chmod JSONL file', PuntWorkLogger::CONTEXT_FEED, ['path' => $json_path]);
+    }
 
     gzip_file($json_path, $gz_json_path);
 
