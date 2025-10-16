@@ -285,7 +285,7 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
     // Schedule concurrent processing for each item in the batch
     foreach ($batch_guids as $guid) {
         $action_id = as_schedule_single_action(
-            time(),
+            time() + 1, // Small delay to prevent conflicts and allow immediate execution
             'puntwork_process_single_item',
             [
                 'guid' => $guid,
@@ -293,9 +293,12 @@ function process_batch_items_concurrent($batch_guids, $batch_items, $last_update
                 'start_index' => $start_index,
                 'acf_fields' => $acf_fields,
                 'zero_empty_fields' => $zero_empty_fields,
-                'user_id' => $user_id
+                'user_id' => $user_id,
+                'concurrent_mode' => true // Flag for optimized concurrent processing
             ],
-            'puntwork-import'
+            'puntwork-import-process', // More specific group
+            false, // Allow duplicates for concurrent processing
+            AS_ACTION_PRIORITY_NORMAL // Explicit normal priority
         );
 
         if ($action_id) {

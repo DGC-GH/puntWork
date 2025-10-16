@@ -1008,6 +1008,21 @@ function continue_paused_import() {
         'cron_scheduled' => wp_next_scheduled('puntwork_continue_import') ? true : false
     ]);
 
+    // Enhanced: Check for proper pause_time before proceeding with continuation
+    if ($status['pause_time'] === null) {
+        error_log('[PUNTWORK] No pause_time found in status - continuation not applicable');
+        PuntWorkLogger::info('Continuation skipped - no pause_time found', PuntWorkLogger::CONTEXT_BATCH, [
+            'current_status' => $status,
+            'method' => 'primary_cron',
+            'processed' => $status['processed'] ?? 0,
+            'total' => $status['total'] ?? 0,
+            'complete' => $status['complete'] ?? false,
+            'paused' => $status['paused'] ?? false,
+            'phase' => $status['phase'] ?? 'unknown'
+        ]);
+        return;
+    }
+
     // Diagnostic snapshot on continuation attempt
     add_import_diagnostics('primary_continuation_attempt', ['attempt_number' => $status['continuation_attempts']]);
 
