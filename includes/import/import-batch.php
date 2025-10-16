@@ -39,6 +39,9 @@ require_once __DIR__ . '/../utilities/puntwork-logger.php';
 // Include core structure logic for feed processing
 require_once __DIR__ . '/../core/core-structure-logic.php';
 
+// Include streaming architecture for Phase 1 implementation
+require_once __DIR__ . '/import-streaming.php';
+
 /**
  * Check if the current import process has exceeded time limits
  * Similar to WooCommerce's time_exceeded() method
@@ -124,13 +127,35 @@ function should_continue_batch_processing() {
 
 if (!function_exists('import_jobs_from_json')) {
     /**
-     * Import jobs from JSONL file in batches.
+     * Import jobs from JSONL file - routes to streaming or batch based on configuration.
      *
      * @param bool $is_batch Whether this is a batch import.
      * @param int $batch_start Starting index for batch.
      * @return array Import result data.
      */
     function import_jobs_from_json($is_batch = false, $batch_start = 0) {
+        // PHASE 1 IMPLEMENTATION: Route to streaming architecture
+        // TODO: Add configuration flag to switch between streaming and batch processing
+        $use_streaming = true; // Force streaming for Phase 1
+
+        if ($use_streaming) {
+            PuntWorkLogger::info('Routing import to streaming architecture', PuntWorkLogger::CONTEXT_IMPORT, [
+                'phase' => 'phase_1_streaming_implementation',
+                'use_streaming' => true,
+                'batch_start' => $batch_start
+            ]);
+
+            // Route to streaming architecture instead of batch processing
+            return import_jobs_streaming($batch_start > 0); // preserve_status for continuation
+        }
+
+        // Fallback to legacy batch processing (for backward compatibility)
+        PuntWorkLogger::info('Using legacy batch processing', PuntWorkLogger::CONTEXT_IMPORT, [
+            'phase' => 'legacy_batch_fallback',
+            'use_streaming' => false,
+            'batch_start' => $batch_start
+        ]);
+
         $setup = prepare_import_setup($batch_start);
         if (is_wp_error($setup)) {
             // Resume cache invalidation on setup failure
