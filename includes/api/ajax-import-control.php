@@ -1595,6 +1595,78 @@ function manually_resume_stuck_import_ajax() {
 }
 
 /**
+ * WordPress Heartbeat handler for real-time import status updates
+ * Responds to heartbeat requests with current import status data
+ */
+add_action('heartbeat_received', __NAMESPACE__ . '\\puntwork_heartbeat_handler', 10, 2);
+function puntwork_heartbeat_handler($response, $data) {
+    try {
+        // Check if client requested import status updates
+        if (isset($data['puntwork_import_status'])) {
+            $response['puntwork_import_update'] = [
+                'status' => get_import_status(),
+                'is_active' => false, // Will be set below
+                'timestamp' => microtime(true)
+            ];
+
+            // Determine if import is active
+            $status = $response['puntwork_import_update']['status'];
+            $is_complete = $status['complete'] ?? false;
+            $is_running = !$is_complete &&
+                         (isset($status['start_time']) || ($status['processed'] ?? 0) > 0);
+
+            $response['puntwork_import_update']['is_active'] = $is_running;
+
+            // Only log when there's meaningful activity to avoid spam
+            if ($is_running || $is_complete) {
+                PuntWorkLogger::debug('Heartbeat import status update sent', PuntWorkLogger::CONTEXT_AJAX, [
+                    'processed' => $status['processed'] ?? 0,
+                    'total' => $status['total'] ?? 0,
+                    'complete' => $is_complete,
+                    'is_active' => $is_running,
+                    'timestamp' => $response['puntwork_import_update']['timestamp']
+                ]);
+            }
+        }
+
+        // Handle scheduled imports status if requested
+        if (isset($data['puntwork_scheduled_imports'])) {
+            $active_imports = check_active_scheduled_imports();
+            $schedule_enabled = get_option('puntwork_import_schedule', ['enabled' => false]);
+            $schedule_enabled = $schedule_enabled['enabled'] ?? false;
+            $schedule_frequency = get_option('puntwork_import_schedule', ['frequency' => 'daily']);
+            $schedule_frequency = $schedule_frequency['frequency'] ?? 'daily';
+
+            $response['puntwork_scheduled_imports'] = [
+                'data' => [
+                    'schedule_enabled' => $schedule_enabled,
+                    'schedule_frequency' => $schedule_frequency,
+                    'active_imports' => $active_imports,
+                    'has_active_imports' => !empty($active_imports)
+                ],
+                'has_changes' => true, // Always send for now, could be optimized with change detection
+                'timestamp' => microtime(true)
+            ];
+        }
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Heartbeat handler error', PuntWorkLogger::CONTEXT_AJAX, [
+            'error_message' => $e->getMessage(),
+            'error_file' => $e->getFile(),
+            'error_line' => $e->getLine()
+        ]);
+
+        // Send error response in heartbeat
+        $response['puntwork_heartbeat_error'] = [
+            'message' => 'Heartbeat processing failed',
+            'timestamp' => microtime(true)
+        ];
+    }
+
+    return $response;
+}
+
+/**
  * POISON PILL: Aggressively cancel all import-related background processes
  * This function implements a comprehensive cancellation system that interrupts
  * running imports at multiple levels for immediate termination.
