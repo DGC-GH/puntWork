@@ -16,8 +16,6 @@
          * Initialize heartbeat functionality
          */
         init: function() {
-            console.log('[PUNTWORK] JobImportHeartbeat.init() called');
-
             // Configure heartbeat for our needs
             this.configureHeartbeat();
 
@@ -26,8 +24,6 @@
 
             // Initial status check
             this.checkInitialStatus();
-
-            console.log('[PUNTWORK] JobImportHeartbeat initialized');
         },
 
         /**
@@ -62,7 +58,6 @@
 
             // Handle heartbeat errors
             $(document).on('heartbeat-error', function(e, jqXHR, textStatus, error) {
-                console.log('[PUNTWORK] Heartbeat error:', textStatus, error);
                 PuntWorkJSLogger.warn('Heartbeat communication error', 'HEARTBEAT', {
                     status: textStatus,
                     error: error
@@ -79,12 +74,10 @@
             // Handle import status updates
             if (data['puntwork_import_update']) {
                 var update = data['puntwork_import_update'];
-                console.log('[PUNTWORK] Heartbeat import update received:', update);
 
                 // Check if status actually changed
                 var currentHash = this.generateStatusHash(update.status);
                 if (currentHash !== this.lastStatusHash) {
-                    console.log('[PUNTWORK] Import status changed, updating UI');
                     this.updateImportUI(update.status);
                     this.lastStatusHash = currentHash;
 
@@ -104,7 +97,6 @@
             // Handle scheduled imports updates
             if (data['puntwork_scheduled_imports']) {
                 var scheduledUpdate = data['puntwork_scheduled_imports'];
-                console.log('[PUNTWORK] Heartbeat scheduled imports update:', scheduledUpdate);
 
                 if (scheduledUpdate.has_changes) {
                     this.updateScheduledUI(scheduledUpdate.data);
@@ -115,7 +107,6 @@
             if (data['puntwork_import_status']) {
                 var statusResponse = data['puntwork_import_status'];
                 if (statusResponse.has_changes) {
-                    console.log('[PUNTWORK] Explicit status response received');
                     this.updateImportUI(statusResponse.status);
                     this.lastStatusHash = this.generateStatusHash(statusResponse.status);
                 }
@@ -153,7 +144,6 @@
 
             // Handle completion
             if (normalizedStatus.complete) {
-                console.log('[PUNTWORK] Import completed via heartbeat');
                 this.handleImportCompletion(normalizedStatus);
             }
 
@@ -188,8 +178,6 @@
          * Handle import completion
          */
         handleImportCompletion: function(status) {
-            console.log('[PUNTWORK] Handling import completion via heartbeat');
-
             // Stop considering import active
             this.isImportActive = false;
 
@@ -272,7 +260,6 @@
          */
         checkInitialStatus: function() {
             var self = this;
-            console.log('[PUNTWORK] Checking initial import status');
 
             // Do one initial AJAX call to get current status
             JobImportAPI.getImportStatus().then(function(response) {
@@ -283,20 +270,13 @@
                     // Check if import is currently active
                     self.isImportActive = !status.complete && (status.processed > 0 || status.total > 0);
 
-                    console.log('[PUNTWORK] Initial status loaded:', {
-                        active: self.isImportActive,
-                        processed: status.processed,
-                        total: status.total,
-                        complete: status.complete
-                    });
-
                     // Update UI with initial status
                     if (self.isImportActive || status.complete) {
                         self.updateImportUI(status);
                     }
                 }
             }).catch(function(error) {
-                console.log('[PUNTWORK] Initial status check failed:', error);
+                PuntWorkJSLogger.warn('Initial status check failed', 'HEARTBEAT', error);
             });
         },
 
@@ -304,7 +284,6 @@
          * Force a status refresh (can be called externally)
          */
         forceStatusRefresh: function() {
-            console.log('[PUNTWORK] Forcing status refresh');
             wp.heartbeat.enqueue('puntwork_import_status', 'force', false);
         },
 
@@ -319,8 +298,6 @@
             if (this.heartbeatInterval) {
                 clearInterval(this.heartbeatInterval);
             }
-
-            console.log('[PUNTWORK] JobImportHeartbeat destroyed');
         }
     };
 
