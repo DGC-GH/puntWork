@@ -1,6 +1,7 @@
 .DS_Store
 assets/.DS_Store
 Console.txt
+.env
 
 # Dependencies
 vendor/
