@@ -95,6 +95,7 @@ function setup_job_import() {
         
         // Admin interface
         'admin/admin-menu.php',
+        'admin/admin-import-settings.php',
         'admin/admin-page-html.php',
         'admin/admin-ui-debug.php',
         'admin/admin-ui-main.php',
