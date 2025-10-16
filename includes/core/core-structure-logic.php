@@ -256,68 +256,7 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
 
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Sequential downloads completed: ' . $successful_downloads . '/' . count($feeds) . ' feeds in ' . round($parallel_download_time, 2) . 's';
 
-    // Process downloaded feeds sequentially (XML processing can't be easily parallelized)
-    foreach ($download_tasks as $feed_key => $task) {
-        if (file_exists($task['xml_path']) && filesize($task['xml_path']) > 1000) {
-            $count = process_feed_after_download($feed_key, $task['xml_path'], $output_dir, $fallback_domain, $logs);
-            $total_items += $count;
-
-            // Update progress after processing each feed
-            $processed_feeds++;
-            $feed_status['processed'] = $processed_feeds;
-            $feed_status['time_elapsed'] = microtime(true) - $start_time;
-            set_import_status($feed_status);
-
-            PuntWorkLogger::debug('Feed processing progress update', PuntWorkLogger::CONTEXT_FEED, [
-                'feed_key' => $feed_key,
-                'processed_feeds' => $processed_feeds,
-                'total_feeds' => $total_feeds,
-                'items_in_feed' => $count,
-                'total_items_so_far' => $total_items
-            ]);
-        } else {
-            // Count failed feeds as processed but log the failure
-            $processed_feeds++;
-            $feed_status['processed'] = $processed_feeds;
-            $feed_status['time_elapsed'] = microtime(true) - $start_time;
-            set_import_status($feed_status);
-
-            PuntWorkLogger::warn('Feed processing skipped - download failed', PuntWorkLogger::CONTEXT_FEED, [
-                'feed_key' => $feed_key,
-                'processed_feeds' => $processed_feeds,
-                'total_feeds' => $total_feeds
-            ]);
-        }
-    }
-
     return $total_items;
-}
-
-function process_feed_after_download($feed_key, $xml_path, $output_dir, $fallback_domain, &$logs) {
-    $json_filename = $feed_key . '.jsonl';
-    $json_path = $output_dir . $json_filename;
-    $gz_json_path = $json_path . '.gz';
-
-    $handle = fopen($json_path, 'w');
-    if (!$handle) throw new \Exception("Can't open $json_path");
-    $batch_size = 100;
-    $total_items = 0;
-    $count = process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
-    fclose($handle);
-    if (!chmod($json_path, 0644)) {
-        PuntWorkLogger::warn('Failed to chmod JSONL file', PuntWorkLogger::CONTEXT_FEED, ['path' => $json_path]);
-    }
-
-    gzip_file($json_path, $gz_json_path);
-
-    PuntWorkLogger::info('Feed processing completed', PuntWorkLogger::CONTEXT_FEED, [
-        'feed_key' => $feed_key,
-        'items_processed' => $count,
-        'jsonl_path' => $json_path,
-        'gz_path' => $gz_json_path
-    ]);
-
-    return $count;
 }
 
 function fetch_and_generate_combined_json() {
