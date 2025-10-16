@@ -53,14 +53,6 @@ function render_javascript_init() {
             console.log('[PUNTWORK] Inline script: JobImportLogic available:', typeof JobImportLogic);
             console.log('[PUNTWORK] Inline script: jobImportInitialized:', typeof window.jobImportInitialized);
 
-            // Add a simple test function to global scope
-            window.testButtons = function() {
-                console.log('[PUNTWORK] Testing buttons...');
-                // Test functionality here if needed
-            };
-
-            console.log('[PUNTWORK] Run testButtons() in console to test button functionality');
-
             // Only initialize if not already initialized
             if (typeof window.jobImportInitialized === 'undefined') {
                 console.log('[PUNTWORK] Inline script: Initializing job import system...');
@@ -227,14 +219,6 @@ function render_jobs_javascript_init() {
             console.log('[PUNTWORK] Jobs Dashboard: JobImportUI available:', typeof JobImportUI);
             console.log('[PUNTWORK] Jobs Dashboard: JobImportAPI available:', typeof JobImportAPI);
             console.log('[PUNTWORK] Jobs Dashboard: JobImportLogic available:', typeof JobImportLogic);
-
-            // Add a simple test function to global scope
-            window.testJobsButtons = function() {
-                console.log('[PUNTWORK] Testing jobs buttons...');
-                // Test functionality here if needed
-            };
-
-            console.log('[PUNTWORK] Run testJobsButtons() in console to test button functionality');
 
             // Only initialize if not already initialized
             if (typeof window.jobsDashboardInitialized === 'undefined') {
