@@ -1,3 +1,5 @@
+
+
 Heartbeat control - Requested by DGC-GH to prevent timeouts during long imports.
 Challenge: Is heartbeat manipulation safe? Could we use smaller batches instead?
 
