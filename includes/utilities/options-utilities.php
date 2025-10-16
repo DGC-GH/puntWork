@@ -23,7 +23,34 @@ function get_import_status() {
         $status['logs'] = [];
     }
     
-    return $status;
+    // Provide defaults for all status fields to prevent undefined values
+    $defaults = [
+        'total' => 0,
+        'processed' => 0,
+        'published' => 0,
+        'updated' => 0,
+        'skipped' => 0,
+        'duplicates_drafted' => 0,
+        'time_elapsed' => 0.0,
+        'complete' => false,
+        'success' => null,
+        'error_message' => '',
+        'batch_size' => get_batch_size(),
+        'inferred_languages' => 0,
+        'inferred_benefits' => 0,
+        'schema_generated' => 0,
+        'start_time' => null,
+        'end_time' => null,
+        'last_update' => null,
+        'resume_progress' => 0,
+        'batch_count' => 0,
+        'job_importing_time_elapsed' => 0.0,
+        'estimated_time_remaining' => 0.0,
+        'logs' => []
+    ];
+    
+    // Merge defaults with existing status, ensuring all fields are present
+    return array_merge($defaults, $status);
 }
 
 /**
