@@ -692,10 +692,11 @@ function process_batch_data($batch_guids, $batch_items, $json_path, $start_index
 
     // Bulk existing post_ids
     $guid_placeholders = implode(',', array_fill(0, count($batch_guids), '%s'));
-    $existing_meta = $wpdb->get_results($wpdb->prepare(
-        "SELECT post_id, meta_value AS guid FROM $wpdb->postmeta WHERE meta_key = 'guid' AND meta_value IN ($guid_placeholders)",
-        $batch_guids
-    ));
+    $sql = "SELECT post_id, meta_value AS guid FROM $wpdb->postmeta WHERE meta_key = 'guid' AND meta_value IN ($guid_placeholders)";
+    $prepare_args = $batch_guids;
+    array_unshift($prepare_args, $sql);
+    $prepared_sql = call_user_func_array([$wpdb, 'prepare'], $prepare_args);
+    $existing_meta = $wpdb->get_results($prepared_sql);
     $existing_by_guid = [];
     foreach ($existing_meta as $row) {
         $existing_by_guid[$row->guid][] = $row->post_id;
@@ -715,20 +716,22 @@ function process_batch_data($batch_guids, $batch_items, $json_path, $start_index
         foreach ($post_id_chunks as $chunk) {
             if (empty($chunk)) continue;
             $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
-            $chunk_last = $wpdb->get_results($wpdb->prepare(
-                "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_last_import_update' AND post_id IN ($placeholders)",
-                $chunk
-            ), OBJECT_K);
+            $chunk_sql = "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_last_import_update' AND post_id IN ($placeholders)";
+            $chunk_prepare_args = $chunk;
+            array_unshift($chunk_prepare_args, $chunk_sql);
+            $prepared_chunk_sql = call_user_func_array([$wpdb, 'prepare'], $chunk_prepare_args);
+            $chunk_last = $wpdb->get_results($prepared_chunk_sql, OBJECT_K);
             $last_updates += (array)$chunk_last;
         }
 
         foreach ($post_id_chunks as $chunk) {
             if (empty($chunk)) continue;
             $placeholders = implode(',', array_fill(0, count($chunk), '%d'));
-            $chunk_hashes = $wpdb->get_results($wpdb->prepare(
-                "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)",
-                $chunk
-            ), OBJECT_K);
+            $chunk_sql2 = "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_import_hash' AND post_id IN ($placeholders)";
+            $chunk_prepare_args2 = $chunk;
+            array_unshift($chunk_prepare_args2, $chunk_sql2);
+            $prepared_chunk_sql2 = call_user_func_array([$wpdb, 'prepare'], $chunk_prepare_args2);
+            $chunk_hashes = $wpdb->get_results($prepared_chunk_sql2, OBJECT_K);
             foreach ($chunk_hashes as $id => $obj) {
                 $all_hashes_by_post[$id] = $obj->meta_value;
             }
