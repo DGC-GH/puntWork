@@ -183,8 +183,7 @@ function process_batch_items_logic($setup) {
                         $heartbeat_status['processed'] = $start_index + $items_processed_in_batch;
                         $heartbeat_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Heartbeat: Processing item ' . ($current_index + 1) . '/' . $total;
                         set_import_status($heartbeat_status);
-                    }
-                }
+                            }
 
                 if (get_transient('import_cancel') === true) {
                     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Import cancelled at #' . ($current_index + 1);
@@ -327,7 +326,6 @@ function process_batch_items_logic($setup) {
                     }
                 }
                 unset($batch_json_items[$i]);
-            }
             } catch (\Exception $e) {
                 PuntWorkLogger::error('Error processing batch item', PuntWorkLogger::CONTEXT_BATCH, [
                     'error' => $e->getMessage(),
