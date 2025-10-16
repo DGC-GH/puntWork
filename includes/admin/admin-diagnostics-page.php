@@ -30,10 +30,23 @@ function puntwork_diagnostics_page() {
                 form.append('action', 'puntwork_import_diagnostics');
                 form.append('nonce', jobImportData.nonce);
                 const res = await fetch(jobImportData.ajaxurl, { method: 'POST', body: form, credentials: 'same-origin' });
+
+                // Collect status, statusText and a small subset of headers for debugging
+                const statusInfo = {
+                    status: res.status,
+                    statusText: res.statusText,
+                    headers: {
+                        'content-type': res.headers.get('content-type'),
+                        'x-wp-total': res.headers.get('x-wp-total'),
+                        'x-wp-totalpages': res.headers.get('x-wp-totalpages')
+                    }
+                };
+
                 const text = await res.text();
                 let parsed;
                 try { parsed = JSON.parse(text); } catch(e) { parsed = text; }
-                show(JSON.stringify(parsed, null, 2));
+
+                show(JSON.stringify({ status: statusInfo, body: parsed }, null, 2));
             } catch (e) {
                 show('Fetch failed: ' + e.message);
             }
