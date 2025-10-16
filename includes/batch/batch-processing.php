@@ -61,29 +61,21 @@ function process_batch_items_logic($setup) {
         $last_peak_memory = get_last_peak_memory();
         $last_memory_ratio = $last_peak_memory / $memory_limit_bytes;
 
-        // PERFORMANCE OPTIMIZATION: Pre-compute optimal batch size based on system resources
-        // Avoid expensive dynamic recalculations during processing
-        static $optimal_batch_size = null;
-        if ($optimal_batch_size === null) {
-            $cpu_cores = function_exists('shell_exec') ? (int) shell_exec('nproc 2>/dev/null') : 2;
-            $memory_mb = $memory_limit_bytes / 1024 / 1024;
+        // DYNAMIC BATCH SIZE CALCULATION FOR CONCURRENT PROCESSING
+        // Calculate optimal batch size dynamically based on system resources and concurrent requirements
+        $batch_size_config = calculate_dynamic_batch_size_for_concurrent($batch_size, $memory_limit_bytes);
 
-            // Conservative calculation: base size based on memory and CPU, adjusted for efficiency
-            $memory_based_size = max(25, min(100, round($memory_mb / 50))); // 25-100 based on memory
-            $cpu_based_size = max(25, $cpu_cores * 8); // Conservative CPU scaling
+        // Apply the calculated optimal batch size
+        $batch_size = $batch_size_config['optimal_batch_size'];
 
-            $optimal_batch_size = min($memory_based_size, $cpu_based_size, 150); // Cap at 150 for safety
-
-            PuntWorkLogger::info('Pre-calculated optimal batch size', PuntWorkLogger::CONTEXT_BATCH, [
-                'optimal_size' => $optimal_batch_size,
-                'memory_based' => $memory_based_size,
-                'cpu_based' => $cpu_based_size,
-                'memory_mb' => round($memory_mb),
-                'cpu_cores' => $cpu_cores
-            ]);
-        }
-
-        $batch_size = min($batch_size, $optimal_batch_size);
+        PuntWorkLogger::info('Dynamic batch size calculated for concurrent processing', PuntWorkLogger::CONTEXT_BATCH, [
+            'calculated_batch_size' => $batch_size,
+            'calculation_method' => $batch_size_config['method'],
+            'memory_allocation_mb' => $batch_size_config['memory_allocation_mb'],
+            'cpu_cores_utilized' => $batch_size_config['cpu_cores_utilized'],
+            'expected_concurrency' => $batch_size_config['expected_concurrency'],
+            'memory_safety_margin' => $batch_size_config['memory_safety_margin']
+        ]);
 
         // PERFORMANCE OPTIMIZATION: Skip expensive batch size recalculations during import
         // Dynamic adjustment removed - now using pre-calculated optimal batch size
@@ -748,27 +740,46 @@ function process_batch_data($batch_guids, $batch_items, $json_path, $start_index
     $acf_fields = get_acf_fields();
     $zero_empty_fields = get_zero_empty_fields();
 
-    // SUCCESS RATE BASED PROCESSING DECISION: Choose between concurrent and sequential based on historical success rates
+    // CONCURRENT-FIRST PROCESSING DECISION: Default to concurrent, fallback to sequential only in rare failure cases
     $concurrent_success_rate = get_concurrent_success_rate();
     $sequential_success_rate = get_sequential_success_rate();
     $action_scheduler_available = function_exists('as_schedule_single_action');
 
-    // Decision logic based on success rates and availability
-    $use_concurrent = false; // Default to sequential
-    $decision_reason = 'default_sequential';
+    // Default to concurrent processing - sequential is now rare fallback
+    $use_concurrent = true; // Default to concurrent
+    $decision_reason = 'concurrent_default';
 
-    if ($action_scheduler_available && $concurrent_success_rate >= 1.0 && $concurrent_success_rate > $sequential_success_rate) {
-        // Only use concurrent if it has perfect success rate (100%)
-        $use_concurrent = true;
-        $decision_reason = 'concurrent_perfect_success_rate';
-    } elseif ($sequential_success_rate >= 0.95) {
-        // Use sequential if it has high success rate
+    // CRITICAL: Check Action Scheduler health - concurrent requires it
+    if (!$action_scheduler_available) {
         $use_concurrent = false;
-        $decision_reason = 'sequential_high_success_rate';
-    } else {
-        // Default to sequential if concurrent success rate is not perfect
+        $decision_reason = 'no_action_scheduler';
+    }
+    // ONLY fallback to sequential in rare failure cases
+    elseif ($concurrent_success_rate < 0.8) { // Below 80% success = problems
         $use_concurrent = false;
-        $decision_reason = 'concurrent_not_perfect_fallback';
+        $decision_reason = 'concurrent_failures';
+        PuntWorkLogger::warn('Concurrent processing disabled due to poor success rate', PuntWorkLogger::CONTEXT_BATCH, [
+            'concurrent_success_rate' => $concurrent_success_rate,
+            'action_scheduler_available' => $action_scheduler_available,
+            'reason' => 'falling back to sequential processing'
+        ]);
+    }
+    // If Action Scheduler has fundamental issues, use sequential
+    elseif ($action_scheduler_available) {
+        try {
+            $health_check = validate_action_scheduler_health();
+            if (!$health_check['healthy']) {
+                $use_concurrent = false;
+                $decision_reason = 'action_scheduler_unhealthy';
+                PuntWorkLogger::warn('Concurrent processing disabled due to Action Scheduler health issues', PuntWorkLogger::CONTEXT_BATCH, [
+                    'issues' => $health_check['issues'],
+                    'reason' => 'falling back to sequential processing'
+                ]);
+            }
+        } catch (\Exception $e) {
+            $use_concurrent = false;
+            $decision_reason = 'health_check_failed';
+        }
     }
 
     PuntWorkLogger::info('Processing mode decision based on success rates', PuntWorkLogger::CONTEXT_BATCH, [
@@ -931,6 +942,119 @@ function load_json_batch($json_path, $start_index, $batch_size) {
         ]);
         throw $e; // Re-throw to let calling function handle it
     }
+}
+
+/**
+ * Calculate dynamic batch size for concurrent processing with optimized resource allocation
+ *
+ * This function determines the optimal batch size for concurrent processing based on:
+ * - Available system memory and CPU cores
+ * - Concurrent processing requirements (memory per process, scheduling overhead)
+ * - Action Scheduler constraints and import system limitations
+ * - Performance monitoring and adaptive scaling
+ *
+ * @param int $current_batch_size Current stored batch size
+ * @param int $memory_limit_bytes PHP memory limit in bytes
+ * @return array Configuration array with optimal batch size and calculation details
+ */
+function calculate_dynamic_batch_size_for_concurrent($current_batch_size, $memory_limit_bytes) {
+    // PHASE 1: Gather system resource information
+    $cpu_cores = function_exists('shell_exec') ? (int) shell_exec('nproc 2>/dev/null') : 2;
+    $memory_limit_mb = $memory_limit_bytes / 1024 / 1024;
+    $current_memory_usage = memory_get_usage(true);
+    $available_memory_mb = ($memory_limit_bytes - $current_memory_usage) / 1024 / 1024;
+
+    // PHASE 2: Define concurrent processing constraints
+    $base_memory_per_concurrent_job = 12; // MB per concurrent job (conservative estimate)
+    $action_scheduler_overhead_mb = 8; // MB for Action Scheduler overhead
+    $safety_margin_mb = max(32, $memory_limit_mb * 0.15); // 15% safety margin or 32MB minimum
+
+    // Calculate maximum concurrent jobs based on memory
+    $available_for_concurrency = max(0, $available_memory_mb - $action_scheduler_overhead_mb - $safety_margin_mb);
+    $max_concurrent_jobs_memory = max(1, floor($available_for_concurrency / $base_memory_per_concurrent_job));
+
+    // CPU-based concurrency limits (more conservative for stability)
+    $cpu_based_limit = max(1, (int)($cpu_cores * 0.6)); // Use max 60% of CPU cores
+
+    // Action Scheduler limits (conservative for reliable operation)
+    $action_scheduler_limit = 8; // Max concurrent jobs Action Scheduler can reliably handle
+
+    // PHASE 3: Determine optimal concurrency level
+    $optimal_concurrency = min($max_concurrent_jobs_memory, $cpu_based_limit, $action_scheduler_limit);
+
+    // PHASE 4: Calculate optimal batch size
+    // For concurrent processing, batch size should optimize for:
+    // 1. Minimizing total batch count (7414 total items / batch_size = batches)
+    // 2. Balancing memory usage across concurrent jobs
+    // 3. Keeping individual job processing time reasonable (< 10 seconds)
+
+    $memory_based_batch_size = max(10, floor(7414 / ($optimal_concurrency * 3))); // 3 batches per concurrency level
+
+    // Apply system constraints
+    $memory_constraint_batch = max(10, min(100, floor(($memory_limit_mb - 64) / 2))); // Memory-based batch limit
+    $cpu_constraint_batch = max(10, $cpu_cores * 4); // CPU-based batch limit
+
+    // Take the minimum of constraints for safety
+    $constrained_batch_size = min($memory_based_batch_size, $memory_constraint_batch, $cpu_constraint_batch);
+
+    // PHASE 5: Apply historical performance adjustments
+    $performance_factor = 1.0;
+
+    // Check recent performance history
+    $concurrent_success_rate = get_concurrent_success_rate();
+    if ($concurrent_success_rate < 0.9) {
+        $performance_factor *= 0.8; // Reduce batch size if recent concurrent failures
+    }
+
+    $avg_time_per_item = get_average_time_per_item_concurrent();
+    if ($avg_time_per_item > 3.0) {
+        $performance_factor *= 0.7; // Reduce batch size if items are slow to process
+    } elseif ($avg_time_per_item < 1.0) {
+        $performance_factor *= 1.2; // Increase batch size if items process quickly
+    }
+
+    // PHASE 6: Determine final optimal batch size
+    $optimal_batch_size = max(10, min(100, (int)($constrained_batch_size * $performance_factor)));
+
+    // PHASE 7: Validate and constrain final result
+    $min_batch_size = 10; // Minimum for concurrent efficiency
+    $max_batch_size = 100; // Maximum for memory safety
+    $optimal_batch_size = max($min_batch_size, min($max_batch_size, $optimal_batch_size));
+
+    return [
+        'optimal_batch_size' => $optimal_batch_size,
+        'method' => 'dynamic_concurrent_calculation',
+        'memory_allocation_mb' => $available_memory_mb,
+        'cpu_cores_utilized' => $optimal_concurrency,
+        'expected_concurrency' => $optimal_concurrency,
+        'memory_safety_margin' => $safety_margin_mb,
+        'calculation_factors' => [
+            'memory_based_batch' => $memory_based_batch_size,
+            'cpu_constraint_batch' => $cpu_constraint_batch,
+            'memory_constraint_batch' => $memory_constraint_batch,
+            'performance_factor' => $performance_factor,
+            'total_items_estimated' => 7414
+        ],
+        'system_resources' => [
+            'cpu_cores_detected' => $cpu_cores,
+            'memory_limit_mb' => $memory_limit_mb,
+            'available_memory_mb' => $available_memory_mb,
+            'base_memory_per_job_mb' => $base_memory_per_concurrent_job
+        ],
+        'constraints_applied' => [
+            'max_concurrent_memory_based' => $max_concurrent_jobs_memory,
+            'cpu_based_limit' => $cpu_based_limit,
+            'action_scheduler_limit' => $action_scheduler_limit
+        ]
+    ];
+}
+
+/**
+ * Get average time per item for concurrent processing from historical data
+ */
+function get_average_time_per_item_concurrent() {
+    $avg_time = get_option('job_import_avg_time_per_item_concurrent', 1.5); // Default 1.5 seconds per item
+    return is_numeric($avg_time) ? (float)$avg_time : 1.5;
 }
 
 /**
