@@ -85,10 +85,19 @@ function puntwork_diagnostics_page() {
                 if (typeof jobImportData !== 'undefined' && jobImportData.nonce) {
                     form.append('nonce', jobImportData.nonce);
                 }
-                const res = await fetch(jobImportData.ajaxurl, { method: 'POST', credentials: 'same-origin', body: form });
-                const text = await res.text();
-                let parsed; try { parsed = JSON.parse(text); } catch (e) { parsed = text; }
-                show(JSON.stringify({ status: res.status, body: parsed }, null, 2));
+
+                // determine ajax URL with fallbacks
+                const ajaxEndpoint = (typeof jobImportData !== 'undefined' && jobImportData.ajaxurl) ? jobImportData.ajaxurl : (window.ajaxurl || '/wp-admin/admin-ajax.php');
+
+                const res = await fetch(ajaxEndpoint, { method: 'POST', credentials: 'same-origin', body: form });
+                const json = await res.json();
+                if (json && json.success) {
+                    show(JSON.stringify({ status: res.status, body: json }, null, 2));
+                    // update input with saved token (in case server normalizes it)
+                    tokenInput.value = token;
+                } else {
+                    show(JSON.stringify({ status: res.status, body: json }, null, 2));
+                }
             } catch (e) {
                 show('Save failed: ' + e.message);
             }
@@ -108,16 +117,22 @@ function puntwork_diagnostics_page() {
             }
         });
 
-        // initialize input with saved value via REST call (if admin session)
+        // initialize input with saved value via admin-ajax getter (admin session required)
         (async function initToken() {
             try {
-                // try to read current option via REST (admin session required) by calling the diagnostics endpoint without token
-                const res = await fetch('/wp-json/puntwork/v1/diagnostics', { method: 'GET', credentials: 'same-origin' });
-                if (res.status === 200) {
-                    // no-op; just show that the endpoint is available
+                const ajaxEndpoint = (typeof jobImportData !== 'undefined' && jobImportData.ajaxurl) ? jobImportData.ajaxurl : (window.ajaxurl || '/wp-admin/admin-ajax.php');
+                const form = new FormData();
+                form.append('action', 'puntwork_get_rest_token');
+                if (typeof jobImportData !== 'undefined' && jobImportData.nonce) {
+                    form.append('nonce', jobImportData.nonce);
+                }
+                const res = await fetch(ajaxEndpoint, { method: 'POST', credentials: 'same-origin', body: form });
+                const json = await res.json();
+                if (json && json.success && json.data && typeof json.data.token !== 'undefined') {
+                    tokenInput.value = json.data.token;
                 }
             } catch (e) {
-                // ignore
+                // ignore — best-effort
             }
         })();
     })();
