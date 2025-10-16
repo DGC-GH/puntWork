@@ -91,7 +91,17 @@
                         complete: update.status.complete,
                         timestamp: update.timestamp
                     });
+                } else {
+                    PuntWorkJSLogger.debug('Heartbeat received but status unchanged', 'HEARTBEAT', {
+                        hash: currentHash,
+                        processed: update.status.processed,
+                        total: update.status.total
+                    });
                 }
+            } else {
+                PuntWorkJSLogger.debug('Heartbeat received but no import update data', 'HEARTBEAT', {
+                    available_keys: Object.keys(data)
+                });
             }
 
             // Handle scheduled imports updates
