@@ -105,11 +105,12 @@ function import_jobs_streaming($preserve_status = false) {
             update_option($status_key, $streaming_status, false);
         }
 
-        PuntWorkLogger::info('Starting item streaming', PuntWorkLogger::CONTEXT_IMPORT, [
-            'total_items' => $total_items,
-            'composite_keys_cached' => count($composite_key_cache),
-            'starting_from' => $composite_keys_processed
-        ]);
+    PuntWorkLogger::info('Starting item streaming', PuntWorkLogger::CONTEXT_IMPORT, [
+        'total_items' => $total_items,
+        'composite_keys_cached' => count($composite_key_cache),
+        'starting_from' => $composite_keys_processed,
+        'initial_memory_mb' => round(memory_get_usage(true) / 1024 / 1024, 2)
+    ]);
 
         // Begin true streaming processing - process items one by one from stream
         $streaming_result = process_feed_stream_optimized(
@@ -366,8 +367,11 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
                 }
 
                 $updated++;
-                // Queued log entry
-                $all_logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Updated job ' . $existing_post_id . ' (composite key: ' . $composite_key . ')';
+                // LIMIT LOGGING: Only keep recent logs to prevent memory buildup
+                $all_logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Updated job ' . $existing_post_id;
+                if (count($all_logs) > 100) {
+                    $all_logs = array_slice($all_logs, -50); // Keep only last 50 log entries
+                }
             } else {
                 $skipped++;
                 // Minimal logging for performance
@@ -406,6 +410,20 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
 
         // MEMORY OPTIMIZATION: Aggressive garbage collection and cleanup
         if (($processed + 1) % 50 === 0) { // More frequent cleanup every 50 items
+            // LOG MEMORY USAGE FOR DEBUGGING
+            $current_memory = memory_get_usage(true);
+            $peak_memory = memory_get_peak_usage(true);
+            PuntWorkLogger::info('Memory checkpoint during streaming', PuntWorkLogger::CONTEXT_IMPORT, [
+                'processed_items' => $processed,
+                'current_memory_mb' => round($current_memory / 1024 / 1024, 2),
+                'peak_memory_mb' => round($peak_memory / 1024 / 1024, 2),
+                'streaming_cache_size' => count($streaming_status['composite_key_cache'] ?? []),
+                'log_entries' => count($all_logs),
+                'streaming_stats_time_items' => count($streaming_stats['time_per_item'] ?? []),
+                'streaming_stats_memory_peaks' => count($streaming_stats['memory_peaks'] ?? []),
+                'update_cache_size' => count($update_check_cache ?? [])
+            ]);
+
             if (function_exists('gc_collect_cycles')) {
                 gc_collect_cycles();
             }
@@ -421,11 +439,19 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
         $item_index++;
         $composite_keys_processed = $item_index;
 
-        // PERFORMANCE METRICS: Optimized tracking
+        // PERFORMANCE METRICS: Optimized tracking with cleanup
         $item_duration = microtime(true) - $item_start_time;
         if ($processed % 10 === 0) { // Sample every 10 items instead of all
             $streaming_stats['time_per_item'][] = $item_duration;
             $streaming_stats['memory_peaks'][] = memory_get_peak_usage(true);
+
+            // LIMIT ARRAY SIZES: Keep only last 50 samples to prevent memory buildup
+            if (count($streaming_stats['time_per_item']) > 50) {
+                $streaming_stats['time_per_item'] = array_slice($streaming_stats['time_per_item'], -50);
+            }
+            if (count($streaming_stats['memory_peaks']) > 50) {
+                $streaming_stats['memory_peaks'] = array_slice($streaming_stats['memory_peaks'], -50);
+            }
         }
 
         // ADAPTIVE RESOURCE MANAGEMENT: Optimized checks
@@ -441,15 +467,21 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
         if ($processed % 100 === 0) { // Progress every 100 items instead of every batch processing
             emit_progress_event($streaming_status, $processed, $published, $updated, $skipped, $streaming_stats);
 
-            // Update status efficiently
-            $streaming_status['processed'] = $processed;
-            $streaming_status['published'] = $published;
-            $streaming_status['updated'] = $updated;
-            $streaming_status['skipped'] = $skipped;
-            $streaming_status['streaming_metrics'] = $streaming_stats;
-            $streaming_status['circuit_breaker'] = $circuit_breaker;
-            $streaming_status['last_update'] = microtime(true);
-            update_option($status_key, $streaming_status, false);
+            // MEMORY OPTIMIZATION: Create lightweight status for DB storage to reduce memory
+            $db_status = [
+                'phase' => $streaming_status['phase'],
+                'processed' => $processed,
+                'total' => isset($streaming_status['total']) ? $streaming_status['total'] : 0,
+                'published' => $published,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'circuit_breaker' => $circuit_breaker,
+                'last_update' => microtime(true),
+                // DO NOT include streaming_metrics and composite_key_cache - too large for DB
+                'logs' => array_slice($all_logs, -10) // Only keep last 10 logs for DB
+            ];
+
+            update_option($status_key, $db_status, false);
         }
     }
 
