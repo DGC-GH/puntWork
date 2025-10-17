@@ -64,44 +64,75 @@ add_filter('heartbeat_received', function($response, $data, $screen_id) {
     if (isset($data['puntwork_import_status'])) {
         $import_status = get_import_status([]);
 
-        // Debug logging for heartbeat polling
-        if (defined('WP_DEBUG') && WP_DEBUG && defined('PUNTWORK_DEBUG_POLLING') && PUNTWORK_DEBUG_POLLING) {
-            PuntWorkLogger::debug('[CLIENT] Heartbeat status request received', PuntWorkLogger::CONTEXT_AJAX, [
-                'processed_from_status' => $import_status['processed'] ?? 'null',
-                'total_from_status' => $import_status['total'] ?? 'null',
-                'phase_from_status' => $import_status['phase'] ?? 'null',
-                'complete_from_status' => $import_status['complete'] ?? 'null',
-                'time_elapsed' => $import_status['time_elapsed'] ?? 'null',
-                'last_update' => $import_status['last_update'] ?? 'null',
-                'has_recent_update' => isset($import_status['last_update']) && $import_status['last_update'] > 0,
-                'heartbeat_force_requested' => $data['puntwork_import_status'] === 'force'
-            ]);
+        // Check if import status should be considered stale/inactive
+        $should_respond = true;
+        if (!empty($import_status)) {
+            $current_time = time();
+            $last_update = $import_status['last_update'] ?? 0;
+            $time_since_update = $current_time - $last_update;
+
+            // Check if import has completed with cleanup (extended inactive period)
+            $is_complete = $import_status['complete'] ?? false;
+            $cleanup_completed = isset($import_status['cleanup_completed']) && $import_status['cleanup_completed'];
+
+            if ($is_complete && $cleanup_completed) {
+                // Completed imports with cleanup: Stop responding after 60 seconds
+                $should_respond = $time_since_update < 60;
+            } elseif ($is_complete) {
+                // Completed imports without cleanup: Stop responding after 30 seconds
+                $should_respond = $time_since_update < 30;
+            }
         }
 
-        // Only send update if status has changed or if this is the first request
-        static $last_status_hash = null;
-        $current_hash = md5(serialize($import_status));
-
-        if ($last_status_hash !== $current_hash || $data['puntwork_import_status'] === 'force') {
-            $response['puntwork_import_status'] = array(
-                'status' => $import_status,
-                'timestamp' => time(),
-                'has_changes' => ($last_status_hash !== $current_hash)
-            );
-            $last_status_hash = $current_hash;
-
+        // Only respond if status is still considered active/recent
+        if ($should_respond) {
+            // Debug logging for heartbeat polling
             if (defined('WP_DEBUG') && WP_DEBUG && defined('PUNTWORK_DEBUG_POLLING') && PUNTWORK_DEBUG_POLLING) {
-                PuntWorkLogger::debug('[CLIENT] Heartbeat status update sent', PuntWorkLogger::CONTEXT_AJAX, [
-                    'processed_sent' => $import_status['processed'] ?? 'null',
-                    'has_changes' => ($last_status_hash !== $current_hash),
-                    'force_requested' => $data['puntwork_import_status'] === 'force',
-                    'timestamp' => time()
+                PuntWorkLogger::debug('[CLIENT] Heartbeat status request received', PuntWorkLogger::CONTEXT_AJAX, [
+                    'processed_from_status' => $import_status['processed'] ?? 'null',
+                    'total_from_status' => $import_status['total'] ?? 'null',
+                    'phase_from_status' => $import_status['phase'] ?? 'null',
+                    'complete_from_status' => $import_status['complete'] ?? 'null',
+                    'time_elapsed' => $import_status['time_elapsed'] ?? 'null',
+                    'last_update' => $import_status['last_update'] ?? 'null',
+                    'has_recent_update' => isset($import_status['last_update']) && $import_status['last_update'] > 0,
+                    'heartbeat_force_requested' => $data['puntwork_import_status'] === 'force',
+                    'should_respond' => $should_respond
+                ]);
+            }
+
+            // Only send update if status has changed or if this is the first request
+            static $last_status_hash = null;
+            $current_hash = md5(serialize($import_status));
+
+            if ($last_status_hash !== $current_hash || $data['puntwork_import_status'] === 'force') {
+                $response['puntwork_import_status'] = array(
+                    'status' => $import_status,
+                    'timestamp' => time(),
+                    'has_changes' => ($last_status_hash !== $current_hash)
+                );
+                $last_status_hash = $current_hash;
+
+                if (defined('WP_DEBUG') && WP_DEBUG && defined('PUNTWORK_DEBUG_POLLING') && PUNTWORK_DEBUG_POLLING) {
+                    PuntWorkLogger::debug('[CLIENT] Heartbeat status update sent', PuntWorkLogger::CONTEXT_AJAX, [
+                        'processed_sent' => $import_status['processed'] ?? 'null',
+                        'has_changes' => ($last_status_hash !== $current_hash),
+                        'force_requested' => $data['puntwork_import_status'] === 'force',
+                        'timestamp' => time()
+                    ]);
+                }
+            } elseif (defined('WP_DEBUG') && WP_DEBUG && defined('PUNTWORK_DEBUG_POLLING') && PUNTWORK_DEBUG_POLLING) {
+                PuntWorkLogger::debug('[CLIENT] Heartbeat status unchanged - no update sent', PuntWorkLogger::CONTEXT_AJAX, [
+                    'processed_current' => $import_status['processed'] ?? 'null',
+                    'hash_match' => true
                 ]);
             }
         } elseif (defined('WP_DEBUG') && WP_DEBUG && defined('PUNTWORK_DEBUG_POLLING') && PUNTWORK_DEBUG_POLLING) {
-            PuntWorkLogger::debug('[CLIENT] Heartbeat status unchanged - no update sent', PuntWorkLogger::CONTEXT_AJAX, [
-                'processed_current' => $import_status['processed'] ?? 'null',
-                'hash_match' => true
+            PuntWorkLogger::debug('[CLIENT] Heartbeat status request ignored - import completed too long ago', PuntWorkLogger::CONTEXT_AJAX, [
+                'last_update' => $import_status['last_update'] ?? 'null',
+                'time_since_update' => $current_time - ($import_status['last_update'] ?? 0),
+                'is_complete' => $import_status['complete'] ?? false,
+                'cleanup_completed' => $cleanup_completed ?? false
             ]);
         }
     }
@@ -148,11 +179,16 @@ add_filter('heartbeat_send', function($response, $screen_id) {
         $time_since_start = $current_time - $start_time;
         $time_since_update = $current_time - $last_update;
 
-        // FIX: Prevent continuous heartbeat updates for completed imports after cleanup
+        // Check if import has completed with cleanup (extended inactive period)
         $is_complete = $import_status['complete'] ?? false;
+        $cleanup_completed = isset($import_status['cleanup_completed']) && $import_status['cleanup_completed'];
 
-        if ($is_complete) {
-            // Completed imports: Only active for very brief period (15 seconds) after completion
+        if ($is_complete && $cleanup_completed) {
+            // Completed imports with cleanup: Consider inactive after brief period (60 seconds)
+            // to prevent continuous updates after finalization, but allow enough time for final status display
+            $is_active = $time_since_update < 60;
+        } elseif ($is_complete) {
+            // Completed imports without cleanup yet: Only active for very brief period (15 seconds)
             // This prevents continuous updates after auto-cleanup runs
             $time_since_completion = $time_since_update; // Use last_update as completion time proxy
             $is_active = $time_since_completion < 15;
@@ -180,6 +216,7 @@ add_filter('heartbeat_send', function($response, $screen_id) {
         // Debug: Log heartbeat activity determination
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('[PUNTWORK] Heartbeat active check: complete=' . ($is_complete ? 'true' : 'false') .
+                     ', cleanup_completed=' . ($cleanup_completed ? 'true' : 'false') .
                      ', time_since_update=' . $time_since_update .
                      ', is_active=' . ($is_active ? 'true' : 'false') .
                      ', processed=' . ($import_status['processed'] ?? 0));

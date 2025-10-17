@@ -85,6 +85,16 @@ function finalize_import_with_cleanup($result) {
     $status['last_update'] = microtime(true);
     set_import_status($status);
 
+    // CLEAR import status after successful cleanup to prevent stale heartbeat notifications
+    // This ensures that after cleanup, no more heartbeat updates will be sent
+    PuntWorkLogger::info('Clearing import status after successful completion and cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+        'cleanup_deleted' => $cleanup_result['deleted_count'],
+        'cleanup_duration' => $cleanup_duration,
+        'final_processed' => $status['processed'] ?? 0,
+        'final_total' => $status['total'] ?? 0
+    ]);
+    delete_import_status();
+
     PuntWorkLogger::info('Automatic cleanup completed', PuntWorkLogger::CONTEXT_BATCH, [
         'jobs_removed' => $cleanup_result['deleted_count'],
         'cleanup_duration' => $cleanup_duration,
