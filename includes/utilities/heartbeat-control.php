@@ -259,6 +259,34 @@ add_filter('heartbeat_send', function($response, $screen_id) {
                      ', cleanup_completed=' . ($cleanup_completed ? 'true' : 'false') .
                      ', time_since_update=' . $time_since_update .
                      ', is_active=' . ($is_active ? 'true' : 'false') .
+                     ', processed=' . ($import_status['processed'] ?? 0) .
+                     ', is_old_completed_import=' . ($is_old_completed_import ? 'true' : 'false'));
+        }
+
+        // HEARTBEAT RESET: Check hash reset before sending, regardless of active status
+        static $last_sent_hash = null;
+        $current_hash = md5(serialize($import_status));
+
+        // Force hash reset for old completed imports that should not be sent
+        if ($is_old_completed_import && $last_sent_hash !== null) {
+            // Reset hash to prevent stale cached data from being sent on next heartbeat
+            $last_sent_hash = null;
+            PuntWorkLogger::debug('[CLIENT] Heartbeat hash reset for stale completed import - preventing stale data', PuntWorkLogger::CONTEXT_SYSTEM, [
+                'is_old_completed_import' => $is_old_completed_import,
+                'hash_was_reset' => true,
+                'time_since_update' => $time_since_update,
+                'threshold' => 300,
+                'processed' => $import_status['processed'] ?? 0,
+                'total' => $import_status['total'] ?? 0
+            ]);
+        }
+
+        // Debug: Log heartbeat activity determination
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] Heartbeat active check: complete=' . ($is_complete ? 'true' : 'false') .
+                     ', cleanup_completed=' . ($cleanup_completed ? 'true' : 'false') .
+                     ', time_since_update=' . $time_since_update .
+                     ', is_active=' . ($is_active ? 'true' : 'false') .
                      ', processed=' . ($import_status['processed'] ?? 0));
         }
     }
