@@ -625,26 +625,24 @@ function cleanup_old_job_posts($import_start_time) {
 
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Found ' . count($current_guids) . ' current GUIDs in feed';
 
-    // Get all published job GUIDs and compare against current feed GUIDs with memory-safe processing
-    // FIX: Get ALL published jobs with GUIDs, then filter out those still in current feed
+    // Get ALL job GUIDs (not just published) so we can clean up old jobs in any status
+    // FIX: Include jobs in draft/pending/trash status that might have GUIDs from older imports
     $published_jobs = [];
     $batch_size = 5000; // Get jobs in batches to handle large datasets
     $offset = 0;
 
-    PuntWorkLogger::info('Fetching all published job posts for cleanup comparison', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Fetching all job posts for cleanup comparison', PuntWorkLogger::CONTEXT_BATCH, [
         'batch_size' => $batch_size
     ]);
 
-    // Get all published jobs with GUIDs in chunks
+    // Get ALL jobs with GUIDs in chunks (include all statuses, not just publish)
     while (true) {
         $chunk_jobs = $wpdb->get_results($wpdb->prepare("
-            SELECT DISTINCT p.ID, pm.meta_value as guid
+            SELECT DISTINCT p.ID, p.post_status, pm.meta_value as guid
             FROM {$wpdb->posts} p
-            JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
+            LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'guid'
             WHERE p.post_type = 'job'
-            AND p.post_status = 'publish'
-            AND pm.meta_value IS NOT NULL
-            AND pm.meta_value != ''
+            AND p.post_status IN ('publish', 'draft', 'pending', 'private', 'trash')
             LIMIT %d OFFSET %d
         ", $batch_size, $offset));
 
@@ -655,7 +653,7 @@ function cleanup_old_job_posts($import_start_time) {
         $published_jobs = array_merge($published_jobs, $chunk_jobs);
         $offset += $batch_size;
 
-        PuntWorkLogger::debug('Published jobs batch fetched', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::debug('Job posts batch fetched', PuntWorkLogger::CONTEXT_BATCH, [
             'batch_offset' => $offset,
             'jobs_in_batch' => count($chunk_jobs),
             'total_jobs_found' => count($published_jobs),
@@ -668,8 +666,8 @@ function cleanup_old_job_posts($import_start_time) {
         }
 
         // Safety break if we have too many jobs (unlikely but prevents infinite loop)
-        if ($offset > 100000) {
-            PuntWorkLogger::warn('Safety break: Too many published jobs to process', PuntWorkLogger::CONTEXT_BATCH, [
+        if ($offset > 200000) { // Increased safety limit
+            PuntWorkLogger::warn('Safety break: Too many job posts to process', PuntWorkLogger::CONTEXT_BATCH, [
                 'offset' => $offset,
                 'jobs_found' => count($published_jobs)
             ]);
@@ -682,15 +680,52 @@ function cleanup_old_job_posts($import_start_time) {
         'current_feed_guids' => count($current_guids)
     ]);
 
-    $current_guids_set = array_flip($current_guids); // For fast lookup
-    $old_post_ids = [];
+    // DEBUG: Analyze job data to identify issues
+    $jobs_with_guids = 0;
+    $jobs_with_empty_guids = 0;
+    $guid_samples = [];
 
     foreach ($published_jobs as $job) {
-        // If this job's GUID is NOT in the current feed, it's an old job to delete
-        if (!isset($current_guids_set[$job->guid])) {
+        if (!empty($job->guid)) {
+            $jobs_with_guids++;
+            if (count($guid_samples) < 10) {
+                $guid_samples[] = $job->guid;
+            }
+        } else {
+            $jobs_with_empty_guids++;
+        }
+    }
+
+    PuntWorkLogger::info('Job posts GUID analysis', PuntWorkLogger::CONTEXT_BATCH, [
+        'total_job_posts' => count($published_jobs),
+        'jobs_with_guids' => $jobs_with_guids,
+        'jobs_with_empty_guids' => $jobs_with_empty_guids,
+        'jobs_without_guid_meta' => count($published_jobs) - $jobs_with_guids - $jobs_with_empty_guids,
+        'current_feed_guids' => count($current_guids),
+        'guid_samples' => array_slice($guid_samples, 0, 5)
+    ]);
+
+    $current_guids_set = array_flip($current_guids); // For fast lookup
+    $old_post_ids = [];
+    $kept_job_guids = [];
+
+    foreach ($published_jobs as $job) {
+        // DEBUG: Log GUID matching logic
+        if (isset($current_guids_set[$job->guid])) {
+            $kept_job_guids[] = $job->guid;
+        } else {
+            // If this job's GUID is NOT in the current feed, it's an old job to delete
             $old_post_ids[] = $job->ID;
         }
     }
+
+    PuntWorkLogger::info('GUID comparison results', PuntWorkLogger::CONTEXT_BATCH, [
+        'total_published_jobs_with_guids' => $jobs_with_guids,
+        'jobs_kept_in_feed' => count($kept_job_guids),
+        'jobs_to_delete' => count($old_post_ids),
+        'sample_kept_guids' => array_slice($kept_job_guids, 0, 5),
+        'sample_old_job_ids' => array_slice($old_post_ids, 0, 5)
+    ]);
 
     $total_old_posts = count($old_post_ids);
 
