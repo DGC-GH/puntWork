@@ -280,8 +280,8 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 // Only transition to next phase when actually complete
                 if (processed >= phaseTotal && phaseTotal > 0) {
                     this.setPhase('jsonl-combining');
-                    // Force a progress update to reflect the phase change
-                    this.updateProgress(data);
+                    // DON'T call updateProgress recursively - let the next monitoring cycle handle it
+                    // this.updateProgress(data); <-- REMOVED: Causes infinite loops and race conditions
                 }
             } else if (this.currentPhase === 'jsonl-combining') {
                 // JSONL combining phase: 0-100% for this phase only
@@ -291,8 +291,8 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                 // Only transition when actually complete
                 if (processed >= 1) {
                     this.setPhase('job-importing');
-                    // Force a progress update to reflect the phase change
-                    this.updateProgress(data);
+                    // DON'T call updateProgress recursively - let the next monitoring cycle handle it
+                    // this.updateProgress(data); <-- REMOVED: Causes infinite loops and race conditions
                 }
             } else if (this.currentPhase === 'job-importing') {
                 // Job importing phase: 0-100% for this phase only
@@ -301,14 +301,14 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                         // Check if cleanup phase is needed
                         if (data.cleanup_phase === true) {
                             this.setPhase('cleanup');
-                            // Force a progress update to reflect the phase change
-                            this.updateProgress(data);
+                            // DON'T call updateProgress recursively - let the next monitoring cycle handle it
+                            // this.updateProgress(data); <-- REMOVED: Causes infinite loops and race conditions
                         } else {
                             percent = 100;
                             this.setPhase('complete');
                             this.importSuccess = true; // Set success when import completes
-                            // Force a final progress update to show completion
-                            this.updateProgress(data);
+                            // DON'T call updateProgress recursively - let the next monitoring cycle handle it
+                            // this.updateProgress(data); <-- REMOVED: Causes infinite loops and race conditions
                         }
                     } else {
                         phaseProgress = processed / total;
@@ -331,15 +331,16 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
                         percent = 100;
                         this.setPhase('complete');
                         this.importSuccess = true;
-                        // Force a final progress update to show completion
-                        this.updateProgress(data);
+                        // DON'T call updateProgress recursively - let the next monitoring cycle handle it
+                        // this.updateProgress(data); <-- REMOVED: Causes infinite loops and race conditions
                     }
                 } else {
                     // No cleanup needed, go directly to complete
                     percent = 100;
                     this.setPhase('complete');
                     this.importSuccess = true;
-                    this.updateProgress(data);
+                    // DON'T call updateProgress recursively - let the next monitoring cycle handle it
+                    // this.updateProgress(data); <-- REMOVED: Causes infinite loops and race conditions
                 }
             } else if (this.currentPhase === 'complete') {
                 // Ensure we show 100% when complete
