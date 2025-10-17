@@ -15,6 +15,166 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Check if automatic cleanup is enabled via configuration
+ *
+ * @return bool Whether automatic cleanup is enabled
+ */
+function is_automatic_cleanup_enabled() {
+    // Check if automatic cleanup is explicitly disabled
+    $cleanup_disabled = get_option('puntwork_disable_auto_cleanup', false);
+    if ($cleanup_disabled) {
+        return false;
+    }
+
+    // Check import config for cleanup settings
+    $import_config = get_import_config();
+    return isset($import_config['cleanup']['auto_cleanup_enabled']) ?
+           $import_config['cleanup']['auto_cleanup_enabled'] : true;
+}
+
+/**
+ * Finalize completed import with automatic cleanup
+ *
+ * @param array $result Import result
+ * @return array Final result with cleanup information
+ */
+function finalize_import_with_cleanup($result) {
+    // Only proceed with cleanup if import was completely successful
+    if (!$result['success'] || !$result['complete']) {
+        PuntWorkLogger::info('Import not fully complete - skipping automatic cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+            'success' => $result['success'] ?? false,
+            'complete' => $result['complete'] ?? false
+        ]);
+        return $result;
+    }
+
+    // Check if automatic cleanup is enabled
+    if (!is_automatic_cleanup_enabled()) {
+        PuntWorkLogger::info('Automatic cleanup disabled by configuration - skipping', PuntWorkLogger::CONTEXT_BATCH);
+        $result['cleanup_skipped'] = true;
+        $result['cleanup_reason'] = 'disabled_by_config';
+        return $result;
+    }
+
+    // Additional validation - ensure we have a reasonable number of jobs imported
+    $imported_count = ($result['published'] ?? 0) + ($result['updated'] ?? 0);
+    if ($imported_count < 1) {
+        PuntWorkLogger::warn('No jobs imported - skipping automatic cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+            'imported_count' => $imported_count
+        ]);
+        return $result;
+    }
+
+    $start_time = microtime(true);
+
+    PuntWorkLogger::info('Starting automatic post-import cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+        'imported_jobs' => $imported_count,
+        'cleanup_start_time' => date('Y-m-d H:i:s', (int)$start_time)
+    ]);
+
+    // Execute cleanup with safeguards
+    $cleanup_result = perform_safe_import_cleanup($start_time);
+
+    $cleanup_duration = microtime(true) - $start_time;
+
+    // Update result with cleanup information
+    $result['cleanup_performed'] = true;
+    $result['cleanup_deleted'] = $cleanup_result['deleted_count'];
+    $result['cleanup_duration'] = $cleanup_duration;
+    $result['cleanup_logs'] = $cleanup_result['logs'];
+    $result['total_duration'] = ($result['time_elapsed'] ?? 0) + $cleanup_duration;
+
+    // Update final import status
+    $status = get_import_status([]);
+    $status['cleanup_completed'] = true;
+    $status['cleanup_result'] = $cleanup_result;
+    $status['cleanup_duration'] = $cleanup_duration;
+    $status['last_update'] = microtime(true);
+    set_import_status($status);
+
+    PuntWorkLogger::info('Automatic cleanup completed', PuntWorkLogger::CONTEXT_BATCH, [
+        'jobs_removed' => $cleanup_result['deleted_count'],
+        'cleanup_duration' => $cleanup_duration,
+        'total_import_duration' => $result['total_duration']
+    ]);
+
+    return $result;
+}
+
+/**
+ * Perform safe cleanup with multiple safeguard layers
+ *
+ * @param float $start_time When cleanup started
+ * @return array Cleanup result
+ */
+function perform_safe_import_cleanup($start_time) {
+    global $wpdb;
+
+    $logs = [];
+    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Beginning automatic cleanup after successful import';
+
+    // SAFEGUARD 1: Verify combined feed file exists and has content
+    $json_path = PUNTWORK_PATH . 'feeds/combined-jobs.jsonl';
+    if (!file_exists($json_path)) {
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] CRITICAL: Combined feed file missing - aborting cleanup';
+        PuntWorkLogger::error('Combined feed file missing during import cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+            'json_path' => $json_path
+        ]);
+        return [
+            'deleted_count' => 0,
+            'logs' => $logs
+        ];
+    }
+
+    // SAFEGUARD 2: Feed integrity validation
+    $feed_validation = validate_feed_integrity($json_path);
+    if (!$feed_validation['valid']) {
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] CRITICAL: Feed integrity validation failed - aborting cleanup';
+        foreach ($feed_validation['errors'] as $error) {
+            $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] VALIDATION ERROR: ' . $error;
+            PuntWorkLogger::error('Feed validation error during cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+                'error' => $error
+            ]);
+        }
+        return [
+            'deleted_count' => 0,
+            'logs' => $logs
+        ];
+    }
+
+    // SAFEGUARD 3: Minimum viable feed check
+    if (($feed_validation['stats']['valid_entries'] ?? 0) < 10) {
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] WARNING: Feed has very few entries - aborting cleanup to prevent data loss';
+        PuntWorkLogger::warn('Feed too small for safe cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+            'valid_entries' => $feed_validation['stats']['valid_entries'] ?? 0
+        ]);
+        return [
+            'deleted_count' => 0,
+            'logs' => $logs
+        ];
+    }
+
+    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Feed validation passed - proceeding with cleanup';
+
+    // Proceed with cleanup using optimized algorithm from existing function
+    $cleanup_result = cleanup_old_job_posts($start_time);
+
+    // Add cleanup logs to our log array
+    $logs = array_merge($logs, $cleanup_result['logs']);
+
+    PuntWorkLogger::info('Safe import cleanup completed', PuntWorkLogger::CONTEXT_BATCH, [
+        'deleted_count' => $cleanup_result['deleted_count'],
+        'current_feed_entries' => $feed_validation['stats']['valid_entries'] ?? 0,
+        'safeguards_passed' => true
+    ]);
+
+    return [
+        'deleted_count' => $cleanup_result['deleted_count'],
+        'logs' => $logs
+    ];
+}
+
+/**
  * Validate feed integrity before performing cleanup operations
  *
  * @param string $json_path Path to the feed file
