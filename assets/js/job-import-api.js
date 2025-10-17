@@ -94,18 +94,6 @@ console.log('[PUNTWORK] job-import-api.js loaded');
         },
 
         /**
-         * Reset import system completely
-         * @returns {Promise} AJAX promise
-         */
-        resetImport: function() {
-            return $.ajax({
-                url: jobImportData.ajaxurl,
-                type: 'POST',
-                data: { action: 'reset_job_import', nonce: jobImportData.nonce }
-            });
-        },
-
-        /**
          * Get current import status
          * @returns {Promise} AJAX promise
          */
