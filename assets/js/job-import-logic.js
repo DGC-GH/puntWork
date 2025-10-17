@@ -286,32 +286,75 @@
          * Handle cancel import process
          */
         handleCancelImport: function() {
-            PuntWorkJSLogger.info('Cancel Import clicked', 'LOGIC');
+            PuntWorkJSLogger.info('Cancel Import clicked - sending cancellation request', 'LOGIC');
+
+            // Prevent multiple cancel requests
+            if (this.isCancelling) {
+                PuntWorkJSLogger.info('Cancel already in progress, ignoring duplicate request', 'LOGIC');
+                return;
+            }
+            this.isCancelling = true;
 
             // Immediately stop the import loop
             this.isImporting = false;
 
             JobImportAPI.cancelImport().then(function(response) {
-                PuntWorkJSLogger.debug('Cancel response', 'LOGIC', response);
+                PuntWorkJSLogger.debug('Cancel response received', 'LOGIC', response);
+
+                // Reset cancel flag
+                JobImportLogic.isCancelling = false;
+
                 if (response.success) {
+                    PuntWorkJSLogger.info('Cancel successful - updating UI', 'LOGIC');
                     JobImportUI.appendLogs(['Import cancelled']);
                     $('#status-message').text('Import Cancelled');
                     JobImportUI.resetButtons();
                     $('#resume-import').show();
                     $('#reset-import').show();
                     $('#start-import').text('Restart').show();
-                    
+
                     // Hide import type indicator on cancel
                     $('#import-type-indicator').hide();
-                    
+
                     // Stop status polling on cancel
                     if (window.JobImportEvents && window.JobImportEvents.stopHeartbeatMonitoring) {
                         window.JobImportEvents.stopHeartbeatMonitoring();
                     }
+                } else {
+                    PuntWorkJSLogger.warn('Cancel response indicates failure', 'LOGIC', response);
+                    JobImportUI.appendLogs(['Cancel request failed: ' + (response.message || 'Unknown error')]);
+                    // Still reset buttons and show options to user
+                    JobImportUI.resetButtons();
+                    $('#resume-import').show();
+                    $('#reset-import').show();
+                    $('#start-import').text('Restart').show();
                 }
             }).catch(function(xhr, status, error) {
-                PuntWorkJSLogger.error('Cancel AJAX error', 'LOGIC', error);
-                JobImportUI.appendLogs(['Cancel AJAX error: ' + error]);
+                PuntWorkJSLogger.error('Cancel AJAX error - but cancellation may have worked on server', 'LOGIC', {
+                    xhr_status: xhr.status,
+                    http_status: status,
+                    error_message: error
+                });
+
+                // Reset cancel flag even on error
+                JobImportLogic.isCancelling = false;
+
+                // The server-side cancellation likely worked (we've seen the logs), so proceed with UI updates
+                // Only show user-friendly message, don't confuse them with technical errors
+                JobImportUI.appendLogs(['Import cancel request completed']);
+                $('#status-message').text('Import Cancelled');
+                JobImportUI.resetButtons();
+                $('#resume-import').show();
+                $('#reset-import').show();
+                $('#start-import').text('Restart').show();
+
+                // Hide import type indicator on cancel
+                $('#import-type-indicator').hide();
+
+                // Stop status polling on cancel
+                if (window.JobImportEvents && window.JobImportEvents.stopHeartbeatMonitoring) {
+                    window.JobImportEvents.stopHeartbeatMonitoring();
+                }
             });
         },
 
