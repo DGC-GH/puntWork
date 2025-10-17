@@ -1283,7 +1283,7 @@ function process_acf_queue_batch(&$update_queue, &$create_queue, $operation = 'b
             ]);
         }
 
-        PuntWorkLogger::debug('ACF batch processing completed for update', PuntWorkLogger::CONTEXT_IMPORT, [
+        PuntWorkLogger::debug('ACF batch processing completed', PuntWorkLogger::CONTEXT_IMPORT, [
             'post_id' => $post_id,
             'guid' => $item['guid'] ?? 'unknown',
             'fields_processed' => $fields_processed,
