@@ -670,29 +670,117 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
     $circuit_breaker = $streaming_status['circuit_breaker'];
 
     // True streaming: process one item at a time from file stream
+    PuntWorkLogger::info('🔄 STARTING STREAMING LOOP - File reading begins', PuntWorkLogger::CONTEXT_IMPORT, [
+        'json_path' => basename($json_path),
+        'total_items_expected' => $streaming_status['total'] ?? 0,
+        'composite_keys_processed' => $composite_keys_processed,
+        'initial_memory_mb' => round(memory_get_usage(true) / 1024 / 1024, 2),
+        'starting_timestamp' => microtime(true),
+        'action' => 'Beginning main streaming loop - file reading phase'
+    ]);
+
     $handle = fopen($json_path, 'r');
     if (!$handle) {
+        PuntWorkLogger::error('❌ STREAMING FAILURE - Could not open feed file', PuntWorkLogger::CONTEXT_IMPORT, [
+            'json_path' => basename($json_path),
+            'file_exists' => file_exists($json_path),
+            'file_readable' => is_readable($json_path),
+            'file_size_kb' => file_exists($json_path) ? round(filesize($json_path) / 1024, 1) : 'N/A',
+            'action' => 'Cannot proceed - feed file not accessible'
+        ]);
         return ['success' => false, 'complete' => false, 'message' => 'Failed to open feed stream'];
     }
 
+    PuntWorkLogger::info('✅ FILE STREAM OPENED successfully', PuntWorkLogger::CONTEXT_IMPORT, [
+        'json_path' => basename($json_path),
+        'file_size_kb' => round(filesize($json_path) / 1024, 1),
+        'total_lines_expected' => $streaming_status['total'] ?? 0,
+        'action' => 'File handle successfully opened for streaming'
+    ]);
+
     // Skip to resume position
+    $skip_start_time = microtime(true);
     if ($composite_keys_processed > 0) {
+        PuntWorkLogger::debug('⏭️ RESUME POSITION - Skipping to existing position', PuntWorkLogger::CONTEXT_IMPORT, [
+            'composite_keys_processed' => $composite_keys_processed,
+            'lines_to_skip' => $composite_keys_processed,
+            'action' => 'Fast-forwarding file pointer to resume position'
+        ]);
+
+        $skipped_lines = 0;
         for ($i = 0; $i < $composite_keys_processed; $i++) {
-            if (fgets($handle) === false) break; // EOF reached
+            if (fgets($handle) === false) {
+                PuntWorkLogger::warn('⚠️ RESUME SKIP - Unexpected EOF during skip', PuntWorkLogger::CONTEXT_IMPORT, [
+                    'lines_attempted_to_skip' => $composite_keys_processed,
+                    'lines_actually_skipped' => $skipped_lines,
+                    'eof_reached' => true,
+                    'remaining_lines' => $composite_keys_processed - $skipped_lines,
+                    'action' => 'EOF reached earlier than expected during resume skip'
+                ]);
+                break; // EOF reached
+            }
+            $skipped_lines++;
         }
+
+        $skip_duration = microtime(true) - $skip_start_time;
+        PuntWorkLogger::info('✅ RESUME SKIP COMPLETED', PuntWorkLogger::CONTEXT_IMPORT, [
+            'lines_skipped' => $skipped_lines,
+            'skip_duration_seconds' => round($skip_duration, 3),
+            'starting_line_number' => $skipped_lines + 1,
+            'action' => 'Successfully resumed from previous position'
+        ]);
     }
 
-    $item_index = $composite_keys_processed;
-    $should_continue = true;
-    $batch_start_time = microtime(true);
+        $item_index = $composite_keys_processed;
+        $should_continue = true;
+        $batch_start_time = microtime(true);
+        $loop_iteration_count = 0;
+        $file_lines_read = 0;
+        $empty_lines_skipped = 0;
+        $invalid_json_count = 0;
+        $missing_guid_count = 0;
+        $successful_creates = 0;
+        $successful_updates = 0;
+        $duplicate_skips = 0;
 
-    // Batch operations for ACF field updates (group to reduce individual update_field() calls)
-    $acf_update_queue = [];
-    $acf_create_queue = [];
-    $batch_size = 50; // PERFORMANCE: Increased batch size for speed optimization (reduced DB calls)
+        // Batch operations for ACF field updates (group to reduce individual update_field() calls)
+        $acf_update_queue = [];
+        $acf_create_queue = [];
+        $batch_size = 50; // PERFORMANCE: Increased batch size for speed optimization (reduced DB calls)
+
+        PuntWorkLogger::info('🔄 ENTERING MAIN STREAMING WHILE LOOP', PuntWorkLogger::CONTEXT_IMPORT, [
+            'starting_item_index' => $item_index,
+            'should_continue_initial' => $should_continue,
+            'acf_batch_size' => $batch_size,
+            'memory_at_loop_start' => round(memory_get_usage(true) / 1024 / 1024, 2),
+            'action' => 'Beginning main processing loop - iterative file reading'
+        ]);
+
+        // LOG INITIAL LOOP CONDITION CHECK
+        PuntWorkLogger::info('📋 LOOP INITIAL CONDITIONS CHECK', PuntWorkLogger::CONTEXT_IMPORT, [
+            'should_continue' => $should_continue,
+            'composite_keys_processed' => $composite_keys_processed,
+            'streaming_total' => $streaming_status['total'] ?? 0,
+            'current_memory_mb' => round(memory_get_usage(true) / 1024 / 1024, 2),
+            'file_handle_open' => is_resource($handle),
+            'action' => 'Checking initial loop conditions before first iteration'
+        ]);
 
     // Memory optimization: Use generator/iterator pattern to reduce memory footprint
     while ($should_continue && ($line = fgets($handle)) !== false) {
+        $loop_iteration_count++;
+        $file_lines_read++;
+        $loop_start_time = microtime(true);
+
+        PuntWorkLogger::debug('🔄 LOOP ITERATION ' . $loop_iteration_count, PuntWorkLogger::CONTEXT_IMPORT, [
+            'iteration' => $loop_iteration_count,
+            'item_index' => $item_index,
+            'file_lines_read' => $file_lines_read,
+            'should_continue' => $should_continue,
+            'memory_current' => round(memory_get_usage(true) / 1024 / 1024, 2),
+            'batch_size_current' => count($acf_update_queue) + count($acf_create_queue),
+            'action' => 'Processing loop iteration'
+        ]);
         $item_start_time = microtime(true);
 
         $line = trim($line);
@@ -890,14 +978,18 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
         // FORCE END-OF-IMPORT BREAKPOINT: If FEED ITEMS PROCESSED equals total items, we've reached the end
         // This prevents infinite loops where ACF updates keep processing existing jobs forever
         if (isset($streaming_status['total']) && $streaming_status['total'] > 0 && $composite_keys_processed >= $streaming_status['total']) {
-            PuntWorkLogger::info('🎯 FORCE END-OF-IMPORT BREAKPOINT TRIGGERED - Stream processing complete!', PuntWorkLogger::CONTEXT_IMPORT, [
+            PuntWorkLogger::error('🚨 FORCE END-OF-IMPORT BREAKPOINT TRIGGERED - STREAM PROCESSING COMPLETE!', PuntWorkLogger::CONTEXT_IMPORT, [
                 'feed_items_processed' => $composite_keys_processed,
                 'acf_jobs_processed' => $processed,
                 'total_feed_items' => $streaming_status['total'],
-                'completion_percentage' => '100%',
+                'completion_percentage' => floor(($composite_keys_processed / $streaming_status['total']) * 100) . '%',
                 'streaming_phase' => 'STREAMING_COMPLETED',
                 'acf_phase' => 'CONTINUES_IN_BACKGROUND',
-                'action' => 'Exiting main streaming loop - ACF batch processing may continue'
+                'action' => 'Exiting main streaming loop (FILE READING COMPLETE) - ACF batch processing may continue',
+                'final_memory_usage' => round(memory_get_usage(true) / 1024 / 1024, 2) . 'MB',
+                'final_execution_time' => round(microtime(true) - $streaming_stats['start_time'], 2) . 's',
+                'action_summary' => 'Feed file successfully processed - exiting streaming loop',
+                'next_steps' => 'ACF batch processing will complete remaining updates in background'
             ]);
             $should_continue = false;
         }
@@ -1001,10 +1093,50 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
         }
     }
 
+    PuntWorkLogger::info('STREAMING LOOP EXITED - Final status check', PuntWorkLogger::CONTEXT_IMPORT, [
+        'exit_reason_summary' => $should_continue ? 'Loop condition became false' : 'Resource limits or breakpoint triggered',
+        'should_continue_final' => $should_continue,
+        'files_closed_gracefully' => true,
+        'final_iteration_count' => $loop_iteration_count,
+        'final_lines_read' => $file_lines_read,
+        'final_keys_processed' => $composite_keys_processed,
+        'final_acf_update_queue_size' => count($acf_update_queue),
+        'final_acf_create_queue_size' => count($acf_create_queue),
+        'action' => 'Beginning final ACF batch processing'
+    ]);
+
     fclose($handle);
 
+    PuntWorkLogger::info('FILE HANDLE CLOSED - Starting final ACF batch processing', PuntWorkLogger::CONTEXT_IMPORT, [
+        'acf_update_queue_items_remaining' => count($acf_update_queue),
+        'acf_create_queue_items_remaining' => count($acf_create_queue),
+        'total_acf_jobs_remaining' => count($acf_update_queue) + count($acf_create_queue),
+        'processing_status' => 'FILE STREAMING COMPLETE - ACF PROCESSING BEGINNING',
+        'estimated_acf_processing_time' => 'TBD - batch processing speed varies',
+        'memory_before_final_acf' => round(memory_get_usage(true) / 1024 / 1024, 2) . 'MB',
+        'action' => 'Beginning final batch processing of remaining ACF fields'
+    ]);
+
     // Final ACF batch processing
+    PuntWorkLogger::info('STARTING FINAL ACF BATCH PROCESSING', PuntWorkLogger::CONTEXT_IMPORT, [
+        'queue_sizes' => ['update' => count($acf_update_queue), 'create' => count($acf_create_queue)],
+        'processing_strategy' => 'Batch processing in groups of 50 for memory efficiency',
+        'expected_iterations' => ceil(count($acf_update_queue) + count($acf_create_queue) / 50),
+        'action' => 'Final ACF field population for all queued jobs'
+    ]);
+
+    $acf_batch_start_time = microtime(true);
     process_acf_queue_batch($acf_update_queue, $acf_create_queue, 'final');
+    $acf_batch_duration = microtime(true) - $acf_batch_start_time;
+
+    PuntWorkLogger::info('FINAL ACF BATCH PROCESSING COMPLETED', PuntWorkLogger::CONTEXT_IMPORT, [
+        'acf_processing_duration_seconds' => round($acf_batch_duration, 2),
+        'acf_processing_status' => 'COMPLETED SUCCESSFULLY',
+        'total_acf_jobs_completed' => count($acf_update_queue) + count($acf_create_queue),
+        'acf_jobs_processed_per_second' => count($acf_update_queue) + count($acf_create_queue) > 0 ? round((count($acf_update_queue) + count($acf_create_queue)) / $acf_batch_duration, 2) : 'N/A',
+        'action' => 'ACF batch processing finished - preparing final cleanup',
+        'next_step' => 'Status updates and cleanup'
+    ]);
 
     // Final status update
     $streaming_status['complete'] = true;
