@@ -154,6 +154,21 @@ function import_jobs_streaming($preserve_status = false) {
             'success_rate' => $processed > 0 ? ($published + $updated) / $processed : 1.0
         ]);
 
+        // INTEGRATE AUTOMATIC CLEANUP: Run after fully successful import
+        if ($final_result['success'] && $final_result['complete']) {
+            PuntWorkLogger::info('Import completed successfully, running automatic cleanup', PuntWorkLogger::CONTEXT_IMPORT, [
+                'processed' => $final_result['processed'],
+                'published' => $final_result['published'],
+                'updated' => $final_result['updated']
+            ]);
+
+            // Import the finalization functions
+            require_once __DIR__ . '/import-finalization.php';
+
+            // Run cleanup with safeguard validations
+            $final_result = \Puntwork\finalize_import_with_cleanup($final_result);
+        }
+
         return $final_result;
 
     } catch (\Exception $e) {
