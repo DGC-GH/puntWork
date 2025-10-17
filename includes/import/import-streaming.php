@@ -201,7 +201,13 @@ function import_jobs_streaming($preserve_status = false) {
  */
 function detect_available_system_memory() {
     // Try to detect actual available system memory on Linux
-    if (function_exists('shell_exec') && stripos(PHP_OS, 'Linux') !== false) {
+    // Set memory limit based on environment variable or default to 512M if not set
+    $env_memory_limit = getenv('PUNTWORK_MEMORY_LIMIT') ?: '512M';
+    $current_limit = ini_get('memory_limit');
+    // Only increase if current limit is lower and not unlimited
+    if ($current_limit !== '-1' && (intval($current_limit) < intval($env_memory_limit))) {
+        ini_set('memory_limit', $env_memory_limit);
+    }
         // Read /proc/meminfo for precise memory detection
         $meminfo = shell_exec('cat /proc/meminfo 2>/dev/null');
         if ($meminfo) {
@@ -1278,22 +1284,62 @@ function create_job_streaming($item) {
 
 /**
  * Selective ACF field loading and updating for efficiency
+ * Maps all available item data to ACF field keys dynamically
  */
 function get_acf_fields_selective($item) {
     $acf_fields = [];
 
-    // Only load ACF fields that are present in the item
-    $field_mappings = [
-        'job_location' => $item['location'] ?? null,
-        'job_company' => $item['company'] ?? null,
-        'job_salary_min' => $item['salary_min'] ?? null,
-        'job_salary_max' => $item['salary_max'] ?? null,
-        // Add other field mappings as needed
-    ];
+    // Get all ACF field names that can be populated
+    $all_acf_field_names = get_acf_fields();
 
-    foreach ($field_mappings as $acf_key => $value) {
-        if ($value !== null) {
-            $acf_fields[$acf_key] = $value;
+    // Dynamically map item data to ACF fields (direct mapping where field names match)
+    foreach ($all_acf_field_names as $acf_field) {
+        // Check if this ACF field exists in the item data (case-insensitive)
+        $item_value = null;
+
+        // Direct match first
+        if (isset($item[$acf_field])) {
+            $item_value = $item[$acf_field];
+        }
+
+        // If not found, try some common variations (legacy mappings)
+        if ($item_value === null) {
+            switch ($acf_field) {
+                case 'job_location':
+                    $item_value = $item['city'] ?? $item['location'] ?? null;
+                    break;
+                case 'job_company':
+                    $item_value = $item['company'] ?? $item['companydescription'] ?? null;
+                    break;
+                case 'job_salary_min':
+                    $item_value = $item['salaryfrom'] ?? $item['salary_min'] ?? null;
+                    break;
+                case 'job_salary_max':
+                    $item_value = $item['salaryto'] ?? $item['salary_max'] ?? null;
+                    break;
+                case 'job_salary':
+                    // Combined salary display
+                    $salary_min = $item['salaryfrom'] ?? $item['salary_min'] ?? null;
+                    $salary_max = $item['salaryto'] ?? $item['salary_max'] ?? null;
+                    if ($salary_min && $salary_max) {
+                        $item_value = $salary_min . ' - ' . $salary_max;
+                    } elseif ($salary_min) {
+                        $item_value = 'From ' . $salary_min;
+                    } elseif ($salary_max) {
+                        $item_value = 'Up to ' . $salary_max;
+                    }
+                    break;
+                case 'location':
+                    $item_value = isset($item['city']) && isset($item['province']) ?
+                        trim($item['city'] . ', ' . $item['province'], ', ') :
+                        ($item['city'] ?? $item['province'] ?? null);
+                    break;
+            }
+        }
+
+        // Only add if value is not null (don't create empty ACF fields)
+        if ($item_value !== null && $item_value !== '') {
+            $acf_fields[$acf_field] = $item_value;
         }
     }
 
