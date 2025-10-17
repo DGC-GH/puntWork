@@ -16,13 +16,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Initialize heartbeat for import status updates
+ * Initialize heartbeat for import status updates on all admin pages
  */
 add_action('admin_enqueue_scripts', function($hook) {
-    // Only enable heartbeat on the job feed dashboard
-    if ($hook === 'puntwork-dashboard_page_job-feed-dashboard') {
-        // Ensure heartbeat is available for our dashboard
-        // Note: We don't deregister heartbeat globally anymore to avoid breaking wp-auth-check dependencies
+    // Enable heartbeat on job-related admin pages for import status updates
+    $job_pages = array(
+        'puntwork-dashboard_page_job-feed-dashboard',
+        'puntwork-dashboard_page_jobs-dashboard',
+        'toplevel_page_puntwork-dashboard'
+    );
+
+    if (in_array($hook, $job_pages) || strpos($hook, 'puntwork') !== false || strpos($hook, 'job') !== false) {
+        // Ensure heartbeat is available for job-related dashboards
+        // Note: We don't deregister heartbeat globally to avoid breaking wp-auth-check dependencies
 
         // Enqueue our heartbeat handler script
         wp_enqueue_script(
@@ -38,8 +44,13 @@ add_action('admin_enqueue_scripts', function($hook) {
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('heartbeat-nonce')
         ));
+
+        // Log initialization for debugging
+        PuntWorkLogger::info('Heartbeat initialized for admin page', PuntWorkLogger::CONTEXT_ADMIN, [
+            'hook' => $hook,
+            'heartbeat_enabled' => true
+        ]);
     }
-    // Removed global heartbeat deregistration to prevent wp-auth-check dependency issues
 });
 
 /**
