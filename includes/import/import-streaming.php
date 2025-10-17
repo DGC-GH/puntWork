@@ -24,6 +24,184 @@ require_once __DIR__ . '/import-circuit-breaker.php';
  */
 
 /**
+ * Resume streaming import from a specific checkpoint with database recovery
+ *
+ * @param int $resume_from_item The item index to resume from
+ * @param array $recovery_context Optional recovery context data
+ * @return array Resume result data
+ */
+function resume_streaming_import_with_recovery($resume_from_item, $recovery_context = []) {
+    global $wpdb;
+
+    PuntWorkLogger::info('Attempting to resume streaming import with database recovery', PuntWorkLogger::CONTEXT_IMPORT, [
+        'resume_from_item' => $resume_from_item,
+        'recovery_context_provided' => !empty($recovery_context),
+        'recovery_reason' => $recovery_context['reason'] ?? 'unknown',
+        'last_failed_field' => $recovery_context['last_field'] ?? 'unknown'
+    ]);
+
+    // Perform database connection recovery before resuming
+    $recovery_success = perform_database_connection_recovery();
+    if (!$recovery_success) {
+        PuntWorkLogger::error('Database connection recovery failed, cannot resume import', PuntWorkLogger::CONTEXT_IMPORT);
+        return [
+            'success' => false,
+            'message' => 'Database connection recovery failed',
+            'can_retry' => false
+        ];
+    }
+
+    // Clear any stalled import status that might prevent resumption
+    $stale_status = get_import_status([]);
+    if (isset($stale_status['complete']) && !$stale_status['complete']) {
+        $last_update = $stale_status['last_update'] ?? 0;
+        $time_since_update = microtime(true) - $last_update;
+
+        // If status is stale (>30 seconds), clear it for fresh start
+        if ($time_since_update > 30) {
+            PuntWorkLogger::info('Clearing stale import status for resume operation', PuntWorkLogger::CONTEXT_IMPORT, [
+                'time_since_last_update' => round($time_since_update, 2),
+                'stale_threshold' => 30
+            ]);
+            delete_import_status();
+        }
+    }
+
+    // Create resume status with checkpoint information
+    $resume_status = [
+        'total' => $recovery_context['total_items'] ?? 0,
+        'processed' => $resume_from_item,
+        'published' => $recovery_context['published'] ?? 0,
+        'updated' => $recovery_context['updated'] ?? 0,
+        'skipped' => $recovery_context['skipped'] ?? 0,
+        'complete' => false,
+        'success' => null,
+        'phase' => 'resuming_import',
+        'resume_attempted' => true,
+        'resume_timestamp' => microtime(true),
+        'recovery_performed' => true,
+        'checkpoint_item' => $resume_from_item,
+        'logs' => [
+            '[' . date('d-M-Y H:i:s') . ' UTC] Import resumed from item ' . $resume_from_item . ' after database recovery'
+        ]
+    ];
+
+    // Set the resume status atomically
+    $status_set = set_import_status_atomic($resume_status, 3, 5);
+    if (!$status_set) {
+        PuntWorkLogger::error('Failed to set resume status atomically', PuntWorkLogger::CONTEXT_IMPORT);
+        return [
+            'success' => false,
+            'message' => 'Failed to set resume status',
+            'can_retry' => true
+        ];
+    }
+
+    // Now call the main import function with preserve_status=true to resume
+    PuntWorkLogger::info('Initiating main import function for resume operation', PuntWorkLogger::CONTEXT_IMPORT, [
+        'preserve_status' => true,
+        'resume_from_item' => $resume_from_item
+    ]);
+
+    try {
+        $result = import_jobs_streaming(true); // preserve_status=true enables resume
+
+        PuntWorkLogger::info('Resume operation completed', PuntWorkLogger::CONTEXT_IMPORT, [
+            'success' => $result['success'] ?? false,
+            'processed' => $result['processed'] ?? 0,
+            'total' => $result['total'] ?? 0,
+            'time_elapsed' => $result['time_elapsed'] ?? 0,
+            'recovery_successful' => $result['success'] ?? false
+        ]);
+
+        return $result;
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Resume operation failed with exception', PuntWorkLogger::CONTEXT_IMPORT, [
+            'error' => $e->getMessage(),
+            'resume_from_item' => $resume_from_item,
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return [
+            'success' => false,
+            'message' => 'Resume operation failed: ' . $e->getMessage(),
+            'can_retry' => true,
+            'resume_from_item' => $resume_from_item
+        ];
+    }
+}
+
+/**
+ * Perform database connection recovery operations
+ *
+ * @return bool True if recovery successful, false otherwise
+ */
+function perform_database_connection_recovery() {
+    global $wpdb;
+
+    PuntWorkLogger::info('Performing database connection recovery', PuntWorkLogger::CONTEXT_IMPORT);
+
+    try {
+        // Step 1: Check current connection status
+        $connection_ok = $wpdb->check_connection(false);
+        if ($connection_ok) {
+            PuntWorkLogger::debug('Database connection is already healthy', PuntWorkLogger::CONTEXT_IMPORT);
+            // Even if connection is OK, perform cleanup operations
+        } else {
+            PuntWorkLogger::warn('Database connection check failed, attempting recovery', PuntWorkLogger::CONTEXT_IMPORT);
+        }
+
+        // Step 2: Force reconnection if possible
+        if (method_exists($wpdb, 'close')) {
+            $wpdb->close();
+            PuntWorkLogger::debug('Closed existing database connection', PuntWorkLogger::CONTEXT_IMPORT);
+        }
+
+        // Step 3: Re-establish connection
+        $reconnect_result = $wpdb->check_connection(false);
+        if (!$reconnect_result) {
+            PuntWorkLogger::error('Failed to re-establish database connection', PuntWorkLogger::CONTEXT_IMPORT);
+            return false;
+        }
+
+        // Step 4: Clear any pending result sets that might cause "commands out of sync"
+        // This is a best-effort attempt for legacy MySQL
+        if (function_exists('mysql_free_result')) {
+            try {
+                while (mysql_free_result() !== false) {
+                    PuntWorkLogger::debug('Cleared pending MySQL result set during recovery', PuntWorkLogger::CONTEXT_IMPORT);
+                }
+            } catch (\Exception $e) {
+                // Ignore errors during cleanup - this is best effort
+                PuntWorkLogger::debug('MySQL result cleanup completed (some results may have been cleared)', PuntWorkLogger::CONTEXT_IMPORT);
+            }
+        }
+
+        // Step 5: Execute a simple test query to verify connection
+        $test_result = $wpdb->get_var("SELECT 1 as test");
+        if ($test_result !== '1') {
+            PuntWorkLogger::error('Database test query failed after recovery', PuntWorkLogger::CONTEXT_IMPORT, [
+                'test_result' => $test_result
+            ]);
+            return false;
+        }
+
+        PuntWorkLogger::info('Database connection recovery completed successfully', PuntWorkLogger::CONTEXT_IMPORT, [
+            'test_query_passed' => true,
+            'connection_reestablished' => true
+        ]);
+
+        return true;
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Exception during database connection recovery', PuntWorkLogger::CONTEXT_IMPORT, [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return false;
+    }
+}
+
+/**
  * Main streaming import function with composite key system
  *
  * @param bool $preserve_status Whether to preserve existing status for continuation
@@ -93,10 +271,18 @@ function import_jobs_streaming($preserve_status = false) {
         $json_path = $stream_setup['json_path'];
         $total_items = $stream_setup['total_items'];
 
-        // Update status with total
+        // Update status with total (atomic update with rollback protection)
         $streaming_status['total'] = $total_items;
         $streaming_status['phase'] = 'streaming';
-        update_option($status_key, $streaming_status, false);
+        $status_update_result = set_import_status_atomic($streaming_status);
+        if (!$status_update_result) {
+            PuntWorkLogger::error('Failed to update streaming status atomically', PuntWorkLogger::CONTEXT_IMPORT, [
+                'total_items' => $total_items,
+                'phase' => 'streaming',
+                'action' => 'continuing_import_despite_lock_failure'
+            ]);
+            // Continue import even if status update failed - better to complete import than fail due to status update lock
+        }
 
         // Initialize composite key cache for duplicate detection
         $composite_key_cache = $streaming_status['composite_key_cache'] ?? [];
@@ -686,7 +872,7 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
                 'all_logs_count' => count($all_logs)
             ]);
 
-            $set_status_result = set_import_status($main_status);
+            $set_status_result = set_import_status_atomic($main_status, 3, 5); // 3 retries, 5 second locks
             PuntWorkLogger::debug('[Progress Update] Main status update attempt', PuntWorkLogger::CONTEXT_IMPORT, [
                 'set_import_status_called' => true,
                 'processed_value' => $processed,
@@ -857,7 +1043,73 @@ function process_acf_queue_batch(&$update_queue, &$create_queue, $operation = 'b
                     if ($field_processed && $field_result !== false) {
                         $fields_processed++;
                     } elseif ($field_timeout_reached || (!$field_processed && isset($error_message))) {
-                        // Handle timeout or failure
+                        // Check for MySQL "commands out of sync" error
+                        $is_mysql_sync_error = isset($error_message) &&
+                            (strpos(strtolower($error_message), 'commands out of sync') !== false ||
+                             strpos(strtolower($error_message), 'mysql') !== false ||
+                             strpos(strtolower($error_message), 'out of sync') !== false);
+
+                        if ($is_mysql_sync_error) {
+                            $mysql_sync_errors++;
+                            PuntWorkLogger::error('MySQL sync error detected - attempting database connection reset', PuntWorkLogger::CONTEXT_IMPORT, [
+                                'field' => $field,
+                                'post_id' => $post_id,
+                                'guid' => $item['guid'] ?? 'unknown',
+                                'error_message' => $error_message,
+                                'mysql_sync_error_count' => $mysql_sync_errors,
+                                'action' => 'Resetting database connection and retrying'
+                            ]);
+
+                            // Reset database connections to clear sync state
+                            if (isset($wpdb) && $wpdb instanceof \wpdb) {
+                                // Force reconnection by closing current connections
+                                if (method_exists($wpdb, 'close')) {
+                                    $wpdb->close();
+                                }
+                                // Re-establish connection
+                                $wpdb->check_connection(false);
+                                PuntWorkLogger::info('Database connection reset for MySQL sync error recovery', PuntWorkLogger::CONTEXT_IMPORT, [
+                                    'post_id' => $post_id,
+                                    'guid' => $item['guid'] ?? 'unknown',
+                                    'connection_reset' => true
+                                ]);
+                            }
+
+                            // Clear any pending results that might cause sync issues
+                            if (function_exists('mysql_free_result')) {
+                                // Legacy MySQL function - attempt to free any pending results
+                                while (mysql_free_result() !== false) {
+                                    // Continue freeing results until none left
+                                }
+                            }
+
+                            // Retry the field update once after connection reset
+                            try {
+                                $retry_result = update_field($field, $set_value, $post_id);
+                                if ($retry_result !== false) {
+                                    PuntWorkLogger::info('MySQL sync error resolved with connection reset', PuntWorkLogger::CONTEXT_IMPORT, [
+                                        'field' => $field,
+                                        'post_id' => $post_id,
+                                        'guid' => $item['guid'] ?? 'unknown',
+                                        'retry_successful' => true
+                                    ]);
+                                    $fields_processed++;
+                                    $mysql_sync_errors--; // Reduce error count since we recovered
+                                    continue; // Successfully processed, move to next field
+                                }
+                            } catch (\Exception $retry_exception) {
+                                PuntWorkLogger::warn('Retry after MySQL sync error reset also failed', PuntWorkLogger::CONTEXT_IMPORT, [
+                                    'field' => $field,
+                                    'post_id' => $post_id,
+                                    'guid' => $item['guid'] ?? 'unknown',
+                                    'original_error' => $error_message,
+                                    'retry_error' => $retry_exception->getMessage(),
+                                    'action' => 'Skipping field after failed retry'
+                                ]);
+                            }
+                        }
+
+                        // Handle timeout or other failure (including failed MySQL sync recovery)
                         $fields_failed++;
                         $field_failures[$field] = ($field_failures[$field] ?? 0) + 1;
                         if ($field_timeout_reached) {
@@ -871,9 +1123,11 @@ function process_acf_queue_batch(&$update_queue, &$create_queue, $operation = 'b
                             'elapsed_seconds' => round(microtime(true) - $start_time, 3),
                             'timeout_threshold' => $field_timeout_seconds,
                             'was_timeout' => $field_timeout_reached,
+                            'was_mysql_sync_error' => $is_mysql_sync_error ?? false,
                             'error_message' => $error_message,
                             'failure_count' => $field_failures[$field],
                             'timeout_count' => $field_timeouts[$field] ?? 0,
+                            'mysql_sync_errors_total' => $mysql_sync_errors,
                             'action' => 'Skipped problematic field, continuing import'
                         ]);
 

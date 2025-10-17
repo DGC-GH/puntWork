@@ -57,24 +57,81 @@ add_action('admin_enqueue_scripts', function($hook) {
 });
 
 /**
- * Handle heartbeat ticks with minimal code to test basic functionality
+ * Handle heartbeat ticks with comprehensive import status updates
  */
 add_filter('heartbeat_received', function($response, $data, $screen_id) {
-    // Minimal heartbeat test - just return the response without any complex logic
+    // Handle import status requests
     if (isset($data['puntwork_import_status'])) {
-        $response['puntwork_import_status'] = array(
-            'status' => array('test' => true),
-            'timestamp' => time(),
-            'has_changes' => true
-        );
+        $import_status = get_import_status([]);
+
+        // Check for status changes compared to last heartbeat
+        static $last_status_hash = null;
+        $current_hash = md5(serialize($import_status));
+        $has_changes = ($last_status_hash !== $current_hash);
+        $last_status_hash = $current_hash;
+
+        // Format status for heartbeat response - keep it lightweight
+        $heartbeat_status = [
+            'processed' => $import_status['processed'] ?? 0,
+            'total' => $import_status['total'] ?? 0,
+            'published' => $import_status['published'] ?? 0,
+            'updated' => $import_status['updated'] ?? 0,
+            'skipped' => $import_status['skipped'] ?? 0,
+            'complete' => $import_status['complete'] ?? false,
+            'success' => $import_status['success'] ?? null,
+            'time_elapsed' => $import_status['time_elapsed'] ?? 0,
+            'last_update' => $import_status['last_update'] ?? null,
+            'phase' => $import_status['phase'] ?? '',
+            'progress_percentage' => ($import_status['total'] ?? 0) > 0 ?
+                round((($import_status['processed'] ?? 0) / ($import_status['total'] ?? 0)) * 100, 2) : 0,
+            'timestamp' => microtime(true)
+        ];
+
+        $response['puntwork_import_update'] = [
+            'status' => $heartbeat_status,
+            'is_active' => !($import_status['complete'] ?? false) &&
+                          (($import_status['processed'] ?? 0) > 0 || ($import_status['total'] ?? 0) > 0),
+            'has_changes' => $has_changes,
+            'timestamp' => microtime(true)
+        ];
     }
+
+    // Handle scheduled imports status
+    if (isset($data['puntwork_scheduled_imports'])) {
+        // Check for active scheduled imports
+        $active_imports = [];
+
+        // Check Action Scheduler
+        if (function_exists('as_get_scheduled_actions')) {
+            $pending_actions = as_get_scheduled_actions([
+                'hook' => 'puntwork_scheduled_import',
+                'status' => \ActionScheduler_Store::STATUS_PENDING
+            ]);
+            if (!empty($pending_actions)) {
+                $active_imports['scheduled_pending'] = count($pending_actions);
+            }
+        }
+
+        // Check WP cron
+        $next_scheduled = wp_next_scheduled('puntwork_scheduled_import');
+        if ($next_scheduled) {
+            $active_imports['wp_cron_scheduled'] = $next_scheduled;
+        }
+
+        $response['puntwork_scheduled_imports'] = [
+            'has_changes' => !empty($active_imports),
+            'data' => $active_imports,
+            'timestamp' => microtime(true)
+        ];
+    }
+
     return $response;
 }, 10, 3);
 
 /**
- * Handle heartbeat send with minimal code to test basic functionality
+ * Handle heartbeat send - prepare data for outgoing heartbeat
  */
 add_filter('heartbeat_send', function($response, $screen_id) {
-    // Minimal heartbeat test - just return empty response
+    // No additional data to send on heartbeat ticks
     return $response;
 }, 10, 2);
