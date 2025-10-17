@@ -46,7 +46,7 @@ add_action('admin_enqueue_scripts', function($hook) {
         ));
 
         // Log initialization for debugging
-        PuntWorkLogger::info('Heartbeat initialized for admin page', PuntWorkLogger::CONTEXT_ADMIN, [
+        PuntWorkLogger::info('Heartbeat initialized for admin page', PuntWorkLogger::CONTEXT_SYSTEM, [
             'hook' => $hook,
             'heartbeat_enabled' => true
         ]);
