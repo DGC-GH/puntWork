@@ -963,8 +963,60 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
             }
         }
 
-        // ADAPTIVE RESOURCE MANAGEMENT: Optimized checks
+        // ADAPTIVE RESOURCE MANAGEMENT: Optimized checks with PAUSE & CONTINUE logic
         $should_continue = check_streaming_resources_optimized($resource_limits, $streaming_stats, $circuit_breaker);
+
+        // CRITICAL FIX: Handle timeout/memory limits by PAUSING import (not stopping it completely)
+        if (!$should_continue && !isset($streaming_status['paused'])) {
+            // Set import status to PAUSED and schedule continuation
+            PuntWorkLogger::warn('RESOURCE LIMIT REACHED - PAUSING IMPORT FOR CONTINUATION', PuntWorkLogger::CONTEXT_IMPORT, [
+                'processed_items_at_pause' => $processed,
+                'total_items' => $streaming_status['total'] ?? 0,
+                'composite_keys_processed' => $composite_keys_processed,
+                'memory_usage_mb' => round(memory_get_usage(true) / 1024 / 1024, 2),
+                'execution_time_seconds' => round(microtime(true) - $streaming_stats['start_time'], 2),
+                'phase_at_pause' => $streaming_status['phase'] ?? 'unknown',
+                'action' => 'Marking import as PAUSED and scheduling continuation hook'
+            ]);
+
+            // Set paused status and checkpoint information
+            $streaming_status['paused'] = true;
+            $streaming_status['pause_timestamp'] = microtime(true);
+            $streaming_status['resume_from_item'] = $composite_keys_processed;
+            $streaming_status['resume_context'] = [
+                'reason' => 'resource_limits_exceeded',
+                'last_item_index' => $composite_keys_processed,
+                'total_processed' => $processed,
+                'memory_at_pause' => memory_get_usage(true),
+                'time_at_pause' => microtime(true) - $streaming_stats['start_time']
+            ];
+
+            // CRITICAL: Update status with paused flag BEFORE scheduling continuation
+            set_import_status_atomic($streaming_status, 3, 5);
+
+            // Schedule immediate continuation (10 seconds from now)
+            wp_schedule_single_event(time() + 10, 'puntwork_continue_import');
+
+            // Schedule fallback continuations
+            wp_schedule_single_event(time() + 120, 'puntwork_continue_import_retry');
+            wp_schedule_single_event(time() + 300, 'puntwork_continue_import_manual');
+
+            PuntWorkLogger::info('IMPORT PAUSED - CONTINUATION SCHEDULED', PuntWorkLogger::CONTEXT_IMPORT, [
+                'pause_timestamp' => $streaming_status['pause_timestamp'],
+                'resume_from_item' => $streaming_status['resume_from_item'],
+                'continuations_scheduled' => [
+                    'primary' => '10 seconds',
+                    'retry' => '2 minutes',
+                    'manual_fallback' => '5 minutes'
+                ],
+                'next_step' => 'Import will resume automatically via puntwork_continue_import hook'
+            ]);
+
+            // Update status one more time to ensure pause status is saved
+            update_option($status_key, $streaming_status, false);
+
+            $should_continue = false; // Exit the processing loop
+        }
 
         // Check for emergency stop (less frequent)
         if ($processed % 50 === 0 && get_transient('import_emergency_stop') === true) {

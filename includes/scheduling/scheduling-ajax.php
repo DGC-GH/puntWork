@@ -417,7 +417,35 @@ function run_scheduled_import_async() {
 
     // Check if an import is already running
     $import_status = get_import_status([]);
-    error_log('[PUNTWORK] Current import status at async start: processed=' . ($import_status['processed'] ?? 0) . ', total=' . ($import_status['total'] ?? 0) . ', complete=' . ($import_status['complete'] ? 'true' : 'false'));
+    error_log('[PUNTWORK] Current import status at async start: processed=' . ($import_status['processed'] ?? 0) . ', total=' . ($import_status['total'] ?? 0) . ', complete=' . ($import_status['complete'] ? 'true' : 'false') . ', paused=' . ($import_status['paused'] ? 'true' : 'false'));
+
+    // CRITICAL FIX: Check if import is PAUSED and needs RESUMPTION
+    if (isset($import_status['paused']) && $import_status['paused']) {
+        error_log('[PUNTWORK] Detected PAUSED import - attempting to RESUME');
+
+        // Clear pause status and prepare for resumption
+        $import_status['paused'] = false;
+        $import_status['resuming'] = true;
+        $import_status['resume_attempt'] = microtime(true);
+        set_import_status($import_status);
+
+        // Resume from the paused position
+        $resume_from_item = $import_status['resume_from_item'] ?? 0;
+        error_log('[PUNTWORK] Resuming import from item: ' . $resume_from_item);
+
+        // Call resume function which handles the continuation
+        $resume_result = resume_streaming_import_with_recovery($resume_from_item, $import_status['resume_context'] ?? []);
+
+        if ($resume_result['success']) {
+            error_log('[PUNTWORK] Import resumed and completed successfully');
+        } else {
+            error_log('[PUNTWORK] Import resume failed: ' . ($resume_result['message'] ?? 'Unknown error'));
+            delete_import_status(); // Clear status on resume failure
+        }
+
+        error_log('[PUNTWORK] === ASYNC RESUME FUNCTION COMPLETED ===');
+        return; // Exit early after resume attempt
+    }
 
     // Check for stuck imports (similar to AJAX handler logic)
     if (isset($import_status['complete']) && !$import_status['complete']) {
@@ -517,7 +545,35 @@ function run_manual_import_async() {
 
     // Check if an import is already running
     $import_status = get_import_status([]);
-    error_log('[PUNTWORK] Current import status at manual async start: processed=' . ($import_status['processed'] ?? 0) . ', total=' . ($import_status['total'] ?? 0) . ', complete=' . ($import_status['complete'] ? 'true' : 'false'));
+    error_log('[PUNTWORK] Current import status at manual async start: processed=' . ($import_status['processed'] ?? 0) . ', total=' . ($import_status['total'] ?? 0) . ', complete=' . ($import_status['complete'] ? 'true' : 'false') . ', paused=' . ($import_status['paused'] ? 'true' : 'false'));
+
+    // CRITICAL FIX: Check if import is PAUSED and needs RESUMPTION
+    if (isset($import_status['paused']) && $import_status['paused']) {
+        error_log('[PUNTWORK] Detected PAUSED import - attempting to RESUME');
+
+        // Clear pause status and prepare for resumption
+        $import_status['paused'] = false;
+        $import_status['resuming'] = true;
+        $import_status['resume_attempt'] = microtime(true);
+        set_import_status($import_status);
+
+        // Resume from the paused position
+        $resume_from_item = $import_status['resume_from_item'] ?? 0;
+        error_log('[PUNTWORK] Resuming manual import from item: ' . $resume_from_item);
+
+        // Call resume function which handles the continuation
+        $resume_result = resume_streaming_import_with_recovery($resume_from_item, $import_status['resume_context'] ?? []);
+
+        if ($resume_result['success']) {
+            error_log('[PUNTWORK] Manual import resumed and completed successfully');
+        } else {
+            error_log('[PUNTWORK] Manual import resume failed: ' . ($resume_result['message'] ?? 'Unknown error'));
+            delete_import_status(); // Clear status on resume failure
+        }
+
+        error_log('[PUNTWORK] === MANUAL ASYNC RESUME FUNCTION COMPLETED ===');
+        return; // Exit early after resume attempt
+    }
 
     // Check for stuck imports (similar to AJAX handler logic)
     if (isset($import_status['complete']) && !$import_status['complete']) {
