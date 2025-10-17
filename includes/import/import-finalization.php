@@ -541,6 +541,15 @@ function cleanup_old_job_posts($import_start_time) {
 
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Feed integrity validation passed - proceeding with cleanup';
 
+    // FEEDS ARE ALWAYS REDOWNLOADED - no freshness check needed since import process ensures fresh feeds
+    PuntWorkLogger::info('Cleanup using freshly downloaded feed data', PuntWorkLogger::CONTEXT_BATCH, [
+        'feed_file_exists' => file_exists($json_path),
+        'feed_file_size' => file_exists($json_path) ? filesize($json_path) : 0,
+        'note' => 'feeds_always_redownloaded'
+    ]);
+
+    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Using freshly downloaded feed data for cleanup';
+
     // MEMORY-SAFE: Load GUIDs in chunks to prevent memory exhaustion
     $guid_chunk_size = 1000;
     $guid_offset = 0;

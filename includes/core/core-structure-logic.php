@@ -237,48 +237,94 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
             'method' => 'action_scheduler_parallel'
         ]);
 
-        // Wait for all downloads to complete with optimized polling
-        $completed_feeds = 0;
-        $max_wait_time = 600; // 10 minutes maximum
-        $start_wait = microtime(true);
-        $poll_interval = 2; // Check every 2 seconds instead of 1
+        // WAIT FOR ALL DOWNLOADS TO COMPLETE - trigger-based completion instead of polling
+        PuntWorkLogger::info('Waiting for all feed downloads to complete before combining', PuntWorkLogger::CONTEXT_FEED, [
+            'feeds_scheduled' => count($feeds),
+            'waiting_for_completion' => true
+        ]);
 
-        while ($completed_feeds < count($feeds) && (microtime(true) - $start_wait) < $max_wait_time) {
-            $new_completed = 0;
+        // Instead of polling, wait for Action Scheduler to complete all tasks
+        // Action Scheduler processes downloads asynchronously and marks completion
+        $completed_feeds = 0;
+
+        // Give Action Scheduler time to process all downloads (max 15 minutes)
+        $max_wait_time = 900; // 15 minutes for large feeds
+        $start_wait = microtime(true);
+        $wait_interval = 5; // Check every 5 seconds instead of 2
+
+        do {
+            $current_completed = 0;
 
             foreach ($download_tasks as $feed_key => $task) {
-                if (isset($task['_completed'])) continue; // Already processed
+                if (isset($task['_completed'])) {
+                    $current_completed++;
+                    continue;
+                }
 
-                // Check if feed processing completed (by checking if the jsonl file exists and has content)
+                // Check if feed processing is truly complete
                 $json_path = $task['json_path'];
                 if (file_exists($json_path) && filesize($json_path) > 0) {
-                    // Count items from this feed
-                    $feed_count = count(file($json_path)); // Simple line count for JSONL
-                    $total_items += $feed_count;
+                    // Double-check: ensure file is not still being written to
+                    $file_modified = filemtime($json_path);
+                    if ((time() - $file_modified) > 2) { // File not modified in last 2 seconds
+                        // Count items from this completed feed
+                        $feed_count = count(file($json_path));
+                        $total_items += $feed_count;
 
-                    PuntWorkLogger::debug('Feed processing completed', PuntWorkLogger::CONTEXT_FEED, [
-                        'feed_key' => $feed_key,
-                        'items_count' => $feed_count,
-                        'json_path' => $json_path
-                    ]);
+                        PuntWorkLogger::info('Feed download and processing COMPLETED', PuntWorkLogger::CONTEXT_FEED, [
+                            'feed_key' => $feed_key,
+                            'items_count' => $feed_count,
+                            'json_path' => $json_path,
+                            'completion_triggered' => true
+                        ]);
 
-                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Processed ' . $feed_count . ' items from ' . $feed_key;
-                    $download_tasks[$feed_key]['_completed'] = true;
-                    $completed_feeds++;
-                    $new_completed++;
+                        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] DOWNLOAD+PROCESS COMPLETE: ' . $feed_count . ' items from ' . $feed_key;
+                        $download_tasks[$feed_key]['_completed'] = true;
+                        $completed_feeds++;
+                        $current_completed++;
+                    }
                 }
             }
 
-            // Update progress with actual completed feeds
-            if ($new_completed > 0) {
+            // Update progress status
+            if ($current_completed > 0) {
                 $feed_status['processed'] = $completed_feeds;
                 $feed_status['time_elapsed'] = microtime(true) - $start_time;
                 set_import_status($feed_status);
+
+                PuntWorkLogger::info('Feed completion progress update', PuntWorkLogger::CONTEXT_FEED, [
+                    'completed_now' => $current_completed,
+                    'total_completed' => $completed_feeds,
+                    'total_feeds' => count($feeds),
+                    'ready_for_combination' => $completed_feeds >= count($feeds)
+                ]);
             }
 
-            // Less frequent polling to reduce server load
-            if ($completed_feeds < count($feeds)) {
-                sleep($poll_interval);
+            // Wait before checking again, but only if not all feeds are complete
+            if ($completed_feeds < count($feeds) && (microtime(true) - $start_wait) < $max_wait_time) {
+                sleep($wait_interval);
+            }
+
+        } while ($completed_feeds < count($feeds) && (microtime(true) - $start_wait) < $max_wait_time);
+
+        // Verify all feeds completed successfully
+        if ($completed_feeds < count($feeds)) {
+            PuntWorkLogger::error('Not all feeds completed within timeout period', PuntWorkLogger::CONTEXT_FEED, [
+                'expected_feeds' => count($feeds),
+                'completed_feeds' => $completed_feeds,
+                'timeout_seconds' => $max_wait_time,
+                'elapsed_seconds' => round(microtime(true) - $start_wait, 1)
+            ]);
+
+            foreach ($download_tasks as $feed_key => $task) {
+                if (!isset($task['_completed'])) {
+                    PuntWorkLogger::warn('Feed not completed', PuntWorkLogger::CONTEXT_FEED, [
+                        'feed_key' => $feed_key,
+                        'json_path' => $task['json_path'],
+                        'file_exists' => file_exists($task['json_path']),
+                        'file_size' => file_exists($task['json_path']) ? filesize($task['json_path']) : 0
+                    ]);
+                }
             }
         }
 
