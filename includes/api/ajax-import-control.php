@@ -674,7 +674,7 @@ function get_job_import_status_ajax() {
                 'complete' => false,
                 'success' => false,
                 'error_message' => '',
-                'batch_size' => DEFAULT_BATCH_SIZE, // Use constant instead of calling get_batch_size()
+                'batch_size' => 1, // Default batch size
                 'inferred_languages' => 0,
                 'inferred_benefits' => 0,
                 'schema_generated' => 0,
@@ -683,6 +683,43 @@ function get_job_import_status_ajax() {
                 'last_update' => microtime(true),
                 'logs' => []
             ];
+        } else {
+            // Check if we have a completed import that's old (>5 minutes) - treat as fresh start for UI
+            $is_complete = $progress['complete'] ?? false;
+            $last_update = $progress['last_update'] ?? 0;
+            $now = microtime(true);
+            $time_since_completion = $now - $last_update;
+
+            // If import completed more than 5 minutes ago, return fresh status to prevent stale notifications
+            $STALE_COMPLETION_THRESHOLD = 300; // 5 minutes
+            if ($is_complete && $time_since_completion > $STALE_COMPLETION_THRESHOLD) {
+                PuntWorkLogger::debug('Returning fresh status for stale completed import', PuntWorkLogger::CONTEXT_AJAX, [
+                    'time_since_completion' => round($time_since_completion, 2),
+                    'threshold' => $STALE_COMPLETION_THRESHOLD,
+                    'last_update' => date('Y-m-d H:i:s', (int)$last_update)
+                ]);
+
+                $progress = [
+                    'total' => 0,
+                    'processed' => 0,
+                    'published' => 0,
+                    'updated' => 0,
+                    'skipped' => 0,
+                    'duplicates_drafted' => 0,
+                    'time_elapsed' => 0,
+                    'complete' => false,
+                    'success' => false,
+                    'error_message' => '',
+                    'batch_size' => 1,
+                    'inferred_languages' => 0,
+                    'inferred_benefits' => 0,
+                    'schema_generated' => 0,
+                    'start_time' => null,
+                    'end_time' => null,
+                    'last_update' => microtime(true),
+                    'logs' => []
+                ];
+            }
         }
 
         // Validate that progress is an array
