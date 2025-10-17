@@ -16,6 +16,9 @@
          * Initialize heartbeat functionality
          */
         init: function() {
+            // Initialize tracking variables
+            this.pageLoadTime = Date.now() / 1000; // Track page load time
+
             // Configure heartbeat for our needs
             this.configureHeartbeat();
 
@@ -203,20 +206,53 @@
          * Handle import completion
          */
         handleImportCompletion: function(status) {
+            // Prevent duplicate completion handling on page reload
+            if (this.completionHandled) {
+                return;
+            }
+            this.completionHandled = true;
+
+            // Only show notifications for imports that completed recently (within last 5 minutes)
+            // to avoid showing stale completion notifications from previous page loads or sessions
+            var lastUpdate = status.last_update || 0;
+            var now = Date.now() / 1000;
+            var timeSinceCompletion = now - lastUpdate;
+            var SHOW_NOTIFICATION_THRESHOLD = 300; // 5 minutes in seconds
+
             // Stop considering import active
             this.isImportActive = false;
 
-            // Update UI for completion
+            // Update UI for completion - check success status
             JobImportUI.resetButtons();
-            $('#status-message').text('Import Complete');
 
-            // Show completion notification
-            var message = status.message || 'Import completed successfully!';
-            if (typeof JobImportScheduling !== 'undefined' && JobImportScheduling.showNotification) {
-                JobImportScheduling.showNotification(message, 'success');
+            var isSuccessful = status.success !== false; // Treat undefined/null as success
+            var baseMessage = isSuccessful ? 'Import completed successfully!' : 'Import completed with issues';
+            var message = status.message || baseMessage;
+
+            $('#status-message').text(isSuccessful ? 'Import Complete' : 'Import Finished');
+
+            // Only show notification if this is a recent completion (within 5 minutes)
+            if (timeSinceCompletion <= SHOW_NOTIFICATION_THRESHOLD) {
+                // Show completion notification with appropriate type
+                var notificationType = isSuccessful ? 'success' : 'warning';
+                if (typeof JobImportScheduling !== 'undefined' && JobImportScheduling.showNotification) {
+                    JobImportScheduling.showNotification(message, notificationType);
+                }
+
+                PuntWorkJSLogger.debug('Showing completion notification for recent import', 'HEARTBEAT', {
+                    timeSinceCompletion: timeSinceCompletion,
+                    success: isSuccessful,
+                    lastUpdate: lastUpdate
+                });
+            } else {
+                PuntWorkJSLogger.debug('Skipping completion notification for stale import status', 'HEARTBEAT', {
+                    timeSinceCompletion: timeSinceCompletion,
+                    success: isSuccessful,
+                    lastUpdate: lastUpdate
+                });
             }
 
-            // Refresh history if available
+            // Refresh history if available - do this regardless of notification timing
             if (typeof JobImportScheduling !== 'undefined' && JobImportScheduling.loadRunHistory) {
                 setTimeout(function() {
                     JobImportScheduling.loadRunHistory();
@@ -236,7 +272,8 @@
             } else if (!status.complete && status.total === 0 && status.processed > 0) {
                 message = 'Counting items... ' + status.processed + ' items found so far';
             } else if (status.complete) {
-                message = 'Import completed successfully!';
+                var isSuccessful = status.success !== false; // Treat undefined/null as success
+                message = isSuccessful ? 'Import completed successfully!' : 'Import completed with issues';
             }
 
             $('#status-message').text(message);
