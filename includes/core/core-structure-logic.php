@@ -14,6 +14,10 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+require_once __DIR__ . '/../import/process-xml-batch.php';
+require_once __DIR__ . '/../utilities/item-cleaning.php';
+require_once __DIR__ . '/../utilities/item-inference.php';
+
 function get_feeds() {
     $feeds = get_transient('puntwork_feeds');
     if (false === $feeds) {
@@ -137,22 +141,43 @@ function process_one_feed($feed_key, $url, $output_dir, $fallback_domain, &$logs
         return 0;
     }
 
-    // Download succeeded; update import status
+    // Download succeeded; now process XML to JSONL
+    $total_feed_items = 0;
+    $batch_size = 1000;
+
     try {
         $status = get_import_status();
         $status['phase'] = 'feed-processing';
         $status['current_feed'] = $feed_key;
         $status['last_update'] = time();
-        $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Download complete for ' . $feed_key;
+        $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Download complete, starting XML processing for ' . $feed_key;
         set_import_status_atomic($status);
     } catch (\Exception $e) {}
 
-// TODO: Reimplement this using streaming processing instead of batch processing
-// The batch processing functionality has been removed, so this XML-to-JSONL conversion
-// needs to be rewritten to work with the streaming architecture
+    // Open JSONL file for writing
+    $json_handle = fopen($json_path, 'w');
+    if (!$json_handle) {
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Error: Could not open JSONL file for writing: ' . $json_path;
+        return 0;
+    }
 
-$logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Skipping feed processing - batch functionality removed for ' . $feed_key;
-return 0;
+    // Process XML feed in batches to JSONL
+    process_xml_batch($xml_path, $json_handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_feed_items, $logs);
+
+    // Close JSONL file
+    fclose($json_handle);
+    @chmod($json_path, 0644);
+
+    // Update import status with processed count
+    try {
+        $status = get_import_status();
+        $status['last_update'] = time();
+        $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Processed ' . $total_feed_items . ' items for ' . $feed_key;
+        set_import_status_atomic($status);
+    } catch (\Exception $e) {}
+
+    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] XML processing complete for ' . $feed_key . ' (' . $total_feed_items . ' items)';
+    return $total_feed_items;
 }
 
 function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$logs) {
@@ -280,6 +305,9 @@ function fetch_and_generate_combined_json() {
         'total_items' => $total_items
     ]);
 
+    $import_logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Starting JSONL combination phase | Data: {"total_items":' . $total_items . '}';
+    error_log('Starting JSONL combination phase | Data: {"total_items":' . $total_items . '}');
+
     combine_jsonl_files($feeds, $output_dir, $total_items, $import_logs);
 
     // Mark JSONL combination as complete
@@ -290,6 +318,9 @@ function fetch_and_generate_combined_json() {
     PuntWorkLogger::info('JSONL combination phase completed', PuntWorkLogger::CONTEXT_FEED, [
         'total_items' => $total_items
     ]);
+
+    $import_logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] JSONL combination phase completed | Data: {"total_items":' . $total_items . '}';
+    error_log('JSONL combination phase completed | Data: {"total_items":' . $total_items . '}');
 
     return $import_logs;
 }
