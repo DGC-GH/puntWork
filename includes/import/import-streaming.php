@@ -811,6 +811,7 @@ function process_acf_queue_batch(&$update_queue, &$create_queue, $operation = 'b
         $fields_processed = 0;
         $fields_skipped = 0;
         $fields_failed = 0;
+        $job_acf_validation_errors = []; // Collect all ACF validation errors for this job
 
         foreach ($acf_fields as $field) {
             $start_time = microtime(true);
@@ -880,13 +881,28 @@ function process_acf_queue_batch(&$update_queue, &$create_queue, $operation = 'b
                         continue;
                     } elseif ($field_result === false) {
                         // ACF update_field returned false (validation failure, etc.)
-                        PuntWorkLogger::debug('ACF field update returned false (validation failure)', PuntWorkLogger::CONTEXT_IMPORT, [
-                            'field' => $field,
-                            'post_id' => $post_id,
-                            'value' => substr((string)$set_value, 0, 100), // Truncate for logging
-                            'guid' => $item['guid'] ?? 'unknown'
-                        ]);
+                        // Capture specific ACF validation errors
+                        $acf_validation_errors = function_exists('acf_get_validation_errors') ? acf_get_validation_errors() : [];
+                        $field_validation_errors = [];
+
+                        if (!empty($acf_validation_errors)) {
+                            foreach ($acf_validation_errors as $error) {
+                                if (isset($error['field']) && $error['field'] === $field) {
+                                    $field_validation_errors[] = $error['message'] ?? 'Unknown validation error';
+                                }
+                            }
+                        }
+
+                        if (!empty($field_validation_errors)) {
+                            $job_acf_validation_errors[$field] = $field_validation_errors;
+                        }
+
                         $fields_skipped++;
+
+                        // Clear ACF validation errors to prevent accumulation
+                        if (function_exists('acf_reset_validation_errors')) {
+                            acf_reset_validation_errors();
+                        }
                     }
                 }
             } catch (\Exception $e) {
