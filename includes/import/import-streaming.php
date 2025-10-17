@@ -201,7 +201,7 @@ function import_jobs_streaming($preserve_status = false) {
  */
 function prepare_streaming_environment() {
     do_action('qm/cease'); // Disable Query Monitor
-    ini_set('memory_limit', '512M');
+    ini_set('memory_limit', '1024M');
     set_time_limit(1800);
     ignore_user_abort(true);
 
@@ -973,7 +973,7 @@ function get_adaptive_resource_limits() {
 
     // Calculate adaptive limits based on server capacity
     $adaptive_limits = [
-        'max_memory_usage' => $memory_limit * 0.8, // 80% of available memory
+        'max_memory_usage' => $memory_limit * 0.9, // 90% of available memory (increased for speed)
         'max_execution_time' => max(600, $time_limit - 60), // Leave 60 seconds buffer
         'items_per_memory_check' => 50,
         'items_per_time_check' => 25,
@@ -988,7 +988,7 @@ function get_adaptive_resource_limits() {
 
     if ($cpu_count >= 8) {
         $adaptive_limits['high_performance'] = true;
-        $adaptive_limits['max_memory_usage'] = $memory_limit * 0.9; // Use more memory on powerful servers
+        $adaptive_limits['max_memory_usage'] = $memory_limit * 0.95; // Use even more memory on powerful servers (increased for speed)
         $adaptive_limits['adaptations'][] = 'high_performance_detected';
     }
 
