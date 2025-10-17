@@ -60,7 +60,7 @@ function prepare_import_setup($batch_start = 0) {
         ]);
     } else {
         $start_time = microtime(true);
-        PuntWorkLogger::info('Starting new import with start time: ' . $start_time, PuntWorkLogger::CONTEXT_BATCH);
+        PuntWorkLogger::info('Starting new import with start time: ' . $start_time, PuntWorkLogger::CONTEXT_IMPORT);
     }
 
     $json_path = PUNTWORK_PATH . 'feeds/combined-jobs.jsonl';
@@ -176,7 +176,7 @@ function prepare_import_setup($batch_start = 0) {
             isset($existing_status['complete']) && $existing_status['complete'] === false) {
             // Status is already properly initialized, don't clear it
             $needs_reinit = false;
-            PuntWorkLogger::info('Using pre-initialized import status', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::info('Using pre-initialized import status', PuntWorkLogger::CONTEXT_IMPORT, [
                 'total' => $existing_status['total'],
                 'start_time' => $existing_status['start_time']
             ]);
@@ -186,7 +186,7 @@ function prepare_import_setup($batch_start = 0) {
             // Clear existing status for fresh start
             delete_option('job_import_status');
             $start_time = microtime(true);
-            PuntWorkLogger::info('Fresh import start - resetting status and progress to 0', PuntWorkLogger::CONTEXT_BATCH);
+            PuntWorkLogger::info('Fresh import start - resetting status and progress to 0', PuntWorkLogger::CONTEXT_IMPORT);
 
             // Initialize status for manual import
             $initial_status = initialize_import_status($total, 'Manual import started - preparing to process items...', $start_time);

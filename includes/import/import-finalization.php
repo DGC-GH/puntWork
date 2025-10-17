@@ -41,7 +41,7 @@ function is_automatic_cleanup_enabled() {
 function finalize_import_with_cleanup($result) {
     // Only proceed with cleanup if import was completely successful
     if (!$result['success'] || !$result['complete']) {
-        PuntWorkLogger::info('Import not fully complete - skipping automatic cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::info('Import not fully complete - skipping automatic cleanup', PuntWorkLogger::CONTEXT_IMPORT, [
             'success' => $result['success'] ?? false,
             'complete' => $result['complete'] ?? false
         ]);
@@ -50,7 +50,7 @@ function finalize_import_with_cleanup($result) {
 
     // Check if automatic cleanup is enabled
     if (!is_automatic_cleanup_enabled()) {
-        PuntWorkLogger::info('Automatic cleanup disabled by configuration - skipping', PuntWorkLogger::CONTEXT_BATCH);
+        PuntWorkLogger::info('Automatic cleanup disabled by configuration - skipping', PuntWorkLogger::CONTEXT_IMPORT);
         $result['cleanup_skipped'] = true;
         $result['cleanup_reason'] = 'disabled_by_config';
         return $result;
@@ -61,7 +61,7 @@ function finalize_import_with_cleanup($result) {
 
     $start_time = microtime(true);
 
-    PuntWorkLogger::info('Starting automatic post-import cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Starting automatic post-import cleanup', PuntWorkLogger::CONTEXT_IMPORT, [
         'cleanup_start_time' => date('Y-m-d H:i:s', (int)$start_time)
     ]);
 
@@ -87,7 +87,7 @@ function finalize_import_with_cleanup($result) {
 
     // CLEAR import status after successful cleanup to prevent stale heartbeat notifications
     // This ensures that after cleanup, no more heartbeat updates will be sent
-    PuntWorkLogger::info('Clearing import status after successful completion and cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Clearing import status after successful completion and cleanup', PuntWorkLogger::CONTEXT_IMPORT, [
         'cleanup_deleted' => $cleanup_result['deleted_count'],
         'cleanup_duration' => $cleanup_duration,
         'final_processed' => $status['processed'] ?? 0,
@@ -95,7 +95,7 @@ function finalize_import_with_cleanup($result) {
     ]);
     delete_import_status();
 
-    PuntWorkLogger::info('Automatic cleanup completed', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Automatic cleanup completed', PuntWorkLogger::CONTEXT_IMPORT, [
         'jobs_removed' => $cleanup_result['deleted_count'],
         'cleanup_duration' => $cleanup_duration,
         'total_import_duration' => $result['total_duration']
@@ -120,7 +120,7 @@ function perform_safe_import_cleanup($start_time) {
     $json_path = PUNTWORK_PATH . 'feeds/combined-jobs.jsonl';
     if (!file_exists($json_path)) {
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] CRITICAL: Combined feed file missing - aborting cleanup';
-        PuntWorkLogger::error('Combined feed file missing during import cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('Combined feed file missing during import cleanup', PuntWorkLogger::CONTEXT_IMPORT, [
             'json_path' => $json_path
         ]);
         return [
@@ -135,7 +135,7 @@ function perform_safe_import_cleanup($start_time) {
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] CRITICAL: Feed integrity validation failed - aborting cleanup';
         foreach ($feed_validation['errors'] as $error) {
             $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] VALIDATION ERROR: ' . $error;
-            PuntWorkLogger::error('Feed validation error during cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::error('Feed validation error during cleanup', PuntWorkLogger::CONTEXT_IMPORT, [
                 'error' => $error
             ]);
         }
@@ -148,7 +148,7 @@ function perform_safe_import_cleanup($start_time) {
     // SAFEGUARD 3: Minimum viable feed check
     if (($feed_validation['stats']['valid_entries'] ?? 0) < 10) {
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] WARNING: Feed has very few entries - aborting cleanup to prevent data loss';
-        PuntWorkLogger::warn('Feed too small for safe cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::warn('Feed too small for safe cleanup', PuntWorkLogger::CONTEXT_IMPORT, [
             'valid_entries' => $feed_validation['stats']['valid_entries'] ?? 0
         ]);
         return [
@@ -165,7 +165,7 @@ function perform_safe_import_cleanup($start_time) {
     // Add cleanup logs to our log array
     $logs = array_merge($logs, $cleanup_result['logs']);
 
-    PuntWorkLogger::info('Safe import cleanup completed', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Safe import cleanup completed', PuntWorkLogger::CONTEXT_IMPORT, [
         'deleted_count' => $cleanup_result['deleted_count'],
         'current_feed_entries' => $feed_validation['stats']['valid_entries'] ?? 0,
         'safeguards_passed' => true
@@ -191,7 +191,7 @@ function validate_feed_integrity($json_path) {
         'stats' => []
     ];
 
-    PuntWorkLogger::info('Starting feed integrity validation', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Starting feed integrity validation', PuntWorkLogger::CONTEXT_IMPORT, [
         'feed_path' => $json_path
     ]);
 
@@ -335,14 +335,14 @@ function validate_feed_integrity($json_path) {
 
     // 5. Log validation results
     if ($validation_result['valid']) {
-        PuntWorkLogger::info('Feed integrity validation passed', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::info('Feed integrity validation passed', PuntWorkLogger::CONTEXT_IMPORT, [
             'valid_entries' => $valid_entries,
             'unique_guids' => count($guids),
             'warnings_count' => count($validation_result['warnings']),
             'file_age_hours' => round($file_age_hours, 1)
         ]);
     } else {
-        PuntWorkLogger::error('Feed integrity validation failed', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('Feed integrity validation failed', PuntWorkLogger::CONTEXT_IMPORT, [
             'errors' => $validation_result['errors'],
             'warnings' => $validation_result['warnings'],
             'stats' => $validation_result['stats']
@@ -429,7 +429,7 @@ function finalize_batch_import($result) {
 
         log_import_run($import_details, 'manual');
 
-        PuntWorkLogger::info('Logged completed manual import to history', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::info('Logged completed manual import to history', PuntWorkLogger::CONTEXT_IMPORT, [
             'processed' => $result['processed'] ?? 0,
             'total' => $result['total'] ?? 0,
             'duration' => $total_elapsed
@@ -478,7 +478,7 @@ function cleanup_old_job_posts($import_start_time) {
 
     $logs = []; // Initialize logs array
 
-    PuntWorkLogger::info('Starting cleanup of old job posts based on current feed GUIDs', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Starting cleanup of old job posts based on current feed GUIDs', PuntWorkLogger::CONTEXT_IMPORT, [
         'import_start_time' => date('Y-m-d H:i:s', (int)$import_start_time)
     ]);
 
@@ -489,7 +489,7 @@ function cleanup_old_job_posts($import_start_time) {
     $current_guids = [];
 
     if (!file_exists($json_path)) {
-        PuntWorkLogger::error('Combined jobs file not found during cleanup - cannot proceed safely', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('Combined jobs file not found during cleanup - cannot proceed safely', PuntWorkLogger::CONTEXT_IMPORT, [
             'json_path' => $json_path
         ]);
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ERROR: Combined jobs file not found - skipping cleanup to prevent unintended deletions';
@@ -500,14 +500,14 @@ function cleanup_old_job_posts($import_start_time) {
     }
 
     // FEED INTEGRITY VALIDATION: Ensure feed is valid before proceeding with cleanup
-    PuntWorkLogger::info('Validating feed integrity before cleanup operations', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Validating feed integrity before cleanup operations', PuntWorkLogger::CONTEXT_IMPORT, [
         'feed_path' => $json_path
     ]);
 
     $feed_validation = validate_feed_integrity($json_path);
 
     if (!$feed_validation['valid']) {
-        PuntWorkLogger::error('Feed integrity validation failed - cannot proceed with cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('Feed integrity validation failed - cannot proceed with cleanup', PuntWorkLogger::CONTEXT_IMPORT, [
             'validation_errors' => $feed_validation['errors'],
             'validation_warnings' => $feed_validation['warnings']
         ]);
@@ -529,7 +529,7 @@ function cleanup_old_job_posts($import_start_time) {
     // Log validation warnings even if validation passed
     if (!empty($feed_validation['warnings'])) {
         foreach ($feed_validation['warnings'] as $warning) {
-            PuntWorkLogger::warn('Feed validation warning during cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::warn('Feed validation warning during cleanup', PuntWorkLogger::CONTEXT_IMPORT, [
                 'warning' => $warning,
                 'feed_stats' => $feed_validation['stats']
             ]);
@@ -537,7 +537,7 @@ function cleanup_old_job_posts($import_start_time) {
         }
     }
 
-    PuntWorkLogger::info('Feed integrity validation passed - proceeding with cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Feed integrity validation passed - proceeding with cleanup', PuntWorkLogger::CONTEXT_IMPORT, [
         'valid_entries' => $feed_validation['stats']['valid_entries'] ?? 0,
         'unique_guids' => $feed_validation['stats']['unique_guids'] ?? 0
     ]);
@@ -545,7 +545,7 @@ function cleanup_old_job_posts($import_start_time) {
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Feed integrity validation passed - proceeding with cleanup';
 
     // FEEDS ARE ALWAYS REDOWNLOADED - no freshness check needed since import process ensures fresh feeds
-    PuntWorkLogger::info('Cleanup using freshly downloaded feed data', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Cleanup using freshly downloaded feed data', PuntWorkLogger::CONTEXT_IMPORT, [
         'feed_file_exists' => file_exists($json_path),
         'feed_file_size' => file_exists($json_path) ? filesize($json_path) : 0,
         'note' => 'feeds_always_redownloaded'
@@ -558,7 +558,7 @@ function cleanup_old_job_posts($import_start_time) {
     $guid_offset = 0;
     $total_guids_loaded = 0;
 
-    PuntWorkLogger::info('Starting memory-safe GUID collection for finalization cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Starting memory-safe GUID collection for finalization cleanup', PuntWorkLogger::CONTEXT_IMPORT, [
         'json_path' => $json_path,
         'chunk_size' => $guid_chunk_size
     ]);
@@ -600,7 +600,7 @@ function cleanup_old_job_posts($import_start_time) {
         $memory_ratio = $current_memory / get_memory_limit_bytes();
 
         if ($memory_ratio > 0.6) {
-            PuntWorkLogger::warn('High memory usage during finalization GUID collection, reducing chunk size', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::warn('High memory usage during finalization GUID collection, reducing chunk size', PuntWorkLogger::CONTEXT_IMPORT, [
                 'guids_loaded' => $total_guids_loaded,
                 'memory_ratio' => $memory_ratio,
                 'chunk_size_reduced' => true
@@ -615,7 +615,7 @@ function cleanup_old_job_posts($import_start_time) {
     }
 
     if (empty($current_guids)) {
-        PuntWorkLogger::error('No valid GUIDs found in combined jobs file - cannot proceed safely', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('No valid GUIDs found in combined jobs file - cannot proceed safely', PuntWorkLogger::CONTEXT_IMPORT, [
             'json_path' => $json_path
         ]);
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ERROR: No valid GUIDs found in feed file - skipping cleanup to prevent unintended deletions';
@@ -625,7 +625,7 @@ function cleanup_old_job_posts($import_start_time) {
         ];
     }
 
-    PuntWorkLogger::info('Found current GUIDs in feed with memory-safe loading', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Found current GUIDs in feed with memory-safe loading', PuntWorkLogger::CONTEXT_IMPORT, [
         'guid_count' => count($current_guids),
         'total_guids_loaded' => $total_guids_loaded,
         'chunks_processed' => ceil($total_guids_loaded / 1000),
@@ -641,7 +641,7 @@ function cleanup_old_job_posts($import_start_time) {
     $batch_size = 5000; // Get jobs in batches to handle large datasets
     $offset = 0;
 
-    PuntWorkLogger::info('Fetching all job posts for cleanup comparison', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Fetching all job posts for cleanup comparison', PuntWorkLogger::CONTEXT_IMPORT, [
         'batch_size' => $batch_size
     ]);
 
@@ -663,7 +663,7 @@ function cleanup_old_job_posts($import_start_time) {
         $published_jobs = array_merge($published_jobs, $chunk_jobs);
         $offset += $batch_size;
 
-        PuntWorkLogger::debug('Job posts batch fetched', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::debug('Job posts batch fetched', PuntWorkLogger::CONTEXT_IMPORT, [
             'batch_offset' => $offset,
             'jobs_in_batch' => count($chunk_jobs),
             'total_jobs_found' => count($published_jobs),
@@ -677,7 +677,7 @@ function cleanup_old_job_posts($import_start_time) {
 
         // Safety break if we have too many jobs (unlikely but prevents infinite loop)
         if ($offset > 200000) { // Increased safety limit
-            PuntWorkLogger::warn('Safety break: Too many job posts to process', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::warn('Safety break: Too many job posts to process', PuntWorkLogger::CONTEXT_IMPORT, [
                 'offset' => $offset,
                 'jobs_found' => count($published_jobs)
             ]);
@@ -685,7 +685,7 @@ function cleanup_old_job_posts($import_start_time) {
         }
     }
 
-    PuntWorkLogger::info('All published jobs fetched, comparing against current feed', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('All published jobs fetched, comparing against current feed', PuntWorkLogger::CONTEXT_IMPORT, [
         'total_published_jobs' => count($published_jobs),
         'current_feed_guids' => count($current_guids)
     ]);
@@ -706,7 +706,7 @@ function cleanup_old_job_posts($import_start_time) {
         }
     }
 
-    PuntWorkLogger::info('Job posts GUID analysis', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Job posts GUID analysis', PuntWorkLogger::CONTEXT_IMPORT, [
         'total_job_posts' => count($published_jobs),
         'jobs_with_guids' => $jobs_with_guids,
         'jobs_with_empty_guids' => $jobs_with_empty_guids,
@@ -729,7 +729,7 @@ function cleanup_old_job_posts($import_start_time) {
         }
     }
 
-    PuntWorkLogger::info('GUID comparison results', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('GUID comparison results', PuntWorkLogger::CONTEXT_IMPORT, [
         'total_published_jobs_with_guids' => $jobs_with_guids,
         'jobs_kept_in_feed' => count($kept_job_guids),
         'jobs_to_delete' => count($old_post_ids),
@@ -739,7 +739,7 @@ function cleanup_old_job_posts($import_start_time) {
 
     $total_old_posts = count($old_post_ids);
 
-    PuntWorkLogger::info('Total old job posts to clean up in finalization', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Total old job posts to clean up in finalization', PuntWorkLogger::CONTEXT_IMPORT, [
         'total_old_posts' => $total_old_posts,
         'current_feed_jobs' => count($current_guids),
         'published_jobs_found' => count($published_jobs),
@@ -750,7 +750,7 @@ function cleanup_old_job_posts($import_start_time) {
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Found ' . $total_old_posts . ' old published job posts to clean up';
 
     if ($total_old_posts === 0) {
-        PuntWorkLogger::info('No old posts to clean up', PuntWorkLogger::CONTEXT_BATCH);
+        PuntWorkLogger::info('No old posts to clean up', PuntWorkLogger::CONTEXT_IMPORT);
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] No old posts to clean up';
         return [
             'deleted_count' => 0,
@@ -783,7 +783,7 @@ function cleanup_old_job_posts($import_start_time) {
             $old_batch_size = $batch_size;
             $batch_size = max(10, intval($batch_size * 0.5)); // Reduce to 50%, minimum 10
 
-            PuntWorkLogger::warn('High memory usage during finalization cleanup, reducing batch size', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::warn('High memory usage during finalization cleanup, reducing batch size', PuntWorkLogger::CONTEXT_IMPORT, [
                 'memory_ratio' => $memory_ratio,
                 'old_batch_size' => $old_batch_size,
                 'new_batch_size' => $batch_size,
@@ -796,7 +796,7 @@ function cleanup_old_job_posts($import_start_time) {
 
         // Log memory status periodically or when high
         if ($memory_ratio > 0.85 || $batches_processed % 10 === 0) {
-            PuntWorkLogger::info('Memory status during finalization cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::info('Memory status during finalization cleanup', PuntWorkLogger::CONTEXT_IMPORT, [
                 'memory_ratio' => $memory_ratio,
                 'batch_size' => $batch_size,
                 'batches_processed' => $batches_processed,
@@ -807,7 +807,7 @@ function cleanup_old_job_posts($import_start_time) {
 
         $batch_ids = array_splice($old_post_ids, 0, $batch_size);
 
-        PuntWorkLogger::debug('Processing deletion batch with memory monitoring', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::debug('Processing deletion batch with memory monitoring', PuntWorkLogger::CONTEXT_IMPORT, [
             'batch' => $batches_processed,
             'batch_size' => count($batch_ids),
             'remaining' => count($old_post_ids),
@@ -829,7 +829,7 @@ function cleanup_old_job_posts($import_start_time) {
                     $deleted_in_batch++;
                     $total_deleted++;
                 } else {
-                    PuntWorkLogger::warn('Failed to delete post', PuntWorkLogger::CONTEXT_BATCH, [
+                    PuntWorkLogger::warn('Failed to delete post', PuntWorkLogger::CONTEXT_IMPORT, [
                         'post_id' => $post_id
                     ]);
                 }
@@ -851,7 +851,7 @@ function cleanup_old_job_posts($import_start_time) {
         $cleanup_progress_status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Cleanup progress: ' . $total_deleted . '/' . $total_old_posts . ' old jobs deleted';
         set_import_status($cleanup_progress_status);
 
-        PuntWorkLogger::debug('Batch deletion completed', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::debug('Batch deletion completed', PuntWorkLogger::CONTEXT_IMPORT, [
             'batch' => $batches_processed,
             'deleted_in_batch' => $deleted_in_batch,
             'total_deleted' => $total_deleted,
@@ -881,7 +881,7 @@ function cleanup_old_job_posts($import_start_time) {
     $final_cleanup_status['last_update'] = microtime(true);
     set_import_status($final_cleanup_status);
 
-    PuntWorkLogger::info('Cleanup of old published job posts completed', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Cleanup of old published job posts completed', PuntWorkLogger::CONTEXT_IMPORT, [
         'deleted_count' => $total_deleted,
         'current_feed_jobs' => count($current_guids),
         'batches_processed' => $batches_processed
@@ -890,20 +890,20 @@ function cleanup_old_job_posts($import_start_time) {
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Cleanup completed: ' . $total_deleted . ' old published jobs deleted';
 
     // DUPLICATE REMOVAL: Clean up job posts that have the same guid and pubdate combinations
-    PuntWorkLogger::info('Starting duplicate job post cleanup', PuntWorkLogger::CONTEXT_BATCH);
+    PuntWorkLogger::info('Starting duplicate job post cleanup', PuntWorkLogger::CONTEXT_IMPORT);
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Starting cleanup of duplicate job posts (same guid + pubdate)';
 
     $duplicates_result = cleanup_duplicate_job_posts();
 
     if ($duplicates_result['duplicate_groups'] > 0) {
-        PuntWorkLogger::info('Duplicate cleanup completed', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::info('Duplicate cleanup completed', PuntWorkLogger::CONTEXT_IMPORT, [
             'duplicate_groups_found' => $duplicates_result['duplicate_groups'],
             'duplicates_removed' => $duplicates_result['deleted_count']
         ]);
 
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Removed ' . $duplicates_result['deleted_count'] . ' duplicate job posts from ' . $duplicates_result['duplicate_groups'] . ' duplicate groups';
     } else {
-        PuntWorkLogger::info('No duplicates found during cleanup', PuntWorkLogger::CONTEXT_BATCH);
+        PuntWorkLogger::info('No duplicates found during cleanup', PuntWorkLogger::CONTEXT_IMPORT);
         $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] No duplicate job posts found';
     }
 
@@ -1229,7 +1229,7 @@ function estimate_next_cleanup() {
 function cleanup_duplicate_job_posts() {
     global $wpdb;
 
-    PuntWorkLogger::info('Starting duplicate job post cleanup based on guid+pubdate', PuntWorkLogger::CONTEXT_BATCH);
+    PuntWorkLogger::info('Starting duplicate job post cleanup based on guid+pubdate', PuntWorkLogger::CONTEXT_IMPORT);
 
     // Find groups of jobs with the same guid and pubdate
     $duplicate_groups = $wpdb->get_results("
@@ -1252,14 +1252,14 @@ function cleanup_duplicate_job_posts() {
     ");
 
     if (empty($duplicate_groups)) {
-        PuntWorkLogger::info('No duplicate job posts found', PuntWorkLogger::CONTEXT_BATCH);
+        PuntWorkLogger::info('No duplicate job posts found', PuntWorkLogger::CONTEXT_IMPORT);
         return [
             'duplicate_groups' => 0,
             'deleted_count' => 0
         ];
     }
 
-    PuntWorkLogger::info('Found duplicate job post groups', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Found duplicate job post groups', PuntWorkLogger::CONTEXT_IMPORT, [
         'duplicate_groups_count' => count($duplicate_groups),
         'sample_guid' => $duplicate_groups[0]->guid ?? 'unknown',
         'sample_pubdate' => $duplicate_groups[0]->pubdate ?? 'unknown'
@@ -1276,7 +1276,7 @@ function cleanup_duplicate_job_posts() {
         // Keep the first post ID (most recently modified) and delete the rest
         $post_to_keep = array_shift($post_ids); // Remove and get the first (most recent) post ID
 
-        PuntWorkLogger::debug('Processing duplicate group', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::debug('Processing duplicate group', PuntWorkLogger::CONTEXT_IMPORT, [
             'guid' => $group->guid,
             'pubdate' => $group->pubdate,
             'keeping_post_id' => $post_to_keep,
@@ -1290,14 +1290,14 @@ function cleanup_duplicate_job_posts() {
             if ($result) {
                 $total_deleted++;
 
-                PuntWorkLogger::debug('Deleted duplicate job post', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::debug('Deleted duplicate job post', PuntWorkLogger::CONTEXT_IMPORT, [
                     'deleted_post_id' => $duplicate_post_id,
                     'kept_post_id' => $post_to_keep,
                     'guid' => $group->guid,
                     'pubdate' => $group->pubdate
                 ]);
             } else {
-                PuntWorkLogger::warn('Failed to delete duplicate job post', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::warn('Failed to delete duplicate job post', PuntWorkLogger::CONTEXT_IMPORT, [
                     'duplicate_post_id' => $duplicate_post_id,
                     'keep_post_id' => $post_to_keep,
                     'guid' => $group->guid
@@ -1307,7 +1307,7 @@ function cleanup_duplicate_job_posts() {
 
         // Log progress every 10 groups
         if ($groups_processed % 10 === 0) {
-            PuntWorkLogger::info('Duplicate cleanup progress', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::info('Duplicate cleanup progress', PuntWorkLogger::CONTEXT_IMPORT, [
                 'groups_processed' => $groups_processed,
                 'total_groups' => count($duplicate_groups),
                 'duplicates_deleted' => $total_deleted
@@ -1315,7 +1315,7 @@ function cleanup_duplicate_job_posts() {
         }
     }
 
-    PuntWorkLogger::info('Duplicate job post cleanup completed', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Duplicate job post cleanup completed', PuntWorkLogger::CONTEXT_IMPORT, [
         'duplicate_groups_processed' => $groups_processed,
         'total_duplicates_removed' => $total_deleted
     ]);
@@ -1370,7 +1370,7 @@ function bulk_delete_job_posts_sql($post_ids) {
     } catch (\Exception $e) {
         // Rollback on error
         $wpdb->query('ROLLBACK');
-        PuntWorkLogger::error('Bulk delete failed, rolled back', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('Bulk delete failed, rolled back', PuntWorkLogger::CONTEXT_IMPORT, [
             'error' => $e->getMessage(),
             'post_count' => count($post_ids)
         ]);

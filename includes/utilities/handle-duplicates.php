@@ -22,14 +22,14 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
 
     // Ensure logs is an array
     if (!is_array($logs)) {
-        PuntWorkLogger::error('logs is not array in handle_duplicates, resetting', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('logs is not array in handle_duplicates, resetting', PuntWorkLogger::CONTEXT_IMPORT, [
             'logs_type' => gettype($logs),
             'logs_value' => is_scalar($logs) ? substr((string)$logs, 0, 100) : 'non-scalar'
         ]);
         $logs = [];
     }
 
-    PuntWorkLogger::info('Starting duplicate handling', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Starting duplicate handling', PuntWorkLogger::CONTEXT_IMPORT, [
         'batch_guids_count' => count($batch_guids),
         'existing_by_guid_count' => count($existing_by_guid)
     ]);
@@ -50,14 +50,14 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
                                 'fields' => 'ids',
                             ]);
                         }, [$ids], [
-                            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                            'logger_context' => PuntWorkLogger::CONTEXT_IMPORT,
                             'operation' => 'get_duplicate_posts',
                             'guid' => $guid,
                             'post_ids' => $ids
                         ]) ?: [];
 
                         if (empty($existing)) {
-                            PuntWorkLogger::warn('No posts found for duplicate GUID', PuntWorkLogger::CONTEXT_BATCH, [
+                            PuntWorkLogger::warn('No posts found for duplicate GUID', PuntWorkLogger::CONTEXT_IMPORT, [
                                 'guid' => $guid,
                                 'ids' => $ids
                             ]);
@@ -73,7 +73,7 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
                             try {
                                 $hashes[$post_id] = get_post_meta($post_id, '_import_hash', true);
                             } catch (\Exception $e) {
-                                PuntWorkLogger::error('Failed to get hash for post', PuntWorkLogger::CONTEXT_BATCH, [
+                                PuntWorkLogger::error('Failed to get hash for post', PuntWorkLogger::CONTEXT_IMPORT, [
                                     'post_id' => $post_id,
                                     'guid' => $guid,
                                     'error' => $e->getMessage()
@@ -104,7 +104,7 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
                                         }
                                     }
                                 } catch (\Exception $e) {
-                                    PuntWorkLogger::error('Error comparing posts for duplicate handling', PuntWorkLogger::CONTEXT_BATCH, [
+                                    PuntWorkLogger::error('Error comparing posts for duplicate handling', PuntWorkLogger::CONTEXT_IMPORT, [
                                         'post_id' => $post_id,
                                         'keep_id' => $post_to_keep,
                                         'guid' => $guid,
@@ -123,7 +123,7 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
                                 $current_title = get_post_field('post_title', $dup_id);
 
                                 if ($current_title === false) {
-                                    PuntWorkLogger::error('Failed to get post title for duplicate', PuntWorkLogger::CONTEXT_BATCH, [
+                                    PuntWorkLogger::error('Failed to get post title for duplicate', PuntWorkLogger::CONTEXT_IMPORT, [
                                         'dup_id' => $dup_id,
                                         'guid' => $guid
                                     ]);
@@ -153,14 +153,14 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
                                         'post_status' => 'draft'
                                     ]);
                                 }, [$dup_id, $new_title], [
-                                    'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                                    'logger_context' => PuntWorkLogger::CONTEXT_IMPORT,
                                     'operation' => 'draft_duplicate_post',
                                     'dup_id' => $dup_id,
                                     'guid' => $guid
                                 ]);
 
                                 if (is_wp_error($update_result)) {
-                                    PuntWorkLogger::error('Failed to draft duplicate post', PuntWorkLogger::CONTEXT_BATCH, [
+                                    PuntWorkLogger::error('Failed to draft duplicate post', PuntWorkLogger::CONTEXT_IMPORT, [
                                         'dup_id' => $dup_id,
                                         'guid' => $guid,
                                         'error' => $update_result->get_error_message()
@@ -173,7 +173,7 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
                                 $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Drafted duplicate ID: ' . $dup_id . ' GUID: ' . $guid . ' - ' . $reason;
 
                             } catch (\Exception $e) {
-                                PuntWorkLogger::error('Error drafting duplicate post', PuntWorkLogger::CONTEXT_BATCH, [
+                                PuntWorkLogger::error('Error drafting duplicate post', PuntWorkLogger::CONTEXT_IMPORT, [
                                     'dup_id' => $dup_id,
                                     'guid' => $guid,
                                     'error' => $e->getMessage()
@@ -186,7 +186,7 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
                         $post_ids_by_guid[$guid] = $post_to_keep;
 
                     } catch (\Exception $e) {
-                        PuntWorkLogger::error('Error processing duplicates for GUID', PuntWorkLogger::CONTEXT_BATCH, [
+                        PuntWorkLogger::error('Error processing duplicates for GUID', PuntWorkLogger::CONTEXT_IMPORT, [
                             'guid' => $guid,
                             'ids' => $ids,
                             'error' => $e->getMessage()
@@ -202,7 +202,7 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
                 }
             }
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Critical error in duplicate handling', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::error('Critical error in duplicate handling', PuntWorkLogger::CONTEXT_IMPORT, [
                 'guid' => $guid,
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
@@ -213,7 +213,7 @@ function handle_duplicates($batch_guids, $existing_by_guid, &$logs, &$duplicates
         }
     }
 
-    PuntWorkLogger::info('Duplicate handling completed', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Duplicate handling completed', PuntWorkLogger::CONTEXT_IMPORT, [
         'duplicates_drafted' => $duplicates_drafted
     ]);
 }

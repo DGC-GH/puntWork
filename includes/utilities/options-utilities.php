@@ -198,7 +198,7 @@ function get_batch_size($skip_system_validation = false) {
 
     // VALIDATE RETRIEVED VALUE
     if (!is_numeric($batch_size)) {
-    PuntWorkLogger::warn('Invalid batch size retrieved from options, using default', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::warn('Invalid batch size retrieved from options, using default', PuntWorkLogger::CONTEXT_IMPORT, [
             'retrieved_value' => $batch_size,
             'retrieved_type' => gettype($batch_size),
             'fallback_value' => 1
@@ -208,7 +208,7 @@ function get_batch_size($skip_system_validation = false) {
 
     // Ensure batch size is within reasonable bounds
     if ($batch_size < 1) {
-    PuntWorkLogger::warn('Batch size too small, correcting to minimum', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::warn('Batch size too small, correcting to minimum', PuntWorkLogger::CONTEXT_IMPORT, [
             'original_value' => $batch_size,
             'corrected_value' => 1,
             'minimum_allowed' => 1
@@ -217,7 +217,7 @@ function get_batch_size($skip_system_validation = false) {
     }
 
     if ($batch_size > 200) {
-    PuntWorkLogger::warn('Batch size excessively large, capping to maximum', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::warn('Batch size excessively large, capping to maximum', PuntWorkLogger::CONTEXT_IMPORT, [
             'original_value' => $batch_size,
             'capped_value' => 100,
             'maximum_allowed' => 100
@@ -233,7 +233,7 @@ function get_batch_size($skip_system_validation = false) {
         $recommended_max = calculate_recommended_max_batch_size($memory_limit, $current_memory_ratio);
 
         if ($batch_size > $recommended_max) {
-            PuntWorkLogger::warn('Stored batch size exceeds recommended maximum for current system', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::warn('Stored batch size exceeds recommended maximum for current system', PuntWorkLogger::CONTEXT_IMPORT, [
                 'stored_batch_size' => $batch_size,
                 'recommended_max' => $recommended_max,
                 'memory_limit' => $memory_limit,

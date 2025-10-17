@@ -70,7 +70,7 @@ function run_job_import_batch_ajax() {
         }
 
         if ($is_stuck) {
-            PuntWorkLogger::info('Detected stuck import in batch start, clearing status', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::info('Detected stuck import in batch start, clearing status', PuntWorkLogger::CONTEXT_IMPORT, [
                 'processed' => $import_status['processed'],
                 'total' => $import_status['total'],
                 'time_elapsed' => $time_elapsed,
@@ -117,7 +117,7 @@ function run_job_import_batch_ajax() {
             'logs' => ['Manual import started - preparing feeds...']
         ];
         set_import_status($initial_status);
-        PuntWorkLogger::info('Manual import initialization completed', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::info('Manual import initialization completed', PuntWorkLogger::CONTEXT_IMPORT, [
             'import_type' => 'manual',
             'status_total' => $initial_status['total'],
             'status_complete' => $initial_status['complete'],
@@ -128,13 +128,13 @@ function run_job_import_batch_ajax() {
 
         // Clear any previous cancellation before starting
         delete_transient('import_cancel');
-        PuntWorkLogger::debug('Import cancellation transient cleared for manual import', PuntWorkLogger::CONTEXT_BATCH);
+        PuntWorkLogger::debug('Import cancellation transient cleared for manual import', PuntWorkLogger::CONTEXT_IMPORT);
 
         // Schedule the import to run asynchronously (same as scheduled imports)
         if (function_exists('as_enqueue_async_action')) {
             // Use Action Scheduler async action for immediate execution
             as_enqueue_async_action('puntwork_manual_import_async');
-            PuntWorkLogger::info('Manual import scheduled via Action Scheduler (async)', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::info('Manual import scheduled via Action Scheduler (async)', PuntWorkLogger::CONTEXT_IMPORT, [
                 'scheduler' => 'action_scheduler',
                 'action' => 'puntwork_manual_import_async',
                 'execution_type' => 'immediate_async'
@@ -142,7 +142,7 @@ function run_job_import_batch_ajax() {
         } elseif (function_exists('as_schedule_single_action')) {
             // Use Action Scheduler if available
             as_schedule_single_action(time(), 'puntwork_manual_import_async');
-            PuntWorkLogger::info('Manual import scheduled via Action Scheduler (single)', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::info('Manual import scheduled via Action Scheduler (single)', PuntWorkLogger::CONTEXT_IMPORT, [
                 'scheduler' => 'action_scheduler',
                 'action' => 'puntwork_manual_import_async',
                 'scheduled_time' => date('Y-m-d H:i:s', time()),
@@ -151,7 +151,7 @@ function run_job_import_batch_ajax() {
         } elseif (function_exists('wp_schedule_single_event')) {
             // Fallback: Use WordPress cron for near-immediate execution
             wp_schedule_single_event(time() + 1, 'puntwork_manual_import_async');
-            PuntWorkLogger::warn('Manual import scheduled via WordPress cron (fallback)', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::warn('Manual import scheduled via WordPress cron (fallback)', PuntWorkLogger::CONTEXT_IMPORT, [
                 'scheduler' => 'wordpress_cron',
                 'action' => 'puntwork_manual_import_async',
                 'scheduled_time' => date('Y-m-d H:i:s', time() + 1),
@@ -160,14 +160,14 @@ function run_job_import_batch_ajax() {
             ]);
         } else {
             // Final fallback: Run synchronously (not ideal for UI but maintains functionality)
-            PuntWorkLogger::warn('Manual import running synchronously (final fallback)', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::warn('Manual import running synchronously (final fallback)', PuntWorkLogger::CONTEXT_IMPORT, [
                 'execution_type' => 'synchronous',
                 'reason' => 'no_async_scheduling_available'
             ]);
             $result = run_manual_import();
 
             if ($result['success']) {
-                PuntWorkLogger::info('Synchronous manual import completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::info('Synchronous manual import completed successfully', PuntWorkLogger::CONTEXT_IMPORT, [
                     'processed' => $result['processed'] ?? 0,
                     'total' => $result['total'] ?? 0,
                     'published' => $result['published'] ?? 0,
@@ -189,20 +189,20 @@ function run_job_import_batch_ajax() {
                     'async' => false
                 ]);
             } else {
-                PuntWorkLogger::error('Synchronous manual import failed', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::error('Synchronous manual import failed', PuntWorkLogger::CONTEXT_IMPORT, [
                     'error_message' => $result['message'] ?? 'Unknown error',
                     'execution_type' => 'synchronous'
                 ]);
                 // Reset import status on failure so future attempts can start
                 delete_import_status();
-                PuntWorkLogger::info('Import status reset after synchronous import failure', PuntWorkLogger::CONTEXT_BATCH);
+                PuntWorkLogger::info('Import status reset after synchronous import failure', PuntWorkLogger::CONTEXT_IMPORT);
                 send_ajax_error('run_job_import_batch', 'Import failed: ' . ($result['message'] ?? 'Unknown error'));
             }
             return;
         }
 
         // Return success immediately so UI can start polling
-        PuntWorkLogger::info('Manual import initiation completed successfully', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::info('Manual import initiation completed successfully', PuntWorkLogger::CONTEXT_IMPORT, [
             'async' => true,
             'import_type' => 'manual',
             'ui_polling_enabled' => true
@@ -302,7 +302,7 @@ function cancel_job_import_ajax() {
         wp_cache_flush();
     }
 
-    PuntWorkLogger::info('Import cancellation initiated - POISON PILL deployed with forced cancelled status', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Import cancellation initiated - POISON PILL deployed with forced cancelled status', PuntWorkLogger::CONTEXT_IMPORT, [
         'import_status_before_cancel' => [
             'processed' => $before_cancel['processed'] ?? 0,
             'total' => $before_cancel['total'] ?? 0,
@@ -341,7 +341,7 @@ function clear_import_cancel_ajax() {
     delete_transient('import_force_cancel');
     delete_transient('import_emergency_stop');
 
-    PuntWorkLogger::info('Import cancellation flags cleared', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Import cancellation flags cleared', PuntWorkLogger::CONTEXT_IMPORT, [
         'import_cancel_existed' => $transient_existed,
         'import_force_cancel_existed' => $force_cancel_existed,
         'import_emergency_stop_existed' => $emergency_stop_existed,
@@ -383,7 +383,7 @@ function reset_job_import_ajax() {
     delete_transient('import_force_cancel');
     delete_transient('import_emergency_stop');
 
-    PuntWorkLogger::info('Import system completely reset', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Import system completely reset', PuntWorkLogger::CONTEXT_IMPORT, [
         'import_status_before_reset' => [
             'processed' => $before_reset['processed'] ?? 0,
             'total' => $before_reset['total'] ?? 0,
@@ -759,7 +759,7 @@ function get_job_import_status_ajax() {
         // Only log debug when import has meaningful progress to reduce log spam
         // NOTE: To enable polling debug logs, define PUNTWORK_DEBUG_POLLING as true in wp-config.php
         if ($should_log && defined('PUNTWORK_DEBUG_POLLING') && PUNTWORK_DEBUG_POLLING) {
-            PuntWorkLogger::debug('Import status retrieved with active progress', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::debug('Import status retrieved with active progress', PuntWorkLogger::CONTEXT_IMPORT, [
                 'total' => $total,
                 'processed' => $processed,
                 'complete' => $complete,
@@ -789,7 +789,7 @@ function get_job_import_status_ajax() {
 
             if (in_array($current_phase, $feed_processing_phases)) {
                 $is_feed_processing_phase = true;
-                PuntWorkLogger::debug('Stuck import detection skipped - currently in feed processing phase', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::debug('Stuck import detection skipped - currently in feed processing phase', PuntWorkLogger::CONTEXT_IMPORT, [
                     'current_phase' => $current_phase,
                     'processed' => $progress['processed'] ?? 0,
                     'total' => $progress['total'] ?? 0,
@@ -806,7 +806,7 @@ function get_job_import_status_ajax() {
             // If total is 1 or very low but we have meaningful processing activity, it's likely incomplete
             if ($total_items <= 5 && $processed_items == 0 && $time_elapsed > 60) {
                 $is_suspiciously_low_total = true;
-                PuntWorkLogger::debug('Stuck import detection skipped - suspiciously low total indicates incomplete status', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::debug('Stuck import detection skipped - suspiciously low total indicates incomplete status', PuntWorkLogger::CONTEXT_IMPORT, [
                     'total' => $total_items,
                     'processed' => $processed_items,
                     'time_elapsed' => round($time_elapsed, 2),
@@ -839,7 +839,7 @@ function get_job_import_status_ajax() {
             }
 
             if ($is_stuck) {
-                PuntWorkLogger::warn('Stuck import detected and cleared during status check', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::warn('Stuck import detected and cleared during status check', PuntWorkLogger::CONTEXT_IMPORT, [
                     'processed' => $progress['processed'] ?? 0,
                     'total' => $progress['total'] ?? 0,
                     'time_elapsed' => round($time_elapsed, 2),
@@ -885,7 +885,7 @@ function get_job_import_status_ajax() {
             } else {
                 // Log why stuck detection was skipped (for debugging)
                 if ($is_feed_processing_phase || $is_suspiciously_low_total || $is_recently_started) {
-                    PuntWorkLogger::debug('Stuck import detection evaluation completed', PuntWorkLogger::CONTEXT_BATCH, [
+                    PuntWorkLogger::debug('Stuck import detection evaluation completed', PuntWorkLogger::CONTEXT_IMPORT, [
                         'is_stuck' => false,
                         'processed' => $progress['processed'] ?? 0,
                         'total' => $progress['total'] ?? 0,
@@ -913,7 +913,7 @@ function get_job_import_status_ajax() {
         if (($progress['total'] ?? 0) > 1 && !$has_job_start_time && !$is_import_complete) {
             $progress['job_import_start_time'] = microtime(true);
             set_import_status($progress);
-            PuntWorkLogger::debug('Job import start time initialized', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::debug('Job import start time initialized', PuntWorkLogger::CONTEXT_IMPORT, [
                 'job_import_start_time' => date('Y-m-d H:i:s', (int)$progress['job_import_start_time']),
                 'total_jobs' => $progress['total'],
                 'is_import_complete' => $is_import_complete,
@@ -934,7 +934,7 @@ function get_job_import_status_ajax() {
         try {
             $progress['estimated_time_remaining'] = calculate_estimated_time_remaining($progress);
         } catch (\Exception $e) {
-            PuntWorkLogger::error('Error calculating estimated time remaining', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::error('Error calculating estimated time remaining', PuntWorkLogger::CONTEXT_IMPORT, [
                 'error' => $e->getMessage(),
                 'progress_data' => [
                     'total' => $progress['total'] ?? 0,
@@ -1053,7 +1053,7 @@ function cleanup_trashed_jobs_ajax() {
     // Reduce batch size if memory usage is high
     if ($memory_ratio > 0.7) {
         $batch_size = max(10, $batch_size / 2);
-    PuntWorkLogger::warn('Reducing batch size due to high memory usage in trashed cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::warn('Reducing batch size due to high memory usage in trashed cleanup', PuntWorkLogger::CONTEXT_IMPORT, [
             'original_batch_size' => isset($_POST['batch_size']) ? intval($_POST['batch_size']) : 50,
             'adjusted_batch_size' => $batch_size,
             'memory_ratio' => $memory_ratio,
@@ -1081,7 +1081,7 @@ function cleanup_trashed_jobs_ajax() {
             set_cleanup_trashed_progress($progress);
 
             $message = "Cleanup completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} trashed jobs";
-            PuntWorkLogger::info('Cleanup of trashed jobs completed', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::info('Cleanup of trashed jobs completed', PuntWorkLogger::CONTEXT_IMPORT, [
                 'total_processed' => $progress['total_processed'],
                 'total_deleted' => $progress['total_deleted'],
                 'memory_peak_mb' => $progress['memory_peak_mb'],
@@ -1109,7 +1109,7 @@ function cleanup_trashed_jobs_ajax() {
             $current_ratio = $current_memory / $memory_limit;
 
             if ($current_ratio > 0.85) {
-                PuntWorkLogger::warn('High memory usage detected during trashed cleanup processing', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::warn('High memory usage detected during trashed cleanup processing', PuntWorkLogger::CONTEXT_IMPORT, [
                     'current_memory_ratio' => $current_ratio,
                     'post_id' => $post->ID,
                     'processed_in_batch' => $deleted_count
@@ -1166,7 +1166,7 @@ function cleanup_trashed_jobs_ajax() {
         ]);
 
     } catch (\Exception $e) {
-        PuntWorkLogger::error('Cleanup of trashed jobs failed', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('Cleanup of trashed jobs failed', PuntWorkLogger::CONTEXT_IMPORT, [
             'error' => $e->getMessage(),
             'memory_usage_mb' => memory_get_usage(true) / (1024 * 1024),
             'memory_limit_mb' => $memory_limit / (1024 * 1024)
@@ -1215,7 +1215,7 @@ function cleanup_drafted_jobs_ajax() {
             $memory_ratio = $current_memory / get_memory_limit_bytes();
 
             if ($memory_ratio > 0.6) {
-                PuntWorkLogger::warn('High memory usage during draft job ID collection, reducing chunk size', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::warn('High memory usage during draft job ID collection, reducing chunk size', PuntWorkLogger::CONTEXT_IMPORT, [
                     'collected_count' => count($draft_job_ids),
                     'memory_ratio' => $memory_ratio,
                     'chunk_size_reduced' => true
@@ -1231,7 +1231,7 @@ function cleanup_drafted_jobs_ajax() {
 
         $total_count = count($draft_job_ids);
 
-        PuntWorkLogger::info('Draft cleanup initialized with memory-safe ID collection', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::info('Draft cleanup initialized with memory-safe ID collection', PuntWorkLogger::CONTEXT_IMPORT, [
             'total_draft_jobs_found' => $total_count,
             'memory_usage_mb' => memory_get_usage(true) / (1024 * 1024),
             'chunks_loaded' => ceil($total_count / 1000)
@@ -1261,7 +1261,7 @@ function cleanup_drafted_jobs_ajax() {
     // Reduce batch size if memory usage is high
     if ($memory_ratio > 0.7) {
         $batch_size = max(5, $batch_size / 2);
-    PuntWorkLogger::warn('Reducing batch size due to high memory usage in drafted cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::warn('Reducing batch size due to high memory usage in drafted cleanup', PuntWorkLogger::CONTEXT_IMPORT, [
             'original_batch_size' => isset($_POST['batch_size']) ? intval($_POST['batch_size']) : 50,
             'adjusted_batch_size' => $batch_size,
             'memory_ratio' => $memory_ratio,
@@ -1310,7 +1310,7 @@ function cleanup_drafted_jobs_ajax() {
                 WHERE post_type = 'job' AND post_status = 'draft'
             "));
 
-            PuntWorkLogger::info('Cleanup of drafted jobs completed', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::info('Cleanup of drafted jobs completed', PuntWorkLogger::CONTEXT_IMPORT, [
                 'total_processed' => $progress['total_processed'],
                 'total_deleted' => $progress['total_deleted'],
                 'final_draft_count' => $final_count,
@@ -1349,7 +1349,7 @@ function cleanup_drafted_jobs_ajax() {
             $current_ratio = $current_memory / $memory_limit;
 
             if ($current_ratio > 0.85) {
-                PuntWorkLogger::warn('High memory usage detected during drafted cleanup processing', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::warn('High memory usage detected during drafted cleanup processing', PuntWorkLogger::CONTEXT_IMPORT, [
                     'current_memory_ratio' => $current_ratio,
                     'post_id' => $post->ID,
                     'processed_in_batch' => $deleted_count
@@ -1381,7 +1381,7 @@ function cleanup_drafted_jobs_ajax() {
                 $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Successfully deleted draft job: ' . $post->post_title . ' (ID: ' . $post->ID . ')';
             } else {
                 $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Failed to delete draft job: ' . $post->post_title . ' (ID: ' . $post->ID . ') - wp_delete_post returned: ' . ($result ? 'true' : 'false') . ', still exists: ' . ($post_exists_after ? 'yes' : 'no');
-                PuntWorkLogger::error('Post deletion failed', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::error('Post deletion failed', PuntWorkLogger::CONTEXT_IMPORT, [
                     'post_id' => $post->ID,
                     'post_title' => $post->post_title,
                     'wp_delete_result' => $result ? 'true' : 'false',
@@ -1415,7 +1415,7 @@ function cleanup_drafted_jobs_ajax() {
         // Calculate progress percentage
         $progress_percentage = $progress['total_jobs'] > 0 ? round(($progress['total_processed'] / $progress['total_jobs']) * 100, 1) : 0;
 
-        PuntWorkLogger::debug('Sending batch progress update', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::debug('Sending batch progress update', PuntWorkLogger::CONTEXT_IMPORT, [
             'processed' => $progress['total_processed'],
             'total' => $progress['total_jobs'],
             'deleted' => $progress['total_deleted'],
@@ -1437,7 +1437,7 @@ function cleanup_drafted_jobs_ajax() {
         ]);
 
     } catch (\Exception $e) {
-        PuntWorkLogger::error('Cleanup of drafted jobs failed', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('Cleanup of drafted jobs failed', PuntWorkLogger::CONTEXT_IMPORT, [
             'error' => $e->getMessage()
         ]);
         wp_send_json_error(['message' => 'Cleanup failed: ' . $e->getMessage()]);
@@ -1470,7 +1470,7 @@ function cleanup_old_published_jobs_ajax() {
         $guid_chunk_size = 500; // Process GUIDs in chunks of 500
         $guid_offset = 0;
 
-        PuntWorkLogger::info('Starting memory-safe GUID collection for old published cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::info('Starting memory-safe GUID collection for old published cleanup', PuntWorkLogger::CONTEXT_IMPORT, [
             'json_path' => $json_path,
             'chunk_size' => $guid_chunk_size
         ]);
@@ -1511,7 +1511,7 @@ function cleanup_old_published_jobs_ajax() {
             $memory_ratio = $current_memory / get_memory_limit_bytes();
 
             if ($memory_ratio > 0.6) {
-                PuntWorkLogger::warn('High memory usage during GUID collection, reducing chunk size', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::warn('High memory usage during GUID collection, reducing chunk size', PuntWorkLogger::CONTEXT_IMPORT, [
                     'collected_guids' => count($current_guids),
                     'memory_ratio' => $memory_ratio,
                     'chunk_size_reduced' => true
@@ -1552,7 +1552,7 @@ function cleanup_old_published_jobs_ajax() {
             }
         }
 
-        PuntWorkLogger::info('Old published cleanup initialized with memory-safe processing', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::info('Old published cleanup initialized with memory-safe processing', PuntWorkLogger::CONTEXT_IMPORT, [
             'current_guids_count' => count($current_guids),
             'total_old_jobs_found' => $total_count,
             'guid_chunks_processed' => count($guid_chunks),
@@ -1589,7 +1589,7 @@ function cleanup_old_published_jobs_ajax() {
     // Reduce batch size if memory usage is high
     if ($memory_ratio > 0.7) {
         $batch_size = max(5, $batch_size / 2);
-    PuntWorkLogger::warn('Reducing batch size due to high memory usage in old published cleanup', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::warn('Reducing batch size due to high memory usage in old published cleanup', PuntWorkLogger::CONTEXT_IMPORT, [
             'original_batch_size' => isset($_POST['batch_size']) ? intval($_POST['batch_size']) : 50,
             'adjusted_batch_size' => $batch_size,
             'memory_ratio' => $memory_ratio,
@@ -1663,7 +1663,7 @@ function cleanup_old_published_jobs_ajax() {
             delete_option('job_cleanup_guids');
 
             $message = "Cleanup completed: Processed {$progress['total_processed']} jobs, deleted {$progress['total_deleted']} old published jobs";
-            PuntWorkLogger::info('Cleanup of old published jobs completed', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::info('Cleanup of old published jobs completed', PuntWorkLogger::CONTEXT_IMPORT, [
                 'total_processed' => $progress['total_processed'],
                 'total_deleted' => $progress['total_deleted'],
                 'current_feed_jobs' => count($current_guids)
@@ -1694,7 +1694,7 @@ function cleanup_old_published_jobs_ajax() {
             $current_ratio = $current_memory / $memory_limit;
 
             if ($current_ratio > 0.85) {
-                PuntWorkLogger::warn('High memory usage detected during old published cleanup processing', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::warn('High memory usage detected during old published cleanup processing', PuntWorkLogger::CONTEXT_IMPORT, [
                     'current_memory_ratio' => $current_ratio,
                     'post_id' => $post->ID,
                     'processed_in_batch' => $deleted_count
@@ -1739,7 +1739,7 @@ function cleanup_old_published_jobs_ajax() {
         // Calculate progress percentage
         $progress_percentage = $progress['total_jobs'] > 0 ? round(($progress['total_processed'] / $progress['total_jobs']) * 100, 1) : 0;
 
-        PuntWorkLogger::debug('Sending batch progress update for old published jobs', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::debug('Sending batch progress update for old published jobs', PuntWorkLogger::CONTEXT_IMPORT, [
             'processed' => $progress['total_processed'],
             'total' => $progress['total_jobs'],
             'deleted' => $progress['total_deleted'],
@@ -1761,7 +1761,7 @@ function cleanup_old_published_jobs_ajax() {
         ]);
 
     } catch (\Exception $e) {
-        PuntWorkLogger::error('Cleanup of old published jobs failed', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('Cleanup of old published jobs failed', PuntWorkLogger::CONTEXT_IMPORT, [
             'error' => $e->getMessage()
         ]);
         wp_send_json_error(['message' => 'Cleanup failed: ' . $e->getMessage()]);
@@ -1985,7 +1985,7 @@ function puntwork_heartbeat_handler($response, $data) {
 function cancel_all_import_processes() {
     $cancelled_count = 0;
 
-    PuntWorkLogger::info('Deploying POISON PILL - Aggressive import cancellation initiated', PuntWorkLogger::CONTEXT_BATCH, [
+    PuntWorkLogger::info('Deploying POISON PILL - Aggressive import cancellation initiated', PuntWorkLogger::CONTEXT_IMPORT, [
         'timestamp' => microtime(true),
         'method' => 'comprehensive_cancellation'
     ]);
@@ -1997,19 +1997,19 @@ function cancel_all_import_processes() {
         if (wp_next_scheduled('puntwork_continue_import')) {
             wp_clear_scheduled_hook('puntwork_continue_import');
             $cron_cancelled++;
-            PuntWorkLogger::info('WordPress cron continuation job cancelled', PuntWorkLogger::CONTEXT_BATCH);
+            PuntWorkLogger::info('WordPress cron continuation job cancelled', PuntWorkLogger::CONTEXT_IMPORT);
         }
 
         if (wp_next_scheduled('puntwork_manual_import_async')) {
             wp_clear_scheduled_hook('puntwork_manual_import_async');
             $cron_cancelled++;
-            PuntWorkLogger::info('WordPress cron manual async job cancelled', PuntWorkLogger::CONTEXT_BATCH);
+            PuntWorkLogger::info('WordPress cron manual async job cancelled', PuntWorkLogger::CONTEXT_IMPORT);
         }
 
         if (wp_next_scheduled('puntwork_scheduled_import')) {
             wp_clear_scheduled_hook('puntwork_scheduled_import');
             $cron_cancelled++;
-            PuntWorkLogger::info('WordPress cron scheduled import job cancelled', PuntWorkLogger::CONTEXT_BATCH);
+            PuntWorkLogger::info('WordPress cron scheduled import job cancelled', PuntWorkLogger::CONTEXT_IMPORT);
         }
 
         $cancelled_count += $cron_cancelled;
@@ -2030,20 +2030,20 @@ function cancel_all_import_processes() {
                     $unscheduled = as_unschedule_all_actions($hook);
                     if ($unscheduled > 0) {
                         $as_cancelled += $unscheduled;
-                        PuntWorkLogger::info('Action Scheduler jobs cancelled', PuntWorkLogger::CONTEXT_BATCH, [
+                        PuntWorkLogger::info('Action Scheduler jobs cancelled', PuntWorkLogger::CONTEXT_IMPORT, [
                             'hook' => $hook,
                             'jobs_cancelled' => $unscheduled
                         ]);
                     }
                 } catch (\Exception $e) {
-                    PuntWorkLogger::warn('Failed to cancel Action Scheduler jobs for hook', PuntWorkLogger::CONTEXT_BATCH, [
+                    PuntWorkLogger::warn('Failed to cancel Action Scheduler jobs for hook', PuntWorkLogger::CONTEXT_IMPORT, [
                         'hook' => $hook,
                         'error' => $e->getMessage()
                     ]);
                 }
             }
         } else {
-            PuntWorkLogger::debug('Action Scheduler not available for job cancellation', PuntWorkLogger::CONTEXT_BATCH);
+            PuntWorkLogger::debug('Action Scheduler not available for job cancellation', PuntWorkLogger::CONTEXT_IMPORT);
         }
 
         $cancelled_count += $as_cancelled;
@@ -2088,7 +2088,7 @@ function cancel_all_import_processes() {
         $kill_signals_sent = 0;
         if (function_exists('posix_kill') && function_exists('getmypid')) {
             // Try to find and kill any child processes (limited effectiveness in web context)
-            PuntWorkLogger::debug('POSIX signals available but limited in web context', PuntWorkLogger::CONTEXT_BATCH);
+            PuntWorkLogger::debug('POSIX signals available but limited in web context', PuntWorkLogger::CONTEXT_IMPORT);
         }
 
         // 5.5. FORCE IMMEDIATE STATUS RESET (NUCLEAR OPTION)
@@ -2109,7 +2109,7 @@ function cancel_all_import_processes() {
             update_option($option, $value, false); // Force immediate update
         }
 
-        PuntWorkLogger::info('NUCLEAR RESET executed - Import state completely wiped', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::info('NUCLEAR RESET executed - Import state completely wiped', PuntWorkLogger::CONTEXT_IMPORT, [
             'nuclear_options_reset' => array_keys($nuclear_reset),
             'method' => 'complete_state_wipe'
         ]);
@@ -2117,11 +2117,11 @@ function cancel_all_import_processes() {
         // 6. FORCE GARBAGE COLLECTION AND MEMORY CLEANUP
         if (function_exists('gc_collect_cycles')) {
             gc_collect_cycles();
-            PuntWorkLogger::debug('Garbage collection forced during cancellation', PuntWorkLogger::CONTEXT_BATCH);
+            PuntWorkLogger::debug('Garbage collection forced during cancellation', PuntWorkLogger::CONTEXT_IMPORT);
         }
 
         // 7. LOG COMPREHENSIVE CANCELLATION REPORT
-        PuntWorkLogger::info('POISON PILL DEPLOYMENT COMPLETE - Import processes terminated', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::info('POISON PILL DEPLOYMENT COMPLETE - Import processes terminated', PuntWorkLogger::CONTEXT_IMPORT, [
             'cron_jobs_cancelled' => $cron_cancelled,
             'action_scheduler_jobs_cancelled' => $as_cancelled,
             'database_flags_set' => $db_flags_set,
@@ -2132,7 +2132,7 @@ function cancel_all_import_processes() {
         ]);
 
     } catch (\Exception $e) {
-        PuntWorkLogger::error('CRITICAL ERROR during import cancellation', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('CRITICAL ERROR during import cancellation', PuntWorkLogger::CONTEXT_IMPORT, [
             'error' => $e->getMessage(),
             'trace' => $e->getTraceAsString(),
             'method' => 'cancel_all_import_processes'
