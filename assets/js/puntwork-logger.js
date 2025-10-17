@@ -102,6 +102,11 @@
          */
         warn: function(message, context, data) {
             this.log('warn', message, context, data);
+
+            // For heartbeat errors, add more detailed error tracking
+            if (context === 'HEARTBEAT' && message.includes('communication error')) {
+                this.trackHeartbeatError(data);
+            }
         },
 
         /**
@@ -205,6 +210,36 @@
         clearLogHistory: function() {
             this.logHistory = [];
             this.log('info', 'Log history cleared', 'SYSTEM');
+        },
+
+        /**
+         * Track heartbeat errors for better debugging
+         * @param {object} errorData - Error data from heartbeat failure
+         */
+        trackHeartbeatError: function(errorData) {
+            // Track heartbeat error frequency to identify patterns
+            this.heartbeatErrorCount = (this.heartbeatErrorCount || 0) + 1;
+            this.lastHeartbeatError = Date.now();
+
+            // Log detailed heartbeat error information
+            this.error('Heartbeat communication failed', 'HEARTBEAT', {
+                errorCount: this.heartbeatErrorCount,
+                lastError: this.lastHeartbeatError,
+                errorData: errorData,
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                heartbeatSupported: typeof wp !== 'undefined' && typeof wp.heartbeat !== 'undefined'
+            });
+
+            // Suggest debugging steps if errors are frequent
+            if (this.heartbeatErrorCount > 3) {
+                console.warn('[PUNTWORK] Frequent heartbeat errors detected. Check:', [
+                    '1. PHP heartbeat handlers are using filters (not actions)',
+                    '2. admin-ajax.php is accessible',
+                    '3. No PHP fatal errors in heartbeat hooks',
+                    '4. Network connectivity is stable'
+                ]);
+            }
         },
 
         /**
