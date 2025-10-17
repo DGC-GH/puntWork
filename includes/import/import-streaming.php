@@ -453,30 +453,28 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
         }
 
         // DUPLICATE DETECTION OPTIMIZATION: Use composite keys for O(1) lookup
+        // Use ONLY guid + pubdate for duplicate detection (source_feed_slug unreliable in feed data)
+        $composite_key = generate_composite_key('', $item['guid'], $item['pubdate'] ?? '');
+
+        // Still log source_feed_slug issues for data quality monitoring
         $source_slug = $item['source_feed_slug'] ?? '';
         if (empty($source_slug)) {
-            // Log warning for missing source_feed_slug - critical for duplicate detection
+            // Log warning for missing source_feed_slug for data quality tracking
             static $missing_slug_warnings = 0;
             $missing_slug_warnings++;
-            if ($missing_slug_warnings <= 5) { // Log first 5 warnings only
-                PuntWorkLogger::warn('Missing source_feed_slug in feed item', PuntWorkLogger::CONTEXT_IMPORT, [
+            if ($missing_slug_warnings <= 3) { // Log first 3 warnings only (reduced frequency)
+                PuntWorkLogger::debug('Missing source_feed_slug in feed item (data quality note)', PuntWorkLogger::CONTEXT_IMPORT, [
                     'guid' => $item['guid'] ?? 'unknown',
-                    'title' => substr($item['title'] ?? '', 0, 50),
-                    'warning_count' => $missing_slug_warnings,
-                    'impact' => 'Reduced duplicate detection reliability'
+                    'warning_count' => $missing_slug_warnings
                 ]);
-            } elseif ($missing_slug_warnings % 100 === 0) { // Log every 100th after first 5
-                PuntWorkLogger::warn('Continuing missing source_feed_slug warnings', PuntWorkLogger::CONTEXT_IMPORT, [
+            } elseif ($missing_slug_warnings % 500 === 0) { // Log every 500th (reduced from 100)
+                PuntWorkLogger::info('Feed data quality: Multiple items missing source_feed_slug', PuntWorkLogger::CONTEXT_IMPORT, [
                     'total_missing' => $missing_slug_warnings,
                     'last_guid' => $item['guid'] ?? 'unknown',
-                    'recommendation' => 'Check feed configuration - source_feed_slug is required for proper duplicate detection'
+                    'note' => 'Not using source_feed_slug in duplicate detection due to inconsistent feed data'
                 ]);
             }
-            // Use a more descriptive fallback when possible
-            $source_slug = !empty($item['feed_source']) ? 'feed_' . $item['feed_source'] : 'unknown_source';
         }
-
-        $composite_key = generate_composite_key($source_slug, $item['guid'], $item['pubdate'] ?? '');
 
         if (isset($streaming_status['composite_key_cache'][$composite_key])) {
             // Existing job - ALWAYS update fully for comprehensive field population

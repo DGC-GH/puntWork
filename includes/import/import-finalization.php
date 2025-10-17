@@ -879,9 +879,29 @@ function cleanup_old_job_posts($import_start_time) {
 
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Cleanup completed: ' . $total_deleted . ' old published jobs deleted';
 
+    // DUPLICATE REMOVAL: Clean up job posts that have the same guid and pubdate combinations
+    PuntWorkLogger::info('Starting duplicate job post cleanup', PuntWorkLogger::CONTEXT_BATCH);
+    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Starting cleanup of duplicate job posts (same guid + pubdate)';
+
+    $duplicates_result = cleanup_duplicate_job_posts();
+
+    if ($duplicates_result['duplicate_groups'] > 0) {
+        PuntWorkLogger::info('Duplicate cleanup completed', PuntWorkLogger::CONTEXT_BATCH, [
+            'duplicate_groups_found' => $duplicates_result['duplicate_groups'],
+            'duplicates_removed' => $duplicates_result['deleted_count']
+        ]);
+
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Removed ' . $duplicates_result['deleted_count'] . ' duplicate job posts from ' . $duplicates_result['duplicate_groups'] . ' duplicate groups';
+    } else {
+        PuntWorkLogger::info('No duplicates found during cleanup', PuntWorkLogger::CONTEXT_BATCH);
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] No duplicate job posts found';
+    }
+
     return [
-        'deleted_count' => $total_deleted,
-        'logs' => $logs
+        'deleted_count' => $total_deleted + $duplicates_result['deleted_count'],
+        'logs' => $logs,
+        'duplicates_removed' => $duplicates_result['deleted_count'],
+        'duplicate_groups' => $duplicates_result['duplicate_groups']
     ];
 }
 
@@ -1191,6 +1211,112 @@ function estimate_next_cleanup() {
 }
 
 /**
+ * Remove duplicate job posts that have the same guid and pubdate combinations
+ * Keeps only one job post per unique guid+pubdate combination (typically the most recently imported)
+ *
+ * @return array Cleanup result with deleted_count and duplicate_groups
+ */
+function cleanup_duplicate_job_posts() {
+    global $wpdb;
+
+    PuntWorkLogger::info('Starting duplicate job post cleanup based on guid+pubdate', PuntWorkLogger::CONTEXT_BATCH);
+
+    // Find groups of jobs with the same guid and pubdate
+    $duplicate_groups = $wpdb->get_results("
+        SELECT pm_guid.meta_value as guid,
+               pm_pubdate.meta_value as pubdate,
+               GROUP_CONCAT(DISTINCT p.ID ORDER BY p.post_modified DESC) as post_ids,
+               COUNT(*) as duplicate_count
+        FROM {$wpdb->posts} p
+        LEFT JOIN {$wpdb->postmeta} pm_guid ON p.ID = pm_guid.post_id AND pm_guid.meta_key = 'guid'
+        LEFT JOIN {$wpdb->postmeta} pm_pubdate ON p.ID = pm_pubdate.post_id AND pm_pubdate.meta_key = 'pubdate'
+        WHERE p.post_type = 'job'
+        AND p.post_status IN ('publish', 'draft', 'pending', 'private')
+        AND pm_guid.meta_value IS NOT NULL
+        AND pm_guid.meta_value != ''
+        AND pm_pubdate.meta_value IS NOT NULL
+        AND pm_pubdate.meta_value != ''
+        GROUP BY pm_guid.meta_value, pm_pubdate.meta_value
+        HAVING COUNT(*) > 1
+        LIMIT 1000
+    ");
+
+    if (empty($duplicate_groups)) {
+        PuntWorkLogger::info('No duplicate job posts found', PuntWorkLogger::CONTEXT_BATCH);
+        return [
+            'duplicate_groups' => 0,
+            'deleted_count' => 0
+        ];
+    }
+
+    PuntWorkLogger::info('Found duplicate job post groups', PuntWorkLogger::CONTEXT_BATCH, [
+        'duplicate_groups_count' => count($duplicate_groups),
+        'sample_guid' => $duplicate_groups[0]->guid ?? 'unknown',
+        'sample_pubdate' => $duplicate_groups[0]->pubdate ?? 'unknown'
+    ]);
+
+    $total_deleted = 0;
+    $groups_processed = 0;
+
+    foreach ($duplicate_groups as $group) {
+        $groups_processed++;
+        $post_ids = explode(',', $group->post_ids);
+        $duplicate_count = $group->duplicate_count;
+
+        // Keep the first post ID (most recently modified) and delete the rest
+        $post_to_keep = array_shift($post_ids); // Remove and get the first (most recent) post ID
+
+        PuntWorkLogger::debug('Processing duplicate group', PuntWorkLogger::CONTEXT_BATCH, [
+            'guid' => $group->guid,
+            'pubdate' => $group->pubdate,
+            'keeping_post_id' => $post_to_keep,
+            'deleting_post_ids' => $post_ids,
+            'total_duplicates' => $duplicate_count
+        ]);
+
+        // Delete the duplicate posts
+        foreach ($post_ids as $duplicate_post_id) {
+            $result = wp_delete_post($duplicate_post_id, true); // true = force delete, skip trash
+            if ($result) {
+                $total_deleted++;
+
+                PuntWorkLogger::debug('Deleted duplicate job post', PuntWorkLogger::CONTEXT_BATCH, [
+                    'deleted_post_id' => $duplicate_post_id,
+                    'kept_post_id' => $post_to_keep,
+                    'guid' => $group->guid,
+                    'pubdate' => $group->pubdate
+                ]);
+            } else {
+                PuntWorkLogger::warn('Failed to delete duplicate job post', PuntWorkLogger::CONTEXT_BATCH, [
+                    'duplicate_post_id' => $duplicate_post_id,
+                    'keep_post_id' => $post_to_keep,
+                    'guid' => $group->guid
+                ]);
+            }
+        }
+
+        // Log progress every 10 groups
+        if ($groups_processed % 10 === 0) {
+            PuntWorkLogger::info('Duplicate cleanup progress', PuntWorkLogger::CONTEXT_BATCH, [
+                'groups_processed' => $groups_processed,
+                'total_groups' => count($duplicate_groups),
+                'duplicates_deleted' => $total_deleted
+            ]);
+        }
+    }
+
+    PuntWorkLogger::info('Duplicate job post cleanup completed', PuntWorkLogger::CONTEXT_BATCH, [
+        'duplicate_groups_processed' => $groups_processed,
+        'total_duplicates_removed' => $total_deleted
+    ]);
+
+    return [
+        'duplicate_groups' => $groups_processed,
+        'deleted_count' => $total_deleted
+    ];
+}
+
+/**
  * Clean up old job posts using direct SQL for maximum performance.
  * WARNING: This bypasses WordPress hooks and should only be used when wp_delete_post is too slow.
  * Use with extreme caution and thorough testing.
@@ -1200,10 +1326,6 @@ function estimate_next_cleanup() {
  */
 function bulk_delete_job_posts_sql($post_ids) {
     global $wpdb;
-
-    if (empty($post_ids)) {
-        return 0;
-    }
 
     $post_ids = array_map('intval', $post_ids);
     $placeholders = implode(',', array_fill(0, count($post_ids), '%d'));
