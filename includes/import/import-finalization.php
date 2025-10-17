@@ -56,19 +56,12 @@ function finalize_import_with_cleanup($result) {
         return $result;
     }
 
-    // Additional validation - ensure we have a reasonable number of jobs imported
-    $imported_count = ($result['published'] ?? 0) + ($result['updated'] ?? 0);
-    if ($imported_count < 1) {
-        PuntWorkLogger::warn('No jobs imported - skipping automatic cleanup', PuntWorkLogger::CONTEXT_BATCH, [
-            'imported_count' => $imported_count
-        ]);
-        return $result;
-    }
+    // Note: We always run cleanup after successful imports, even if no jobs were imported
+    // This ensures old jobs that are no longer in the feed get properly removed
 
     $start_time = microtime(true);
 
     PuntWorkLogger::info('Starting automatic post-import cleanup', PuntWorkLogger::CONTEXT_BATCH, [
-        'imported_jobs' => $imported_count,
         'cleanup_start_time' => date('Y-m-d H:i:s', (int)$start_time)
     ]);
 
