@@ -21,6 +21,9 @@ define( 'PUNTWORK_LOGS', PUNTWORK_PATH . 'logs/import.log' );
 // Debug configuration - set to true to enable detailed job update logging
 define( 'PUNTWORK_DEBUG_JOB_UPDATES', false );
 
+// Enable detailed import polling debug logs - helps troubleshoot progress synchronization issues
+// Set to true to enable: define( 'PUNTWORK_DEBUG_POLLING', true );
+
 // Activation hook
 register_activation_hook( __FILE__, __NAMESPACE__ . '\\job_import_activate' );
 function job_import_activate() {
