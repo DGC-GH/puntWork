@@ -887,14 +887,15 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
             $should_continue = false;
         }
 
-        // FORCE END-OF-IMPORT BREAKPOINT: If processed equals total items, we've reached the end
-        // This prevents infinite loops where the file might be processed but fgets never returns false
-        if (isset($streaming_status['total']) && $streaming_status['total'] > 0 && $processed >= $streaming_status['total']) {
-            PuntWorkLogger::info('FORCE END-OF-IMPORT BREAKPOINT triggered - all items processed', PuntWorkLogger::CONTEXT_IMPORT, [
-                'processed' => $processed,
-                'total' => $streaming_status['total'],
+        // FORCE END-OF-IMPORT BREAKPOINT: If FEED ITEMS PROCESSED equals total items, we've reached the end
+        // This prevents infinite loops where ACF updates keep processing existing jobs forever
+        if (isset($streaming_status['total']) && $streaming_status['total'] > 0 && $composite_keys_processed >= $streaming_status['total']) {
+            PuntWorkLogger::info('FORCE END-OF-IMPORT BREAKPOINT triggered - all FEED items processed', PuntWorkLogger::CONTEXT_IMPORT, [
+                'feed_items_processed' => $composite_keys_processed,
+                'acf_jobs_processed' => $processed,
+                'total_feed_items' => $streaming_status['total'],
                 'force_completion' => true,
-                'action' => 'completing import to prevent infinite loop'
+                'action' => 'completing import - ACF updates may continue in background but streaming stops'
             ]);
             $should_continue = false;
         }
