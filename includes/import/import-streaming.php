@@ -934,6 +934,18 @@ function process_acf_queue_batch(&$update_queue, &$create_queue, $operation = 'b
         $item_hash = md5(json_encode($item));
         update_post_meta($post_id, '_import_hash', $item_hash);
 
+        // Log consolidated ACF validation errors for this job if any occurred
+        if (!empty($job_acf_validation_errors)) {
+            PuntWorkLogger::debug('Job ACF validation failures summary', PuntWorkLogger::CONTEXT_IMPORT, [
+                'post_id' => $post_id,
+                'guid' => $item['guid'] ?? 'unknown',
+                'failed_fields_count' => count($job_acf_validation_errors),
+                'failed_fields' => array_keys($job_acf_validation_errors),
+                'validation_errors' => $job_acf_validation_errors,
+                'operation' => 'update'
+            ]);
+        }
+
         PuntWorkLogger::debug('ACF batch processing completed for update', PuntWorkLogger::CONTEXT_IMPORT, [
             'post_id' => $post_id,
             'guid' => $item['guid'] ?? 'unknown',
