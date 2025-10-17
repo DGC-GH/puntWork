@@ -203,25 +203,43 @@ add_filter('heartbeat_send', function($response, $screen_id) {
         $is_complete = $import_status['complete'] ?? false;
         $cleanup_completed = isset($import_status['cleanup_completed']) && $import_status['cleanup_completed'];
 
-        // HEARTBEAT FIX: Detect old completed imports that should not be sent via heartbeat
+        // HEARTBEAT FIX: Detect AND CLEAR old completed imports from database
         $is_old_completed_import = false;
-        if ($is_complete) {
-            // Consider any completed import older than 5 minutes (300 seconds) as old/inactive
+        if ($is_complete && !$cleanup_completed) {
+            // Consider any completed import older than 5 minutes (300 seconds) as stale/old
             $STALE_COMPLETION_THRESHOLD = 300; // 5 minutes in seconds
             if ($time_since_update > $STALE_COMPLETION_THRESHOLD) {
                 $is_old_completed_import = true;
-                PuntWorkLogger::debug('[CLIENT] Detected old completed import - heartbeat inactive', PuntWorkLogger::CONTEXT_AJAX, [
+
+                // CRITICAL FIX: Clear stale import data from database to provide clean dashboard
+                PuntWorkLogger::info('[SYSTEM] Clearing stale completed import data from database', PuntWorkLogger::CONTEXT_SYSTEM, [
                     'time_since_update' => $time_since_update,
                     'threshold' => $STALE_COMPLETION_THRESHOLD,
                     'processed' => $import_status['processed'] ?? 0,
                     'total' => $import_status['total'] ?? 0,
-                    'is_complete' => true
+                    'last_update' => $last_update,
+                    'action' => 'auto_cleanup_stale_import'
                 ]);
+
+                // Clear all import-related options to provide fresh dashboard state
+                delete_import_status();
+                delete_option('job_import_progress');
+                delete_option('job_import_processed_guids');
+                delete_option('job_import_batch_size');
+                delete_transient('import_cancel');
+                delete_transient('import_force_cancel');
+                delete_transient('import_emergency_stop');
+
+                // Return fresh empty status instead of old data
+                $import_status = [];
+                $is_complete = false;
+                $cleanup_completed = false;
+                $time_since_update = 0;
             }
         }
 
         if ($is_old_completed_import) {
-            // Suppress heartbeat for old completed imports to prevent stale data display
+            // Suppress heartbeat and return clean state
             $is_active = false;
         } elseif ($is_complete && $cleanup_completed) {
             // Completed imports with cleanup: Consider inactive after brief period (60 seconds)
