@@ -157,8 +157,9 @@ add_filter('heartbeat_received', function($response, $data, $screen_id) {
         }
     }
 
-    // Check for active scheduled imports
+    // Check for active scheduled imports - only when client requests it
     if (isset($data['puntwork_scheduled_imports'])) {
+        // Only run expensive scheduled imports check when specifically requested
         $scheduled_data = array(
             'schedule' => get_option('job_import_schedule', array()),
             'next_run' => wp_next_scheduled('puntwork_scheduled_import'),
@@ -186,8 +187,21 @@ add_filter('heartbeat_received', function($response, $data, $screen_id) {
  * Handle heartbeat ticks from client and send import status updates
  */
 add_filter('heartbeat_send', function($response, $screen_id) {
-    // Always include basic import status in heartbeat response for any admin page
-    // This ensures import status is available across the admin interface
+    // Only include import status in heartbeat response when actively needed
+    // Skip expensive database operations for idle/clean dashboard states
+
+    // Check if this heartbeat request includes import status request from client
+    $data = isset($_POST['data']) ? json_decode(stripslashes($_POST['data']), true) : [];
+    $client_requests_status = isset($data['puntwork_import_status']);
+    $client_requests_scheduled = isset($data['puntwork_scheduled_imports']);
+
+    // Skip import status checks unless client specifically requests them
+    if (!$client_requests_status && !$client_requests_scheduled) {
+        // Return empty response for automatic idle heartbeats
+        return $response;
+    }
+
+    // Get import status only when needed
     $import_status = get_import_status([]);
 
     // Check if import is active (running or very recently completed)
