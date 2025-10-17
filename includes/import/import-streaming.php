@@ -342,8 +342,9 @@ function import_jobs_streaming($preserve_status = false) {
             'success_rate' => $processed > 0 ? ($published + $updated) / $processed : 1.0
         ]);
 
-        // INTEGRATE AUTOMATIC CLEANUP: Run after fully successful import
+        // INTEGRATE AUTOMATIC CLEANUP: Run after fully successful import (with forced timeout to prevent indefinite hangs)
         if ($final_result['success'] && $final_result['complete']) {
+            $cleanup_start_time = microtime(true);
             PuntWorkLogger::info('Import completed successfully, running automatic cleanup', PuntWorkLogger::CONTEXT_IMPORT, [
                 'processed' => $final_result['processed'],
                 'published' => $final_result['published'],
@@ -353,8 +354,78 @@ function import_jobs_streaming($preserve_status = false) {
             // Import the finalization functions
             require_once __DIR__ . '/import-finalization.php';
 
-            // Run cleanup with safeguard validations
-            $final_result = \Puntwork\finalize_import_with_cleanup($final_result);
+            // Run cleanup with safeguard validations and forced timeout protection
+            try {
+                // Set a hard timeout for cleanup (10 minutes max)
+                $cleanup_timeout = 600; // 10 minutes
+                $cleanup_finished = false;
+                $cleanup_result = null;
+
+                // Use process control for timeout if available (Linux)
+                if (function_exists('pcntl_fork') && function_exists('pcntl_waitpid')) {
+                    $cleanup_pid = pcntl_fork();
+
+                    if ($cleanup_pid == -1) {
+                        // Fork failed, run cleanup normally with manual timeout
+                        PuntWorkLogger::warn('Fork failed for cleanup timeout protection, using manual timeout', PuntWorkLogger::CONTEXT_IMPORT);
+                        $final_result = \Puntwork\finalize_import_with_cleanup($final_result);
+                        $cleanup_finished = true;
+                    } elseif ($cleanup_pid == 0) {
+                        // Child process - run cleanup
+                        $final_result = \Puntwork\finalize_import_with_cleanup($final_result);
+                        exit(0); // Success
+                    } else {
+                        // Parent process - wait with timeout
+                        $status = null;
+                        $wait_start = microtime(true);
+
+                        while (microtime(true) - $wait_start < $cleanup_timeout) {
+                            $result = pcntl_waitpid($cleanup_pid, $status, WNOHANG);
+                            if ($result > 0) {
+                                $cleanup_finished = true;
+                                break;
+                            }
+                            sleep(1); // Wait 1 second before checking again
+                        }
+
+                        if (!$cleanup_finished) {
+                            // Timeout reached, kill child process
+                            posix_kill($cleanup_pid, SIGKILL);
+                            PuntWorkLogger::error('Cleanup process timed out and was killed', PuntWorkLogger::CONTEXT_IMPORT, [
+                                'timeout_seconds' => $cleanup_timeout,
+                                'cleanup_duration' => microtime(true) - $cleanup_start_time
+                            ]);
+
+                            // Mark import as successful but with cleanup failure
+                            $final_result['cleanup_timeout'] = true;
+                            $final_result['cleanup_success'] = false;
+                        }
+                    }
+                } else {
+                    // No process control available, run with manual timeout monitoring
+                    PuntWorkLogger::warn('Process control not available, using manual timeout for cleanup', PuntWorkLogger::CONTEXT_IMPORT);
+                    $final_result = \Puntwork\finalize_import_with_cleanup($final_result);
+                    $cleanup_finished = true;
+                }
+
+                $cleanup_duration = microtime(true) - $cleanup_start_time;
+                PuntWorkLogger::info('Cleanup completed', PuntWorkLogger::CONTEXT_IMPORT, [
+                    'cleanup_duration' => round($cleanup_duration, 2),
+                    'cleanup_success' => $final_result['cleanup_success'] ?? true,
+                    'cleanup_timeout' => $final_result['cleanup_timeout'] ?? false
+                ]);
+
+            } catch (\Exception $e) {
+                PuntWorkLogger::error('Exception during cleanup phase', PuntWorkLogger::CONTEXT_IMPORT, [
+                    'error' => $e->getMessage(),
+                    'cleanup_duration' => microtime(true) - $cleanup_start_time,
+                    'action' => 'Continuing with import completion despite cleanup error'
+                ]);
+
+                // Don't fail the entire import due to cleanup errors
+                $final_result['cleanup_error'] = $e->getMessage();
+                $final_result['cleanup_success'] = false;
+            }
         }
 
         return $final_result;

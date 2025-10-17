@@ -81,6 +81,7 @@ function run_job_import_batch_ajax() {
                 'batch_size' => $import_status['batch_size'] ?? 'unknown',
                 'complete' => $import_status['complete'] ?? false
             ]);
+            // FORCE COMPLETE IMPORT STATUS RESET TO PREVENT RECURRING STUCK STATUS
             delete_option('job_import_status');
             delete_option('job_import_progress');
             delete_option('job_import_processed_guids');
@@ -88,6 +89,7 @@ function run_job_import_batch_ajax() {
             delete_option('job_import_last_batch_processed');
             delete_option('job_import_batch_size');
             delete_option('job_import_consecutive_small_batches');
+            delete_option('streaming_import_status'); // Also clear streaming status
             delete_transient('import_cancel');
 
             // Clear the status so we can proceed
