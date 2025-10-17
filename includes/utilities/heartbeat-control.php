@@ -75,12 +75,32 @@ add_filter('heartbeat_received', function($response, $data, $screen_id) {
             $is_complete = $import_status['complete'] ?? false;
             $cleanup_completed = isset($import_status['cleanup_completed']) && $import_status['cleanup_completed'];
 
-            if ($is_complete && $cleanup_completed) {
-                // Completed imports with cleanup: Stop responding after 60 seconds
-                $should_respond = $time_since_update < 60;
-            } elseif ($is_complete) {
-                // Completed imports without cleanup: Stop responding after 30 seconds
-                $should_respond = $time_since_update < 30;
+            // HEARTBEAT FIX: Detect old completed imports that should not respond via heartbeat
+            $is_old_completed_import = false;
+            if ($is_complete) {
+                // Consider any completed import older than 5 minutes (300 seconds) as old/inactive
+                $STALE_COMPLETION_THRESHOLD = 300; // 5 minutes in seconds
+                if ($time_since_update > $STALE_COMPLETION_THRESHOLD) {
+                    $is_old_completed_import = true;
+                    $should_respond = false;
+                    PuntWorkLogger::debug('[CLIENT] Heartbeat status request ignored - old completed import', PuntWorkLogger::CONTEXT_AJAX, [
+                        'time_since_update' => $time_since_update,
+                        'threshold' => $STALE_COMPLETION_THRESHOLD,
+                        'processed' => $import_status['processed'] ?? 0,
+                        'total' => $import_status['total'] ?? 0,
+                        'is_complete' => true
+                    ]);
+                }
+            }
+
+            if (!$is_old_completed_import) {
+                if ($is_complete && $cleanup_completed) {
+                    // Completed imports with cleanup: Stop responding after 60 seconds
+                    $should_respond = $time_since_update < 60;
+                } elseif ($is_complete) {
+                    // Completed imports without cleanup: Stop responding after 30 seconds
+                    $should_respond = $time_since_update < 30;
+                }
             }
         }
 
@@ -183,7 +203,27 @@ add_filter('heartbeat_send', function($response, $screen_id) {
         $is_complete = $import_status['complete'] ?? false;
         $cleanup_completed = isset($import_status['cleanup_completed']) && $import_status['cleanup_completed'];
 
-        if ($is_complete && $cleanup_completed) {
+        // HEARTBEAT FIX: Detect old completed imports that should not be sent via heartbeat
+        $is_old_completed_import = false;
+        if ($is_complete) {
+            // Consider any completed import older than 5 minutes (300 seconds) as old/inactive
+            $STALE_COMPLETION_THRESHOLD = 300; // 5 minutes in seconds
+            if ($time_since_update > $STALE_COMPLETION_THRESHOLD) {
+                $is_old_completed_import = true;
+                PuntWorkLogger::debug('[CLIENT] Detected old completed import - heartbeat inactive', PuntWorkLogger::CONTEXT_AJAX, [
+                    'time_since_update' => $time_since_update,
+                    'threshold' => $STALE_COMPLETION_THRESHOLD,
+                    'processed' => $import_status['processed'] ?? 0,
+                    'total' => $import_status['total'] ?? 0,
+                    'is_complete' => true
+                ]);
+            }
+        }
+
+        if ($is_old_completed_import) {
+            // Suppress heartbeat for old completed imports to prevent stale data display
+            $is_active = false;
+        } elseif ($is_complete && $cleanup_completed) {
             // Completed imports with cleanup: Consider inactive after brief period (60 seconds)
             // to prevent continuous updates after finalization, but allow enough time for final status display
             $is_active = $time_since_update < 60;
