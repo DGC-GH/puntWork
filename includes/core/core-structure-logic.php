@@ -305,9 +305,6 @@ function fetch_and_generate_combined_json() {
         'total_items' => $total_items
     ]);
 
-    $import_logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Starting JSONL combination phase | Data: {"total_items":' . $total_items . '}';
-    error_log('Starting JSONL combination phase | Data: {"total_items":' . $total_items . '}');
-
     combine_jsonl_files($feeds, $output_dir, $total_items, $import_logs);
 
     // Mark JSONL combination as complete
@@ -318,9 +315,6 @@ function fetch_and_generate_combined_json() {
     PuntWorkLogger::info('JSONL combination phase completed', PuntWorkLogger::CONTEXT_FEED, [
         'total_items' => $total_items
     ]);
-
-    $import_logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] JSONL combination phase completed | Data: {"total_items":' . $total_items . '}';
-    error_log('JSONL combination phase completed | Data: {"total_items":' . $total_items . '}');
 
     return $import_logs;
 }
