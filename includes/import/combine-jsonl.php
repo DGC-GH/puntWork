@@ -16,7 +16,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs) {
     $combined_json_path = $output_dir . 'combined-jobs.jsonl';
-    $combined_gz_path = $combined_json_path . '.gz';
     $combined_handle = fopen($combined_json_path, 'w');
     if (!$combined_handle) throw new \Exception('Cant open combined JSONL');
     // Initialize combine progress in import status
@@ -49,12 +48,4 @@ function combine_jsonl_files($feeds, $output_dir, $total_items, &$logs) {
     @chmod($combined_json_path, 0644);
     $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] ' . "Combined JSONL ($total_items items)";
     error_log("Combined JSONL ($total_items items)");
-    gzip_file($combined_json_path, $combined_gz_path);
-    // Update status after gzip
-    try {
-        $status = get_import_status();
-        $status['last_update'] = time();
-        $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Gzipped combined JSONL';
-        set_import_status_atomic($status);
-    } catch (\Exception $e) {}
 }
