@@ -332,9 +332,41 @@
                     // Check if import is currently active
                     self.isImportActive = !status.complete && (status.processed > 0 || status.total > 0);
 
-                    // Update UI with initial status
-                    if (self.isImportActive || status.complete) {
+                    // Update UI with initial status BUT avoid stale completion notifications
+                    if (self.isImportActive) {
+                        // If actively running, show with full processing
                         self.updateImportUI(status);
+                    } else if (status.complete) {
+                        // For completed imports, only process completion and notifications on page load
+                        // if it completed very recently (<30 seconds ago) to avoid spam
+                        var lastUpdate = status.last_update || 0;
+                        var now = Date.now() / 1000;
+                        var timeSinceCompletion = now - lastUpdate;
+                        var RECENT_COMPLETION_THRESHOLD = 30; // 30 seconds
+
+                        if (timeSinceCompletion <= RECENT_COMPLETION_THRESHOLD) {
+                            // Very recent completion - show with notification
+                            PuntWorkJSLogger.debug('Showing recent completion status on page load', 'HEARTBEAT', {
+                                timeSinceCompletion: timeSinceCompletion,
+                                lastUpdate: lastUpdate
+                            });
+                            self.updateImportUI(status);
+                        } else {
+                            // Old completion - just update UI without triggering completion handler
+                            PuntWorkJSLogger.debug('Not showing old completion notification on page load', 'HEARTBEAT', {
+                                timeSinceCompletion: timeSinceCompletion,
+                                lastUpdate: lastUpdate
+                            });
+
+                            // Update progress and status message, but skip completion handling
+                            JobImportUI.updateProgress(status);
+                            // Calling updateStatusMessage directly to show final state without completion
+                            if (status.complete) {
+                                var isSuccessful = status.success !== false;
+                                var message = isSuccessful ? 'Import completed successfully!' : 'Import completed with issues';
+                                $('#status-message').text(message);
+                            }
+                        }
                     }
                 }
             }).catch(function(error) {
