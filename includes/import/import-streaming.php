@@ -772,15 +772,23 @@ function should_update_existing_job_smart($post_id, $item) {
 
 /**
  * Batch process ACF field updates for performance with memory optimization
+ * Updates ALL ACF fields like the batch methods to ensure comprehensive field population
  */
 function process_acf_queue_batch(&$update_queue, &$create_queue, $operation = 'batch') {
-    // Process update queue with memory optimization
+    // Get all ACF field names that should be processed (like batch methods)
+    $acf_fields = get_acf_fields();
+    $zero_empty_fields = get_zero_empty_fields();
+
+    // Process update queue with comprehensive ACF field handling
     foreach ($update_queue as $post_id => $item) {
-        // Only process selective fields present in item to reduce memory usage
-        $selective_fields = get_acf_fields_selective($item);
-        foreach ($selective_fields as $key => $value) {
+        // Process ALL ACF fields like batch methods do (not selective)
+        foreach ($acf_fields as $field) {
+            $value = $item[$field] ?? '';
+            $is_special = in_array($field, $zero_empty_fields);
+            $set_value = $is_special && $value === '0' ? '' : $value;
+
             if (function_exists('update_field')) {
-                update_field($key, $value, $post_id);
+                update_field($field, $set_value, $post_id);
             }
         }
 
@@ -789,17 +797,21 @@ function process_acf_queue_batch(&$update_queue, &$create_queue, $operation = 'b
         update_post_meta($post_id, 'guid', $item['guid']);
         update_post_meta($post_id, 'pubdate', $item['pubdate'] ?? '');
 
-        // Clear temporary variables immediately to free memory
-        unset($selective_fields);
+        // Update import hash for change detection
+        $item_hash = md5(json_encode($item));
+        update_post_meta($post_id, '_import_hash', $item_hash);
     }
 
-    // Process create queue with memory optimization
+    // Process create queue with comprehensive ACF field handling
     foreach ($create_queue as $post_id => $item) {
-        // Only process selective fields present in item to reduce memory usage
-        $selective_fields = get_acf_fields_selective($item);
-        foreach ($selective_fields as $key => $value) {
+        // Process ALL ACF fields like batch methods do (not selective)
+        foreach ($acf_fields as $field) {
+            $value = $item[$field] ?? '';
+            $is_special = in_array($field, $zero_empty_fields);
+            $set_value = $is_special && $value === '0' ? '' : $value;
+
             if (function_exists('update_field')) {
-                update_field($key, $value, $post_id);
+                update_field($field, $set_value, $post_id);
             }
         }
 
@@ -809,8 +821,9 @@ function process_acf_queue_batch(&$update_queue, &$create_queue, $operation = 'b
         update_post_meta($post_id, 'source_feed_slug', $item['source_feed_slug'] ?? 'unknown');
         update_post_meta($post_id, '_last_import_update', current_time('mysql'));
 
-        // Clear temporary variables immediately to free memory
-        unset($selective_fields);
+        // Set import hash for new posts
+        $item_hash = md5(json_encode($item));
+        update_post_meta($post_id, '_import_hash', $item_hash);
     }
 
     // Clear queues after processing and trigger garbage collection
