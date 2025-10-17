@@ -186,9 +186,10 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
     $total_feeds = count($feeds);
     $processed_feeds = 0;
 
-    PuntWorkLogger::info('Starting parallel feed downloads', PuntWorkLogger::CONTEXT_FEED, [
+    PuntWorkLogger::info('Starting parallel feed downloads (optimized)', PuntWorkLogger::CONTEXT_FEED, [
         'feed_count' => $total_feeds,
-        'output_dir' => $output_dir
+        'output_dir' => $output_dir,
+        'parallel_processing' => 'concurrent_via_action_scheduler'
     ]);
 
     // Initialize import status for feed processing phase
@@ -210,53 +211,126 @@ function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$log
 
     // Prepare download tasks
     $download_tasks = [];
+    $action_ids = [];
     foreach ($feeds as $feed_key => $url) {
-        $xml_path = $output_dir . $feed_key . '.xml';
         $download_tasks[$feed_key] = [
             'url' => $url,
-            'xml_path' => $xml_path,
-            'feed_key' => $feed_key
+            'xml_path' => $output_dir . $feed_key . '.xml',
+            'json_path' => $output_dir . $feed_key . '.jsonl',
+            'feed_key' => $feed_key,
+            'output_dir' => $output_dir,
+            'fallback_domain' => $fallback_domain,
+            'feed_status_key' => 'feed_' . $feed_key . '_status'
         ];
+
+        // Schedule each feed download as a separate Action Scheduler job for parallelism
+        if (function_exists('as_enqueue_async_action')) {
+            $action_id = as_enqueue_async_action('puntwork_download_feed', $download_tasks[$feed_key]);
+            $action_ids[$feed_key] = $action_id;
+        }
     }
 
-    // For this deployment we intentionally use sequential downloads for reliability.
-    PuntWorkLogger::info('Starting feed downloads (sequential wp_remote_get)', PuntWorkLogger::CONTEXT_FEED, [
-        'feed_count' => count($download_tasks),
-        'output_dir' => $output_dir,
-        'method' => 'sequential_wp_remote_get'
-    ]);
+    if (!empty($action_ids)) {
+        PuntWorkLogger::info('Parallel feed downloads scheduled via Action Scheduler', PuntWorkLogger::CONTEXT_FEED, [
+            'total_feeds' => count($feeds),
+            'action_ids_count' => count($action_ids),
+            'method' => 'action_scheduler_parallel'
+        ]);
 
-    $successful_downloads = 0;
-    foreach ($download_tasks as $feed_key => $task) {
-        try {
-            // Force the use of wp_remote_get inside process_one_feed
-            $count = process_one_feed($feed_key, $task['url'], $output_dir, $fallback_domain, $logs, true);
-            if ($count > 0) $successful_downloads++;
-            $total_items += $count;
-        } catch (\Exception $e) {
-            PuntWorkLogger::error('Sequential feed download failed', PuntWorkLogger::CONTEXT_FEED, [
-                'feed_key' => $feed_key,
-                'url' => $task['url'],
-                'error' => $e->getMessage()
-            ]);
+        // Wait for all downloads to complete with optimized polling
+        $completed_feeds = 0;
+        $max_wait_time = 600; // 10 minutes maximum
+        $start_wait = microtime(true);
+        $poll_interval = 2; // Check every 2 seconds instead of 1
+
+        while ($completed_feeds < count($feeds) && (microtime(true) - $start_wait) < $max_wait_time) {
+            $new_completed = 0;
+
+            foreach ($download_tasks as $feed_key => $task) {
+                if (isset($task['_completed'])) continue; // Already processed
+
+                // Check if feed processing completed (by checking if the jsonl file exists and has content)
+                $json_path = $task['json_path'];
+                if (file_exists($json_path) && filesize($json_path) > 0) {
+                    // Count items from this feed
+                    $feed_count = count(file($json_path)); // Simple line count for JSONL
+                    $total_items += $feed_count;
+
+                    PuntWorkLogger::debug('Feed processing completed', PuntWorkLogger::CONTEXT_FEED, [
+                        'feed_key' => $feed_key,
+                        'items_count' => $feed_count,
+                        'json_path' => $json_path
+                    ]);
+
+                    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Processed ' . $feed_count . ' items from ' . $feed_key;
+                    $download_tasks[$feed_key]['_completed'] = true;
+                    $completed_feeds++;
+                    $new_completed++;
+                }
+            }
+
+            // Update progress with actual completed feeds
+            if ($new_completed > 0) {
+                $feed_status['processed'] = $completed_feeds;
+                $feed_status['time_elapsed'] = microtime(true) - $start_time;
+                set_import_status($feed_status);
+            }
+
+            // Less frequent polling to reduce server load
+            if ($completed_feeds < count($feeds)) {
+                sleep($poll_interval);
+            }
         }
 
-        // Update progress after processing each feed
-        $processed_feeds++;
-        $feed_status['processed'] = $processed_feeds;
-        $feed_status['time_elapsed'] = microtime(true) - $start_time;
-        set_import_status($feed_status);
+        $parallel_download_time = microtime(true) - $start_time;
+        PuntWorkLogger::info('Parallel feed downloads completed via Action Scheduler', PuntWorkLogger::CONTEXT_FEED, [
+            'total_feeds' => count($feeds),
+            'completed_feeds' => $completed_feeds,
+            'total_download_time' => $parallel_download_time,
+            'average_time_per_feed' => count($feeds) > 0 ? $parallel_download_time / count($feeds) : 0,
+            'efficiency_boost' => 'parallel_processing_via_background_jobs'
+        ]);
+
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Parallel downloads completed: ' . $completed_feeds . '/' . count($feeds) . ' feeds in ' . round($parallel_download_time, 2) . 's';
+
+    } else {
+        // Fallback to optimized sequential processing if Action Scheduler not available
+        PuntWorkLogger::warn('Action Scheduler not available, falling back to optimized sequential processing', PuntWorkLogger::CONTEXT_FEED);
+
+        // Implement optimized sequential with progress tracking and reduced logging
+        $successful_downloads = 0;
+        foreach ($download_tasks as $feed_key => $task) {
+            try {
+                // Use cURL if available for better performance, fallback to wp_remote_get
+                $use_curl = function_exists('curl_init');
+                $count = process_one_feed($feed_key, $task['url'], $output_dir, $fallback_domain, $logs, !$use_curl);
+                if ($count > 0) $successful_downloads++;
+                $total_items += $count;
+            } catch (\Exception $e) {
+                PuntWorkLogger::error('Feed download failed', PuntWorkLogger::CONTEXT_FEED, [
+                    'feed_key' => $feed_key,
+                    'url' => $task['url'],
+                    'error' => $e->getMessage()
+                ]);
+            }
+
+            // Update progress after processing each feed
+            $processed_feeds++;
+            $feed_status['processed'] = $processed_feeds;
+            $feed_status['time_elapsed'] = microtime(true) - $start_time;
+            set_import_status($feed_status);
+        }
+
+        $sequential_download_time = microtime(true) - $start_time;
+        PuntWorkLogger::info('Optimized sequential feed downloads completed', PuntWorkLogger::CONTEXT_FEED, [
+            'total_feeds' => count($feeds),
+            'successful_downloads' => $successful_downloads,
+            'total_download_time' => $sequential_download_time,
+            'method' => 'optimized_sequential_with_curl_preference'
+        ]);
+
+        $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Sequential downloads completed: ' . $successful_downloads . '/' . count($feeds) . ' feeds in ' . round($sequential_download_time, 2) . 's';
     }
-
-    $parallel_download_time = microtime(true) - $start_time;
-    PuntWorkLogger::info('Sequential feed downloads completed', PuntWorkLogger::CONTEXT_FEED, [
-        'total_feeds' => count($feeds),
-        'successful_downloads' => $successful_downloads,
-        'total_download_time' => $parallel_download_time,
-        'average_time_per_feed' => count($feeds) > 0 ? $parallel_download_time / count($feeds) : 0
-    ]);
-
-    $logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Sequential downloads completed: ' . $successful_downloads . '/' . count($feeds) . ' feeds in ' . round($parallel_download_time, 2) . 's';
 
     return $total_items;
 }
@@ -318,3 +392,52 @@ function fetch_and_generate_combined_json() {
 
     return $import_logs;
 }
+
+/**
+ * Action Scheduler handler for parallel feed downloads
+ * Processes one feed asynchronously for improved performance
+ */
+function download_feed_async_handler($task_data) {
+    $feed_key = $task_data['feed_key'] ?? '';
+    $url = $task_data['url'] ?? '';
+    $output_dir = $task_data['output_dir'] ?? '';
+    $fallback_domain = $task_data['fallback_domain'] ?? 'belgiumjobs.work';
+
+    if (empty($feed_key) || empty($url) || empty($output_dir)) {
+        PuntWorkLogger::error('Invalid task data for parallel feed download', PuntWorkLogger::CONTEXT_FEED, [
+            'task_data' => $task_data
+        ]);
+        return;
+    }
+
+    PuntWorkLogger::info('Processing feed asynchronously', PuntWorkLogger::CONTEXT_FEED, [
+        'feed_key' => $feed_key,
+        'method' => 'action_scheduler_async'
+    ]);
+
+    try {
+        $logs = [];
+        $count = process_one_feed($feed_key, $url, $output_dir, $fallback_domain, $logs, false); // Prefer cURL
+
+        PuntWorkLogger::info('Asynchronous feed processing completed', PuntWorkLogger::CONTEXT_FEED, [
+            'feed_key' => $feed_key,
+            'items_processed' => $count,
+            'json_path' => $task_data['json_path'] ?? 'unknown'
+        ]);
+
+    } catch (\Exception $e) {
+        PuntWorkLogger::error('Asynchronous feed processing failed', PuntWorkLogger::CONTEXT_FEED, [
+            'feed_key' => $feed_key,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        throw $e; // Re-throw for Action Scheduler error handling
+    }
+}
+
+// Clear feeds cache when job-feed post is updated
+add_action('save_post', function($post_id, $post, $update) {
+    if ($post->post_type === 'job-feed' && $post->post_status === 'publish') {
+        delete_transient('puntwork_feeds');
+    }
+}, 10, 3);
