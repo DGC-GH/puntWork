@@ -2,7 +2,7 @@
 /**
  * Plugin Name: puntWork
  * Description: Imports jobs from XML feeds via job-feed CPT.
- * Version: 1.1.1
+ * Version: 1.1.2
  * Author: DGC-GH
  */
 
@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'PUNTWORK_VERSION', '1.1.1' );
+define( 'PUNTWORK_VERSION', '1.1.2' );
 define( 'PUNTWORK_PATH', plugin_dir_path( __FILE__ ) );
 define( 'PUNTWORK_URL', plugin_dir_url( __FILE__ ) );
 define( 'PUNTWORK_LOGS', PUNTWORK_PATH . 'logs/import.log' );
