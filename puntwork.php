@@ -24,10 +24,6 @@ define( 'PUNTWORK_DEBUG_JOB_UPDATES', false );
 // Activation hook
 register_activation_hook( __FILE__, __NAMESPACE__ . '\\job_import_activate' );
 function job_import_activate() {
-    // Schedule cron (DISABLED - removed automatic cron loop)
-    // if ( ! wp_next_scheduled( 'job_import_cron' ) ) {
-    //     wp_schedule_event( current_time('timestamp'), 'daily', 'job_import_cron' );
-    // }
     // Create logs dir if needed
     $logs_dir = dirname( PUNTWORK_LOGS );
     if ( ! file_exists( $logs_dir ) ) {
@@ -92,7 +88,7 @@ function setup_job_import() {
         // Core functionality
         'core/core-structure-logic.php',
         'core/enqueue-scripts-js.php',
-        
+
         // Admin interface
         'admin/admin-menu.php',
         'admin/admin-import-settings.php',
@@ -100,7 +96,7 @@ function setup_job_import() {
         'admin/admin-ui-debug.php',
         'admin/admin-ui-main.php',
         'admin/admin-ui-scheduling.php',
-        
+
         // API handlers
     'api/ajax-feed-processing.php',
         'api/ajax-handlers.php',
@@ -108,24 +104,14 @@ function setup_job_import() {
     'api/ajax-purge.php',
     // REST endpoints
     'api/rest-diagnostics.php',
-        
-        // Batch processing
-        'batch/batch-core.php',
-        'batch/batch-data.php',
-        'batch/batch-processing.php',
-        'batch/batch-size-management.php',
-        'batch/batch-utils.php',
-        
-        // Import functionality
+
+        // Import functionality (streaming only)
         'import/combine-jsonl.php',
         'import/download-feed.php',
-        'import/import-batch.php',
-        'import/import-finalization.php',
         'import/import-setup.php',
-        'import/process-batch-items.php',
-        'import/process-batch-items-concurrent.php',
-        'import/process-xml-batch.php',
-        
+        'import/import-streaming.php',
+        'import/import-finalization.php',
+
         // Utilities
         'utilities/ajax-utilities.php',
         'utilities/database-utilities.php',
@@ -141,7 +127,7 @@ function setup_job_import() {
         'utilities/item-inference.php',
         'utilities/shortcode.php',
         'utilities/utility-helpers.php',
-        
+
         // Mappings
         'mappings/mappings-constants.php',
         'mappings/mappings-fields.php',
@@ -149,7 +135,7 @@ function setup_job_import() {
         'mappings/mappings-icons.php',
         'mappings/mappings-salary.php',
         'mappings/mappings-schema.php',
-        
+
         // Scheduling
         'scheduling/scheduling-ajax.php',
         'scheduling/scheduling-core.php',
