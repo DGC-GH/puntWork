@@ -227,11 +227,6 @@
                 // Trigger the unified async import process
                 await JobImportAPI.clearImportCancel();
 
-                // Removed automatic status polling to prevent loops
-                // if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
-                //     window.JobImportEvents.startStatusPolling();
-                // }
-
                 // Trigger the async import using the same API as scheduled imports
                 const startResponse = await JobImportAPI.call('run_scheduled_import', { import_type: 'manual' });
                 PuntWorkJSLogger.debug('Manual import start response', 'LOGIC', startResponse);
@@ -240,10 +235,8 @@
                     throw new Error('Failed to start import: ' + (startResponse.message || 'Unknown error'));
                 }
 
-                // Start status polling for real-time updates
-                if (window.JobImportEvents && window.JobImportEvents.startHeartbeatMonitoring) {
-                    window.JobImportEvents.startHeartbeatMonitoring();
-                }
+                // The import is now running asynchronously
+                // Status polling will provide real-time progress updates
 
                 // The import is now running asynchronously
                 // Status polling will provide real-time progress updates
@@ -367,9 +360,9 @@
             // Stop any ongoing import
             this.isImporting = false;
 
-            // Stop status polling
-            if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
-                window.JobImportEvents.stopStatusPolling();
+            // Stop heartbeat monitoring
+            if (window.JobImportEvents && window.JobImportEvents.stopHeartbeatMonitoring) {
+                window.JobImportEvents.stopHeartbeatMonitoring();
             }
 
             // Show loading state
@@ -454,9 +447,9 @@
             // Stop any ongoing import
             this.isImporting = false;
 
-            // Stop status polling
-            if (window.JobImportEvents && window.JobImportEvents.stopStatusPolling) {
-                window.JobImportEvents.stopStatusPolling();
+            // Stop heartbeat monitoring
+            if (window.JobImportEvents && window.JobImportEvents.stopHeartbeatMonitoring) {
+                window.JobImportEvents.stopHeartbeatMonitoring();
             }
 
             JobImportAPI.call('manually_resume_stuck_import', {}).then(function(response) {
@@ -485,9 +478,9 @@
                     $('#import-type-indicator').show();
                     $('#import-type-text').text('Manual import is currently running');
 
-                    // Start status polling to monitor progress
-                    if (window.JobImportEvents && window.JobImportEvents.startStatusPolling) {
-                        window.JobImportEvents.startStatusPolling();
+                    // Start heartbeat monitoring to monitor progress
+                    if (window.JobImportEvents && window.JobImportEvents.startHeartbeatMonitoring) {
+                        window.JobImportEvents.startHeartbeatMonitoring();
                     }
                 } else {
                     // Resume failed - show error
