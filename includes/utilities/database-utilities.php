@@ -48,7 +48,7 @@ function create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, &$log
         'post_date' => $xml_validfrom,
         'post_modified' => $post_modified,
         'comment_status' => 'closed',
-        'post_author' => $user_id,
+        'post_author' => '',
     ];
 
     $post_id = retry_database_operation(function() use ($post_data) {

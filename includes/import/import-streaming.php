@@ -364,7 +364,7 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
                 'post_content' => $item['description'] ?? '',
                 'post_status' => 'publish',
                 'post_type' => 'job',
-                'post_author' => 1
+                'post_author' => ''
             ];
 
             $post_id = wp_insert_post($post_data);
@@ -863,7 +863,8 @@ function update_job_streaming($post_id, $item) {
             'post_title' => $item['title'] ?? '',
             'post_content' => $item['description'] ?? '',
             'post_status' => 'publish',
-            'post_modified' => current_time('mysql')
+            'post_modified' => current_time('mysql'),
+            'post_author' => 0 // Clear author if present
         ]);
 
         if (is_wp_error($update_result)) {
@@ -900,8 +901,8 @@ function create_job_streaming($item) {
             'post_title' => $item['title'] ?? '',
             'post_content' => $item['description'] ?? '',
             'post_status' => 'publish',
-            'post_type' => 'job',
-            'post_author' => get_user_by('login', 'admin') ? get_user_by('login', 'admin')->ID : 1
+            'post_type' => 'job'
+            // Removed post_author to ensure no author is set
         ];
 
         $post_id = wp_insert_post($post_data);
