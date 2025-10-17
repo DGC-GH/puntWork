@@ -417,7 +417,8 @@ function run_scheduled_import_async() {
 
     // Check if an import is already running
     $import_status = get_import_status([]);
-    error_log('[PUNTWORK] Current import status at async start: processed=' . ($import_status['processed'] ?? 0) . ', total=' . ($import_status['total'] ?? 0) . ', complete=' . ($import_status['complete'] ? 'true' : 'false') . ', paused=' . ($import_status['paused'] ? 'true' : 'false'));
+    $import_paused = isset($import_status['paused']) && $import_status['paused'];
+    error_log('[PUNTWORK] Current import status at async start: processed=' . ($import_status['processed'] ?? 0) . ', total=' . ($import_status['total'] ?? 0) . ', complete=' . (($import_status['complete'] ?? false) ? 'true' : 'false') . ', paused=' . ($import_paused ? 'true' : 'false'));
 
     // CRITICAL FIX: Check if import is PAUSED and needs RESUMPTION
     if (isset($import_status['paused']) && $import_status['paused']) {
@@ -545,7 +546,7 @@ function run_manual_import_async() {
 
     // Check if an import is already running
     $import_status = get_import_status([]);
-    error_log('[PUNTWORK] Current import status at manual async start: processed=' . ($import_status['processed'] ?? 0) . ', total=' . ($import_status['total'] ?? 0) . ', complete=' . ($import_status['complete'] ? 'true' : 'false') . ', paused=' . ($import_status['paused'] ? 'true' : 'false'));
+    error_log('[PUNTWORK] Current import status at manual async start: processed=' . ($import_status['processed'] ?? 0) . ', total=' . ($import_status['total'] ?? 0) . ', complete=' . (($import_status['complete'] ?? false) ? 'true' : 'false') . ', paused=' . ((isset($import_status['paused']) && $import_status['paused']) ? 'true' : 'false'));
 
     // CRITICAL FIX: Check if import is PAUSED and needs RESUMPTION
     if (isset($import_status['paused']) && $import_status['paused']) {
