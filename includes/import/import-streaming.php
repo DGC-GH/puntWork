@@ -16,6 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once __DIR__ . '/../utilities/options-utilities.php';
 require_once __DIR__ . '/../utilities/puntwork-logger.php';
+require_once __DIR__ . '/import-circuit-breaker.php';
 
 /**
  * Streaming architecture to replace batch processing
@@ -452,11 +453,30 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
         }
 
         // DUPLICATE DETECTION OPTIMIZATION: Use composite keys for O(1) lookup
-        $composite_key = generate_composite_key(
-            $item['source_feed_slug'] ?? 'unknown',
-            $item['guid'],
-            $item['pubdate'] ?? ''
-        );
+        $source_slug = $item['source_feed_slug'] ?? '';
+        if (empty($source_slug)) {
+            // Log warning for missing source_feed_slug - critical for duplicate detection
+            static $missing_slug_warnings = 0;
+            $missing_slug_warnings++;
+            if ($missing_slug_warnings <= 5) { // Log first 5 warnings only
+                PuntWorkLogger::warn('Missing source_feed_slug in feed item', PuntWorkLogger::CONTEXT_IMPORT, [
+                    'guid' => $item['guid'] ?? 'unknown',
+                    'title' => substr($item['title'] ?? '', 0, 50),
+                    'warning_count' => $missing_slug_warnings,
+                    'impact' => 'Reduced duplicate detection reliability'
+                ]);
+            } elseif ($missing_slug_warnings % 100 === 0) { // Log every 100th after first 5
+                PuntWorkLogger::warn('Continuing missing source_feed_slug warnings', PuntWorkLogger::CONTEXT_IMPORT, [
+                    'total_missing' => $missing_slug_warnings,
+                    'last_guid' => $item['guid'] ?? 'unknown',
+                    'recommendation' => 'Check feed configuration - source_feed_slug is required for proper duplicate detection'
+                ]);
+            }
+            // Use a more descriptive fallback when possible
+            $source_slug = !empty($item['feed_source']) ? 'feed_' . $item['feed_source'] : 'unknown_source';
+        }
+
+        $composite_key = generate_composite_key($source_slug, $item['guid'], $item['pubdate'] ?? '');
 
         if (isset($streaming_status['composite_key_cache'][$composite_key])) {
             // Existing job - ALWAYS update fully for comprehensive field population
@@ -765,28 +785,133 @@ function should_update_existing_job_smart($post_id, $item) {
 }
 
 /**
- * Batch process ACF field updates for performance with memory optimization
+ * Batch process ACF field updates for performance with timeout protection and error handling
  * Updates ALL ACF fields like the batch methods to ensure comprehensive field population
+ * Includes individual field timeout protection to prevent hanging on problematic fields
  */
 function process_acf_queue_batch(&$update_queue, &$create_queue, $operation = 'batch') {
     // Get all ACF field names that should be processed (like batch methods)
     $acf_fields = get_acf_fields();
     $zero_empty_fields = get_zero_empty_fields();
 
-    // Process update queue with comprehensive ACF field handling
-    foreach ($update_queue as $post_id => $item) {
-        // Process ALL ACF fields like batch methods do (not selective)
-        foreach ($acf_fields as $field) {
-            $value = $item[$field] ?? '';
-            $is_special = in_array($field, $zero_empty_fields);
-            $set_value = $is_special && $value === '0' ? '' : $value;
+    // Initialize field failure tracking
+    static $field_failures = [];
+    static $field_timeouts = [];
+    $field_timeout_seconds = 30; // 30 second timeout per field to prevent hanging
 
-            if (function_exists('update_field')) {
-                update_field($field, $set_value, $post_id);
+    PuntWorkLogger::info('Starting ACF batch processing with timeout protection', PuntWorkLogger::CONTEXT_IMPORT, [
+        'operation' => $operation,
+        'update_queue_size' => count($update_queue),
+        'create_queue_size' => count($create_queue),
+        'total_acf_fields' => count($acf_fields),
+        'field_timeout_seconds' => $field_timeout_seconds,
+        'previous_field_failures' => count($field_failures)
+    ]);
+
+    // Process update queue with comprehensive ACF field handling and timeout protection
+    foreach ($update_queue as $post_id => $item) {
+        $fields_processed = 0;
+        $fields_skipped = 0;
+        $fields_failed = 0;
+
+        foreach ($acf_fields as $field) {
+            $start_time = microtime(true);
+            $field_processed = false;
+
+            try {
+                $value = $item[$field] ?? '';
+                $is_special = in_array($field, $zero_empty_fields);
+                $set_value = $is_special && $value === '0' ? '' : $value;
+
+                if (function_exists('update_field')) {
+                    // Set up timeout protection for individual field updates
+                    $field_timeout_reached = false;
+                    $field_result = null;
+                    $error_message = null;
+
+                    // Use pcntl_alarm for timeout protection if available, otherwise manual time tracking
+                    if (function_exists('pcntl_alarm')) {
+                        // Set alarm for timeout
+                        pcntl_alarm($field_timeout_seconds);
+
+                        try {
+                            $field_result = update_field($field, $set_value, $post_id);
+                            pcntl_alarm(0); // Cancel alarm
+                            $field_processed = true;
+                        } catch (\Exception $e) {
+                            pcntl_alarm(0); // Cancel alarm
+                            $error_message = $e->getMessage();
+                        }
+                    } else {
+                        // Manual timeout checking with small increments
+                        $field_result = update_field($field, $set_value, $post_id);
+                        $elapsed = microtime(true) - $start_time;
+
+                        if ($elapsed > $field_timeout_seconds) {
+                            $field_timeout_reached = true;
+                            $error_message = "Field update exceeded timeout of {$field_timeout_seconds}s";
+                        } else {
+                            $field_processed = true;
+                        }
+                    }
+
+                    if ($field_processed && $field_result !== false) {
+                        $fields_processed++;
+                    } elseif ($field_timeout_reached || (!$field_processed && isset($error_message))) {
+                        // Handle timeout or failure
+                        $fields_failed++;
+                        $field_failures[$field] = ($field_failures[$field] ?? 0) + 1;
+                        if ($field_timeout_reached) {
+                            $field_timeouts[$field] = ($field_timeouts[$field] ?? 0) + 1;
+                        }
+
+                        PuntWorkLogger::warn('ACF field update failed or timed out', PuntWorkLogger::CONTEXT_IMPORT, [
+                            'field' => $field,
+                            'post_id' => $post_id,
+                            'guid' => $item['guid'] ?? 'unknown',
+                            'elapsed_seconds' => round(microtime(true) - $start_time, 3),
+                            'timeout_threshold' => $field_timeout_seconds,
+                            'was_timeout' => $field_timeout_reached,
+                            'error_message' => $error_message,
+                            'failure_count' => $field_failures[$field],
+                            'timeout_count' => $field_timeouts[$field] ?? 0,
+                            'action' => 'Skipped problematic field, continuing import'
+                        ]);
+
+                        // Skip this field and continue processing other fields
+                        continue;
+                    } elseif ($field_result === false) {
+                        // ACF update_field returned false (validation failure, etc.)
+                        PuntWorkLogger::debug('ACF field update returned false (validation failure)', PuntWorkLogger::CONTEXT_IMPORT, [
+                            'field' => $field,
+                            'post_id' => $post_id,
+                            'value' => substr((string)$set_value, 0, 100), // Truncate for logging
+                            'guid' => $item['guid'] ?? 'unknown'
+                        ]);
+                        $fields_skipped++;
+                    }
+                }
+            } catch (\Exception $e) {
+                // Catch any unexpected errors during field processing
+                $fields_failed++;
+                $field_failures[$field] = ($field_failures[$field] ?? 0) + 1;
+
+                PuntWorkLogger::error('Unexpected error processing ACF field', PuntWorkLogger::CONTEXT_IMPORT, [
+                    'field' => $field,
+                    'post_id' => $post_id,
+                    'guid' => $item['guid'] ?? 'unknown',
+                    'error_message' => $e->getMessage(),
+                    'elapsed_seconds' => round(microtime(true) - $start_time, 3),
+                    'failure_count' => $field_failures[$field],
+                    'action' => 'Skipped field due to error, continuing import'
+                ]);
+
+                // Continue processing other fields
+                continue;
             }
         }
 
-        // Update metadata in batch
+        // Update metadata in batch (these are more reliable than ACF fields)
         update_post_meta($post_id, '_last_import_update', current_time('mysql'));
         update_post_meta($post_id, 'guid', $item['guid']);
         update_post_meta($post_id, 'pubdate', $item['pubdate'] ?? '');
@@ -794,22 +919,121 @@ function process_acf_queue_batch(&$update_queue, &$create_queue, $operation = 'b
         // Update import hash for change detection
         $item_hash = md5(json_encode($item));
         update_post_meta($post_id, '_import_hash', $item_hash);
+
+        PuntWorkLogger::debug('ACF batch processing completed for update', PuntWorkLogger::CONTEXT_IMPORT, [
+            'post_id' => $post_id,
+            'guid' => $item['guid'] ?? 'unknown',
+            'fields_processed' => $fields_processed,
+            'fields_skipped' => $fields_skipped,
+            'fields_failed' => $fields_failed,
+            'operation' => 'update'
+        ]);
     }
 
-    // Process create queue with comprehensive ACF field handling
+    // Process create queue with comprehensive ACF field handling and timeout protection
     foreach ($create_queue as $post_id => $item) {
-        // Process ALL ACF fields like batch methods do (not selective)
-        foreach ($acf_fields as $field) {
-            $value = $item[$field] ?? '';
-            $is_special = in_array($field, $zero_empty_fields);
-            $set_value = $is_special && $value === '0' ? '' : $value;
+        $fields_processed = 0;
+        $fields_skipped = 0;
+        $fields_failed = 0;
 
-            if (function_exists('update_field')) {
-                update_field($field, $set_value, $post_id);
+        foreach ($acf_fields as $field) {
+            $start_time = microtime(true);
+            $field_processed = false;
+
+            try {
+                $value = $item[$field] ?? '';
+                $is_special = in_array($field, $zero_empty_fields);
+                $set_value = $is_special && $value === '0' ? '' : $value;
+
+                if (function_exists('update_field')) {
+                    // Set up timeout protection for individual field updates
+                    $field_timeout_reached = false;
+                    $field_result = null;
+                    $error_message = null;
+
+                    // Use pcntl_alarm for timeout protection if available, otherwise manual time tracking
+                    if (function_exists('pcntl_alarm')) {
+                        // Set alarm for timeout
+                        pcntl_alarm($field_timeout_seconds);
+
+                        try {
+                            $field_result = update_field($field, $set_value, $post_id);
+                            pcntl_alarm(0); // Cancel alarm
+                            $field_processed = true;
+                        } catch (\Exception $e) {
+                            pcntl_alarm(0); // Cancel alarm
+                            $error_message = $e->getMessage();
+                        }
+                    } else {
+                        // Manual timeout checking with small increments
+                        $field_result = update_field($field, $set_value, $post_id);
+                        $elapsed = microtime(true) - $start_time;
+
+                        if ($elapsed > $field_timeout_seconds) {
+                            $field_timeout_reached = true;
+                            $error_message = "Field update exceeded timeout of {$field_timeout_seconds}s";
+                        } else {
+                            $field_processed = true;
+                        }
+                    }
+
+                    if ($field_processed && $field_result !== false) {
+                        $fields_processed++;
+                    } elseif ($field_timeout_reached || (!$field_processed && isset($error_message))) {
+                        // Handle timeout or failure
+                        $fields_failed++;
+                        $field_failures[$field] = ($field_failures[$field] ?? 0) + 1;
+                        if ($field_timeout_reached) {
+                            $field_timeouts[$field] = ($field_timeouts[$field] ?? 0) + 1;
+                        }
+
+                        PuntWorkLogger::warn('ACF field update failed or timed out during create', PuntWorkLogger::CONTEXT_IMPORT, [
+                            'field' => $field,
+                            'post_id' => $post_id,
+                            'guid' => $item['guid'] ?? 'unknown',
+                            'elapsed_seconds' => round(microtime(true) - $start_time, 3),
+                            'timeout_threshold' => $field_timeout_seconds,
+                            'was_timeout' => $field_timeout_reached,
+                            'error_message' => $error_message,
+                            'failure_count' => $field_failures[$field],
+                            'timeout_count' => $field_timeouts[$field] ?? 0,
+                            'action' => 'Skipped problematic field, continuing import'
+                        ]);
+
+                        // Skip this field and continue processing other fields
+                        continue;
+                    } elseif ($field_result === false) {
+                        // ACF update_field returned false (validation failure, etc.)
+                        PuntWorkLogger::debug('ACF field update returned false during create (validation failure)', PuntWorkLogger::CONTEXT_IMPORT, [
+                            'field' => $field,
+                            'post_id' => $post_id,
+                            'value' => substr((string)$set_value, 0, 100), // Truncate for logging
+                            'guid' => $item['guid'] ?? 'unknown'
+                        ]);
+                        $fields_skipped++;
+                    }
+                }
+            } catch (\Exception $e) {
+                // Catch any unexpected errors during field processing
+                $fields_failed++;
+                $field_failures[$field] = ($field_failures[$field] ?? 0) + 1;
+
+                PuntWorkLogger::error('Unexpected error processing ACF field during create', PuntWorkLogger::CONTEXT_IMPORT, [
+                    'field' => $field,
+                    'post_id' => $post_id,
+                    'guid' => $item['guid'] ?? 'unknown',
+                    'error_message' => $e->getMessage(),
+                    'elapsed_seconds' => round(microtime(true) - $start_time, 3),
+                    'failure_count' => $field_failures[$field],
+                    'action' => 'Skipped field due to error, continuing import'
+                ]);
+
+                // Continue processing other fields
+                continue;
             }
         }
 
-        // Update metadata in batch
+        // Update metadata in batch (these are more reliable than ACF fields)
         update_post_meta($post_id, 'guid', $item['guid']);
         update_post_meta($post_id, 'pubdate', $item['pubdate'] ?? '');
         update_post_meta($post_id, 'source_feed_slug', $item['source_feed_slug'] ?? 'unknown');
@@ -818,6 +1042,46 @@ function process_acf_queue_batch(&$update_queue, &$create_queue, $operation = 'b
         // Set import hash for new posts
         $item_hash = md5(json_encode($item));
         update_post_meta($post_id, '_import_hash', $item_hash);
+
+        PuntWorkLogger::debug('ACF batch processing completed for create', PuntWorkLogger::CONTEXT_IMPORT, [
+            'post_id' => $post_id,
+            'guid' => $item['guid'] ?? 'unknown',
+            'fields_processed' => $fields_processed,
+            'fields_skipped' => $fields_skipped,
+            'fields_failed' => $fields_failed,
+            'operation' => 'create'
+        ]);
+    }
+
+    // Log summary of batch processing
+    PuntWorkLogger::info('ACF batch processing summary', PuntWorkLogger::CONTEXT_IMPORT, [
+        'operation' => $operation,
+        'update_queue_processed' => count($update_queue),
+        'create_queue_processed' => count($create_queue),
+        'problematic_fields' => count($field_failures),
+        'timed_out_fields' => count($field_timeouts),
+        'most_failed_field' => !empty($field_failures) ? array_search(max($field_failures), $field_failures) : null,
+        'total_field_failures' => array_sum($field_failures),
+        'total_timeouts' => array_sum($field_timeouts)
+    ]);
+
+    // Store field failure statistics for potential admin alerts
+    if (count($field_failures) > 0) {
+        update_option('puntwork_acf_field_failures', [
+            'last_batch' => $field_failures,
+            'last_updated' => time(),
+            'total_processed' => count($update_queue) + count($create_queue)
+        ], false);
+
+        // If we have fields with multiple failures, send an alert
+        $critical_failures = array_filter($field_failures, function($count) { return $count >= 5; });
+        if (!empty($critical_failures) && time() % 3600 < 60) { // Only alert once per hour
+            send_health_alert('Critical ACF Field Failures Detected', [
+                'critical_fields' => $critical_failures,
+                'total_jobs_processed' => count($update_queue) + count($create_queue),
+                'recommendation' => 'Check ACF field configuration and consider temporarily disabling problematic fields'
+            ]);
+        }
     }
 
     // Clear queues after processing and trigger garbage collection
