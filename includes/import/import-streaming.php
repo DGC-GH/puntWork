@@ -333,7 +333,7 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
     // Batch operations for ACF field updates (group to reduce individual update_field() calls)
     $acf_update_queue = [];
     $acf_create_queue = [];
-    $batch_size = 25; // Reduced batch size to prevent memory buildup
+    $batch_size = 50; // PERFORMANCE: Increased batch size for speed optimization (reduced DB calls)
 
     // Memory optimization: Use generator/iterator pattern to reduce memory footprint
     while ($should_continue && ($line = fgets($handle)) !== false) {
@@ -404,17 +404,17 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
                 // ULTRA-AGGRESSIVE COMPOSITE KEY CACHE MANAGEMENT - Target: 8K limit
                 $streaming_status['composite_key_cache'][$composite_key] = $post_id;
 
-                // Keep cache size bounded to 8K entries - remove older entries more aggressively
-                if (count($streaming_status['composite_key_cache']) > 8000) {
-                    // Remove 30% of oldest entries (keep the most recent 70%)
+                // PERFORMANCE: Keep cache size bounded to 10K entries - less aggressive trimming for speed
+                if (count($streaming_status['composite_key_cache']) > 10000) {
+                    // Remove 20% of oldest entries (keep the most recent 80%) - less aggressive than before
                     $cache_count = count($streaming_status['composite_key_cache']);
-                    $remove_count = (int)($cache_count * 0.3); // Remove 30%
+                    $remove_count = (int)($cache_count * 0.2); // Remove 20%
                     $streaming_status['composite_key_cache'] = array_slice($streaming_status['composite_key_cache'], $remove_count, null, true);
 
                     PuntWorkLogger::info('ULTRA-MEMORY: Composite key cache trimmed aggressively', PuntWorkLogger::CONTEXT_IMPORT, [
                         'cache_size_after_trim' => count($streaming_status['composite_key_cache']),
-                        'target_limit' => 8000,
-                        'efficiency' => '30% removal rate for <256MB target'
+                        'target_limit' => 10000,
+                        'efficiency' => '20% removal rate for speed optimization'
                     ]);
                 }
 
@@ -436,50 +436,55 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
             }
         }
 
-        // ULTRA-MEMORY OPTIMIZATION: Aggressive garbage collection and cleanup
-        if (($processed + 1) % 50 === 0) { // More frequent cleanup every 50 items
-            // LOG MEMORY USAGE FOR DEBUGGING
+        // PERFORMANCE OPTIMIZATION: Reduced frequency garbage collection and cleanup (every 200 items vs 50)
+        if (($processed + 1) % 200 === 0) { // Reduced frequency for speed optimization
+            // LOG MEMORY USAGE FOR DEBUGGING (less frequent)
             $current_memory = memory_get_usage(true);
             $peak_memory = memory_get_peak_usage(true);
             $memory_percent = ($current_memory / get_memory_limit_bytes()) * 100;
 
-            PuntWorkLogger::info('Memory checkpoint during streaming', PuntWorkLogger::CONTEXT_IMPORT, [
-                'processed_items' => $processed,
-                'memory_percent' => round($memory_percent, 2),
-                'current_memory_mb' => round($current_memory / 1024 / 1024, 2),
-                'peak_memory_mb' => round($peak_memory / 1024 / 1024, 2),
-                'streaming_cache_size' => count($streaming_status['composite_key_cache'] ?? []),
-                'log_entries' => count($all_logs),
-                'streaming_stats_time_items' => count($streaming_stats['time_per_item'] ?? []),
-                'streaming_stats_memory_peaks' => count($streaming_stats['memory_peaks'] ?? []),
-                'update_cache_size' => count($update_check_cache ?? [])
-            ]);
+            // PERFORMANCE: Only log memory details when memory > 60% to reduce logging overhead
+            if ($memory_percent > 60) {
+                PuntWorkLogger::info('Memory checkpoint during streaming', PuntWorkLogger::CONTEXT_IMPORT, [
+                    'processed_items' => $processed,
+                    'memory_percent' => round($memory_percent, 2),
+                    'current_memory_mb' => round($current_memory / 1024 / 1024, 2),
+                    'peak_memory_mb' => round($peak_memory / 1024 / 1024, 2),
+                    'streaming_cache_size' => count($streaming_status['composite_key_cache'] ?? []),
+                    'log_entries' => count($all_logs)
+                ]);
+            }
 
-            // ULTRA-MEMORY: Emergency cache trimming when memory > 80%
+            // ULTRA-MEMORY: Emergency cache trimming when memory > 80% (more aggressive trimming)
             if ($memory_percent > 80) {
                 $original_cache_size = count($streaming_status['composite_key_cache']);
                 $trimmed_cache = array_slice($streaming_status['composite_key_cache'],
-                    max(0, $original_cache_size - 500), null, true); // Keep only most recent 500 entries
+                    max(0, $original_cache_size - 1000), null, true); // Remove more: keep only most recent 1000 entries
                 $streaming_status['composite_key_cache'] = $trimmed_cache;
 
-                PuntWorkLogger::warn('ULTRA-MEMORY: Emergency cache trim triggered', PuntWorkLogger::CONTEXT_IMPORT, [
+                PuntWorkLogger::warn('ULTRA-MEMORY: Emergency cache trim triggered (speed mode)', PuntWorkLogger::CONTEXT_IMPORT, [
                     'memory_percent' => round($memory_percent, 2),
                     'original_cache_size' => $original_cache_size,
                     'trimmed_cache_size' => count($trimmed_cache),
                     'entries_removed' => $original_cache_size - count($trimmed_cache),
-                    'action' => 'Reduced cache to prevent memory exhaustion'
+                    'action' => 'Aggressive cache reduction for speed optimization'
                 ]);
 
                 // Also trim logs aggressively under high memory pressure
                 if (count($all_logs) > 10) {
                     $all_logs = array_slice($all_logs, -5); // Keep only last 5 entries
                 }
+            } elseif ($memory_percent > 75) {
+                // PERFORMANCE: Light GC at 75% instead of immediate emergency
+                if (function_exists('gc_collect_cycles')) {
+                    gc_collect_cycles();
+                }
             }
+        }
 
-            if (function_exists('gc_collect_cycles')) {
-                gc_collect_cycles();
-            }
-            // ULTRA-MEMORY: Clear ALL temporary variables that might hold large data
+        // PERFORMANCE: Periodic cleanup every 100 items but without logging
+        if (($processed + 1) % 100 === 0) {
+            // Clear temporary variables to free memory without logging overhead
             unset($line, $item, $composite_key, $existing_post_id, $post_id, $post_data, $create_result, $update_result);
         }
 
