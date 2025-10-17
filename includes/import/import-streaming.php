@@ -1218,7 +1218,7 @@ function should_update_existing_job($post_id, $item) {
 }
 
 /**
- * Update job in streaming context
+ * Update job in streaming context - comprehensive ACF field handling
  */
 function update_job_streaming($post_id, $item) {
     try {
@@ -1239,13 +1239,28 @@ function update_job_streaming($post_id, $item) {
             return ['success' => false, 'message' => $update_result->get_error_message()];
         }
 
-        // Update ACF fields selectively
-        update_job_acf_fields_selective($post_id, $item);
+        // Update ALL ACF fields comprehensively (not selectively)
+        $acf_fields = get_acf_fields();
+        $zero_empty_fields = get_zero_empty_fields();
+
+        foreach ($acf_fields as $field) {
+            $value = $item[$field] ?? '';
+            $is_special = in_array($field, $zero_empty_fields);
+            $set_value = $is_special && $value === '0' ? '' : $value;
+
+            if (function_exists('update_field')) {
+                update_field($field, $set_value, $post_id);
+            }
+        }
 
         // Update metadata
         update_post_meta($post_id, '_last_import_update', current_time('mysql'));
         update_post_meta($post_id, 'guid', $item['guid']);
         update_post_meta($post_id, 'pubdate', $item['pubdate'] ?? '');
+
+        // Update import hash for change detection
+        $item_hash = md5(json_encode($item));
+        update_post_meta($post_id, '_import_hash', $item_hash);
 
         return ['success' => true];
     } catch (\Exception $e) {
@@ -1258,13 +1273,10 @@ function update_job_streaming($post_id, $item) {
 }
 
 /**
- * Create job in streaming context
+ * Create job in streaming context - comprehensive ACF field handling
  */
 function create_job_streaming($item) {
     try {
-        // Get ACF fields efficiently
-        $acf_fields = get_acf_fields();
-
         $post_data = [
             'post_title' => $item['title'] ?? '',
             'post_content' => $item['description'] ?? '',
@@ -1278,14 +1290,29 @@ function create_job_streaming($item) {
             return ['success' => false, 'message' => $post_id->get_error_message()];
         }
 
-        // Set ACF fields
-        set_job_acf_fields_selective($post_id, $item, $acf_fields);
+        // Set ALL ACF fields comprehensively (not selectively)
+        $acf_fields = get_acf_fields();
+        $zero_empty_fields = get_zero_empty_fields();
+
+        foreach ($acf_fields as $field) {
+            $value = $item[$field] ?? '';
+            $is_special = in_array($field, $zero_empty_fields);
+            $set_value = $is_special && $value === '0' ? '' : $value;
+
+            if (function_exists('update_field')) {
+                update_field($field, $set_value, $post_id);
+            }
+        }
 
         // Set metadata
         update_post_meta($post_id, 'guid', $item['guid']);
         update_post_meta($post_id, 'pubdate', $item['pubdate'] ?? '');
         update_post_meta($post_id, 'source_feed_slug', $item['source_feed_slug'] ?? 'unknown');
         update_post_meta($post_id, '_last_import_update', current_time('mysql'));
+
+        // Set import hash for new posts
+        $item_hash = md5(json_encode($item));
+        update_post_meta($post_id, '_import_hash', $item_hash);
 
         return ['success' => true, 'post_id' => $post_id];
     } catch (\Exception $e) {
