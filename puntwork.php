@@ -159,6 +159,9 @@ function setup_job_import() {
     // Initialize scheduling
     if (function_exists(__NAMESPACE__ . '\\init_scheduling')) {
         call_user_func(__NAMESPACE__ . '\\init_scheduling');
+
+        // Register Action Scheduler hook for parallel feed processing
+        add_action('puntwork_download_feed', __NAMESPACE__ . '\\download_feed_async_handler', 10, 1);
     }
 }
 
