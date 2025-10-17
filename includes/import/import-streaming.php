@@ -588,7 +588,7 @@ function prepare_streaming_environment() {
 
 /**
  * Initialize composite key cache for duplicate detection
- * Uses "source_feed_slug + GUID + pubdate" format
+ * Uses "GUID + pubdate" format
  */
 function initialize_composite_key_cache($json_path) {
     global $wpdb;
@@ -613,7 +613,6 @@ function initialize_composite_key_cache($json_path) {
     $composite_cache = [];
     foreach ($existing_jobs as $job) {
         $composite_key = generate_composite_key(
-            $job->source_feed_slug ?? 'unknown',
             $job->guid,
             $job->pubdate ?? ''
         );
@@ -629,18 +628,16 @@ function initialize_composite_key_cache($json_path) {
 }
 
 /**
- * Generate composite key from source feed slug, GUID, and pubdate
+ * Generate composite key from GUID and pubdate
  */
-function generate_composite_key($source_feed_slug, $guid, $pubdate) {
+function generate_composite_key($guid, $pubdate) {
     // Normalize components
-    $normalized_slug = strtolower(trim($source_feed_slug));
     $normalized_guid = trim($guid);
     $normalized_pubdate = $pubdate ? date('Y-m-d', strtotime($pubdate)) : '';
 
-    // Create deterministic composite key
+    // Create deterministic composite key (guid + pubdate only)
     $composite_key = sprintf(
-        '%s|%s|%s',
-        $normalized_slug,
+        '%s|%s',
         $normalized_guid,
         $normalized_pubdate
     );
@@ -798,8 +795,8 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
         }
 
         // DUPLICATE DETECTION OPTIMIZATION: Use composite keys for O(1) lookup
-        // Use ONLY guid + pubdate for duplicate detection (source_feed_slug unreliable in feed data)
-        $composite_key = generate_composite_key('', $item['guid'], $item['pubdate'] ?? '');
+        // Use ONLY guid + pubdate for duplicate detection (source_feed_slug removed from identification)
+        $composite_key = generate_composite_key($item['guid'], $item['pubdate'] ?? '');
 
         // Still log source_feed_slug issues for data quality monitoring
         $source_slug = $item['source_feed_slug'] ?? '';
@@ -1817,7 +1814,6 @@ function process_feed_stream($json_path, &$composite_keys_processed, &$streaming
 
         // Check composite key for duplicates
         $composite_key = generate_composite_key(
-            $item['source_feed_slug'] ?? 'unknown',
             $item['guid'],
             $item['pubdate'] ?? ''
         );

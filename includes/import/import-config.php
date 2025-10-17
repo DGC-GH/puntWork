@@ -56,7 +56,7 @@ function get_import_config() {
         // Duplicate detection
         'duplicates' => [
             'composite_key_enabled' => true,
-            'key_components' => ['source_feed_slug', 'guid', 'pubdate'],
+            'key_components' => ['guid', 'pubdate'],
             'update_existing' => true,
             'update_on_newer_pubdate' => true,
         ],
