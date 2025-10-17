@@ -28,7 +28,10 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
         setPhase: function(phase) {
             var oldPhase = this.currentPhase;
             this.currentPhase = phase;
-            PuntWorkJSLogger.debug('Import phase changed from ' + oldPhase + ' to: ' + phase, 'UI');
+            // Only log phase changes when they actually change (not every polling cycle)
+            if (oldPhase !== phase) {
+                PuntWorkJSLogger.info('Import phase changed from ' + oldPhase + ' to: ' + phase, 'UI');
+            }
 
             // Reset progress bar when transitioning to a new phase (except complete)
             if (phase !== 'complete' && phase !== 'idle') {
@@ -187,20 +190,21 @@ console.log('[PUNTWORK] job-import-ui.js loaded');
             normalizedData.job_importing_time_elapsed = parseFloat(normalizedData.job_importing_time_elapsed) || 0;
             normalizedData.estimated_time_remaining = parseFloat(normalizedData.estimated_time_remaining) || 0;
 
-            PuntWorkJSLogger.debug('Normalized response data', 'UI', {
-                total: normalizedData.total,
-                processed: normalizedData.processed,
-                published: normalizedData.published,
-                updated: normalizedData.updated,
-                skipped: normalizedData.skipped,
-                duplicates_drafted: normalizedData.duplicates_drafted,
-                time_elapsed: normalizedData.time_elapsed,
-                success: normalizedData.success,
-                error_message: normalizedData.error_message,
-                start_time: normalizedData.start_time,
-                last_update: normalizedData.last_update,
-                complete: normalizedData.complete
-            });
+            // Comment out verbose debug logging to reduce console spam during import polling
+            // PuntWorkJSLogger.debug('Normalized response data', 'UI', {
+            //     total: normalizedData.total,
+            //     processed: normalizedData.processed,
+            //     published: normalizedData.published,
+            //     updated: normalizedData.updated,
+            //     skipped: normalizedData.skipped,
+            //     duplicates_drafted: normalizedData.duplicates_drafted,
+            //     time_elapsed: normalizedData.time_elapsed,
+            //     success: normalizedData.success,
+            //     error_message: normalizedData.error_message,
+            //     start_time: normalizedData.start_time,
+            //     last_update: normalizedData.last_update,
+            //     complete: normalizedData.complete
+            // });
 
             return normalizedData;
         },
