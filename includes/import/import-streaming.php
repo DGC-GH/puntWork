@@ -388,7 +388,16 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
 
             $post_id = wp_insert_post($post_data);
             if (!is_wp_error($post_id)) {
+                // LIMIT COMPOSITE KEY CACHE SIZE - prevent memory explosion
                 $streaming_status['composite_key_cache'][$composite_key] = $post_id;
+
+                // Keep cache size bounded by removing oldest entries if > 10000 items
+                if (count($streaming_status['composite_key_cache']) > 10000) {
+                    // Remove 20% of oldest entries (keep the most recent 80%)
+                    $cache_count = count($streaming_status['composite_key_cache']);
+                    $remove_count = (int)($cache_count * 0.2); // Remove 20%
+                    $streaming_status['composite_key_cache'] = array_slice($streaming_status['composite_key_cache'], $remove_count, null, true);
+                }
 
                 // Queue ACF creation in batches
                 $acf_create_queue[$post_id] = $item;
