@@ -30,15 +30,62 @@
         },
 
         /**
-         * Configure WordPress heartbeat settings
+         * Configure WordPress heartbeat settings - only when import is active
          */
         configureHeartbeat: function() {
-            // Set heartbeat interval to 5 seconds for responsive updates
-            wp.heartbeat.interval(5);
+            // Only configure active heartbeat if there's an active import or scheduled activity
+            if (this.shouldEnableHeartbeat()) {
+                // Set heartbeat interval to 30 seconds (reduced frequency) only when active
+                wp.heartbeat.interval(30);
 
-            // Enable our custom data in heartbeat
-            wp.heartbeat.enqueue('puntwork_import_status', 'init', false);
-            wp.heartbeat.enqueue('puntwork_scheduled_imports', 'init', false);
+                // Enable our custom data in heartbeat only when needed
+                wp.heartbeat.enqueue('puntwork_import_status', 'init', false);
+
+                PuntWorkJSLogger.debug('Heartbeat enabled for active import state', 'HEARTBEAT');
+            } else {
+                // For clean/idle state, use minimal heartbeat (60 seconds) only for essential checks
+                wp.heartbeat.interval(60);
+
+                // Don't enqueue import status data in idle state to prevent unnecessary queries
+                // Comment out: wp.heartbeat.enqueue('puntwork_import_status', 'init', false);
+
+                PuntWorkJSLogger.debug('Heartbeat disabled for clean idle state', 'HEARTBEAT');
+            }
+        },
+
+        /**
+         * Determine if heartbeat should be actively enabled
+         */
+        shouldEnableHeartbeat: function() {
+            // Only enable active heartbeat if:
+            // 1. Import is currently active, OR
+            // 2. We detected recent import activity (within last 30 minutes), OR
+            // 3. There are scheduled imports pending
+
+            // Check if we have an active import from UI state
+            if (this.isImportActive) {
+                return true;
+            }
+
+            // Check for recent import activity (within 30 minutes)
+            var now = Date.now() / 1000;
+            var recentActivityThreshold = 30 * 60; // 30 minutes
+            if (this.pageLoadTime && (now - this.pageLoadTime) < recentActivityThreshold) {
+                // Check if there was a recent import completion
+                // This is a proxy - if page was loaded recently, there might be active imports
+                if (typeof JobImportUI !== 'undefined' && JobImportUI.importSuccess !== undefined) {
+                    return true;
+                }
+            }
+
+            // Check for scheduled imports configured
+            if (typeof JobImportScheduling !== 'undefined' &&
+                JobImportScheduling.isEnabled && JobImportScheduling.isEnabled()) {
+                return true;
+            }
+
+            // Don't enable active heartbeat monitoring - keep in idle mode
+            return false;
         },
 
         /**
