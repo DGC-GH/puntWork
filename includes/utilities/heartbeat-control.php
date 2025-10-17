@@ -267,6 +267,18 @@ add_filter('heartbeat_send', function($response, $screen_id) {
         static $last_sent_hash = null;
         $current_hash = md5(serialize($import_status));
 
+        // HEARTBEAT RESET: Force hash reset for old imports that become inactive
+        if ($is_old_completed_import && $last_sent_hash !== null) {
+            // Reset hash so if an import becomes active again later, it will send fresh data
+            $last_sent_hash = null;
+            PuntWorkLogger::debug('[CLIENT] Heartbeat hash reset for old completed import', PuntWorkLogger::CONTEXT_SYSTEM, [
+                'is_old_completed_import' => $is_old_completed_import,
+                'hash_was_reset' => true,
+                'processed' => $import_status['processed'] ?? 0,
+                'total' => $import_status['total'] ?? 0
+            ]);
+        }
+
         // Only send if status changed
         if ($last_sent_hash !== $current_hash) {
             $response['puntwork_import_update'] = array(
