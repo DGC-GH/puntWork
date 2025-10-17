@@ -100,7 +100,22 @@ function run_job_import_batch_ajax() {
 
     try {
         // Initialize import status for immediate UI feedback
-        $initial_status = initialize_import_status(0, 'Manual import started - preparing feeds...');
+        $initial_status = [
+            'total' => 0,
+            'processed' => 0,
+            'published' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'duplicates_drafted' => 0,
+            'time_elapsed' => 0,
+            'complete' => false,
+            'success' => null,
+            'batch_count' => 0,
+            'batch_size' => 50,
+            'start_time' => microtime(true),
+            'last_update' => microtime(true),
+            'logs' => ['Manual import started - preparing feeds...']
+        ];
         set_import_status($initial_status);
         PuntWorkLogger::info('Manual import initialization completed', PuntWorkLogger::CONTEXT_BATCH, [
             'import_type' => 'manual',
@@ -814,7 +829,22 @@ function get_job_import_status_ajax() {
                 delete_transient('import_emergency_stop');
 
                 // Return fresh status
-                $progress = initialize_import_status(0, '', null);
+                $progress = [
+                    'total' => 0,
+                    'processed' => 0,
+                    'published' => 0,
+                    'updated' => 0,
+                    'skipped' => 0,
+                    'duplicates_drafted' => 0,
+                    'time_elapsed' => 0,
+                    'complete' => false,
+                    'success' => false,
+                    'batch_count' => 0,
+                    'batch_size' => 50,
+                    'start_time' => null,
+                    'last_update' => microtime(true),
+                    'logs' => []
+                ];
             } else {
                 // Log why stuck detection was skipped (for debugging)
                 if ($is_feed_processing_phase || $is_suspiciously_low_total || $is_recently_started) {

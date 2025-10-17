@@ -303,7 +303,22 @@ function run_scheduled_import_ajax() {
     try {
         // Initialize import status for immediate UI feedback
         $status_message = $is_manual ? 'Manual import started - preparing feeds...' : 'Scheduled import started - preparing feeds...';
-        $initial_status = initialize_import_status(0, $status_message);
+        $initial_status = [
+            'total' => 0,
+            'processed' => 0,
+            'published' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'duplicates_drafted' => 0,
+            'time_elapsed' => 0,
+            'complete' => false,
+            'success' => null,
+            'batch_count' => 0,
+            'batch_size' => 50,
+            'start_time' => microtime(true),
+            'last_update' => microtime(true),
+            'logs' => [$status_message]
+        ];
         set_import_status($initial_status);
 
         PuntWorkLogger::info('Import status initialized', PuntWorkLogger::CONTEXT_SCHEDULING, [
