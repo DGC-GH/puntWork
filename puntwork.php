@@ -109,6 +109,9 @@ function setup_job_import() {
         'import/combine-jsonl.php',
         'import/download-feed.php',
         'import/import-setup.php',
+        'import/import-batch.php',
+        'import/import-config.php',
+        'import/import-recovery.php',
         'import/import-streaming.php',
         'import/import-finalization.php',
 
