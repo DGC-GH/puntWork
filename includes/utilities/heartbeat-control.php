@@ -139,7 +139,7 @@ add_filter('heartbeat_send', function($response, $screen_id) {
     // This ensures import status is available across the admin interface
     $import_status = get_import_status([]);
 
-    // Check if import is active (running or recently completed)
+    // Check if import is active (running or very recently completed)
     $is_active = false;
     if (!empty($import_status)) {
         $current_time = time();
@@ -148,17 +148,27 @@ add_filter('heartbeat_send', function($response, $screen_id) {
         $time_since_start = $current_time - $start_time;
         $time_since_update = $current_time - $last_update;
 
-        // Consider active if:
-        // 1. Not complete, or
-        // 2. Completed within last 30 seconds, or
-        // 3. Started within last 5 minutes, or
-        // 4. Updated within last 2 minutes (for scheduled imports), or
-        // 5. Has a start_time and is not complete (for async scheduled imports)
-        $is_active = !$import_status['complete'] ||
-                    ($import_status['complete'] && $time_since_update < 30) ||
-                    ($start_time > 0 && $time_since_start < 300) ||
-                    ($last_update > 0 && $time_since_update < 120) ||
-                    ($start_time > 0 && !$import_status['complete']);
+        // FIX: Prevent continuous heartbeat updates for completed imports after cleanup
+        $is_complete = $import_status['complete'] ?? false;
+
+        if ($is_complete) {
+            // Completed imports: Only active for very brief period (15 seconds) after completion
+            // This prevents continuous updates after auto-cleanup runs
+            $time_since_completion = $time_since_update; // Use last_update as completion time proxy
+            $is_active = $time_since_completion < 15;
+        } else {
+            // Running imports: Active if currently running or recently started
+            $is_active = ($start_time > 0 && $time_since_start < 300) || // Started within last 5 minutes
+                        ($start_time > 0 && !$import_status['complete']); // Has start_time and not complete
+        }
+
+        // Debug: Log heartbeat activity determination
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PUNTWORK] Heartbeat active check: complete=' . ($is_complete ? 'true' : 'false') .
+                     ', time_since_update=' . $time_since_update .
+                     ', is_active=' . ($is_active ? 'true' : 'false') .
+                     ', processed=' . ($import_status['processed'] ?? 0));
+        }
     }
 
     if ($is_active) {
