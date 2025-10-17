@@ -339,14 +339,29 @@ console.log('[PUNTWORK] job-import-events.js loaded');
                             }
                         }
                     } else {
-                        // Clean state - hide all import controls except start
+                        // Check if there's a completed import that could benefit from reset
+                        var hasCompletedImport = statusData.processed > 0 || statusData.total > 0;
+                        var timeSinceLastUpdate = currentTime - (statusData.last_update || 0);
+                        var isOldImport = timeSinceLastUpdate > 300; // 5+ minutes old
+
+                        // Clean state - but show reset button if there's an old completed import to clean up
                         $('#start-import').show().text('Start Import');
                         $('#resume-import').hide();
                         $('#cancel-import').hide();
-                        $('#reset-import').hide();
                         $('#resume-stuck-import').hide();
+
+                        // Show reset button for completed imports that might need cleanup
+                        if (hasCompletedImport && (!statusData.complete || isOldImport)) {
+                            $('#reset-import').show().text('Reset Import Status');
+                            $('#status-message').text('Import completed - use Reset to start fresh');
+                            JobImportUI.showImportUI();
+                            JobImportUI.updateProgress(statusData);
+                        } else {
+                            $('#reset-import').hide();
+                            JobImportUI.hideImportUI();
+                        }
+
                         $('#import-type-indicator').hide();
-                        JobImportUI.hideImportUI();
                     }
                 }
 
