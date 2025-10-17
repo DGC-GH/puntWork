@@ -16,6 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 require_once __DIR__ . '/options-utilities.php';
+require_once __DIR__ . '/puntwork-logger.php';
 
 /**
  * Initialize heartbeat for import status updates on all admin pages
