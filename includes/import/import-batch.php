@@ -97,21 +97,21 @@ function import_memory_exceeded() {
 }
 
 /**
- * Check if batch processing should continue
+ * Check if streaming processing should continue
  * Returns false if time or memory limits exceeded
  *
  * @return bool True if processing should continue
  */
-function should_continue_batch_processing() {
+function should_continue_streaming_processing() {
     error_log('[PUNTWORK] Checking import time limit...');
         if (import_time_exceeded()) {
-        error_log('[PUNTWORK] Import time limit exceeded - pausing batch processing');
+        error_log('[PUNTWORK] Import time limit exceeded - pausing streaming processing');
         return false;
     }
 
     error_log('[PUNTWORK] Checking import memory limit...');
     if (import_memory_exceeded()) {
-        error_log('[PUNTWORK] Import memory limit exceeded - pausing batch processing');
+        error_log('[PUNTWORK] Import memory limit exceeded - pausing streaming processing');
         return false;
     }
 

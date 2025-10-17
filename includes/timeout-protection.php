@@ -29,7 +29,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 1. Time Limit Checking (20 seconds default)
  *    - import_time_exceeded() - checks if current batch exceeds time limit
  *    - import_memory_exceeded() - checks if memory usage exceeds 90% of limit
- *    - should_continue_batch_processing() - combines time/memory checks
+ *    - should_continue_streaming_processing() - combines time/memory checks
  *
  * 2. Background Continuation
  *    - Imports pause when time limits exceeded

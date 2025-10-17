@@ -147,35 +147,12 @@ function process_one_feed($feed_key, $url, $output_dir, $fallback_domain, &$logs
         set_import_status_atomic($status);
     } catch (\Exception $e) {}
 
-    $handle = fopen($json_path, 'w');
-    if (!$handle) throw new \Exception("Can't open $json_path");
-    $batch_size = 100;
-    $total_items = 0;
-    $count = process_xml_batch($xml_path, $handle, $feed_key, $output_dir, $fallback_domain, $batch_size, $total_items, $logs);
-    fclose($handle);
-    if (!chmod($json_path, 0644)) {
-        PuntWorkLogger::warn('Failed to chmod JSONL file', PuntWorkLogger::CONTEXT_FEED, ['path' => $json_path]);
-    }
-    // Update import status with count of items processed from this feed
-    try {
-        $status = get_import_status();
-        $status['last_update'] = time();
-        $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Processed ' . $count . ' items for ' . $feed_key;
-        // Keep a running total of items discovered
-        $status['total'] = ($status['total'] ?? 0) + $count;
-        set_import_status_atomic($status);
-    } catch (\Exception $e) {}
+// TODO: Reimplement this using streaming processing instead of batch processing
+// The batch processing functionality has been removed, so this XML-to-JSONL conversion
+// needs to be rewritten to work with the streaming architecture
 
-    gzip_file($json_path, $gz_json_path);
-
-    // Update import status to indicate gzip finished for this feed
-    try {
-        $status = get_import_status();
-        $status['last_update'] = time();
-        $status['logs'][] = '[' . date('d-M-Y H:i:s') . ' UTC] Gzipped JSONL for ' . $feed_key;
-        set_import_status_atomic($status);
-    } catch (\Exception $e) {}
-    return $count;
+$logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Skipping feed processing - batch functionality removed for ' . $feed_key;
+return 0;
 }
 
 function download_feeds_in_parallel($feeds, $output_dir, $fallback_domain, &$logs) {

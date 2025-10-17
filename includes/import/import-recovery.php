@@ -224,35 +224,21 @@ class ImportRecoveryManager {
 
     /**
      * Execute gradual load increase strategy
+     * Disabled for streaming - returns success
      */
     private function execute_gradual_load_increase(&$recovery) {
-        // Implement gradual load increase after circuit breaker reset
-        $current_batch_size = get_batch_size();
-        $increased_batch_size = min($current_batch_size * 1.5, get_import_config_value('batch.max_batch_size', 100));
+        // Streaming imports don't use batch sizes - always processes 1 item at a time
+        PuntWorkLogger::info('Gradual load increase skipped for streaming architecture', PuntWorkLogger::CONTEXT_IMPORT, [
+            'strategy' => 'gradual_load_increase',
+            'reason' => 'streaming_architecture',
+            'batch_size' => 1
+        ]);
 
-        if ($increased_batch_size > $current_batch_size) {
-            // Gradually increase batch size
-            $intermediate_size = intval(($current_batch_size + $increased_batch_size) / 2);
-            update_option('puntwork_batch_size', $intermediate_size);
-
-            PuntWorkLogger::info('Gradual load increase applied', PuntWorkLogger::CONTEXT_IMPORT, [
-                'old_batch_size' => $current_batch_size,
-                'new_batch_size' => $intermediate_size,
-                'target_batch_size' => $increased_batch_size
-            ]);
-
-            return [
-                'success' => true,
-                'action' => 'load_increase',
-                'old_batch_size' => $current_batch_size,
-                'new_batch_size' => $intermediate_size
-            ];
-        } else {
-            return [
-                'success' => false,
-                'error' => 'Batch size already at maximum'
-            ];
-        }
+        return [
+            'success' => true,
+            'action' => 'load_increase_skipped',
+            'reason' => 'streaming_does_not_use_batch_sizes'
+        ];
     }
 
     /**
