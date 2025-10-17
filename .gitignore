@@ -3,15 +3,15 @@ assets/.DS_Store
 Console.txt
 .env
 
-# Dependencies
 vendor/
 
-# WordPress test environment
 wordpress/
 
-# Test cache
 .phpunit.result.cache
 phpunit.xml
 wp-content/debug.log
 .vscode/sftp.json
 wp-content/
+node_modules/
+package-lock.json
+package.json
