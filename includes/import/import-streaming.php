@@ -323,7 +323,7 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
     // Batch operations for ACF field updates (group to reduce individual update_field() calls)
     $acf_update_queue = [];
     $acf_create_queue = [];
-    $batch_size = 50; // Process ACF in batches to reduce overhead
+    $batch_size = 25; // Reduced batch size to prevent memory buildup
 
     // Memory optimization: Use generator/iterator pattern to reduce memory footprint
     while ($should_continue && ($line = fgets($handle)) !== false) {
@@ -404,14 +404,18 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
             }
         }
 
-        // MEMORY OPTIMIZATION: Explicit garbage collection every 100 items
-        if (($processed + 1) % 100 === 0) {
+        // MEMORY OPTIMIZATION: Aggressive garbage collection and cleanup
+        if (($processed + 1) % 50 === 0) { // More frequent cleanup every 50 items
             if (function_exists('gc_collect_cycles')) {
                 gc_collect_cycles();
             }
-            // Clear any temporary variables
-            unset($line, $item);
+            // Clear all temporary variables that might hold large data
+            unset($line, $item, $composite_key, $existing_post_id, $post_id, $post_data, $create_result, $update_result);
         }
+
+        // Clear line and item after every item to prevent memory buildup
+        unset($line);
+        // Note: $item is still needed for queue processing, so clear it later
 
         $processed++;
         $item_index++;
@@ -484,6 +488,11 @@ function should_update_existing_job_smart($post_id, $item) {
         return $update_check_cache[$cache_key];
     }
 
+    // Limit cache size to prevent memory buildup (max 1000 entries)
+    if (count($update_check_cache) > 1000) {
+        $update_check_cache = array_slice($update_check_cache, 500, null, true); // Keep last 500 entries
+    }
+
     // Quick pubdate comparison first (most common change)
     $current_pubdate = get_post_meta($post_id, 'pubdate', true);
     $new_pubdate = $item['pubdate'] ?? '';
@@ -505,18 +514,12 @@ function should_update_existing_job_smart($post_id, $item) {
 }
 
 /**
- * Batch process ACF field updates for performance
+ * Batch process ACF field updates for performance with memory optimization
  */
 function process_acf_queue_batch(&$update_queue, &$create_queue, $operation = 'batch') {
-    static $acf_fields = null;
-
-    // Lazy load ACF field mappings once
-    if ($acf_fields === null) {
-        $acf_fields = get_acf_fields();
-    }
-
-    // Process update queue
+    // Process update queue with memory optimization
     foreach ($update_queue as $post_id => $item) {
+        // Only process selective fields present in item to reduce memory usage
         $selective_fields = get_acf_fields_selective($item);
         foreach ($selective_fields as $key => $value) {
             if (function_exists('update_field')) {
@@ -528,10 +531,14 @@ function process_acf_queue_batch(&$update_queue, &$create_queue, $operation = 'b
         update_post_meta($post_id, '_last_import_update', current_time('mysql'));
         update_post_meta($post_id, 'guid', $item['guid']);
         update_post_meta($post_id, 'pubdate', $item['pubdate'] ?? '');
+
+        // Clear temporary variables immediately to free memory
+        unset($selective_fields);
     }
 
-    // Process create queue
+    // Process create queue with memory optimization
     foreach ($create_queue as $post_id => $item) {
+        // Only process selective fields present in item to reduce memory usage
         $selective_fields = get_acf_fields_selective($item);
         foreach ($selective_fields as $key => $value) {
             if (function_exists('update_field')) {
@@ -544,11 +551,19 @@ function process_acf_queue_batch(&$update_queue, &$create_queue, $operation = 'b
         update_post_meta($post_id, 'pubdate', $item['pubdate'] ?? '');
         update_post_meta($post_id, 'source_feed_slug', $item['source_feed_slug'] ?? 'unknown');
         update_post_meta($post_id, '_last_import_update', current_time('mysql'));
+
+        // Clear temporary variables immediately to free memory
+        unset($selective_fields);
     }
 
-    // Clear queues after processing
+    // Clear queues after processing and trigger garbage collection
     $update_queue = [];
     $create_queue = [];
+
+    // Explicit garbage collection to free memory immediately
+    if (function_exists('gc_collect_cycles')) {
+        gc_collect_cycles();
+    }
 }
 
 /**
