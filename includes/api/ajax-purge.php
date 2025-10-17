@@ -76,7 +76,7 @@ function job_import_purge_ajax() {
 
             if (!$has_processed_data) {
                 delete_transient('job_import_purge_lock');
-                PuntWorkLogger::warn('Purge operation skipped - no processed data found', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::warn('Purge operation skipped - no processed data found', PuntWorkLogger::CONTEXT_IMPORT, [
                     'processed_guids_count' => count($processed_guids),
                     'import_progress_total' => $import_progress['total'] ?? 0,
                     'import_progress_processed' => $import_progress['processed'] ?? 0,
@@ -87,7 +87,7 @@ function job_import_purge_ajax() {
             }
 
             // Log the current state for debugging
-            PuntWorkLogger::info('Purge operation state check', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::info('Purge operation state check', PuntWorkLogger::CONTEXT_IMPORT, [
                 'import_progress' => [
                     'processed' => $import_progress['processed'] ?? 0,
                     'total' => $import_progress['total'] ?? 0,
@@ -101,7 +101,7 @@ function job_import_purge_ajax() {
             // Get total count for progress calculation
             $total_jobs = get_jobs_count(['guid' => '']); // Jobs with GUID meta
             update_progress('purge', ['total_jobs' => $total_jobs]);
-            PuntWorkLogger::debug('Purge total jobs count retrieved', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::debug('Purge total jobs count retrieved', PuntWorkLogger::CONTEXT_IMPORT, [
                 'total_jobs_with_guid' => $total_jobs
             ]);
         }
@@ -206,7 +206,7 @@ function job_import_purge_ajax() {
 
     } catch (\Exception $e) {
         release_operation_lock('purge');
-        PuntWorkLogger::error('Purge operation failed with exception', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('Purge operation failed with exception', PuntWorkLogger::CONTEXT_IMPORT, [
             'error_message' => $e->getMessage(),
             'error_code' => $e->getCode(),
             'error_file' => $e->getFile(),

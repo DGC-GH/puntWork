@@ -54,14 +54,14 @@ function create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, &$log
     $post_id = retry_database_operation(function() use ($post_data) {
         return wp_insert_post($post_data);
     }, [$post_data], [
-        'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+        'logger_context' => PuntWorkLogger::CONTEXT_IMPORT,
         'operation' => 'create_new_post',
         'guid' => $guid,
         'title' => $xml_title
     ]);
 
     if (is_wp_error($post_id)) {
-        PuntWorkLogger::error('Failed to create new post', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('Failed to create new post', PuntWorkLogger::CONTEXT_IMPORT, [
             'guid' => $guid,
             'error' => $post_id->get_error_message()
         ]);
@@ -76,7 +76,7 @@ function create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, &$log
         retry_database_operation(function() use ($post_id, $current_time) {
             return update_post_meta($post_id, '_last_import_update', $current_time);
         }, [$post_id, $current_time], [
-            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+            'logger_context' => PuntWorkLogger::CONTEXT_IMPORT,
             'operation' => 'set_last_import_meta_new',
             'post_id' => $post_id,
             'guid' => $guid
@@ -86,7 +86,7 @@ function create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, &$log
         retry_database_operation(function() use ($post_id, $guid) {
             return update_post_meta($post_id, 'guid', $guid);
         }, [$post_id, $guid], [
-            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+            'logger_context' => PuntWorkLogger::CONTEXT_IMPORT,
             'operation' => 'set_guid_meta_new',
             'post_id' => $post_id,
             'guid' => $guid
@@ -97,7 +97,7 @@ function create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, &$log
         retry_database_operation(function() use ($post_id, $item_hash) {
             return update_post_meta($post_id, '_import_hash', $item_hash);
         }, [$post_id, $item_hash], [
-            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+            'logger_context' => PuntWorkLogger::CONTEXT_IMPORT,
             'operation' => 'set_import_hash_meta_new',
             'post_id' => $post_id,
             'guid' => $guid
@@ -116,7 +116,7 @@ function create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, &$log
             // }
 
             if (!function_exists('update_field')) {
-                PuntWorkLogger::debug('update_field not available in create, skipping ACF field update', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::debug('update_field not available in create, skipping ACF field update', PuntWorkLogger::CONTEXT_IMPORT, [
                     'post_id' => $post_id,
                     'guid' => $guid,
                     'field' => $field
@@ -126,7 +126,7 @@ function create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, &$log
                 retry_database_operation(function() use ($post_id, $field, $set_value) {
                     return update_field($field, $set_value, $post_id);
                 }, [$post_id, $field, $set_value], [
-                    'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                    'logger_context' => PuntWorkLogger::CONTEXT_IMPORT,
                     'operation' => 'set_acf_field_meta_new',
                     'post_id' => $post_id,
                     'field' => $field,
@@ -136,7 +136,7 @@ function create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, &$log
         }
 
         if (!is_array($logs)) {
-            PuntWorkLogger::error('logs is not array in create_job_post, resetting', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::error('logs is not array in create_job_post, resetting', PuntWorkLogger::CONTEXT_IMPORT, [
                 'post_id' => $post_id,
                 'guid' => $guid,
                 'logs_type' => gettype($logs),
@@ -149,7 +149,7 @@ function create_job_post($item, $acf_fields, $zero_empty_fields, $user_id, &$log
         return $post_id;
 
     } catch (\Exception $e) {
-        PuntWorkLogger::error('Failed to set post meta for new post', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('Failed to set post meta for new post', PuntWorkLogger::CONTEXT_IMPORT, [
             'post_id' => $post_id,
             'guid' => $guid,
             'error' => $e->getMessage()
@@ -197,13 +197,13 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
     $debug_job_updates = defined('PUNTWORK_DEBUG_JOB_UPDATES') && PUNTWORK_DEBUG_JOB_UPDATES;
 
     if ($debug_job_updates) {
-        PuntWorkLogger::debug('update_job_post validations passed', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::debug('update_job_post validations passed', PuntWorkLogger::CONTEXT_IMPORT, [
             'post_id' => $post_id,
             'guid' => $guid,
             'logs_type' => gettype($logs)
         ]);
 
-        PuntWorkLogger::debug('About to update wp_update_post', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::debug('About to update wp_update_post', PuntWorkLogger::CONTEXT_IMPORT, [
             'post_id' => $post_id,
             'guid' => $guid
         ]);
@@ -222,13 +222,13 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
         $update_result = retry_database_operation(function() use ($post_data) {
             return wp_update_post($post_data);
         }, [$post_data], [
-            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+            'logger_context' => PuntWorkLogger::CONTEXT_IMPORT,
             'operation' => 'update_existing_post',
             'post_id' => $post_id,
             'guid' => $guid
         ]);
     } catch (\Exception $e) {
-        PuntWorkLogger::error('Exception during wp_update_post', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('Exception during wp_update_post', PuntWorkLogger::CONTEXT_IMPORT, [
             'post_id' => $post_id,
             'guid' => $guid,
             'error' => $e->getMessage()
@@ -236,7 +236,7 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
         $error_message = 'Failed to update ID: ' . $post_id . ' GUID: ' . $guid . ' - ' . $e->getErrorMessage();
         return new \WP_Error('update_failed', $error_message);
     } catch (\Throwable $t) {
-        PuntWorkLogger::error('Fatal error during wp_update_post', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('Fatal error during wp_update_post', PuntWorkLogger::CONTEXT_IMPORT, [
             'post_id' => $post_id,
             'guid' => $guid,
             'error' => $t->getMessage()
@@ -246,7 +246,7 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
     }
 
     if (is_wp_error($update_result)) {
-        PuntWorkLogger::error('Failed to update existing post', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('Failed to update existing post', PuntWorkLogger::CONTEXT_IMPORT, [
             'post_id' => $post_id,
             'guid' => $guid,
             'error' => $update_result->get_error_message()
@@ -256,12 +256,12 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
     }
 
     if ($debug_job_updates) {
-        PuntWorkLogger::debug('wp_update_post completed', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::debug('wp_update_post completed', PuntWorkLogger::CONTEXT_IMPORT, [
             'post_id' => $post_id,
             'guid' => $guid
         ]);
 
-        PuntWorkLogger::debug('About to update last import meta', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::debug('About to update last import meta', PuntWorkLogger::CONTEXT_IMPORT, [
             'post_id' => $post_id,
             'guid' => $guid
         ]);
@@ -274,7 +274,7 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
         retry_database_operation(function() use ($post_id, $current_time) {
             return update_post_meta($post_id, '_last_import_update', $current_time);
         }, [$post_id, $current_time], [
-            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+            'logger_context' => PuntWorkLogger::CONTEXT_IMPORT,
             'operation' => 'update_last_import_meta',
             'post_id' => $post_id,
             'guid' => $guid
@@ -282,14 +282,14 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
 
         // NOTE: To enable item processing debug logs, define PUNTWORK_DEBUG_ITEM_PROCESSING as true in wp-config.php
         if (defined('PUNTWORK_DEBUG_ITEM_PROCESSING') && PUNTWORK_DEBUG_ITEM_PROCESSING) {
-            PuntWorkLogger::debug('last import meta updated', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::debug('last import meta updated', PuntWorkLogger::CONTEXT_IMPORT, [
                 'post_id' => $post_id,
                 'guid' => $guid
             ]);
         }
 
         if ($debug_job_updates) {
-            PuntWorkLogger::debug('About to update import hash', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::debug('About to update import hash', PuntWorkLogger::CONTEXT_IMPORT, [
                 'post_id' => $post_id,
                 'guid' => $guid
             ]);
@@ -300,25 +300,25 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
         retry_database_operation(function() use ($post_id, $item_hash) {
             return update_post_meta($post_id, '_import_hash', $item_hash);
         }, [$post_id, $item_hash], [
-            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+            'logger_context' => PuntWorkLogger::CONTEXT_IMPORT,
             'operation' => 'update_import_hash_meta',
             'post_id' => $post_id,
             'guid' => $guid
         ]);
 
         if ($debug_job_updates) {
-            PuntWorkLogger::debug('import hash updated', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::debug('import hash updated', PuntWorkLogger::CONTEXT_IMPORT, [
                 'post_id' => $post_id,
                 'guid' => $guid
             ]);
 
-            PuntWorkLogger::debug('About to start ACF fields loop', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::debug('About to start ACF fields loop', PuntWorkLogger::CONTEXT_IMPORT, [
                 'post_id' => $post_id,
                 'guid' => $guid
             ]);
 
             // Update ACF fields
-            PuntWorkLogger::debug('Starting ACF field updates', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::debug('Starting ACF field updates', PuntWorkLogger::CONTEXT_IMPORT, [
                 'post_id' => $post_id,
                 'guid' => $guid,
                 'acf_fields_count' => count($acf_fields),
@@ -340,7 +340,7 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
 
                 if (!function_exists('update_field')) {
                     if ($debug_job_updates) {
-                        PuntWorkLogger::debug('update_field not available, skipping ACF field update', PuntWorkLogger::CONTEXT_BATCH, [
+                        PuntWorkLogger::debug('update_field not available, skipping ACF field update', PuntWorkLogger::CONTEXT_IMPORT, [
                             'post_id' => $post_id,
                             'guid' => $guid,
                             'field' => $field
@@ -351,7 +351,7 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
                     retry_database_operation(function() use ($post_id, $field, $set_value) {
                         return update_field($field, $set_value, $post_id);
                     }, [$post_id, $field, $set_value], [
-                        'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+                        'logger_context' => PuntWorkLogger::CONTEXT_IMPORT,
                         'operation' => 'update_acf_field_meta',
                         'post_id' => $post_id,
                         'field' => $field,
@@ -359,7 +359,7 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
                     ]);
                 }
             } catch (\Exception $e) {
-                PuntWorkLogger::error('Failed to update ACF field', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::error('Failed to update ACF field', PuntWorkLogger::CONTEXT_IMPORT, [
                     'post_id' => $post_id,
                     'guid' => $guid,
                     'field' => $field,
@@ -369,7 +369,7 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
                 continue;
             } catch (\Throwable $t) {
                 error_log("DEBUG: Caught Throwable in ACF field processing: " . $t->getMessage() . " for field $field, post_id $post_id, guid $guid");
-                PuntWorkLogger::error('Fatal error updating ACF field', PuntWorkLogger::CONTEXT_BATCH, [
+                PuntWorkLogger::error('Fatal error updating ACF field', PuntWorkLogger::CONTEXT_IMPORT, [
                     'post_id' => $post_id,
                     'guid' => $guid,
                     'field' => $field,
@@ -383,12 +383,12 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
         }
 
         if ($debug_job_updates) {
-            PuntWorkLogger::debug('ACF fields loop completed', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::debug('ACF fields loop completed', PuntWorkLogger::CONTEXT_IMPORT, [
                 'post_id' => $post_id,
                 'guid' => $guid
             ]);
 
-            PuntWorkLogger::debug('About to add to logs', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::debug('About to add to logs', PuntWorkLogger::CONTEXT_IMPORT, [
                 'post_id' => $post_id,
                 'guid' => $guid
             ]);
@@ -396,7 +396,7 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
 
         // Ensure logs is an array before appending
         if (!is_array($logs)) {
-            PuntWorkLogger::error('logs is not array in update_job_post before append, resetting', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::error('logs is not array in update_job_post before append, resetting', PuntWorkLogger::CONTEXT_IMPORT, [
                 'post_id' => $post_id,
                 'guid' => $guid,
                 'logs_type' => gettype($logs),
@@ -408,14 +408,14 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
         array_push($logs, '[' . date('d-M-Y H:i:s') . ' UTC] ' . 'Updated ID: ' . $post_id . ' GUID: ' . $guid);
 
         if ($debug_job_updates) {
-            PuntWorkLogger::debug('Added to logs', PuntWorkLogger::CONTEXT_BATCH, [
+            PuntWorkLogger::debug('Added to logs', PuntWorkLogger::CONTEXT_IMPORT, [
                 'post_id' => $post_id,
                 'guid' => $guid
             ]);
         }
 
     } catch (\Exception $e) {
-        PuntWorkLogger::error('Failed to update post meta for existing post', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('Failed to update post meta for existing post', PuntWorkLogger::CONTEXT_IMPORT, [
             'post_id' => $post_id,
             'guid' => $guid,
             'error' => $e->getMessage()
@@ -424,7 +424,7 @@ function update_job_post($post_id, $guid, $item, $acf_fields, $zero_empty_fields
         return new \WP_Error('meta_update_failed', $error_message);
     } catch (\Throwable $t) {
         error_log("DEBUG: Caught Throwable in outer catch: " . $t->getMessage() . " for post_id $post_id, guid $guid");
-        PuntWorkLogger::error('Fatal error updating post meta for existing post', PuntWorkLogger::CONTEXT_BATCH, [
+        PuntWorkLogger::error('Fatal error updating post meta for existing post', PuntWorkLogger::CONTEXT_IMPORT, [
             'post_id' => $post_id,
             'guid' => $guid,
             'error' => $t->getMessage()
@@ -501,7 +501,7 @@ function delete_jobs_by_ids($post_ids, $force_delete = true) {
         $result = retry_database_operation(function() use ($post_id, $force_delete) {
             return wp_delete_post($post_id, $force_delete);
         }, [$post_id, $force_delete], [
-            'logger_context' => PuntWorkLogger::CONTEXT_BATCH,
+            'logger_context' => PuntWorkLogger::CONTEXT_IMPORT,
             'operation' => 'delete_job_post',
             'post_id' => $post_id
         ]);
