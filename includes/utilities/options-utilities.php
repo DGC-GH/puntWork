@@ -41,7 +41,7 @@ function get_import_status($overrides = []) {
         'complete' => false,
         'success' => null,
         'error_message' => '',
-        'batch_size' => get_batch_size(),
+        'batch_size' => 1,
         'inferred_languages' => 0,
         'inferred_benefits' => 0,
         'schema_generated' => 0,
@@ -194,16 +194,16 @@ function delete_import_status() {
  * @param bool $skip_system_validation Skip expensive system constraint validation (for status checks)
  */
 function get_batch_size($skip_system_validation = false) {
-    $batch_size = get_option('job_import_batch_size', DEFAULT_BATCH_SIZE);
+    $batch_size = get_option('job_import_batch_size', 1);
 
     // VALIDATE RETRIEVED VALUE
     if (!is_numeric($batch_size)) {
     PuntWorkLogger::warn('Invalid batch size retrieved from options, using default', PuntWorkLogger::CONTEXT_BATCH, [
             'retrieved_value' => $batch_size,
             'retrieved_type' => gettype($batch_size),
-            'fallback_value' => DEFAULT_BATCH_SIZE
+            'fallback_value' => 1
         ]);
-        $batch_size = DEFAULT_BATCH_SIZE;
+        $batch_size = 1;
     }
 
     // Ensure batch size is within reasonable bounds
@@ -216,13 +216,13 @@ function get_batch_size($skip_system_validation = false) {
         $batch_size = 1;
     }
 
-    if ($batch_size > MAX_BATCH_SIZE * 2) {
+    if ($batch_size > 200) {
     PuntWorkLogger::warn('Batch size excessively large, capping to maximum', PuntWorkLogger::CONTEXT_BATCH, [
             'original_value' => $batch_size,
-            'capped_value' => MAX_BATCH_SIZE,
-            'maximum_allowed' => MAX_BATCH_SIZE
+            'capped_value' => 100,
+            'maximum_allowed' => 100
         ]);
-        $batch_size = MAX_BATCH_SIZE;
+        $batch_size = 100;
     }
 
     // Skip expensive system constraint validation during AJAX status checks when no import is running
@@ -251,7 +251,7 @@ function get_batch_size($skip_system_validation = false) {
  * Set batch size with validation
  */
 function set_batch_size($size) {
-    $validated_size = max(1, min((int)$size, MAX_BATCH_SIZE));
+    $validated_size = max(1, min((int)$size, 100));
     update_option('job_import_batch_size', $validated_size, false);
     return $validated_size;
 }

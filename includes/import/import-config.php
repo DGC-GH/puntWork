@@ -65,7 +65,7 @@ function get_import_config() {
         'cleanup' => [
             'strategy' => 'smart_retention', // 'none', 'auto_delete', 'smart_retention'
             'retention_days' => 90,
-            'batch_size' => 100,
+            'batch_size' => 1,
             'safety_checks' => true,
         ],
 
