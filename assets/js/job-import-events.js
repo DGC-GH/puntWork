@@ -310,14 +310,15 @@ console.log('[PUNTWORK] job-import-events.js loaded');
                                 } else {
                                     JobImportUI.hideResumeStuckButton();
                                 }
-                            } else {
-                                // Scheduled import completed or not running
-                                JobImportUI.hideCancelButton();
-                                JobImportUI.hideResumeButton();
-                                JobImportUI.hideResetButton();
-                                JobImportUI.hideResumeStuckButton();
-                                JobImportUI.showStartButton();
-                            }
+                        } else {
+                            // Scheduled import completed or not running
+                            JobImportUI.hideCancelButton();
+                            JobImportUI.hideResumeButton();
+                            // Show reset button for completed imports (potential stale data)
+                            JobImportUI.showResetButton();
+                            JobImportUI.hideResumeStuckButton();
+                            JobImportUI.showStartButton();
+                        }
                         } else {
                             // For manual imports, show resume/reset based on state
                             if (hasIncompleteImport) {

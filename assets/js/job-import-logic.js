@@ -395,17 +395,54 @@
                     // Hide import type indicator on reset
                     $('#import-type-indicator').hide();
                 } else {
-                    // Reset failed - show error but don't change UI state
-                    JobImportUI.appendLogs(['Reset failed: ' + (response.message || 'Unknown error')]);
-                    $('#status-message').text('Reset failed - please try again');
-                    $('#reset-import').prop('disabled', false);
+                    // Backend reset failed - but do client-side UI reset anyway
+                    PuntWorkJSLogger.warn('Backend reset failed, performing client-side reset', 'LOGIC', response);
+                    JobImportUI.appendLogs(['Backend reset failed, performing local UI reset: ' + (response.message || 'Unknown error')]);
+
+                    // Force client-side reset even if backend failed
+                    clientSideReset();
                 }
             }).catch(function(xhr, status, error) {
-                PuntWorkJSLogger.error('Reset AJAX error', 'LOGIC', error);
-                JobImportUI.appendLogs(['Reset AJAX error: ' + error]);
-                $('#status-message').text('Reset failed - please try again');
-                $('#reset-import').prop('disabled', false);
+                PuntWorkJSLogger.error('Reset AJAX error - performing client-side reset', 'LOGIC', {
+                    xhr_status: xhr.status,
+                    error: error
+                });
+
+                // AJAX failed entirely - perform client-side fallback reset
+                JobImportUI.appendLogs(['Server connection failed, performing local UI reset']);
+                clientSideReset();
             });
+
+            /**
+             * Client-side reset fallback function
+             * Clears UI state when backend reset fails
+             */
+            function clientSideReset() {
+                JobImportUI.appendLogs(['Performing client-side import state reset...']);
+                $('#status-message').text('Local reset completed - system ready for fresh import');
+
+                // Force clear all UI elements regardless of server state
+                JobImportUI.clearProgress();
+                JobImportUI.hideImportUI();
+
+                // Reset button states
+                $('#start-import').show().text('Start Import').prop('disabled', false);
+                $('#resume-import').hide();
+                $('#cancel-import').hide();
+                $('#reset-import').hide().prop('disabled', false);
+
+                // Hide import type indicator
+                $('#import-type-indicator').hide();
+
+                // Force a heartbeat status refresh to show fresh state
+                if (window.JobImportHeartbeat && typeof JobImportHeartbeat.forceStatusRefresh === 'function') {
+                    setTimeout(function() {
+                        JobImportHeartbeat.forceStatusRefresh();
+                    }, 1000);
+                }
+
+                JobImportUI.appendLogs(['Client-side reset completed successfully']);
+            }
         },
 
         /**
