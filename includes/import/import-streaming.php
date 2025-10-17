@@ -459,29 +459,23 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
         );
 
         if (isset($streaming_status['composite_key_cache'][$composite_key])) {
-            // Existing job - check if update needed (smart update logic)
+            // Existing job - ALWAYS update fully for comprehensive field population
             $existing_post_id = $streaming_status['composite_key_cache'][$composite_key];
 
-            // SMART UPDATE CHECK: Only update if content actually changed
-            if (should_update_existing_job_smart($existing_post_id, $item)) {
-                // Queue ACF updates in batches
-                $acf_update_queue[$existing_post_id] = $item;
+            // ALWAYS UPDATE: Ensure all ACF fields are fully updated on every job post
+            $acf_update_queue[$existing_post_id] = $item;
 
-                // Process ACF queue when it reaches batch size
-                if (count($acf_update_queue) >= $batch_size) {
-                    process_acf_queue_batch($acf_update_queue, $acf_create_queue, 'update');
-                    $acf_update_queue = [];
-                }
+            // Process ACF queue when it reaches batch size
+            if (count($acf_update_queue) >= $batch_size) {
+                process_acf_queue_batch($acf_update_queue, $acf_create_queue, 'update');
+                $acf_update_queue = [];
+            }
 
-                $updated++;
-                // LIMIT LOGGING: Only keep recent logs to prevent memory buildup
-                $all_logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Updated job ' . $existing_post_id;
-                if (count($all_logs) > 100) {
-                    $all_logs = array_slice($all_logs, -50); // Keep only last 50 log entries
-                }
-            } else {
-                $skipped++;
-                // Minimal logging for performance
+            $updated++;
+            // LIMIT LOGGING: Only keep recent logs to prevent memory buildup
+            $all_logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Updated job ' . $existing_post_id;
+            if (count($all_logs) > 100) {
+                $all_logs = array_slice($all_logs, -50); // Keep only last 50 log entries
             }
         } else {
             // New job - create with batch ACF processing
