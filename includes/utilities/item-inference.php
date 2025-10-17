@@ -15,16 +15,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 function infer_item_details(&$item, $fallback_domain, $lang, &$job_obj) {
-    $province = strtolower(trim(isset($item->province) ? (string)$item->province : ''));
+    // Ensure all required fields have safe string values
+    $province = isset($item->province) && $item->province !== null ? strtolower(trim((string)$item->province)) : '';
     $norm_province = GetProvinceMap()[$province] ?? $fallback_domain;
 
-    $title = isset($item->functiontitle) ? (string)$item->functiontitle : '';
+    $title = isset($item->functiontitle) && $item->functiontitle !== null ? (string)$item->functiontitle : '';
+    $city = isset($item->city) && $item->city !== null ? (string)$item->city : '';
+    $province_name = isset($item->province) && $item->province !== null ? (string)$item->province : '';
+    $guid = isset($item->guid) && $item->guid !== null ? (string)$item->guid : '';
+
     $enhanced_title = $title;
-    if (isset($item->city)) $enhanced_title .= ' in ' . (string)$item->city;
-    if (isset($item->province)) $enhanced_title .= ', ' . (string)$item->province;
+    if ($city) $enhanced_title .= ' in ' . $city;
+    if ($province_name) $enhanced_title .= ', ' . $province_name;
     $enhanced_title = trim($enhanced_title);
 
-    $slug = sanitize_title($enhanced_title . '-' . (string)$item->guid);
+    $slug = sanitize_title($enhanced_title . '-' . $guid);
     $job_link = 'https://' . $norm_province . '/job/' . $slug;
 
     $fg = strtolower(trim(isset($item->functiongroup) ? (string)$item->functiongroup : ''));
@@ -48,15 +53,24 @@ function infer_item_details(&$item, $fallback_domain, $lang, &$job_obj) {
         }
     }
 
-    $apply_link = isset($item->applylink) ? (string)$item->applylink : '';
-    if ($apply_link) $apply_link .= '?utm_source=puntwork&utm_term=' . (string)$item->guid;
+    $apply_link = isset($item->applylink) && $item->applylink !== null ? (string)$item->applylink : '';
+    if ($apply_link && $guid) $apply_link .= '?utm_source=puntwork&utm_term=' . $guid;
 
     $icon_key = array_reduce(array_keys(GetIconMap()), function($carry, $key) use ($fg) {
         return strpos($fg, strtolower($key)) !== false ? $key : $carry;
     }, null);
     $icon = $icon_key ? '<i class="fas ' . GetIconMap()[$icon_key] . '"></i>' : '<i class="fas fa-briefcase"></i>';
 
-    $all_text = strtolower(implode(' ', [(string)$item->functiontitle, (string)$item->description, (string)$item->functiondescription, (string)$item->offerdescription, (string)$item->requirementsdescription, (string)$item->companydescription]));
+    // Build analysis text using safe string values
+    $analysis_fields = [
+        isset($item->functiontitle) && $item->functiontitle !== null ? (string)$item->functiontitle : '',
+        isset($item->description) && $item->description !== null ? (string)$item->description : '',
+        isset($item->functiondescription) && $item->functiondescription !== null ? (string)$item->functiondescription : '',
+        isset($item->offerdescription) && $item->offerdescription !== null ? (string)$item->offerdescription : '',
+        isset($item->requirementsdescription) && $item->requirementsdescription !== null ? (string)$item->requirementsdescription : '',
+        isset($item->companydescription) && $item->companydescription !== null ? (string)$item->companydescription : ''
+    ];
+    $all_text = strtolower(implode(' ', $analysis_fields));
     $job_car = (bool)preg_match('/bedrijfs(wagen|auto)|firmawagen|voiture de société|company car/i', $all_text);
     $job_remote = (bool)preg_match('/thuiswerk|télétravail|remote work|home office/i', $all_text);
     $job_meal_vouchers = (bool)preg_match('/maaltijdcheques|chèques repas|meal vouchers/i', $all_text);

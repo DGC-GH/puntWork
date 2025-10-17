@@ -387,9 +387,13 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
             }
         } else {
             // New job - create with batch ACF processing
+            // Ensure safe string values for post creation to prevent null-related warnings
+            $safe_title = isset($item['title']) && $item['title'] !== null ? (string)$item['title'] : '';
+            $safe_content = isset($item['description']) && $item['description'] !== null ? (string)$item['description'] : '';
+
             $post_data = [
-                'post_title' => $item['title'] ?? '',
-                'post_content' => $item['description'] ?? '',
+                'post_title' => trim($safe_title),
+                'post_content' => trim($safe_content),
                 'post_status' => 'publish',
                 'post_type' => 'job',
                 'post_author' => ''
@@ -1046,13 +1050,14 @@ function should_update_existing_job($post_id, $item) {
  */
 function update_job_streaming($post_id, $item) {
     try {
-        // Get ACF fields efficiently (lazy loading)
-        $acf_fields = get_acf_fields();
+        // Ensure safe string values for post update to prevent null-related warnings
+        $safe_title = isset($item['title']) && $item['title'] !== null ? (string)$item['title'] : '';
+        $safe_content = isset($item['description']) && $item['description'] !== null ? (string)$item['description'] : '';
 
         $update_result = wp_update_post([
             'ID' => $post_id,
-            'post_title' => $item['title'] ?? '',
-            'post_content' => $item['description'] ?? '',
+            'post_title' => trim($safe_title),
+            'post_content' => trim($safe_content),
             'post_status' => 'publish',
             'post_modified' => current_time('mysql'),
             'post_author' => 0 // Clear author if present
@@ -1063,7 +1068,7 @@ function update_job_streaming($post_id, $item) {
         }
 
         // Update ACF fields selectively
-        update_job_acf_fields_selective($post_id, $item, $acf_fields);
+        update_job_acf_fields_selective($post_id, $item);
 
         // Update metadata
         update_post_meta($post_id, '_last_import_update', current_time('mysql'));
@@ -1144,7 +1149,7 @@ function get_acf_fields_selective($item) {
     return $acf_fields;
 }
 
-function update_job_acf_fields_selective($post_id, $item, $acf_fields) {
+function update_job_acf_fields_selective($post_id, $item) {
     $selective_fields = get_acf_fields_selective($item);
 
     foreach ($selective_fields as $key => $value) {
