@@ -53,6 +53,20 @@ add_filter('heartbeat_received', function($response, $data, $screen_id) {
     if (isset($data['puntwork_import_status'])) {
         $import_status = get_import_status([]);
 
+        // Debug logging for heartbeat polling
+        if (defined('WP_DEBUG') && WP_DEBUG && defined('PUNTWORK_DEBUG_POLLING') && PUNTWORK_DEBUG_POLLING) {
+            PuntWorkLogger::debug('[CLIENT] Heartbeat status request received', PuntWorkLogger::CONTEXT_AJAX, [
+                'processed_from_status' => $import_status['processed'] ?? 'null',
+                'total_from_status' => $import_status['total'] ?? 'null',
+                'phase_from_status' => $import_status['phase'] ?? 'null',
+                'complete_from_status' => $import_status['complete'] ?? 'null',
+                'time_elapsed' => $import_status['time_elapsed'] ?? 'null',
+                'last_update' => $import_status['last_update'] ?? 'null',
+                'has_recent_update' => isset($import_status['last_update']) && $import_status['last_update'] > 0,
+                'heartbeat_force_requested' => $data['puntwork_import_status'] === 'force'
+            ]);
+        }
+
         // Only send update if status has changed or if this is the first request
         static $last_status_hash = null;
         $current_hash = md5(serialize($import_status));
@@ -64,6 +78,20 @@ add_filter('heartbeat_received', function($response, $data, $screen_id) {
                 'has_changes' => ($last_status_hash !== $current_hash)
             );
             $last_status_hash = $current_hash;
+
+            if (defined('WP_DEBUG') && WP_DEBUG && defined('PUNTWORK_DEBUG_POLLING') && PUNTWORK_DEBUG_POLLING) {
+                PuntWorkLogger::debug('[CLIENT] Heartbeat status update sent', PuntWorkLogger::CONTEXT_AJAX, [
+                    'processed_sent' => $import_status['processed'] ?? 'null',
+                    'has_changes' => ($last_status_hash !== $current_hash),
+                    'force_requested' => $data['puntwork_import_status'] === 'force',
+                    'timestamp' => time()
+                ]);
+            }
+        } elseif (defined('WP_DEBUG') && WP_DEBUG && defined('PUNTWORK_DEBUG_POLLING') && PUNTWORK_DEBUG_POLLING) {
+            PuntWorkLogger::debug('[CLIENT] Heartbeat status unchanged - no update sent', PuntWorkLogger::CONTEXT_AJAX, [
+                'processed_current' => $import_status['processed'] ?? 'null',
+                'hash_match' => true
+            ]);
         }
     }
 

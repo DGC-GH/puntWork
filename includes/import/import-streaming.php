@@ -517,6 +517,18 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
 
         // ULTRA-MEMORY PROGRESS MONITORING: Reduced frequency to every 250 items
         if ($processed % 250 === 0) { // ULTRA-OPTIMIZED: Progress every 250 items (was 100)
+            PuntWorkLogger::debug('[Progress Update] Milestone reached at 250 items', PuntWorkLogger::CONTEXT_IMPORT, [
+                'processed' => $processed,
+                'total' => isset($streaming_status['total']) ? $streaming_status['total'] : 0,
+                'published' => $published,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'progress_percentage' => isset($streaming_status['total']) && $streaming_status['total'] > 0 ?
+                    round(($processed / $streaming_status['total']) * 100, 2) : 0,
+                'time_elapsed' => round(microtime(true) - $streaming_status['start_time'], 2),
+                'phase' => $streaming_status['phase']
+            ]);
+
             emit_progress_event($streaming_status, $processed, $published, $updated, $skipped, $streaming_stats);
 
             // ULTRA-MEMORY OPTIMIZATION: Ultra-lightweight status for DB storage to prevent memory explosion
@@ -534,13 +546,57 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
                 'logs' => [] // No logs in DB updates - keep in memory only
             ];
 
+            // CRITICAL FIX: Also update the main job_import_status so client polling mechanisms can see progress
+            $main_status = [
+                'total' => isset($streaming_status['total']) ? $streaming_status['total'] : 0,
+                'processed' => $processed,
+                'published' => $published,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'complete' => false,
+                'success' => null,
+                'time_elapsed' => microtime(true) - $streaming_status['start_time'],
+                'start_time' => $streaming_status['start_time'],
+                'last_update' => microtime(true),
+                'batch_size' => 250, // Progress update frequency
+                'batch_count' => floor($processed / 250),
+                'logs' => array_slice($all_logs, -10), // Include latest log entries for client
+                'phase' => $streaming_status['phase']
+            ];
+
+            PuntWorkLogger::debug('[Progress Update] Preparing main status update', PuntWorkLogger::CONTEXT_IMPORT, [
+                'main_status_keys' => array_keys($main_status),
+                'logs_count_in_main' => count($main_status['logs']),
+                'has_recent_logs' => !empty($all_logs),
+                'all_logs_count' => count($all_logs)
+            ]);
+
+            $set_status_result = set_import_status($main_status);
+            PuntWorkLogger::debug('[Progress Update] Main status update attempt', PuntWorkLogger::CONTEXT_IMPORT, [
+                'set_import_status_called' => true,
+                'processed_value' => $processed,
+                'expected_main_status_processed' => $main_status['processed'],
+                'wp_cache_function_available' => function_exists('wp_cache_delete')
+            ]);
+
+            // Verify the status was set correctly
+            $verify_status = get_import_status([]);
+            PuntWorkLogger::debug('[Progress Update] Status verification after update', PuntWorkLogger::CONTEXT_IMPORT, [
+                'verified_processed' => $verify_status['processed'] ?? 'null',
+                'verified_total' => $verify_status['total'] ?? 'null',
+                'verified_phase' => $verify_status['phase'] ?? 'null',
+                'status_matches_expected' => ($verify_status['processed'] ?? 0) === $processed,
+                'last_update_timestamp' => $verify_status['last_update'] ?? 'null'
+            ]);
+
             update_option($status_key, $db_status, false);
 
             PuntWorkLogger::debug('ULTRA-MEMORY: DB status updated (lightweight format)', PuntWorkLogger::CONTEXT_IMPORT, [
                 'processed' => $processed,
                 'update_frequency' => 'every 250 items',
                 'excludes' => ['streaming_metrics', 'composite_key_cache', 'logs'],
-                'memory_saved_mb' => round(get_memory_limit_bytes() * 0.5 / 1024 / 1024, 2) // Estimate
+                'memory_saved_mb' => round(get_memory_limit_bytes() * 0.5 / 1024 / 1024, 2), // Estimate
+                'client_status_sync' => 'job_import_status updated for polling compatibility'
             ]);
         }
     }
