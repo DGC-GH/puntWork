@@ -327,7 +327,6 @@ add_filter('heartbeat_send', function($response, $screen_id) {
     }
 
     if ($is_active) {
-        static $last_sent_hash = null;
         $current_hash = md5(serialize($import_status));
 
         // HEARTBEAT RESET: Force hash reset for old imports that become inactive
