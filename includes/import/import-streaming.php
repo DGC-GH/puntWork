@@ -890,12 +890,27 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
         // FORCE END-OF-IMPORT BREAKPOINT: If FEED ITEMS PROCESSED equals total items, we've reached the end
         // This prevents infinite loops where ACF updates keep processing existing jobs forever
         if (isset($streaming_status['total']) && $streaming_status['total'] > 0 && $composite_keys_processed >= $streaming_status['total']) {
-            PuntWorkLogger::info('FORCE END-OF-IMPORT BREAKPOINT triggered - all FEED items processed', PuntWorkLogger::CONTEXT_IMPORT, [
+            PuntWorkLogger::info('🎯 FORCE END-OF-IMPORT BREAKPOINT TRIGGERED - Stream processing complete!', PuntWorkLogger::CONTEXT_IMPORT, [
                 'feed_items_processed' => $composite_keys_processed,
                 'acf_jobs_processed' => $processed,
                 'total_feed_items' => $streaming_status['total'],
-                'force_completion' => true,
-                'action' => 'completing import - ACF updates may continue in background but streaming stops'
+                'completion_percentage' => '100%',
+                'streaming_phase' => 'STREAMING_COMPLETED',
+                'acf_phase' => 'CONTINUES_IN_BACKGROUND',
+                'action' => 'Exiting main streaming loop - ACF batch processing may continue'
+            ]);
+            $should_continue = false;
+        }
+
+        // ULTRA-SAFEGUARD: Maximum iteration limit to prevent runaway loops even if counters fail
+        static $maximum_safe_iterations = 50000; // Allow up to 50K iterations (more than enough for any feed)
+        if ($composite_keys_processed > $maximum_safe_iterations) {
+            PuntWorkLogger::error('🚨 MAXIMUM ITERATION LIMIT EXCEEDED - Emergency shutdown', PuntWorkLogger::CONTEXT_IMPORT, [
+                'iterations_reached' => $composite_keys_processed,
+                'maximum_allowed' => $maximum_safe_iterations,
+                'acf_jobs_processed' => $processed,
+                'feed_items_expected' => $streaming_status['total'] ?? 'unknown',
+                'emergency_action' => 'Forcing import completion due to excessive iterations'
             ]);
             $should_continue = false;
         }
