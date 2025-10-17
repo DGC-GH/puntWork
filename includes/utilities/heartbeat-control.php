@@ -15,6 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+require_once __DIR__ . '/options-utilities.php';
+
 /**
  * Initialize heartbeat for import status updates on all admin pages
  */
