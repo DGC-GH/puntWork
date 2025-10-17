@@ -887,6 +887,18 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
             $should_continue = false;
         }
 
+        // FORCE END-OF-IMPORT BREAKPOINT: If processed equals total items, we've reached the end
+        // This prevents infinite loops where the file might be processed but fgets never returns false
+        if (isset($streaming_status['total']) && $streaming_status['total'] > 0 && $processed >= $streaming_status['total']) {
+            PuntWorkLogger::info('FORCE END-OF-IMPORT BREAKPOINT triggered - all items processed', PuntWorkLogger::CONTEXT_IMPORT, [
+                'processed' => $processed,
+                'total' => $streaming_status['total'],
+                'force_completion' => true,
+                'action' => 'completing import to prevent infinite loop'
+            ]);
+            $should_continue = false;
+        }
+
         // ULTRA-MEMORY PROGRESS MONITORING: Reduced frequency to every 250 items
         if ($processed % 250 === 0) { // ULTRA-OPTIMIZED: Progress every 250 items (was 100)
             PuntWorkLogger::debug('[Progress Update] Milestone reached at 250 items', PuntWorkLogger::CONTEXT_IMPORT, [
