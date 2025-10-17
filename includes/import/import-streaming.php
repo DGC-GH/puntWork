@@ -201,13 +201,15 @@ function import_jobs_streaming($preserve_status = false) {
  */
 function detect_available_system_memory() {
     // Try to detect actual available system memory on Linux
-    // Set memory limit based on environment variable or default to 512M if not set
-    $env_memory_limit = getenv('PUNTWORK_MEMORY_LIMIT') ?: '512M';
-    $current_limit = ini_get('memory_limit');
-    // Only increase if current limit is lower and not unlimited
-    if ($current_limit !== '-1' && (intval($current_limit) < intval($env_memory_limit))) {
-        ini_set('memory_limit', $env_memory_limit);
-    }
+    if (function_exists('shell_exec') && stripos(PHP_OS, 'Linux') !== false) {
+        // Set memory limit based on environment variable or default to 512M if not set
+        $env_memory_limit = getenv('PUNTWORK_MEMORY_LIMIT') ?: '512M';
+        $current_limit = ini_get('memory_limit');
+        // Only increase if current limit is lower and not unlimited
+        if ($current_limit !== '-1' && (intval($current_limit) < intval($env_memory_limit))) {
+            ini_set('memory_limit', $env_memory_limit);
+        }
+
         // Read /proc/meminfo for precise memory detection
         $meminfo = shell_exec('cat /proc/meminfo 2>/dev/null');
         if ($meminfo) {
