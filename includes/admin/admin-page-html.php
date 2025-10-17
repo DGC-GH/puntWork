@@ -18,7 +18,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Load admin UI components
 require_once __DIR__ . '/admin-ui-main.php';
 require_once __DIR__ . '/admin-ui-scheduling.php';
-require_once __DIR__ . '/admin-ui-debug.php';
 require_once __DIR__ . '/admin-diagnostics-page.php';
 
 function feeds_dashboard_page() {
@@ -32,9 +31,6 @@ function feeds_dashboard_page() {
 
     // Render import history UI
     render_import_history_ui();
-
-    // Render debug UI (only in development)
-    render_debug_ui();
 
     // Render JavaScript initialization
     render_javascript_init();
