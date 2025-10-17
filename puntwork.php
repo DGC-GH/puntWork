@@ -128,7 +128,7 @@ function setup_job_import() {
         'utilities/heartbeat-control.php',
         'utilities/item-cleaning.php',
         'utilities/item-inference.php',
-        'utilities/shortcode.php',
+
         'utilities/utility-helpers.php',
 
         // Mappings
