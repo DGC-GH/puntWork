@@ -1102,8 +1102,65 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
         'final_keys_processed' => $composite_keys_processed,
         'final_acf_update_queue_size' => count($acf_update_queue),
         'final_acf_create_queue_size' => count($acf_create_queue),
+        'processing_stats_summary' => [
+            'total_phases' => ['file_reading', 'acf_batch_processing', 'finalization'],
+            'current_phase_when_stopped' => 'streaming_loop',
+            'items_successfully_processed' => $processed,
+            'memory_at_exit_mb' => round(memory_get_usage(true) / 1024 / 1024, 2),
+            'total_execution_time_seconds' => round(microtime(true) - $batch_start_time, 2)
+        ],
         'action' => 'Beginning final ACF batch processing'
     ]);
+
+    // LOG execution time analysis to detect timeouts
+    $total_execution_time = microtime(true) - $batch_start_time;
+    $memory_usage_mb = memory_get_usage(true) / 1024 / 1024;
+
+    PuntWorkLogger::info('EXIT TIMING ANALYSIS - Detect abnormal termination', PuntWorkLogger::CONTEXT_IMPORT, [
+        'total_execution_time_seconds' => round($total_execution_time, 2),
+        'max_expected_time_seconds' => 600, // 10 minutes
+        'percentage_time_used' => round($total_execution_time / 600 * 100, 2) . '%',
+        'memory_usage_mb' => round($memory_usage_mb, 2),
+        'process_termination_risk_indicators' => [
+            'web_server_timeout_likely' => ($total_execution_time > 300) ? 'HIGH RISK' : 'LOW RISK', // 5+ min = likely web timeout
+            'hosting_provider_kill_likely' => ($total_execution_time > 120 && $memory_usage_mb < 1000) ? 'MODERATE RISK' : 'LOW RISK',
+            'sudden_termination_signature' => ($processed > 1000 && !$should_continue) ? 'UNUSUAL' : 'NORMAL',
+            'incomplete_acf_queues' => (count($acf_update_queue) > 0 || count($acf_create_queue) > 0) ? 'TERMINATED MID-ACF' : 'NORMAL EXIT'
+        ],
+        'recommendation' => 'If import consistently stops here, increase PHP max_execution_time to 1800 (30 minutes) in php.ini or .htaccess'
+    ]);
+
+    // DEATHBED LOGGING: Write to file system immediately before any further processing
+    if (is_writable(dirname(PUNTWORK_LOGS))) {
+        $deathbed_log_path = dirname(PUNTWORK_LOGS) . '/import_deathbed_' . time() . '.log';
+        $deathbed_data = [
+            'timestamp' => time(),
+            'processed_items' => $processed,
+            'total_expected' => $streaming_status['total'] ?? 0,
+            'remaining_items' => ($streaming_status['total'] ?? 0) - $processed,
+            'total_execution_time_seconds' => round($total_execution_time, 2),
+            'exit_reason' => $should_continue ? 'NORMAL_COMPLETION' : 'ABNORMAL_TERMINATION',
+            'acf_queues_pending' => count($acf_update_queue) + count($acf_create_queue),
+            'memory_usage_mb' => round($memory_usage_mb, 2),
+            'php_ini_limits' => [
+                'max_execution_time' => ini_get('max_execution_time'),
+                'memory_limit' => ini_get('memory_limit'),
+                'max_input_time' => ini_get('max_input_time')
+            ],
+            'web_server_hints' => [
+                'likely_timeout_source' => $total_execution_time > 300 ? 'WEB_SERVER_TIMEOUT' : 'SCRIPT_ERROR',
+                'recommended_php_ini_setting' => 'max_execution_time = 1800',
+                'server_upload_limits_worth_checking' => true
+            ]
+        ];
+
+        file_put_contents($deathbed_log_path, json_encode($deathbed_data, JSON_PRETTY_PRINT), LOCK_EX);
+        PuntWorkLogger::info('DEATHBED LOG WRITTEN - Process termination forensics', PuntWorkLogger::CONTEXT_IMPORT, [
+            'deathbed_log_path' => $deathbed_log_path,
+            'log_contents_summary' => 'Comprehensive analysis of exit conditions written to disk',
+            'importance' => 'CRITICAL: This log survives script termination and contains timeout analysis'
+        ]);
+    }
 
     fclose($handle);
 
