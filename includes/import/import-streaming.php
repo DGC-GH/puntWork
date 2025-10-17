@@ -197,11 +197,101 @@ function import_jobs_streaming($preserve_status = false) {
 }
 
 /**
- * Prepare the streaming environment with adaptive resource management
+ * Dynamically detect available system memory for adaptive memory limits
+ */
+function detect_available_system_memory() {
+    // Try to detect actual available system memory on Linux
+    if (function_exists('shell_exec') && stripos(PHP_OS, 'Linux') !== false) {
+        // Read /proc/meminfo for precise memory detection
+        $meminfo = shell_exec('cat /proc/meminfo 2>/dev/null');
+        if ($meminfo) {
+            $lines = explode("\n", trim($meminfo));
+            $memory_info = [];
+
+            foreach ($lines as $line) {
+                if (preg_match('/^(\w+):\s+(\d+)\s+kB/', $line, $matches)) {
+                    $memory_info[$matches[1]] = (int)$matches[2] * 1024; // Convert KB to bytes
+                }
+            }
+
+            // Calculate available memory from MemAvailable (preferred) or MemFree + Cached + Buffers
+            $available_bytes = 0;
+            if (isset($memory_info['MemAvailable'])) {
+                $available_bytes = $memory_info['MemAvailable'];
+            } elseif (isset($memory_info['MemFree']) && isset($memory_info['Cached']) && isset($memory_info['Buffers'])) {
+                $available_bytes = $memory_info['MemFree'] + $memory_info['Cached'] + $memory_info['Buffers'];
+            }
+
+            if ($available_bytes > 0) {
+                // Use 75% of available memory as safe limit for PHP processes
+                $recommended_limit = (int)($available_bytes * 0.75);
+
+                // Ensure minimum of 512MB and maximum of 4096MB as safe bounds
+                $recommended_limit = max(536870912, min(4294967296, $recommended_limit));
+
+                PuntWorkLogger::info('System memory detected for dynamic limits', PuntWorkLogger::CONTEXT_IMPORT, [
+                    'total_memory_gb' => isset($memory_info['MemTotal']) ? round($memory_info['MemTotal'] / 1024 / 1024 / 1024, 2) : 'unknown',
+                    'available_memory_gb' => round($available_bytes / 1024 / 1024 / 1024, 2),
+                    'recommended_php_limit_gb' => round($recommended_limit / 1024 / 1024 / 1024, 2),
+                    'detection_method' => 'proc_meminfo'
+                ]);
+
+                return $recommended_limit;
+            }
+        }
+    }
+
+    // Fallback: Use configured PHP limit but apply intelligent scaling
+    $current_limit = get_memory_limit_bytes();
+    if ($current_limit > 0 && $current_limit !== PHP_INT_MAX) {
+        // If PHP limit is low (<512MB), try to increase it safely
+        if ($current_limit < 536870912) { // Less than 512MB
+            $adaptive_limit = min(1073741824, $current_limit * 2); // Double it, max 1GB
+            PuntWorkLogger::info('PHP limit too low, applying adaptive increase', PuntWorkLogger::CONTEXT_IMPORT, [
+                'current_limit_mb' => round($current_limit / 1024 / 1024, 2),
+                'adaptive_limit_mb' => round($adaptive_limit / 1024 / 1024, 2),
+                'detection_method' => 'php_limit_adaptive'
+            ]);
+            return $adaptive_limit;
+        }
+
+        // For reasonable limits, use 90% as safe working limit
+        PuntWorkLogger::info('Using PHP-configured memory limit with adaptive adjustment', PuntWorkLogger::CONTEXT_IMPORT, [
+            'php_limit_mb' => round($current_limit / 1024 / 1024, 2),
+            'adaptive_limit_mb' => round($current_limit * 0.9 / 1024 / 1024, 2),
+            'detection_method' => 'php_limit_90_percent'
+        ]);
+        return (int)($current_limit * 0.9);
+    }
+
+    // Ultimate fallback: Conservative 512MB limit
+    PuntWorkLogger::warn('Unable to detect memory limits, using conservative fallback', PuntWorkLogger::CONTEXT_IMPORT, [
+        'fallback_limit_mb' => 512,
+        'detection_method' => 'conservative_fallback'
+    ]);
+    return 536870912; // 512MB
+}
+
+/**
+ * Prepare the streaming environment with dynamic memory limit detection
  */
 function prepare_streaming_environment() {
     do_action('qm/cease'); // Disable Query Monitor
-    ini_set('memory_limit', '1024M');
+
+    // DYNAMIC MEMORY LIMIT: Detect and set based on available system memory
+    $dynamic_memory_limit_bytes = detect_available_system_memory();
+    $dynamic_memory_limit_mb = round($dynamic_memory_limit_bytes / 1024 / 1024, 2);
+
+    // Set PHP memory limit dynamically
+    ini_set('memory_limit', $dynamic_memory_limit_mb . 'M');
+
+    PuntWorkLogger::info('Streaming environment prepared with dynamic memory limits', PuntWorkLogger::CONTEXT_IMPORT, [
+        'dynamic_memory_limit_mb' => $dynamic_memory_limit_mb,
+        'dynamic_memory_limit_bytes' => $dynamic_memory_limit_bytes,
+        'time_limit_seconds' => 1800,
+        'ignore_user_abort' => true
+    ]);
+
     set_time_limit(1800);
     ignore_user_abort(true);
 
