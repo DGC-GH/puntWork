@@ -157,9 +157,24 @@ add_filter('heartbeat_send', function($response, $screen_id) {
             $time_since_completion = $time_since_update; // Use last_update as completion time proxy
             $is_active = $time_since_completion < 15;
         } else {
-            // Running imports: Active if currently running or recently started
-            $is_active = ($start_time > 0 && $time_since_start < 300) || // Started within last 5 minutes
-                        ($start_time > 0 && !$import_status['complete']); // Has start_time and not complete
+            // Running imports: Active if currently running or recently started, BUT with safety timeout
+            $has_recent_progress = $time_since_update < 60; // Progress within last minute
+            $within_reasonable_time = $time_since_start < 900; // Max 15 minutes total runtime
+
+            $is_active = ($start_time > 0 && $time_since_start < 300 && $has_recent_progress) || // Recent start + recent progress
+                        ($start_time > 0 && !$import_status['complete'] && $within_reasonable_time); // Not complete + hasn't run too long
+
+            // Safety: If import has been running too long without progress, consider inactive to prevent loops
+            if (!$is_active && $start_time > 0 && $time_since_start > 300) {
+                PuntWorkLogger::warn('Import appears stuck - deactivating heartbeat updates', PuntWorkLogger::CONTEXT_SYSTEM, [
+                    'start_time' => $start_time,
+                    'time_since_start' => $time_since_start,
+                    'last_update' => $last_update,
+                    'time_since_update' => $time_since_update,
+                    'processed' => $import_status['processed'] ?? 0,
+                    'phase' => $import_status['phase'] ?? 'unknown'
+                ]);
+            }
         }
 
         // Debug: Log heartbeat activity determination
