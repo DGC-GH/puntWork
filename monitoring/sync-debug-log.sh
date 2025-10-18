@@ -31,7 +31,7 @@ monitor_debug_log() {
         CURRENT_LOCAL_SIZE=$(stat -f%z "$LOCAL_PATH" 2>/dev/null || echo "0")
 
         # Get server size using lftp
-        REMOTE_SIZE=$( /opt/homebrew/bin/lftp -c "open -u '$REMOTE_USER','$FTP_PASS' ftp://$FTP_HOST; ls -la $REMOTE_PATH" | awk '{print $5}' | tail -n1 | tr -d '\r' || echo "0" )
+        REMOTE_SIZE=$( /opt/homebrew/bin/lftp -c "set ssl:verify-certificate no; open -u '$REMOTE_USER','$FTP_PASS' ftp://$FTP_HOST; ls -la $REMOTE_PATH" | awk '{print $5}' | tail -n1 | tr -d '\r' || echo "0" )
 
         # Enhanced dev mode detection
         if [ -f "$LAST_SYNC_FILE" ]; then
@@ -62,7 +62,7 @@ monitor_debug_log() {
             # Enhanced logic: In dev mode, be MUCH more restrictive about server pulls
             ALLOW_PULL=true
 
-            if [ -f "$DEV_MODE_FILE" ]; then
+            if [ -f "$DEV_MODE_FILE" ] && [ "$CURRENT_LOCAL_SIZE" -ne 0 ]; then
                 # In dev mode, only pull if:
                 # 1. Server grew SIGNIFICANTLY (3x) since dev mode started, indicating real errors
                 # 2. OR server has major new content growth (+2000+ bytes)
@@ -74,6 +74,10 @@ monitor_debug_log() {
                     echo "$(date): ⚠️ DEV MODE: Allowing server pull - significant error growth detected"
                     ALLOW_PULL=true
                 fi
+            elif [ "$CURRENT_LOCAL_SIZE" -eq 0 ]; then
+                # When local is empty (user cleared), block pulls to allow testing
+                ALLOW_PULL=false
+                echo "$(date): 🔇 DEV MODE: Blocking server pull (local cleared, allowing manual testing)"
             fi
 
             if [ "$ALLOW_PULL" = true ]; then
