@@ -3,11 +3,17 @@
 # WordPress Debug Log Sync Script
 # Usage: ./sync-debug-log.sh [pull|push|watch|monitor|pause|resume|clear|status]
 
-SERVER="belgiumjobs.work"
-REMOTE_USER="u164580062.belgiumjobs.work"
-REMOTE_PATH="/wp-content/debug.log"
+# Source environment variables
+set -a
+source .env
+set +a
+
+SERVER="${PUNTWORK_SITE_URL#https://}"
+REMOTE_USER="$PUNTWORK_FTP_USERNAME"
+FTP_PASS="$PUNTWORK_FTP_PASSWORD"
+REMOTE_PATH="wp-content/debug.log"
 LOCAL_PATH="./debug.log"
-FTP_PASS="Ftpbjw2105."
+FTP_HOST="${PUNTWORK_FTP_HOST#ftp://}"
 
 # Pause file for controlling sync
 PAUSE_FILE="/tmp/debug_sync_paused"
@@ -24,9 +30,8 @@ monitor_debug_log() {
         # === DEVELOPMENT MODE DETECTION ===
         CURRENT_LOCAL_SIZE=$(stat -f%z "$LOCAL_PATH" 2>/dev/null || echo "0")
 
-        # Get server size for comparison
-        REMOTE_INFO=$(curl -s -I --ftp-method EPSV "ftp://$REMOTE_USER:$FTP_PASS@153.92.216.191$REMOTE_PATH" | grep -E "(Content-Length:|Last-Modified:)")
-        REMOTE_SIZE=$(echo "$REMOTE_INFO" | grep "Content-Length:" | cut -d' ' -f2 | tr -d '\r' || echo "0")
+        # Get server size using lftp
+        REMOTE_SIZE=$( /opt/homebrew/bin/lftp -c "open -u '$REMOTE_USER','$FTP_PASS' ftp://$FTP_HOST; ls -la $REMOTE_PATH" | awk '{print $5}' | tail -n1 | tr -d '\r' || echo "0" )
 
         # Enhanced dev mode detection
         if [ -f "$LAST_SYNC_FILE" ]; then
@@ -39,7 +44,7 @@ monitor_debug_log() {
             # 3. Manual dev mode flag
             if [ "$CURRENT_LOCAL_SIZE" -eq 0 ] || \
                [ "$CURRENT_LOCAL_SIZE" -lt 50 -a "$LAST_SERVER_SIZE" -gt 500 ] || \
-               [ -f "$DEV_MODE_FILE" -a "$DEV_MODE_FILE" != "/tmp/debug_dev_mode" ]; then
+               [ -f "$DEV_MODE_FILE" ]; then
 
                 # Record server size when dev mode activated
                 if [ "$DEV_MODE_SERVER_SIZE" != "$REMOTE_SIZE" ]; then
@@ -51,7 +56,7 @@ monitor_debug_log() {
         fi
 
         # === SERVER → LOCAL DIRECTION ===
-        if [ "$REMOTE_SIZE" != "$LOCAL_SIZE" ] && [ -n "$REMOTE_SIZE" ] && [ "$REMOTE_SIZE" != "0" ]; then
+        if [ "$REMOTE_SIZE" != "$CURRENT_LOCAL_SIZE" ] && [ -n "$REMOTE_SIZE" ] && [ "$REMOTE_SIZE" != "0" ]; then
             DEV_MODE_SERVER_SIZE=$(cat "$DEV_MODE_FILE" 2>/dev/null || echo "0")
 
             # Enhanced logic: In dev mode, be MUCH more restrictive about server pulls
@@ -73,7 +78,7 @@ monitor_debug_log() {
 
             if [ "$ALLOW_PULL" = true ]; then
                 echo "$(date): 🔄 Server change detected, pulling to local..."
-                curl -s -u "$REMOTE_USER:$FTP_PASS" "ftp://153.92.216.191$REMOTE_PATH" -o "$LOCAL_PATH"
+                curl -s -u "$REMOTE_USER:$FTP_PASS" "ftp://$FTP_HOST/$REMOTE_PATH" -o "$LOCAL_PATH"
                 echo "✓ Local updated from server (size: $REMOTE_SIZE bytes)"
                 echo "server:$REMOTE_SIZE:$(stat -f%M $LOCAL_PATH 2>/dev/null || echo '0')" > "$LAST_SYNC_FILE"
             fi
@@ -87,7 +92,7 @@ monitor_debug_log() {
 
             if [ "$CURRENT_LOCAL_MOD" != "$LAST_LOCAL_MOD" ] && [ "$CURRENT_LOCAL_SIZE" -gt 10 ]; then
                 echo "$(date): 🔄 Local change detected, pushing to server..."
-                curl -s -u "$REMOTE_USER:$FTP_PASS" -T "$LOCAL_PATH" "ftp://153.92.216.191$REMOTE_PATH"
+                curl -s -u "$REMOTE_USER:$FTP_PASS" -T "$LOCAL_PATH" "ftp://$FTP_HOST/$REMOTE_PATH"
                 echo "✓ Server updated from local"
 
                 # Update sync state with current local mod time
@@ -111,12 +116,12 @@ monitor_debug_log() {
 case "$1" in
     "pull")
         echo "Pulling debug.log from server..."
-        curl -u "$REMOTE_USER:$FTP_PASS" "ftp://153.92.216.191$REMOTE_PATH" -o "$LOCAL_PATH"
+        curl -u "$REMOTE_USER:$FTP_PASS" "ftp://$FTP_HOST/$REMOTE_PATH" -o "$LOCAL_PATH"
         echo "Debug log updated from server"
         ;;
     "push")
         echo "Pushing debug.log to server..."
-        curl -u "$REMOTE_USER:$FTP_PASS" -T "$LOCAL_PATH" "ftp://153.92.216.191$REMOTE_PATH"
+        curl -u "$REMOTE_USER:$FTP_PASS" -T "$LOCAL_PATH" "ftp://$FTP_HOST/$REMOTE_PATH"
         echo "Debug log pushed to server"
         ;;
     "watch")
