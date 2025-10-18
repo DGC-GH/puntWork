@@ -74,22 +74,15 @@ if wait_for_confirmation "Step 2: Initial log file cleanup"; then
     echo "Debug monitoring started (PID: $MONITOR_PID)"
 fi
 
-if wait_for_confirmation "Step 3: Debug monitoring setup"; then
-    # Step 4: Reset debug log after monitoring starts
-    echo "🔄 Resetting debug log after monitoring activation..."
-    > wordpress-debug.log
-    echo "Debug log reset"
-fi
-
-if wait_for_confirmation "Step 4: Debug log initialization"; then
+if wait_for_confirmation "Step 4: Safari activation"; then
     # Step 5: Activate Safari browser or open it
     echo "🌐 Activating Safari browser..."
     osascript -e 'tell application "Safari" to activate' || open -a Safari
     sleep 2
 fi
 
-if wait_for_confirmation "Step 4: Browser environment setup"; then
-    # Step 5: Activate tab with URL or open it
+if wait_for_confirmation "Step 5: Dashboard navigation"; then
+    # Step 6: Activate tab with URL or open it
     echo "📋 Activating/Opening the feeds dashboard tab..."
     osascript -e "
     tell application \"Safari\"
@@ -116,7 +109,7 @@ if wait_for_confirmation "Step 4: Browser environment setup"; then
     echo "Feeds dashboard tab ready"
 fi
 
-if wait_for_confirmation "Step 5: Dashboard navigation"; then
+if wait_for_confirmation "Step 6: Console monitoring"; then
     # Step 6: Activate constant console monitoring
     echo "📝 Starting constant console monitoring..."
     CONSOLE_PID_FILE="browser-automation/monitor-browser-console.pid"
@@ -133,13 +126,13 @@ if wait_for_confirmation "Step 5: Dashboard navigation"; then
     echo "Console monitoring started (PID: $CONSOLE_PID)"
 fi
 
-if wait_for_confirmation "Step 6: Browser console monitoring"; then
+if wait_for_confirmation "Step 7: Import trigger"; then
     # Step 7: Click import button
     echo "🚀 Clicking import button..."
     osascript browser-automation/click_import_button.applescript
 fi
 
-if wait_for_confirmation "Step 7: Import trigger"; then
+if wait_for_confirmation "Step 8: Import progress monitoring"; then
     # Step 8: Wait for import to start and finish
     echo "⏳ Monitoring import progress..."
     IMPORT_STARTED=false
@@ -167,8 +160,38 @@ if wait_for_confirmation "Step 7: Import trigger"; then
     done
 fi
 
-if wait_for_confirmation "Step 8: Import progress monitoring"; then
-    # Step 9: Analyze log files in detail
+if wait_for_confirmation "Step 9: Stop monitoring"; then
+    # Step 9: Stop monitoring processes
+    echo "🛑 Stopping monitoring processes..."
+    kill $MONITOR_PID $CONSOLE_PID 2>/dev/null
+
+    # Ensure debug sync monitoring is killed
+    MPID_FILE="wordpress-debug-sync/wordpress-debug-monitor.pid"
+    if [ -f "$MPID_FILE" ]; then
+        DEBUG_PID=$(cat "$MPID_FILE")
+        if kill -0 "$DEBUG_PID" 2>/dev/null; then
+            kill "$DEBUG_PID" 2>/dev/null
+            echo "Stopped debug monitoring (PID: $DEBUG_PID)"
+        fi
+        rm -f "$MPID_FILE"
+    fi
+
+    # Ensure console monitoring is killed
+    CONSOLE_PID_FILE="browser-automation/monitor-browser-console.pid"
+    if [ -f "$CONSOLE_PID_FILE" ]; then
+        BROWSER_PID=$(cat "$CONSOLE_PID_FILE")
+        if kill -0 "$BROWSER_PID" 2>/dev/null; then
+            kill "$BROWSER_PID" 2>/dev/null
+            echo "Stopped console monitoring (PID: $BROWSER_PID)"
+        fi
+        rm -f "$CONSOLE_PID_FILE"
+    fi
+
+    echo "✅ Monitoring processes stopped!"
+fi
+
+if wait_for_confirmation "Step 10: Log analysis"; then
+    # Step 10: Analyze log files in detail
     echo "📊 Analyzing log files..."
 
     echo "=== BROWSER-CONSOLE.LOG ANALYSIS ==="
@@ -185,11 +208,6 @@ if wait_for_confirmation "Step 8: Import progress monitoring"; then
     echo "Import-related entries: $(grep -i import wordpress-debug.log | wc -l)"
     echo "Last 5 lines:"
     tail -5 wordpress-debug.log
-fi
 
-if wait_for_confirmation "Step 9: Log analysis"; then
-    # Step 10: Stop monitoring processes
-    echo "🛑 Stopping monitoring processes..."
-    kill $MONITOR_PID $CONSOLE_PID 2>/dev/null
     echo "✅ Protocol completed!"
 fi
