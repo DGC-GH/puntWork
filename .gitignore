@@ -11,7 +11,11 @@ wordpress/
 phpunit.xml
 wp-content/debug.log
 .vscode/sftp.json
+# Runtime files
+monitor.pid
+*.log
 wp-content/
 node_modules/
 package-lock.json
 package.json
+debug.log
