@@ -72,6 +72,14 @@ if wait_for_confirmation "Step 2: Initial log file cleanup"; then
     MONITOR_PID=$!
     echo $MONITOR_PID > "$MPID_FILE"
     echo "Debug monitoring started (PID: $MONITOR_PID)"
+    
+    # Verify process is running
+    sleep 1
+    if kill -0 "$MONITOR_PID" 2>/dev/null; then
+        echo "✓ Debug monitoring confirmed running"
+    else
+        echo "⚠️ Warning: Debug monitoring PID $MONITOR_PID not found"
+    fi
 fi
 
 if wait_for_confirmation "Step 4: Safari activation"; then
@@ -84,7 +92,7 @@ fi
 if wait_for_confirmation "Step 5: Dashboard navigation"; then
     # Step 6: Activate tab with URL or open it
     echo "📋 Activating/Opening the feeds dashboard tab..."
-    osascript -e "
+    if osascript -e "
     tell application \"Safari\"
         set dashboardURL to \"https://belgiumjobs.work/wp-admin/admin.php?page=job-feed-dashboard\"
         set foundTab to false
@@ -105,8 +113,11 @@ if wait_for_confirmation "Step 5: Dashboard navigation"; then
             delay 3
         end if
     end tell
-    "
-    echo "Feeds dashboard tab ready"
+    "; then
+        echo "✓ Dashboard navigation completed"
+    else
+        echo "⚠️ Warning: Dashboard navigation failed"
+    fi
 fi
 
 if wait_for_confirmation "Step 6: Console monitoring"; then
@@ -124,12 +135,24 @@ if wait_for_confirmation "Step 6: Console monitoring"; then
     CONSOLE_PID=$!
     echo $CONSOLE_PID > "$CONSOLE_PID_FILE"
     echo "Console monitoring started (PID: $CONSOLE_PID)"
+    
+    # Verify process is running
+    sleep 1
+    if kill -0 "$CONSOLE_PID" 2>/dev/null; then
+        echo "✓ Console monitoring confirmed running"
+    else
+        echo "⚠️ Warning: Console monitoring PID $CONSOLE_PID not found"
+    fi
 fi
 
 if wait_for_confirmation "Step 7: Import trigger"; then
     # Step 7: Click import button
     echo "🚀 Clicking import button..."
-    osascript browser-automation/click_import_button.applescript
+    if osascript browser-automation/click_import_button.applescript; then
+        echo "✓ Import button clicked"
+    else
+        echo "⚠️ Warning: Import button click failed"
+    fi
 fi
 
 if wait_for_confirmation "Step 8: Import progress monitoring"; then
