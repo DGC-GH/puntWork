@@ -22,6 +22,12 @@ monitor_debug_log() {
     echo "Monitoring debug.log for bidirectional changes..."
     echo "Press Ctrl+C to stop"
 
+    # Clear server debug log first when monitoring starts
+    echo "Clearing server debug log before starting monitoring..."
+    > "$LOCAL_PATH"
+    curl -s -u "$REMOTE_USER:$FTP_PASS" -T "$LOCAL_PATH" "ftp://$FTP_HOST/$REMOTE_PATH"
+    echo "✓ Server debug log cleared, starting bidirectional sync..."
+
     # Create tracking file for local changes
     LAST_SYNC_FILE="/tmp/debug_sync_state"
 
