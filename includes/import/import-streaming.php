@@ -578,7 +578,7 @@ function prepare_streaming_environment() {
         return new \WP_Error('stream_setup_failed', 'Feed file not accessible');
     }
 
-    // Count items efficiently for streaming
+    // Count items efficiently for streaming - NO forced testing limits (removed 30s/100 item caps)
     $total_items = get_json_item_count($json_path);
 
     if ($total_items == 0) {
@@ -972,36 +972,18 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
         $current_time = microtime(true);
         $elapsed_time = $current_time - $streaming_stats['start_time'];
 
-        // FORCE EARLIER PAUSE: Reduce safe threshold to 30 seconds to test pause/resume functionality
-        $original_safe_threshold = PUNTWORK_SAFE_RUN_SECONDS ?? 60;
-        $forced_safe_threshold = 30; // Force testing at 30 seconds instead of 60
-
         PuntWorkLogger::debug('RESOURCE CHECK DEBUG', PuntWorkLogger::CONTEXT_IMPORT, [
             'elapsed_seconds' => round($elapsed_time, 2),
             'max_exec_time_limit' => $resource_limits['max_execution_time'] ?? null,
             'current_memory_mb' => round(memory_get_usage(true) / 1024 / 1024, 2),
             'max_memory_mb' => isset($resource_limits['max_memory_usage']) ? round($resource_limits['max_memory_usage'] / 1024 / 1024, 2) : null,
             'php_time_limit' => ini_get('max_execution_time'),
-            'original_safe_threshold' => $original_safe_threshold,
-            'forced_safe_threshold' => $forced_safe_threshold,
             'iteration' => $loop_iteration_count,
-            'processed' => $processed,
-            'should_force_pause' => $elapsed_time >= $forced_safe_threshold
+            'processed' => $processed
         ]);
 
-        // FORCE IMMEDIATE PAUSE FOR TESTING: Pause at 30 seconds OR after 100 items processed (whichever comes first)
+        // Standard resource checking without forced testing limits
         $should_continue = check_streaming_resources_optimized($resource_limits, $streaming_stats, $circuit_breaker);
-        $force_pause_for_testing = $elapsed_time >= $forced_safe_threshold || $processed >= 100;
-
-        if ($force_pause_for_testing) {
-            PuntWorkLogger::info('FORCED PAUSE FOR TESTING - pausing import regardless of resource limits', PuntWorkLogger::CONTEXT_IMPORT, [
-                'elapsed_seconds' => round($elapsed_time, 2),
-                'processed_items' => $processed,
-                'force_reason' => $elapsed_time >= $forced_safe_threshold ? 'time_threshold_reached' : 'item_count_threshold_reached',
-                'action' => 'Simulating resource limit exceeded for pause/resume testing'
-            ]);
-            $should_continue = false; // Force pause for testing
-        }
 
         // CRITICAL FIX: Handle timeout/memory limits by PAUSING import (not stopping it completely)
         if (!$should_continue && !isset($streaming_status['paused'])) {
