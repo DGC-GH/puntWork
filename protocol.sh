@@ -120,7 +120,7 @@ if wait_for_confirmation "Step 5: Dashboard navigation"; then
     fi
 fi
 
-if wait_for_confirmation "Step 6: Console monitoring"; then
+if wait_for_confirmation "Step 6: Console monitoring startup"; then
     # Step 6: Activate constant console monitoring
     echo "📝 Starting constant console monitoring..."
     CONSOLE_PID_FILE="browser-automation/monitor-browser-console.pid"
@@ -130,18 +130,37 @@ if wait_for_confirmation "Step 6: Console monitoring"; then
             kill "$OLD_CONSOLE_PID" 2>/dev/null
             echo "Stopped previous console monitoring (PID: $OLD_CONSOLE_PID)"
         fi
+        rm -f "$CONSOLE_PID_FILE"
     fi
+
+    # Start the monitoring script
+    echo "Launching AppleScript for console monitoring..."
     osascript browser-automation/monitor-browser-console.applescript &
     CONSOLE_PID=$!
+
+    # Save PID immediately
     echo $CONSOLE_PID > "$CONSOLE_PID_FILE"
     echo "Console monitoring started (PID: $CONSOLE_PID)"
-    
-    # Verify process is running
-    sleep 1
-    if kill -0 "$CONSOLE_PID" 2>/dev/null; then
-        echo "✓ Console monitoring confirmed running"
+
+    # Verify process is running with multiple checks
+    sleep 2
+    if ! kill -0 "$CONSOLE_PID" 2>/dev/null; then
+        echo "❌ CRITICAL: Console monitoring failed to start (PID $CONSOLE_PID not found)"
+        rm -f "$CONSOLE_PID_FILE"
+        echo "Retrying console monitoring startup..."
+        osascript browser-automation/monitor-browser-console.applescript &
+        CONSOLE_PID=$!
+        echo $CONSOLE_PID > "$CONSOLE_PID_FILE"
+        echo "Console monitoring retry started (PID: $CONSOLE_PID)"
+        sleep 2
+        if kill -0 "$CONSOLE_PID" 2>/dev/null; then
+            echo "✓ Console monitoring retry confirmed running"
+        else
+            echo "❌ CRITICAL: Console monitoring retry also failed"
+            rm -f "$CONSOLE_PID_FILE"
+        fi
     else
-        echo "⚠️ Warning: Console monitoring PID $CONSOLE_PID not found"
+        echo "✓ Console monitoring confirmed running"
     fi
 fi
 
