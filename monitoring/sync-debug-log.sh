@@ -22,46 +22,60 @@ monitor_debug_log() {
 
     while true; do
         # === DEVELOPMENT MODE DETECTION ===
-        # Auto-detect when user is editing locally (small files or recent clears)
         CURRENT_LOCAL_SIZE=$(stat -f%z "$LOCAL_PATH" 2>/dev/null || echo "0")
 
-        # Detect development mode conditions:
-        # 1. Local file is much smaller than last known server sync
-        # 2. Local file is empty (just cleared)
-        # 3. Manual dev mode flag exists
+        # Get server size for comparison
+        REMOTE_INFO=$(curl -s -I --ftp-method EPSV "ftp://$REMOTE_USER:$FTP_PASS@153.92.216.191$REMOTE_PATH" | grep -E "(Content-Length:|Last-Modified:)")
+        REMOTE_SIZE=$(echo "$REMOTE_INFO" | grep "Content-Length:" | cut -d' ' -f2 | tr -d '\r' || echo "0")
+
+        # Enhanced dev mode detection
         if [ -f "$LAST_SYNC_FILE" ]; then
+            DEV_MODE_SERVER_SIZE=$(cat "$DEV_MODE_FILE" 2>/dev/null || echo "0")
             LAST_SERVER_SIZE=$(cat "$LAST_SYNC_FILE" | head -n1 | cut -d: -f2 2>/dev/null || echo "0")
-            # Enter dev mode if: manually flagged, empty file, or much smaller than server
-            if [ -f "$DEV_MODE_FILE" ] || [ "$CURRENT_LOCAL_SIZE" -eq 0 ] || [ "$LAST_SERVER_SIZE" -gt 1000 -a "$CURRENT_LOCAL_SIZE" -lt 100 ]; then
-                touch "$DEV_MODE_FILE"
-                echo "$(date): 🛠️ DEV MODE: Local editing detected, pausing server pushes for testing"
+
+            # Enter dev mode conditions:
+            # 1. Empty file (user cleared it)
+            # 2. Much smaller than server (user manually reduced for testing)
+            # 3. Manual dev mode flag
+            if [ "$CURRENT_LOCAL_SIZE" -eq 0 ] || \
+               [ "$CURRENT_LOCAL_SIZE" -lt 50 -a "$LAST_SERVER_SIZE" -gt 500 ] || \
+               [ -f "$DEV_MODE_FILE" -a "$DEV_MODE_FILE" != "/tmp/debug_dev_mode" ]; then
+
+                # Record server size when dev mode activated
+                if [ "$DEV_MODE_SERVER_SIZE" != "$REMOTE_SIZE" ]; then
+                    echo "$REMOTE_SIZE" > "$DEV_MODE_FILE"
+                    echo "$(date): 🛠️ DEV MODE: Activated - Protecting local changes from server overwrites"
+                    echo "$(date):    Local: ${CURRENT_LOCAL_SIZE} bytes, Server: ${REMOTE_SIZE} bytes"
+                fi
             fi
         fi
 
         # === SERVER → LOCAL DIRECTION ===
-        # Get remote file timestamp/size
-        REMOTE_INFO=$(curl -s -I --ftp-method EPSV "ftp://$REMOTE_USER:$FTP_PASS@153.92.216.191$REMOTE_PATH" | grep -E "(Content-Length:|Last-Modified:)")
-        REMOTE_SIZE=$(echo "$REMOTE_INFO" | grep "Content-Length:" | cut -d' ' -f2 | tr -d '\r')
-
-        # Get local file size
-        LOCAL_SIZE=$(stat -f%z "$LOCAL_PATH" 2>/dev/null || echo "0")
-
-        # Pull from server if remote is different and newer (but don't overwrite if in dev mode and local was manually set)
         if [ "$REMOTE_SIZE" != "$LOCAL_SIZE" ] && [ -n "$REMOTE_SIZE" ] && [ "$REMOTE_SIZE" != "0" ]; then
-            # If not in dev mode OR server is MUCH larger (error logs), allow pull
-            if [ ! -f "$DEV_MODE_FILE" ] || [ "$REMOTE_SIZE" -gt "$((LOCAL_SIZE + 1000))" ]; then
+            DEV_MODE_SERVER_SIZE=$(cat "$DEV_MODE_FILE" 2>/dev/null || echo "0")
+
+            # Enhanced logic: In dev mode, be MUCH more restrictive about server pulls
+            ALLOW_PULL=true
+
+            if [ -f "$DEV_MODE_FILE" ]; then
+                # In dev mode, only pull if:
+                # 1. Server grew SIGNIFICANTLY (3x) since dev mode started, indicating real errors
+                # 2. OR server has major new content growth (+2000+ bytes)
+                GROWTH_RATIO=$((REMOTE_SIZE / (DEV_MODE_SERVER_SIZE + 1)))
+                if [ $GROWTH_RATIO -lt 3 ] && [ $((REMOTE_SIZE - DEV_MODE_SERVER_SIZE)) -lt 2000 ]; then
+                    ALLOW_PULL=false
+                    echo "$(date): 🔇 DEV MODE: Blocking server pull (in dev mode, minor server changes ignored)"
+                else
+                    echo "$(date): ⚠️ DEV MODE: Allowing server pull - significant error growth detected"
+                    ALLOW_PULL=true
+                fi
+            fi
+
+            if [ "$ALLOW_PULL" = true ]; then
                 echo "$(date): 🔄 Server change detected, pulling to local..."
                 curl -s -u "$REMOTE_USER:$FTP_PASS" "ftp://153.92.216.191$REMOTE_PATH" -o "$LOCAL_PATH"
                 echo "✓ Local updated from server (size: $REMOTE_SIZE bytes)"
-                # Update sync state
                 echo "server:$REMOTE_SIZE:$(stat -f%M $LOCAL_PATH 2>/dev/null || echo '0')" > "$LAST_SYNC_FILE"
-
-                # Exit dev mode if it was server-triggered pull
-                if [ ! -f "$DEV_MODE_FILE" ]; then
-                    rm -f "$DEV_MODE_FILE"
-                fi
-            else
-                echo "$(date): 🔇 DEV MODE: Skipping server pull to allow local testing"
             fi
         fi
 
