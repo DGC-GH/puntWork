@@ -6,8 +6,17 @@ echo "🔄 Starting protocol..."
 
 # Step 1: Activate debug.log monitoring
 echo "📊 Activating debug.log monitoring..."
+MPID_FILE="monitoring/monitoring-debug.pid"
+if [ -f "$MPID_FILE" ]; then
+    OLD_PID=$(cat "$MPID_FILE")
+    if kill -0 "$OLD_PID" 2>/dev/null; then
+        kill "$OLD_PID" 2>/dev/null
+        echo "Stopped previous debug monitoring (PID: $OLD_PID)"
+    fi
+fi
 ./monitoring/sync-debug-log.sh monitor &
 MONITOR_PID=$!
+echo $MONITOR_PID > "$MPID_FILE"
 echo "Debug monitoring started (PID: $MONITOR_PID)"
 
 # Step 2: Clear local debug.log file
@@ -48,8 +57,17 @@ echo "Feeds dashboard tab ready"
 
 # Step 5: Activate constant console monitoring
 echo "📝 Starting constant console monitoring..."
+CONSOLE_PID_FILE="monitoring/monitoring-console.pid"
+if [ -f "$CONSOLE_PID_FILE" ]; then
+    OLD_CONSOLE_PID=$(cat "$CONSOLE_PID_FILE")
+    if kill -0 "$OLD_CONSOLE_PID" 2>/dev/null; then
+        kill "$OLD_CONSOLE_PID" 2>/dev/null
+        echo "Stopped previous console monitoring (PID: $OLD_CONSOLE_PID)"
+    fi
+fi
 osascript monitor_logs.applescript &
 CONSOLE_PID=$!
+echo $CONSOLE_PID > "$CONSOLE_PID_FILE"
 echo "Console monitoring started (PID: $CONSOLE_PID)"
 
 # Step 6: Click import button
