@@ -10,10 +10,14 @@ LOCAL_PATH="./debug.log"
 FTP_PASS="Ftpbjw2105."
 
 monitor_debug_log() {
-    echo "Monitoring debug.log for changes from server..."
+    echo "Monitoring debug.log for bidirectional changes..."
     echo "Press Ctrl+C to stop"
 
+    # Create tracking file for local changes
+    LAST_SYNC_FILE="/tmp/debug_sync_state"
+
     while true; do
+        # === SERVER → LOCAL DIRECTION ===
         # Get remote file timestamp/size
         REMOTE_INFO=$(curl -s -I --ftp-method EPSV "ftp://$REMOTE_USER:$FTP_PASS@153.92.216.191$REMOTE_PATH" | grep -E "(Content-Length:|Last-Modified:)")
         REMOTE_SIZE=$(echo "$REMOTE_INFO" | grep "Content-Length:" | cut -d' ' -f2 | tr -d '\r')
@@ -21,13 +25,38 @@ monitor_debug_log() {
         # Get local file size
         LOCAL_SIZE=$(stat -f%z "$LOCAL_PATH" 2>/dev/null || echo "0")
 
-        if [ "$REMOTE_SIZE" != "$LOCAL_SIZE" ] && [ -n "$REMOTE_SIZE" ]; then
-            echo "$(date): Change detected, pulling debug.log..."
+        # Pull from server if remote is different and newer
+        if [ "$REMOTE_SIZE" != "$LOCAL_SIZE" ] && [ -n "$REMOTE_SIZE" ] && [ "$REMOTE_SIZE" != "0" ]; then
+            echo "$(date): 🔄 Server change detected, pulling to local..."
             curl -s -u "$REMOTE_USER:$FTP_PASS" "ftp://153.92.216.191$REMOTE_PATH" -o "$LOCAL_PATH"
-            echo "✓ Updated from server"
+            echo "✓ Local updated from server (size: $REMOTE_SIZE bytes)"
+            # Update sync state
+            echo "server:$REMOTE_SIZE:$(stat -f%M $LOCAL_PATH 2>/dev/null || echo '0')" > "$LAST_SYNC_FILE"
         fi
 
-        sleep 10  # Check every 10 seconds
+        # === LOCAL → SERVER DIRECTION ===
+        # Check if local file was modified since last sync
+        if [ -f "$LOCAL_PATH" ] && [ -f "$LAST_SYNC_FILE" ]; then
+            LAST_LOCAL_MOD=$(cat "$LAST_SYNC_FILE" | cut -d: -f3)
+            CURRENT_LOCAL_MOD=$(stat -f%M "$LOCAL_PATH" 2>/dev/null || echo '0')
+
+            if [ "$CURRENT_LOCAL_MOD" != "$LAST_LOCAL_MOD" ]; then
+                echo "$(date): 🔄 Local change detected, pushing to server..."
+                curl -s -u "$REMOTE_USER:$FTP_PASS" -T "$LOCAL_PATH" "ftp://153.92.216.191$REMOTE_PATH"
+                echo "✓ Server updated from local"
+
+                # Update sync state with current local mod time
+                CURRENT_LOCAL_SIZE=$(stat -f%z "$LOCAL_PATH" 2>/dev/null || echo "0")
+                echo "local:$CURRENT_LOCAL_SIZE:$CURRENT_LOCAL_MOD" > "$LAST_SYNC_FILE"
+            fi
+        elif [ -f "$LOCAL_PATH" ]; then
+            # Initialize sync state if it doesn't exist
+            CURRENT_LOCAL_SIZE=$(stat -f%z "$LOCAL_PATH" 2>/dev/null || echo "0")
+            CURRENT_LOCAL_MOD=$(stat -f%M "$LOCAL_PATH" 2>/dev/null || echo '0')
+            echo "local:$CURRENT_LOCAL_SIZE:$CURRENT_LOCAL_MOD" > "$LAST_SYNC_FILE"
+        fi
+
+        sleep 5  # Check every 5 seconds for bidirectional sync
     done
 }
 
@@ -61,7 +90,7 @@ case "$1" in
         echo "  pull    - Download debug.log from server once"
         echo "  push    - Upload debug.log to server"
         echo "  watch   - Watch for local changes and sync to server"
-        echo "  monitor - Monitor server for changes and pull automatically"
+        echo "  monitor - Bidirectional sync: server ↔ local automatically"
         exit 1
         ;;
 esac
