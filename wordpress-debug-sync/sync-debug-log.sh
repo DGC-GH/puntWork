@@ -30,8 +30,8 @@ monitor_debug_log() {
         # === DEVELOPMENT MODE DETECTION ===
         CURRENT_LOCAL_SIZE=$(stat -f%z "$LOCAL_PATH" 2>/dev/null || echo "0")
 
-        # Get server size using lftp
-        REMOTE_SIZE=$( /opt/homebrew/bin/lftp -c "open -u '$REMOTE_USER','$FTP_PASS' ftp://$FTP_HOST; ls -la $REMOTE_PATH" | awk '{print $5}' | tail -n1 | tr -d '\r' || echo "0" )
+        # Get server size using curl (more reliable than lftp with SSL issues)
+        REMOTE_SIZE=$(curl -s -I -u "$REMOTE_USER:$FTP_PASS" --ftp-ssl -k "ftp://$FTP_HOST/$REMOTE_PATH" | grep "Content-Length" | awk '{print $2}' | tr -d '\r' || echo "0")
 
         # Enhanced dev mode detection
         if [ -f "$LAST_SYNC_FILE" ]; then
@@ -114,3 +114,53 @@ monitor_debug_log() {
 }
 
 case "$1" in
+pull)
+    echo "Pulling debug.log from server..."
+    curl -s -u "$REMOTE_USER:$FTP_PASS" "ftp://$FTP_HOST/$REMOTE_PATH" -o "$LOCAL_PATH"
+    echo "✓ Local updated from server"
+    ;;
+push)
+    echo "Pushing debug.log to server..."
+    curl -s -u "$REMOTE_USER:$FTP_PASS" -T "$LOCAL_PATH" "ftp://$FTP_HOST/$REMOTE_PATH"
+    echo "✓ Server updated from local"
+    ;;
+monitor)
+    monitor_debug_log
+    ;;
+watch)
+    echo "Watch mode - checking every 10 seconds..."
+    while true; do
+        sleep 10
+        MONITOR_SIZE=$(stat -f%z "$LOCAL_PATH" 2>/dev/null || echo "0")
+        SERVER_SIZE=$(curl -s -u "$REMOTE_USER:$FTP_PASS" "ftp://$FTP_HOST/$REMOTE_PATH" | wc -c)
+        echo "Local: ${MONITOR_SIZE} bytes, Server: ${SERVER_SIZE} bytes"
+    done
+    ;;
+status)
+    LOCAL_SIZE=$(stat -f%z "$LOCAL_PATH" 2>/dev/null || echo "0")
+    SERVER_SIZE=$(curl -s -I -u "$REMOTE_USER:$FTP_PASS" --ftp-ssl -k "ftp://$FTP_HOST/$REMOTE_PATH" | grep "Content-Length" | awk '{print $2}' | tr -d '\r' || echo "0")
+    echo "WordPress Debug Log Sync Status:"
+    echo "Local file ($LOCAL_PATH): ${LOCAL_SIZE} bytes"
+    echo "Server file: ${SERVER_SIZE} bytes"
+    if [ "$LOCAL_SIZE" = "$SERVER_SIZE" ]; then
+        echo "✅ Files are synchronized"
+    else
+        echo "⚠️  Files are out of sync"
+    fi
+    ;;
+clear)
+    echo "Clearing local debug.log..."
+    > "$LOCAL_PATH"
+    echo "✓ Local file cleared"
+    ;;
+*)
+    echo "Usage: $0 {pull|push|monitor|watch|status|clear}"
+    echo "  pull   - Download debug.log from server"
+    echo "  push   - Upload debug.log to server"
+    echo "  monitor- Bidirectional sync monitoring"
+    echo "  watch  - Watch file sizes without syncing"
+    echo "  status - Show sync status"
+    echo "  clear  - Clear local debug.log"
+    exit 1
+    ;;
+esac
