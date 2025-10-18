@@ -21,6 +21,18 @@ wait_for_confirmation() {
     fi
 }
 
+# Function to get unix timestamp of last import-related log entry
+get_last_import_unix_seconds() {
+    local last_line=$(grep -i "import\|IMPORT" wordpress-debug.log | tail -1)
+    if [ -n "$last_line" ]; then
+        # Extract date components, assuming format: "Sat Oct 18 20:24:27 CEST 2025 ..."
+        local date_str=$(echo "$last_line" | awk '{print $1,$2,$3,$4,$6}')
+        date -j -f '%a %b %e %H:%M:%S %Y' "$date_str" +%s 2>/dev/null || echo 0
+    else
+        echo 0
+    fi
+}
+
 # Step 1: Cleanup any running monitoring processes
 echo "🧹 Cleaning up any running monitoring processes..."
 MPID_FILE="wordpress-debug-sync/wordpress-debug-monitor.pid"
@@ -185,8 +197,11 @@ if wait_for_confirmation "Step 8: Import progress monitoring"; then
         if grep -q "Importing\.\.\." browser-console.log && ! $IMPORT_STARTED; then
             IMPORT_STARTED=true
             echo "▶️ Import started - found 'Importing...' in browser-console.log"
+            LAST_LOG_TIME=$(get_last_import_unix_seconds)
+            echo "Monitoring debug.log for import log activity..."
         fi
 
+        # Check for completion markers
         if grep -q "completed successfully\|failed\|cancelled\|paused" browser-console.log && ! $IMPORT_COMPLETED; then
             echo "🏁 Import completed - found completion marker in browser-console.log"
             break
@@ -196,6 +211,25 @@ if wait_for_confirmation "Step 8: Import progress monitoring"; then
         if grep -q "IMPORT.*SUCCESS\|IMPORT.*FAILED\|import.*complete" wordpress-debug.log && ! $IMPORT_COMPLETED; then
             echo "🌐 Import completed - found completion marker in wordpress-debug.log"
             break
+        fi
+
+        # Actively monitor import log activity in wordpress-debug.log
+        if $IMPORT_STARTED; then
+            current_log_time=$(get_last_import_unix_seconds)
+            if [ "$current_log_time" -gt "$LAST_LOG_TIME" ]; then
+                LAST_LOG_TIME=$current_log_time
+                echo "✓ Import log activity detected at $(date '+%H:%M:%S')"
+            fi
+
+            # Check if no new import logs for 60 seconds (indicates import stopped/crashed)
+            if [ $(($(date +%s) - LAST_LOG_TIME)) -gt 60 ]; then
+                echo "❌ Import appears to have stopped - no new import logs in debug.log for 60 seconds"
+                echo "Last import log time: $(date -r $LAST_LOG_TIME '+%H:%M:%S')"
+                echo "Current time: $(date '+%H:%M:%S')"
+                echo "Last 5 lines:"
+                tail -5 wordpress-debug.log
+                break
+            fi
         fi
 
         sleep 3
