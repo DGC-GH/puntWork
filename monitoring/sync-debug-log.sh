@@ -22,6 +22,9 @@ monitor_debug_log() {
     echo "Monitoring debug.log for changes..."
     echo "Press Ctrl+C to stop"
 
+    # Flag to track if we've already cleared server for empty local file
+    SERVER_CLEARED_FOR_EMPTY_LOCAL="/tmp/server_cleared_for_empty_local"
+
     while true; do
         # Get current local file size
         CURRENT_LOCAL_SIZE=$(stat -f%z "$LOCAL_PATH" 2>/dev/null || echo "0")
@@ -31,18 +34,25 @@ monitor_debug_log() {
 
         # SERVER → LOCAL DIRECTION
         if [ "$REMOTE_SIZE" != "$CURRENT_LOCAL_SIZE" ] && [ -n "$REMOTE_SIZE" ] && [ "$REMOTE_SIZE" != "0" ]; then
-            # Check if local file is empty - if so, clear server instead of pulling
-            if [ "$CURRENT_LOCAL_SIZE" -eq 0 ]; then
+            # Check if local file is empty - if so, clear server only once
+            if [ "$CURRENT_LOCAL_SIZE" -eq 0 ] && [ ! -f "$SERVER_CLEARED_FOR_EMPTY_LOCAL" ]; then
                 echo "$(date): 🧹 Local is empty, clearing server log..."
                 echo -n > /tmp/empty_file
                 curl -s -u "$REMOTE_USER:$FTP_PASS" -T /tmp/empty_file "ftp://$FTP_HOST/$REMOTE_PATH"
                 echo "$(date): 🧹 Server log cleared to match local empty state"
                 rm -f /tmp/empty_file
+                # Set flag to prevent continuous clearing
+                touch "$SERVER_CLEARED_FOR_EMPTY_LOCAL"
             else
                 echo "$(date): 🔄 Server change detected, pulling to local..."
                 curl -s -u "$REMOTE_USER:$FTP_PASS" "ftp://$FTP_HOST/$REMOTE_PATH" -o "$LOCAL_PATH"
                 echo "✓ Local updated from server (size: $REMOTE_SIZE bytes)"
             fi
+        fi
+
+        # Reset flag when local file has content again
+        if [ "$CURRENT_LOCAL_SIZE" -gt 0 ] && [ -f "$SERVER_CLEARED_FOR_EMPTY_LOCAL" ]; then
+            rm -f "$SERVER_CLEARED_FOR_EMPTY_LOCAL"
         fi
 
         # No local -> server pushing in monitor mode - simplified
