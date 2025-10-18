@@ -12,8 +12,8 @@ echo "$(date): Starting debug log monitoring..." >> "$MONITOR_LOG"
 # Function to start monitoring
 start_monitoring() {
     echo "$(date): Starting monitoring process..." >> "$MONITOR_LOG"
-    cd "$SCRIPT_DIR"
-    nohup ./sync-debug-log.sh monitor >> "$MONITOR_LOG" 2>&1 &
+    # Stay in the original working directory (project root) to match paths
+    nohup "$SCRIPT_DIR"/sync-debug-log.sh monitor >> "$MONITOR_LOG" 2>&1 &
     echo $! > "$MONITOR_PID_FILE"
     echo "$(date): Monitor started with PID $!" >> "$MONITOR_LOG"
 }
