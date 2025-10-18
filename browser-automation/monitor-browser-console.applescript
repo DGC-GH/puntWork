@@ -36,10 +36,18 @@ tell application "Safari"
 		-- delay 3
 	end tell
 
-	-- Get initial logs
+	-- Clear localStorage and get initial logs
 	tell foundTab
 		set overrideJS to "
 (function() {
+  // Clear old localStorage logs at monitoring start
+  var keys = Object.keys(localStorage);
+  keys.forEach(function(key) {
+    if (key.startsWith('log_') || key === 'log_count') {
+      localStorage.removeItem(key);
+    }
+  });
+
   window.console.originalMethods = window.console.originalMethods || {};
   ['log', 'info', 'warn', 'error', 'debug', 'trace', 'assert'].forEach(function(method) {
     if (typeof console[method] === 'function') {
