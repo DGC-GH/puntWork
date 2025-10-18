@@ -12,7 +12,7 @@ SERVER="${PUNTWORK_SITE_URL#https://}"
 REMOTE_USER="$PUNTWORK_FTP_USERNAME"
 FTP_PASS="$PUNTWORK_FTP_PASSWORD"
 REMOTE_PATH="wp-content/debug.log"
-LOCAL_PATH="./debug.log"
+LOCAL_PATH="./wordpress-debug.log"
 FTP_HOST="${PUNTWORK_FTP_HOST#ftp://}"
 
 # Pause file for controlling sync
@@ -114,4 +114,3 @@ monitor_debug_log() {
 }
 
 case "$1" in
-

@@ -1,8 +1,8 @@
 -- Kill any existing monitoring processes
-do shell script "pkill -f monitor_logs.applescript 2>/dev/null || true"
+do shell script "pkill -f monitor-browser-console.applescript 2>/dev/null || true"
 
 -- Log startup
-do shell script "echo '[MONITORING STARTUP]' `date '+%Y-%m-%dT%H:%M:%S%z'` 'Console monitoring starting (single instance ensured)' >> console.log"
+do shell script "echo '[MONITORING STARTUP]' `date '+%Y-%m-%dT%H:%M:%S%z'` 'Console monitoring starting (single instance ensured)' >> browser-console.log"
 
 tell application "Safari"
 	activate
@@ -116,7 +116,7 @@ tell application "Safari"
 					end if
 				end repeat
 				if newLogsText ≠ "" then
-					do shell script "echo " & quoted form of newLogsText & " >> console.log"
+					do shell script "echo " & quoted form of newLogsText & " >> browser-console.log"
 					set my previousCount to countNum
 				end if
 			end if

@@ -5,7 +5,7 @@
 
 MONITOR_LOG="$HOME/debug-monitor.log"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MONITOR_PID_FILE="$SCRIPT_DIR/monitor.pid"
+MONITOR_PID_FILE="$SCRIPT_DIR/wordpress-debug-monitor.pid"
 
 echo "$(date): Starting debug log monitoring..." >> "$MONITOR_LOG"
 

@@ -8,7 +8,7 @@
     <array>
         <string>/bin/bash</string>
         <string>-c</string>
-        <string>cd /Users/dg/Documents/GitHub/puntWork && ./monitoring/start-monitoring.sh start</string>
+        <string>cd /Users/dg/Documents/GitHub/puntWork && ./wordpress-debug-sync/start-monitoring.sh start</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
