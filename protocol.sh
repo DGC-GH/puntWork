@@ -21,19 +21,44 @@ wait_for_confirmation() {
     fi
 }
 
-# Step 1: Clear local log files (console, debug, import)
-echo "🧹 Clearing local log files (browser-console.log, wordpress-debug.log, import.log)..."
-> browser-console.log
-> wordpress-debug.log
-# Clear any import-specific log files that might exist
-if [ -f "import.log" ]; then
-    > import.log
-    echo "Cleared import.log"
+# Step 1: Cleanup any running monitoring processes
+echo "🧹 Cleaning up any running monitoring processes..."
+MPID_FILE="wordpress-debug-sync/wordpress-debug-monitor.pid"
+if [ -f "$MPID_FILE" ]; then
+    OLD_PID=$(cat "$MPID_FILE")
+    if kill -0 "$OLD_PID" 2>/dev/null; then
+        kill "$OLD_PID" 2>/dev/null
+        echo "Stopped previous debug monitoring (PID: $OLD_PID)"
+    fi
+    rm -f "$MPID_FILE"
 fi
-echo "Local log files cleared"
 
-if wait_for_confirmation "Step 1: Initial log file cleanup"; then
-    # Step 2: Activate wordpress-debug.log monitoring
+CONSOLE_PID_FILE="browser-automation/monitor-browser-console.pid"
+if [ -f "$CONSOLE_PID_FILE" ]; then
+    OLD_CONSOLE_PID=$(cat "$CONSOLE_PID_FILE")
+    if kill -0 "$OLD_CONSOLE_PID" 2>/dev/null; then
+        kill "$OLD_CONSOLE_PID" 2>/dev/null
+        echo "Stopped previous console monitoring (PID: $OLD_CONSOLE_PID)"
+    fi
+    rm -f "$CONSOLE_PID_FILE"
+fi
+echo "Monitoring processes cleanup completed"
+
+if wait_for_confirmation "Step 1: Process cleanup"; then
+    # Step 2: Clear local log files (console, debug, import)
+    echo "🧹 Clearing local log files (browser-console.log, wordpress-debug.log, import.log)..."
+    > browser-console.log
+    > wordpress-debug.log
+    # Clear any import-specific log files that might exist
+    if [ -f "import.log" ]; then
+        > import.log
+        echo "Cleared import.log"
+    fi
+    echo "Local log files cleared"
+fi
+
+if wait_for_confirmation "Step 2: Initial log file cleanup"; then
+    # Step 3: Activate wordpress-debug.log monitoring
     echo "📊 Activating wordpress-debug.log monitoring..."
     MPID_FILE="wordpress-debug-sync/wordpress-debug-monitor.pid"
     if [ -f "$MPID_FILE" ]; then
@@ -49,15 +74,15 @@ if wait_for_confirmation "Step 1: Initial log file cleanup"; then
     echo "Debug monitoring started (PID: $MONITOR_PID)"
 fi
 
-if wait_for_confirmation "Step 2: Debug monitoring setup"; then
-    # Step 3: Reset debug log after monitoring starts
+if wait_for_confirmation "Step 3: Debug monitoring setup"; then
+    # Step 4: Reset debug log after monitoring starts
     echo "🔄 Resetting debug log after monitoring activation..."
     > wordpress-debug.log
     echo "Debug log reset"
 fi
 
-if wait_for_confirmation "Step 3: Debug log initialization"; then
-    # Step 4: Activate Safari browser or open it
+if wait_for_confirmation "Step 4: Debug log initialization"; then
+    # Step 5: Activate Safari browser or open it
     echo "🌐 Activating Safari browser..."
     osascript -e 'tell application "Safari" to activate' || open -a Safari
     sleep 2
