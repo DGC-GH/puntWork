@@ -1,3 +1,9 @@
 {
-    "chat.agent.maxRequests": 50
+    "chat.agent.maxRequests": 50,
+    "files.associations": {
+        "debug.log": "log"
+    },
+    "search.exclude": {
+        "debug.log": true
+    }
 }
