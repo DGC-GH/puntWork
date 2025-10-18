@@ -14,6 +14,11 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+// Define safe run seconds constant - fallback to 60 seconds if not configured
+if ( ! defined( 'PUNTWORK_SAFE_RUN_SECONDS' ) ) {
+    define( 'PUNTWORK_SAFE_RUN_SECONDS', 60 );
+}
+
 require_once __DIR__ . '/../utilities/options-utilities.php';
 require_once __DIR__ . '/../utilities/puntwork-logger.php';
 require_once __DIR__ . '/import-circuit-breaker.php';
