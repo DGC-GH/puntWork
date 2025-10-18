@@ -4,9 +4,9 @@
 
 echo "🔄 Starting protocol..."
 
-# Step 1: Activate debug.log monitoring
-echo "📊 Activating debug.log monitoring..."
-MPID_FILE="monitoring/monitoring-debug.pid"
+# Step 1: Activate wordpress-debug.log monitoring
+echo "📊 Activating wordpress-debug.log monitoring..."
+MPID_FILE="wordpress-debug-sync/wordpress-debug-monitor.pid"
 if [ -f "$MPID_FILE" ]; then
     OLD_PID=$(cat "$MPID_FILE")
     if kill -0 "$OLD_PID" 2>/dev/null; then
@@ -14,14 +14,14 @@ if [ -f "$MPID_FILE" ]; then
         echo "Stopped previous debug monitoring (PID: $OLD_PID)"
     fi
 fi
-./monitoring/sync-debug-log.sh monitor &
+./wordpress-debug-sync/sync-debug-log.sh monitor &
 MONITOR_PID=$!
 echo $MONITOR_PID > "$MPID_FILE"
 echo "Debug monitoring started (PID: $MONITOR_PID)"
 
-# Step 2: Clear local debug.log file
-echo "🧹 Clearing local debug.log file..."
-> debug.log
+# Step 2: Clear local wordpress-debug.log file
+echo "🧹 Clearing local wordpress-debug.log file..."
+> wordpress-debug.log
 echo "Debug log cleared"
 
 # Step 3: Activate Safari browser or open it
@@ -57,7 +57,7 @@ echo "Feeds dashboard tab ready"
 
 # Step 5: Activate constant console monitoring
 echo "📝 Starting constant console monitoring..."
-CONSOLE_PID_FILE="monitoring/monitoring-console.pid"
+CONSOLE_PID_FILE="browser-automation/monitor-browser-console.pid"
 if [ -f "$CONSOLE_PID_FILE" ]; then
     OLD_CONSOLE_PID=$(cat "$CONSOLE_PID_FILE")
     if kill -0 "$OLD_CONSOLE_PID" 2>/dev/null; then
@@ -65,14 +65,14 @@ if [ -f "$CONSOLE_PID_FILE" ]; then
         echo "Stopped previous console monitoring (PID: $OLD_CONSOLE_PID)"
     fi
 fi
-osascript monitor_logs.applescript &
+osascript browser-automation/monitor-browser-console.applescript &
 CONSOLE_PID=$!
 echo $CONSOLE_PID > "$CONSOLE_PID_FILE"
 echo "Console monitoring started (PID: $CONSOLE_PID)"
 
 # Step 6: Click import button
 echo "🚀 Clicking import button..."
-osascript click_import_button.applescript
+osascript browser-automation/click_import_button.applescript
 
 # Step 7: Wait for import to start and finish
 echo "⏳ Monitoring import progress..."
@@ -80,20 +80,20 @@ IMPORT_STARTED=false
 IMPORT_COMPLETED=false
 
 while true; do
-    # Check console.log for import status
-    if grep -q "Importing\.\.\." console.log && ! $IMPORT_STARTED; then
+    # Check browser-console.log for import status
+    if grep -q "Importing\.\.\." browser-console.log && ! $IMPORT_STARTED; then
         IMPORT_STARTED=true
-        echo "▶️ Import started - found 'Importing...' in console.log"
+        echo "▶️ Import started - found 'Importing...' in browser-console.log"
     fi
 
-    if grep -q "completed successfully\|failed\|cancelled\|paused" console.log && ! $IMPORT_COMPLETED; then
-        echo "🏁 Import completed - found completion marker in console.log"
+    if grep -q "completed successfully\|failed\|cancelled\|paused" browser-console.log && ! $IMPORT_COMPLETED; then
+        echo "🏁 Import completed - found completion marker in browser-console.log"
         break
     fi
 
-    # Also check debug.log for server-side completion
-    if grep -q "IMPORT.*SUCCESS\|IMPORT.*FAILED\|import.*complete" debug.log && ! $IMPORT_COMPLETED; then
-        echo "🌐 Import completed - found completion marker in debug.log"
+    # Also check wordpress-debug.log for server-side completion
+    if grep -q "IMPORT.*SUCCESS\|IMPORT.*FAILED\|import.*complete" wordpress-debug.log && ! $IMPORT_COMPLETED; then
+        echo "🌐 Import completed - found completion marker in wordpress-debug.log"
         break
     fi
 
@@ -103,20 +103,20 @@ done
 # Step 8: Analyze log files in detail
 echo "📊 Analyzing log files..."
 
-echo "=== CONSOLE.LOG ANALYSIS ==="
-echo "Total lines: $(wc -l < console.log)"
-echo "Heartbeat entries: $(grep -c "Heartbeat update" console.log)"
-echo "Import duration: $(grep "Duration" console.log | tail -1 || echo "Not found")"
-echo "Items processed: $(grep "Items Processed" console.log | tail -1 || echo "Not found")"
-echo "Success rate: $(grep "Success Rate" console.log | tail -1 || echo "Not found")"
+echo "=== BROWSER-CONSOLE.LOG ANALYSIS ==="
+echo "Total lines: $(wc -l < browser-console.log)"
+echo "Heartbeat entries: $(grep -c "Heartbeat update" browser-console.log)"
+echo "Import duration: $(grep "Duration" browser-console.log | tail -1 || echo "Not found")"
+echo "Items processed: $(grep "Items Processed" browser-console.log | tail -1 || echo "Not found")"
+echo "Success rate: $(grep "Success Rate" browser-console.log | tail -1 || echo "Not found")"
 
-echo "=== DEBUG.LOG ANALYSIS ==="
-echo "Total lines: $(wc -l < debug.log)"
-echo "PHP Fatal errors: $(grep -c "Fatal error" debug.log)"
-echo "WPDB errors: $(grep -c "WordPress database error" debug.log)"
-echo "Import-related entries: $(grep -i import debug.log | wc -l)"
+echo "=== WORDPRESS-DEBUG.LOG ANALYSIS ==="
+echo "Total lines: $(wc -l < wordpress-debug.log)"
+echo "PHP Fatal errors: $(grep -c "Fatal error" wordpress-debug.log)"
+echo "WPDB errors: $(grep -c "WordPress database error" wordpress-debug.log)"
+echo "Import-related entries: $(grep -i import wordpress-debug.log | wc -l)"
 echo "Last 5 lines:"
-tail -5 debug.log
+tail -5 wordpress-debug.log
 
 # Stop monitoring processes
 echo "🛑 Stopping monitoring processes..."
