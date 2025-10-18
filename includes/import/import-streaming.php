@@ -24,6 +24,24 @@ require_once __DIR__ . '/../utilities/puntwork-logger.php';
 require_once __DIR__ . '/import-circuit-breaker.php';
 
 /**
+ * Helper function to add log entry to both in-memory array and import.log file
+ *
+ * @param array &$logs_array Reference to the logs array
+ * @param string $log_message The log message to add
+ */
+function add_import_log_entry(&$logs_array, $log_message) {
+    // Add to in-memory array (limited size to prevent memory issues)
+    $logs_array[] = $log_message;
+    if (count($logs_array) > 100) {
+        $logs_array = array_slice($logs_array, -50); // Keep only last 50 log entries
+    }
+
+    // Also write to import.log file (append with timestamp and newline)
+    $log_line = $log_message . "\n";
+    file_put_contents(PUNTWORK_PATH . 'import.log', $log_line, FILE_APPEND | LOCK_EX);
+}
+
+/**
  * Streaming architecture to replace batch processing
  * Processes items one by one from the feed stream with adaptive resource management
  */
@@ -36,12 +54,15 @@ require_once __DIR__ . '/import-circuit-breaker.php';
  * @return array Resume result data
  */
 function resume_streaming_import_with_recovery($resume_from_item, $recovery_context = []) {
+    // Clear import log at start of import process
+    file_put_contents(PUNTWORK_PATH . 'import.log', '', LOCK_EX);
+
     global $wpdb;
 
     PuntWorkLogger::info('Attempting to resume streaming import with database recovery', PuntWorkLogger::CONTEXT_IMPORT, [
         'resume_from_item' => $resume_from_item,
         'recovery_context_provided' => !empty($recovery_context),
-        'recovery_reason' => $recovery_context['reason'] ?? 'unknown',
+        'reason' => $recovery_context['reason'] ?? 'unknown',
         'last_failed_field' => $recovery_context['last_field'] ?? 'unknown'
     ]);
 
@@ -214,6 +235,10 @@ function perform_database_connection_recovery() {
  */
 function import_jobs_streaming($preserve_status = false) {
     $start_time = microtime(true);
+
+    // Clear import log at start of import process
+    file_put_contents(PUNTWORK_PATH . 'import.log', '', LOCK_EX);
+
     $composite_keys_processed = 0;
     $processed = 0;
     $published = 0;
@@ -838,10 +863,7 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
 
             $updated++;
             // LIMIT LOGGING: Only keep recent logs to prevent memory buildup
-            $all_logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Updated job ' . $existing_post_id;
-            if (count($all_logs) > 100) {
-                $all_logs = array_slice($all_logs, -50); // Keep only last 50 log entries
-            }
+            add_import_log_entry($all_logs, '[' . date('d-M-Y H:i:s') . ' UTC] Updated job ' . $existing_post_id);
         } else {
             // New job - create with batch ACF processing
             // Ensure safe string values for post creation to prevent null-related warnings
@@ -886,7 +908,7 @@ function process_feed_stream_optimized($json_path, &$composite_keys_processed, &
 
                 $published++;
                 // Queued log entry
-                $all_logs[] = '[' . date('d-M-Y H:i:s') . ' UTC] Created new job ' . $post_id . ' (composite key: ' . $composite_key . ')';
+                add_import_log_entry($all_logs, '[' . date('d-M-Y H:i:s') . ' UTC] Created new job ' . $post_id . ' (composite key: ' . $composite_key . ')');
             } else {
                 $skipped++;
                 $circuit_breaker = handle_circuit_breaker_failure($circuit_breaker, 'create_failure');
