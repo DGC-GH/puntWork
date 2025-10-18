@@ -22,11 +22,17 @@ monitor_debug_log() {
     echo "Monitoring debug.log for bidirectional changes..."
     echo "Press Ctrl+C to stop"
 
-    # Clear server debug log first when monitoring starts
-    echo "Clearing server debug log before starting monitoring..."
-    > "$LOCAL_PATH"
-    curl -s -u "$REMOTE_USER:$FTP_PASS" -T "$LOCAL_PATH" "ftp://$FTP_HOST/$REMOTE_PATH"
-    echo "✓ Server debug log cleared, starting bidirectional sync..."
+    # Check if server debug log needs clearing at startup
+    REMOTE_SIZE=$(curl -s -I -u "$REMOTE_USER:$FTP_PASS" --ftp-ssl -k "ftp://$FTP_HOST/$REMOTE_PATH" | grep "Content-Length" | awk '{print $2}' | tr -d '\r' || echo "0")
+
+    if [ "$REMOTE_SIZE" != "0" ]; then
+        echo "Clearing server debug log before starting monitoring..."
+        > "$LOCAL_PATH"
+        curl -s -u "$REMOTE_USER:$FTP_PASS" -T "$LOCAL_PATH" "ftp://$FTP_HOST/$REMOTE_PATH"
+        echo "✓ Server debug log cleared, starting bidirectional sync..."
+    else
+        echo "✓ Server debug log already empty, starting bidirectional sync..."
+    fi
 
     # Create tracking file for local changes
     LAST_SYNC_FILE="/tmp/debug_sync_state"
@@ -36,22 +42,15 @@ monitor_debug_log() {
         CURRENT_LOCAL_SIZE=$(stat -f%z "$LOCAL_PATH" 2>/dev/null || echo "0")
         REMOTE_SIZE=$(curl -s -I -u "$REMOTE_USER:$FTP_PASS" --ftp-ssl -k "ftp://$FTP_HOST/$REMOTE_PATH" | grep "Content-Length" | awk '{print $2}' | tr -d '\r' || echo "0")
 
-        # === SERVER → LOCAL DIRECTION ===
+        # === SERVER → LOCAL DIRECTION ONLY ===
+        # Monitor server for new content and pull to local (one-way sync)
         if [ "$REMOTE_SIZE" != "$CURRENT_LOCAL_SIZE" ] && [ -n "$REMOTE_SIZE" ] && [ "$REMOTE_SIZE" != "0" ]; then
             echo "$(date): 🔄 Server change detected, pulling to local..."
             curl -s -u "$REMOTE_USER:$FTP_PASS" "ftp://$FTP_HOST/$REMOTE_PATH" -o "$LOCAL_PATH"
             echo "✓ Local updated from server (size: $REMOTE_SIZE bytes)"
         fi
 
-        # === LOCAL → SERVER DIRECTION ===
-        # Only push to server when local file is cleared (size 0) to reset server debug log
-        if [ "$CURRENT_LOCAL_SIZE" -eq 0 ] && [ -f "$LOCAL_PATH" ]; then
-            echo "$(date): 🔄 Local file cleared, pushing empty file to server to reset..."
-            curl -s -u "$REMOTE_USER:$FTP_PASS" -T "$LOCAL_PATH" "ftp://$FTP_HOST/$REMOTE_PATH"
-            echo "✓ Server debug log cleared"
-        fi
-
-        sleep 5  # Check every 5 seconds for bidirectional sync
+        sleep 5  # Check every 5 seconds for server changes
     done
 }
 
