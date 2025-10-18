@@ -19,101 +19,35 @@ FTP_HOST="${PUNTWORK_FTP_HOST#ftp://}"
 PAUSE_FILE="/tmp/debug_sync_paused"
 
 monitor_debug_log() {
-    echo "Monitoring debug.log for bidirectional changes (auto-pause when editing locally)..."
+    echo "Monitoring debug.log for changes..."
     echo "Press Ctrl+C to stop"
 
-    # Create tracking file for local changes
-    LAST_SYNC_FILE="/tmp/debug_sync_state"
-    DEV_MODE_FILE="/tmp/debug_dev_mode"
-
     while true; do
-        # === DEVELOPMENT MODE DETECTION ===
+        # Get current local file size
         CURRENT_LOCAL_SIZE=$(stat -f%z "$LOCAL_PATH" 2>/dev/null || echo "0")
 
         # Get server size using lftp
         REMOTE_SIZE=$( /opt/homebrew/bin/lftp -c "set ssl:verify-certificate no; open -u '$REMOTE_USER','$FTP_PASS' ftp://$FTP_HOST; ls -la $REMOTE_PATH" | awk '{print $5}' | tail -n1 | tr -d '\r' || echo "0" )
 
-        # Enhanced dev mode detection
-        if [ -f "$LAST_SYNC_FILE" ]; then
-            DEV_MODE_SERVER_SIZE=$(cat "$DEV_MODE_FILE" 2>/dev/null || echo "0")
-            LAST_SERVER_SIZE=$(cat "$LAST_SYNC_FILE" | head -n1 | cut -d: -f2 2>/dev/null || echo "0")
-
-            # Enter dev mode conditions:
-            # 1. Empty file (user cleared it)
-            # 2. Much smaller than server (user manually reduced for testing)
-            # 3. Manual dev mode flag
-            if [ "$CURRENT_LOCAL_SIZE" -eq 0 ] || \
-               [ "$CURRENT_LOCAL_SIZE" -lt 50 -a "$LAST_SERVER_SIZE" -gt 500 ] || \
-               [ -f "$DEV_MODE_FILE" ]; then
-
-                # Record server size when dev mode activated
-                if [ "$DEV_MODE_SERVER_SIZE" != "$REMOTE_SIZE" ]; then
-                    echo "$REMOTE_SIZE" > "$DEV_MODE_FILE"
-                    echo "$(date): 🛠️ DEV MODE: Activated - Protecting local changes from server overwrites"
-                    echo "$(date):    Local: ${CURRENT_LOCAL_SIZE} bytes, Server: ${REMOTE_SIZE} bytes"
-                fi
-            fi
-        fi
-
-        # === SERVER → LOCAL DIRECTION ===
+        # SERVER → LOCAL DIRECTION
         if [ "$REMOTE_SIZE" != "$CURRENT_LOCAL_SIZE" ] && [ -n "$REMOTE_SIZE" ] && [ "$REMOTE_SIZE" != "0" ]; then
-            DEV_MODE_SERVER_SIZE=$(cat "$DEV_MODE_FILE" 2>/dev/null || echo "0")
-
-            # Enhanced logic: In dev mode, be MUCH more restrictive about server pulls
-            ALLOW_PULL=true
-
-            if [ -f "$DEV_MODE_FILE" ] && [ "$CURRENT_LOCAL_SIZE" -ne 0 ]; then
-                # In dev mode, only pull if:
-                # 1. Server grew SIGNIFICANTLY (3x) since dev mode started, indicating real errors
-                # 2. OR server has major new content growth (+2000+ bytes)
-                GROWTH_RATIO=$((REMOTE_SIZE / (DEV_MODE_SERVER_SIZE + 1)))
-                if [ $GROWTH_RATIO -lt 3 ] && [ $((REMOTE_SIZE - DEV_MODE_SERVER_SIZE)) -lt 2000 ]; then
-                    ALLOW_PULL=false
-                    echo "$(date): 🔇 DEV MODE: Blocking server pull (in dev mode, minor server changes ignored)"
-                else
-                    echo "$(date): ⚠️ DEV MODE: Allowing server pull - significant error growth detected"
-                    ALLOW_PULL=true
-                fi
-            elif [ "$CURRENT_LOCAL_SIZE" -eq 0 ]; then
-                # When local is empty (user cleared), block pulls to allow testing
-                ALLOW_PULL=false
-                echo "$(date): 🔇 DEV MODE: Blocking server pull (local cleared, allowing manual testing)"
-            fi
-
-            if [ "$ALLOW_PULL" = true ]; then
+            # Check if local file is empty - if so, clear server instead of pulling
+            if [ "$CURRENT_LOCAL_SIZE" -eq 0 ]; then
+                echo "$(date): 🧹 Local is empty, clearing server log..."
+                echo -n > /tmp/empty_file
+                curl -s -u "$REMOTE_USER:$FTP_PASS" -T /tmp/empty_file "ftp://$FTP_HOST/$REMOTE_PATH"
+                echo "$(date): 🧹 Server log cleared to match local empty state"
+                rm -f /tmp/empty_file
+            else
                 echo "$(date): 🔄 Server change detected, pulling to local..."
                 curl -s -u "$REMOTE_USER:$FTP_PASS" "ftp://$FTP_HOST/$REMOTE_PATH" -o "$LOCAL_PATH"
                 echo "✓ Local updated from server (size: $REMOTE_SIZE bytes)"
-                echo "server:$REMOTE_SIZE:$(stat -f%M $LOCAL_PATH 2>/dev/null || echo '0')" > "$LAST_SYNC_FILE"
             fi
         fi
 
-        # === LOCAL → SERVER DIRECTION ===
-        # Check if local file was modified since last sync
-        if [ ! -f "$DEV_MODE_FILE" ] && [ -f "$LOCAL_PATH" ] && [ -f "$LAST_SYNC_FILE" ]; then
-            LAST_LOCAL_MOD=$(cat "$LAST_SYNC_FILE" | cut -d: -f3 2>/dev/null)
-            CURRENT_LOCAL_MOD=$(stat -f%M "$LOCAL_PATH" 2>/dev/null || echo '0')
+        # No local -> server pushing in monitor mode - simplified
 
-            if [ "$CURRENT_LOCAL_MOD" != "$LAST_LOCAL_MOD" ] && [ "$CURRENT_LOCAL_SIZE" -gt 10 ]; then
-                echo "$(date): 🔄 Local change detected, pushing to server..."
-                curl -s -u "$REMOTE_USER:$FTP_PASS" -T "$LOCAL_PATH" "ftp://$FTP_HOST/$REMOTE_PATH"
-                echo "✓ Server updated from local"
-
-                # Update sync state with current local mod time
-                echo "local:$CURRENT_LOCAL_SIZE:$CURRENT_LOCAL_MOD" > "$LAST_SYNC_FILE"
-
-                # Exit dev mode after successful push
-                if [ -f "$DEV_MODE_FILE" ] && [ "$CURRENT_LOCAL_SIZE" -gt 500 ]; then
-                    rm -f "$DEV_MODE_FILE"
-                    echo "$(date): ✅ DEV MODE: Auto-exited (local changes pushed)"
-                fi
-            fi
-        elif [ -f "$LOCAL_PATH" ]; then
-            # Initialize sync state if it doesn't exist
-            echo "local:$CURRENT_LOCAL_SIZE:$(stat -f%M "$LOCAL_PATH" 2>/dev/null || echo '0')" > "$LAST_SYNC_FILE"
-        fi
-
-        sleep 5  # Check every 5 seconds for bidirectional sync
+        sleep 5  # Check every 5 seconds
     done
 }
 
@@ -152,10 +86,16 @@ case "$1" in
         echo "▶️ Sync resumed. Bidirectional syncing active again."
         ;;
     "clear")
-        echo "Clearing local debug.log..."
+        echo "Clearing local and remote debug.log..."
         > "$LOCAL_PATH"
-        echo "✓ Local debug.log cleared. Modify it manually for testing."
-        echo "⚠️ Changes will be pushed to server when you resume sync."
+        echo "✓ Local debug.log cleared."
+
+        # Immediately push empty file to server for fresh logs
+        echo "🔄 Pushing cleared log to server..."
+        curl -s -u "$REMOTE_USER:$FTP_PASS" -T "$LOCAL_PATH" "ftp://$FTP_HOST/$REMOTE_PATH"
+        echo "✓ Server debug.log cleared as well."
+
+        echo "🟢 Both local and remote debug logs are now fresh and ready for new logs."
         ;;
     "status")
         if [ -f "$PAUSE_FILE" ]; then
